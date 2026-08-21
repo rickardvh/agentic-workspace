@@ -3,18 +3,18 @@
   "authority": "command_package_ir.json",
   "compatibility": {
     "protocol": "1.0.0",
-    "fingerprint": "sha256:056539052044d91cd2e56595adfc565d196c5529c87ad9b08f881f61f5d1c25c",
+    "fingerprint": "sha256:3f205b9a4902af13602b0a29820c8cb88bebba3d36dbe1099cc07f91e0eeb02d",
     "additive_fields": "allowed"
   },
   "support_rule": "Operations fail closed unless generated status, effects, conformance, and Python/TypeScript target accounting are present.",
   "readiness_authority": {
     "kind": "agentic-workspace/external-readiness-authority/v1",
     "status": "current",
-    "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:84ad2cf426b0ab3a295c6260f78e3b7449604b3e29dcb2b9e1fc2cfb63eab3de",
-    "client_semantics_revision": "sha256:cf2264f999ee87e8c48a39bc9f47aed27d4c32c1327f925f188f10f24058ba8b",
+    "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:88249390847ffbaf7de3fec9a332a8a53416a93a8cea261f49ff1113bcf088cd",
+    "client_semantics_revision": "sha256:630e955877cc613aa6df1bc6304e879831d0dee7e3a9cefda87e4c9c89022402",
     "client_artifact_revisions": {
       "public_python_client": "src/agentic_workspace/client.py@sha256:f99ef3d3337cbd7a7a0499c1458be9ac8099bd6210cf8fb96d5f21fb9c0bf221",
-      "generated_client_generator": "scripts/generate/generate_external_consumer_profile.py@sha256:5dcd7b58bce9adf781f8a6a73f8ff616f9d74b92d9db3ffdc04f7b1de1a32a12",
+      "generated_client_generator": "scripts/generate/generate_external_consumer_profile.py@sha256:ad0b5b453cbfbce8174a325a2d56a333b5fc7134d9ec63586f59cc2798289992",
       "typescript_client_template": "scripts/generate/templates/external_client.mjs@sha256:99e55285734b7776d64794ffd0d810a6b9e0181c3ca11f55bc3cbb53d09e8a2c"
     }
   },
@@ -54,8 +54,8 @@
         ]
       },
       "effects": {
-        "destructive": false,
-        "idempotent": true,
+        "destructive": true,
+        "idempotent": false,
         "read_only": false,
         "requires_preflight_gate": false,
         "writes_repo_state": false
@@ -87,15 +87,6 @@
         }
       },
       "conformance": [
-        "agent-guidance.promote.process",
-        "agent-guidance.edit.process",
-        "agent-guidance.merge.process",
-        "agent-guidance.split.process",
-        "agent-guidance.suppress.process",
-        "agent-guidance.revalidate.process",
-        "agent-guidance.weaken.process",
-        "agent-guidance.supersede.process",
-        "agent-guidance.retire.process",
         "agent-guidance.delete.process"
       ],
       "external_consumption": {
@@ -106,15 +97,6 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
               "agent-guidance.delete.process"
             ],
             "migration_dependency": "#2044"
@@ -124,15 +106,6 @@
             "scope": "guidance lifecycle store writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
               "agent-guidance.delete.process"
             ],
             "migration_dependency": "#2044"
@@ -142,15 +115,6 @@
             "scope": "promotion authority resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
               "agent-guidance.delete.process"
             ],
             "migration_dependency": "#2044"
@@ -160,15 +124,6 @@
             "scope": "revision guard enforcement",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
               "agent-guidance.delete.process"
             ],
             "migration_dependency": "#2044"
@@ -178,15 +133,6 @@
             "scope": "mutation receipt emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
               "agent-guidance.delete.process"
             ],
             "migration_dependency": "#2044"
@@ -196,15 +142,6 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
               "agent-guidance.delete.process"
             ],
             "migration_dependency": "#2044"
@@ -243,7 +180,7 @@
       },
       "effects": {
         "destructive": false,
-        "idempotent": true,
+        "idempotent": false,
         "read_only": false,
         "requires_preflight_gate": false,
         "writes_repo_state": false
@@ -275,16 +212,7 @@
         }
       },
       "conformance": [
-        "agent-guidance.promote.process",
-        "agent-guidance.edit.process",
-        "agent-guidance.merge.process",
-        "agent-guidance.split.process",
-        "agent-guidance.suppress.process",
-        "agent-guidance.revalidate.process",
-        "agent-guidance.weaken.process",
-        "agent-guidance.supersede.process",
-        "agent-guidance.retire.process",
-        "agent-guidance.delete.process"
+        "agent-guidance.edit.process"
       ],
       "external_consumption": {
         "status": "runtime-backed",
@@ -294,16 +222,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.edit.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -312,16 +231,7 @@
             "scope": "guidance lifecycle store writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.edit.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -330,16 +240,7 @@
             "scope": "promotion authority resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.edit.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -348,16 +249,7 @@
             "scope": "revision guard enforcement",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.edit.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -366,16 +258,7 @@
             "scope": "mutation receipt emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.edit.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -384,16 +267,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.edit.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -431,7 +305,7 @@
       },
       "effects": {
         "destructive": false,
-        "idempotent": true,
+        "idempotent": false,
         "read_only": false,
         "requires_preflight_gate": false,
         "writes_repo_state": false
@@ -463,16 +337,7 @@
         }
       },
       "conformance": [
-        "agent-guidance.promote.process",
-        "agent-guidance.edit.process",
-        "agent-guidance.merge.process",
-        "agent-guidance.split.process",
-        "agent-guidance.suppress.process",
-        "agent-guidance.revalidate.process",
-        "agent-guidance.weaken.process",
-        "agent-guidance.supersede.process",
-        "agent-guidance.retire.process",
-        "agent-guidance.delete.process"
+        "agent-guidance.merge.process"
       ],
       "external_consumption": {
         "status": "runtime-backed",
@@ -482,16 +347,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.merge.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -500,16 +356,7 @@
             "scope": "guidance lifecycle store writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.merge.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -518,16 +365,7 @@
             "scope": "promotion authority resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.merge.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -536,16 +374,7 @@
             "scope": "revision guard enforcement",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.merge.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -554,16 +383,7 @@
             "scope": "mutation receipt emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.merge.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -572,16 +392,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.merge.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -651,16 +462,7 @@
         }
       },
       "conformance": [
-        "agent-guidance.promote.process",
-        "agent-guidance.edit.process",
-        "agent-guidance.merge.process",
-        "agent-guidance.split.process",
-        "agent-guidance.suppress.process",
-        "agent-guidance.revalidate.process",
-        "agent-guidance.weaken.process",
-        "agent-guidance.supersede.process",
-        "agent-guidance.retire.process",
-        "agent-guidance.delete.process"
+        "agent-guidance.promote.process"
       ],
       "external_consumption": {
         "status": "runtime-backed",
@@ -670,16 +472,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.promote.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -688,16 +481,7 @@
             "scope": "guidance lifecycle store writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.promote.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -706,16 +490,7 @@
             "scope": "promotion authority resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.promote.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -724,16 +499,7 @@
             "scope": "revision guard enforcement",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.promote.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -742,16 +508,7 @@
             "scope": "mutation receipt emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.promote.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -760,16 +517,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.promote.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -807,7 +555,7 @@
       },
       "effects": {
         "destructive": false,
-        "idempotent": true,
+        "idempotent": false,
         "read_only": false,
         "requires_preflight_gate": false,
         "writes_repo_state": false
@@ -839,16 +587,7 @@
         }
       },
       "conformance": [
-        "agent-guidance.promote.process",
-        "agent-guidance.edit.process",
-        "agent-guidance.merge.process",
-        "agent-guidance.split.process",
-        "agent-guidance.suppress.process",
-        "agent-guidance.revalidate.process",
-        "agent-guidance.weaken.process",
-        "agent-guidance.supersede.process",
-        "agent-guidance.retire.process",
-        "agent-guidance.delete.process"
+        "agent-guidance.retire.process"
       ],
       "external_consumption": {
         "status": "runtime-backed",
@@ -858,16 +597,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.retire.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -876,16 +606,7 @@
             "scope": "guidance lifecycle store writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.retire.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -894,16 +615,7 @@
             "scope": "promotion authority resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.retire.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -912,16 +624,7 @@
             "scope": "revision guard enforcement",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.retire.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -930,16 +633,7 @@
             "scope": "mutation receipt emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.retire.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -948,16 +642,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.retire.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -995,7 +680,7 @@
       },
       "effects": {
         "destructive": false,
-        "idempotent": true,
+        "idempotent": false,
         "read_only": false,
         "requires_preflight_gate": false,
         "writes_repo_state": false
@@ -1027,16 +712,7 @@
         }
       },
       "conformance": [
-        "agent-guidance.promote.process",
-        "agent-guidance.edit.process",
-        "agent-guidance.merge.process",
-        "agent-guidance.split.process",
-        "agent-guidance.suppress.process",
-        "agent-guidance.revalidate.process",
-        "agent-guidance.weaken.process",
-        "agent-guidance.supersede.process",
-        "agent-guidance.retire.process",
-        "agent-guidance.delete.process"
+        "agent-guidance.revalidate.process"
       ],
       "external_consumption": {
         "status": "runtime-backed",
@@ -1046,16 +722,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.revalidate.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -1064,16 +731,7 @@
             "scope": "guidance lifecycle store writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.revalidate.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -1082,16 +740,7 @@
             "scope": "promotion authority resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.revalidate.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -1100,16 +749,7 @@
             "scope": "revision guard enforcement",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.revalidate.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -1118,16 +758,7 @@
             "scope": "mutation receipt emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.revalidate.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -1136,16 +767,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.revalidate.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -1183,7 +805,7 @@
       },
       "effects": {
         "destructive": false,
-        "idempotent": true,
+        "idempotent": false,
         "read_only": false,
         "requires_preflight_gate": false,
         "writes_repo_state": false
@@ -1215,16 +837,7 @@
         }
       },
       "conformance": [
-        "agent-guidance.promote.process",
-        "agent-guidance.edit.process",
-        "agent-guidance.merge.process",
-        "agent-guidance.split.process",
-        "agent-guidance.suppress.process",
-        "agent-guidance.revalidate.process",
-        "agent-guidance.weaken.process",
-        "agent-guidance.supersede.process",
-        "agent-guidance.retire.process",
-        "agent-guidance.delete.process"
+        "agent-guidance.split.process"
       ],
       "external_consumption": {
         "status": "runtime-backed",
@@ -1234,16 +847,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.split.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -1252,16 +856,7 @@
             "scope": "guidance lifecycle store writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.split.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -1270,16 +865,7 @@
             "scope": "promotion authority resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.split.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -1288,16 +874,7 @@
             "scope": "revision guard enforcement",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.split.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -1306,16 +883,7 @@
             "scope": "mutation receipt emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.split.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -1324,16 +892,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.split.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -1371,7 +930,7 @@
       },
       "effects": {
         "destructive": false,
-        "idempotent": true,
+        "idempotent": false,
         "read_only": false,
         "requires_preflight_gate": false,
         "writes_repo_state": false
@@ -1403,16 +962,7 @@
         }
       },
       "conformance": [
-        "agent-guidance.promote.process",
-        "agent-guidance.edit.process",
-        "agent-guidance.merge.process",
-        "agent-guidance.split.process",
-        "agent-guidance.suppress.process",
-        "agent-guidance.revalidate.process",
-        "agent-guidance.weaken.process",
-        "agent-guidance.supersede.process",
-        "agent-guidance.retire.process",
-        "agent-guidance.delete.process"
+        "agent-guidance.supersede.process"
       ],
       "external_consumption": {
         "status": "runtime-backed",
@@ -1422,16 +972,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.supersede.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -1440,16 +981,7 @@
             "scope": "guidance lifecycle store writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.supersede.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -1458,16 +990,7 @@
             "scope": "promotion authority resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.supersede.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -1476,16 +999,7 @@
             "scope": "revision guard enforcement",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.supersede.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -1494,16 +1008,7 @@
             "scope": "mutation receipt emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.supersede.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -1512,16 +1017,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.supersede.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -1559,7 +1055,7 @@
       },
       "effects": {
         "destructive": false,
-        "idempotent": true,
+        "idempotent": false,
         "read_only": false,
         "requires_preflight_gate": false,
         "writes_repo_state": false
@@ -1591,16 +1087,7 @@
         }
       },
       "conformance": [
-        "agent-guidance.promote.process",
-        "agent-guidance.edit.process",
-        "agent-guidance.merge.process",
-        "agent-guidance.split.process",
-        "agent-guidance.suppress.process",
-        "agent-guidance.revalidate.process",
-        "agent-guidance.weaken.process",
-        "agent-guidance.supersede.process",
-        "agent-guidance.retire.process",
-        "agent-guidance.delete.process"
+        "agent-guidance.suppress.process"
       ],
       "external_consumption": {
         "status": "runtime-backed",
@@ -1610,16 +1097,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.suppress.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -1628,16 +1106,7 @@
             "scope": "guidance lifecycle store writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.suppress.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -1646,16 +1115,7 @@
             "scope": "promotion authority resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.suppress.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -1664,16 +1124,7 @@
             "scope": "revision guard enforcement",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.suppress.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -1682,16 +1133,7 @@
             "scope": "mutation receipt emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.suppress.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -1700,16 +1142,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.suppress.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -1747,7 +1180,7 @@
       },
       "effects": {
         "destructive": false,
-        "idempotent": true,
+        "idempotent": false,
         "read_only": false,
         "requires_preflight_gate": false,
         "writes_repo_state": false
@@ -1779,16 +1212,7 @@
         }
       },
       "conformance": [
-        "agent-guidance.promote.process",
-        "agent-guidance.edit.process",
-        "agent-guidance.merge.process",
-        "agent-guidance.split.process",
-        "agent-guidance.suppress.process",
-        "agent-guidance.revalidate.process",
-        "agent-guidance.weaken.process",
-        "agent-guidance.supersede.process",
-        "agent-guidance.retire.process",
-        "agent-guidance.delete.process"
+        "agent-guidance.weaken.process"
       ],
       "external_consumption": {
         "status": "runtime-backed",
@@ -1798,16 +1222,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.weaken.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -1816,16 +1231,7 @@
             "scope": "guidance lifecycle store writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.weaken.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -1834,16 +1240,7 @@
             "scope": "promotion authority resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.weaken.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -1852,16 +1249,7 @@
             "scope": "revision guard enforcement",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.weaken.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -1870,16 +1258,7 @@
             "scope": "mutation receipt emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.weaken.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -1888,16 +1267,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.weaken.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -1967,16 +1337,7 @@
         }
       },
       "conformance": [
-        "assignment.admit.process",
-        "assignment.cleanup.process",
-        "assignment.close.process",
-        "assignment.export.process",
-        "assignment.import.process",
-        "assignment.integrate.process",
-        "assignment.override.process",
-        "assignment.reassign.process",
-        "assignment.reject.process",
-        "assignment.repair.process"
+        "assignment.admit.process"
       ],
       "external_consumption": {
         "status": "runtime-backed",
@@ -1986,16 +1347,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.admit.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -2004,16 +1356,7 @@
             "scope": "local assignment artifact writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.admit.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -2022,16 +1365,7 @@
             "scope": "current authority validation",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.admit.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -2040,16 +1374,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.admit.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -2119,16 +1444,7 @@
         }
       },
       "conformance": [
-        "assignment.admit.process",
-        "assignment.cleanup.process",
-        "assignment.close.process",
-        "assignment.export.process",
-        "assignment.import.process",
-        "assignment.integrate.process",
-        "assignment.override.process",
-        "assignment.reassign.process",
-        "assignment.reject.process",
-        "assignment.repair.process"
+        "assignment.cleanup.process"
       ],
       "external_consumption": {
         "status": "runtime-backed",
@@ -2138,16 +1454,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.cleanup.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -2156,16 +1463,7 @@
             "scope": "local assignment artifact writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.cleanup.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -2174,16 +1472,7 @@
             "scope": "current authority validation",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.cleanup.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -2192,16 +1481,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.cleanup.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -2271,16 +1551,7 @@
         }
       },
       "conformance": [
-        "assignment.admit.process",
-        "assignment.cleanup.process",
-        "assignment.close.process",
-        "assignment.export.process",
-        "assignment.import.process",
-        "assignment.integrate.process",
-        "assignment.override.process",
-        "assignment.reassign.process",
-        "assignment.reject.process",
-        "assignment.repair.process"
+        "assignment.close.process"
       ],
       "external_consumption": {
         "status": "runtime-backed",
@@ -2290,16 +1561,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.close.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -2308,16 +1570,7 @@
             "scope": "local assignment artifact writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.close.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -2326,16 +1579,7 @@
             "scope": "current authority validation",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.close.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -2344,16 +1588,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.close.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -2423,16 +1658,7 @@
         }
       },
       "conformance": [
-        "assignment.admit.process",
-        "assignment.cleanup.process",
-        "assignment.close.process",
-        "assignment.export.process",
-        "assignment.import.process",
-        "assignment.integrate.process",
-        "assignment.override.process",
-        "assignment.reassign.process",
-        "assignment.reject.process",
-        "assignment.repair.process"
+        "assignment.export.process"
       ],
       "external_consumption": {
         "status": "runtime-backed",
@@ -2442,16 +1668,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.export.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -2460,16 +1677,7 @@
             "scope": "local assignment artifact writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.export.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -2478,16 +1686,7 @@
             "scope": "current authority validation",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.export.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -2496,16 +1695,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.export.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -2575,16 +1765,7 @@
         }
       },
       "conformance": [
-        "assignment.admit.process",
-        "assignment.cleanup.process",
-        "assignment.close.process",
-        "assignment.export.process",
-        "assignment.import.process",
-        "assignment.integrate.process",
-        "assignment.override.process",
-        "assignment.reassign.process",
-        "assignment.reject.process",
-        "assignment.repair.process"
+        "assignment.import.process"
       ],
       "external_consumption": {
         "status": "runtime-backed",
@@ -2594,16 +1775,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.import.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -2612,16 +1784,7 @@
             "scope": "local assignment artifact writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.import.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -2630,16 +1793,7 @@
             "scope": "current authority validation",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.import.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -2648,16 +1802,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.import.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -2727,16 +1872,7 @@
         }
       },
       "conformance": [
-        "assignment.admit.process",
-        "assignment.cleanup.process",
-        "assignment.close.process",
-        "assignment.export.process",
-        "assignment.import.process",
-        "assignment.integrate.process",
-        "assignment.override.process",
-        "assignment.reassign.process",
-        "assignment.reject.process",
-        "assignment.repair.process"
+        "assignment.integrate.process"
       ],
       "external_consumption": {
         "status": "runtime-backed",
@@ -2746,16 +1882,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.integrate.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -2764,16 +1891,7 @@
             "scope": "local assignment artifact writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.integrate.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -2782,16 +1900,7 @@
             "scope": "current authority validation",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.integrate.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -2800,16 +1909,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.integrate.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -2879,16 +1979,7 @@
         }
       },
       "conformance": [
-        "assignment.admit.process",
-        "assignment.cleanup.process",
-        "assignment.close.process",
-        "assignment.export.process",
-        "assignment.import.process",
-        "assignment.integrate.process",
-        "assignment.override.process",
-        "assignment.reassign.process",
-        "assignment.reject.process",
-        "assignment.repair.process"
+        "assignment.override.process"
       ],
       "external_consumption": {
         "status": "runtime-backed",
@@ -2898,16 +1989,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.override.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -2916,16 +1998,7 @@
             "scope": "local assignment artifact writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.override.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -2934,16 +2007,7 @@
             "scope": "current authority validation",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.override.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -2952,16 +2016,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.override.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -3031,16 +2086,7 @@
         }
       },
       "conformance": [
-        "assignment.admit.process",
-        "assignment.cleanup.process",
-        "assignment.close.process",
-        "assignment.export.process",
-        "assignment.import.process",
-        "assignment.integrate.process",
-        "assignment.override.process",
-        "assignment.reassign.process",
-        "assignment.reject.process",
-        "assignment.repair.process"
+        "assignment.reassign.process"
       ],
       "external_consumption": {
         "status": "runtime-backed",
@@ -3050,16 +2096,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.reassign.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -3068,16 +2105,7 @@
             "scope": "local assignment artifact writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.reassign.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -3086,16 +2114,7 @@
             "scope": "current authority validation",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.reassign.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -3104,16 +2123,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.reassign.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -3183,16 +2193,7 @@
         }
       },
       "conformance": [
-        "assignment.admit.process",
-        "assignment.cleanup.process",
-        "assignment.close.process",
-        "assignment.export.process",
-        "assignment.import.process",
-        "assignment.integrate.process",
-        "assignment.override.process",
-        "assignment.reassign.process",
-        "assignment.reject.process",
-        "assignment.repair.process"
+        "assignment.reject.process"
       ],
       "external_consumption": {
         "status": "runtime-backed",
@@ -3202,16 +2203,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.reject.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -3220,16 +2212,7 @@
             "scope": "local assignment artifact writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.reject.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -3238,16 +2221,7 @@
             "scope": "current authority validation",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.reject.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -3256,16 +2230,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.reject.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -3335,15 +2300,6 @@
         }
       },
       "conformance": [
-        "assignment.admit.process",
-        "assignment.cleanup.process",
-        "assignment.close.process",
-        "assignment.export.process",
-        "assignment.import.process",
-        "assignment.integrate.process",
-        "assignment.override.process",
-        "assignment.reassign.process",
-        "assignment.reject.process",
         "assignment.repair.process"
       ],
       "external_consumption": {
@@ -3354,15 +2310,6 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
               "assignment.repair.process"
             ],
             "migration_dependency": "#2044"
@@ -3372,15 +2319,6 @@
             "scope": "local assignment artifact writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
               "assignment.repair.process"
             ],
             "migration_dependency": "#2044"
@@ -3390,15 +2328,6 @@
             "scope": "current authority validation",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
               "assignment.repair.process"
             ],
             "migration_dependency": "#2044"
@@ -3408,15 +2337,6 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
               "assignment.repair.process"
             ],
             "migration_dependency": "#2044"
@@ -3452,11 +2372,11 @@
         ]
       },
       "effects": {
+        "read_only": false,
         "destructive": true,
         "idempotent": false,
-        "read_only": false,
-        "requires_preflight_gate": true,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": true
       },
       "targets": {
         "python": {
@@ -3566,11 +2486,11 @@
         ]
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -3664,11 +2584,11 @@
         ]
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -3809,11 +2729,7 @@
         }
       },
       "conformance": [
-        "correction-event.submit.process",
-        "correction-event.query.process",
-        "correction-event.correct-dispute.process",
-        "correction-event.withdraw-supersede.process",
-        "correction-event.prune-compact.process"
+        "correction-event.correct-dispute.process"
       ],
       "external_consumption": {
         "status": "runtime-backed",
@@ -3823,11 +2739,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
-              "correction-event.prune-compact.process"
+              "correction-event.correct-dispute.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -3836,11 +2748,7 @@
             "scope": "local correction-event store writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
-              "correction-event.prune-compact.process"
+              "correction-event.correct-dispute.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -3849,11 +2757,7 @@
             "scope": "trusted authority receipt validation",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
-              "correction-event.prune-compact.process"
+              "correction-event.correct-dispute.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -3862,11 +2766,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
-              "correction-event.prune-compact.process"
+              "correction-event.correct-dispute.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -3936,10 +2836,6 @@
         }
       },
       "conformance": [
-        "correction-event.submit.process",
-        "correction-event.query.process",
-        "correction-event.correct-dispute.process",
-        "correction-event.withdraw-supersede.process",
         "correction-event.prune-compact.process"
       ],
       "external_consumption": {
@@ -3950,10 +2846,6 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
               "correction-event.prune-compact.process"
             ],
             "migration_dependency": "#2044"
@@ -3963,10 +2855,6 @@
             "scope": "local correction-event store writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
               "correction-event.prune-compact.process"
             ],
             "migration_dependency": "#2044"
@@ -3976,10 +2864,6 @@
             "scope": "trusted authority receipt validation",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
               "correction-event.prune-compact.process"
             ],
             "migration_dependency": "#2044"
@@ -3989,10 +2873,6 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
               "correction-event.prune-compact.process"
             ],
             "migration_dependency": "#2044"
@@ -4032,7 +2912,7 @@
       "effects": {
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
+        "read_only": true,
         "requires_preflight_gate": false,
         "writes_repo_state": false
       },
@@ -4063,11 +2943,7 @@
         }
       },
       "conformance": [
-        "correction-event.submit.process",
-        "correction-event.query.process",
-        "correction-event.correct-dispute.process",
-        "correction-event.withdraw-supersede.process",
-        "correction-event.prune-compact.process"
+        "correction-event.query.process"
       ],
       "external_consumption": {
         "status": "runtime-backed",
@@ -4077,11 +2953,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
-              "correction-event.prune-compact.process"
+              "correction-event.query.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -4090,11 +2962,7 @@
             "scope": "local correction-event store writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
-              "correction-event.prune-compact.process"
+              "correction-event.query.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -4103,11 +2971,7 @@
             "scope": "trusted authority receipt validation",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
-              "correction-event.prune-compact.process"
+              "correction-event.query.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -4116,11 +2980,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
-              "correction-event.prune-compact.process"
+              "correction-event.query.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -4190,11 +3050,7 @@
         }
       },
       "conformance": [
-        "correction-event.submit.process",
-        "correction-event.query.process",
-        "correction-event.correct-dispute.process",
-        "correction-event.withdraw-supersede.process",
-        "correction-event.prune-compact.process"
+        "correction-event.submit.process"
       ],
       "external_consumption": {
         "status": "runtime-backed",
@@ -4204,11 +3060,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
-              "correction-event.prune-compact.process"
+              "correction-event.submit.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -4217,11 +3069,7 @@
             "scope": "local correction-event store writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
-              "correction-event.prune-compact.process"
+              "correction-event.submit.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -4230,11 +3078,7 @@
             "scope": "trusted authority receipt validation",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
-              "correction-event.prune-compact.process"
+              "correction-event.submit.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -4243,11 +3087,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
-              "correction-event.prune-compact.process"
+              "correction-event.submit.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -4317,11 +3157,7 @@
         }
       },
       "conformance": [
-        "correction-event.submit.process",
-        "correction-event.query.process",
-        "correction-event.correct-dispute.process",
-        "correction-event.withdraw-supersede.process",
-        "correction-event.prune-compact.process"
+        "correction-event.withdraw-supersede.process"
       ],
       "external_consumption": {
         "status": "runtime-backed",
@@ -4331,11 +3167,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
-              "correction-event.prune-compact.process"
+              "correction-event.withdraw-supersede.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -4344,11 +3176,7 @@
             "scope": "local correction-event store writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
-              "correction-event.prune-compact.process"
+              "correction-event.withdraw-supersede.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -4357,11 +3185,7 @@
             "scope": "trusted authority receipt validation",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
-              "correction-event.prune-compact.process"
+              "correction-event.withdraw-supersede.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -4370,11 +3194,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
-              "correction-event.prune-compact.process"
+              "correction-event.withdraw-supersede.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -4409,11 +3229,11 @@
         ]
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -4519,11 +3339,11 @@
         ]
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -4617,11 +3437,11 @@
         "output": []
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -4733,11 +3553,11 @@
         ]
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -4840,11 +3660,11 @@
         ]
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -4947,11 +3767,11 @@
         ]
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -5054,11 +3874,11 @@
         ]
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -5161,11 +3981,11 @@
         ]
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -5268,11 +4088,11 @@
         ]
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -5375,11 +4195,11 @@
         ]
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -5482,11 +4302,11 @@
         ]
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -5587,11 +4407,11 @@
         ]
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -5692,11 +4512,11 @@
         ]
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -5799,11 +4619,11 @@
         ]
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -5906,11 +4726,11 @@
         ]
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -6011,11 +4831,11 @@
         ]
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -6116,11 +4936,11 @@
         ]
       },
       "effects": {
-        "destructive": false,
-        "idempotent": true,
         "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -6219,11 +5039,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -6321,11 +5141,11 @@
         ]
       },
       "effects": {
+        "read_only": false,
         "destructive": true,
         "idempotent": false,
-        "read_only": false,
-        "requires_preflight_gate": true,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": true
       },
       "targets": {
         "python": {
@@ -6426,11 +5246,11 @@
         ]
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -6529,11 +5349,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -6632,11 +5452,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -6711,6 +5531,496 @@
       }
     },
     {
+      "id": "instructions.check",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/instructions.check.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:9a1f45f4f4132187756a15fb28fb71d0e37b2efc796033c78e7fc298308d743b"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-workspace",
+          "path": "operations/instructions.check.json",
+          "exists": true
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "path": "resources/operations/instructions.check.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [
+          "scoped_instruction_operation_input.schema.json"
+        ],
+        "output": [
+          "scoped_instruction_operation_result.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "conformance": [
+        "instructions.check.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "instructions.check.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "scoped instruction semantics",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "instructions.check.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "instructions.check.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "instructions.create",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/instructions.create.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:6e9d9c966b5e74931dc8ea9dd7f31defd9ecfe34d09f423605229bed64f82f37"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-workspace",
+          "path": "operations/instructions.create.json",
+          "exists": true
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "path": "resources/operations/instructions.create.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [
+          "scoped_instruction_operation_input.schema.json"
+        ],
+        "output": [
+          "scoped_instruction_operation_result.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "conformance": [
+        "instructions.create.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "instructions.create.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "scoped instruction semantics",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "instructions.create.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "instructions.create.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "instructions.explain",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/instructions.explain.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:24cab17a1b700102f90f59c8d797987093ec7ea704a7f232170c64a04615fb99"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-workspace",
+          "path": "operations/instructions.explain.json",
+          "exists": true
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "path": "resources/operations/instructions.explain.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [
+          "scoped_instruction_operation_input.schema.json"
+        ],
+        "output": [
+          "scoped_instruction_operation_result.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "conformance": [
+        "instructions.explain.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "instructions.explain.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "scoped instruction semantics",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "instructions.explain.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "instructions.explain.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "instructions.list",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/instructions.list.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:6c933b768fa556059a382d0342542f60f36773b8996c8020e1305764385a55c2"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-workspace",
+          "path": "operations/instructions.list.json",
+          "exists": true
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "path": "resources/operations/instructions.list.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [
+          "scoped_instruction_operation_input.schema.json"
+        ],
+        "output": [
+          "scoped_instruction_operation_result.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "conformance": [
+        "instructions.list.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "instructions.list.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "scoped instruction semantics",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "instructions.list.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "instructions.list.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "instructions.migrate",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/instructions.migrate.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:dbfa3b3998034de8da4b001d04855675d51379fd3f887a8683296e623c532198"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-workspace",
+          "path": "operations/instructions.migrate.json",
+          "exists": true
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "path": "resources/operations/instructions.migrate.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [
+          "scoped_instruction_operation_input.schema.json"
+        ],
+        "output": [
+          "scoped_instruction_operation_result.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "conformance": [
+        "instructions.migrate.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "instructions.migrate.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "scoped instruction semantics",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "instructions.migrate.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "instructions.migrate.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
       "id": "memory.adopt.lifecycle",
       "owner": "memory-bootstrap",
       "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.adopt.lifecycle.json",
@@ -6735,11 +6045,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -6817,11 +6127,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -6899,11 +6209,11 @@
         "output": []
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -6981,11 +6291,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -7063,11 +6373,11 @@
         "output": []
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -7149,11 +6459,11 @@
         "output": []
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -7327,11 +6637,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -7409,11 +6719,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -7491,11 +6801,11 @@
         "output": []
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -7573,11 +6883,11 @@
         "output": []
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -7655,11 +6965,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -7737,11 +7047,11 @@
         "output": []
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -7819,11 +7129,11 @@
         "output": []
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -7892,11 +7202,11 @@
         "output": []
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -7974,11 +7284,11 @@
         "output": []
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -8056,11 +7366,11 @@
         "output": []
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -8138,11 +7448,11 @@
         "output": []
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -8220,11 +7530,11 @@
         "output": []
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -8302,11 +7612,11 @@
         "output": []
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -8384,11 +7694,11 @@
         "output": []
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -8466,11 +7776,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": true,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -8548,11 +7858,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -8630,11 +7940,11 @@
         "output": []
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -8712,11 +8022,11 @@
         "output": []
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -8815,11 +8125,11 @@
         "output": []
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -8918,11 +8228,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -9000,11 +8310,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -9082,11 +8392,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -9164,11 +8474,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -9246,11 +8556,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -9328,11 +8638,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -9401,11 +8711,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -9483,11 +8793,11 @@
         "output": []
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -9661,11 +8971,11 @@
         "output": []
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -9734,11 +9044,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -9816,11 +9126,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -9898,11 +9208,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -9982,11 +9292,11 @@
         ]
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -10066,11 +9376,11 @@
         ]
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -10150,11 +9460,11 @@
         ]
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -10241,11 +9551,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -10314,11 +9624,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -10387,11 +9697,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -10460,11 +9770,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -10533,11 +9843,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -10606,11 +9916,11 @@
         "output": []
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -10679,11 +9989,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -10763,11 +10073,11 @@
         ]
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -10854,11 +10164,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -10936,11 +10246,11 @@
         "output": []
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -11009,11 +10319,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -11091,11 +10401,11 @@
         "output": []
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -11173,11 +10483,11 @@
         "output": []
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -11255,11 +10565,11 @@
         "output": []
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -11337,11 +10647,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -11423,11 +10733,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": true,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -11505,11 +10815,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -11587,11 +10897,11 @@
         "output": []
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -11669,11 +10979,11 @@
         "output": []
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": false,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -11772,11 +11082,11 @@
         "output": []
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -11805,9 +11115,7 @@
         }
       },
       "conformance": [
-        "prompt.init.process",
-        "prompt.upgrade.process",
-        "prompt.uninstall.process"
+        "prompt.init.process"
       ],
       "external_consumption": {
         "status": "internal",
@@ -11817,9 +11125,7 @@
             "scope": "module selection",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "prompt.init.process",
-              "prompt.upgrade.process",
-              "prompt.uninstall.process"
+              "prompt.init.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -11828,9 +11134,7 @@
             "scope": "lifecycle handoff prompt rendering",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "prompt.init.process",
-              "prompt.upgrade.process",
-              "prompt.uninstall.process"
+              "prompt.init.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -11839,9 +11143,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "prompt.init.process",
-              "prompt.upgrade.process",
-              "prompt.uninstall.process"
+              "prompt.init.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -11874,11 +11176,11 @@
         "output": []
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -11907,8 +11209,6 @@
         }
       },
       "conformance": [
-        "prompt.init.process",
-        "prompt.upgrade.process",
         "prompt.uninstall.process"
       ],
       "external_consumption": {
@@ -11919,8 +11219,6 @@
             "scope": "module selection",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "prompt.init.process",
-              "prompt.upgrade.process",
               "prompt.uninstall.process"
             ],
             "migration_dependency": "#2044"
@@ -11930,8 +11228,6 @@
             "scope": "lifecycle handoff prompt rendering",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "prompt.init.process",
-              "prompt.upgrade.process",
               "prompt.uninstall.process"
             ],
             "migration_dependency": "#2044"
@@ -11941,8 +11237,6 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "prompt.init.process",
-              "prompt.upgrade.process",
               "prompt.uninstall.process"
             ],
             "migration_dependency": "#2044"
@@ -11976,11 +11270,11 @@
         "output": []
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -12009,9 +11303,7 @@
         }
       },
       "conformance": [
-        "prompt.init.process",
-        "prompt.upgrade.process",
-        "prompt.uninstall.process"
+        "prompt.upgrade.process"
       ],
       "external_consumption": {
         "status": "internal",
@@ -12021,9 +11313,7 @@
             "scope": "module selection",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "prompt.init.process",
-              "prompt.upgrade.process",
-              "prompt.uninstall.process"
+              "prompt.upgrade.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -12032,9 +11322,7 @@
             "scope": "lifecycle handoff prompt rendering",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "prompt.init.process",
-              "prompt.upgrade.process",
-              "prompt.uninstall.process"
+              "prompt.upgrade.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -12043,9 +11331,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "prompt.init.process",
-              "prompt.upgrade.process",
-              "prompt.uninstall.process"
+              "prompt.upgrade.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -12078,11 +11364,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -12190,11 +11476,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -12302,11 +11588,11 @@
         "output": []
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -12423,11 +11709,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -12517,11 +11803,11 @@
         "output": []
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -12620,11 +11906,11 @@
         "output": []
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -12725,11 +12011,11 @@
         ]
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -12828,11 +12114,11 @@
         "output": []
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -12940,11 +12226,11 @@
         "output": []
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -13043,11 +12329,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -13146,11 +12432,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": true,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": true,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": true
       },
       "targets": {
         "python": {
@@ -13254,11 +12540,11 @@
         "output": []
       },
       "effects": {
+        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": true,
-        "writes_repo_state": true
+        "writes_repo_state": true,
+        "requires_preflight_gate": true
       },
       "targets": {
         "python": {
@@ -13364,11 +12650,11 @@
         ]
       },
       "effects": {
+        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "read_only": true,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -13433,11 +12719,11 @@
         ]
       },
       "effects": {
-        "destructive": true,
+        "read_only": true,
+        "destructive": false,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -13466,11 +12752,7 @@
         }
       },
       "conformance": [
-        "work-thread.prune.process",
-        "work-thread.select.process",
-        "work-thread.carry-inspect.process",
-        "work-thread.carry-select.process",
-        "work-thread.carry-prune.process"
+        "work-thread.carry-inspect.process"
       ],
       "external_consumption": {
         "status": "internal",
@@ -13480,11 +12762,7 @@
             "scope": "local-only decision-point carry inspect",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "work-thread.prune.process",
-              "work-thread.select.process",
-              "work-thread.carry-inspect.process",
-              "work-thread.carry-select.process",
-              "work-thread.carry-prune.process"
+              "work-thread.carry-inspect.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -13493,11 +12771,7 @@
             "scope": "local-only decision-point carry select",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "work-thread.prune.process",
-              "work-thread.select.process",
-              "work-thread.carry-inspect.process",
-              "work-thread.carry-select.process",
-              "work-thread.carry-prune.process"
+              "work-thread.carry-inspect.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -13506,11 +12780,7 @@
             "scope": "local-only decision-point carry prune",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "work-thread.prune.process",
-              "work-thread.select.process",
-              "work-thread.carry-inspect.process",
-              "work-thread.carry-select.process",
-              "work-thread.carry-prune.process"
+              "work-thread.carry-inspect.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -13519,11 +12789,7 @@
             "scope": "local-only work-thread prune",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "work-thread.prune.process",
-              "work-thread.select.process",
-              "work-thread.carry-inspect.process",
-              "work-thread.carry-select.process",
-              "work-thread.carry-prune.process"
+              "work-thread.carry-inspect.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -13532,11 +12798,7 @@
             "scope": "target root validation",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "work-thread.prune.process",
-              "work-thread.select.process",
-              "work-thread.carry-inspect.process",
-              "work-thread.carry-select.process",
-              "work-thread.carry-prune.process"
+              "work-thread.carry-inspect.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -13545,11 +12807,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "work-thread.prune.process",
-              "work-thread.select.process",
-              "work-thread.carry-inspect.process",
-              "work-thread.carry-select.process",
-              "work-thread.carry-prune.process"
+              "work-thread.carry-inspect.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -13584,11 +12842,11 @@
         ]
       },
       "effects": {
+        "read_only": false,
         "destructive": true,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -13617,10 +12875,6 @@
         }
       },
       "conformance": [
-        "work-thread.prune.process",
-        "work-thread.select.process",
-        "work-thread.carry-inspect.process",
-        "work-thread.carry-select.process",
         "work-thread.carry-prune.process"
       ],
       "external_consumption": {
@@ -13631,10 +12885,6 @@
             "scope": "local-only decision-point carry inspect",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "work-thread.prune.process",
-              "work-thread.select.process",
-              "work-thread.carry-inspect.process",
-              "work-thread.carry-select.process",
               "work-thread.carry-prune.process"
             ],
             "migration_dependency": "#2044"
@@ -13644,10 +12894,6 @@
             "scope": "local-only decision-point carry select",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "work-thread.prune.process",
-              "work-thread.select.process",
-              "work-thread.carry-inspect.process",
-              "work-thread.carry-select.process",
               "work-thread.carry-prune.process"
             ],
             "migration_dependency": "#2044"
@@ -13657,10 +12903,6 @@
             "scope": "local-only decision-point carry prune",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "work-thread.prune.process",
-              "work-thread.select.process",
-              "work-thread.carry-inspect.process",
-              "work-thread.carry-select.process",
               "work-thread.carry-prune.process"
             ],
             "migration_dependency": "#2044"
@@ -13670,10 +12912,6 @@
             "scope": "local-only work-thread prune",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "work-thread.prune.process",
-              "work-thread.select.process",
-              "work-thread.carry-inspect.process",
-              "work-thread.carry-select.process",
               "work-thread.carry-prune.process"
             ],
             "migration_dependency": "#2044"
@@ -13683,10 +12921,6 @@
             "scope": "target root validation",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "work-thread.prune.process",
-              "work-thread.select.process",
-              "work-thread.carry-inspect.process",
-              "work-thread.carry-select.process",
               "work-thread.carry-prune.process"
             ],
             "migration_dependency": "#2044"
@@ -13696,10 +12930,6 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "work-thread.prune.process",
-              "work-thread.select.process",
-              "work-thread.carry-inspect.process",
-              "work-thread.carry-select.process",
               "work-thread.carry-prune.process"
             ],
             "migration_dependency": "#2044"
@@ -13735,11 +12965,11 @@
         ]
       },
       "effects": {
-        "destructive": true,
-        "idempotent": true,
         "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -13768,11 +12998,7 @@
         }
       },
       "conformance": [
-        "work-thread.prune.process",
-        "work-thread.select.process",
-        "work-thread.carry-inspect.process",
-        "work-thread.carry-select.process",
-        "work-thread.carry-prune.process"
+        "work-thread.carry-select.process"
       ],
       "external_consumption": {
         "status": "internal",
@@ -13782,11 +13008,7 @@
             "scope": "local-only decision-point carry inspect",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "work-thread.prune.process",
-              "work-thread.select.process",
-              "work-thread.carry-inspect.process",
-              "work-thread.carry-select.process",
-              "work-thread.carry-prune.process"
+              "work-thread.carry-select.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -13795,11 +13017,7 @@
             "scope": "local-only decision-point carry select",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "work-thread.prune.process",
-              "work-thread.select.process",
-              "work-thread.carry-inspect.process",
-              "work-thread.carry-select.process",
-              "work-thread.carry-prune.process"
+              "work-thread.carry-select.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -13808,11 +13026,7 @@
             "scope": "local-only decision-point carry prune",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "work-thread.prune.process",
-              "work-thread.select.process",
-              "work-thread.carry-inspect.process",
-              "work-thread.carry-select.process",
-              "work-thread.carry-prune.process"
+              "work-thread.carry-select.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -13821,11 +13035,7 @@
             "scope": "local-only work-thread prune",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "work-thread.prune.process",
-              "work-thread.select.process",
-              "work-thread.carry-inspect.process",
-              "work-thread.carry-select.process",
-              "work-thread.carry-prune.process"
+              "work-thread.carry-select.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -13834,11 +13044,7 @@
             "scope": "target root validation",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "work-thread.prune.process",
-              "work-thread.select.process",
-              "work-thread.carry-inspect.process",
-              "work-thread.carry-select.process",
-              "work-thread.carry-prune.process"
+              "work-thread.carry-select.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -13847,11 +13053,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "work-thread.prune.process",
-              "work-thread.select.process",
-              "work-thread.carry-inspect.process",
-              "work-thread.carry-select.process",
-              "work-thread.carry-prune.process"
+              "work-thread.carry-select.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -13886,11 +13088,11 @@
         ]
       },
       "effects": {
+        "read_only": false,
         "destructive": true,
         "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -13919,11 +13121,7 @@
         }
       },
       "conformance": [
-        "work-thread.prune.process",
-        "work-thread.select.process",
-        "work-thread.carry-inspect.process",
-        "work-thread.carry-select.process",
-        "work-thread.carry-prune.process"
+        "work-thread.prune.process"
       ],
       "external_consumption": {
         "status": "internal",
@@ -13933,11 +13131,7 @@
             "scope": "local-only decision-point carry inspect",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "work-thread.prune.process",
-              "work-thread.select.process",
-              "work-thread.carry-inspect.process",
-              "work-thread.carry-select.process",
-              "work-thread.carry-prune.process"
+              "work-thread.prune.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -13946,11 +13140,7 @@
             "scope": "local-only decision-point carry select",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "work-thread.prune.process",
-              "work-thread.select.process",
-              "work-thread.carry-inspect.process",
-              "work-thread.carry-select.process",
-              "work-thread.carry-prune.process"
+              "work-thread.prune.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -13959,11 +13149,7 @@
             "scope": "local-only decision-point carry prune",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "work-thread.prune.process",
-              "work-thread.select.process",
-              "work-thread.carry-inspect.process",
-              "work-thread.carry-select.process",
-              "work-thread.carry-prune.process"
+              "work-thread.prune.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -13972,11 +13158,7 @@
             "scope": "local-only work-thread prune",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "work-thread.prune.process",
-              "work-thread.select.process",
-              "work-thread.carry-inspect.process",
-              "work-thread.carry-select.process",
-              "work-thread.carry-prune.process"
+              "work-thread.prune.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -13985,11 +13167,7 @@
             "scope": "target root validation",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "work-thread.prune.process",
-              "work-thread.select.process",
-              "work-thread.carry-inspect.process",
-              "work-thread.carry-select.process",
-              "work-thread.carry-prune.process"
+              "work-thread.prune.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -13998,11 +13176,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "work-thread.prune.process",
-              "work-thread.select.process",
-              "work-thread.carry-inspect.process",
-              "work-thread.carry-select.process",
-              "work-thread.carry-prune.process"
+              "work-thread.prune.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -14037,11 +13211,11 @@
         ]
       },
       "effects": {
-        "destructive": true,
-        "idempotent": true,
         "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -14070,11 +13244,7 @@
         }
       },
       "conformance": [
-        "work-thread.prune.process",
-        "work-thread.select.process",
-        "work-thread.carry-inspect.process",
-        "work-thread.carry-select.process",
-        "work-thread.carry-prune.process"
+        "work-thread.select.process"
       ],
       "external_consumption": {
         "status": "internal",
@@ -14084,11 +13254,7 @@
             "scope": "local-only decision-point carry inspect",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "work-thread.prune.process",
-              "work-thread.select.process",
-              "work-thread.carry-inspect.process",
-              "work-thread.carry-select.process",
-              "work-thread.carry-prune.process"
+              "work-thread.select.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -14097,11 +13263,7 @@
             "scope": "local-only decision-point carry select",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "work-thread.prune.process",
-              "work-thread.select.process",
-              "work-thread.carry-inspect.process",
-              "work-thread.carry-select.process",
-              "work-thread.carry-prune.process"
+              "work-thread.select.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -14110,11 +13272,7 @@
             "scope": "local-only decision-point carry prune",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "work-thread.prune.process",
-              "work-thread.select.process",
-              "work-thread.carry-inspect.process",
-              "work-thread.carry-select.process",
-              "work-thread.carry-prune.process"
+              "work-thread.select.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -14123,11 +13281,7 @@
             "scope": "local-only work-thread prune",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "work-thread.prune.process",
-              "work-thread.select.process",
-              "work-thread.carry-inspect.process",
-              "work-thread.carry-select.process",
-              "work-thread.carry-prune.process"
+              "work-thread.select.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -14136,11 +13290,7 @@
             "scope": "target root validation",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "work-thread.prune.process",
-              "work-thread.select.process",
-              "work-thread.carry-inspect.process",
-              "work-thread.carry-select.process",
-              "work-thread.carry-prune.process"
+              "work-thread.select.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -14149,11 +13299,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "work-thread.prune.process",
-              "work-thread.select.process",
-              "work-thread.carry-inspect.process",
-              "work-thread.carry-select.process",
-              "work-thread.carry-prune.process"
+              "work-thread.select.process"
             ],
             "migration_dependency": "#2044"
           }

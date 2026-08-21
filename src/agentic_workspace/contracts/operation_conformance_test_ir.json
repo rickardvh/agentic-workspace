@@ -147,13 +147,21 @@
   },
   "external_readiness": {
     "operations": [
-      {
-        "operation_id": "config.report",
-        "valid_input": {},
-        "runtime_exception_revision": "github-2044-closure:config.report@pr-2256",
-        "case_exceptions": {}
+    {
+      "operation_id": "config.report",
+      "valid_input": {},
+      "runtime_exception_revision": "github-2044-closure:config.report@pr-2256",
+      "case_exceptions": {}
+    },
+    {
+      "operation_id": "instructions.explain",
+      "valid_input": {
+        "changed": ["src/auth/login.py"]
       },
-      {
+      "runtime_exception_revision": "github-2639:instructions.explain@pr-2627",
+      "case_exceptions": {}
+    },
+    {
         "operation_id": "delegation-outcome.append",
         "valid_input": {
           "delegation_target": "external-conformance",
@@ -1252,6 +1260,99 @@
           "tests/test_generated_command_package_proof_runner.py::test_generated_typescript_conformance_cases_come_from_contract_artifacts remains as conformance-registry projection coverage, not behavior proof"
         ],
         "rationale": "This case remains wrapper-smoke because its current acceptance is cross-target CLI parity for generated Memory transport and stable JSON fields. Composite parity assumes primitive executor behavior is tested by primitive cases, and a later TypeScript function target should promote this to direct operation conformance when both direct function adapters are available."
+      }
+    },
+    {
+      "id": "instructions.explain.progressive-disclosure.success",
+      "title": "Scoped instruction explanation preserves progressive disclosure across generated targets",
+      "behavioral_class": "success",
+      "operation_ref": {
+        "package_id": "root-workspace",
+        "operation_id": "instructions.explain",
+        "operation_path": "operations/instructions.explain.json",
+        "conformance_ref": "instructions.explain.process"
+      },
+      "artifacts": [
+        {
+          "artifact_id": "root-workspace.instructions-explain.python",
+          "target": "python",
+          "adapter_id": "python.function",
+          "proof_role": "operation-conformance",
+          "source_ref": "command_package_ir:root-workspace/instructions",
+          "wrapper_refs": ["instructions.operations.cli"]
+        },
+        {
+          "artifact_id": "root-workspace.instructions-explain.typescript",
+          "target": "typescript",
+          "adapter_id": "typescript.function",
+          "proof_role": "operation-conformance",
+          "source_ref": "command_package_ir:root-workspace/instructions",
+          "wrapper_refs": ["instructions.operations.cli"]
+        }
+      ],
+      "schema_refs": {
+        "operation_contract": "operations/instructions.explain.json",
+        "input": ["scoped_instruction_operation_input.schema.json"],
+        "output": ["scoped_instruction_operation_result.schema.json"]
+      },
+      "composition": {
+        "case_focus": "The generated operation loads matching guidance while leaving an irrelevant Markdown body unloaded.",
+        "assumes_primitives": ["workspace.target-root.resolve", "instructions.execute", "output.emit"],
+        "reuses_case_ids": []
+      },
+      "targets": [
+        {"kind": "python", "mode": "run"},
+        {"kind": "typescript", "mode": "run"}
+      ],
+      "input": {
+        "json": {"target": ".", "changed": ["src/auth/login.py"], "format": "json"},
+        "argv": ["instructions", "explain", "--target", ".", "--changed", "src/auth/login.py", "--format", "json"],
+        "fixture_id": "scoped-instructions",
+        "fixture_files": {
+          ".git/.keep": "",
+          ".agentic-workspace/instructions/auth.md": "---\npaths:\n  - src/auth/**\n---\n# Auth\n",
+          ".agentic-workspace/instructions/docs.md": "---\npaths:\n  - docs/**\n---\n# Docs\n"
+        }
+      },
+      "expected": {
+        "exit_code": 0,
+        "result": {
+          "format": "json",
+          "selected_fields": {
+            "operation_id": "instructions.explain",
+            "applicable_count": 1,
+            "progressive_disclosure.irrelevant_bodies_loaded": 0
+          }
+        },
+        "stdout": {
+          "format": "json",
+          "selected_fields": {
+            "operation_id": "instructions.explain",
+            "applicable_count": 1,
+            "progressive_disclosure.irrelevant_bodies_loaded": 0
+          }
+        },
+        "stderr": {"format": "none", "allow_non_empty": false},
+        "parity": {
+          "compare": ["exit_code", "selected canonical result fields", "structured error absence"],
+          "normalization": ["ignore target-specific path separators", "compare declared selected fields instead of full payload ordering"]
+        }
+      },
+      "freshness": {
+        "source_refs": [
+          "src/agentic_workspace/contracts/command_package_ir.json",
+          "src/agentic_workspace/contracts/conformance/instructions.explain.process.json"
+        ],
+        "stale_when": [
+          "instructions.explain operation or primitive sequence changes",
+          "progressive-disclosure result fields change",
+          "target matrix gains or loses a required generated target"
+        ]
+      },
+      "migration": {
+        "replaces_handwritten_tests": ["Python/TypeScript instruction explanation parity is represented by this operation IR case."],
+        "retain_handwritten_tests": ["frontmatter parsing and instruction-program semantic unit tests"],
+        "rationale": "Generated Python and TypeScript operation callables consume the same operation contract and result schema while the scoped instruction module remains the explicit domain semantic owner."
       }
     },
     {

@@ -588,6 +588,54 @@
       },
       "status": "generated"
     },
+    "instructions": {
+      "command": {
+        "command_manifest": "cli_commands.json",
+        "name": "instructions",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-workspace",
+        "subcommands": [
+          "list",
+          "new",
+          "check",
+          "explain",
+          "migrate"
+        ]
+      },
+      "conformance_refs": [
+        "instructions.list.process",
+        "instructions.create.process",
+        "instructions.check.process",
+        "instructions.explain.process",
+        "instructions.migrate.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "id": "instructions.operations.cli",
+      "operation_id": "instructions.explain",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.target-root.resolve",
+          "instructions.execute",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [
+          "scoped_instruction_operation_input.schema.json"
+        ],
+        "output": [
+          "scoped_instruction_operation_result.schema.json"
+        ]
+      },
+      "status": "generated"
+    },
     "memory": {
       "command": {
         "command_manifest": "cli_commands.json",

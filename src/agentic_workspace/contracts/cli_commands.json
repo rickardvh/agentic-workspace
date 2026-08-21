@@ -30,6 +30,84 @@
     },
     {
       "audience": "ordinary_host_repo",
+      "classification_note": "target-neutral scoped Markdown instruction authoring and inspection",
+      "help": "Create, validate, and explain scoped Markdown instructions through generated operations.",
+      "mutates_state": true,
+      "name": "instructions",
+      "options": [],
+      "role": "core_context_router",
+      "subcommand_dest": "instructions_command",
+      "subcommands": [
+        {
+          "audience": "ordinary_host_repo",
+          "classification_note": "progressive-disclosure instruction inventory",
+          "help": "List scoped instructions without loading irrelevant bodies.",
+          "mutates_state": false,
+          "name": "list",
+          "options": [
+            {"flags": ["--target"], "help": "Target repository path. Defaults to current directory.", "name": "target"}
+          ],
+          "role": "core_context_router",
+          "uses_option_groups": ["format"]
+        },
+        {
+          "audience": "ordinary_host_repo",
+          "classification_note": "no-overwrite instruction scaffold creation",
+          "help": "Scaffold one global or path-scoped Markdown instruction.",
+          "mutates_state": true,
+          "name": "new",
+          "options": [
+            {"flags": ["--name"], "help": "Lowercase instruction identity used as the filename stem.", "name": "name", "required": true},
+            {"action": "append", "default": [], "flags": ["--paths"], "help": "Repository-relative applicability pattern. Repeat for multiple patterns.", "name": "paths"},
+            {"flags": ["--target"], "help": "Target repository path. Defaults to current directory.", "name": "target"}
+          ],
+          "role": "core_context_router",
+          "uses_option_groups": ["format"]
+        },
+        {
+          "audience": "ordinary_host_repo",
+          "classification_note": "static instruction validation",
+          "help": "Validate instruction syntax and references without executing checks.",
+          "mutates_state": false,
+          "name": "check",
+          "options": [
+            {"flags": ["--target"], "help": "Target repository path. Defaults to current directory.", "name": "target"}
+          ],
+          "role": "core_context_router",
+          "uses_option_groups": ["format"]
+        },
+        {
+          "audience": "ordinary_host_repo",
+          "classification_note": "task-scoped instruction applicability explanation",
+          "help": "Explain task-specific applicability in repository vocabulary.",
+          "mutates_state": false,
+          "name": "explain",
+          "options": [
+            {"default": "", "flags": ["--task"], "help": "Optional task text used during applicability explanation.", "name": "task"},
+            {"action": "append", "default": [], "flags": ["--changed"], "help": "Changed or target path. Repeat for multiple paths.", "name": "changed"},
+            {"action": "store_true", "flags": ["--verbose"], "help": "Include the compiled instruction program.", "name": "verbose"},
+            {"flags": ["--target"], "help": "Target repository path. Defaults to current directory.", "name": "target"}
+          ],
+          "role": "core_context_router",
+          "uses_option_groups": ["format"]
+        },
+        {
+          "audience": "ordinary_host_repo",
+          "classification_note": "non-destructive static-instruction migration advice",
+          "help": "Give non-destructive incremental migration guidance.",
+          "mutates_state": false,
+          "name": "migrate",
+          "options": [
+            {"flags": ["--from"], "help": "Repository-relative instruction source to inspect.", "name": "source", "required": true},
+            {"flags": ["--target"], "help": "Target repository path. Defaults to current directory.", "name": "target"}
+          ],
+          "role": "core_context_router",
+          "uses_option_groups": ["format"]
+        }
+      ]
+    },
+    {
+      "audience": "ordinary_host_repo",
       "classification_note": "compact active planning and handoff state",
       "help": "Show the active execution summary from the planning module.",
       "mutates_state": false,

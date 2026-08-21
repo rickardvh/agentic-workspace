@@ -89,6 +89,36 @@
       "path": "operations/agent-guidance.delete.json"
     },
     {
+      "command": "instructions",
+      "id": "instructions.list",
+      "migration_status": "runtime-consumed",
+      "path": "operations/instructions.list.json"
+    },
+    {
+      "command": "instructions",
+      "id": "instructions.create",
+      "migration_status": "runtime-consumed",
+      "path": "operations/instructions.create.json"
+    },
+    {
+      "command": "instructions",
+      "id": "instructions.check",
+      "migration_status": "runtime-consumed",
+      "path": "operations/instructions.check.json"
+    },
+    {
+      "command": "instructions",
+      "id": "instructions.explain",
+      "migration_status": "runtime-consumed",
+      "path": "operations/instructions.explain.json"
+    },
+    {
+      "command": "instructions",
+      "id": "instructions.migrate",
+      "migration_status": "runtime-consumed",
+      "path": "operations/instructions.migrate.json"
+    },
+    {
       "command": "autopilot",
       "id": "autopilot.run",
       "migration_status": "runtime-consumed",

@@ -10123,6 +10123,105 @@
           "status": "generated"
         },
         {
+          "adapter_id": "instructions.operations.cli",
+          "command": {
+            "manifest_ref": "cli_commands.json",
+            "name": "instructions"
+          },
+          "conformance_refs": [
+            "instructions.list.process",
+            "instructions.create.process",
+            "instructions.check.process",
+            "instructions.explain.process",
+            "instructions.migrate.process"
+          ],
+          "effect_hints": {
+            "destructive": false,
+            "idempotent": true,
+            "read_only": true,
+            "requires_preflight_gate": false,
+            "writes_repo_state": false
+          },
+          "interface": {
+            "help": "Create, validate, and explain scoped Markdown instructions through generated operations.",
+            "name": "instructions",
+            "options": [],
+            "subcommand_dest": "instructions_command",
+            "subcommands_required": true,
+            "subcommands": [
+              {
+                "help": "List scoped instructions without loading irrelevant bodies.",
+                "name": "list",
+                "operation_ref": {"id": "instructions.list", "path": "operations/instructions.list.json"},
+                "options": [
+                  {"flags": ["--target"], "help": "Target repository path. Defaults to current directory.", "name": "target"},
+                  {"choices": ["text", "json"], "default": "text", "flags": ["--format"], "help": "Output format.", "name": "format"}
+                ]
+              },
+              {
+                "help": "Scaffold one global or path-scoped Markdown instruction.",
+                "name": "new",
+                "operation_ref": {"id": "instructions.create", "path": "operations/instructions.create.json"},
+                "options": [
+                  {"flags": ["--name"], "help": "Lowercase instruction identity used as the filename stem.", "name": "name", "required": true},
+                  {"action": "append", "default": [], "flags": ["--paths"], "help": "Repository-relative applicability pattern. Repeat for multiple patterns.", "name": "paths"},
+                  {"flags": ["--target"], "help": "Target repository path. Defaults to current directory.", "name": "target"},
+                  {"choices": ["text", "json"], "default": "text", "flags": ["--format"], "help": "Output format.", "name": "format"}
+                ]
+              },
+              {
+                "help": "Validate instruction syntax and references without executing checks.",
+                "name": "check",
+                "operation_ref": {"id": "instructions.check", "path": "operations/instructions.check.json"},
+                "options": [
+                  {"flags": ["--target"], "help": "Target repository path. Defaults to current directory.", "name": "target"},
+                  {"choices": ["text", "json"], "default": "text", "flags": ["--format"], "help": "Output format.", "name": "format"}
+                ]
+              },
+              {
+                "help": "Explain task-specific applicability in repository vocabulary.",
+                "name": "explain",
+                "operation_ref": {"id": "instructions.explain", "path": "operations/instructions.explain.json"},
+                "options": [
+                  {"default": "", "flags": ["--task"], "help": "Optional task text used during applicability explanation.", "name": "task"},
+                  {"action": "append", "default": [], "flags": ["--changed"], "help": "Changed or target path. Repeat for multiple paths.", "name": "changed"},
+                  {"action": "store_true", "flags": ["--verbose"], "help": "Include the compiled instruction program.", "name": "verbose"},
+                  {"flags": ["--target"], "help": "Target repository path. Defaults to current directory.", "name": "target"},
+                  {"choices": ["text", "json"], "default": "text", "flags": ["--format"], "help": "Output format.", "name": "format"}
+                ]
+              },
+              {
+                "help": "Give non-destructive incremental migration guidance.",
+                "name": "migrate",
+                "operation_ref": {"id": "instructions.migrate", "path": "operations/instructions.migrate.json"},
+                "options": [
+                  {"flags": ["--from"], "help": "Repository-relative instruction source to inspect.", "name": "source", "required": true},
+                  {"flags": ["--target"], "help": "Target repository path. Defaults to current directory.", "name": "target"},
+                  {"choices": ["text", "json"], "default": "text", "flags": ["--format"], "help": "Output format.", "name": "format"}
+                ]
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "instructions.explain",
+            "path": "operations/instructions.explain.json"
+          },
+          "projection_boundary": {
+            "runtime_owned": ["target root resolution", "scoped instruction semantics", "output emission"],
+            "target_specific": ["parser library", "package entrypoint wiring", "help text layout", "test container image"],
+            "universal": ["command identity", "nested subcommand option semantics", "operation reference", "runtime primitive reference", "effect hints", "schema refs", "conformance refs"]
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": ["workspace.target-root.resolve", "instructions.execute", "output.emit"]
+          },
+          "schemas": {
+            "input": ["scoped_instruction_operation_input.schema.json"],
+            "output": ["scoped_instruction_operation_result.schema.json"]
+          },
+          "status": "generated"
+        },
+        {
           "adapter_id": "agent-guidance.lifecycle.cli",
           "command": {
             "manifest_ref": "cli_commands.json",
@@ -14962,6 +15061,31 @@
               "name": "dry_run"
             },
             {
+              "arg": "instructions_command",
+              "default": null,
+              "name": "instructions_command"
+            },
+            {
+              "arg": "name",
+              "default": null,
+              "name": "name"
+            },
+            {
+              "arg": "paths",
+              "default": [],
+              "name": "paths"
+            },
+            {
+              "arg": "task",
+              "default": "",
+              "name": "task"
+            },
+            {
+              "arg": "changed",
+              "default": [],
+              "name": "changed"
+            },
+            {
               "arg": "agent_guidance_command",
               "default": null,
               "name": "agent_guidance_command"
@@ -15106,6 +15230,11 @@
             "assignment.reassign",
             "assignment.reject",
             "assignment.repair",
+            "instructions.list",
+            "instructions.create",
+            "instructions.check",
+            "instructions.explain",
+            "instructions.migrate",
             "agent-guidance.promote",
             "agent-guidance.edit",
             "agent-guidance.merge",

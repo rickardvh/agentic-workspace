@@ -1790,6 +1790,7 @@ function domainPrimitive(primitive, values, args, operationId) {
   if (primitive === 'assignment.lifecycle.apply') return assignmentLifecycleApply(values, operationId);
   if (primitive === 'correction.event.apply') return correctionEventApply(values, operationId);
   if (primitive === 'guidance.lifecycle.apply') return guidanceLifecycleApply(values, operationId);
+  if (primitive === 'instructions.execute') return instructionsExecute(values, operationId);
   if (primitive === 'toml.table.counts') return tomlTableCounts(values, args);
   throw new RuntimeError(`unsupported native TypeScript primitive: ${primitive}`);
 }
@@ -2156,7 +2157,7 @@ function correctionEventApply(values, operationId) {
     ) continue;
     args.push(`--${key.replaceAll('_', '-')}`, String(value));
   }
-  const completed = spawnSync('uv', args, { cwd: targetRoot, encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
+  const completed = spawnSync('uv', args, { cwd: dirname(dirname(scriptPath)), encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
   const text = completed.stdout || completed.stderr || '';
   try {
     const payload = JSON.parse(text);
@@ -2216,6 +2217,43 @@ function guidanceLifecycleApply(values, operationId) {
     return completed.status === 0
       ? payload
       : blocked('authoritative-python-boundary-failed', JSON.stringify(payload).slice(0, 500));
+  } catch {
+    return blocked('authoritative-python-boundary-non-json', text.slice(0, 500) || 'Install uv/python and retry through AW.');
+  }
+}
+
+function instructionsExecute(values, operationId) {
+  const targetRoot = resolve(String(values.target_root ?? values.target ?? '.'));
+  const localScriptPath = resolve(process.cwd(), 'scripts/run_agentic_workspace.py');
+  const packageScriptPath = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../scripts/run_agentic_workspace.py');
+  const scriptPath = existsSync(localScriptPath) ? localScriptPath : packageScriptPath;
+  const operation = String(operationId).replace(/^instructions\./, '').replace(/^create$/, 'new');
+  const blocked = (reason, recovery) => ({
+    kind: 'agentic-workspace/scoped-instruction-error/v1',
+    operation_id: operationId,
+    status: 'failed',
+    message: recovery,
+    exit_status: 2,
+    reason,
+  });
+  if (!existsSync(scriptPath)) return blocked('authoritative-python-boundary-unavailable', 'Install the Python AW runtime to execute scoped instruction semantics.');
+  const args = ['run', 'python', scriptPath, 'instructions', operation, '--target', targetRoot, '--format', 'json'];
+  for (const [key, value] of Object.entries(values)) {
+    if (key.startsWith('_') || ['target', 'target_root', 'format', 'operation_id', 'instructions_command'].includes(key) || value === undefined || value === null || value === '' || value === false) continue;
+    const flag = key === 'source' ? '--from' : `--${key.replaceAll('_', '-')}`;
+    if (Array.isArray(value)) {
+      for (const item of value) args.push(flag, String(item));
+    } else if (value === true) {
+      args.push(flag);
+    } else {
+      args.push(flag, String(value));
+    }
+  }
+  const completed = spawnSync('uv', args, { cwd: targetRoot, encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
+  const text = completed.stdout || completed.stderr || '';
+  try {
+    const payload = JSON.parse(text);
+    return payload;
   } catch {
     return blocked('authoritative-python-boundary-non-json', text.slice(0, 500) || 'Install uv/python and retry through AW.');
   }

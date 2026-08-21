@@ -644,6 +644,36 @@
     },
     {
       "adapter_kind": "process",
+      "id": "instructions.list.process",
+      "operation_id": "instructions.list",
+      "path": "conformance/instructions.list.process.json"
+    },
+    {
+      "adapter_kind": "process",
+      "id": "instructions.create.process",
+      "operation_id": "instructions.create",
+      "path": "conformance/instructions.create.process.json"
+    },
+    {
+      "adapter_kind": "process",
+      "id": "instructions.check.process",
+      "operation_id": "instructions.check",
+      "path": "conformance/instructions.check.process.json"
+    },
+    {
+      "adapter_kind": "process",
+      "id": "instructions.explain.process",
+      "operation_id": "instructions.explain",
+      "path": "conformance/instructions.explain.process.json"
+    },
+    {
+      "adapter_kind": "process",
+      "id": "instructions.migrate.process",
+      "operation_id": "instructions.migrate",
+      "path": "conformance/instructions.migrate.process.json"
+    },
+    {
+      "adapter_kind": "process",
       "id": "agent-guidance.promote.process",
       "operation_id": "agent-guidance.promote",
       "path": "conformance/agent-guidance.promote.process.json"

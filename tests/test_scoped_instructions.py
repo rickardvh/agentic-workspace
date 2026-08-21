@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from agentic_workspace.cli import _run_instructions_cli as run_cli
+from agentic_workspace.cli import main as run_cli
 from agentic_workspace.operating_decision import CONTEXT_AUTHORITY_REGISTRY, _resolve_context_authority_source, compile_operating_decision
 from agentic_workspace.scoped_instructions import (
     INSTRUCTION_DIR,
@@ -202,20 +202,34 @@ def test_scaffold_is_minimal_and_never_overwrites(tmp_path: Path) -> None:
 
 
 def test_cli_create_check_explain_and_migrate_are_one_coherent_surface(tmp_path: Path, capsys) -> None:
-    assert run_cli(["new", "auth", "--paths", "src/auth/**", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert run_cli(["instructions", "new", "--name", "auth", "--paths", "src/auth/**", "--target", str(tmp_path), "--format", "json"]) == 0
     created = json.loads(capsys.readouterr().out)
     assert created["status"] == "created"
-    assert run_cli(["check", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert run_cli(["instructions", "check", "--target", str(tmp_path), "--format", "json"]) == 0
     checked = json.loads(capsys.readouterr().out)
     assert checked["status"] == "valid"
     assert (
-        run_cli(["explain", "--task", "Update auth", "--changed", "src/auth/token.py", "--target", str(tmp_path), "--format", "json"]) == 0
+        run_cli(
+            [
+                "instructions",
+                "explain",
+                "--task",
+                "Update auth",
+                "--changed",
+                "src/auth/token.py",
+                "--target",
+                str(tmp_path),
+                "--format",
+                "json",
+            ]
+        )
+        == 0
     )
     explained = json.loads(capsys.readouterr().out)
     assert explained["instructions"][0]["reason"] == "src/auth/token.py matches src/auth/**"
 
     (tmp_path / "AGENTS.md").write_text("# Adapter\n\n## Auth\n\nGuidance\n", encoding="utf-8")
-    assert run_cli(["migrate", "--from", "AGENTS.md", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert run_cli(["instructions", "migrate", "--from", "AGENTS.md", "--target", str(tmp_path), "--format", "json"]) == 0
     migrated = json.loads(capsys.readouterr().out)
     assert migrated["candidate_headings"] == ["Auth"]
     assert migrated["writes_applied"] is False

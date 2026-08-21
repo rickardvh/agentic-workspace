@@ -31,6 +31,13 @@
         "contract_owner": "src/agentic_workspace/contracts",
         "current_contract_root": "src/agentic_workspace/contracts/operations",
         "future_contract_root": "modules/workspace/contracts",
+        "id": "workspace-instructions",
+        "operation_id_prefix": "instructions."
+      },
+      {
+        "contract_owner": "src/agentic_workspace/contracts",
+        "current_contract_root": "src/agentic_workspace/contracts/operations",
+        "future_contract_root": "modules/workspace/contracts",
         "id": "workspace",
         "operation_id_prefix": "workspace."
       },
@@ -1777,6 +1784,16 @@
       "taxonomy_tier": "tier-2-package-domain",
       "tier_owner": "workspace guidance lifecycle operation owner",
       "tier_reason": "Guidance lifecycle admission owns workspace-specific promotion authority, destination owner admission, revision guards, lineage preservation, and local-only mutation receipts."
+    },
+    {
+      "conformance_ref": "instructions.list.process, instructions.create.process, instructions.check.process, instructions.explain.process, instructions.migrate.process",
+      "generic_behavior_audit": "Generated parser, operation IR, Python/TypeScript clients, and conformance own the target-neutral interface; scoped_instructions.py retains Markdown parsing, compilation, safe scaffolding, and migration advice semantics.",
+      "id": "instructions.execute",
+      "migration_path": "Split stable Markdown parsing and deterministic scaffold rendering into Tier 1 primitives only if another package needs to execute them independently of the workspace instruction owner.",
+      "summary": "Execute one scoped Markdown instruction authoring or inspection operation through its semantic owner.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "workspace scoped instruction operation owner",
+      "tier_reason": "Repository instruction discovery, capability resolution, and safe write boundaries depend on the current workspace and remain package-domain behavior."
     }
   ],
   "schema_version": "agentic-workspace/operation-primitives/v1",

@@ -105,6 +105,14 @@ OPERATION_RESOURCE_OUTPUTS = {
     )
 }
 SCHEMA_RESOURCE_OUTPUTS = {
+    REPO_ROOT / "generated/workspace/python/_contracts/scoped_instruction_operation_input.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/scoped_instruction_operation_input.schema.json",
+    REPO_ROOT / "generated/workspace/python/_contracts/scoped_instruction_operation_result.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/scoped_instruction_operation_result.schema.json",
+    REPO_ROOT / "generated/workspace/typescript/resources/_contracts/scoped_instruction_operation_input.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/scoped_instruction_operation_input.schema.json",
+    REPO_ROOT / "generated/workspace/typescript/resources/_contracts/scoped_instruction_operation_result.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/scoped_instruction_operation_result.schema.json",
     REPO_ROOT / "generated/workspace/python/_contracts/evaluation_authority_refresh_input.schema.json": REPO_ROOT
     / "src/agentic_workspace/contracts/schemas/evaluation_authority_refresh_input.schema.json",
     REPO_ROOT / "generated/workspace/python/_contracts/evaluation_authority_refresh_result.schema.json": REPO_ROOT
@@ -279,6 +287,17 @@ def build_profile(ir: dict[str, object], *, repo_root: Path | None = None) -> di
                 contract_payload = (
                     json.loads((repo_root / contract_path).read_text(encoding="utf-8")) if repo_root is not None and contract_exists else {}
                 )
+                contract_effects = contract_payload.get("effects", {})
+                if isinstance(contract_effects, dict) and contract_effects:
+                    effects = contract_effects
+                operation_conformance = [
+                    conformance_id
+                    for conformance_id in conformance
+                    if conformance_id in conformance_by_id
+                    and conformance_by_id[conformance_id].get("operation_id") == ref["id"]
+                ]
+                if operation_conformance:
+                    conformance = operation_conformance
                 declared_schemas = command.get("schemas", {"input": [], "output": []})
                 schemas = {
                     "input": list(declared_schemas.get("input", [])) if isinstance(declared_schemas, dict) else [],

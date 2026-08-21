@@ -42,6 +42,8 @@ def execute_host_primitive(
         return _correction_event_apply(values=values, arguments=arguments, context=context)
     if primitive == "guidance.lifecycle.apply":
         return _guidance_lifecycle_apply(values=values, arguments=arguments, context=context)
+    if primitive == "instructions.execute":
+        return _instructions_execute(values=values, arguments=arguments, context=context)
     raise PrimitiveExecutionError(f"unsupported AW host primitive: {primitive!r}")
 
 
@@ -1477,6 +1479,15 @@ def _guidance_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, An
                 }
             ],
         }
+
+
+def _instructions_execute(*, values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> dict[str, Any]:
+    del context
+    target_root = Path(str(values.get("target_root") or values.get("target") or ".")).resolve()
+    operation_id = str(values.get("operation_id") or arguments.get("operation_id") or "")
+    from agentic_workspace.scoped_instructions import apply_instruction_operation
+
+    return apply_instruction_operation(target_root=target_root, operation_id=operation_id, values=values)
 
 
 def _emit_output(*, values: dict[str, Any], arguments: dict[str, Any] | None = None) -> str:

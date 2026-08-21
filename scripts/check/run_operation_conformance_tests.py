@@ -1740,7 +1740,7 @@ def _run_case_target(
         )
     adapter_id = str(artifact.get("adapter_id", "cli.process"))
     if target_kind == "python" and adapter_id == "python.function":
-        return _run_python_function_case(case=case, artifact=artifact)
+        return _run_python_function_case(case=case, artifact=artifact, temp_root=temp_root)
     if target_kind == "typescript" and adapter_id == "typescript.function":
         return _run_typescript_function_case(case=case, artifact=artifact, temp_root=temp_root, require_node=require_node)
     process_case = _case_process_fixture(case)
@@ -1786,7 +1786,9 @@ def _run_case_target(
     }
 
 
-def _run_python_function_case(*, case: Mapping[str, object], artifact: Mapping[str, object]) -> dict[str, object]:
+def _run_python_function_case(
+    *, case: Mapping[str, object], artifact: Mapping[str, object], temp_root: Path
+) -> dict[str, object]:
     operation_ref = case.get("operation_ref", {})
     if not isinstance(operation_ref, Mapping):
         return _function_result(case=case, artifact=artifact, state="fail", message="malformed operation_ref")
@@ -1795,7 +1797,21 @@ def _run_python_function_case(*, case: Mapping[str, object], artifact: Mapping[s
         return _function_result(
             case=case, artifact=artifact, state="unavailable", message="python.function artifact has no importable symbol"
         )
+    process_case = _case_process_fixture(case)
+    fixture_root = materialize_case_fixture(
+        case=process_case,
+        root=temp_root / str(case.get("id", "case")).replace(".", "-") / "python-function",
+    )
     function_case = _case_function_fixture(case)
+    if function_case.input_values.get("target") == ".":
+        function_case = OperationConformanceCase(
+            conformance_ref=function_case.conformance_ref,
+            label=function_case.label,
+            input_values={**function_case.input_values, "target": str(fixture_root)},
+            selected_fields=function_case.selected_fields,
+            expected_fields=function_case.expected_fields,
+            expected_error_contains=function_case.expected_error_contains,
+        )
     result, failures = run_function_conformance_case(case=function_case, target=function_target)
     return {
         "case_id": str(case.get("id", "")),

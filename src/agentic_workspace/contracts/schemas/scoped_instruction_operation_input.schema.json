@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/scoped_instruction_operation_input.schema.json",
+  "title": "Scoped instruction operation input",
+  "description": "Inputs shared by generated scoped Markdown instruction operations.",
+  "x-agentic-workspace-doc-role": "public-contract",
+  "type": "object",
+  "properties": {
+    "target": {"type": "string", "description": "Target repository path; defaults to the current directory."},
+    "format": {"enum": ["text", "json"], "description": "Requested command output format."},
+    "name": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$", "description": "Lowercase instruction identity used for scaffold creation."},
+    "paths": {"type": "array", "description": "Repository-relative applicability patterns for a new instruction.", "items": {"type": "string", "description": "One repository-relative path or glob."}},
+    "task": {"type": "string", "description": "Optional task text used when explaining applicability."},
+    "changed": {"type": "array", "description": "Changed or target paths used to evaluate applicability.", "items": {"type": "string", "description": "One repository-relative changed or target path."}},
+    "verbose": {"type": "boolean", "description": "Whether explanation output includes the compiled instruction program."},
+    "source": {"type": "string", "description": "Repository-relative static instruction source used for migration advice."}
+  },
+  "additionalProperties": false
+}

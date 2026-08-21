@@ -1439,6 +1439,7 @@ TYPESCRIPT_SUPPORTED_EXACT_PRIMITIVES = {
     "assignment.lifecycle.apply",
     "correction.event.apply",
     "guidance.lifecycle.apply",
+    "instructions.execute",
     "workspace.selection.resolve",
 }
 

@@ -1,19 +1,19 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:056539052044d91cd2e56595adfc565d196c5529c87ad9b08f881f61f5d1c25c",
+  "profile_fingerprint": "sha256:3f205b9a4902af13602b0a29820c8cb88bebba3d36dbe1099cc07f91e0eeb02d",
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",
-    "client_package": "0.41.0",
+    "client_package": "0.41.1",
     "runtime_protocol": "1.0.0",
     "python_package": {
       "name": "agentic-workspace",
-      "version": "0.41.0"
+      "version": "0.41.1"
     },
     "typescript_package": {
       "name": "@agentic-workspace/workspace-cli",
-      "version": "0.41.0"
+      "version": "0.41.1"
     }
   },
   "operations": {
@@ -233,15 +233,6 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
               "agent-guidance.delete.process"
             ],
             "migration_dependency": "#2044"
@@ -251,15 +242,6 @@
             "scope": "guidance lifecycle store writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
               "agent-guidance.delete.process"
             ],
             "migration_dependency": "#2044"
@@ -269,15 +251,6 @@
             "scope": "promotion authority resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
               "agent-guidance.delete.process"
             ],
             "migration_dependency": "#2044"
@@ -287,15 +260,6 @@
             "scope": "revision guard enforcement",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
               "agent-guidance.delete.process"
             ],
             "migration_dependency": "#2044"
@@ -305,15 +269,6 @@
             "scope": "mutation receipt emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
               "agent-guidance.delete.process"
             ],
             "migration_dependency": "#2044"
@@ -323,15 +278,6 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
               "agent-guidance.delete.process"
             ],
             "migration_dependency": "#2044"
@@ -832,16 +778,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.edit.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -850,16 +787,7 @@
             "scope": "guidance lifecycle store writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.edit.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -868,16 +796,7 @@
             "scope": "promotion authority resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.edit.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -886,16 +805,7 @@
             "scope": "revision guard enforcement",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.edit.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -904,16 +814,7 @@
             "scope": "mutation receipt emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.edit.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -922,16 +823,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.edit.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -1432,16 +1324,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.merge.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -1450,16 +1333,7 @@
             "scope": "guidance lifecycle store writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.merge.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -1468,16 +1342,7 @@
             "scope": "promotion authority resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.merge.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -1486,16 +1351,7 @@
             "scope": "revision guard enforcement",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.merge.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -1504,16 +1360,7 @@
             "scope": "mutation receipt emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.merge.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -1522,16 +1369,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.merge.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -2031,16 +1869,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.promote.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -2049,16 +1878,7 @@
             "scope": "guidance lifecycle store writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.promote.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -2067,16 +1887,7 @@
             "scope": "promotion authority resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.promote.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -2085,16 +1896,7 @@
             "scope": "revision guard enforcement",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.promote.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -2103,16 +1905,7 @@
             "scope": "mutation receipt emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.promote.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -2121,16 +1914,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.promote.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -2629,16 +2413,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.retire.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -2647,16 +2422,7 @@
             "scope": "guidance lifecycle store writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.retire.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -2665,16 +2431,7 @@
             "scope": "promotion authority resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.retire.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -2683,16 +2440,7 @@
             "scope": "revision guard enforcement",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.retire.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -2701,16 +2449,7 @@
             "scope": "mutation receipt emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.retire.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -2719,16 +2458,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.retire.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -3227,16 +2957,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.revalidate.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -3245,16 +2966,7 @@
             "scope": "guidance lifecycle store writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.revalidate.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -3263,16 +2975,7 @@
             "scope": "promotion authority resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.revalidate.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -3281,16 +2984,7 @@
             "scope": "revision guard enforcement",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.revalidate.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -3299,16 +2993,7 @@
             "scope": "mutation receipt emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.revalidate.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -3317,16 +3002,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.revalidate.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -3826,16 +3502,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.split.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -3844,16 +3511,7 @@
             "scope": "guidance lifecycle store writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.split.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -3862,16 +3520,7 @@
             "scope": "promotion authority resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.split.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -3880,16 +3529,7 @@
             "scope": "revision guard enforcement",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.split.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -3898,16 +3538,7 @@
             "scope": "mutation receipt emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.split.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -3916,16 +3547,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.split.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -4426,16 +4048,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.supersede.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -4444,16 +4057,7 @@
             "scope": "guidance lifecycle store writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.supersede.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -4462,16 +4066,7 @@
             "scope": "promotion authority resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.supersede.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -4480,16 +4075,7 @@
             "scope": "revision guard enforcement",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.supersede.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -4498,16 +4084,7 @@
             "scope": "mutation receipt emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.supersede.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -4516,16 +4093,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.supersede.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -5025,16 +4593,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.suppress.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -5043,16 +4602,7 @@
             "scope": "guidance lifecycle store writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.suppress.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -5061,16 +4611,7 @@
             "scope": "promotion authority resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.suppress.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -5079,16 +4620,7 @@
             "scope": "revision guard enforcement",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.suppress.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -5097,16 +4629,7 @@
             "scope": "mutation receipt emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.suppress.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -5115,16 +4638,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.suppress.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -5623,16 +5137,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.weaken.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -5641,16 +5146,7 @@
             "scope": "guidance lifecycle store writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.weaken.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -5659,16 +5155,7 @@
             "scope": "promotion authority resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.weaken.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -5677,16 +5164,7 @@
             "scope": "revision guard enforcement",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.weaken.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -5695,16 +5173,7 @@
             "scope": "mutation receipt emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.weaken.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -5713,16 +5182,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "agent-guidance.promote.process",
-              "agent-guidance.edit.process",
-              "agent-guidance.merge.process",
-              "agent-guidance.split.process",
-              "agent-guidance.suppress.process",
-              "agent-guidance.revalidate.process",
-              "agent-guidance.weaken.process",
-              "agent-guidance.supersede.process",
-              "agent-guidance.retire.process",
-              "agent-guidance.delete.process"
+              "agent-guidance.weaken.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -6268,16 +5728,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.admit.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -6286,16 +5737,7 @@
             "scope": "local assignment artifact writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.admit.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -6304,16 +5746,7 @@
             "scope": "current authority validation",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.admit.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -6322,16 +5755,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.admit.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -6929,16 +6353,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.cleanup.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -6947,16 +6362,7 @@
             "scope": "local assignment artifact writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.cleanup.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -6965,16 +6371,7 @@
             "scope": "current authority validation",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.cleanup.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -6983,16 +6380,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.cleanup.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -7562,16 +6950,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.close.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -7580,16 +6959,7 @@
             "scope": "local assignment artifact writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.close.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -7598,16 +6968,7 @@
             "scope": "current authority validation",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.close.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -7616,16 +6977,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.close.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -8195,16 +7547,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.export.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -8213,16 +7556,7 @@
             "scope": "local assignment artifact writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.export.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -8231,16 +7565,7 @@
             "scope": "current authority validation",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.export.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -8249,16 +7574,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.export.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -8828,16 +8144,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.import.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -8846,16 +8153,7 @@
             "scope": "local assignment artifact writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.import.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -8864,16 +8162,7 @@
             "scope": "current authority validation",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.import.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -8882,16 +8171,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.import.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -9461,16 +8741,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.integrate.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -9479,16 +8750,7 @@
             "scope": "local assignment artifact writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.integrate.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -9497,16 +8759,7 @@
             "scope": "current authority validation",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.integrate.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -9515,16 +8768,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.integrate.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -10094,16 +9338,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.override.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -10112,16 +9347,7 @@
             "scope": "local assignment artifact writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.override.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -10130,16 +9356,7 @@
             "scope": "current authority validation",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.override.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -10148,16 +9365,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.override.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -10727,16 +9935,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.reassign.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -10745,16 +9944,7 @@
             "scope": "local assignment artifact writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.reassign.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -10763,16 +9953,7 @@
             "scope": "current authority validation",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.reassign.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -10781,16 +9962,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.reassign.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -11360,16 +10532,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.reject.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -11378,16 +10541,7 @@
             "scope": "local assignment artifact writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.reject.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -11396,16 +10550,7 @@
             "scope": "current authority validation",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.reject.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -11414,16 +10559,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
-              "assignment.repair.process"
+              "assignment.reject.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -11993,15 +11129,6 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
               "assignment.repair.process"
             ],
             "migration_dependency": "#2044"
@@ -12011,15 +11138,6 @@
             "scope": "local assignment artifact writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
               "assignment.repair.process"
             ],
             "migration_dependency": "#2044"
@@ -12029,15 +11147,6 @@
             "scope": "current authority validation",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
               "assignment.repair.process"
             ],
             "migration_dependency": "#2044"
@@ -12047,15 +11156,6 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "assignment.admit.process",
-              "assignment.cleanup.process",
-              "assignment.close.process",
-              "assignment.export.process",
-              "assignment.import.process",
-              "assignment.integrate.process",
-              "assignment.override.process",
-              "assignment.reassign.process",
-              "assignment.reject.process",
               "assignment.repair.process"
             ],
             "migration_dependency": "#2044"
@@ -13221,11 +12321,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
-              "correction-event.prune-compact.process"
+              "correction-event.correct-dispute.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -13234,11 +12330,7 @@
             "scope": "local correction-event store writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
-              "correction-event.prune-compact.process"
+              "correction-event.correct-dispute.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -13247,11 +12339,7 @@
             "scope": "trusted authority receipt validation",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
-              "correction-event.prune-compact.process"
+              "correction-event.correct-dispute.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -13260,11 +12348,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
-              "correction-event.prune-compact.process"
+              "correction-event.correct-dispute.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -13885,10 +12969,6 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
               "correction-event.prune-compact.process"
             ],
             "migration_dependency": "#2044"
@@ -13898,10 +12978,6 @@
             "scope": "local correction-event store writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
               "correction-event.prune-compact.process"
             ],
             "migration_dependency": "#2044"
@@ -13911,10 +12987,6 @@
             "scope": "trusted authority receipt validation",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
               "correction-event.prune-compact.process"
             ],
             "migration_dependency": "#2044"
@@ -13924,10 +12996,6 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
               "correction-event.prune-compact.process"
             ],
             "migration_dependency": "#2044"
@@ -14564,11 +13632,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
-              "correction-event.prune-compact.process"
+              "correction-event.query.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -14577,11 +13641,7 @@
             "scope": "local correction-event store writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
-              "correction-event.prune-compact.process"
+              "correction-event.query.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -14590,11 +13650,7 @@
             "scope": "trusted authority receipt validation",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
-              "correction-event.prune-compact.process"
+              "correction-event.query.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -14603,11 +13659,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
-              "correction-event.prune-compact.process"
+              "correction-event.query.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -15258,11 +14310,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
-              "correction-event.prune-compact.process"
+              "correction-event.submit.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -15271,11 +14319,7 @@
             "scope": "local correction-event store writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
-              "correction-event.prune-compact.process"
+              "correction-event.submit.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -15284,11 +14328,7 @@
             "scope": "trusted authority receipt validation",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
-              "correction-event.prune-compact.process"
+              "correction-event.submit.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -15297,11 +14337,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
-              "correction-event.prune-compact.process"
+              "correction-event.submit.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -15937,11 +14973,7 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
-              "correction-event.prune-compact.process"
+              "correction-event.withdraw-supersede.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -15950,11 +14982,7 @@
             "scope": "local correction-event store writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
-              "correction-event.prune-compact.process"
+              "correction-event.withdraw-supersede.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -15963,11 +14991,7 @@
             "scope": "trusted authority receipt validation",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
-              "correction-event.prune-compact.process"
+              "correction-event.withdraw-supersede.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -15976,11 +15000,7 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process",
-              "correction-event.query.process",
-              "correction-event.correct-dispute.process",
-              "correction-event.withdraw-supersede.process",
-              "correction-event.prune-compact.process"
+              "correction-event.withdraw-supersede.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -20356,6 +19376,1768 @@
           }
         }
       }
+    },
+    "instructions.check": {
+      "identity": "instructions.check",
+      "version": "agentic-workspace/operation/v1",
+      "fingerprint": "sha256:4fb444c53ce8299dd1b59fae19cf8ecf2df46ec1df2deba920687264d2d51339",
+      "compatibility_fingerprint": "sha256:3b9651047753180ed94b079c17dd6f0cccd4e691aa2ae32aa63e1e8b08183409",
+      "contract": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "id": "instructions.check",
+        "command_surface": {
+          "command": "instructions",
+          "subcommand": "check",
+          "format_option": "format"
+        },
+        "summary": "Validate scoped instruction syntax and references without executing declared checks.",
+        "classification": "read-only-report",
+        "inputs": [
+          {
+            "name": "target",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "format",
+            "source": "cli-option",
+            "required": false
+          }
+        ],
+        "output": {
+          "kind": "text-or-json",
+          "schema_ref": "schemas/scoped_instruction_operation_result.schema.json"
+        },
+        "effects": {
+          "read_only": true,
+          "destructive": false,
+          "idempotent": true,
+          "writes_repo_state": false,
+          "requires_preflight_gate": false
+        },
+        "locality": {
+          "requires_repo": false,
+          "network": "forbidden",
+          "outside_repo_writes": "forbidden"
+        },
+        "reads": [
+          {
+            "surface": ".agentic-workspace/instructions/*.md",
+            "required": false
+          }
+        ],
+        "writes": [],
+        "steps": [
+          {
+            "id": "resolve_root",
+            "uses": "workspace.target-root.resolve",
+            "description": "Resolve the target root."
+          },
+          {
+            "id": "execute_instruction_operation",
+            "uses": "instructions.execute",
+            "description": "Statically validate through the scoped instruction semantic owner."
+          },
+          {
+            "id": "emit_output",
+            "uses": "output.emit",
+            "description": "Emit the instruction result."
+          }
+        ],
+        "ir_plan": {
+          "status": "complete",
+          "steps": [
+            {
+              "id": "resolve_root",
+              "uses": "workspace.target-root.resolve",
+              "description": "resolve_root",
+              "outputs": [
+                "target_root"
+              ]
+            },
+            {
+              "id": "execute_instruction_operation",
+              "uses": "instructions.execute",
+              "description": "execute_instruction_operation",
+              "outputs": [
+                "result"
+              ]
+            },
+            {
+              "id": "emit_output",
+              "uses": "output.emit",
+              "description": "emit_output",
+              "outputs": [
+                "emitted"
+              ]
+            }
+          ]
+        },
+        "guards": [
+          "Never execute an inline or named check.",
+          "Return exit status 2 for invalid instruction syntax or references."
+        ],
+        "proof": [
+          "instructions.check.process",
+          "negative fixtures prove malformed and ambiguous controls fail closed"
+        ],
+        "migration_status": "runtime-consumed"
+      },
+      "schemas": [
+        "operation_failure.schema.json",
+        "scoped_instruction_operation_input.schema.json",
+        "scoped_instruction_operation_result.schema.json"
+      ],
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "instructions.check.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "scoped instruction semantics",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "instructions.check.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "instructions.check.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      },
+      "schema_roles": {
+        "input": [
+          "scoped_instruction_operation_input.schema.json"
+        ],
+        "output": [
+          "scoped_instruction_operation_result.schema.json"
+        ],
+        "failure": [
+          "operation_failure.schema.json"
+        ]
+      },
+      "compatibility_surface": {
+        "contract": {
+          "schema_version": "agentic-workspace/operation/v1",
+          "id": "instructions.check",
+          "classification": "read-only-report",
+          "inputs": [
+            {
+              "name": "target",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "format",
+              "source": "cli-option",
+              "required": false
+            }
+          ],
+          "output": {
+            "kind": "text-or-json",
+            "schema_ref": "schemas/scoped_instruction_operation_result.schema.json"
+          },
+          "effects": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "guards": [
+            "Never execute an inline or named check.",
+            "Return exit status 2 for invalid instruction syntax or references."
+          ]
+        },
+        "schemas": {
+          "input": {
+            "scoped_instruction_operation_input.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "public-contract",
+              "type": "object",
+              "properties": {
+                "target": {
+                  "type": "string"
+                },
+                "format": {
+                  "enum": [
+                    "text",
+                    "json"
+                  ]
+                },
+                "name": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9][a-z0-9-]*$"
+                },
+                "paths": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "task": {
+                  "type": "string"
+                },
+                "changed": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "verbose": {
+                  "type": "boolean"
+                },
+                "source": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "output": {
+            "scoped_instruction_operation_result.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "public-contract",
+              "type": "object",
+              "required": [
+                "kind",
+                "operation_id",
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "agentic-workspace/scoped-instruction-inspection/v1",
+                    "agentic-workspace/scoped-instruction-create-result/v1",
+                    "agentic-workspace/scoped-instruction-migration-advice/v1",
+                    "agentic-workspace/scoped-instruction-error/v1"
+                  ]
+                },
+                "operation_id": {
+                  "enum": [
+                    "instructions.list",
+                    "instructions.create",
+                    "instructions.check",
+                    "instructions.explain",
+                    "instructions.migrate"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "message": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "failure": {
+            "operation_failure.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "rejected",
+                    "failed",
+                    "retryable"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        }
+      }
+    },
+    "instructions.create": {
+      "identity": "instructions.create",
+      "version": "agentic-workspace/operation/v1",
+      "fingerprint": "sha256:01b7d9706e06acc93a09136fe2ab4fe20c8062e0cf3ff0ca120dd7d92bdbf9d0",
+      "compatibility_fingerprint": "sha256:8658c9da8ab0f6b5541c6ca99225547353b87aa92b7b66539c620d40a5c2df64",
+      "contract": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "id": "instructions.create",
+        "command_surface": {
+          "command": "instructions",
+          "subcommand": "new",
+          "format_option": "format"
+        },
+        "summary": "Create one scoped Markdown instruction without overwriting an existing file.",
+        "classification": "lifecycle-mutation",
+        "inputs": [
+          {
+            "name": "target",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "format",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "name",
+            "source": "cli-option",
+            "required": true
+          },
+          {
+            "name": "paths",
+            "source": "cli-option",
+            "required": false
+          }
+        ],
+        "output": {
+          "kind": "text-or-json",
+          "schema_ref": "schemas/scoped_instruction_operation_result.schema.json"
+        },
+        "effects": {
+          "read_only": false,
+          "destructive": false,
+          "idempotent": false,
+          "writes_repo_state": true,
+          "requires_preflight_gate": false
+        },
+        "locality": {
+          "requires_repo": false,
+          "network": "forbidden",
+          "outside_repo_writes": "forbidden"
+        },
+        "reads": [
+          {
+            "surface": ".agentic-workspace/instructions/<name>.md",
+            "required": false
+          }
+        ],
+        "writes": [
+          {
+            "surface": ".agentic-workspace/instructions/<name>.md",
+            "required": true,
+            "when": "the destination does not exist",
+            "description": "one new scoped instruction scaffold"
+          }
+        ],
+        "steps": [
+          {
+            "id": "resolve_root",
+            "uses": "workspace.target-root.resolve",
+            "description": "Resolve the target root."
+          },
+          {
+            "id": "execute_instruction_operation",
+            "uses": "instructions.execute",
+            "description": "Create through the no-overwrite scoped instruction semantic owner."
+          },
+          {
+            "id": "emit_output",
+            "uses": "output.emit",
+            "description": "Emit the instruction result."
+          }
+        ],
+        "ir_plan": {
+          "status": "complete",
+          "steps": [
+            {
+              "id": "resolve_root",
+              "uses": "workspace.target-root.resolve",
+              "description": "resolve_root",
+              "outputs": [
+                "target_root"
+              ]
+            },
+            {
+              "id": "execute_instruction_operation",
+              "uses": "instructions.execute",
+              "description": "execute_instruction_operation",
+              "outputs": [
+                "result"
+              ]
+            },
+            {
+              "id": "emit_output",
+              "uses": "output.emit",
+              "description": "emit_output",
+              "outputs": [
+                "emitted"
+              ]
+            }
+          ]
+        },
+        "guards": [
+          "Reject invalid names and repository-relative path patterns.",
+          "Never overwrite an existing instruction file."
+        ],
+        "proof": [
+          "instructions.create.process",
+          "generated Python and TypeScript operation clients preserve the no-overwrite boundary"
+        ],
+        "migration_status": "runtime-consumed"
+      },
+      "schemas": [
+        "operation_failure.schema.json",
+        "scoped_instruction_operation_input.schema.json",
+        "scoped_instruction_operation_result.schema.json"
+      ],
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "instructions.create.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "scoped instruction semantics",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "instructions.create.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "instructions.create.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      },
+      "schema_roles": {
+        "input": [
+          "scoped_instruction_operation_input.schema.json"
+        ],
+        "output": [
+          "scoped_instruction_operation_result.schema.json"
+        ],
+        "failure": [
+          "operation_failure.schema.json"
+        ]
+      },
+      "compatibility_surface": {
+        "contract": {
+          "schema_version": "agentic-workspace/operation/v1",
+          "id": "instructions.create",
+          "classification": "lifecycle-mutation",
+          "inputs": [
+            {
+              "name": "target",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "format",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "name",
+              "source": "cli-option",
+              "required": true
+            },
+            {
+              "name": "paths",
+              "source": "cli-option",
+              "required": false
+            }
+          ],
+          "output": {
+            "kind": "text-or-json",
+            "schema_ref": "schemas/scoped_instruction_operation_result.schema.json"
+          },
+          "effects": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": false,
+            "writes_repo_state": true,
+            "requires_preflight_gate": false
+          },
+          "guards": [
+            "Reject invalid names and repository-relative path patterns.",
+            "Never overwrite an existing instruction file."
+          ]
+        },
+        "schemas": {
+          "input": {
+            "scoped_instruction_operation_input.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "public-contract",
+              "type": "object",
+              "properties": {
+                "target": {
+                  "type": "string"
+                },
+                "format": {
+                  "enum": [
+                    "text",
+                    "json"
+                  ]
+                },
+                "name": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9][a-z0-9-]*$"
+                },
+                "paths": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "task": {
+                  "type": "string"
+                },
+                "changed": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "verbose": {
+                  "type": "boolean"
+                },
+                "source": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "output": {
+            "scoped_instruction_operation_result.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "public-contract",
+              "type": "object",
+              "required": [
+                "kind",
+                "operation_id",
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "agentic-workspace/scoped-instruction-inspection/v1",
+                    "agentic-workspace/scoped-instruction-create-result/v1",
+                    "agentic-workspace/scoped-instruction-migration-advice/v1",
+                    "agentic-workspace/scoped-instruction-error/v1"
+                  ]
+                },
+                "operation_id": {
+                  "enum": [
+                    "instructions.list",
+                    "instructions.create",
+                    "instructions.check",
+                    "instructions.explain",
+                    "instructions.migrate"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "message": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "failure": {
+            "operation_failure.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "rejected",
+                    "failed",
+                    "retryable"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        }
+      }
+    },
+    "instructions.explain": {
+      "identity": "instructions.explain",
+      "version": "agentic-workspace/operation/v1",
+      "fingerprint": "sha256:b1fa8e777aae923a2e5edb4cb622871b904c98a404a0924c9cb1f029eb1233dc",
+      "compatibility_fingerprint": "sha256:df100a14cbd7c0fad8a0941107b51c0aa59c548ea036cabc7000abfc22404707",
+      "contract": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "id": "instructions.explain",
+        "command_surface": {
+          "command": "instructions",
+          "subcommand": "explain",
+          "format_option": "format"
+        },
+        "summary": "Explain task and path applicability without loading irrelevant instruction bodies.",
+        "classification": "read-only-report",
+        "inputs": [
+          {
+            "name": "target",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "format",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "task",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "changed",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "verbose",
+            "source": "cli-option",
+            "required": false
+          }
+        ],
+        "output": {
+          "kind": "text-or-json",
+          "schema_ref": "schemas/scoped_instruction_operation_result.schema.json"
+        },
+        "effects": {
+          "read_only": true,
+          "destructive": false,
+          "idempotent": true,
+          "writes_repo_state": false,
+          "requires_preflight_gate": false
+        },
+        "locality": {
+          "requires_repo": false,
+          "network": "forbidden",
+          "outside_repo_writes": "forbidden"
+        },
+        "reads": [
+          {
+            "surface": ".agentic-workspace/instructions/*.md",
+            "required": false
+          }
+        ],
+        "writes": [],
+        "steps": [
+          {
+            "id": "resolve_root",
+            "uses": "workspace.target-root.resolve",
+            "description": "Resolve the target root."
+          },
+          {
+            "id": "execute_instruction_operation",
+            "uses": "instructions.execute",
+            "description": "Explain applicability through the scoped instruction semantic owner."
+          },
+          {
+            "id": "emit_output",
+            "uses": "output.emit",
+            "description": "Emit the instruction result."
+          }
+        ],
+        "ir_plan": {
+          "status": "complete",
+          "steps": [
+            {
+              "id": "resolve_root",
+              "uses": "workspace.target-root.resolve",
+              "description": "resolve_root",
+              "outputs": [
+                "target_root"
+              ]
+            },
+            {
+              "id": "execute_instruction_operation",
+              "uses": "instructions.execute",
+              "description": "execute_instruction_operation",
+              "outputs": [
+                "result"
+              ]
+            },
+            {
+              "id": "emit_output",
+              "uses": "output.emit",
+              "description": "emit_output",
+              "outputs": [
+                "emitted"
+              ]
+            }
+          ]
+        },
+        "guards": [
+          "Do not execute declared checks.",
+          "Do not load irrelevant Markdown bodies or read targets."
+        ],
+        "proof": [
+          "instructions.explain.process",
+          "positive and negative path fixtures prove progressive disclosure"
+        ],
+        "migration_status": "runtime-consumed"
+      },
+      "schemas": [
+        "operation_failure.schema.json",
+        "scoped_instruction_operation_input.schema.json",
+        "scoped_instruction_operation_result.schema.json"
+      ],
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "instructions.explain.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "scoped instruction semantics",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "instructions.explain.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "instructions.explain.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      },
+      "schema_roles": {
+        "input": [
+          "scoped_instruction_operation_input.schema.json"
+        ],
+        "output": [
+          "scoped_instruction_operation_result.schema.json"
+        ],
+        "failure": [
+          "operation_failure.schema.json"
+        ]
+      },
+      "compatibility_surface": {
+        "contract": {
+          "schema_version": "agentic-workspace/operation/v1",
+          "id": "instructions.explain",
+          "classification": "read-only-report",
+          "inputs": [
+            {
+              "name": "target",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "format",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "task",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "changed",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "verbose",
+              "source": "cli-option",
+              "required": false
+            }
+          ],
+          "output": {
+            "kind": "text-or-json",
+            "schema_ref": "schemas/scoped_instruction_operation_result.schema.json"
+          },
+          "effects": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "guards": [
+            "Do not execute declared checks.",
+            "Do not load irrelevant Markdown bodies or read targets."
+          ]
+        },
+        "schemas": {
+          "input": {
+            "scoped_instruction_operation_input.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "public-contract",
+              "type": "object",
+              "properties": {
+                "target": {
+                  "type": "string"
+                },
+                "format": {
+                  "enum": [
+                    "text",
+                    "json"
+                  ]
+                },
+                "name": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9][a-z0-9-]*$"
+                },
+                "paths": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "task": {
+                  "type": "string"
+                },
+                "changed": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "verbose": {
+                  "type": "boolean"
+                },
+                "source": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "output": {
+            "scoped_instruction_operation_result.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "public-contract",
+              "type": "object",
+              "required": [
+                "kind",
+                "operation_id",
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "agentic-workspace/scoped-instruction-inspection/v1",
+                    "agentic-workspace/scoped-instruction-create-result/v1",
+                    "agentic-workspace/scoped-instruction-migration-advice/v1",
+                    "agentic-workspace/scoped-instruction-error/v1"
+                  ]
+                },
+                "operation_id": {
+                  "enum": [
+                    "instructions.list",
+                    "instructions.create",
+                    "instructions.check",
+                    "instructions.explain",
+                    "instructions.migrate"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "message": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "failure": {
+            "operation_failure.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "rejected",
+                    "failed",
+                    "retryable"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        }
+      }
+    },
+    "instructions.list": {
+      "identity": "instructions.list",
+      "version": "agentic-workspace/operation/v1",
+      "fingerprint": "sha256:7826c8e5503f1a2d47821dc3baa575011ed51305912716ddcc0c116dd1928ae6",
+      "compatibility_fingerprint": "sha256:de64f6a24c99a3d61878aba47aa0e30b3a02adcf9b98f688a2dc87e853bf9103",
+      "contract": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "id": "instructions.list",
+        "command_surface": {
+          "command": "instructions",
+          "subcommand": "list",
+          "format_option": "format"
+        },
+        "summary": "List scoped Markdown instructions without loading irrelevant bodies.",
+        "classification": "read-only-report",
+        "inputs": [
+          {
+            "name": "target",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "format",
+            "source": "cli-option",
+            "required": false
+          }
+        ],
+        "output": {
+          "kind": "text-or-json",
+          "schema_ref": "schemas/scoped_instruction_operation_result.schema.json"
+        },
+        "effects": {
+          "read_only": true,
+          "destructive": false,
+          "idempotent": true,
+          "writes_repo_state": false,
+          "requires_preflight_gate": false
+        },
+        "locality": {
+          "requires_repo": false,
+          "network": "forbidden",
+          "outside_repo_writes": "forbidden"
+        },
+        "reads": [
+          {
+            "surface": ".agentic-workspace/instructions/*.md",
+            "required": false
+          }
+        ],
+        "writes": [],
+        "steps": [
+          {
+            "id": "resolve_root",
+            "uses": "workspace.target-root.resolve",
+            "description": "Resolve the target root."
+          },
+          {
+            "id": "execute_instruction_operation",
+            "uses": "instructions.execute",
+            "description": "List instructions through the scoped instruction semantic owner."
+          },
+          {
+            "id": "emit_output",
+            "uses": "output.emit",
+            "description": "Emit the instruction result."
+          }
+        ],
+        "ir_plan": {
+          "status": "complete",
+          "steps": [
+            {
+              "id": "resolve_root",
+              "uses": "workspace.target-root.resolve",
+              "description": "resolve_root",
+              "outputs": [
+                "target_root"
+              ]
+            },
+            {
+              "id": "execute_instruction_operation",
+              "uses": "instructions.execute",
+              "description": "execute_instruction_operation",
+              "outputs": [
+                "result"
+              ]
+            },
+            {
+              "id": "emit_output",
+              "uses": "output.emit",
+              "description": "emit_output",
+              "outputs": [
+                "emitted"
+              ]
+            }
+          ]
+        },
+        "guards": [
+          "Do not load irrelevant Markdown bodies.",
+          "Do not mutate instruction files while listing."
+        ],
+        "proof": [
+          "instructions.list.process",
+          "generated Python and TypeScript operation clients consume the same result schema"
+        ],
+        "migration_status": "runtime-consumed"
+      },
+      "schemas": [
+        "operation_failure.schema.json",
+        "scoped_instruction_operation_input.schema.json",
+        "scoped_instruction_operation_result.schema.json"
+      ],
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "instructions.list.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "scoped instruction semantics",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "instructions.list.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "instructions.list.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      },
+      "schema_roles": {
+        "input": [
+          "scoped_instruction_operation_input.schema.json"
+        ],
+        "output": [
+          "scoped_instruction_operation_result.schema.json"
+        ],
+        "failure": [
+          "operation_failure.schema.json"
+        ]
+      },
+      "compatibility_surface": {
+        "contract": {
+          "schema_version": "agentic-workspace/operation/v1",
+          "id": "instructions.list",
+          "classification": "read-only-report",
+          "inputs": [
+            {
+              "name": "target",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "format",
+              "source": "cli-option",
+              "required": false
+            }
+          ],
+          "output": {
+            "kind": "text-or-json",
+            "schema_ref": "schemas/scoped_instruction_operation_result.schema.json"
+          },
+          "effects": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "guards": [
+            "Do not load irrelevant Markdown bodies.",
+            "Do not mutate instruction files while listing."
+          ]
+        },
+        "schemas": {
+          "input": {
+            "scoped_instruction_operation_input.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "public-contract",
+              "type": "object",
+              "properties": {
+                "target": {
+                  "type": "string"
+                },
+                "format": {
+                  "enum": [
+                    "text",
+                    "json"
+                  ]
+                },
+                "name": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9][a-z0-9-]*$"
+                },
+                "paths": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "task": {
+                  "type": "string"
+                },
+                "changed": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "verbose": {
+                  "type": "boolean"
+                },
+                "source": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "output": {
+            "scoped_instruction_operation_result.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "public-contract",
+              "type": "object",
+              "required": [
+                "kind",
+                "operation_id",
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "agentic-workspace/scoped-instruction-inspection/v1",
+                    "agentic-workspace/scoped-instruction-create-result/v1",
+                    "agentic-workspace/scoped-instruction-migration-advice/v1",
+                    "agentic-workspace/scoped-instruction-error/v1"
+                  ]
+                },
+                "operation_id": {
+                  "enum": [
+                    "instructions.list",
+                    "instructions.create",
+                    "instructions.check",
+                    "instructions.explain",
+                    "instructions.migrate"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "message": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "failure": {
+            "operation_failure.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "rejected",
+                    "failed",
+                    "retryable"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        }
+      }
+    },
+    "instructions.migrate": {
+      "identity": "instructions.migrate",
+      "version": "agentic-workspace/operation/v1",
+      "fingerprint": "sha256:64bce546a0991b944886fc1bf7ec197a707b51125adb88f04d9b030a934fda21",
+      "compatibility_fingerprint": "sha256:e68b047261f2064d04022e41904afff78dce0e0aeb8a2f60f7363cc35dbc3f0e",
+      "contract": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "id": "instructions.migrate",
+        "command_surface": {
+          "command": "instructions",
+          "subcommand": "migrate",
+          "format_option": "format"
+        },
+        "summary": "Return non-destructive incremental migration advice for a selected repository instruction source.",
+        "classification": "read-only-report",
+        "inputs": [
+          {
+            "name": "target",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "format",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "source",
+            "source": "cli-option",
+            "required": true
+          }
+        ],
+        "output": {
+          "kind": "text-or-json",
+          "schema_ref": "schemas/scoped_instruction_operation_result.schema.json"
+        },
+        "effects": {
+          "read_only": true,
+          "destructive": false,
+          "idempotent": true,
+          "writes_repo_state": false,
+          "requires_preflight_gate": false
+        },
+        "locality": {
+          "requires_repo": false,
+          "network": "forbidden",
+          "outside_repo_writes": "forbidden"
+        },
+        "reads": [
+          {
+            "surface": "selected repository-relative source",
+            "required": true
+          }
+        ],
+        "writes": [],
+        "steps": [
+          {
+            "id": "resolve_root",
+            "uses": "workspace.target-root.resolve",
+            "description": "Resolve the target root."
+          },
+          {
+            "id": "execute_instruction_operation",
+            "uses": "instructions.execute",
+            "description": "Build migration advice through the scoped instruction semantic owner."
+          },
+          {
+            "id": "emit_output",
+            "uses": "output.emit",
+            "description": "Emit the instruction result."
+          }
+        ],
+        "ir_plan": {
+          "status": "complete",
+          "steps": [
+            {
+              "id": "resolve_root",
+              "uses": "workspace.target-root.resolve",
+              "description": "resolve_root",
+              "outputs": [
+                "target_root"
+              ]
+            },
+            {
+              "id": "execute_instruction_operation",
+              "uses": "instructions.execute",
+              "description": "execute_instruction_operation",
+              "outputs": [
+                "result"
+              ]
+            },
+            {
+              "id": "emit_output",
+              "uses": "output.emit",
+              "description": "emit_output",
+              "outputs": [
+                "emitted"
+              ]
+            }
+          ]
+        },
+        "guards": [
+          "Reject migration sources outside the repository.",
+          "Never modify the source or scaffold files automatically."
+        ],
+        "proof": [
+          "instructions.migrate.process",
+          "migration conformance asserts writes_applied=false and no filesystem mutation"
+        ],
+        "migration_status": "runtime-consumed"
+      },
+      "schemas": [
+        "operation_failure.schema.json",
+        "scoped_instruction_operation_input.schema.json",
+        "scoped_instruction_operation_result.schema.json"
+      ],
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "instructions.migrate.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "scoped instruction semantics",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "instructions.migrate.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "instructions.migrate.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      },
+      "schema_roles": {
+        "input": [
+          "scoped_instruction_operation_input.schema.json"
+        ],
+        "output": [
+          "scoped_instruction_operation_result.schema.json"
+        ],
+        "failure": [
+          "operation_failure.schema.json"
+        ]
+      },
+      "compatibility_surface": {
+        "contract": {
+          "schema_version": "agentic-workspace/operation/v1",
+          "id": "instructions.migrate",
+          "classification": "read-only-report",
+          "inputs": [
+            {
+              "name": "target",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "format",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "source",
+              "source": "cli-option",
+              "required": true
+            }
+          ],
+          "output": {
+            "kind": "text-or-json",
+            "schema_ref": "schemas/scoped_instruction_operation_result.schema.json"
+          },
+          "effects": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "guards": [
+            "Reject migration sources outside the repository.",
+            "Never modify the source or scaffold files automatically."
+          ]
+        },
+        "schemas": {
+          "input": {
+            "scoped_instruction_operation_input.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "public-contract",
+              "type": "object",
+              "properties": {
+                "target": {
+                  "type": "string"
+                },
+                "format": {
+                  "enum": [
+                    "text",
+                    "json"
+                  ]
+                },
+                "name": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9][a-z0-9-]*$"
+                },
+                "paths": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "task": {
+                  "type": "string"
+                },
+                "changed": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "verbose": {
+                  "type": "boolean"
+                },
+                "source": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "output": {
+            "scoped_instruction_operation_result.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "public-contract",
+              "type": "object",
+              "required": [
+                "kind",
+                "operation_id",
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "agentic-workspace/scoped-instruction-inspection/v1",
+                    "agentic-workspace/scoped-instruction-create-result/v1",
+                    "agentic-workspace/scoped-instruction-migration-advice/v1",
+                    "agentic-workspace/scoped-instruction-error/v1"
+                  ]
+                },
+                "operation_id": {
+                  "enum": [
+                    "instructions.list",
+                    "instructions.create",
+                    "instructions.check",
+                    "instructions.explain",
+                    "instructions.migrate"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "message": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "failure": {
+            "operation_failure.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "rejected",
+                    "failed",
+                    "retryable"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        }
+      }
     }
   },
   "schemas": {
@@ -21544,6 +22326,115 @@
         },
         "additionalProperties": true
       }
+    },
+    "scoped_instruction_operation_input.schema.json": {
+      "source": "src/agentic_workspace/contracts/schemas/scoped_instruction_operation_input.schema.json",
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "agentic-workspace/scoped_instruction_operation_input.schema.json",
+        "title": "Scoped instruction operation input",
+        "description": "Inputs shared by generated scoped Markdown instruction operations.",
+        "x-agentic-workspace-doc-role": "public-contract",
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string",
+            "description": "Target repository path; defaults to the current directory."
+          },
+          "format": {
+            "enum": [
+              "text",
+              "json"
+            ],
+            "description": "Requested command output format."
+          },
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$",
+            "description": "Lowercase instruction identity used for scaffold creation."
+          },
+          "paths": {
+            "type": "array",
+            "description": "Repository-relative applicability patterns for a new instruction.",
+            "items": {
+              "type": "string",
+              "description": "One repository-relative path or glob."
+            }
+          },
+          "task": {
+            "type": "string",
+            "description": "Optional task text used when explaining applicability."
+          },
+          "changed": {
+            "type": "array",
+            "description": "Changed or target paths used to evaluate applicability.",
+            "items": {
+              "type": "string",
+              "description": "One repository-relative changed or target path."
+            }
+          },
+          "verbose": {
+            "type": "boolean",
+            "description": "Whether explanation output includes the compiled instruction program."
+          },
+          "source": {
+            "type": "string",
+            "description": "Repository-relative static instruction source used for migration advice."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "scoped_instruction_operation_result.schema.json": {
+      "source": "src/agentic_workspace/contracts/schemas/scoped_instruction_operation_result.schema.json",
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "agentic-workspace/scoped_instruction_operation_result.schema.json",
+        "title": "Scoped instruction operation result",
+        "description": "Structured result shared by generated scoped Markdown instruction operations.",
+        "x-agentic-workspace-doc-role": "public-contract",
+        "type": "object",
+        "required": [
+          "kind",
+          "operation_id",
+          "status"
+        ],
+        "properties": {
+          "kind": {
+            "description": "Versioned result-envelope identity.",
+            "enum": [
+              "agentic-workspace/scoped-instruction-inspection/v1",
+              "agentic-workspace/scoped-instruction-create-result/v1",
+              "agentic-workspace/scoped-instruction-migration-advice/v1",
+              "agentic-workspace/scoped-instruction-error/v1"
+            ]
+          },
+          "operation_id": {
+            "description": "Generated instruction operation that produced the result.",
+            "enum": [
+              "instructions.list",
+              "instructions.create",
+              "instructions.check",
+              "instructions.explain",
+              "instructions.migrate"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Outcome status in scoped-instruction vocabulary."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable rendering of the result."
+          },
+          "exit_status": {
+            "type": "integer",
+            "description": "Non-zero process status requested for invalid or rejected results."
+          }
+        },
+        "additionalProperties": true
+      }
     }
   },
   "external_conformance": {
@@ -21578,6 +22469,16 @@
         "operation_id": "config.report",
         "valid_input": {},
         "runtime_exception_revision": "github-2044-closure:config.report@pr-2256",
+        "case_exceptions": {}
+      },
+      {
+        "operation_id": "instructions.explain",
+        "valid_input": {
+          "changed": [
+            "src/auth/login.py"
+          ]
+        },
+        "runtime_exception_revision": "github-2639:instructions.explain@pr-2627",
         "case_exceptions": {}
       },
       {

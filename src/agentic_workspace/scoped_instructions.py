@@ -412,3 +412,54 @@ def _migration_advice(root: Path, source: str) -> dict[str, Any]:
             "Remove the static block only after behavior is verified; retain a thin bootstrap.",
         ],
     }
+
+
+def apply_instruction_operation(*, target_root: Path, operation_id: str, values: dict[str, Any]) -> dict[str, Any]:
+    """Execute one generated instruction operation while retaining semantic ownership here."""
+
+    try:
+        if operation_id == "instructions.create":
+            payload = _write_scaffold(
+                target_root,
+                name=str(values.get("name") or ""),
+                paths=[str(item) for item in values.get("paths", [])],
+            )
+        elif operation_id == "instructions.migrate":
+            payload = _migration_advice(target_root, str(values.get("source") or ""))
+        elif operation_id in {"instructions.list", "instructions.check", "instructions.explain"}:
+            payload = inspect_instructions(
+                target_root,
+                task=str(values.get("task") or ""),
+                changed_paths=[str(item) for item in values.get("changed", [])],
+                include_ir=bool(values.get("verbose", False)),
+            )
+        else:
+            raise ValueError(f"unsupported instruction operation: {operation_id}")
+    except (OSError, ValueError) as exc:
+        return {
+            "kind": "agentic-workspace/scoped-instruction-error/v1",
+            "operation_id": operation_id,
+            "status": "failed",
+            "message": str(exc),
+            "exit_status": 2,
+            "outcome": "blocked",
+            "mutation_applied": False,
+            "reason_code": "instruction-operation-rejected",
+            "conflict_owner": "scoped-instructions",
+            "recovery_command": "agentic-workspace instructions check --target . --format json",
+        }
+    payload["operation_id"] = operation_id
+    payload["message"] = _render_text(payload)
+    if operation_id == "instructions.check" and payload.get("status") == "invalid":
+        payload["exit_status"] = 2
+    if operation_id == "instructions.create":
+        payload.update(
+            {
+                "outcome": "applied",
+                "mutation_applied": True,
+                "reason_code": "instruction-created",
+                "conflict_owner": "",
+                "recovery_command": "",
+            }
+        )
+    return payload
