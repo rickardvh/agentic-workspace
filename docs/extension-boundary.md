@@ -1,20 +1,44 @@
 # Extensibility and Public Boundary
 
-Extensibility is a core Agentic Workspace product property. The current support boundary is narrower than that architectural intent: AW already has generic module participation machinery and a stable external-operation direction, while the public third-party module compatibility contract is still being deliberately stabilized.
+Extensibility is a core Agentic Workspace property because the generic operating loop should be able to gain specialized capabilities without changing its mental model **or making capability authors learn AW's internal choreography**.
 
-This page distinguishes **product direction** from **current support-bearing compatibility** so those concepts do not get conflated.
+The architectural goal is broader than the current support-bearing third-party contract. This page distinguishes the two.
 
 ## Core stance
 
-Workspace should be a small operating kernel that composes independently owned capabilities. Planning, Memory, and Verification are first-party batteries and proving grounds for that model, not the fixed outer boundary of the architecture.
+AW resolves bounded repo operating context into one current operating contract, lets the agent act through a supported route, and reconciles the result.
+
+Modules are peer extensions of what that loop can know and do. Planning, Memory, and Verification are current first-party examples, not fixed outer slots.
+
+The authoring rule is: **a module describes its domain; Workspace owns the loop.** `resolve -> act -> reconcile` is how Workspace consumes capability declarations, not a requirement that every module implement three hooks or describe AW's phases back to it.
 
 The extension architecture has three distinct forms:
 
-1. **Modules** add domain capabilities, owned state/resources, operations, lifecycle, and bounded effects on the ordinary operating decision.
-2. **Repo customization** uses host-owned config, obligations, skills, canonical guidance, ownership, and proof declarations.
-3. **External adapters** integrate AW with other tools and vendors by consuming stable AW operations from outside core.
+1. **Modules** add reusable domain capabilities through small declarative capability/ownership/relevance/operation/result contracts.
+2. **Repo customization** supplies host-owned control inputs through config, obligations, skills, canonical guidance, ownership, proof declarations, and repository operations.
+3. **External adapters** integrate AW with other tools/vendors by consuming stable AW operations from outside core.
 
 These forms must not collapse into one generic plugin mechanism because they have different ownership, trust, lifecycle, and compatibility semantics.
+
+## What a module should need to declare
+
+A stable public module boundary should expose domain semantics rather than arbitrary callbacks or phase registration.
+
+For an ordinary capability, the contract should reduce toward:
+
+- **identity / compatibility** — what capability this is, whether it is available, and whether core can admit it safely;
+- **ownership** — which state/resources/roots/effects belong to it;
+- **relevance** — bounded facts that make the capability worth considering for the current task or changed surface;
+- **capabilities** — source-owned resources/context, lazily discoverable procedures/skills, and typed operations the module provides;
+- **result semantics** — bounded state/evidence/blocker/residue/continuation/effect meaning returned by those operations or observations.
+
+Dependencies/conflicts may compose with compatibility/ownership where required.
+
+Those dimensions are optional when a module does not need them. A read-only context/retrieval module should not declare dummy action or reconciliation hooks. An operation-oriented module should not invent startup posture, workflow phases, report slots, or closeout behavior simply because AW currently has those internal concepts.
+
+Workspace decides how admitted declarations participate in resolve/act/reconcile through the existing compiled operating decision.
+
+The module's full domain state does not need to be copied into a central AW context store. Workspace should consume only the bounded current contribution needed to compose the operating contract.
 
 ## Current support boundary
 
@@ -22,81 +46,98 @@ These forms must not collapse into one generic plugin mechanism because they hav
 
 Planning, Memory, and Verification are the currently shipped support-bearing module implementations. The coordinated root distribution may bundle them for lifecycle convenience.
 
-They should increasingly exercise the same generic composition path expected of independently implemented modules. Bundling is a distribution choice, not a reason for Workspace to hard-code their domain semantics.
+They should increasingly exercise the same generic capability path expected of independent modules. Bundling and default selection are distribution/product presets, not semantic authority.
 
 ### Independent modules
 
-Independent modules are part of the intended architecture, but the public module contract must remain narrower than the full internal participation registry.
+Independent modules are part of the intended architecture, but the public contribution contract must remain narrower than the full internal registry/runtime vocabulary.
 
-Until a versioned public module compatibility profile is explicitly published and conformance-tested, external module authors should not assume that every field, lifecycle hook, posture fragment, workflow phase, or internal descriptor detail is a stable API.
+Until a versioned public compatibility profile is explicitly published and conformance-tested, independent authors should not assume that every lifecycle hook, posture fragment, workflow phase, renderer packet, report slot, callback, or internal descriptor field is stable API.
 
-The public boundary should stabilize only what independent capability authors need for safe composition, including the equivalent of:
+The public boundary should stabilize only the semantics necessary for safe capability composition through the existing operating decision.
 
-- module identity and compatibility;
-- declared capabilities and activation/relevance;
-- owned resources/state and writable roots;
-- stable operations and effect/result contracts;
-- lifecycle, dependencies, and conflicts;
-- bounded proof/authority effects;
-- generated discovery/reference metadata.
-
-Internal implementation flexibility may remain broader.
-
-### External adapters and integrations
+### External adapters
 
 External adapters follow an inverted dependency model: the integration knows about AW; AW does not need to know the integration package or vendor.
 
-Adapters may translate native tool events, invoke public AW operations, and keep disposable local integration state. They own transport, authentication, credentials, and vendor-specific lifecycle. They do not own AW Planning state, proof semantics, completion permission, or unrelated repository mutations.
+Adapters may translate native events, invoke AW operations, and keep disposable local integration state. They own transport, authentication, credentials, and vendor-specific lifecycle. They do not gain repository policy, module, proof, or completion authority merely by transporting a result.
 
 Core should not gain an adapter registry, marketplace, credential store, or vendor-specific configuration solely to support integrations.
 
-## Kernel guarantees extensions must preserve
+## Practical extension boundary
 
-Any support-bearing extension path must preserve the same kernel invariants:
+A generic contract is not useful merely because it can describe many module shapes. It is useful when a later independent module is cheap to add.
 
-- **compatibility before authority**: incompatible or unsupported contributions do not partially influence current semantic decisions;
-- **explicit ownership**: modules and adapters cannot silently claim unrelated roots, state, proof, or completion authority;
-- **bounded relevance**: irrelevant installed capabilities stay out of the first-line operating context;
-- **conflict visibility**: collisions name the competing owners and resolution owner instead of relying on hidden precedence;
-- **safe absence**: missing or removed capabilities leave the remaining workspace interpretable;
-- **clean removal**: package/module/local/promoted output boundaries remain distinguishable when a capability is removed;
-- **projection discipline**: generated docs, clients, catalogue entries, and adapters derive from authority rather than becoming parallel sources of truth;
-- **ordinary-loop stability**: adding capabilities should normally enrich existing startup/work/proof/closeout/continuation questions instead of multiplying first-contact concepts.
+The expected ordinary authoring path is approximately:
+
+- module package/implementation;
+- public descriptor/contracts;
+- module-owned tests and fixtures.
+
+Adding a new independent module should not require semantic Workspace edits merely to recognize that module's identity/domain. In particular, it should not require adding the module to runtime switches, core enums/name lists, fixed module-slot maps, canonical operating skills, proof/closeout branches, global posture dimensions, or another core-owned per-module registry entry.
+
+An in-repo fixture may need generic test/package wiring, but that wiring must not encode the fixture's domain semantics. A real out-of-tree/external-consumer module should be able to install/admit/use the same public contract without modifying the AW repository.
+
+If a deliberately small module needs many AW-specific declarations or core-file edits, that is evidence that the extension contract is still too framework-shaped.
+
+## Guarantees extensions must preserve
+
+Any support-bearing extension path must preserve the same dynamic-control invariants:
+
+- **compatibility before authority** — incompatible contributions do not partially influence the current decision;
+- **source ownership** — module state and repo policy keep their own owners; the compiled operating contract is a projection, not a new source of truth;
+- **bounded relevance** — irrelevant installed capabilities stay out of first-line context and instructions;
+- **constructible actions** — relevant capability should expose supported operations/skills/routes rather than conceptual transitions with no implementation path;
+- **bounded effects** — a module cannot widen unrelated mutation, policy, proof, or completion authority;
+- **conflict visibility** — collisions name competing owners and the resolution owner rather than relying on hidden precedence;
+- **safe absence/removal** — a missing or removed capability leaves the rest of the workspace interpretable and clears its active authority;
+- **progressive discovery** — adding capability does not proportionally increase startup burden;
+- **one control path** — modules contribute to the existing compiled operating decision instead of creating peer decision engines or mandatory workflows;
+- **low-coupling authoring** — a module declares its domain; core derives loop participation rather than requiring the author to register AW-specific phase/slot choreography.
 
 ## What the kernel may assume
 
-The kernel may assume only the capabilities declared by an admitted compatible module or host-repo contract. It should not infer behavior from a module's package name, source-tree layout, first-party status, or similarity to Planning/Memory/Verification.
+The kernel may assume only semantics declared by an admitted compatible capability or host-repo contract.
 
-Where the public contract is insufficient, the correct outcome is to extend that contract deliberately or keep the behavior first-party/internal—not to add a hidden module-name special case and call the boundary generic.
+It should not infer behavior from package name, source-tree layout, first-party status, or similarity to Planning/Memory/Verification. Where the public contract is insufficient, extend it deliberately or keep the behavior internal; do not hide a module-name branch behind generic-looking metadata.
+
+Nor should core move module-name coupling from Python into a central JSON/TOML list and call the result generic. A core-owned per-module registration edit is still coupling when every independent module requires one.
 
 ## What extensibility does not imply
 
 Extensibility does not require:
 
-- arbitrary in-process code loading from untrusted sources;
+- a repository knowledge database, semantic index, RAG layer, or knowledge graph in core;
+- arbitrary untrusted in-process code loading;
 - a remote module marketplace;
-- a generic event bus or workflow engine;
-- every internal callback becoming public API;
+- a generic callback/event-bus/workflow engine;
+- mandatory `on_resolve`, `on_act`, or `on_reconcile` hooks;
+- every internal hook becoming public API;
 - adapter discovery or credentials inside AW;
 - fixed module slots matching today's first-party products;
-- a new user-visible command for every capability.
+- a new user-visible command or phase for every capability.
 
-## Readiness standard for a public module contract
+A richer repository-knowledge capability can be a module if useful; it does not redefine the core operating-context model.
 
-A module capability should be described as support-bearing for independent authors only when:
+## Readiness standard for independent modules
 
-1. its public contract is versioned and mechanically distinguishable from internal participation metadata;
+A capability should be described as support-bearing for independent authors only when:
+
+1. its public contribution contract is versioned, capability-first, and mechanically distinguishable from internal metadata;
 2. first-party modules use that same semantic path where applicable;
-3. an independently implemented non-core module can be discovered, activated, used, disabled, and removed without Workspace learning its identity;
-4. compatibility, conflict, authority, absence, and removal behavior fail closed;
-5. reusable conformance fixtures prove the boundary from outside first-party assumptions;
-6. ordinary-agent scenarios show that the extension stays quiet when irrelevant and does not materially regress direct work.
+3. modules can omit irrelevant contribution dimensions without dummy hooks/phase declarations;
+4. an independent non-core module can be discovered, routed, acted through when applicable, reconciled when applicable, disabled, and removed without Workspace learning its identity;
+5. an out-of-tree/external-consumer module can participate without modifying the AW repository merely to register its identity/domain;
+6. compatibility, conflict, authority, absence, and removal fail closed;
+7. reusable conformance fixtures prove the boundary outside first-party assumptions;
+8. ordinary-agent scenarios show that relevant capability appears progressively, irrelevant capability stays quiet, and direct work does not materially regress;
+9. extension-effort evidence shows any non-module changes are generic infrastructure/test wiring rather than per-module semantic coupling.
 
-This is a readiness bar for **how** the core extensibility goal is exposed safely, not a gate on whether extensibility belongs in the product at all.
+This is a readiness bar for how extensibility is exposed safely and practically, not a gate on whether extensibility belongs in the product.
 
 ## Related documentation
 
-- [Architecture](architecture.md) — kernel/module/repo/adapter ownership model.
-- [Modules](package/modules.md) — capability ownership and current first-party modules.
-- [Contracts and references](package/contracts.md) — machine-readable contract layers and generated projections.
+- [Architecture](architecture.md) — operating-context/control/module/repo/adapter model.
+- [Modules](package/modules.md) — capability-first module authoring model and current first-party examples.
+- [Contracts and references](package/contracts.md) — machine-readable contracts and generated projections.
 - [`SYSTEM_INTENT.md`](../SYSTEM_INTENT.md) — durable product intent.

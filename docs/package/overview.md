@@ -1,108 +1,166 @@
 # Package Overview
 
-`agentic-workspace` is the root package and CLI for a small repo-native operating substrate. It exists for repositories where agent work must survive time, tool changes, branches, model changes, handoff, or non-trivial proof expectations without forcing each new agent to reconstruct the task from chat history.
+`agentic-workspace` turns static repository agent guidance into a programmable, repo-native operating context and control system.
 
-AW is an amortized coordination layer: it adds bounded structure when that structure costs less than future rediscovery, repair, proof ambiguity, or handoff loss. For short-lived work in a repo that is already cheap to understand, the right AW footprint may be minimal or none.
+The repository preserves a bounded set of context because it materially affects agent behavior. AW selects the relevant part for the current task, environment, and decision, then compiles one compact operating contract: what matters now, what action is supported, what constraints apply, what deeper procedure is relevant, and what may be claimed afterward.
 
-## Product model
+AW is an amortized coordination layer. It should add structure only when that structure costs less than future rediscovery, repair, proof ambiguity, wrong-owner work, or handoff loss.
 
-Workspace is the kernel. It owns the cross-cutting mechanics needed for safe composition and continuity:
+## Core model
 
-- compact startup and current-work routing;
-- compatibility and lifecycle admission;
-- ownership and authority composition;
-- effect, mutation, proof, and claim boundaries;
-- conflict visibility and bounded recovery;
-- stable operation contracts for modules and external consumers.
+The product has two core concerns:
 
-Domain semantics should stay outside that kernel.
+1. **Operating context** — source-owned context whose current or durable availability can change how an agent should operate.
+2. **Dynamic control** — task-shaped selection and composition of that context and applicable repo policy into one current operating decision and action envelope.
 
-Capabilities extend AW through three different boundaries:
+Operating context is deliberately narrower than general repository knowledge. AW does not mirror or semantically model the whole repository. Ordinary source, docs, tests, history, and other canonical content remain in their existing owners. Rich semantic retrieval, indexing, RAG, or knowledge graphs are possible future module capabilities rather than core requirements.
 
-| Boundary | Owner | Purpose |
-| --- | --- | --- |
-| Modules | module package/domain owner | add domain capabilities, owned state/resources, operations, and bounded effects on the ordinary loop |
-| Repo customization | host repository | declare repo-owned config, workflow obligations, skills, and canonical guidance |
-| External adapters | independent integration package/tool | translate vendor/tool transport to AW's stable public operations without becoming AW authority |
+## Programmable instruction model
 
-Planning, Memory, and Verification are the bundled first-party modules and the current proving grounds for the module model. They should not require permanent semantic privilege in Workspace merely because they ship with the root distribution.
+Repo customization should be more than a set of switches choosing prewritten behavior. A repository should be able to state bounded conditional control such as:
 
-See [Modules](modules.md), [Architecture](../architecture.md), and [Extensibility and public boundary](../extension-boundary.md).
+> when these authoritative task/path/owner/capability/evidence facts apply, surface this context or procedure, require or nominate this typed action/evidence/human decision, or restrict this effect/claim.
+
+The intended internal normal form is:
+
+```text
+source-owned facts
++ bounded instruction clauses
++ available skills and typed operations
++ module capabilities/results
+                    ↓
+        existing operating-decision compiler
+                    ↓
+          current operating contract
+```
+
+This is not a second compiler. The existing operating decision remains authoritative; specialized config and domain declarations should converge on or compile into the smallest shared control semantics they actually have in common.
+
+The roles are deliberately separate:
+
+- **facts** belong to their existing owners and remain independently fresh/revisioned;
+- **instruction clauses** add bounded applicability plus a control effect, not domain state;
+- **skills** contain lazily loaded procedure;
+- **typed operations** own effectful action and mutation authority;
+- **modules** add new facts, capabilities, procedures, operations, and result semantics without adding new global instruction operators.
+
+A useful effect vocabulary should remain closed and small: surface relevant context/procedure, route or require a typed operation, require evidence or a human decision, restrict an effect, or limit a claim. The clause itself should not mutate state.
+
+Composition should be deterministic and authority-preserving. Lower-authority input cannot widen higher-authority permission; restrictions and requirements compose conservatively; incompatible control effects surface a conflict instead of relying on hidden order; provenance and input revisions remain inspectable.
+
+The current product already contains specialized precursors—workflow obligations, assurance/proof declarations, scoped instructions, skill routing, target/correction guidance, configuration projections, and module contributions. They are not yet one public general-purpose instruction API, and they should not be mechanically replaced by a larger rule language. First normalize overlap internally, then expose only authoring semantics that repeatedly prove useful.
+
+## Ordinary loop
+
+The conceptual loop is:
+
+### Resolve
+
+Use the current task, authoritative repo context, environment/runtime facts, applicable instruction policy, and admitted capability contributions to derive the smallest trustworthy operating contract.
+
+Only decision-relevant information should be first-line. Deeper context and procedures remain behind selectors, skills, operations, or owners.
+
+### Act
+
+Follow the current typed/routed action. The action may be a Workspace operation, repo-owned operation, routed skill, module operation, bounded recovery, or explicit human decision.
+
+AW should constrain the operating envelope without scripting ordinary implementation judgment.
+
+### Reconcile
+
+Admit the result to the correct owner, determine what changed, update claim/continuation state, route any future-relevant residue, and resolve again when work remains.
+
+Closeout is simply reconciliation that reaches a justified terminal outcome.
+
+The existing compiled operating-decision and typed-action architecture is the implementation center of this loop. `resolve -> act -> reconcile` is a conceptual simplification, not a second runtime model.
 
 ## What ships
 
 The coordinated distribution currently includes:
 
-- the `agentic-workspace` root CLI and shared lifecycle/routing behavior;
-- first-party Planning, Memory, and Verification packages;
-- package-managed workspace skills and compact routing adapters;
-- machine-readable command, operation, module, proof, report, selector, ownership, and lifecycle contracts;
+- the `agentic-workspace` root CLI and compiled operating-decision/routing behavior;
+- package-managed skills and thin startup adapters;
+- contracts for operations, authority, ownership, proof, reports, selectors, modules, lifecycle, and installed surfaces;
 - JSON schemata and generated reference projections;
-- installable payload used to create the small `.agentic-workspace/` host-repo enclave.
+- first-party Planning, Memory, and Verification module packages;
+- installable payload used to create the `.agentic-workspace/` host-repo enclave.
 
-The current root Python distribution bundles all three first-party module distributions for lifecycle convenience. That packaging decision is not the intended architectural definition of the module boundary. Host-repo module selection controls which module state is installed and active in the repository.
+The current Python distribution bundles the first-party modules for lifecycle convenience. That packaging decision does not make their domains part of the core architecture.
 
-## Ordinary operation
+## Modules
 
-The ordinary product is phase-question first. Commands are affordances, not a workflow the agent should memorize.
+Modules are peer extensions of what the operating loop can know and do.
 
-| Question | Ordinary affordance |
-| --- | --- |
-| What is the smallest safe context before acting? | `agentic-workspace start --target ./repo --task "<task>" --format json` |
-| What work currently owns continuation? | `agentic-workspace summary --target ./repo --format json` |
-| What changed surfaces and obligations matter now? | `agentic-workspace implement --target ./repo --changed <paths> --task "<task>" --format json` |
-| What evidence is required for the intended claim? | `agentic-workspace proof --target ./repo --changed <paths> --format json` |
-| What may be claimed and what must survive? | the compact current-owner/closeout projection routed by the ordinary decision path |
+A module author describes the module's domain—identity/compatibility, ownership, relevance, resources/procedures/typed operations, and result/effect semantics. Workspace derives how those declarations participate in its loop; modules do not implement three mandatory resolve/act/reconcile hooks or define new global control operators.
 
-Diagnostics such as `report`, `doctor`, `ownership`, `modules`, `defaults`, and verbose/raw state should stay behind routing unless the current question needs them.
+Contribution dimensions are optional. Domain state stays under the module owner. Workspace composes only the bounded current effect needed for the operating decision.
 
-A module should normally enrich one of these existing questions. Installing more capabilities should not require agents to learn a proportionally larger first-contact framework.
+The current first-party modules are examples:
+
+- **Planning** — active execution continuity and bounded intent;
+- **Memory** — learned anti-rediscovery repository knowledge;
+- **Verification** — reusable soft-verification protocols, evidence, and known gaps.
+
+See [Modules](modules.md) and [Extensibility and public boundary](../extension-boundary.md).
+
+## Repo customization
+
+A host repository can program AW's dynamic control without creating a module. Repo-owned config, obligations, skills, canonical guidance, ownership, proof declarations, and repository operations can all affect the current operating contract.
+
+The long-term goal is a **smaller programming surface**, not a larger policy framework: specialized authoring formats may remain where they carry domain meaning, but overlapping applicability/effect semantics should be normalized instead of spawning more peer knobs, stages, forces, packet types, or runtime branches.
+
+Keep hard repo authority distinct from machine-local capability/preferences and from module-owned policy. A growing `posture` vocabulary is not itself a product goal; the useful output is the resulting current constraint or action.
+
+## External adapters
+
+External adapters project or transport stable AW operations into agents, IDEs, CLIs, MCP-style clients, or vendor workflows.
+
+The dependency remains inverted: the adapter knows about AW. AW does not need a marketplace, adapter registry, credentials, or vendor lifecycle in core.
+
+## Command surface
+
+Commands are affordances for the current question, not the product mental model.
+
+Common routes include:
+
+- `start` to resolve first-contact context and the next action;
+- `implement` when changed paths are already known;
+- `summary`, proof operations, module operations, or specialized skills when the current contract routes there;
+- diagnostics such as `report`, `doctor`, `ownership`, and generated references only when deeper inspection is needed.
+
+The acting agent should not have to infer a command sequence from documentation.
 
 ## Ownership model
 
 Keep one primary owner per concern:
 
-- **Planning** owns active execution continuity and bounded intent when Planning is selected.
-- **Memory** owns durable anti-rediscovery repo knowledge.
-- **Verification** owns reusable soft-verification protocols, bounded evidence records, and known verification gaps.
-- **Workspace** owns cross-cutting composition, compatibility, routing, lifecycle coordination, and final kernel-level claim/effect boundaries.
-- **The host repository** owns its canonical docs, policies, ordinary source, and promoted output.
-- **Local state** may support diagnostics, integrations, or machine-specific preferences but is not shared authority by existence alone.
+- canonical repo content stays repo-owned;
+- Workspace owns cross-cutting dynamic-control and instruction-effect composition plus stable action/authority boundaries;
+- modules own their domain semantics and state;
+- repo customization owns host policy and bounded instruction declarations;
+- external adapters own transport/vendor integration;
+- local state supports machine-specific operation but is not shared authority by existence alone.
 
-External trackers and services normally provide evidence rather than automatically owning Planning completion or repo intent.
+Generated operating contracts and instructions project those owners; they do not replace them.
 
 ## Trust model
 
-AW is not a sandbox. A repository can configure proof or executor commands that inherit the caller's filesystem and credential authority. Treat the repository and those commands as trusted before execution. See [Threat model and supply-chain boundary](../security/threat-model.md).
-
-## Module selection
-
-The bundled first-party capabilities are independently useful:
-
-| Selection | Use when |
-| --- | --- |
-| routing-only / no modules | compact startup, config, ownership, skills, and shared routing are enough |
-| Memory | agents repeatedly rediscover repo invariants, runbooks, traps, or subsystem boundaries |
-| Planning | active work must survive interruption, task switching, proof obligations, or handoff |
-| Verification | reusable manual/semi-automated verification protocols and bounded evidence need a repo-visible owner |
-| combinations | more than one of those problems is independently expensive enough to justify its owner |
-
-The threshold is expected future value, not team size. Solo work can benefit when the handoff is to a future session, branch, or model.
+AW is not a sandbox. Repository-configured shell/proof/executor routes inherit caller filesystem and credential authority. Treat the repository and configured commands as trusted before execution. See [Threat model and supply-chain boundary](../security/threat-model.md).
 
 ## Documentation layers
 
-Use the documentation at the level of the question:
+Use the smallest layer that answers the question:
 
-1. **Conceptual package docs** explain stable product roles and boundaries.
-2. **Generated/current-value references** should answer exact command, schema, module, and footprint questions from machine-readable authority.
+1. **Conceptual docs** explain operating context, programmable dynamic control, modules, trust, and adoption.
+2. **Generated/current-value references** answer exact command, schema, module, and footprint questions from machine-readable authority.
 3. **Maintainer docs** own source-checkout generation, validation, release, and dogfooding procedure.
-4. **Reviews and Planning** retain dated evidence and active implementation shaping; they are not current public product explanation.
+4. **Reviews and Planning** retain dated evidence and active implementation shaping rather than current public doctrine.
 
 Read next:
 
+- [Architecture](../architecture.md)
 - [Modules](modules.md)
 - [Lifecycle and context commands](lifecycle.md)
 - [Installed surfaces](installed-surfaces.md)
 - [Contracts and references](contracts.md)
-- [Architecture](../architecture.md)
 - [Documentation index](../index.md)

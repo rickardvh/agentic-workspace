@@ -1,49 +1,49 @@
 # Which AW Module Should I Enable?
 
-Use `agentic-workspace` as the public entrypoint.
-Pick the core modules that match the repo problem.
+Use `agentic-workspace` as the public entrypoint. Enable only the modules whose specialized capability pays back for this repository.
 
-Agentic Workspace is primarily a quiet repo-native capability layer. If you want the smallest useful core, start by checking whether the `memory` module is enough.
+AW itself is the dynamic operating-context/control layer. Modules are optional peer extensions of what the generic `resolve -> act -> reconcile` loop can know and do. There is no privileged first module that every repo should start with.
 
-The adoption question is whether the checked-in operating cost will pay back. Agentic Workspace is probably unnecessary when the repo is cheap to reread, tasks finish in one sitting, existing README notes and tests already carry the important rules, and there is little long-running intent, handoff, proof ambiguity, or recurring friction. It can still be valuable for solo work when the expensive handoff is to a future session, future branch, or future agent.
+AW may be unnecessary when the repo is cheap to reread, tasks finish in one sitting, existing docs/tests already carry the important rules, and there is little recurring context, handoff, proof, or control friction. A routing-only install can also be enough when the repo benefits from dynamic instructions/control but no specialized module justifies durable state.
 
-For the full Agentic Workspace documentation map, use [`docs/index.md`](index.md). For capability status, documentation freshness, and role signals, use [`docs/documentation-status.md`](documentation-status.md). Keep the README as the stable public entrypoint rather than a status dashboard.
+For the product model, use [`docs/package/overview.md`](package/overview.md). For module boundaries, use [`docs/package/modules.md`](package/modules.md).
 
-## Fast Chooser
+## Fast chooser
 
-Use `agentic-workspace defaults --section module_selection --format json` for the compact module selection guide.
+Use `agentic-workspace defaults --section module_selection --format json` for the current compact selection guidance.
 
-That query surface now owns the first-line answer for which core modules fit the repo problem, which partial-adoption combinations are supported, and why `memory` is usually the smallest starting point.
+Choose by the bottleneck you actually have:
 
-Use the thresholds this way:
+- Use **Memory** when agents repeatedly rediscover durable repo lessons, invariants, traps, runbooks, or subsystem orientation that is expensive to reconstruct.
+- Use **Planning** when active work itself must survive interruption: bounded intent, sequencing, handoff, continuation, or non-obvious completion boundaries.
+- Use **Verification** when reusable manual/semi-automated verification protocols, bounded evidence, or known verification gaps need a repo-visible owner.
+- Combine modules when more than one capability independently saves enough future work to justify its state.
+- Use **routing-only / no modules** when AW's dynamic control, repo customization, ownership, skills, or compact routing are useful but none of the current specialized domains justify installation.
+- Stay with ordinary repo docs/tests alone when even the core AW layer would cost more than it saves.
 
-- Use `memory` when agents repeatedly rediscover repo rules, invariants, traps, operator steps, or non-obvious subsystem boundaries.
-- Use `planning` when work spans sessions or branches, proof expectations are non-obvious, agents need bounded handoff, or "done" often means one slice is done while the larger intent remains open.
-- Use `verification` when manual or semi-automated proof needs repo-visible protocols, bounded evidence, known gaps, and review ownership.
-- Use `planning,memory` when durable knowledge and active execution continuity are both recurring bottlenecks.
-- Stay with ordinary repo docs and tests when they already make context, intent, and proof cheap enough to reconstruct.
+The current first-party modules are examples, not the limit of the architecture. Future modules may add delegation, deployment, richer repository retrieval, security, or other functions through the same generic contribution model.
 
-## Compact Operating Map
+## Progressive discovery
 
-Use `agentic-workspace defaults --section operating_questions --format json` for the compact question-to-surface map.
+Module selection should not enlarge the ordinary mental model.
 
-That query surface now owns the first-line answers for routine questions such as startup path, active state, combined workspace state, proof or ownership lookup, setup or handoff home, and mixed-agent posture.
+After installation, agents should still start from the same compact current operating contract. A module becomes visible when it is relevant to the current decision; an irrelevant installed module should remain out of first-line context.
 
-For the common combined-state question, prefer `agentic-workspace preflight --target ./repo --format json` before the broader workspace report.
+Do not teach agents a module command sequence as the normal workflow. Follow the current routed operation, skill, selector, or owner.
 
-Use broader docs or raw files only when that compact surface says you still need them.
+## What stays secondary
 
-## What Stays Secondary
+Direct module CLIs, module-local lifecycle commands, internal manifests, and debugging workflows are real but secondary. Use them when the current route or maintainer task explicitly requires module-level control.
 
-Direct module CLIs, module-local maintainer workflows, and debugging-oriented lifecycle paths are real but secondary. Use them only when you explicitly need module-level control, not for normal adoption.
+Exact installed surfaces and current command details belong in generated/reference owners rather than this chooser.
 
-## Read Next
+## Read next
 
 - Package overview: [`docs/package/overview.md`](package/overview.md)
-- Module responsibilities: [`docs/package/modules.md`](package/modules.md)
+- Module contribution model: [`docs/package/modules.md`](package/modules.md)
+- Extensibility boundary: [`docs/extension-boundary.md`](extension-boundary.md)
 - Installed surfaces: [`docs/package/installed-surfaces.md`](package/installed-surfaces.md)
-- Compact operating map and first question: [`.agentic-workspace/docs/compact-contract-profile.md`](../.agentic-workspace/docs/compact-contract-profile.md)
-- Memory module path: [`packages/memory/README.md`](../packages/memory/README.md)
-- Planning module path: [`packages/planning/README.md`](../packages/planning/README.md)
-- Verification module path: [`packages/verification/README.md`](../packages/verification/README.md)
+- Memory module: [`packages/memory/README.md`](../packages/memory/README.md)
+- Planning module: [`packages/planning/README.md`](../packages/planning/README.md)
+- Verification module: [`packages/verification/README.md`](../packages/verification/README.md)
 - Architecture: [`docs/architecture.md`](architecture.md)

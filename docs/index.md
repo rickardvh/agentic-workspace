@@ -1,33 +1,44 @@
 # Agentic Workspace Documentation
 
-Use the smallest documentation layer that answers the question. Public conceptual docs explain stable product roles; machine-generated references should answer exact contract questions; maintainer docs own source-checkout procedure; dated reviews and Planning retain implementation evidence rather than current product doctrine.
+Use the smallest documentation layer that answers the question. Public conceptual docs explain the stable product model; generated references answer exact contract questions; maintainer docs own source-checkout procedure; reviews and Planning retain evidence rather than current product doctrine.
 
 ## Start here
 
-- [Package overview](package/overview.md) — what AW is, when it pays back, and the ordinary operating shape.
-- [Modules](package/modules.md) — capability ownership, module selection, and the module/repo/adapter distinction.
-- [Architecture](architecture.md) — kernel, module, repo-customization, and external-adapter boundaries.
-- [Installation and adoption](agentic-workspace-install.md) — support-bearing install and lifecycle entrypoint.
+- [Package overview](package/overview.md) — operating context, dynamic control, and the `resolve -> act -> reconcile` loop.
+- [Architecture](architecture.md) — source ownership, compiled control, modules, repo customization, and adapters.
+- [Modules](package/modules.md) — peer capability contributions and current first-party examples.
+- [Installation and adoption](agentic-workspace-install.md) — support-bearing installation and lifecycle entrypoint.
 - [Threat model](security/threat-model.md) — trust, shell execution, credentials, repository, and supply-chain boundaries.
-- [Installed surfaces](package/installed-surfaces.md) — conceptual host-repo ownership and footprint model.
-- [Contracts and references](package/contracts.md) — how source contracts, schemas, runtime outputs, and generated references relate.
+- [Installed surfaces](package/installed-surfaces.md) — host-repo ownership and footprint model.
+- [Contracts and references](package/contracts.md) — source contracts, runtime outputs, schemas, and generated references.
 
 ## Canonical conceptual owners
 
-| Question | Canonical conceptual owner |
+| Question | Canonical owner |
 | --- | --- |
-| What is Agentic Workspace and when should a repo use it? | [Package overview](package/overview.md) |
-| What do modules own and how does extensibility work? | [Modules](package/modules.md) and [Extensibility and public boundary](extension-boundary.md) |
-| What does the kernel own versus modules, repo policy, and adapters? | [Architecture](architecture.md) |
-| How do I install/adopt it? | [Installation and adoption](agentic-workspace-install.md) |
+| What is AW? | [Package overview](package/overview.md) |
+| What is operating context and what is deliberately outside it? | [Package overview](package/overview.md) and [Architecture](architecture.md) |
+| How does the ordinary agent loop work? | [Package overview](package/overview.md) |
+| What does Workspace own versus repository sources? | [Architecture](architecture.md) |
+| How do modules extend AW without changing the loop? | [Modules](package/modules.md) and [Extensibility and public boundary](extension-boundary.md) |
+| How does repo customization differ from modules/adapters? | [Architecture](architecture.md) |
+| How do I install/adopt AW? | [Installation and adoption](agentic-workspace-install.md) |
 | What is the security/trust boundary? | [Threat model](security/threat-model.md) |
 | What files/state exist in a host repo and who owns them? | [Installed surfaces](package/installed-surfaces.md) |
-| How do lifecycle/context commands fit the product? | [Lifecycle and context commands](package/lifecycle.md) and [Command map](package/commands.md) |
+| How do commands relate to the operating loop? | [Lifecycle and context commands](package/lifecycle.md) and [Command map](package/commands.md) |
 | How do contracts and generated references relate? | [Contracts and references](package/contracts.md) |
 | What is current maturity/support status? | [Maturity model](maturity-model.md) and [Documentation status](documentation-status.md) |
 | How do maintainers build, validate, dogfood, and release AW? | [Maintainer index](maintainer/index.md) |
 
-A second conceptual page should link to these owners instead of restating their full model.
+A second conceptual page should link to these owners rather than invent another product abstraction.
+
+## Terminology boundary
+
+`Operating context` means only source-owned context whose availability can materially affect how an agent should operate. It is not a promise that AW ingests, indexes, embeds, or semantically models arbitrary repository content.
+
+Source code, canonical docs, tests, and history remain ordinary repository content. Richer semantic retrieval can be provided by a module without changing the core product model.
+
+Planning, Memory, Verification, assurance, delegation, proof, and other specialized capabilities should be documented under their owners when relevant, not taught as mandatory core concepts.
 
 ## Exact reference material
 
@@ -40,11 +51,11 @@ Generated references are for exact contract shapes and values after the conceptu
 - [Workspace report](reference/workspace-report.md)
 - [Operation contracts](reference/operation-contracts.md)
 
-The current CLI schema/reference pages describe declared contract structure. Work to generate a true current command catalogue and exact installed-surface matrix is tracked separately; conceptual docs should not claim a schema-shape page already answers those current-value questions.
+Conceptual docs should not duplicate exhaustive command, option, footprint, module, or schema data.
 
 ## Supporting product concepts
 
-Use these only when the ordinary conceptual pages route you deeper:
+Use these only when the ordinary conceptual pages or current operating contract route you deeper:
 
 - [Knowledge routing and source authority](package/knowledge-routing.md)
 - [Pre-work knowledge gates](package/knowledge-gates.md)
@@ -53,6 +64,8 @@ Use these only when the ordinary conceptual pages route you deeper:
 - [Jumpstart contract](jumpstart-contract.md)
 - [Host-repo learning](host-repo-learning.md)
 - [Setup findings contract](setup-findings-contract.md)
+
+These pages explain supporting mechanisms, not additional pillars of the product.
 
 ## Maintainer and design material
 
@@ -64,15 +77,13 @@ Start with:
 - [Contributor playbook](maintainer/contributor-playbook.md)
 - [Maintainer commands](maintainer/maintainer-commands.md)
 
-The following existing package-path documents currently function primarily as design/maintainer evidence and should be treated that way until the documentation-ladder cleanup gives them a final move/merge/delete disposition:
+The following existing package-path documents function primarily as design/maintainer evidence and should not be used as current product doctrine:
 
 - `package/ordinary-continuity-loop.md`
 - `package/operating-loop-substeps.md`
 - `package/cli-boundary-tests.md`
 - `package/generated-behavior-test-inventory.md`
 - `package/generated-behavior-closure-inventory.md`
-
-Do not use active issue numbers or migration inventories in those pages as the current public product definition.
 
 ## Historical evidence
 
@@ -86,8 +97,9 @@ Historical evidence may explain why the product changed, but it is not current a
 
 Prefer this ladder:
 
-1. explain stable meaning once in a conceptual owner;
-2. derive exact facts from machine-readable authority;
-3. keep source-checkout procedure in maintainer docs;
-4. keep dated evidence historical;
-5. delete or demote duplicated current prose instead of adding another index or compatibility explanation.
+1. explain the stable operating-context/control model once;
+2. progressively disclose specialized capability concepts only when relevant;
+3. derive exact facts from machine-readable authority;
+4. keep source-checkout procedure in maintainer docs;
+5. keep dated evidence historical;
+6. delete or demote duplicated current prose instead of adding another abstraction layer.

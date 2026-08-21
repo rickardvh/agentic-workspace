@@ -1,75 +1,110 @@
 ---
 name: workspace-transition-gates
-description: Reference SkillSpec-backed transition gates only when the main AW operating skill or compact router names allowed actions, forbidden actions, preferred invocation, interpreted fields, or fallback behavior that need interpretation.
+description: Interpret explicit AW transition gates only when the compact current contract needs deeper allowed-action, forbidden-action, owner, proof, reconciliation, or degraded-fallback guidance.
 ---
 
 # Workspace Transition Gates Reference
 
-This is a package-managed workspace skill installed under `.agentic-workspace/skills/`.
+This is a routed reference skill. Do not use it as an ordinary startup, module map, proof manual, or closeout workflow.
 
-Do not use it as an ordinary startup, implementation, proof, or closeout entrypoint. Start with `workspace-startup`; use this reference only when a routed transition packet needs explicit gate interpretation.
-When AW is enabled, these gates are mandatory workflow boundaries. Advisory routing explains agent-owned choices inside the workflow; it is not permission to skip `start`, `implement`, Planning gates, proof, or closeout.
+Start with `workspace-startup`. Use this reference only when the current operating contract exposes a gate that needs interpretation.
 
-Each gate is a compact SkillSpec-shaped record:
+## Gate Contract
 
-- trigger
-- preferred CLI or report
-- interpreted fields
-- allowed actions
-- forbidden actions
-- proof required
-- no-CLI fallback
+A gate should be understood through the smallest set of fields that change the next decision:
 
-## Gates
+- trigger/reason;
+- current decision/action identity or revision when relevant;
+- owning authority/capability;
+- preferred operation, skill, selector, or invocation;
+- allowed actions/effects;
+- forbidden actions/effects;
+- proof/claim requirement when relevant;
+- expected transition/reconciliation effect;
+- bounded no-CLI or human-decision fallback.
 
-### Startup To Work
+Treat those facts as a projection of current source-owned authority. Do not infer a permanent workflow phase from the gate name.
 
-- Trigger: first contact, takeover, or uncertain task shape.
-- Preferred route: configured AW invocation with `start --task "<task>" --format json`.
-- Interpreted fields: `workflow_participation`, `immediate_next_allowed_action`, `workflow_sufficiency`, `next_safe_action`, `skill_routing`.
-- Allowed: follow `next_safe_action.preferred_cli`, request a selector, or continue direct work when the packet says enough.
-- Forbidden: open broad raw planning files before the compact summary when the packet forbids it; treat advisory routing or `implementation_allowed` as a bypass around enabled-AW workflow participation.
-- Fallback: read `.agentic-workspace/WORKFLOW.md` and preserve forbidden actions.
+## Resolve Gate
 
-### Work To Planning
+Use when first contact, takeover, stale state, ambiguous ownership, or insufficient current context prevents a safe action.
 
-- Trigger: lane/epic shape, active planning pressure, durable sequencing, or issue-linked execution.
-- Preferred route: configured AW invocation with `summary --format json`, then Planning commands named by the packet.
-- Interpreted fields: active item, active execplan, continuation owner, stop conditions.
-- Allowed: create or continue the active planning artifact through package commands.
-- Forbidden: hand-edit planning state or claim completion from a local slice.
-- Fallback: read the active execplan only after the compact summary points there.
+- Preferred route: configured AW `start` or the exact selector/owner query named by the packet.
+- Allowed: obtain the smallest missing authoritative fact, route to the named owner, or continue direct work when explicitly permitted.
+- Forbidden: broad raw-state inspection when a compact route exists; treating advisory prose as stronger than a current hard gate.
+- Expected result: one current operating contract with a constructible action or explicit human decision.
 
-### Work To Proof
+## Owner / Capability Gate
 
-- Trigger: changed paths are known or a completion claim is near.
-- Preferred route: configured AW invocation with `implement --changed <paths> --format json` or `proof --changed <paths> --format json`.
-- Interpreted fields: required commands, proof burden, acceptance guidance, completion-claim boundary.
-- Allowed: run the selected narrow proof and classify gaps.
-- Forbidden: substitute passing commands for intent satisfaction.
-- Fallback: choose the narrowest existing test, lint, contract, or inspection route for the changed surface.
+Use when the current decision routes work to a specialized owner, module, repo operation, or skill.
 
-### Work To Correction Or Memory Residue
+- Follow the named route without assuming the capability applies globally.
+- Let the owner interpret its domain state; return only the bounded result needed by the current operating decision.
+- Preserve mutation, proof, and claim boundaries from the parent decision.
+- If the capability is unavailable/incompatible, use the bounded recovery named by the current packet rather than raw file guessing.
 
-- Trigger: repeated correction, durable lesson, closeout residue, or improvement signal.
-- Preferred route: `correction-event submit` for agent-specific behavioral correction; configured AW `memory route` or `memory promotion-report` only for genuinely shared repo knowledge.
-- Interpreted fields: correction capture decision, target identity, `memory_consultation_status`, `durable_residue_decision`, and `improvement_signal_status`.
-- Allowed: capture target-scoped correction evidence, capture durable shared anti-rediscovery knowledge, or route to the owning surface.
-- Forbidden: substitute an apology or Memory note for correction admission; write agent-specific weakness, task logs, plan history, or one-off chat residue to checked-in Memory.
-- Fallback: inspect the Memory index and only already-routed notes.
+Current runtimes may name first-party owners such as Planning, Memory, Verification/proof, or another specialized subsystem. Those names are examples of routed owners, not fixed gate classes.
 
-### Proof To Closeout
+## Action / Effect Gate
 
-- Trigger: validation has run and the agent is about to say work is complete.
-- Preferred CLI: Planning closeout/archive command when planned; otherwise final acceptance reconciliation.
-- Interpreted fields: proof result, intent satisfaction, issue linkage, residue decision, completion allowed.
-- Allowed: close only the claim level actually proven.
-- Forbidden: close parent/lane/epic issues from slice-only proof.
-- Fallback: state proof, intent, gaps, and next owner without mutating managed state by hand.
+Use when an operation is blocked or constrained by authority, changed scope, mutation baseline, runtime capability, or another effect boundary.
+
+- Preferred action: the typed operation or exact recovery route supplied by the current decision.
+- Allowed: only effects within the admitted boundary.
+- Forbidden: broadening mutation because the user or another module permitted a different concern.
+- A blocked result must name a constructible next action, exact owner/selector, or explicit human decision. A conceptual transition label alone is insufficient.
+
+## Proof / Claim Gate
+
+Use only when evidence materially affects the intended claim.
+
+- Run or admit the narrow proof route selected for the current subject/requirement.
+- Preserve the distinction between evidence success, semantic intent satisfaction, and broader parent completion.
+- A module-local or proof-local success cannot widen the claim beyond the current compiled boundary.
+- When proof is not relevant, do not introduce proof ceremony merely because proof capability exists.
+
+## Reconciliation Gate
+
+Use after a bounded action when the result does not automatically determine what happens next.
+
+Reconcile only relevant facts:
+
+- expected transition/result status;
+- changed source-owned state/evidence;
+- current claim permission;
+- future-relevant residue and its owner, if any;
+- continuation owner or next supported action;
+- explicit human decision when semantics cannot be inferred safely.
+
+If another action remains, return to resolve. If no action remains and the intended claim is permitted, reconciliation is terminal.
+
+Do not preserve a separate mandatory closeout phase merely because current compatibility packets use closeout-specific names.
+
+## Correction, Learning, and Other Specialized Results
+
+When a user correction, durable learned lesson, evaluation result, delegation outcome, setup finding, or future module result needs admission, follow the exact operation/owner routed by the current contract.
+
+This reference does not define those domain procedures. Do not substitute one owner for another—for example, do not turn an agent-specific correction into shared repository knowledge merely because Memory is installed.
+
+## Degraded / No-CLI Gate
+
+When the configured runtime is unavailable:
+
+- preserve the current forbidden actions;
+- use the installed fallback or exact named file/selector only;
+- repair or escalate the specific missing capability rather than reconstructing broad state manually;
+- keep module-specific state opaque unless the fallback explicitly routes there.
+
+## Compatibility Note
+
+Current packets may still expose names such as `planning_safety_gate`, `module_slot`, `planning.closeout`, `workspace.proof`, or phase-specific transition fields.
+
+Honor them when they carry current authority, but interpret them through generic owner/action/reconciliation semantics. Do not teach those names as the permanent architecture.
 
 ## Guardrails
 
-- Treat `forbidden_actions` as binding until a newer compact packet supersedes them.
-- Preserve `module_slot` when falling back without CLI.
-- Prefer selector output before opening broad raw files.
-- Keep SkillSpec gate records compact enough to reduce context, not create a new manual.
+- Treat `forbidden_actions` as binding until superseded by a newer admitted decision.
+- Prefer exact selectors and owner routes before broad raw reads.
+- Keep the transition reference smaller than the domain procedure it routes to.
+- Do not let transport, evidence, or module-local state silently widen unrelated authority.
+- Do not create another gate category when an existing owner/action/reconcile fact can express the decision.

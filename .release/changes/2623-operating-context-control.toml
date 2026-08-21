@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Reframe Agentic Workspace around operating context and dynamic control, with module-neutral progressively disclosed operating guidance."
