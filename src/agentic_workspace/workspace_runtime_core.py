@@ -49295,7 +49295,7 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
                 admitted_input=admitted_input,
             )
             if reused is not None:
-                for diagnostic_key in ("context", "projection_reuse", "owner_reconciliation"):
+                for diagnostic_key in ("context", "owner_reconciliation"):
                     reused.pop(diagnostic_key, None)
                 print(format_summary_json(reused))
                 return 0
@@ -49397,9 +49397,6 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
         summary, operating_decision = finalize_projection_surface_operating_decision(
             payload=summary, admitted_input=admitted_input, consumer="summary"
         )
-        if summary_profile == "tiny":
-            for diagnostic_key in ("context", "projection_reuse", "owner_reconciliation"):
-                summary.pop(diagnostic_key, None)
         if reuse_context is not None:
             reuse_result = record_projection_reuse(
                 root=target_root,
@@ -49416,6 +49413,9 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
                     reuse_result=reuse_result,
                     full_detail_command=full_detail_command,
                 )
+        if summary_profile == "tiny":
+            for diagnostic_key in ("context", "owner_reconciliation"):
+                summary.pop(diagnostic_key, None)
         if args.format == "json":
             print(format_summary_json(summary))
         elif summary_profile == "tiny":
