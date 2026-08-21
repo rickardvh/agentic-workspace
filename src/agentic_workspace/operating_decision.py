@@ -21,6 +21,7 @@ from agentic_workspace.instruction_clause_ir import compile_instruction_program,
 from agentic_workspace.intent_feedback import compile_intent_feedback, intent_evidence_from_observed_behavior
 from agentic_workspace.memory_effectiveness import compile_memory_effectiveness
 from agentic_workspace.reconciliation import compile_reconciliation
+from agentic_workspace.scoped_instructions import inspect_instructions
 
 BLOCKER_PRECEDENCE = [
     "missing-authority",
@@ -58,14 +59,14 @@ def _file_digest(path: Path) -> str:
 def _directory_digest(path: Path) -> str:
     if not path.is_dir():
         return ""
-    entries: list[dict[str, str]] = []
+    entries: dict[str, str] = {}
     try:
         children = sorted(item for item in path.rglob("*") if item.is_file())
     except OSError:
         return ""
     for child in children[:200]:
         rel = child.relative_to(path).as_posix()
-        entries.append({"path": rel, "digest": _file_digest(child)})
+        entries[rel] = _file_digest(child)
     return _digest(entries)
 
 
@@ -99,9 +100,9 @@ CONTEXT_AUTHORITY_SOURCE_SPECS: dict[str, dict[str, Any]] = {
         "source_adapter": "architecture-principles-source-adapter",
     },
     "scoped-instructions": {
-        "source": "AGENTS.md",
+        "source": ".agentic-workspace/instructions",
         "required": ["AGENTS.md", ".agentic-workspace/skills/workspace-startup/SKILL.md"],
-        "routes": ["AGENTS.md", ".agentic-workspace/skills/**"],
+        "routes": ["AGENTS.md", ".agentic-workspace/instructions/**", ".agentic-workspace/skills/**"],
         "source_adapter": "scoped-instruction-source-adapter",
     },
     "ownership": {
@@ -442,6 +443,10 @@ def _resolve_context_authority_source(
             "selection": selection,
         }
     chosen = root / str(spec.get("source") or candidates[0])
+    if surface == "scoped-instructions" and not chosen.exists():
+        # Existing hosts retain their thin adapter until they create or migrate
+        # a canonical scoped-instruction directory.
+        chosen = root / "AGENTS.md"
     if not chosen.exists():
         return {
             "status": "missing",
@@ -2146,9 +2151,28 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
     reconciliation = compile_reconciliation(_as_dict(inputs.get("reconciliation")))
     control_inputs = compile_control_inputs([item for item in _as_list(inputs.get("control_inputs")) if isinstance(item, dict)])
     instruction_program = instruction_program_from_existing_mechanisms(inputs)
+    scoped_instruction_projection: dict[str, Any] = {}
+    if inputs.get("target_root"):
+        instruction_root = Path(str(inputs["target_root"]))
+        scoped_instruction_projection = inspect_instructions(
+            instruction_root,
+            task=str(inputs.get("task") or ""),
+            changed_paths=[str(path) for path in _as_list(inputs.get("changed_paths"))],
+            include_ir=True,
+            evidence={str(key): bool(value) for key, value in _as_dict(inputs.get("instruction_evidence")).items()},
+        )
+        scoped_program = _as_dict(scoped_instruction_projection.pop("instruction_program", {}))
+        instruction_program = {
+            "kind": "agentic-workspace/instruction-program/v1",
+            **{
+                key: [*_as_list(instruction_program.get(key)), *_as_list(scoped_program.get(key))]
+                for key in ("facts", "clauses", "capabilities", "source_diagnostics")
+            },
+        }
     instruction_action = _as_dict(_as_dict(inputs.get("actionability")).get("next_action") or inputs.get("primary_action"))
     instruction_invocation = _as_dict(instruction_action.get("operation_invocation"))
     instruction_targets = [str(item) for item in _as_list(inputs.get("instruction_targets")) if str(item)]
+    instruction_targets.extend(f"effect:write:{path}" for path in _as_list(inputs.get("changed_paths")) if str(path))
     if instruction_invocation.get("operation_id"):
         instruction_targets.append(f"operation:{instruction_invocation['operation_id']}")
     instruction_targets.extend(f"claim:{item}" for item in _as_list(inputs.get("requested_claim_classes")) if str(item))
@@ -2399,6 +2423,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         "memory_effectiveness": memory_effectiveness,
         "source_guidance": source_guidance,
         "instruction_clause_projection": instruction_clause_projection,
+        "scoped_instruction_projection": scoped_instruction_projection,
         "reconciliation": reconciliation,
         "control_inputs": control_inputs,
         "highest_impact_context_consequence": context_consequences[0] if context_consequences else {},

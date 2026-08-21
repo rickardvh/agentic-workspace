@@ -1,0 +1,462 @@
+"""Small Markdown-first repository instruction authoring and compilation surface."""
+
+from __future__ import annotations
+
+import argparse
+import fnmatch
+import hashlib
+import json
+import re
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Iterable
+
+INSTRUCTION_DIR = Path(".agentic-workspace/instructions")
+FRONTMATTER_FIELDS = ("paths", "read", "use", "checks", "protect")
+_NAME = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+
+
+@dataclass(frozen=True)
+class InstructionDocument:
+    identity: str
+    source_ref: str
+    revision: str
+    metadata: dict[str, list[Any]]
+    body: str
+    has_guidance: bool
+    body_loaded: bool
+    diagnostics: tuple[dict[str, str], ...]
+
+
+def _digest(value: str) -> str:
+    return "sha256:" + hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _valid_repo_pattern(value: str) -> bool:
+    normalized = value.strip()
+    if not normalized or "\\" in normalized or normalized.startswith(("/", "~")) or re.match(r"^[A-Za-z]:", normalized):
+        return False
+    return ".." not in Path(normalized).parts
+
+
+def _frontmatter(path: Path, *, load_body: bool) -> tuple[dict[str, list[Any]], str, bool, bool, list[dict[str, str]]]:
+    metadata: dict[str, list[Any]] = {field: [] for field in FRONTMATTER_FIELDS}
+    diagnostics: list[dict[str, str]] = []
+    try:
+        handle = path.open(encoding="utf-8")
+    except OSError as exc:
+        return metadata, "", False, False, [{"field": "file", "code": "unreadable", "message": str(exc)}]
+    with handle:
+        first = handle.readline()
+        if first.rstrip("\r\n") != "---":
+            remainder = handle.read()
+            body = first + remainder if load_body else ""
+            return metadata, body.strip(), bool((first + remainder).strip()), load_body, diagnostics
+        current = ""
+        closed = False
+        for raw in handle:
+            line = raw.rstrip("\r\n")
+            if line == "---":
+                closed = True
+                break
+            if not line.strip() or line.lstrip().startswith("#"):
+                continue
+            if not line.startswith((" ", "-")) and ":" in line:
+                key, value = line.split(":", 1)
+                current = key.strip()
+                if current not in FRONTMATTER_FIELDS:
+                    diagnostics.append({"field": current, "code": "unknown-field", "message": f"use only {', '.join(FRONTMATTER_FIELDS)}"})
+                    continue
+                value = value.strip()
+                if value:
+                    if value.startswith("[") and value.endswith("]"):
+                        metadata[current].extend(item.strip().strip("'\"") for item in value[1:-1].split(",") if item.strip())
+                    else:
+                        diagnostics.append({"field": current, "code": "invalid-shape", "message": "use a YAML list or a short inline list"})
+                continue
+            stripped = line.strip()
+            if stripped.startswith("-") and current in FRONTMATTER_FIELDS:
+                value = stripped[1:].strip()
+                if current == "checks" and value.startswith("run:"):
+                    command = value.removeprefix("run:").strip()
+                    metadata[current].append({"run": command})
+                else:
+                    metadata[current].append(value.strip("'\""))
+                continue
+            diagnostics.append({"field": current or "frontmatter", "code": "invalid-syntax", "message": f"cannot parse `{stripped}`"})
+        if not closed:
+            diagnostics.append({"field": "frontmatter", "code": "unterminated", "message": "add the closing --- line"})
+            return metadata, "", False, False, diagnostics
+        remainder = handle.read()
+        body = remainder.strip() if load_body else ""
+        return metadata, body, bool(remainder.strip()), load_body, diagnostics
+
+
+def _validate_metadata(metadata: dict[str, list[Any]]) -> list[dict[str, str]]:
+    diagnostics: list[dict[str, str]] = []
+    for field in ("paths", "read", "protect"):
+        for index, value in enumerate(metadata[field]):
+            if not isinstance(value, str) or not _valid_repo_pattern(value):
+                diagnostics.append(
+                    {
+                        "field": f"{field}[{index}]",
+                        "code": "invalid-repo-pattern",
+                        "message": "use a non-empty repo-relative path or glob without `..`, a drive, or a leading slash",
+                    }
+                )
+    for index, value in enumerate(metadata["use"]):
+        if not isinstance(value, str) or not value.strip():
+            diagnostics.append({"field": f"use[{index}]", "code": "invalid-reference", "message": "name one admitted capability"})
+    for index, value in enumerate(metadata["checks"]):
+        if isinstance(value, dict):
+            command = str(value.get("run") or "").strip()
+            if set(value) != {"run"} or not command or "\n" in command:
+                diagnostics.append(
+                    {"field": f"checks[{index}]", "code": "invalid-inline-check", "message": "use `- run: <trusted repo command>`"}
+                )
+        elif not isinstance(value, str) or not value.strip():
+            diagnostics.append({"field": f"checks[{index}]", "code": "invalid-reference", "message": "name one admitted check"})
+    return diagnostics
+
+
+def read_instruction(path: Path, *, root: Path, load_body: bool = False) -> InstructionDocument:
+    try:
+        source_ref = path.resolve().relative_to(root.resolve()).as_posix()
+    except ValueError:
+        source_ref = path.as_posix()
+    metadata, body, has_guidance, body_loaded, diagnostics = _frontmatter(path, load_body=load_body)
+    diagnostics.extend(_validate_metadata(metadata))
+    try:
+        revision = _digest(path.read_text(encoding="utf-8"))
+    except OSError:
+        revision = ""
+    return InstructionDocument(
+        identity=path.stem,
+        source_ref=source_ref,
+        revision=revision,
+        metadata=metadata,
+        body=body,
+        has_guidance=has_guidance,
+        body_loaded=body_loaded,
+        diagnostics=tuple(diagnostics),
+    )
+
+
+def instruction_documents(root: Path, *, load_bodies: bool = False) -> list[InstructionDocument]:
+    directory = root / INSTRUCTION_DIR
+    if not directory.is_dir():
+        return []
+    return [read_instruction(path, root=root, load_body=load_bodies) for path in sorted(directory.glob("*.md")) if path.is_file()]
+
+
+def _matched_paths(patterns: list[str], changed_paths: Iterable[str]) -> list[str]:
+    normalized = [str(path).replace("\\", "/") for path in changed_paths]
+    return sorted({path for path in normalized for pattern in patterns if fnmatch.fnmatch(path, pattern)})
+
+
+def instruction_applies(document: InstructionDocument, *, changed_paths: list[str]) -> tuple[bool, str, list[str]]:
+    patterns = [str(item) for item in document.metadata["paths"]]
+    if not patterns:
+        return True, "global instruction", []
+    matched = _matched_paths(patterns, changed_paths)
+    if matched:
+        return True, f"{matched[0]} matches {next(pattern for pattern in patterns if fnmatch.fnmatch(matched[0], pattern))}", matched
+    return False, "no changed or target path matches " + ", ".join(patterns), []
+
+
+def _capability_candidates(root: Path) -> dict[str, list[str]]:
+    identities: set[str] = set()
+    for skills_root in (root / ".agentic-workspace/skills", root / ".agents/skills"):
+        if skills_root.is_dir():
+            identities.update(f"skill:{path.parent.name}" for path in skills_root.glob("*/SKILL.md"))
+    registry = Path(__file__).resolve().parent / "contracts" / "operation_contracts.json"
+    if registry.is_file():
+        try:
+            payload = json.loads(registry.read_text(encoding="utf-8"))
+            identities.update(
+                f"operation:{item['id']}" for item in payload.get("operations", []) if isinstance(item, dict) and item.get("id")
+            )
+        except (OSError, json.JSONDecodeError):
+            pass
+    candidates: dict[str, list[str]] = {}
+    for identity in sorted(identities):
+        short = identity.partition(":")[2].rsplit(".", 1)[-1]
+        candidates.setdefault(short, []).append(identity)
+        candidates.setdefault(identity, []).append(identity)
+    return candidates
+
+
+def _resolve_reference(value: str, *, candidates: dict[str, list[str]], field: str) -> tuple[str, dict[str, str] | None]:
+    matches = sorted(set(candidates.get(value, [])))
+    if len(matches) == 1:
+        return matches[0], None
+    if not matches:
+        return "", {"field": field, "code": "missing-reference", "message": f"`{value}` is not an admitted capability"}
+    return "", {
+        "field": field,
+        "code": "ambiguous-reference",
+        "message": f"`{value}` matches {', '.join(matches)}; use a qualified identity",
+    }
+
+
+def inspect_instructions(
+    root: Path,
+    *,
+    task: str = "",
+    changed_paths: list[str] | None = None,
+    include_ir: bool = False,
+    evidence: dict[str, bool] | None = None,
+) -> dict[str, Any]:
+    del task  # v1 applicability is deliberately path/global only.
+    changed = [str(item).replace("\\", "/") for item in (changed_paths or [])]
+    candidates = _capability_candidates(root)
+    records: list[dict[str, Any]] = []
+    diagnostics: list[dict[str, str]] = []
+    program: dict[str, Any] = {
+        "kind": "agentic-workspace/instruction-program/v1",
+        "facts": [],
+        "clauses": [],
+        "capabilities": [],
+        "source_diagnostics": [],
+    }
+    for shallow in instruction_documents(root):
+        applies, reason, matched = instruction_applies(shallow, changed_paths=changed)
+        document = read_instruction(root / shallow.source_ref, root=root, load_body=applies)
+        item_diagnostics = [dict(item) for item in document.diagnostics]
+        resolved_use: list[str] = []
+        resolved_checks: list[dict[str, str]] = []
+        for index, value in enumerate(document.metadata["use"]):
+            resolved, diagnostic = _resolve_reference(str(value), candidates=candidates, field=f"use[{index}]")
+            if diagnostic:
+                item_diagnostics.append(diagnostic)
+            else:
+                resolved_use.append(resolved)
+        for index, value in enumerate(document.metadata["read"]):
+            reference = str(value)
+            if not any(marker in reference for marker in "*?[") and not (root / reference).is_file():
+                item_diagnostics.append(
+                    {
+                        "field": f"read[{index}]",
+                        "code": "missing-resource",
+                        "message": f"`{reference}` is not a readable repo-owned file",
+                    }
+                )
+        for index, value in enumerate(document.metadata["checks"]):
+            if isinstance(value, dict):
+                command = str(value.get("run") or "").strip()
+                check_id = "instruction-check:" + document.identity + ":" + hashlib.sha256(command.encode()).hexdigest()[:16]
+                resolved_checks.append({"identity": check_id, "command": command, "kind": "inline"})
+            else:
+                resolved, diagnostic = _resolve_reference(str(value), candidates=candidates, field=f"checks[{index}]")
+                if diagnostic:
+                    item_diagnostics.append(diagnostic)
+                else:
+                    check_id = "instruction-check:" + resolved
+                    resolved_checks.append({"identity": check_id, "reference": resolved, "kind": "named"})
+        for diagnostic in item_diagnostics:
+            diagnostics.append({"source_ref": document.source_ref, **diagnostic})
+        record = {
+            "id": document.identity,
+            "source_ref": document.source_ref,
+            "revision": document.revision,
+            "scope": document.metadata["paths"] or ["global"],
+            "valid": not item_diagnostics,
+            "applies": applies,
+            "reason": reason,
+            "matched_paths": matched,
+            "body_loaded": document.body_loaded,
+            "features": [
+                name
+                for name, present in (
+                    ("guidance", document.has_guidance),
+                    ("read", bool(document.metadata["read"])),
+                    ("use", bool(document.metadata["use"])),
+                    ("checks", bool(document.metadata["checks"])),
+                    ("protect", bool(document.metadata["protect"])),
+                )
+                if present
+            ],
+            "guidance": document.body if applies else "",
+            "read": document.metadata["read"] if applies else [],
+            "use": resolved_use if applies else [],
+            "checks": resolved_checks if applies else [],
+            "protect": document.metadata["protect"] if applies else [],
+            "diagnostics": item_diagnostics,
+        }
+        records.append(record)
+        if applies and item_diagnostics:
+            program["source_diagnostics"].extend(
+                {
+                    "code": "invalid-bounded-control",
+                    "ref": f"{document.source_ref}:{diagnostic['field']}",
+                    "owner": "repo-instructions",
+                    "repair": diagnostic["message"],
+                }
+                for diagnostic in item_diagnostics
+            )
+        if not applies or item_diagnostics:
+            continue
+        fact_id = f"instruction:{document.identity}:applies"
+        source = {"owner": "repo-instructions", "revision": document.revision, "current": True}
+        program["facts"].append({"id": fact_id, "type": "boolean", "value": True, "source": source})
+        effects: list[dict[str, str]] = []
+        if document.body:
+            effects.append({"kind": "surface", "target": f"surface:instruction:{document.identity}"})
+        effects.extend({"kind": "surface", "target": f"surface:{ref}"} for ref in document.metadata["read"])
+        effects.extend({"kind": "prefer", "target": ref} for ref in resolved_use)
+        for check in resolved_checks:
+            satisfier = check["identity"]
+            effects.append({"kind": "require", "target": "claim:complete", "satisfier": satisfier})
+            program["capabilities"].append(
+                {
+                    "id": satisfier,
+                    "kind": "evidence",
+                    "current": bool((evidence or {}).get(satisfier, False)),
+                    "source": {"owner": "proof", "revision": document.revision, "current": True},
+                }
+            )
+        effects.extend({"kind": "restrict", "target": f"effect:write:{pattern}"} for pattern in document.metadata["protect"])
+        if effects:
+            program["clauses"].append(
+                {
+                    "id": f"scoped-markdown:{document.identity}",
+                    "source": source,
+                    "when": {"fact": fact_id, "operator": "is", "value": True},
+                    "effects": effects,
+                    "authority": {
+                        "effects": sorted({effect["kind"] for effect in effects}),
+                        "target_patterns": [effect["target"] for effect in effects],
+                    },
+                }
+            )
+    payload: dict[str, Any] = {
+        "kind": "agentic-workspace/scoped-instruction-inspection/v1",
+        "status": "invalid" if diagnostics else "valid",
+        "instruction_count": len(records),
+        "applicable_count": sum(item["applies"] for item in records),
+        "instructions": records,
+        "diagnostics": diagnostics,
+        "progressive_disclosure": {
+            "irrelevant_bodies_loaded": sum(item["body_loaded"] for item in records if not item["applies"]),
+            "rule": "Only matching or global instruction bodies enter the current operating contract.",
+        },
+    }
+    if include_ir:
+        payload["instruction_program"] = program
+    return payload
+
+
+def instruction_program_for_operating_decision(
+    *, root: Path, task: str, changed_paths: list[str], evidence: dict[str, bool] | None = None
+) -> dict[str, Any]:
+    return inspect_instructions(root, task=task, changed_paths=changed_paths, include_ir=True, evidence=evidence)["instruction_program"]
+
+
+def _render_text(payload: dict[str, Any]) -> str:
+    lines: list[str] = []
+    for item in payload.get("instructions", []):
+        scope = "global" if item["scope"] == ["global"] else ", ".join(item["scope"])
+        state = "valid" if item["valid"] else "invalid"
+        lines.append(f"{item['id']:<20} {scope:<24} {state}")
+        if item.get("applies"):
+            lines.append(f"  because {item['reason']}")
+            if item.get("features"):
+                lines.append("  " + " · ".join(item["features"]))
+        elif "reason" in item:
+            lines.append(f"  not applicable: {item['reason']}")
+    for diagnostic in payload.get("diagnostics", []):
+        lines.extend(["", str(diagnostic["source_ref"]), f"  {diagnostic['field']}: {diagnostic['message']}"])
+    return "\n".join(lines) if lines else "No scoped repository instructions found."
+
+
+def _write_scaffold(root: Path, *, name: str, paths: list[str]) -> dict[str, Any]:
+    if not _NAME.fullmatch(name):
+        raise ValueError("instruction name must use lowercase letters, digits, and hyphens")
+    invalid = [pattern for pattern in paths if not _valid_repo_pattern(pattern)]
+    if invalid:
+        raise ValueError(f"invalid repo-relative path pattern: {invalid[0]}")
+    destination = root / INSTRUCTION_DIR / f"{name}.md"
+    if destination.exists():
+        raise FileExistsError(f"instruction already exists: {destination.relative_to(root).as_posix()}")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    title = " ".join(part.capitalize() for part in name.split("-"))
+    frontmatter = ""
+    if paths:
+        frontmatter = "---\npaths:\n" + "".join(f"  - {pattern}\n" for pattern in paths) + "---\n\n"
+    destination.write_text(f"{frontmatter}# {title}\n\n<!-- Write the guidance an agent needs in this scope. -->\n", encoding="utf-8")
+    return {
+        "kind": "agentic-workspace/scoped-instruction-create-result/v1",
+        "status": "created",
+        "source_ref": destination.relative_to(root).as_posix(),
+        "scope": paths or ["global"],
+    }
+
+
+def _migration_advice(root: Path, source: str) -> dict[str, Any]:
+    path = (root / source).resolve()
+    try:
+        path.relative_to(root.resolve())
+    except ValueError as exc:
+        raise ValueError("migration source must stay inside the repository") from exc
+    text = path.read_text(encoding="utf-8")
+    headings = [line.lstrip("#").strip() for line in text.splitlines() if line.startswith("## ")]
+    return {
+        "kind": "agentic-workspace/scoped-instruction-migration-advice/v1",
+        "status": "review-required",
+        "source_ref": path.relative_to(root).as_posix(),
+        "candidate_headings": headings,
+        "writes_applied": False,
+        "steps": [
+            "Choose one coherent guidance block and its intended scope.",
+            "Scaffold a scoped instruction and move the guidance with human or agent judgment.",
+            "Run instructions check and positive/negative instructions explain scenarios.",
+            "Remove the static block only after behavior is verified; retain a thin bootstrap.",
+        ],
+    }
+
+
+def run_cli(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(
+        prog="agentic-workspace instructions", description="Create, check, and explain scoped Markdown instructions."
+    )
+    parser.add_argument("--target", default=".")
+    parser.add_argument("--format", choices=("text", "json"), default="text")
+    commands = parser.add_subparsers(dest="instruction_command")
+    new = commands.add_parser("new", help="Scaffold one global or path-scoped Markdown instruction.")
+    new.add_argument("name")
+    new.add_argument("--paths", action="append", default=[])
+    new.add_argument("--target", default=".")
+    new.add_argument("--format", choices=("text", "json"), default="text")
+    check = commands.add_parser("check", help="Validate instruction syntax and references without executing checks.")
+    check.add_argument("--target", default=".")
+    check.add_argument("--format", choices=("text", "json"), default="text")
+    explain = commands.add_parser("explain", help="Explain task-specific applicability in repository vocabulary.")
+    explain.add_argument("--task", default="")
+    explain.add_argument("--changed", action="append", default=[])
+    explain.add_argument("--verbose", action="store_true")
+    explain.add_argument("--target", default=".")
+    explain.add_argument("--format", choices=("text", "json"), default="text")
+    migrate = commands.add_parser("migrate", help="Give non-destructive incremental migration guidance.")
+    migrate.add_argument("--from", dest="source", required=True)
+    migrate.add_argument("--target", default=".")
+    migrate.add_argument("--format", choices=("text", "json"), default="text")
+    args = parser.parse_args(argv)
+    root = Path(args.target).resolve()
+    try:
+        if args.instruction_command == "new":
+            payload = _write_scaffold(root, name=args.name, paths=args.paths)
+        elif args.instruction_command == "migrate":
+            payload = _migration_advice(root, args.source)
+        else:
+            payload = inspect_instructions(
+                root,
+                task=getattr(args, "task", ""),
+                changed_paths=getattr(args, "changed", []),
+                include_ir=bool(getattr(args, "verbose", False)),
+            )
+    except (OSError, ValueError) as exc:
+        payload = {"kind": "agentic-workspace/scoped-instruction-error/v1", "status": "failed", "message": str(exc)}
+        print(json.dumps(payload, indent=2) if args.format == "json" else payload["message"])
+        return 2
+    print(json.dumps(payload, indent=2) if args.format == "json" else _render_text(payload))
+    return 2 if args.instruction_command == "check" and payload["status"] == "invalid" else 0

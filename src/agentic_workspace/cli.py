@@ -36,6 +36,10 @@ def _run_cli(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
         return 2
+    if args[:1] == ["instructions"]:
+        from agentic_workspace.scoped_instructions import run_cli
+
+        return run_cli(args[1:])
     generated_main = _load_main()
     try:
         return run_with_session_logging(args, generated_main)

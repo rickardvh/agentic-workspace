@@ -26,7 +26,7 @@ _SPECS: dict[str, tuple[str, str, str, str]] = {
         "agentic_workspace.workspace_runtime_core.scoped_instruction_routing",
         "agentic-workspace/scoped-instruction-selection/v1",
         "workspace.instructions.route",
-        "AGENTS scoped-instruction managed fence",
+        "repository scoped Markdown instruction directory with thin AGENTS fallback",
     ),
     "ownership": (
         "agentic_workspace.workspace_runtime_core.ownership",
@@ -163,13 +163,36 @@ def _skill_semantics(root: Path) -> tuple[str, str, dict[str, Any], dict[str, An
     )
 
 
+def _scoped_instruction_semantics(path: Path, root: Path) -> tuple[str, str, dict[str, Any], dict[str, Any]]:
+    if not path.is_dir():
+        status, reason, schema = _text_semantics(path, [], ["Authority marker:", "agentic-workspace:workflow:start", "Ordinary route:"])
+        return status, reason, schema, {"compatibility_source": "thin-agent-adapter"}
+    from agentic_workspace.scoped_instructions import instruction_documents
+
+    documents = instruction_documents(root)
+    diagnostics = [{"source_ref": document.source_ref, **diagnostic} for document in documents for diagnostic in document.diagnostics]
+    current = bool(documents) and not diagnostics
+    return (
+        "current" if current else "invalid",
+        "" if current else "owner-source-schema-invalid",
+        {
+            "source_format": "scoped-markdown-directory",
+            "parse_status": "valid" if current else "invalid",
+            "instruction_count": len(documents),
+            "diagnostic_count": len(diagnostics),
+            "population": {"status": "present" if current else "invalid"},
+        },
+        {"instruction_diagnostics": diagnostics[:10], "compatibility_source": "canonical-scoped-markdown"},
+    )
+
+
 def _semantic_resolver(surface: str, chosen: Path, root: Path) -> tuple[str, str, dict[str, Any], dict[str, Any]]:
     if surface == "system-intent":
         status, reason, schema = _text_semantics(chosen, ["# System Intent", "## Purpose", "## Governing intents"])
     elif surface == "architecture-principles":
         status, reason, schema = _text_semantics(chosen, ["## Governing intents"], ["generated", "runtime", "contract"])
     elif surface == "scoped-instructions":
-        status, reason, schema = _text_semantics(chosen, [], ["Authority marker:", "agentic-workspace:workflow:start", "Ordinary route:"])
+        return _scoped_instruction_semantics(chosen, root)
     elif surface == "ownership":
         status, reason, schema = _toml_semantics(chosen, ["schema_version", "managed_surfaces", "authority_surfaces"])
     elif surface in {"assignment", "target-guidance"}:

@@ -52117,6 +52117,8 @@ def _proof_intent_for_lane(lane: dict[str, Any]) -> dict[str, Any]:
 
 
 def _proof_route_source_for_lane(*, lane: dict[str, Any], command: str, adjustments_by_replacement: dict[str, dict[str, str]]) -> str:
+    if lane.get("scoped_instruction"):
+        return "repo-scoped-instruction-check"
     if lane.get("domain_lane"):
         return "host-declared-domain-proof-lane"
     if lane.get("local_overlay"):

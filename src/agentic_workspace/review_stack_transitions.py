@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 import shlex
+import subprocess
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Sequence
@@ -63,18 +64,45 @@ def _stack_current_pr(stack: dict[str, Any]) -> str:
     return str(members[-1].get("pr_number") or "").strip() if members else ""
 
 
-def _select_member(stack: dict[str, Any], *, pr_number: str, changed_paths: list[str]) -> dict[str, Any]:
+def _current_branch(target_root: Path) -> str:
+    completed = subprocess.run(
+        ["git", "branch", "--show-current"],
+        cwd=target_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return completed.stdout.strip() if completed.returncode == 0 else ""
+
+
+def _select_member(stack: dict[str, Any], *, pr_number: str, branch: str, changed_paths: list[str]) -> dict[str, Any]:
     members = [item for item in stack.get("stack_members", []) if isinstance(item, dict)]
+    if pr_number:
+        match = next((member for member in members if str(member.get("pr_number") or "").strip() == pr_number), None)
+        if match is not None:
+            return match
+    if branch:
+        match = next(
+            (
+                member
+                for member in members
+                if branch
+                in {
+                    str(member.get("branch") or "").strip(),
+                    str(member.get("head_ref") or "").strip(),
+                    str(member.get("head_branch") or "").strip(),
+                }
+            ),
+            None,
+        )
+        if match is not None:
+            return match
     normalized = set(_dedupe(changed_paths))
     if normalized:
         for member in members:
             member_paths = set(_member_paths(member))
             if normalized.issubset(member_paths) or member_paths.intersection(normalized):
                 return member
-    if pr_number:
-        match = next((member for member in members if str(member.get("pr_number") or "").strip() == pr_number), None)
-        if match is not None:
-            return match
     current = _stack_current_pr(stack)
     if current:
         match = next((member for member in members if str(member.get("pr_number") or "").strip() == current), None)
@@ -149,7 +177,8 @@ def record_review_stack_transition(
     if not members:
         return {"status": "skipped", "reason": "review stack cache unavailable"}
     normalized_paths = _dedupe(_string_list(list(changed_paths)))
-    selected_member = _select_member(stack, pr_number=pr_number, changed_paths=normalized_paths)
+    branch = _current_branch(target_root)
+    selected_member = _select_member(stack, pr_number=pr_number, branch=branch, changed_paths=normalized_paths)
     selected_pr = str(pr_number or selected_member.get("pr_number") or _stack_current_pr(stack)).strip()
     if not selected_pr:
         return {"status": "skipped", "reason": "review stack PR unavailable"}

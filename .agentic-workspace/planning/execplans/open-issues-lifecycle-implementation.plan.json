@@ -4,19 +4,14 @@
   "title": "Implement lifecycle and reconciliation lane",
   "owner_level": "slice",
   "lifecycle": "live",
-  "phase": "validation",
-  "revision": 2,
+  "phase": "closeout",
+  "revision": 4,
   "intent": {
-    "outcome": "Make Planning mutation authority effect-scoped, expose stale external state with local-owner reconciliation choices, compose result/claim/residue/continuation through the operating decision, and reduce posture/config to applicable material control effects.",
-    "non_goals": [
-      "Do not grant external trackers Planning authority or infer semantic satisfaction from proof.",
-      "Do not add a peer closeout compiler, universal policy language, or module-defined global claim dimensions.",
-      "Leave assurance evidence admission and final public-product closure to their declared downstream lanes."
-    ]
+    "outcome": "Make Planning mutation authority effect-scoped, reconcile stale external state and result/claim/continuation generically, and close #2613/#2638/#2639 with a five-field scoped-Markdown authoring surface compiled through the existing operating decision."
   },
   "parent": {
     "owner_id": "open-issues-lifecycle",
-    "contribution": "Close GitHub issues #2605 #2611 #2612 and #2613 on top of PR #2626.",
+    "contribution": "Close GitHub issues #2605 #2611 #2612 #2613 #2638 and #2639 on top of PR #2626.",
     "closure_boundary": "this lifecycle slice only; assurance and product-closure lanes remain open"
   },
   "scope": {
@@ -24,6 +19,7 @@
       "Planning route classification for mechanically proven ignored transient cleanup.",
       "Provider-neutral external observation reconciliation and ordinary claim limits.",
       "Generic operating-decision reconciliation and material control-input compilation.",
+      "Scoped Markdown parsing, compilation, authoring, validation, explanation, and incremental migration.",
       "Focused schemas, documentation, tests, and release metadata."
     ],
     "effects": [
@@ -50,27 +46,33 @@
   "references": [
     {
       "kind": "source",
-      "target": "GitHub issues #2605 #2611 #2612 #2613; stacked on PR #2626",
-      "label": "GitHub issues #2605 #2611 #2612 #2613; stacked on PR #2626",
+      "target": "GitHub issues #2605 #2611 #2612 #2613 #2638 #2639; stacked on PR #2626",
+      "label": "GitHub issues #2605 #2611 #2612 #2613 #2638 #2639; stacked on PR #2626",
       "role": "intake",
       "locator": ""
     }
   ],
-  "next_action": "Run the final focused and package proof, reconcile generated references, and publish the lifecycle draft PR on #2626.",
+  "next_action": "Publish the validated lifecycle/scoped-instruction head and restack assurance PR #2628.",
   "blockers": [
     "None."
   ],
   "proof": {
     "claims": [
-      "Implement lifecycle and reconciliation lane is implemented, validated, and closed out honestly."
+      "Lifecycle reconciliation and scoped Markdown instruction authoring are implemented through one operating decision without a peer policy engine."
     ],
     "requirements": [
-      "Run reconciliation/control-input and operating-decision schema tests.",
-      "Run positive and negative local-transient Planning route fixtures.",
-      "Run Planning external-observation and workspace route regression tests.",
-      "Run lint, typecheck, schema-reference freshness, structured inventory, and diff checks."
+      "109 focused scoped-instruction, instruction-IR, reconciliation, and operating-decision tests passed.",
+      "397 workspace CLI tests passed.",
+      "37 focused proof-routing tests passed.",
+      "Workspace lint, all package typechecks, contract tooling, structured inventory, maintainer surfaces, Memory freshness, and diff checks passed."
     ],
-    "refs": []
+    "refs": [
+      "GitHub #2613",
+      "GitHub #2638",
+      "GitHub #2639",
+      "src/agentic_workspace/contracts/scoped_markdown_instructions.json",
+      "docs/maintainer/scoped-instruction-migration-evidence.md"
+    ]
   },
   "continuation": {
     "owner": ".agentic-workspace/planning/lanes/open-issues-assurance.lane.json",

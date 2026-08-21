@@ -2864,7 +2864,7 @@ def _structured_route_inputs(
     route_evidence: dict[str, Any],
     planning_revision: dict[str, Any],
     proposal: dict[str, Any],
-    path_classification: dict[str, Any],
+    path_classification: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Derive resolver dimensions from current-work and owner facts, not status aliases."""
     active_owner, owner_record = _active_execplan_record_payload(target_root=target_root)
@@ -2875,7 +2875,7 @@ def _structured_route_inputs(
     acknowledged = route_evidence.get("status") == "current-task-route-acknowledged"
     bounded_read_only = current_task_class.startswith("bounded-") and not acknowledged
     bounded_mutation = acknowledged and bool(changed_paths)
-    effect_scope = _as_dict(path_classification.get("effect_scope"))
+    effect_scope = _as_dict(_as_dict(path_classification).get("effect_scope"))
     local_transient_cleanup = effect_scope.get("status") == "proven-local-transient"
     mutation_baseline = _as_dict(route_evidence.get("mutation_baseline"))
     if bounded_mutation and not local_transient_cleanup:

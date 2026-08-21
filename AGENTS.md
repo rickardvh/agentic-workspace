@@ -31,6 +31,3 @@ Boundaries:
 - Treat `preflight`, `config`, `defaults`, `skills`, `modules`, `ownership`, and `report` as routed drill-down or recovery surfaces, not the ordinary startup loop.
 - Report repo-relative paths, not local absolute paths.
 <!-- agentic-workspace:workflow:end -->
-
-Repo-specific obligation:
-- Actively dogfood Agentic Workspace while using it: look for weak points, friction, ineffective or noisy features, missed routing, avoidable rereads, unclear claim/proof boundaries, and ways to make agent work safer, cheaper, quieter, or more effective. Fix immediate blockers when they are in scope. For durable findings, create narrow preliminary/draft GitHub issues with concrete evidence and the smallest useful intended outcome instead of leaving the learning in chat.

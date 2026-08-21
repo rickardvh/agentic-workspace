@@ -80,6 +80,10 @@
       "type": "object",
       "description": "Revision-bound explanation of source-owned facts, bounded clauses, composed effects, and target-scoped blockers feeding this compiler."
     },
+    "scoped_instruction_projection": {
+      "type": "object",
+      "description": "Human-facing matched and suppressed scoped Markdown instructions; irrelevant bodies remain unloaded."
+    },
     "reconciliation": {
       "type": "object",
       "description": "Generic post-action result, bounded claim, residue, continuation, and constructible next-action composition supplied by domain owners."

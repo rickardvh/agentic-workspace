@@ -48,7 +48,7 @@ A useful effect vocabulary should remain closed and small: surface relevant cont
 
 Composition should be deterministic and authority-preserving. Lower-authority input cannot widen higher-authority permission; restrictions and requirements compose conservatively; incompatible control effects surface a conflict instead of relying on hidden order; provenance and input revisions remain inspectable.
 
-The current product already contains specialized precursors—workflow obligations, assurance/proof declarations, scoped instructions, skill routing, target/correction guidance, configuration projections, and module contributions. They are not yet one public general-purpose instruction API, and they should not be mechanically replaced by a larger rule language. First normalize overlap internally, then expose only authoring semantics that repeatedly prove useful.
+The product retains specialized domain inputs—workflow obligations, assurance/proof declarations, skill routing, target/correction guidance, configuration projections, and module contributions—but ordinary repo guidance now has one small public surface: scoped Markdown under `.agentic-workspace/instructions/`. Its five optional fields compile through the shared instruction IR and operating decision rather than exposing a larger rule language.
 
 ## Ordinary loop
 
