@@ -11,6 +11,7 @@ MODULE_CONTRACT_VERSION = "agentic-workspace/module-capability/v2"
 MODULE_READER_EPOCH = 1
 SUPPORTED_REQUIRED_CAPABILITIES = frozenset(
     {
+        "module-facts-v1",
         "module-resources-v1",
         "module-skills-v1",
         "module-operations-v1",
@@ -33,6 +34,9 @@ class ModuleContractError(ValueError):
     pass
 
 
+FACT_TYPES = frozenset({"boolean", "string", "string-set", "identity"})
+
+
 def _string_list(value: Any, *, field: str) -> list[str]:
     if value is None:
         return []
@@ -45,6 +49,41 @@ def _mapping(value: Any, *, field: str) -> dict[str, Any]:
     if not isinstance(value, Mapping):
         raise ModuleContractError(f"{field} must be an object")
     return dict(value)
+
+
+def _validate_fact(fact: Mapping[str, Any], *, module: str, field: str) -> dict[str, Any]:
+    normalized = dict(fact)
+    fact_id = str(normalized.get("id", "")).strip()
+    fact_type = str(normalized.get("type", "")).strip()
+    if not fact_id:
+        raise ModuleContractError(f"{field}.id is required")
+    if fact_type not in FACT_TYPES:
+        raise ModuleContractError(f"{field}.type must be one of: {', '.join(sorted(FACT_TYPES))}")
+    source = _mapping(normalized.get("source"), field=f"{field}.source")
+    owner = str(source.get("owner", "")).strip()
+    revision = str(source.get("revision", "")).strip()
+    current = source.get("current")
+    if owner != module:
+        raise ModuleContractError(f"{field}.source.owner must match module identity {module}")
+    if not revision:
+        raise ModuleContractError(f"{field}.source.revision is required")
+    if not isinstance(current, bool):
+        raise ModuleContractError(f"{field}.source.current must be a boolean")
+    value = normalized.get("value")
+    if fact_type == "boolean" and not isinstance(value, bool):
+        raise ModuleContractError(f"{field}.value must be a boolean")
+    if fact_type in {"string", "identity"} and not isinstance(value, str):
+        raise ModuleContractError(f"{field}.value must be a string")
+    if fact_type == "string-set" and (
+        not isinstance(value, list) or any(not isinstance(item, str) for item in value) or len(value) != len(set(value))
+    ):
+        raise ModuleContractError(f"{field}.value must be a unique list of strings")
+    return {
+        **normalized,
+        "id": fact_id,
+        "type": fact_type,
+        "source": {"owner": owner, "revision": revision, "current": current},
+    }
 
 
 def validate_module_contract(payload: Mapping[str, Any]) -> dict[str, Any]:
@@ -75,6 +114,17 @@ def validate_module_contract(payload: Mapping[str, Any]) -> dict[str, Any]:
     always = relevance.get("always", False)
     if not isinstance(always, bool):
         raise ModuleContractError("relevance.always must be a boolean")
+
+    raw_facts = contract.get("facts", [])
+    if not isinstance(raw_facts, list) or any(not isinstance(item, Mapping) for item in raw_facts):
+        raise ModuleContractError("facts must be a list of objects")
+    facts = [
+        _validate_fact(_mapping(item, field=f"facts[{index}]"), module=name, field=f"facts[{index}]")
+        for index, item in enumerate(raw_facts)
+    ]
+    fact_ids = [str(item["id"]) for item in facts]
+    if len(fact_ids) != len(set(fact_ids)):
+        raise ModuleContractError("facts must have unique ids")
 
     capabilities = _mapping(contract.get("capabilities"), field="capabilities")
     normalized_capabilities: dict[str, list[dict[str, Any]]] = {}
@@ -128,6 +178,8 @@ def validate_module_contract(payload: Mapping[str, Any]) -> dict[str, Any]:
         "dependencies": _string_list(contract.get("dependencies", []), field="dependencies"),
         "conflicts": _string_list(contract.get("conflicts", []), field="conflicts"),
     }
+    if "facts" in contract:
+        normalized["facts"] = facts
     return normalized
 
 
@@ -216,7 +268,7 @@ def module_contribution(contract: Mapping[str, Any], *, task: str, changed_paths
     if relevance["status"] != "relevant":
         return None
     capabilities = _mapping(contract.get("capabilities"), field="capabilities")
-    return {
+    contribution: dict[str, Any] = {
         "module": str(contract.get("name", "")),
         "contract": MODULE_CONTRACT_VERSION,
         "relevance": relevance,
@@ -228,6 +280,10 @@ def module_contribution(contract: Mapping[str, Any], *, task: str, changed_paths
         "result_semantics": dict(_mapping(contract.get("result_semantics"), field="result_semantics")),
         "source": "module entry-point contract",
     }
+    facts = [dict(item) for item in contract.get("facts", [])]
+    if facts:
+        contribution["facts"] = facts
+    return contribution
 
 
 def target_has_install_signal(target_root: Path, signals: list[str]) -> bool:
@@ -259,6 +315,22 @@ def invoke_module_operation(discovered: DiscoveredModule, *, operation_id: str, 
     widened = sorted(reported_effects - allowed_effects)
     if widened:
         raise ModuleContractError(f"operation {operation_id} reported undeclared effects: {', '.join(widened)}")
+    declared_facts = {str(item.get("id")): dict(item) for item in discovered.contract.get("facts", [])}
+    reported_facts = payload.get("facts", [])
+    if not isinstance(reported_facts, list) or any(not isinstance(item, Mapping) for item in reported_facts):
+        raise ModuleContractError(f"operation {operation_id} facts must be a list of objects")
+    normalized_facts: list[dict[str, Any]] = []
+    for index, fact in enumerate(reported_facts):
+        fact_payload = _mapping(fact, field=f"operation {operation_id}.facts[{index}]")
+        fact_id = str(fact_payload.get("id", ""))
+        if fact_id not in declared_facts:
+            raise ModuleContractError(f"operation {operation_id} reported undeclared fact: {fact_id or '<missing>'}")
+        normalized = _validate_fact(fact_payload, module=discovered.name, field=f"operation {operation_id}.facts[{index}]")
+        if normalized["type"] != declared_facts[fact_id].get("type"):
+            raise ModuleContractError(f"operation {operation_id} changed declared fact type: {fact_id}")
+        normalized_facts.append(normalized)
+    if reported_facts:
+        payload["facts"] = normalized_facts
     return {
         "kind": "agentic-workspace/module-operation-result/v1",
         "module": discovered.name,

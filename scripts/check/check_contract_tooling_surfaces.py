@@ -3422,6 +3422,7 @@ def main(argv: list[str] | None = None) -> int:
         "compatibility",
         "ownership",
         "relevance",
+        "facts",
         "selection_rank",
         "capabilities",
         "dependencies",

@@ -1647,6 +1647,14 @@ def _projection_instruction_mechanisms(payload: dict[str, Any], posture: dict[st
                     "target": f"surface:workflow-obligation:{obligation_id}",
                 }
             )
+    task_posture_packet = _as_dict(payload.get("task_posture_packet")) or _as_dict(context.get("task_posture_packet"))
+    module_contributions = [
+        *_as_list(payload.get("module_contributions")),
+        *_as_list(task_posture_packet.get("module_contributions")),
+    ]
+    module_facts = [
+        _as_dict(fact) for contribution in [_as_dict(item) for item in module_contributions] for fact in _as_list(contribution.get("facts"))
+    ]
     return (
         {
             "scoped_instructions": scoped,
@@ -1654,6 +1662,7 @@ def _projection_instruction_mechanisms(payload: dict[str, Any], posture: dict[st
             "assurance_requirements": requirements,
             "claim_restrictions": restrictions,
             "bounded_controls": bounded_controls,
+            "source_facts": module_facts,
         },
         capabilities,
     )
@@ -2262,9 +2271,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
     if assurance_requested and assurance["status"] != "admitted":
         blockers.append(
             {
-                "reason_code": "conflicting-input"
-                if "classification-owner-conflict" in assurance["reason_codes"]
-                else "missing-authority",
+                "reason_code": "conflicting-input" if "classification-owner-conflict" in assurance["reason_codes"] else "missing-authority",
                 "owner": str(inputs.get("assurance_classification_owner") or "repository"),
                 "repair": str(_as_dict(assurance.get("next_action")).get("why") or "refresh repository assurance classification"),
             }

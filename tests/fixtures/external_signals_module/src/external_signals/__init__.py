@@ -10,7 +10,7 @@ def _contract(*, name: str, reader_epoch: int = 1, roots: list[str] | None = Non
         "description": "Read and refresh external build signals.",
         "compatibility": {
             "reader_epoch": reader_epoch,
-            "required_capabilities": ["module-resources-v1", "module-operations-v1", "module-results-v1"],
+            "required_capabilities": ["module-facts-v1", "module-resources-v1", "module-operations-v1", "module-results-v1"],
         },
         "ownership": {
             "roots": roots or ["external-signals/cache"],
@@ -21,6 +21,15 @@ def _contract(*, name: str, reader_epoch: int = 1, roots: list[str] | None = Non
             "task_terms": ["external build signal"],
             "path_prefixes": ["external-signals/"],
         },
+        "facts": [
+            {
+                "id": "external-signals.build-risk",
+                "type": "string",
+                "value": "elevated",
+                "subject": "external-build",
+                "source": {"owner": name, "revision": "signal-r1", "current": True},
+            }
+        ],
         "capabilities": {
             "resources": [{"id": "external-signals.latest", "ref": "signals://latest", "read_only": True}],
             "skills": [],
@@ -38,10 +47,20 @@ def _contract(*, name: str, reader_epoch: int = 1, roots: list[str] | None = Non
 
 
 def _refresh(arguments: dict[str, Any]) -> dict[str, Any]:
+    revision = str(arguments.get("revision") or "latest")
     return {
         "status": "refreshed",
         "effects": ["external-signals-cache"],
-        "requested_revision": str(arguments.get("revision") or "latest"),
+        "requested_revision": revision,
+        "facts": [
+            {
+                "id": "external-signals.build-risk",
+                "type": "string",
+                "value": "clear",
+                "subject": "external-build",
+                "source": {"owner": "external-signals", "revision": revision, "current": True},
+            }
+        ],
     }
 
 

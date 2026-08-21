@@ -355,7 +355,7 @@ def instruction_program_from_existing_mechanisms(inputs: dict[str, Any]) -> dict
     mechanisms = _as_dict(inputs.get("instruction_mechanisms"))
     if not mechanisms:
         return _as_dict(inputs.get("instruction_program"))
-    facts: list[dict[str, Any]] = []
+    facts = [_as_dict(item) for item in _as_list(mechanisms.get("source_facts"))]
     clauses: list[dict[str, Any]] = []
     source_diagnostics: list[dict[str, str]] = []
     capabilities = [_as_dict(item) for item in _as_list(inputs.get("instruction_capabilities"))]

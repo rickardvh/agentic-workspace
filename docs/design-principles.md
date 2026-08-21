@@ -142,7 +142,7 @@ Do not turn extensibility into:
 
 ### 16. Repo customization is different from a module
 
-Host-specific rules belong in repo-owned config, obligations, skills, canonical guidance, ownership, or deterministic repo operations when that is the smallest owner.
+Ordinary host-specific guidance belongs in scoped Markdown. Repo-owned config, specialized stage-bound compatibility obligations, skills, canonical guidance, ownership, or deterministic repo operations remain narrower owners when scoped guidance cannot express the required semantics.
 
 A reusable domain capability with its own state/resources, operations, compatibility, and lifecycle may justify a module. Do not turn every repository rule into one.
 

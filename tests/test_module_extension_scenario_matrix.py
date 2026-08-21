@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from agentic_workspace import workspace_runtime_core as runtime
+from agentic_workspace.instruction_clause_ir import compile_instruction_program, instruction_program_from_existing_mechanisms
 from agentic_workspace.module_contract import (
     DiscoveredModule,
     ModuleContractError,
@@ -16,6 +17,7 @@ from agentic_workspace.module_contract import (
     module_contribution,
     validate_module_contract,
 )
+from agentic_workspace.operating_decision import _projection_instruction_mechanisms
 
 MATRIX_PATH = Path("tools/model-cli-harness/external-agent-evaluation/module-extension-scenario-matrix.json")
 FIXTURE_PATH = Path("tests/fixtures/external_signals_module/src/external_signals/__init__.py")
@@ -128,13 +130,15 @@ def test_module_matrix_deterministic_probes_cover_progressive_disclosure_failure
     )
     assert relevant is not None
     assert relevant["module"] == "external-signals"
+    assert relevant["facts"][0]["source"] == {"owner": "external-signals", "revision": "signal-r1", "current": True}
     assert relevant["operations"] == [{"id": "external-signals.refresh", "result_schema": "external-signals/result/v1"}]
     assert "proof" not in relevant and "closeout" not in relevant
 
     partial = json.loads(json.dumps(contract))
     partial["name"] = "external-signals-read-only"
+    partial["facts"][0]["source"]["owner"] = "external-signals-read-only"
     partial["capabilities"]["operations"] = []
-    partial["compatibility"]["required_capabilities"] = ["module-resources-v1"]
+    partial["compatibility"]["required_capabilities"] = ["module-facts-v1", "module-resources-v1"]
     partial_contract = validate_module_contract(partial)
     partial_contribution = module_contribution(partial_contract, task="Read the latest external build signal", changed_paths=[])
     assert partial_contribution is not None
@@ -144,7 +148,7 @@ def test_module_matrix_deterministic_probes_cover_progressive_disclosure_failure
     descriptors = {
         name: runtime._external_module_descriptor(discovered) for name, discovered in by_name.items() if discovered.status == "available"
     }
-    with pytest.raises(runtime.ModuleSelectionError, match="ownership collision"):
+    with pytest.raises(runtime.ModuleSelectionError, match="(fact|ownership) collision"):
         runtime._validate_selected_module_contract(
             selected_modules=["external-signals", "external-signals-conflict"],
             descriptors=descriptors,
@@ -209,3 +213,18 @@ def test_independent_module_reaches_the_ordinary_posture_packet_only_when_releva
     assert relevant["dynamic_instruction_projection"]["provenance_preserved"] is True
     assert irrelevant["module_contributions"] == []
     assert {"source": "module_registry", "matched_module_count": 0} in irrelevant["provenance"]
+
+    mechanisms, capabilities = _projection_instruction_mechanisms({"task_posture_packet": relevant}, {})
+    program = instruction_program_from_existing_mechanisms({"instruction_mechanisms": mechanisms, "instruction_capabilities": capabilities})
+    assert [fact["id"] for fact in program["facts"]] == ["external-signals.build-risk"]
+    program["clauses"] = [
+        {
+            "id": "repo:surface-external-risk",
+            "source": {"owner": "repo-scoped-instructions", "revision": "policy-r1", "current": True},
+            "when": {"fact": "external-signals.build-risk", "operator": "is", "value": "elevated"},
+            "effects": [{"kind": "surface", "target": "surface:external-build-risk"}],
+            "authority": {"effects": ["surface"], "target_patterns": ["surface:external-build-risk"]},
+        }
+    ]
+    compiled = compile_instruction_program(program)
+    assert compiled["effects"]["surface"][0]["target"] == "surface:external-build-risk"

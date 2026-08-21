@@ -10093,6 +10093,7 @@ def _validate_selected_module_contract(*, selected_modules: list[str], descripto
     selected_set = set(selected_modules)
     claimed_roots: dict[str, str] = {}
     claimed_effects: dict[str, str] = {}
+    claimed_facts: dict[str, str] = {}
     for module_name in selected_modules:
         descriptor = descriptors[module_name]
         if descriptor.availability != "available":
@@ -10108,6 +10109,15 @@ def _validate_selected_module_contract(*, selected_modules: list[str], descripto
             raise ModuleSelectionError(f"Module '{module_name}' conflicts with: {conflict_text}.")
         contract = descriptor.public_contract or {}
         ownership = _as_dict(contract.get("ownership"))
+        for fact in [_as_dict(item) for item in _list_payload(contract.get("facts"))]:
+            fact_id = str(fact.get("id") or "")
+            competing = claimed_facts.get(fact_id)
+            if competing is not None:
+                raise ModuleSelectionError(
+                    f"Module fact collision: '{competing}' and '{module_name}' both export fact '{fact_id}'. "
+                    "Force=blocking; resolution owner=repository module configuration."
+                )
+            claimed_facts[fact_id] = module_name
         for root in [str(item) for item in _list_payload(ownership.get("roots")) if str(item).strip()]:
             competing = claimed_roots.get(root)
             if competing is not None:
@@ -47077,8 +47087,10 @@ def _agent_configuration_workflow_extensions_payload() -> dict[str, Any]:
     return {
         "canonical_doc": canonical_doc,
         "command": "agentic-workspace defaults --section agent_configuration_workflow_extensions --format json",
-        "rule": "Declare small repo-custom workflow obligations in `.agentic-workspace/config.toml` so workspace owns the extension mechanism and planning only consumes relevant obligations.",
+        "rule": "Author ordinary repo guidance in `.agentic-workspace/instructions/*.md`. Use workflow obligations only as compatibility metadata for a concrete stage-bound lifecycle consumer.",
         "definition_format": copy.deepcopy(_WORKFLOW_DEFINITION_FORMAT),
+        "ordinary_authoring_surface": ".agentic-workspace/instructions/*.md",
+        "status": "specialized-compatibility-only",
         "owner_surface": ".agentic-workspace/config.toml [workflow_obligations]",
         "fields": [
             {"field": "summary", "purpose": "bounded repo-local expectation worth surfacing into active work"},
@@ -47091,12 +47103,13 @@ def _agent_configuration_workflow_extensions_payload() -> dict[str, Any]:
         "supported_stages": list(SUPPORTED_WORKFLOW_OBLIGATION_STAGES),
         "supported_forces": list(SUPPORTED_WORKFLOW_OBLIGATION_FORCES),
         "consumption_rule": [
-            "workspace owns declaration and reporting of repo-custom workflow obligations",
-            "planning consumes only the obligations relevant to the current touched scope",
-            "adapter surfaces may mention the mechanism but should not become the primary declaration home",
+            "scoped Markdown owns ordinary repo guidance, checks, procedures, and protections",
+            "workspace reports surviving stage-bound compatibility obligations to their specialized lifecycle consumers",
+            "planning consumes only relevant compatibility obligations and does not treat them as a generic instruction language",
         ],
         "must_not": [
             "turn workflow obligations into a general scheduler",
+            "present stage plus scope_tags plus commands as a peer ordinary authoring model",
             "move planning ownership into workspace config",
             "encode every minor preference as a workflow obligation",
         ],
@@ -58442,6 +58455,8 @@ def _descriptor_participation(descriptor: ModuleDescriptor) -> dict[str, Any]:
     relevance = _as_dict(contract.get("relevance"))
     capabilities = _as_dict(contract.get("capabilities"))
     declared = [name for name in ("resources", "skills", "operations") if _list_payload(capabilities.get(name))]
+    if _list_payload(contract.get("facts")):
+        declared.insert(0, "facts")
     return {
         "loop_steps": ["resolve", "act", "reconcile"],
         "declares": declared,
