@@ -62,14 +62,27 @@ def test_prepare_updates_all_version_mirrors_and_consumes_changesets(tmp_path, m
     root_pyproject = tmp_path / "pyproject.toml"
     package_pyproject = tmp_path / "packages/memory/pyproject.toml"
     package_json = tmp_path / "generated/workspace/typescript/package.json"
+    payload_provenance = tmp_path / ".agentic-workspace/payload-provenance.json"
     changeset = tmp_path / ".release/changes/change.toml"
     release_note = tmp_path / ".release/releases/v0.2.0.md"
     package_pyproject.parent.mkdir(parents=True)
     package_json.parent.mkdir(parents=True)
+    payload_provenance.parent.mkdir(parents=True)
     changeset.parent.mkdir(parents=True)
     root_pyproject.write_text('[project]\nname = "root"\nversion = "0.1.0"\n', encoding="utf-8")
     package_pyproject.write_text('[project]\nname = "pkg"\nversion = "0.1.0"\n', encoding="utf-8")
     package_json.write_text('{"name":"pkg","version":"0.1.0","private":false}\n', encoding="utf-8")
+    payload_provenance.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/payload-provenance/v1",
+                "installed_by": {"version": "0.1.0"},
+                "release_identity": {"version": "0.1.0", "tag": "v0.1.0"},
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     changeset.write_text(
         'schema_version = "agentic-workspace/release-change/v1"\nbump = "minor"\nsummary = "Feature"\n',
         encoding="utf-8",
@@ -78,7 +91,14 @@ def test_prepare_updates_all_version_mirrors_and_consumes_changesets(tmp_path, m
     monkeypatch.setattr(module, "existing_release_versions", lambda ownership: [module.Version.parse("0.1.0")])
     ownership = {
         "changeset_dir": ".release/changes",
-        "packages": [{"pyproject": "pyproject.toml"}, {"pyproject": "packages/memory/pyproject.toml"}],
+        "packages": [
+            {
+                "name": "agentic-workspace",
+                "pyproject": "pyproject.toml",
+                "payload_provenance": ".agentic-workspace/payload-provenance.json",
+            },
+            {"name": "agentic-workspace-memory", "pyproject": "packages/memory/pyproject.toml"},
+        ],
         "typescript_packages": [{"package_json": "generated/workspace/typescript/package.json"}],
     }
 
@@ -89,6 +109,9 @@ def test_prepare_updates_all_version_mirrors_and_consumes_changesets(tmp_path, m
     assert 'version = "0.2.0"' in root_pyproject.read_text(encoding="utf-8")
     assert 'version = "0.2.0"' in package_pyproject.read_text(encoding="utf-8")
     assert json.loads(package_json.read_text(encoding="utf-8"))["version"] == "0.2.0"
+    provenance = json.loads(payload_provenance.read_text(encoding="utf-8"))
+    assert provenance["installed_by"]["version"] == "0.2.0"
+    assert provenance["release_identity"] == {"version": "0.2.0", "tag": "v0.2.0"}
     assert release_note.read_text(encoding="utf-8").count("Feature") == 1
     assert not changeset.exists()
 
