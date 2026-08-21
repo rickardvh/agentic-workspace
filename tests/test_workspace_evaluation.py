@@ -2314,9 +2314,10 @@ def test_operating_context_convergence_evaluation_is_owner_bound_and_privacy_saf
         "proof-receipts",
     }
     disposition = json.loads((ROOT / ".agentic-workspace/evaluations/issue-2646-disposition.json").read_text(encoding="utf-8"))
-    assert disposition["status"] == "satisfied"
-    assert disposition["conclusion"]["decision_observation_count"] == 6
-    assert len(disposition["representative_sessions"]) >= 4
-    assert disposition["convergence"]["human_steering_avoided_next_time"] is True
-    assert set(disposition["bounded_adaptation_proof"]["owner_classes"]) == {"proof-route", "scoped-instruction"}
-    assert "raw prompts and full transcripts remain local" in disposition["conclusion"]["privacy"]
+    implementation = disposition["implementation_disposition"]
+    assert disposition["status"] == "implementation-closed-evaluation-open"
+    assert implementation["decision_observation_count"] == 6
+    assert len(implementation["representative_sessions"]) >= 4
+    assert implementation["convergence"]["human_steering_avoided_next_time"] is True
+    assert set(implementation["bounded_adaptation_proof"]["owner_classes"]) == {"proof-route", "scoped-instruction"}
+    assert "raw prompts and full transcripts remain local" in disposition["evaluation_disposition"]["privacy"]
