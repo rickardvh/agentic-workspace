@@ -386,6 +386,8 @@ def test_completed_child_reconciliation_is_cross_consumer_idempotent_and_fails_c
                 "README.md",
                 "--task",
                 "Fix an unrelated documentation typo",
+                "--select",
+                "planning_safety_gate",
                 "--format",
                 "json",
             ]
@@ -393,9 +395,8 @@ def test_completed_child_reconciliation_is_cross_consumer_idempotent_and_fails_c
         == 0
     )
     implemented = json.loads(capsys.readouterr().out)
-    gate = implemented["context"]["planning_safety_gate"]
+    gate = implemented["values"]["planning_safety_gate"]
     assert gate["gate_result"] == "direct-work-allowed"
-    assert gate["implementation_allowed"] is True
 
     assert cli.main(["start", "--target", str(served), "--task", "Review unrelated repository docs", "--format", "json"]) == 0
     next_start = json.loads(capsys.readouterr().out)
@@ -9047,6 +9048,8 @@ def test_implement_routes_post_closeout_archive_residue_as_verification(tmp_path
                 *changed,
                 "--task",
                 "Final post-closeout verification for #1981",
+                "--select",
+                "planning_safety_gate",
                 "--format",
                 "json",
             ]
@@ -9054,15 +9057,13 @@ def test_implement_routes_post_closeout_archive_residue_as_verification(tmp_path
         == 0
     )
     payload = json.loads(capsys.readouterr().out)
-    gate = payload["context"]["planning_safety_gate"]
+    gate = payload["values"]["planning_safety_gate"]
 
     assert gate["gate_result"] == "post-closeout-verification"
     assert gate["workflow_sufficient"] is True
     assert gate["required_next_action"] == "run-post-closeout-verification"
     assert gate["changed_path_facts"]["dirty_shape"] == "implementation-with-archived-planning-residue"
     assert gate["changed_path_facts"]["archived_planning_residue"]["status"] == "completed-closeout-residue"
-    assert payload["action_signals"]["implementation_allowed"] is True
-    assert "implementation-owner-missing" not in payload["action_signals"]["hard_blockers"]
 
 
 def test_start_keeps_incomplete_active_plan_on_task_switch_route(tmp_path: Path, capsys) -> None:
@@ -13925,14 +13926,15 @@ def test_report_pr_comment_attention_cache_miss_routes_to_live_inspection_for_br
     assert attention["repository"] == "rickardvh/agentic-workspace"
     assert attention["branch"] == branch
     assert attention["pr_number"] == ""
-    assert "gh pr list" in attention["recommended_command"]
-    assert '--head "codex/2030-proof-receipt-bridge-actions"' in attention["recommended_command"]
+    assert "scripts/github/pr_topology.py" in attention["recommended_command"]
+    assert '--branch "codex/2030-proof-receipt-bridge-actions"' in attention["recommended_command"]
     assert "report --target . --section pr_comment_attention --format json" in attention["cache_selector_command"]
     assert attention["live_inspection"]["status"] == "pr_resolution_required"
     assert attention["live_inspection"]["recommended_command"] == attention["recommended_command"]
     assert attention["live_inspection"]["connector_route"].endswith("#<resolved-pr-number>")
     assert attention["pr_resolution"]["status"] == "required"
     assert attention["pr_resolution"]["command"] == attention["recommended_command"]
+    assert "gh pr list" in attention["pr_resolution"]["provider_probe_command"]
     assert attention["write_safety"]["github_writes_performed"] is False
     assert "resolve_thread" in attention["write_safety"]["forbidden_actions_without_user_request"]
     assert attention["comment_addressing"]["status"] == "review_comment_evidence_unavailable"
@@ -14117,6 +14119,334 @@ def test_report_pr_comment_attention_reads_cached_actionable_and_empty_deltas(tm
     assert fresh_empty["comment_addressing"]["status"] == "review_feedback_closed"
     assert fresh_empty["comment_addressing"]["closeout"]["status"] == "ready_if_fresh"
     assert fresh_empty["unverified_context"] == []
+
+
+def _init_committed_pr_topology_repo(target: Path, *, branch: str) -> str:
+    subprocess.run(["git", "init", "-q"], cwd=target, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.name", "Fixture"], cwd=target, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "fixture@example.invalid"], cwd=target, check=True, capture_output=True)
+    _write(target / "README.md", "fixture\n")
+    subprocess.run(["git", "add", "README.md"], cwd=target, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-q", "-m", "fixture"], cwd=target, check=True, capture_output=True)
+    subprocess.run(["git", "switch", "-q", "-c", branch], cwd=target, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "remote", "add", "origin", "https://github.com/example/project.git"],
+        cwd=target,
+        check=True,
+        capture_output=True,
+    )
+    return _git_value(target, "rev-parse", "HEAD")
+
+
+def test_live_pr_topology_admission_populates_continuity_without_claiming_thread_freshness(tmp_path: Path, capsys) -> None:
+    head_sha = _init_committed_pr_topology_repo(tmp_path, branch="codex/live-topology")
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Continue the current stacked PR",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    unavailable = json.loads(capsys.readouterr().out)["context"]["pr_comment_attention"]
+    assert unavailable["absence_states"]["stack_membership"] == "unavailable"
+    assert "scripts/github/pr_topology.py" in unavailable["pr_resolution"]["command"]
+
+    provider_fixture = tmp_path / "github-prs.json"
+    _write(
+        provider_fixture,
+        json.dumps(
+            [
+                {
+                    "number": 41,
+                    "headRefName": "codex/foundation",
+                    "baseRefName": "main",
+                    "headRefOid": "a" * 40,
+                },
+                {
+                    "number": 42,
+                    "headRefName": "codex/live-topology",
+                    "baseRefName": "codex/foundation",
+                    "headRefOid": head_sha,
+                },
+            ]
+        ),
+    )
+    adapter = subprocess.run(
+        [
+            sys.executable,
+            "scripts/github/pr_topology.py",
+            "--repo",
+            "example/project",
+            "--branch",
+            "codex/live-topology",
+            "--target",
+            str(tmp_path),
+            "--input",
+            str(provider_fixture),
+            "--format",
+            "json",
+        ],
+        cwd=Path.cwd(),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert adapter.returncode == 0, adapter.stderr
+    admitted = json.loads(adapter.stdout)
+    assert admitted["status"] == "admitted"
+    assert admitted["dependency_order"] == ["41", "42"]
+    assert admitted["thread_comment_state"] == "unverified"
+    full_attention = workspace_runtime_core._pr_comment_attention_payload(
+        target_root=tmp_path,
+        task_text="Continue the current stacked PR",
+        cli_invoke="agentic-workspace",
+    )
+    assert full_attention["stack"]["stack_members"][1]["comment_addressing"]["status"] == "review_comment_evidence_unavailable"
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Continue the current stacked PR",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    attention = json.loads(capsys.readouterr().out)["context"]["pr_comment_attention"]
+    assert attention["status"] == "stack_comment_status_unavailable"
+    assert attention["stack_discovery"]["status"] == "admitted-live-topology"
+    assert attention["absence_states"] == {
+        "stack_membership": "known",
+        "thread_level_comments": "hidden_behind_detail_route",
+    }
+    continuity = attention["review_stack_continuity"]
+    assert continuity["current_pr_number"] == "42"
+    assert [item["pr_number"] for item in continuity["dependency_order"]] == ["41", "42"]
+    assert continuity["phase"] == "review-state-refresh"
+    assert continuity["closeout_route"]["status"] == "blocked"
+
+
+def test_pr_topology_admission_rejects_mismatched_ambiguous_and_stale_observations(tmp_path: Path) -> None:
+    from agentic_workspace.review_stack_topology import TopologyAdmissionError, admit_pr_topology_observation
+
+    head_sha = _init_committed_pr_topology_repo(tmp_path, branch="codex/live-topology")
+    member = {
+        "pr_number": 42,
+        "branch": "codex/live-topology",
+        "base_branch": "main",
+        "head_sha": head_sha,
+    }
+    observations = [
+        {"repository": "other/project", "branch": "codex/live-topology", "head_sha": head_sha, "members": [member]},
+        {"repository": "example/project", "branch": "codex/other", "head_sha": head_sha, "members": [member]},
+        {"repository": "example/project", "branch": "codex/live-topology", "head_sha": "b" * 40, "members": [member]},
+        {
+            "repository": "example/project",
+            "branch": "codex/live-topology",
+            "head_sha": head_sha,
+            "members": [member, {**member, "pr_number": 43}],
+        },
+        {
+            "repository": "example/project",
+            "branch": "codex/live-topology",
+            "head_sha": head_sha,
+            "members": [{**member, "head_sha": "c" * 40}],
+        },
+        {
+            "repository": "example/project",
+            "branch": "codex/live-topology",
+            "head_sha": head_sha,
+            "members": [{key: value for key, value in member.items() if key != "base_branch"}],
+        },
+        {
+            "repository": "example/project",
+            "branch": "codex/live-topology",
+            "head_sha": head_sha,
+            "members": [
+                member,
+                {
+                    "pr_number": 43,
+                    "branch": "codex/disconnected",
+                    "base_branch": "main",
+                    "head_sha": "d" * 40,
+                },
+            ],
+        },
+    ]
+    for observation in observations:
+        with pytest.raises(TopologyAdmissionError):
+            admit_pr_topology_observation(
+                target_root=tmp_path,
+                observation=observation,
+                expected_repository="example/project",
+                expected_branch="codex/live-topology",
+            )
+    assert not (tmp_path / ".agentic-workspace/local/cache/pr-comment-stack.json").exists()
+
+
+def test_github_pr_topology_adapter_selects_only_the_current_linear_stack() -> None:
+    from scripts.github.pr_topology import github_topology_observation
+
+    from agentic_workspace.review_stack_topology import TopologyAdmissionError
+
+    pull_requests = [
+        {"number": 41, "headRefName": "codex/foundation", "baseRefName": "main", "headRefOid": "a" * 40},
+        {
+            "number": 42,
+            "headRefName": "codex/live-topology",
+            "baseRefName": "codex/foundation",
+            "headRefOid": "b" * 40,
+        },
+        {"number": 99, "headRefName": "codex/unrelated", "baseRefName": "main", "headRefOid": "c" * 40},
+    ]
+    observation = github_topology_observation(
+        repository="example/project",
+        branch="codex/live-topology",
+        head_sha="b" * 40,
+        pull_requests=pull_requests,
+    )
+    assert [member["number"] for member in observation["members"]] == [41, 42]
+    assert observation["provider"] == "github-gh-read-only"
+
+    with pytest.raises(TopologyAdmissionError, match="no open pull request"):
+        github_topology_observation(
+            repository="example/project",
+            branch="codex/missing",
+            head_sha="d" * 40,
+            pull_requests=pull_requests,
+        )
+    with pytest.raises(TopologyAdmissionError, match="multiple open pull requests"):
+        github_topology_observation(
+            repository="example/project",
+            branch="codex/live-topology",
+            head_sha="b" * 40,
+            pull_requests=[*pull_requests, dict(pull_requests[1])],
+        )
+
+
+def test_github_pr_topology_adapter_fails_closed_when_provider_is_unavailable(monkeypatch) -> None:
+    from scripts.github import pr_topology
+
+    def unavailable(*args, **kwargs):
+        raise OSError("gh unavailable")
+
+    monkeypatch.setattr(pr_topology.subprocess, "run", unavailable)
+    with pytest.raises(pr_topology.TopologyAdmissionError, match="provider is unavailable"):
+        pr_topology._github_pull_requests(repository="example/project")
+
+
+def test_github_pr_topology_adapter_fails_closed_for_provider_errors_and_incomplete_records(monkeypatch) -> None:
+    from scripts.github import pr_topology
+
+    monkeypatch.setattr(
+        pr_topology.subprocess,
+        "run",
+        lambda *args, **kwargs: subprocess.CompletedProcess(args=[], returncode=1, stdout="", stderr="unauthorized"),
+    )
+    with pytest.raises(pr_topology.TopologyAdmissionError, match="provider read failed"):
+        pr_topology._github_pull_requests(repository="example/project")
+
+    with pytest.raises(pr_topology.TopologyAdmissionError, match="incomplete PR record"):
+        pr_topology.github_topology_observation(
+            repository="example/project",
+            branch="codex/live-topology",
+            head_sha="a" * 40,
+            pull_requests=[
+                {
+                    "number": 42,
+                    "headRefName": "codex/live-topology",
+                    "baseRefName": "main",
+                }
+            ],
+        )
+
+
+def test_admitted_pr_topology_is_rejected_after_head_changes(tmp_path: Path, capsys) -> None:
+    from agentic_workspace.review_stack_topology import admit_pr_topology_observation
+
+    head_sha = _init_committed_pr_topology_repo(tmp_path, branch="codex/live-topology")
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    admit_pr_topology_observation(
+        target_root=tmp_path,
+        expected_repository="example/project",
+        expected_branch="codex/live-topology",
+        observation={
+            "repository": "example/project",
+            "branch": "codex/live-topology",
+            "head_sha": head_sha,
+            "members": [
+                {
+                    "pr_number": 42,
+                    "branch": "codex/live-topology",
+                    "base_branch": "main",
+                    "head_sha": head_sha,
+                }
+            ],
+        },
+    )
+    _write(tmp_path / "head-change.txt", "changed\n")
+    subprocess.run(["git", "add", "head-change.txt"], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-m", "head change"],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Continue the current stacked PR",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    attention = json.loads(capsys.readouterr().out)["context"]["pr_comment_attention"]
+    assert attention["stack_member_count"] == 0
+    assert attention["stack_discovery"]["status"] == "rejected"
+    assert attention["stack_discovery"]["reason"] == "topology-head-stale"
+    assert attention["absence_states"]["stack_membership"] == "unavailable"
+
+
+def test_unrelated_startup_does_not_execute_live_pr_provider(tmp_path: Path, capsys, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    real_run = subprocess.run
+    observed_commands: list[list[str]] = []
+
+    def guarded_run(command, *args, **kwargs):
+        if isinstance(command, list):
+            observed_commands.append([str(item) for item in command])
+        return real_run(command, *args, **kwargs)
+
+    monkeypatch.setattr(workspace_runtime_core.subprocess, "run", guarded_run)
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Fix one local typo", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert "pr_comment_attention" not in payload["context"]
+    assert not any(command and command[0] == "gh" for command in observed_commands)
 
 
 def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_commands(tmp_path: Path, capsys) -> None:

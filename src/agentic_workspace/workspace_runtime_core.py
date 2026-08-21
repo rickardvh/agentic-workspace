@@ -190,6 +190,7 @@ from agentic_workspace.reporting_support import (
 )
 from agentic_workspace.repository_scanning import repository_scan_files
 from agentic_workspace.result_adapter import adapt_module_result, serialise_value
+from agentic_workspace.review_stack_topology import validate_admitted_pr_topology
 from agentic_workspace.review_stack_transitions import command_text, record_review_stack_transition
 from agentic_workspace.runtime_compatibility import (
     READER_CAPABILITIES,
@@ -30846,12 +30847,23 @@ def _pr_comment_pr_resolution_command(*, repo: str, branch: str) -> str:
     return f"gh pr list --repo {_shell_quote(repo)} --state open{branch_filter} --json number,url,headRefName,baseRefName"
 
 
+def _pr_topology_source_checkout_helper_command(*, repo: str, branch: str, cli_invoke: str) -> str:
+    return _command_with_cli_invoke(
+        command=(
+            "python scripts/github/pr_topology.py"
+            f" --repo {_shell_quote(repo)} --branch {_shell_quote(branch or '<branch>')} --target . --format json"
+        ),
+        cli_invoke=cli_invoke,
+    )
+
+
 def _pr_comment_live_inspection_routes_payload(*, repo: str, branch: str, pr_number: str, cli_invoke: str) -> dict[str, Any]:
     pr_resolution_command = _pr_comment_pr_resolution_command(repo=repo, branch=branch)
+    topology_admission_command = _pr_topology_source_checkout_helper_command(repo=repo, branch=branch, cli_invoke=cli_invoke)
     live_inspection_command = (
         _pr_comment_source_checkout_helper_command(repo=repo, pr_number=pr_number, cli_invoke=cli_invoke)
         if pr_number
-        else pr_resolution_command
+        else topology_admission_command
     )
     return {
         "kind": "agentic-workspace/pr-comment-live-inspection-routes/v1",
@@ -30861,6 +30873,7 @@ def _pr_comment_live_inspection_routes_payload(*, repo: str, branch: str, pr_num
         "pr_number": pr_number,
         "recommended_command": live_inspection_command,
         "pr_resolution_command": pr_resolution_command,
+        "topology_admission_command": topology_admission_command,
         "live_thread_inspection_command": live_inspection_command,
         "source_checkout_helper_command": _pr_comment_source_checkout_helper_command(repo=repo, pr_number=pr_number, cli_invoke=cli_invoke)
         if pr_number
@@ -30871,7 +30884,10 @@ def _pr_comment_live_inspection_routes_payload(*, repo: str, branch: str, pr_num
             "allowed_actions": ["read_pr_metadata", "read_review_threads", "refresh_local_comment_delta"],
             "forbidden_actions_without_user_request": ["reply_to_comment", "resolve_thread", "submit_review", "dismiss_review"],
         },
-        "rule": "Resolve the branch PR or inspect live thread-level comments before making review-readiness claims.",
+        "rule": (
+            "Admit bounded branch topology through the existing stack owner, then inspect thread-level comments separately "
+            "before making review-readiness claims."
+        ),
     }
 
 
@@ -31806,6 +31822,41 @@ def _pr_stack_comment_cache_payload(*, target_root: Path, repo: str, branch: str
             "thread_inspection": _pr_comment_thread_inspection_payload(repo=command_repo, pr_number="<number>", cli_invoke=cli_invoke),
             "unverified_context": ["Stack cache could not be read; stack members and thread-level comment state are unverified."],
         }
+    topology_current, topology_reason, topology_observation = validate_admitted_pr_topology(
+        target_root=target_root,
+        cache=cache,
+        expected_repository=repo,
+        expected_branch=branch,
+    )
+    if not topology_current:
+        live_inspection = _pr_comment_live_inspection_routes_payload(repo=repo, branch=branch, pr_number="", cli_invoke=cli_invoke)
+        return {
+            "kind": "agentic-workspace/pr-stack-comment-attention/v1",
+            "status": "stack_comment_status_unavailable",
+            "comment_state": "stack_discovery_stale_or_rejected",
+            "repository": repo,
+            "branch": branch,
+            "stack_member_count": 0,
+            "stack_members": [],
+            "cache_path": cache_path,
+            "stack_discovery": {
+                "status": "rejected",
+                "reason": topology_reason,
+                "repository": repo,
+                "branch": branch,
+                "cache_path": cache_path,
+                "observation_digest": str(topology_observation.get("observation_digest") or ""),
+                "refresh_command": live_inspection["recommended_command"],
+            },
+            "live_inspection": live_inspection,
+            "recommended_command": live_inspection["recommended_command"],
+            "unverified_context": [
+                "Cached stack topology does not match the current repository, branch, or head revision.",
+                "Thread-level PR comment state is unverified.",
+            ],
+            "claim_boundary": "A rejected or stale topology observation cannot support stack routing or review-readiness claims.",
+            "degraded_because": topology_reason,
+        }
     raw_members = [item for item in _list_payload(cache.get("stack_members")) if isinstance(item, dict)]
     if not raw_members:
         return {}
@@ -31838,12 +31889,22 @@ def _pr_stack_comment_cache_payload(*, target_root: Path, repo: str, branch: str
             unavailable_present = True
         refresh_command = _pr_comment_report_command(cli_invoke=cli_invoke)
         thread_inspection = _pr_comment_thread_inspection_payload(repo=command_repo, pr_number=pr_number, cli_invoke=cli_invoke)
-        comment_addressing = _pr_comment_addressing_packet_from_delta(
-            cache=member_cache,
-            repo=command_repo,
-            pr_number=pr_number,
-            cache_path=cache_path,
-            cli_invoke=cli_invoke,
+        comment_addressing = (
+            _pr_comment_addressing_packet_from_delta(
+                cache=member_cache,
+                repo=command_repo,
+                pr_number=pr_number,
+                cache_path=cache_path,
+                cli_invoke=cli_invoke,
+            )
+            if isinstance(item.get("delta"), dict)
+            else _pr_comment_addressing_unavailable_packet(
+                repo=command_repo,
+                pr_number=pr_number,
+                cache_path=cache_path,
+                reason="PR topology was admitted without review-thread evidence.",
+                cli_invoke=cli_invoke,
+            )
         )
         changed_effect_paths = _review_stack_changed_effect_paths(member=item, member_cache=member_cache)
         proof_hints = _review_stack_member_proof_hints(member=item, member_cache=member_cache)
@@ -31896,16 +31957,30 @@ def _pr_stack_comment_cache_payload(*, target_root: Path, repo: str, branch: str
         if unavailable_present
         else "stack_current_no_actionable_comments",
         "stack_discovery": {
-            "status": "from-cache",
+            "status": "admitted-live-topology" if topology_observation else "from-cache",
             "repository": command_repo,
             "branch": branch,
             "cache_path": cache_path,
             "member_count": len(members),
             "current_branch_pr_number": _pr_number_from_stack({"stack_members": members}, branch=branch),
+            **(
+                {
+                    "provider": topology_observation.get("provider"),
+                    "current_head_sha": topology_observation.get("current_head_sha"),
+                    "observation_digest": topology_observation.get("observation_digest"),
+                    "thread_comment_state": "unverified" if unavailable_present else "separately-admitted",
+                }
+                if topology_observation
+                else {}
+            ),
         },
         "unverified_context": []
         if not unavailable_present
-        else ["At least one stack member lacks PR-head freshness proof; refresh that member before readiness claims."],
+        else [
+            "Stack topology is current, but at least one member lacks separately admitted review-thread freshness proof."
+            if topology_observation
+            else "At least one stack member lacks PR-head freshness proof; refresh that member before readiness claims."
+        ],
         "claim_boundary": "A broad stack-ready claim is blocked while any stack member has actionable, stale, or unavailable comment status.",
         "degraded_because": "stale-or-missing-member-freshness" if unavailable_present else "",
         "comment_addressing": {
@@ -31968,17 +32043,19 @@ def _pr_stack_comment_unavailable_payload(*, repo: str, branch: str, pr_number: 
             "cache_path": cache_path,
             "refresh_command": recommended_command,
             "pr_resolution_command": live_inspection["pr_resolution_command"],
-            "source_checkout_refresh_command": _pr_comment_source_checkout_helper_command(
-                repo=repo, pr_number=pr_number, cli_invoke=cli_invoke
-            ),
+            "topology_admission_command": live_inspection["topology_admission_command"],
         },
         "comment_state": "stack_discovery_unavailable",
         "thread_inspection": _pr_comment_thread_inspection_payload(repo=repo, pr_number=pr_number, cli_invoke=cli_invoke),
         "live_inspection": live_inspection,
         "pr_resolution": {
             "status": "known" if pr_number else "required",
-            "command": live_inspection["pr_resolution_command"],
-            "rule": "Resolve the current branch PR before stack review-thread claims when stack cache is absent.",
+            "command": live_inspection["topology_admission_command"],
+            "provider_probe_command": live_inspection["pr_resolution_command"],
+            "rule": (
+                "Admit the bounded topology result into the existing stack owner before rerunning AW; "
+                "review-thread claims remain separately unverified."
+            ),
         },
         "recommended_command": recommended_command,
         "unverified_context": ["Stack membership is unverified.", "Thread-level PR comment state is unverified."],
@@ -32167,8 +32244,13 @@ def _pr_comment_attention_payload(*, target_root: Path, task_text: str | None, c
         "live_inspection": live_inspection,
         "pr_resolution": {
             "status": "known" if pr_number else "required",
-            "command": live_inspection["pr_resolution_command"],
-            "rule": "Resolve the current branch PR before claiming review comments are absent or handled.",
+            "command": live_inspection["topology_admission_command"] if not pr_number else live_inspection["pr_resolution_command"],
+            "provider_probe_command": live_inspection["pr_resolution_command"],
+            "rule": (
+                "Admit the current branch PR topology before rerunning AW; review comments remain separately unverified."
+                if not pr_number
+                else "Resolve the current branch PR before claiming review comments are absent or handled."
+            ),
         },
         "thread_inspection": _pr_comment_thread_inspection_payload(repo=repo, pr_number=pr_number, cli_invoke=cli_invoke),
         "comment_addressing": _pr_comment_addressing_unavailable_packet(

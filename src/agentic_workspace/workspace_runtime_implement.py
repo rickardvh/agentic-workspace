@@ -43,6 +43,7 @@ from agentic_workspace.reporting_support import (
     evidence_bundle_payload,
     message_economy_payload,
     state_delta_core_payload,
+    visible_state_delta_response_payload,
 )
 from agentic_workspace.review_stack_transitions import command_text, record_review_stack_transition
 from agentic_workspace.runtime_source_review import (
@@ -360,6 +361,16 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
                 compact=True,
                 cli_invoke=_load_workspace_config(target_root=target_root).cli_invoke,
             )
+        if _selector_requests(selected_fields, "visible_state_delta_response"):
+            payload["visible_state_delta_response"] = visible_state_delta_response_payload(
+                surface="implementation",
+                current_decision=_as_dict(payload.get("current_decision")),
+                message_economy=_as_dict(payload.get("message_economy")),
+                evidence_bundle=_as_dict(payload.get("evidence_bundle")),
+            )
+            payload["visible_state_delta_response"].pop("expansion_triggers", None)
+            payload["visible_state_delta_response"].pop("omitted_details", None)
+            payload["visible_state_delta_response"]["detail_selector"] = "visible_state_delta_response"
     if getattr(args, "select", None):
         decision_context = _as_dict(payload.get("context"))
         payload = _select_payload_fields(payload, select=getattr(args, "select"), source_command="implement")
