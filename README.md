@@ -22,7 +22,7 @@ Command-line interfaces are one way to access this behavior, not a workflow the 
 
 ## First-party modules
 
-Most of Agentic Workspace's current higher-level functionality is provided by three first-party modules. They are independently selectable capabilities rather than prerequisites: a repository can use the Workspace routing/control layer on its own or add the modules that solve recurring problems.
+Most of Agentic Workspace's current higher-level functionality is provided by three first-party modules. They are independently selectable rather than mandatory: a repository can use the Workspace routing/control layer on its own or add the modules that solve recurring problems.
 
 - **Memory** preserves repository knowledge that is costly to rediscover, so later agents can recover useful lessons, constraints, and orientation without repeating the same investigation.
 - **Planning** preserves active work and execution continuity across sessions and agents: what is being worked on, the intent and boundaries that matter, what remains, and where continuation belongs.
