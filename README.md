@@ -28,7 +28,7 @@ Most of Agentic Workspace's current higher-level functionality is provided by th
 - **Planning** preserves active work and execution continuity across sessions and agents: what is being worked on, the intent and boundaries that matter, what remains, and where continuation belongs.
 - **Verification** preserves reusable verification procedures, evidence, and known gaps so agents can apply the right checks and keep completion claims aligned with what has actually been established.
 
-Workspace connects these capabilities with task-shaped routing, repository instructions, ownership, and the current action and completion boundaries. A module becomes relevant when its capability matters without making unrelated tasks carry its terminology or procedure.
+Workspace connects these capabilities with task-shaped routing, repository instructions, ownership, and current action and completion boundaries. A module becomes relevant when its capability matters without making unrelated tasks carry its terminology or procedure.
 
 See [`docs/package/modules.md`](docs/package/modules.md) for module roles and ownership.
 
