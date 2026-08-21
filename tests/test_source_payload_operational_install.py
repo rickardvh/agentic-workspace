@@ -299,6 +299,87 @@ def test_boundary_checker_passes_for_clean_root_install(tmp_path: Path) -> None:
     assert warnings == []
 
 
+def _write_source_current_payload_fixture(tmp_path: Path) -> None:
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+        schema_version = 1
+
+        [payload]
+        target_release = "source-current"
+        dogfood_latest = true
+        """,
+    )
+    _write(tmp_path / "pyproject.toml", '[project]\nname = "fixture"\nversion = "1.2.3"')
+    _write(
+        tmp_path / ".agentic-workspace/payload-provenance.json",
+        json.dumps(
+            {
+                "installed_by": {"version": "1.2.3"},
+                "release_identity": {"version": "1.2.3", "tag": "v1.2.3"},
+            }
+        ),
+    )
+    _write(
+        tmp_path / "src/agentic_workspace/contracts/workspace_surfaces.json",
+        json.dumps({"payload_files": [".agentic-workspace/skills/workspace-startup/SKILL.md"]}),
+    )
+    _write(tmp_path / "src/agentic_workspace/_payload/.agentic-workspace/skills/workspace-startup/SKILL.md", "current")
+    _write(tmp_path / ".agentic-workspace/skills/workspace-startup/SKILL.md", "current")
+    _write(
+        tmp_path / "packages/memory/bootstrap/.agentic-workspace/memory/skills/memory-router/SKILL.md",
+        "current",
+    )
+    _write(tmp_path / ".agentic-workspace/memory/skills/memory-router/SKILL.md", "current")
+
+
+def test_committed_payload_alignment_accepts_matching_source_current_state(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "source_payload_committed_alignment_current")
+    _write_source_current_payload_fixture(tmp_path)
+
+    alignment = mod._committed_payload_alignment(repo_root=tmp_path)
+
+    assert alignment["status"] == "current"
+    assert alignment["drift"] == []
+
+
+def test_committed_payload_alignment_rejects_stale_provenance_and_managed_payload(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "source_payload_committed_alignment_drift")
+    _write_source_current_payload_fixture(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/payload-provenance.json",
+        json.dumps(
+            {
+                "installed_by": {"version": "1.2.2"},
+                "release_identity": {"version": "1.2.2", "tag": "v1.2.2"},
+            }
+        ),
+    )
+    _write(tmp_path / ".agentic-workspace/skills/workspace-startup/SKILL.md", "stale")
+    _write(tmp_path / ".agentic-workspace/memory/skills/memory-router/SKILL.md", "stale")
+
+    alignment = mod._committed_payload_alignment(repo_root=tmp_path)
+    warnings = mod._committed_payload_alignment_warnings(repo_root=tmp_path)
+
+    assert alignment["status"] == "drift"
+    assert {item["path"] for item in alignment["drift"]} == {
+        ".agentic-workspace/payload-provenance.json",
+        ".agentic-workspace/skills/workspace-startup/SKILL.md",
+        ".agentic-workspace/memory/skills/memory-router/SKILL.md",
+    }
+    assert len(warnings) == 1
+    assert warnings[0].warning_class == "committed_payload_drift"
+    assert mod._exit_status_for_warnings(warnings=warnings, strict=False) == 1
+
+
+def test_boundary_exit_status_keeps_non_committed_warnings_advisory() -> None:
+    mod = _load_module(_checker_script_path(), "source_payload_boundary_exit_status")
+    warnings = [mod.BoundaryWarning("payload_inventory_drift", "packages/memory/bootstrap", "fixture drift")]
+
+    assert mod._exit_status_for_warnings(warnings=warnings, strict=False) == 0
+    assert mod._exit_status_for_warnings(warnings=warnings, strict=True) == 1
+
+
 def test_boundary_checker_warns_on_package_local_install_clones(tmp_path: Path) -> None:
     mod = _load_module(_checker_script_path(), "source_payload_boundary_drift")
     _write_root_surfaces(tmp_path)

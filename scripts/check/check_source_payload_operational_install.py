@@ -31,6 +31,7 @@ WARNING_PACKAGING_MANIFEST_DRIFT = "packaging_manifest_drift"
 WARNING_DUPLICATE_PLANNING_CHECKER_DRIFT = "duplicate_planning_checker_drift"
 WARNING_EXECUTABLE_PAYLOAD_DRIFT = "executable_payload_drift"
 WARNING_REFERENCE_CLOSURE_DRIFT = "reference_closure_drift"
+WARNING_COMMITTED_PAYLOAD_DRIFT = "committed_payload_drift"
 
 SUPPORTED_MODULE_COMBINATIONS = (
     (),
@@ -178,6 +179,136 @@ def _package_payload_files(repo_root: Path, package_name: str) -> list[str]:
 
 def _should_count_bootstrap_file(path: Path) -> bool:
     return path.is_file() and "__pycache__" not in path.parts and path.suffix != ".pyc"
+
+
+def _normalized_file_text(path: Path) -> str:
+    return path.read_text(encoding="utf-8").replace("\r\n", "\n")
+
+
+def _committed_payload_alignment(*, repo_root: Path) -> dict[str, object]:
+    config_path = repo_root / ".agentic-workspace" / "config.toml"
+    if not config_path.is_file():
+        return {
+            "status": "not-configured",
+            "enabled": False,
+            "drift": [],
+            "rule": "Committed payload alignment is required only for source-current dogfooding repositories.",
+        }
+    try:
+        config = tomllib.loads(config_path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return {
+            "status": "not-configured",
+            "enabled": False,
+            "drift": [],
+            "rule": "Invalid workspace config is owned by config validation, not payload alignment.",
+        }
+    payload_target = config.get("payload", {})
+    enabled = isinstance(payload_target, dict) and bool(payload_target.get("dogfood_latest"))
+    target_release = payload_target.get("target_release") if isinstance(payload_target, dict) else None
+    if not enabled or target_release not in {None, "source-current"}:
+        return {
+            "status": "not-configured",
+            "enabled": False,
+            "drift": [],
+            "rule": "Committed payload alignment is required only for source-current dogfooding repositories.",
+        }
+
+    drift: list[dict[str, str]] = []
+    pyproject_path = repo_root / "pyproject.toml"
+    provenance_path = repo_root / ".agentic-workspace" / "payload-provenance.json"
+    source_version = ""
+    if pyproject_path.is_file():
+        pyproject = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
+        project = pyproject.get("project", {})
+        source_version = str(project.get("version", "")) if isinstance(project, dict) else ""
+    provenance: dict[str, Any] = {}
+    if provenance_path.is_file():
+        try:
+            loaded = json.loads(provenance_path.read_text(encoding="utf-8"))
+            provenance = loaded if isinstance(loaded, dict) else {}
+        except (OSError, json.JSONDecodeError):
+            provenance = {}
+    if not provenance:
+        drift.append({"path": ".agentic-workspace/payload-provenance.json", "reason": "payload provenance is missing or invalid"})
+    elif source_version:
+        installed_by = provenance.get("installed_by", {})
+        release_identity = provenance.get("release_identity", {})
+        observed = {
+            "installed_by.version": installed_by.get("version") if isinstance(installed_by, dict) else None,
+            "release_identity.version": release_identity.get("version") if isinstance(release_identity, dict) else None,
+            "release_identity.tag": release_identity.get("tag") if isinstance(release_identity, dict) else None,
+        }
+        expected = {
+            "installed_by.version": source_version,
+            "release_identity.version": source_version,
+            "release_identity.tag": f"v{source_version}",
+        }
+        for field, expected_value in expected.items():
+            if observed[field] != expected_value:
+                drift.append(
+                    {
+                        "path": ".agentic-workspace/payload-provenance.json",
+                        "reason": f"{field} is {observed[field]!r}; expected {expected_value!r}",
+                    }
+                )
+
+    manifest_path = repo_root / "src" / "agentic_workspace" / "contracts" / "workspace_surfaces.json"
+    source_payload_root = repo_root / "src" / "agentic_workspace" / "_payload"
+    if manifest_path.is_file():
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        payload_files = manifest.get("payload_files", []) if isinstance(manifest, dict) else []
+        for relative in payload_files if isinstance(payload_files, list) else []:
+            if not isinstance(relative, str):
+                continue
+            source = source_payload_root / relative
+            installed = repo_root / relative
+            if not source.is_file() or not installed.is_file():
+                drift.append({"path": relative, "reason": "declared workspace payload file is missing from source or root install"})
+            elif _normalized_file_text(source) != _normalized_file_text(installed):
+                drift.append({"path": relative, "reason": "root install differs from the declared workspace payload source"})
+
+    for module in ("memory", "planning"):
+        bootstrap_root = repo_root / "packages" / module / "bootstrap"
+        skills_root = bootstrap_root / ".agentic-workspace" / module / "skills"
+        if not skills_root.is_dir():
+            continue
+        for source in sorted(path for path in skills_root.rglob("*") if _should_count_bootstrap_file(path)):
+            relative = source.relative_to(bootstrap_root)
+            installed = repo_root / relative
+            rendered = relative.as_posix()
+            if not installed.is_file():
+                drift.append({"path": rendered, "reason": f"{module} managed skill is missing from the root install"})
+            elif _normalized_file_text(source) != _normalized_file_text(installed):
+                drift.append({"path": rendered, "reason": f"root install differs from the {module} bootstrap payload"})
+
+    return {
+        "status": "current" if not drift else "drift",
+        "enabled": True,
+        "source_version": source_version,
+        "drift": drift,
+        "rule": (
+            "A source-current dogfooding repository may be transiently dirty while editing, but every committed state must "
+            "carry matching workspace payload files, module-managed skills, and release provenance."
+        ),
+    }
+
+
+def _committed_payload_alignment_warnings(*, repo_root: Path) -> list[BoundaryWarning]:
+    alignment = _committed_payload_alignment(repo_root=repo_root)
+    drift = alignment["drift"]
+    if alignment["status"] != "drift" or not isinstance(drift, list):
+        return []
+    samples = [f"{item['path']}: {item['reason']}" for item in drift[:8] if isinstance(item, dict)]
+    return [
+        BoundaryWarning(
+            WARNING_COMMITTED_PAYLOAD_DRIFT,
+            ".agentic-workspace/payload-provenance.json",
+            "Committed source-current payload does not match its source: "
+            + "; ".join(samples)
+            + (" ..." if len(drift) > 8 else ""),
+        )
+    ]
 
 
 def _looks_like_executable_payload(path: Path) -> bool:
@@ -630,6 +761,7 @@ def gather_boundary_warnings(*, repo_root: Path = REPO_ROOT) -> list[BoundaryWar
     warnings.extend(_payload_inventory_warnings(repo_root=repo_root, package_name="memory", expected=memory_expected))
     warnings.extend(_packaging_manifest_warnings(repo_root=repo_root, package_name="planning", expected=planning_expected))
     warnings.extend(_packaging_manifest_warnings(repo_root=repo_root, package_name="memory", expected=memory_expected))
+    warnings.extend(_committed_payload_alignment_warnings(repo_root=repo_root))
     closure_manifest = repo_root / "src" / "agentic_workspace" / "contracts" / "workspace_surfaces.json"
     closure = gather_installed_reference_closure(repo_root=repo_root) if closure_manifest.is_file() else None
     if closure is not None and closure["status"] != "passed":
@@ -911,10 +1043,16 @@ def gather_sync_proof(*, repo_root: Path = REPO_ROOT) -> dict[str, object]:
         ),
     ]
     closure = gather_installed_reference_closure(repo_root=repo_root)
+    committed_alignment = _committed_payload_alignment(repo_root=repo_root)
     return {
         "kind": "source-payload-root-sync-proof/v1",
-        "status": "current" if all(item["status"] == "current" for item in proof) else "warning",
+        "status": (
+            "current"
+            if all(item["status"] == "current" for item in proof) and committed_alignment["status"] in {"current", "not-configured"}
+            else "warning"
+        ),
         "packages": proof,
+        "committed_payload_alignment": committed_alignment,
         "installed_reference_closure": closure,
         "intentional_difference_rule": "Intentional root dogfooding state is classified here and should not be reported as payload drift unless a managed payload file changed without refresh.",
         "operator_commands": [
@@ -948,6 +1086,11 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def _exit_status_for_warnings(*, warnings: list[BoundaryWarning], strict: bool) -> int:
+    committed_state_drift = any(warning.warning_class == WARNING_COMMITTED_PAYLOAD_DRIFT for warning in warnings)
+    return 1 if committed_state_drift or (strict and warnings) else 0
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     warnings = gather_boundary_warnings(repo_root=REPO_ROOT)
@@ -976,7 +1119,7 @@ def main(argv: list[str] | None = None) -> int:
                     f"root {package['payload_to_root_install']['status']})"
                 )
 
-    return 1 if args.strict and warnings else 0
+    return _exit_status_for_warnings(warnings=warnings, strict=args.strict)
 
 
 if __name__ == "__main__":

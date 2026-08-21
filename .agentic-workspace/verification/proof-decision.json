@@ -1,15 +1,15 @@
 {
   "kind": "agentic-workspace/verification-proof-decision/v1",
   "proof_decision": {
-    "selected_decision": "add-regression-evidence",
-    "trust_question": "Do one-shot review and stack-restack operations remain exact-head, idempotent, fail-closed, and auditable across stale races and bounded publication failures?",
+    "selected_decision": "add",
+    "trust_question": "Does strict source-checkout validation reject every committed source-current state whose declared workspace payload, module-managed skills, or release provenance is stale?",
     "host_strategy_source": ".agentic-workspace/verification/manifest.toml#scenarios.test_evidence_decision_review",
-    "proof_owner": "review-continuation-and-stack-publication",
-    "proof_intent": "exact-head-review-and-cas-restack-contract",
+    "proof_owner": "root-orchestration",
+    "proof_intent": "workflow-routing",
     "evidence_durability": "permanent",
-    "narrowest_evidence": "The existing review-loop suite plus real temporary Git remotes cover stopped-watcher launch, duplicate reuse, stale-head races, patch/ancestry preservation, exact leases, preflight isolation, successful publication, and failed publication receipts.",
-    "prune_or_replacement_condition": "Replace only when a narrower end-to-end review transport and remote-stack harness proves the same exact-head request, CAS publication, patch preservation, and partial-write boundaries.",
+    "narrowest_evidence": "Two focused checker tests prove that a matching source-current fixture passes and that stale provenance plus stale workspace and module skill payloads fail; the strict checker run proves the real repository is currently aligned.",
+    "prune_or_replacement_condition": "Replace only when a narrower authoritative committed-state validator proves the same source-current version, declared workspace payload, and module-managed skill alignment and remains in the strict maintainer validation lane.",
     "confidence": "high",
-    "residual_risk": "The external reviewer can complete without posting a marker, which is intentionally retained as an idempotent awaiting-result receipt. Multi-branch publication is not atomic, so every successful bounded write is recorded for recovery."
+    "residual_risk": "The guard intentionally excludes root-owned Planning and Memory state and module payload categories not declared as workspace payload files or managed skills; newly managed categories must be added to the alignment contract."
   }
 }
