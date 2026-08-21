@@ -74,6 +74,11 @@ def test_all_declared_ordinary_profiles_obey_authoritative_output_budgets(tmp_pa
         cold = samples[surface]
         warm = _run_json(capsys, commands[surface])
         _assert_budget(warm, budgets[surface])
+        if surface == "doctor":
+            assert warm["kind"] == "agentic-workspace/unchanged-projection/v1"
+            assert warm["operation"] == "doctor"
+            assert warm["decision_delta"] == "unchanged"
+            continue
         assert _semantic_signature(surface, cold) == _semantic_signature(surface, warm)
 
     for surface, argv in {"init": ["init", "--target", str(tmp_path), "--dry-run"], **commands}.items():
