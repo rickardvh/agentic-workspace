@@ -2488,24 +2488,46 @@ def _coordinated_release_proof_lane(*, target_root: Path | None, changed_paths: 
     ]
     if not matched:
         return None
+    package_commands: list[str] = []
+    package_dependencies: list[dict[str, Any]] = []
+    for package in _list_payload(ownership.get("packages")):
+        if not isinstance(package, dict):
+            continue
+        package_id = str(package.get("name") or "").strip()
+        pyproject = str(package.get("pyproject") or "").strip()
+        commands = [str(command) for command in _list_payload(package.get("proof_commands")) if str(command).strip()]
+        if not package_id or not pyproject or not commands:
+            continue
+        package_root = Path(pyproject).parent.as_posix()
+        package_matches = [
+            path
+            for path in matched
+            if path == pyproject or (package_root not in {"", "."} and path.startswith(package_root.rstrip("/") + "/"))
+        ]
+        if not package_matches:
+            continue
+        package_commands.extend(commands)
+        package_dependencies.append(
+            {
+                "requirement": f"{package_id}-package-release-integrity",
+                "subject_dependency": package_matches,
+                "distinct_claim": f"the coordinated release remains valid for the changed {package_id} package surface",
+                "commands": commands,
+            }
+        )
+    focused_commands = [
+        "make test-workspace",
+        "make lint-workspace",
+        *package_commands,
+        "uv run python scripts/check/check_generated_command_packages.py",
+        "uv run python scripts/check/run_operation_conformance_tests.py --target all",
+        "uv run python scripts/run_agentic_workspace.py defaults --section root_cli_authority --format json",
+        "uv run pytest tests/test_release_workflows.py -q",
+    ]
     return {
         "id": "coordinated_release_proof",
         "when": "changed paths touch release-owned coordinated version or release workflow surfaces",
-        "enough_proof": [
-            "make test-workspace",
-            "make lint-workspace",
-            "make test-memory",
-            "make lint-memory",
-            "make test-planning",
-            "make lint-planning",
-            "make typecheck-planning",
-            "make test-verification",
-            "make lint-verification",
-            "uv run python scripts/check/check_generated_command_packages.py",
-            "uv run python scripts/check/run_operation_conformance_tests.py --target all",
-            "uv run python scripts/run_agentic_workspace.py defaults --section root_cli_authority --format json",
-            "uv run pytest tests/test_release_workflows.py -q",
-        ],
+        "enough_proof": _dedupe(focused_commands),
         "proof_kind": "full-test",
         "proof_responsibility": "local-closeout",
         "execution_mode": "serial-recommended",
@@ -2514,6 +2536,12 @@ def _coordinated_release_proof_lane(*, target_root: Path | None, changed_paths: 
         "matched_paths": matched,
         "release_model": str(ownership.get("release_model", "coordinated-workspace")),
         "release_ownership_path": ".github/release-ownership.json",
+        "selection_posture": "focused-release-runtime",
+        "package_dependencies": package_dependencies,
+        "broad_proof_contract": (
+            "A package-wide suite is selected only when matched_paths names that package as an exact subject dependency; "
+            "each selected package dependency records its requirement, subject, and distinct claim before execution."
+        ),
     }
 
 
@@ -2616,9 +2644,11 @@ def _release_proof_profile_payload(
         "triggered_by": changed_paths,
         "release_ownership_path": str(release_lane.get("release_ownership_path", ".github/release-ownership.json")),
         "groups": groups,
+        "selection_posture": str(release_lane.get("selection_posture") or "focused-release-runtime"),
+        "package_dependencies": list(release_lane.get("package_dependencies", [])),
         "rule": (
-            "This profile explains why coordinated release proof is broad; it groups selected required commands by "
-            "protected release surface and proof purpose without relaxing required_commands."
+            "This profile groups selected proof by protected release subject. Package-wide proof requires an explicit "
+            "requirement, subject dependency, and distinct claim; otherwise the focused release/runtime lane applies."
         ),
     }
 

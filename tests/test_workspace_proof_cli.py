@@ -3056,12 +3056,13 @@ def test_proof_changed_release_version_surface_exposes_named_release_profile(cap
     values = json.loads(capsys.readouterr().out)["values"]
     lane_ids = [lane["id"] for lane in values["selected_lanes"]]
     assert "coordinated_release_proof" in lane_ids
-    assert "make test-memory" in values["required_commands"]
-    assert "make test-planning" in values["required_commands"]
-    assert "make test-verification" in values["required_commands"]
-    assert "uv run python scripts/check/check_generated_command_packages.py" in values["required_commands"]
-    assert "uv run python scripts/check/run_operation_conformance_tests.py --target all" in values["required_commands"]
-    assert "uv run pytest tests/test_release_workflows.py -q" in values["required_commands"]
+    assert "make test-workspace" in values["required_commands"]
+    assert "make test-memory" not in values["required_commands"]
+    assert "make test-planning" not in values["required_commands"]
+    assert "make test-verification" not in values["required_commands"]
+    assert any("scripts/check/check_generated_command_packages.py" in command for command in values["required_commands"])
+    assert any("scripts/check/run_operation_conformance_tests.py --target all" in command for command in values["required_commands"])
+    assert any("pytest tests/test_release_workflows.py -q" in command for command in values["required_commands"])
 
     profile = values["release_proof_profile"]
     assert profile["kind"] == "agentic-workspace/release-proof-profile/v1"
@@ -3070,14 +3071,53 @@ def test_proof_changed_release_version_surface_exposes_named_release_profile(cap
     assert profile["matched_paths"] == ["pyproject.toml"]
     groups = {group["id"]: group for group in profile["groups"]}
     assert groups["workspace-runtime"]["proof_purpose"] == "behavioral"
-    assert groups["memory-package"]["commands"] == ["make test-memory", "make lint-memory"]
-    assert groups["planning-package"]["commands"] == ["make test-planning", "make lint-planning", "make typecheck-planning"]
-    assert groups["verification-package"]["commands"] == ["make test-verification", "make lint-verification"]
+    assert groups["memory-package"]["commands"] == []
+    assert groups["planning-package"]["commands"] == []
+    assert groups["verification-package"]["commands"] == []
     assert groups["generated-command-package-freshness"]["proof_purpose"] == "freshness-parity"
-    assert "uv run python scripts/check/check_generated_command_packages.py" in groups["generated-command-package-freshness"]["commands"]
-    assert groups["operation-conformance"]["commands"] == ["uv run python scripts/check/run_operation_conformance_tests.py --target all"]
+    assert any(
+        "scripts/check/check_generated_command_packages.py" in command
+        for command in groups["generated-command-package-freshness"]["commands"]
+    )
+    assert len(groups["operation-conformance"]["commands"]) == 1
+    assert "scripts/check/run_operation_conformance_tests.py --target all" in groups["operation-conformance"]["commands"][0]
     assert groups["release-defaults-version-authority"]["proof_purpose"] == "release-authority"
-    assert "uv run pytest tests/test_release_workflows.py -q" in groups["release-defaults-version-authority"]["commands"]
+    assert any(
+        "pytest tests/test_release_workflows.py -q" in command for command in groups["release-defaults-version-authority"]["commands"]
+    )
+    assert profile["selection_posture"] == "focused-release-runtime"
+    assert profile["package_dependencies"][0]["requirement"] == "agentic-workspace-package-release-integrity"
+    assert profile["package_dependencies"][0]["subject_dependency"] == ["pyproject.toml"]
+
+
+def test_proof_changed_release_package_surface_names_exact_package_dependency(capsys) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(repo_root),
+                "--changed",
+                "packages/planning/pyproject.toml",
+                "--select",
+                "required_commands,release_proof_profile",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    values = json.loads(capsys.readouterr().out)["values"]
+    assert "make test-planning" in values["required_commands"]
+    assert "make test-memory" not in values["required_commands"]
+    assert "make test-verification" not in values["required_commands"]
+    dependency = values["release_proof_profile"]["package_dependencies"][0]
+    assert dependency["requirement"] == "agentic-workspace-planning-package-release-integrity"
+    assert dependency["subject_dependency"] == ["packages/planning/pyproject.toml"]
+    assert "agentic-workspace-planning package" in dependency["distinct_claim"]
 
 
 def test_proof_changed_uses_python_pytest_capability_without_makefile(tmp_path: Path, capsys) -> None:

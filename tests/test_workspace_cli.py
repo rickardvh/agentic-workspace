@@ -15151,6 +15151,64 @@ def test_report_proof_reuse_guidance_classifies_safe_and_stale_receipts(tmp_path
     assert stale["changed_fingerprints"] == ["src/app.py"]
 
 
+def test_proof_reuse_v2_reuses_unrelated_descendants_and_rejects_exact_identity_drift(tmp_path: Path) -> None:
+    import agentic_workspace.workspace_runtime_core as runtime_core
+
+    subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True, check=True)
+    subprocess.run(["git", "config", "user.email", "fixture@example.invalid"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.name", "Fixture"], cwd=tmp_path, check=True)
+    _write(tmp_path / "src" / "app.py", "VALUE = 1\n")
+    _write(tmp_path / "docs" / "unrelated.md", "one\n")
+    _write(tmp_path / "pyproject.toml", "[project]\nname='fixture'\nversion='0.1.0'\n")
+    _write(tmp_path / "uv.lock", "version = 1\n")
+    _write(tmp_path / "Makefile", "test:\n\t@echo ok\n")
+    _write(tmp_path / ".agentic-workspace" / "config.toml", "schema_version = 1\n")
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
+    subprocess.run(["git", "commit", "-m", "subject"], cwd=tmp_path, capture_output=True, check=True)
+
+    runtime_core._write_proof_reuse_cache_from_receipt(
+        target_root=tmp_path,
+        command="uv run pytest tests/test_app.py -q",
+        result="passed",
+        changed_paths=["src/app.py"],
+        receipt={"recorded_at": "2026-08-22T10:00:00+00:00"},
+    )
+    cache_path = tmp_path / ".agentic-workspace" / "local" / "cache" / "proof-reuse.json"
+    cache = json.loads(cache_path.read_text(encoding="utf-8"))
+    assert cache["dependency_subject_identity"]
+
+    _write(tmp_path / "docs" / "unrelated.md", "two\n")
+    subprocess.run(["git", "add", "docs/unrelated.md"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "commit", "-m", "unrelated"], cwd=tmp_path, capture_output=True, check=True)
+    reused = runtime_core._proof_reuse_guidance_payload(target_root=tmp_path, cli_invoke="agentic-workspace")
+    assert reused["status"] == "reuse_safe_with_evidence"
+    assert reused["head_transition"] == "unrelated-descendant"
+    assert reused["pre_execution_summary"]["reused"] == ["uv run pytest tests/test_app.py -q"]
+    assert reused["pre_execution_summary"]["focused_local"] == ["uv run pytest tests/test_app.py -q"]
+
+    _write(tmp_path / "pyproject.toml", "[project]\nname='fixture'\nversion='0.2.0'\n")
+    dependency_changed = runtime_core._proof_reuse_guidance_payload(target_root=tmp_path, cli_invoke="agentic-workspace")
+    assert dependency_changed["status"] == "rerun_required"
+    assert dependency_changed["identity_failures"] == ["dependency-config-changed"]
+    assert dependency_changed["dependency_config_changed"] == ["pyproject.toml"]
+    assert dependency_changed["proof_groups"][0]["execution_decision"] == "rerun-required"
+
+    _write(tmp_path / "pyproject.toml", "[project]\nname='fixture'\nversion='0.1.0'\n")
+    cache["runtime_identity"]["python"] = "0.0"
+    cache_path.write_text(json.dumps(cache), encoding="utf-8")
+    wrong_runtime = runtime_core._proof_reuse_guidance_payload(target_root=tmp_path, cli_invoke="agentic-workspace")
+    assert wrong_runtime["identity_failures"] == ["wrong-runtime"]
+
+    cache["runtime_identity"] = {
+        "executable": str(Path(sys.executable).resolve()),
+        "python": f"{sys.version_info.major}.{sys.version_info.minor}",
+    }
+    cache["prior_head"] = "not-a-commit"
+    cache_path.write_text(json.dumps(cache), encoding="utf-8")
+    wrong_head = runtime_core._proof_reuse_guidance_payload(target_root=tmp_path, cli_invoke="agentic-workspace")
+    assert wrong_head["identity_failures"] == ["wrong-head"]
+
+
 def test_report_runtime_mirror_consistency_detects_missing_and_mismatched_shapes(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0

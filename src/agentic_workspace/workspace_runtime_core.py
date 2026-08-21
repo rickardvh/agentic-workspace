@@ -32552,6 +32552,66 @@ def _proof_reuse_guidance_payload(*, target_root: Path, cli_invoke: str) -> dict
             changed_fingerprints.append(relative)
         elif not expected_hash:
             changed_fingerprints.append(relative)
+    identity_schema = _as_int(receipt.get("schema_version"))
+    identity_failures: list[str] = []
+    head_transition = "legacy-unverified"
+    current_head = ""
+    runtime_status = "legacy-unverified"
+    dependency_config_changed: list[str] = []
+    if identity_schema >= 2:
+        recorded_runtime = _as_dict(receipt.get("runtime_identity"))
+        current_runtime = {
+            "executable": str(Path(sys.executable).resolve()),
+            "python": f"{sys.version_info.major}.{sys.version_info.minor}",
+        }
+        if recorded_runtime != current_runtime:
+            identity_failures.append("wrong-runtime")
+            runtime_status = "mismatch"
+        else:
+            runtime_status = "matched"
+        prior_head = str(receipt.get("prior_head") or "").strip()
+        current_head = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=target_root, capture_output=True, text=True, check=False
+        ).stdout.strip()
+        head_check = subprocess.run(
+            ["git", "merge-base", "--is-ancestor", prior_head, current_head],
+            cwd=target_root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if not prior_head or not current_head or head_check.returncode != 0:
+            identity_failures.append("wrong-head")
+            head_transition = "rejected"
+        elif prior_head == current_head:
+            head_transition = "exact"
+        else:
+            changed_since_receipt = subprocess.run(
+                ["git", "diff", "--name-only", f"{prior_head}..{current_head}"],
+                cwd=target_root,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if changed_since_receipt.returncode != 0:
+                identity_failures.append("wrong-head")
+                head_transition = "rejected"
+            else:
+                transition_paths = {line.strip().replace("\\", "/") for line in changed_since_receipt.stdout.splitlines() if line.strip()}
+                if transition_paths.intersection(changed_paths):
+                    identity_failures.append("dependency-subject-changed")
+                    head_transition = "subject-changed"
+                else:
+                    head_transition = "unrelated-descendant"
+        config_fingerprints = _as_dict(receipt.get("dependency_config_fingerprints"))
+        for relative, expected in config_fingerprints.items():
+            if _file_sha256(target_root / str(relative)) != str(expected):
+                dependency_config_changed.append(str(relative))
+        if dependency_config_changed:
+            identity_failures.append("dependency-config-changed")
+        if missing_paths or changed_fingerprints:
+            identity_failures.append("dependency-subject-changed")
+    identity_failures = _dedupe(identity_failures)
     proof_groups: list[dict[str, Any]] = []
     raw_groups = receipt.get("proof_groups", []) if isinstance(receipt.get("proof_groups"), list) else []
     for raw in raw_groups:
@@ -32565,9 +32625,10 @@ def _proof_reuse_guidance_payload(*, target_root: Path, cli_invoke: str) -> dict
         group_missing_evidence = list(missing_reuse_evidence)
         if not command_identity:
             group_missing_evidence.append("command_identity")
-        if missing_paths or changed_fingerprints:
+        execution_posture = str(raw.get("execution_posture") or "focused-local")
+        if identity_failures or missing_paths or changed_fingerprints:
             classification = "rerun_required"
-            rationale = "changed proof input fingerprints"
+            rationale = identity_failures[0] if identity_failures else "dependency-subject-changed"
         elif prior_status not in {"passed", "success", "ok"}:
             classification = "rerun_required"
             rationale = "prior proof did not pass"
@@ -32581,6 +32642,8 @@ def _proof_reuse_guidance_payload(*, target_root: Path, cli_invoke: str) -> dict
             {
                 "command": command,
                 "classification": classification,
+                "execution_decision": "reused" if classification == "reuse_safe_with_evidence" else "rerun-required",
+                "execution_posture": execution_posture,
                 "missing_reuse_evidence": group_missing_evidence,
                 "evidence": {
                     "prior_head": receipt.get("prior_head") or receipt.get("head"),
@@ -32592,13 +32655,18 @@ def _proof_reuse_guidance_payload(*, target_root: Path, cli_invoke: str) -> dict
                     "command_identity": command_identity,
                     "changed_paths": changed_paths,
                     "fingerprint_count": len(path_fingerprints),
+                    "dependency_subject_identity": receipt.get("dependency_subject_identity"),
+                    "head_transition": head_transition,
+                    "current_head": current_head,
+                    "runtime_status": runtime_status,
+                    "dependency_config_changed": dependency_config_changed,
                 },
                 "rationale": rationale,
             }
         )
-    if missing_paths or changed_fingerprints:
+    if identity_failures or missing_paths or changed_fingerprints:
         status = "rerun_required"
-        recommended = "Rerun proof for changed or missing proof inputs."
+        recommended = "Rerun proof for the rejected runtime, head, dependency, or subject identity."
     elif proof_groups and all(group["classification"] == "reuse_safe_with_evidence" for group in proof_groups):
         status = "reuse_safe_with_evidence"
         recommended = "Focused proof may reuse the named prior proof groups; record the reuse rationale in closeout."
@@ -32618,8 +32686,19 @@ def _proof_reuse_guidance_payload(*, target_root: Path, cli_invoke: str) -> dict
         "observed_changed_paths": changed_paths,
         "missing_paths": missing_paths,
         "changed_fingerprints": changed_fingerprints,
+        "identity_failures": identity_failures,
+        "head_transition": head_transition,
+        "runtime_status": runtime_status,
+        "dependency_config_changed": dependency_config_changed,
         "missing_reuse_evidence": missing_reuse_evidence,
         "proof_groups": proof_groups,
+        "pre_execution_summary": {
+            "reused": [group["command"] for group in proof_groups if group["execution_decision"] == "reused"],
+            "rerun_required": [group["command"] for group in proof_groups if group["execution_decision"] == "rerun-required"],
+            "focused_local": [group["command"] for group in proof_groups if group["execution_posture"] == "focused-local"],
+            "exhaustive_local": [group["command"] for group in proof_groups if group["execution_posture"] == "exhaustive-local"],
+            "exhaustive_ci": [group["command"] for group in proof_groups if group["execution_posture"] == "exhaustive-ci-owned"],
+        },
         "recommended_next_action": recommended,
         "detail_command": detail_command,
         "rule": "This is claim-safety guidance, not a test-skipping feature; unknown evidence requires rerun.",
@@ -48656,21 +48735,61 @@ def _write_proof_reuse_cache_from_receipt(
 ) -> dict[str, Any]:
     normalized_paths = _normalize_changed_paths(changed_paths)
     path_fingerprints = {relative: digest for relative in normalized_paths if (digest := _file_sha256(target_root / relative))}
+    dependency_config_paths = [
+        relative
+        for relative in ("pyproject.toml", "uv.lock", "Makefile", ".agentic-workspace/config.toml")
+        if (target_root / relative).is_file()
+    ]
+    dependency_config_fingerprints = {
+        relative: digest for relative in dependency_config_paths if (digest := _file_sha256(target_root / relative))
+    }
+    dependency_config_fingerprint = hashlib.sha256(
+        json.dumps(dependency_config_fingerprints, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    repository_head = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=target_root, capture_output=True, text=True, check=False
+    ).stdout.strip()
+    runtime_identity = {
+        "executable": str(Path(sys.executable).resolve()),
+        "python": f"{sys.version_info.major}.{sys.version_info.minor}",
+    }
+    dependency_subject_identity = hashlib.sha256(
+        json.dumps(
+            {
+                "path_fingerprints": path_fingerprints,
+                "dependency_config_fingerprint": dependency_config_fingerprint,
+                "runtime_identity": runtime_identity,
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()
     command_identity = hashlib.sha256(command.encode("utf-8")).hexdigest()
     proof_selection_fingerprint = hashlib.sha256("\n".join([*sorted(normalized_paths), command]).encode("utf-8")).hexdigest()
     cache_payload = {
         "kind": "agentic-workspace/proof-reuse-cache/v1",
+        "schema_version": 2,
+        "prior_head": repository_head,
+        "runtime_identity": runtime_identity,
         "changed_paths": normalized_paths,
         "path_fingerprints": path_fingerprints,
         "parent_proof_reference": PROOF_RECEIPT_RELATIVE_PATH.as_posix(),
         "proof_selection_fingerprint": proof_selection_fingerprint,
-        "dependency_config_fingerprint": "ordinary-proof-receipt",
+        "dependency_config_paths": dependency_config_paths,
+        "dependency_config_fingerprints": dependency_config_fingerprints,
+        "dependency_config_fingerprint": dependency_config_fingerprint,
+        "dependency_subject_identity": dependency_subject_identity,
         "generated_surface_freshness": {"status": "verified"},
         "proof_groups": [
             {
                 "command": command,
                 "command_fingerprint": command_identity,
                 "status": result,
+                "dependency_subject": {
+                    "paths": normalized_paths,
+                    "identity": dependency_subject_identity,
+                },
+                "execution_posture": "focused-local",
             }
         ],
         "source_receipt_recorded_at": receipt.get("recorded_at"),
