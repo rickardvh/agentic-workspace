@@ -1,7 +1,7 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:3f205b9a4902af13602b0a29820c8cb88bebba3d36dbe1099cc07f91e0eeb02d",
+  "profile_fingerprint": "sha256:ad5e38b332e1d3ca1db231ac89bf960bf3a2a60a16b43be149d152eeeb30cd3a",
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",
@@ -19377,6 +19377,670 @@
         }
       }
     },
+    "external-evidence.query": {
+      "identity": "external-evidence.query",
+      "version": "agentic-workspace/operation/v1",
+      "fingerprint": "sha256:9fffd9d63d6bfb58ec669a0183aeb7902c64862b4bb70ae2b6bd394b07ed53a4",
+      "compatibility_fingerprint": "sha256:bda8fed87f7ebdaf8cc5af82570648fd38fd40196b638963c76c3f8bade79765",
+      "contract": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "id": "external-evidence.query",
+        "command_surface": {
+          "command": "external-evidence-query",
+          "format_option": "format"
+        },
+        "summary": "Query and revalidate one external proof candidate and opaque host result.",
+        "classification": "read-only-report",
+        "inputs": [
+          {
+            "name": "target",
+            "source": "cli-option",
+            "required": false,
+            "schema_ref": "schemas/external_evidence_operation_input.schema.json"
+          },
+          {
+            "name": "candidate_json",
+            "source": "cli-option",
+            "required": true
+          },
+          {
+            "name": "host_result_ref",
+            "source": "cli-option",
+            "required": true
+          },
+          {
+            "name": "format",
+            "source": "cli-option",
+            "required": false
+          }
+        ],
+        "output": {
+          "kind": "json",
+          "schema_ref": "schemas/external_evidence_operation_result.schema.json"
+        },
+        "effects": {
+          "read_only": true,
+          "destructive": false,
+          "idempotent": true,
+          "writes_repo_state": false,
+          "requires_preflight_gate": false
+        },
+        "locality": {
+          "requires_repo": true,
+          "network": "forbidden",
+          "outside_repo_writes": "forbidden"
+        },
+        "reads": [
+          {
+            "surface": ".agentic-workspace/local/proof/external-evidence-host-results/inbox/<result-id>.json",
+            "required": true
+          },
+          {
+            "surface": ".agentic-workspace/verification/manifest.toml",
+            "required": true
+          },
+          {
+            "surface": "stored proof-subject source inputs",
+            "required": true
+          }
+        ],
+        "writes": [],
+        "steps": [
+          {
+            "id": "resolve_root",
+            "uses": "workspace.target-root.resolve",
+            "description": "Resolve the target repository."
+          },
+          {
+            "id": "query_evidence",
+            "uses": "assurance.external-evidence.apply",
+            "description": "Re-resolve signed custody, repository authority, and current proof-subject status."
+          },
+          {
+            "id": "emit_output",
+            "uses": "output.emit",
+            "description": "Emit the current structured admission result."
+          }
+        ],
+        "guards": [
+          "Query is stateless and re-verifies the signed host result, candidate binding, current repository policy, and current dependency inputs."
+        ],
+        "proof": [
+          "external evidence public-operation tests",
+          "independent generated-client fixture",
+          "operation contract validation"
+        ],
+        "migration_status": "runtime-consumed"
+      },
+      "schemas": [
+        "external_evidence_operation_input.schema.json",
+        "external_evidence_operation_result.schema.json",
+        "operation_failure.schema.json"
+      ],
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "package-trusted host result revalidation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "external-evidence.query.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "repository evidence-authority resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "external-evidence.query.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "current proof-subject classification",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "external-evidence.query.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "external-evidence.query.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      },
+      "schema_roles": {
+        "input": [
+          "external_evidence_operation_input.schema.json"
+        ],
+        "output": [
+          "external_evidence_operation_result.schema.json"
+        ],
+        "failure": [
+          "operation_failure.schema.json"
+        ]
+      },
+      "compatibility_surface": {
+        "contract": {
+          "schema_version": "agentic-workspace/operation/v1",
+          "id": "external-evidence.query",
+          "classification": "read-only-report",
+          "inputs": [
+            {
+              "name": "target",
+              "source": "cli-option",
+              "required": false,
+              "schema_ref": "schemas/external_evidence_operation_input.schema.json"
+            },
+            {
+              "name": "candidate_json",
+              "source": "cli-option",
+              "required": true
+            },
+            {
+              "name": "host_result_ref",
+              "source": "cli-option",
+              "required": true
+            },
+            {
+              "name": "format",
+              "source": "cli-option",
+              "required": false
+            }
+          ],
+          "output": {
+            "kind": "json",
+            "schema_ref": "schemas/external_evidence_operation_result.schema.json"
+          },
+          "effects": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "guards": [
+            "Query is stateless and re-verifies the signed host result, candidate binding, current repository policy, and current dependency inputs."
+          ]
+        },
+        "schemas": {
+          "input": {
+            "external_evidence_operation_input.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "object",
+              "properties": {
+                "target": {
+                  "type": "string"
+                },
+                "format": {
+                  "type": "string",
+                  "enum": [
+                    "text",
+                    "json"
+                  ]
+                },
+                "candidate_json": {
+                  "type": "string",
+                  "minLength": 2
+                },
+                "host_result_ref": {
+                  "type": "string",
+                  "pattern": "^external-evidence-host-result:[A-Za-z0-9._-]+$"
+                }
+              },
+              "additionalProperties": false,
+              "x-agentic-workspace-doc-role": "contract-reference"
+            }
+          },
+          "output": {
+            "external_evidence_operation_result.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "object",
+              "required": [
+                "kind",
+                "operation",
+                "status",
+                "admission",
+                "stored"
+              ],
+              "properties": {
+                "kind": {
+                  "const": "agentic-workspace/external-evidence-operation-result/v1"
+                },
+                "operation": {
+                  "type": "string",
+                  "enum": [
+                    "submit",
+                    "query"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "admitted",
+                    "rejected"
+                  ]
+                },
+                "admission": {
+                  "type": "object"
+                },
+                "stored": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": true,
+              "x-agentic-workspace-doc-role": "contract-reference"
+            }
+          },
+          "failure": {
+            "operation_failure.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "rejected",
+                    "failed",
+                    "retryable"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        }
+      }
+    },
+    "external-evidence.submit": {
+      "identity": "external-evidence.submit",
+      "version": "agentic-workspace/operation/v1",
+      "fingerprint": "sha256:6a8bd6649e9d4e1ad69a6ae6d5ff43974ce49fab826c88a6003756a98d760efd",
+      "compatibility_fingerprint": "sha256:42c7818a5bd27be914d7baa8eaab4d620e965bba9237cc98c8f9151545c37d85",
+      "contract": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "id": "external-evidence.submit",
+        "command_surface": {
+          "command": "external-evidence-submit",
+          "format_option": "format"
+        },
+        "summary": "Submit externally produced proof through an opaque package-trusted host result.",
+        "classification": "local-record-append",
+        "inputs": [
+          {
+            "name": "target",
+            "source": "cli-option",
+            "required": false,
+            "schema_ref": "schemas/external_evidence_operation_input.schema.json"
+          },
+          {
+            "name": "candidate_json",
+            "source": "cli-option",
+            "required": true
+          },
+          {
+            "name": "host_result_ref",
+            "source": "cli-option",
+            "required": true
+          },
+          {
+            "name": "format",
+            "source": "cli-option",
+            "required": false
+          }
+        ],
+        "output": {
+          "kind": "json",
+          "schema_ref": "schemas/external_evidence_operation_result.schema.json"
+        },
+        "effects": {
+          "read_only": true,
+          "destructive": false,
+          "idempotent": true,
+          "writes_repo_state": false,
+          "requires_preflight_gate": false
+        },
+        "locality": {
+          "requires_repo": true,
+          "network": "forbidden",
+          "outside_repo_writes": "forbidden"
+        },
+        "reads": [
+          {
+            "surface": ".agentic-workspace/local/proof/external-evidence-host-results/inbox/<result-id>.json",
+            "required": true
+          },
+          {
+            "surface": ".agentic-workspace/verification/manifest.toml",
+            "required": true
+          },
+          {
+            "surface": "candidate proof-subject source inputs",
+            "required": true
+          }
+        ],
+        "writes": [],
+        "steps": [
+          {
+            "id": "resolve_root",
+            "uses": "workspace.target-root.resolve",
+            "description": "Resolve the target repository."
+          },
+          {
+            "id": "submit_evidence",
+            "uses": "assurance.external-evidence.apply",
+            "description": "Verify host custody, resolve repository authority, classify the current proof subject, and return one compact admitted result."
+          },
+          {
+            "id": "emit_output",
+            "uses": "output.emit",
+            "description": "Emit the structured admission result."
+          }
+        ],
+        "guards": [
+          "Callers provide an opaque host_result_ref and cannot provide authenticated producer custody.",
+          "The package-trusted signature binds producer, issuer, result contract, result, proof route, evidence class, and proof-subject digest.",
+          "Verification evidence_authorities are loaded by the operation from repository policy rather than submitted by the transport.",
+          "Current source inputs are re-read before proof-subject classification; the operation creates no parallel evidence ledger."
+        ],
+        "proof": [
+          "external evidence public-operation tests",
+          "independent generated-client fixture",
+          "operation contract validation"
+        ],
+        "migration_status": "runtime-consumed"
+      },
+      "schemas": [
+        "external_evidence_operation_input.schema.json",
+        "external_evidence_operation_result.schema.json",
+        "operation_failure.schema.json"
+      ],
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "package-trusted host result verification",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "external-evidence.submit.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "repository evidence-authority resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "external-evidence.submit.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "current proof-subject classification",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "external-evidence.submit.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "external-evidence.submit.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      },
+      "schema_roles": {
+        "input": [
+          "external_evidence_operation_input.schema.json"
+        ],
+        "output": [
+          "external_evidence_operation_result.schema.json"
+        ],
+        "failure": [
+          "operation_failure.schema.json"
+        ]
+      },
+      "compatibility_surface": {
+        "contract": {
+          "schema_version": "agentic-workspace/operation/v1",
+          "id": "external-evidence.submit",
+          "classification": "local-record-append",
+          "inputs": [
+            {
+              "name": "target",
+              "source": "cli-option",
+              "required": false,
+              "schema_ref": "schemas/external_evidence_operation_input.schema.json"
+            },
+            {
+              "name": "candidate_json",
+              "source": "cli-option",
+              "required": true
+            },
+            {
+              "name": "host_result_ref",
+              "source": "cli-option",
+              "required": true
+            },
+            {
+              "name": "format",
+              "source": "cli-option",
+              "required": false
+            }
+          ],
+          "output": {
+            "kind": "json",
+            "schema_ref": "schemas/external_evidence_operation_result.schema.json"
+          },
+          "effects": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "guards": [
+            "Callers provide an opaque host_result_ref and cannot provide authenticated producer custody.",
+            "The package-trusted signature binds producer, issuer, result contract, result, proof route, evidence class, and proof-subject digest.",
+            "Verification evidence_authorities are loaded by the operation from repository policy rather than submitted by the transport.",
+            "Current source inputs are re-read before proof-subject classification; the operation creates no parallel evidence ledger."
+          ]
+        },
+        "schemas": {
+          "input": {
+            "external_evidence_operation_input.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "object",
+              "properties": {
+                "target": {
+                  "type": "string"
+                },
+                "format": {
+                  "type": "string",
+                  "enum": [
+                    "text",
+                    "json"
+                  ]
+                },
+                "candidate_json": {
+                  "type": "string",
+                  "minLength": 2
+                },
+                "host_result_ref": {
+                  "type": "string",
+                  "pattern": "^external-evidence-host-result:[A-Za-z0-9._-]+$"
+                }
+              },
+              "additionalProperties": false,
+              "x-agentic-workspace-doc-role": "contract-reference"
+            }
+          },
+          "output": {
+            "external_evidence_operation_result.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "object",
+              "required": [
+                "kind",
+                "operation",
+                "status",
+                "admission",
+                "stored"
+              ],
+              "properties": {
+                "kind": {
+                  "const": "agentic-workspace/external-evidence-operation-result/v1"
+                },
+                "operation": {
+                  "type": "string",
+                  "enum": [
+                    "submit",
+                    "query"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "admitted",
+                    "rejected"
+                  ]
+                },
+                "admission": {
+                  "type": "object"
+                },
+                "stored": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": true,
+              "x-agentic-workspace-doc-role": "contract-reference"
+            }
+          },
+          "failure": {
+            "operation_failure.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "rejected",
+                    "failed",
+                    "retryable"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        }
+      }
+    },
     "instructions.check": {
       "identity": "instructions.check",
       "version": "agentic-workspace/operation/v1",
@@ -22121,6 +22785,80 @@
         "additionalProperties": true
       }
     },
+    "external_evidence_operation_input.schema.json": {
+      "source": "src/agentic_workspace/contracts/schemas/external_evidence_operation_input.schema.json",
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "agentic-workspace/external-evidence-operation-input.schema.json",
+        "title": "External Evidence Operation Input",
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "text",
+              "json"
+            ]
+          },
+          "candidate_json": {
+            "type": "string",
+            "minLength": 2
+          },
+          "host_result_ref": {
+            "type": "string",
+            "pattern": "^external-evidence-host-result:[A-Za-z0-9._-]+$"
+          }
+        },
+        "additionalProperties": false,
+        "x-agentic-workspace-doc-role": "contract-reference"
+      }
+    },
+    "external_evidence_operation_result.schema.json": {
+      "source": "src/agentic_workspace/contracts/schemas/external_evidence_operation_result.schema.json",
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "agentic-workspace/external-evidence-operation-result.schema.json",
+        "title": "External Evidence Operation Result",
+        "type": "object",
+        "required": [
+          "kind",
+          "operation",
+          "status",
+          "admission",
+          "stored"
+        ],
+        "properties": {
+          "kind": {
+            "const": "agentic-workspace/external-evidence-operation-result/v1"
+          },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "submit",
+              "query"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "admitted",
+              "rejected"
+            ]
+          },
+          "admission": {
+            "type": "object"
+          },
+          "stored": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": true,
+        "x-agentic-workspace-doc-role": "contract-reference"
+      }
+    },
     "guidance_lifecycle_input.schema.json": {
       "source": "src/agentic_workspace/contracts/schemas/guidance_lifecycle_input.schema.json",
       "schema": {
@@ -22494,6 +23232,34 @@
         },
         "runtime_exception_revision": "github-2044-closure:delegation-outcome.append@pr-2256",
         "mutation_path": ".agentic-workspace/delegation-outcomes.json",
+        "case_exceptions": {}
+      },
+      {
+        "operation_id": "external-evidence.submit",
+        "valid_input": {
+          "candidate_json": "{\"kind\":\"agentic-workspace/external-evidence-candidate/v1\",\"transport_id\":\"independent-fixture-client\",\"proof_route\":\"unit\",\"evidence_class\":\"test-result\",\"proof_subject\":{\"kind\":\"agentic-workspace/proof-subject/v1\",\"fingerprint\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"identity_complete\":true,\"claim_classes\":[\"executable-validation\"],\"source_inputs\":[{\"path\":\"src/a.py\",\"sha256\":\"ad64355106bb158b020ecf9702be48f7730fc091dd4bb6a2f092b40393495b3d\"}]}}",
+          "host_result_ref": "external-evidence-host-result:fixture-pass-v1"
+        },
+        "runtime_exception_revision": "github-2619-external-evidence-host-operation:v1",
+        "fixture_files": {
+          "src/a.py": "print('ok')\n",
+          ".agentic-workspace/verification/manifest.toml": "schema_version = \"agentic-workspace/verification-manifest/v1\"\n[protocols.unit]\ntitle = \"Unit\"\npurpose = \"Run unit proof\"\napplies_to_paths = [\"src/**\"]\nreview_owner = \"maintainers\"\n[proof_routes.unit]\nprotocol_refs = [\"unit\"]\ncommands = [\"pytest\"]\n[evidence_authorities.acme]\nproducer_id = \"ci/acme\"\nissuer_id = \"synthetic-evidence-host\"\nproof_route = \"unit\"\nevidence_class = \"test-result\"\nresult_contract = \"pytest/v1\"\nallowed_results = [\"passed\", \"failed\"]\n",
+          ".agentic-workspace/local/proof/external-evidence-host-results/inbox/fixture-pass-v1.json": "{\"kind\":\"agentic-workspace/external-evidence-host-result/v1\",\"status\":\"current\",\"result_id\":\"fixture-pass-v1\",\"result_ref\":\"external-evidence-host-result:fixture-pass-v1\",\"audience\":\"agentic-workspace.external-evidence\",\"producer_id\":\"ci/acme\",\"issuer_id\":\"synthetic-evidence-host\",\"transport_id\":\"independent-fixture-client\",\"proof_route\":\"unit\",\"evidence_class\":\"test-result\",\"result_contract\":\"pytest/v1\",\"result\":\"passed\",\"evidence_ref\":\"urn:synthetic-ci:run:42\",\"proof_subject_digest\":\"4daf1df1a430782d4bfd407d544d4eb46998615eaa64992ecefbbffded5ea6dc\",\"issued_at\":\"2026-01-01T00:00:00Z\",\"expires_at\":\"2099-01-01T00:00:00Z\",\"nonce\":\"fixture-pass-v1\",\"host_admission\":{\"kind\":\"agentic-workspace/external-evidence-host-admission/v1\",\"algorithm\":\"RS256\",\"key_id\":\"external-evidence-host:fixture-v1\",\"signature\":\"AkW583pguSR8oQ97WA2D76w-rOjpE_WdIdr9FqdNu3UvOQpiwnQOWJ3XFwaKIafB8j7kX-Mvx9wxpBpp2qwbimnqMdw5AEacIk135wDAWGmxyN5dS76onXAwHJLKcUNg9TR0gTKnRVBBEQUtqhfi4jsxvmavQo12-rE-O8U0ZUs\"}}\n"
+        },
+        "case_exceptions": {}
+      },
+      {
+        "operation_id": "external-evidence.query",
+        "valid_input": {
+          "candidate_json": "{\"kind\":\"agentic-workspace/external-evidence-candidate/v1\",\"transport_id\":\"independent-fixture-client\",\"proof_route\":\"unit\",\"evidence_class\":\"test-result\",\"proof_subject\":{\"kind\":\"agentic-workspace/proof-subject/v1\",\"fingerprint\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"identity_complete\":true,\"claim_classes\":[\"executable-validation\"],\"source_inputs\":[{\"path\":\"src/a.py\",\"sha256\":\"ad64355106bb158b020ecf9702be48f7730fc091dd4bb6a2f092b40393495b3d\"}]}}",
+          "host_result_ref": "external-evidence-host-result:fixture-pass-v1"
+        },
+        "runtime_exception_revision": "github-2619-external-evidence-host-operation:v1",
+        "fixture_files": {
+          "src/a.py": "print('ok')\n",
+          ".agentic-workspace/verification/manifest.toml": "schema_version = \"agentic-workspace/verification-manifest/v1\"\n[protocols.unit]\ntitle = \"Unit\"\npurpose = \"Run unit proof\"\napplies_to_paths = [\"src/**\"]\nreview_owner = \"maintainers\"\n[proof_routes.unit]\nprotocol_refs = [\"unit\"]\ncommands = [\"pytest\"]\n[evidence_authorities.acme]\nproducer_id = \"ci/acme\"\nissuer_id = \"synthetic-evidence-host\"\nproof_route = \"unit\"\nevidence_class = \"test-result\"\nresult_contract = \"pytest/v1\"\nallowed_results = [\"passed\", \"failed\"]\n",
+          ".agentic-workspace/local/proof/external-evidence-host-results/inbox/fixture-pass-v1.json": "{\"kind\":\"agentic-workspace/external-evidence-host-result/v1\",\"status\":\"current\",\"result_id\":\"fixture-pass-v1\",\"result_ref\":\"external-evidence-host-result:fixture-pass-v1\",\"audience\":\"agentic-workspace.external-evidence\",\"producer_id\":\"ci/acme\",\"issuer_id\":\"synthetic-evidence-host\",\"transport_id\":\"independent-fixture-client\",\"proof_route\":\"unit\",\"evidence_class\":\"test-result\",\"result_contract\":\"pytest/v1\",\"result\":\"passed\",\"evidence_ref\":\"urn:synthetic-ci:run:42\",\"proof_subject_digest\":\"4daf1df1a430782d4bfd407d544d4eb46998615eaa64992ecefbbffded5ea6dc\",\"issued_at\":\"2026-01-01T00:00:00Z\",\"expires_at\":\"2099-01-01T00:00:00Z\",\"nonce\":\"fixture-pass-v1\",\"host_admission\":{\"kind\":\"agentic-workspace/external-evidence-host-admission/v1\",\"algorithm\":\"RS256\",\"key_id\":\"external-evidence-host:fixture-v1\",\"signature\":\"AkW583pguSR8oQ97WA2D76w-rOjpE_WdIdr9FqdNu3UvOQpiwnQOWJ3XFwaKIafB8j7kX-Mvx9wxpBpp2qwbimnqMdw5AEacIk135wDAWGmxyN5dS76onXAwHJLKcUNg9TR0gTKnRVBBEQUtqhfi4jsxvmavQo12-rE-O8U0ZUs\"}}\n"
+        },
         "case_exceptions": {}
       }
     ],

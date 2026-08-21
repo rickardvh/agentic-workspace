@@ -3,18 +3,18 @@
   "authority": "command_package_ir.json",
   "compatibility": {
     "protocol": "1.0.0",
-    "fingerprint": "sha256:3f205b9a4902af13602b0a29820c8cb88bebba3d36dbe1099cc07f91e0eeb02d",
+    "fingerprint": "sha256:ad5e38b332e1d3ca1db231ac89bf960bf3a2a60a16b43be149d152eeeb30cd3a",
     "additive_fields": "allowed"
   },
   "support_rule": "Operations fail closed unless generated status, effects, conformance, and Python/TypeScript target accounting are present.",
   "readiness_authority": {
     "kind": "agentic-workspace/external-readiness-authority/v1",
     "status": "current",
-    "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:88249390847ffbaf7de3fec9a332a8a53416a93a8cea261f49ff1113bcf088cd",
-    "client_semantics_revision": "sha256:630e955877cc613aa6df1bc6304e879831d0dee7e3a9cefda87e4c9c89022402",
+    "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:425a5834df23b26ab25d241fdc6500185b601f93d4eaa7e56b1fa285792f7419",
+    "client_semantics_revision": "sha256:2612b08f6a4639bd5b85ce2943cb354471d8004dcfc0933448e1f4ba46ff64bf",
     "client_artifact_revisions": {
       "public_python_client": "src/agentic_workspace/client.py@sha256:f99ef3d3337cbd7a7a0499c1458be9ac8099bd6210cf8fb96d5f21fb9c0bf221",
-      "generated_client_generator": "scripts/generate/generate_external_consumer_profile.py@sha256:ad0b5b453cbfbce8174a325a2d56a333b5fc7134d9ec63586f59cc2798289992",
+      "generated_client_generator": "scripts/generate/generate_external_consumer_profile.py@sha256:a0499b9668478a00e07081c071129a43fee557f9a38deb7ba344bea6c0d219a3",
       "typescript_client_template": "scripts/generate/templates/external_client.mjs@sha256:99e55285734b7776d64794ffd0d810a6b9e0181c3ca11f55bc3cbb53d09e8a2c"
     }
   },
@@ -5007,6 +5007,220 @@
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
               "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "external-evidence.query",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/external-evidence.query.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:5b6a18458e33cfd6320430a0067454ef8621b9ae4a59c9a6920f3bd8009956cd"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-workspace",
+          "path": "operations/external-evidence.query.json",
+          "exists": true
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "path": "resources/operations/external-evidence.query.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [
+          "external_evidence_operation_input.schema.json"
+        ],
+        "output": [
+          "external_evidence_operation_result.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "conformance": [
+        "external-evidence.query.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "package-trusted host result revalidation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "external-evidence.query.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "repository evidence-authority resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "external-evidence.query.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "current proof-subject classification",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "external-evidence.query.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "external-evidence.query.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "external-evidence.submit",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/external-evidence.submit.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:4a5a21965a3d986e5be13482c00295445c7e8a6d3eb9fc670c6cc2bd4a5ad001"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-workspace",
+          "path": "operations/external-evidence.submit.json",
+          "exists": true
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "path": "resources/operations/external-evidence.submit.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [
+          "external_evidence_operation_input.schema.json"
+        ],
+        "output": [
+          "external_evidence_operation_result.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "conformance": [
+        "external-evidence.submit.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "package-trusted host result verification",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "external-evidence.submit.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "repository evidence-authority resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "external-evidence.submit.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "current proof-subject classification",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "external-evidence.submit.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "external-evidence.submit.process"
             ],
             "migration_dependency": "#2044"
           }
