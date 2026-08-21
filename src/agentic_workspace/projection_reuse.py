@@ -64,7 +64,9 @@ _SELECTOR_ENRICHMENT_DEPENDENCIES = {
 def _expose_projection_reuse_receipt(*, operation: str, query: dict[str, Any]) -> bool:
     """Keep proof lineage visible where a caller supplied projection scope."""
 
-    return operation != "start" or bool(query.get("changed")) or bool(str(query.get("select") or "").strip())
+    if operation in {"start", "implement"}:
+        return bool(str(query.get("select") or "").strip())
+    return True
 
 
 @dataclass(frozen=True)

@@ -1253,6 +1253,10 @@ def _acknowledged_current_task_switch_payload(
         "Changed-path implementation context can acknowledge the current-task route when planning-owned surfaces are not being "
         "mutated; active-plan protection still blocks active-plan progress claims."
     )
+    if _as_dict(path_classification.get("effect_scope")).get("status") == "proven-local-transient":
+        acknowledged["summary"] = (
+            "Current-task cleanup is mechanically bounded to ignored transient residue; the selected Planning owner and its claims remain unchanged."
+        )
     return acknowledged
 
 
@@ -2860,6 +2864,7 @@ def _structured_route_inputs(
     route_evidence: dict[str, Any],
     planning_revision: dict[str, Any],
     proposal: dict[str, Any],
+    path_classification: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Derive resolver dimensions from current-work and owner facts, not status aliases."""
     active_owner, owner_record = _active_execplan_record_payload(target_root=target_root)
@@ -2870,8 +2875,10 @@ def _structured_route_inputs(
     acknowledged = route_evidence.get("status") == "current-task-route-acknowledged"
     bounded_read_only = current_task_class.startswith("bounded-") and not acknowledged
     bounded_mutation = acknowledged and bool(changed_paths)
+    effect_scope = _as_dict(_as_dict(path_classification).get("effect_scope"))
+    local_transient_cleanup = effect_scope.get("status") == "proven-local-transient"
     mutation_baseline = _as_dict(route_evidence.get("mutation_baseline"))
-    if bounded_mutation:
+    if bounded_mutation and not local_transient_cleanup:
         live_baseline = mutation_baseline_payload(target_root=target_root, changed_paths=changed_paths)
         mutation_baseline = {
             **live_baseline,
@@ -2939,7 +2946,16 @@ def _structured_route_inputs(
                 "changed_path_count": len(changed_paths),
                 "allowed_paths": list(changed_paths) if bounded_mutation else [],
                 "mutation_scope_acknowledged": bounded_mutation,
-                "mode": "read-only" if bounded_read_only else "mutation" if bounded_mutation else "unresolved",
+                "mode": (
+                    "local-transient-cleanup"
+                    if local_transient_cleanup
+                    else "read-only"
+                    if bounded_read_only
+                    else "mutation"
+                    if bounded_mutation
+                    else "unresolved"
+                ),
+                "effect_scope": effect_scope,
             },
             "mutation_baseline": mutation_baseline,
             "owner": {
@@ -3300,7 +3316,7 @@ def _planning_safety_gate_payload(
     work_shape, proof_burden = _capability_structural_hints(capability)
     decomposition_delegation = execution_posture.get("decomposition_delegation", {}) if isinstance(execution_posture, dict) else {}
     decomposition_status = str(decomposition_delegation.get("status", "")) if isinstance(decomposition_delegation, dict) else ""
-    path_classification = _planning_safety_path_classification(changed_paths)
+    path_classification = _planning_safety_path_classification(changed_paths, target_root=target_root, task_text=task_text)
     numeric_refs = sorted(set(re.findall("#\\d+", task_text or "")))
     pr_context_refs = _pr_context_refs_from_task(task_text)
     issue_refs = [ref for ref in numeric_refs if ref not in set(pr_context_refs)]
@@ -3381,6 +3397,7 @@ def _planning_safety_gate_payload(
             route_evidence=route_evidence,
             planning_revision=planning_revision,
             proposal=reconciliation_proposal,
+            path_classification=path_classification,
         ),
     }
     route_decision = _planning_route_decision_payload(

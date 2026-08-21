@@ -2,6 +2,26 @@
 
 This directory holds read-only helpers for GitHub review and maintainer workflows.
 
+## PR Topology Admission
+
+When AW reports that stack topology is unavailable, use the routed
+`pr_topology.py` command to perform one bounded, read-only GitHub lookup and
+admit its repository/branch/head-bound result into the existing local review
+stack owner:
+
+```powershell
+uv run python scripts/github/pr_topology.py `
+  --repo rickardvh/agentic-workspace `
+  --branch codex/example-stack-head `
+  --target . `
+  --format json
+```
+
+The admitted result supplies PR identity and dependency order only. It does
+not prove review-thread freshness, absence of comments, or stack readiness.
+Ordinary unrelated startup remains network-quiet; this adapter runs only when
+the agent explicitly follows the PR-topology recovery route.
+
 ## PR Comment Delta Packet
 
 Use `pr_comment_delta.py` at the start of a review-response turn when a PR may have new comments, reviews, or inline review threads. The helper emits `agentic-workspace/pr-comment-delta/v1` so the next action can stay narrow:

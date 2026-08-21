@@ -57,6 +57,8 @@ Repo-owned Agentic Workspace configuration stored in .agentic-workspace/config.t
 | `assurance.agent_may_escalate` | boolean | no | `true` | Whether agents may raise assurance level when risk or scope warrants it. |  |  |
 | `assurance.agent_may_deescalate` | boolean | no | `false` | Whether agents may lower assurance level below the configured default. |  |  |
 | `assurance.strict_closeout` | boolean | no | `false` | Whether closeout should block when required proof references or gates are missing. |  |  |
+| `assurance.classification_owner` | enum `"config-native"`, `"repository-owned"` | no | `"config-native"` | Exclusive owner of assurance applicability classification: native workspace config or one repository-owned classifier. |  |  |
+| `assurance.classification_source` | string | no |  | Repo-relative source or operation ref for the repository-owned classifier; forbidden for config-native ownership. |  |  |
 | `assurance.decision_record_target` | string | no |  | Path for durable decision records when work requires one; explicit config wins, but conventional ADR directories may be discovered when this is unset. | `"docs/decisions/"` |  |
 | `assurance.decision_record_format` | string | no |  | Host-declared file format for durable decision records. | `"markdown"` |  |
 | `assurance.decision_record_template` | string | no |  | Optional host template id or repo-relative template path for decision scaffolds. | `"adr-lite"` |  |
@@ -88,9 +90,23 @@ Repo-owned Agentic Workspace configuration stored in .agentic-workspace/config.t
 | `assurance.requirements.<name>.waiver` | ref `#/$defs/assurance_requirement_disposition` | no |  | Recorded waiver with reason and owner for this requirement. |  |  |
 | `assurance.requirements.<name>.waiver.reason` | string | yes |  | Why the requirement was waived, dismissed, or found not applicable. |  |  |
 | `assurance.requirements.<name>.waiver.owner` | string | yes |  | Repo-local owner or role accountable for the waiver or dismissal. |  |  |
+| `assurance.requirements.<name>.waiver.applicability` | object | no |  | Optional bounds that keep the disposition active only for the classified application, proof subject, work identity, source revision, and review window. |  |  |
+| `assurance.requirements.<name>.waiver.applicability.application_id` | string | no |  | Exact assurance application for which this disposition is valid. |  |  |
+| `assurance.requirements.<name>.waiver.applicability.source_revision` | string | no |  | Classification-source revision for which this disposition is valid. |  |  |
+| `assurance.requirements.<name>.waiver.applicability.current_work_id` | string | no |  | Current-work identity for which this disposition is valid. |  |  |
+| `assurance.requirements.<name>.waiver.applicability.proof_subject_fingerprint` | string | no |  | Optional proof subject to which this disposition is bound. |  |  |
+| `assurance.requirements.<name>.waiver.applicability.expires_at` | string | no |  | Time after which the disposition is inactive. |  |  |
+| `assurance.requirements.<name>.waiver.applicability.review_after` | string | no |  | Time at which owner review is required and the disposition becomes inactive. |  |  |
 | `assurance.requirements.<name>.dismissal` | ref `#/$defs/assurance_requirement_disposition` | no |  | Recorded dismissal or not-applicable decision with reason and owner for this requirement. |  |  |
 | `assurance.requirements.<name>.dismissal.reason` | string | yes |  | Why the requirement was waived, dismissed, or found not applicable. |  |  |
 | `assurance.requirements.<name>.dismissal.owner` | string | yes |  | Repo-local owner or role accountable for the waiver or dismissal. |  |  |
+| `assurance.requirements.<name>.dismissal.applicability` | object | no |  | Optional bounds that keep the disposition active only for the classified application, proof subject, work identity, source revision, and review window. |  |  |
+| `assurance.requirements.<name>.dismissal.applicability.application_id` | string | no |  | Exact assurance application for which this disposition is valid. |  |  |
+| `assurance.requirements.<name>.dismissal.applicability.source_revision` | string | no |  | Classification-source revision for which this disposition is valid. |  |  |
+| `assurance.requirements.<name>.dismissal.applicability.current_work_id` | string | no |  | Current-work identity for which this disposition is valid. |  |  |
+| `assurance.requirements.<name>.dismissal.applicability.proof_subject_fingerprint` | string | no |  | Optional proof subject to which this disposition is bound. |  |  |
+| `assurance.requirements.<name>.dismissal.applicability.expires_at` | string | no |  | Time after which the disposition is inactive. |  |  |
+| `assurance.requirements.<name>.dismissal.applicability.review_after` | string | no |  | Time at which owner review is required and the disposition becomes inactive. |  |  |
 | `assurance.requirements.<name>.notes` | string | no |  | Optional repo-local note about this requirement. |  |  |
 | `assurance.subsystem_profiles` | object | no | `{}` | Subsystem-scoped assurance profiles keyed by existing .agentic-workspace/OWNERSHIP.toml subsystem ids. |  |  |
 | `assurance.subsystem_profiles.<name>` | object | no |  | One host-owned assurance profile for an ownership subsystem. |  | x-agentic-workspace-unknown-properties: "warn" |

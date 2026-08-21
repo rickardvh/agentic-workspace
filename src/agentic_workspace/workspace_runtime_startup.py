@@ -2341,6 +2341,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
                 "actionable_count",
                 "new_comment_count",
                 "stack_member_count",
+                "stack_discovery",
                 "recommended_command",
                 "cache_selector_command",
                 "live_inspection",
@@ -2350,8 +2351,15 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             )
             if key in pr_comment_attention
         }
+        stack_discovery = _as_dict(pr_comment_attention.get("stack_discovery"))
+        topology_known = bool(pr_comment_attention.get("stack_member_count")) and stack_discovery.get("status") in {
+            "admitted-live-topology",
+            "from-cache",
+        }
         context["pr_comment_attention"]["absence_states"] = {
-            "stack_membership": "unavailable"
+            "stack_membership": "known"
+            if topology_known
+            else "unavailable"
             if pr_comment_attention.get("status") == "stack_comment_status_unavailable"
             else "detail_omitted",
             "thread_level_comments": "hidden_behind_detail_route",
@@ -3027,6 +3035,11 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
     if _selector_requests(selected_fields, "source_guidance"):
         payload.setdefault("values", {})["source_guidance"] = _as_dict(operating_decision.get("source_guidance"))
         payload["missing"] = [item for item in payload.get("missing", []) if item != "source_guidance"]
+    if _selector_requests(selected_fields, "instruction_clause_projection"):
+        payload.setdefault("values", {})["instruction_clause_projection"] = _as_dict(
+            operating_decision.get("instruction_clause_projection")
+        )
+        payload["missing"] = [item for item in payload.get("missing", []) if item != "instruction_clause_projection"]
     selected_gate = _as_dict(_as_dict(payload.get("values")).get("planning_safety_gate"))
     selected_route = _as_dict(selected_gate.get("route_decision"))
     if (

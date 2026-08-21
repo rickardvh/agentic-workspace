@@ -23,6 +23,18 @@
       "type": "string",
       "description": "Longer explanation or display text for this entry."
     },
+    "local_execution_effects": {
+      "type": "object",
+      "description": "Program-wide ignored local effects that may occur independently of shared command mutability.",
+      "required": ["authority", "condition", "effects", "rule"],
+      "properties": {
+        "authority": {"type": "string", "description": "Authority class of the local effects."},
+        "condition": {"type": "string", "description": "Runtime condition that enables the local effects."},
+        "effects": {"type": "array", "items": {"type": "string"}, "description": "Possible ignored local writes."},
+        "rule": {"type": "string", "description": "Boundary between local diagnostics and shared command authority."}
+      },
+      "additionalProperties": false
+    },
     "commands": {
       "type": "array",
       "minItems": 1,

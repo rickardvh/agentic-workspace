@@ -678,7 +678,9 @@ def handoff(
     session_id = session_id.strip()
     if not session_id:
         raise LoopError(
-            "session-missing", "Codex session identity is required", recovery="run from a Stop hook or pass --session-id explicitly"
+            "session-missing",
+            "Codex session identity is required",
+            recovery="run from Codex with CODEX_THREAD_ID available, or pass --session-id explicitly",
         )
     root = _repo_root(cwd, runner)
     checkout_branch = _git_value(root, runner, "branch", "--show-current")
@@ -791,8 +793,8 @@ def handoff(
     )
     attempt = state.get("job_attempt")
     if isinstance(attempt, dict) and not attempt.get("session_id"):
-        # A Stop hook gives the fresh job's identity before any later completion
-        # transition can observe its handoff.
+        # An explicit continuation handoff gives the fresh job's identity before
+        # any later completion transition can observe its pushed head.
         attempt["session_id"] = session_id
     if not same_handoff:
         state["handoff_at"] = datetime.now(timezone.utc).isoformat()
@@ -1130,7 +1132,7 @@ def _review_prompt(review: Review, *, branch: str = "") -> str:
         f"{source} found actionable blockers for PR #{review.pr} at exact head {review.head}.\n\n"
         f"Source: {review.url or review.comment_id}\n\n"
         f"Required work:\n{review.findings}\n\n"
-        f"{'You are on branch ' + branch + '; push with git push origin ' + branch + '. ' if branch else ''}Address these findings, run the appropriate proof, push a new head, and let the repo Stop hook record the next handoff. "
+        f"{'You are on branch ' + branch + '; push with git push origin ' + branch + '. ' if branch else ''}Address these findings, run the appropriate proof, push a new head, then explicitly record it with `uv run python tools/chatgpt_review_loop.py handoff --pr {review.pr} --existing-only`. "
         'After proof and push, record their exact outcomes with `python tools/chatgpt_review_loop.py job-result --session-id $CODEX_THREAD_ID --proof-status passed|failed --proof-command "<command>" --proof-exit-code <exit> --push-status passed|failed`. Do not merge from this continuation.'
     )
 
@@ -1839,8 +1841,8 @@ def _dispatch_all_unlocked(
                 )
                 _save_state(root, existing)
             if existing.get("status") == "fresh-session-in-progress":
-                # A fresh job has no session identity until its Stop hook binds
-                # one.  Once the dispatcher lock has been reclaimed, that job
+                # A fresh job has no session identity until its explicit handoff
+                # binds one. Once the dispatcher lock has been reclaimed, that job
                 # is orphaned: retire its state and permit exactly one
                 # replacement fresh job for the same review.
                 if review.key in existing.get("automatic_recovery_reviews", []):
@@ -2205,6 +2207,11 @@ def _parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
     handoff_parser = sub.add_parser("handoff", help="Record one pushed PR head and exact Codex session without waiting.")
     handoff_parser.add_argument("--hook", action="store_true", help="Read Stop hook JSON and update only an explicitly enabled loop.")
+    handoff_parser.add_argument(
+        "--existing-only",
+        action="store_true",
+        help="Update only an existing loop from an explicit continuation handoff and preserve its configured limits.",
+    )
     handoff_parser.add_argument("--session-id", default=os.environ.get("CODEX_THREAD_ID", ""))
     handoff_parser.add_argument("--target", type=Path, default=Path.cwd())
     handoff_parser.add_argument("--pr", type=int)
@@ -2309,7 +2316,7 @@ def main(argv: Sequence[str] | None = None, *, runner: CommandRunner | None = No
                 max_cycles=args.max_cycles,
                 max_repeated_blockers=args.max_repeated_blockers,
                 replace_session=args.replace_session,
-                existing_only=args.hook,
+                existing_only=args.hook or args.existing_only,
                 runner=runner,
             )
             if args.hook:

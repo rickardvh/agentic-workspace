@@ -282,29 +282,8 @@ def _sample_setup_findings_payload() -> dict[str, object]:
 
 def _sample_module_capability_payload() -> dict[str, object]:
     descriptor = cli._module_operations()["planning"]  # type: ignore[attr-defined]
-    return {
-        "name": descriptor.name,
-        "description": descriptor.description,
-        "selection_rank": descriptor.selection_rank,
-        "kind": descriptor.kind,
-        "default_enabled": descriptor.default_enabled,
-        "capabilities": list(descriptor.capabilities),
-        "commands": list(descriptor.commands),
-        "command_args": {name: list(args) for name, args in descriptor.command_args.items()},
-        "install_signals": [path.as_posix() for path in descriptor.install_signals],
-        "workflow_surfaces": [path.as_posix() for path in descriptor.workflow_surfaces],
-        "generated_artifacts": [path.as_posix() for path in descriptor.generated_artifacts],
-        "dependencies": list(descriptor.dependencies),
-        "conflicts": list(descriptor.conflicts),
-        "startup_steps": list(descriptor.startup_steps),
-        "sources_of_truth": list(descriptor.sources_of_truth),
-        "result_contract": {
-            "schema_version": descriptor.result_contract.schema_version,
-            "guaranteed_fields": list(descriptor.result_contract.guaranteed_fields),
-            "action_fields": list(descriptor.result_contract.action_fields),
-            "warning_fields": list(descriptor.result_contract.warning_fields),
-        },
-    }
+    assert descriptor.public_contract is not None
+    return descriptor.public_contract
 
 
 def _sample_startup_context_payload() -> dict[str, object]:
@@ -3342,6 +3321,7 @@ def main(argv: list[str] | None = None) -> int:
             "capabilities": list(entry.capabilities),
             "dependencies": list(entry.dependencies),
             "conflicts": list(entry.conflicts),
+            "public_contract": entry.public_contract,
             "participation": entry.participation,
             "components": cli._MODULE_REGISTRY_ENTRIES[entry.name]["components"],  # type: ignore[attr-defined]
             "result_contract": {
@@ -3435,47 +3415,37 @@ def main(argv: list[str] | None = None) -> int:
         checks.append(("setup findings schema parity", ["setup findings classes drifted from cli supported values"]))
     module_capability_schema = contract_schema("module_capability.schema.json")
     module_capability_properties = module_capability_schema["properties"]
-    descriptor = cli._module_operations()["planning"]  # type: ignore[attr-defined]
     expected_module_capability_properties = {
+        "schema_version",
         "name",
         "description",
+        "compatibility",
+        "ownership",
+        "relevance",
         "selection_rank",
-        "kind",
-        "default_enabled",
         "capabilities",
-        "commands",
-        "command_args",
-        "install_signals",
-        "workflow_surfaces",
-        "generated_artifacts",
         "dependencies",
         "conflicts",
-        "startup_steps",
-        "sources_of_truth",
-        "result_contract",
+        "result_semantics",
     }
     if set(module_capability_properties) != expected_module_capability_properties:
         checks.append(("module capability schema parity", ["module capability properties drifted from supported descriptor fields"]))
     if set(module_capability_schema["required"]) != {
+        "schema_version",
         "name",
         "description",
+        "compatibility",
+        "ownership",
+        "relevance",
         "capabilities",
-        "commands",
-        "install_signals",
-        "workflow_surfaces",
-        "result_contract",
+        "result_semantics",
     }:
         checks.append(("module capability schema parity", ["required module capability fields drifted from the supported contract"]))
-    if set(module_capability_properties["command_args"]["patternProperties"]["^.+$"]["items"]["enum"]) != {
-        "target",
-        "dry_run",
-        "force",
-    }:
-        checks.append(("module capability schema parity", ["command arg names drifted from supported module invocation args"]))
-    if set(_sample_module_capability_payload()) != expected_module_capability_properties:
-        checks.append(("module capability schema parity", ["sample module capability payload drifted from the supported descriptor fields"]))
-    if set(_sample_module_capability_payload()["commands"]) != set(descriptor.commands):
-        checks.append(("module capability schema parity", ["sample module capability commands drifted from the live module descriptor"]))
+    sample_module_contract = _sample_module_capability_payload()
+    if not set(module_capability_schema["required"]).issubset(sample_module_contract):
+        checks.append(("module capability schema parity", ["sample public module contract omits required capability-first fields"]))
+    if "commands" in sample_module_contract or "workflow_surfaces" in sample_module_contract:
+        checks.append(("module capability schema parity", ["public module contract leaked internal lifecycle participation fields"]))
 
     failures = [(name, errors) for name, errors in checks if errors]
     if failures:

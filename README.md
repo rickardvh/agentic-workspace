@@ -72,6 +72,8 @@ Use the installation guide for current installation and adoption guidance:
 
 [`docs/agentic-workspace-install.md`](docs/agentic-workspace-install.md)
 
+The support-bearing install path is a versioned GitHub Release. Each coordinated release publishes `distribution-install-readiness.json`, which identifies the project-controlled root wheel and its SHA-256-bound install command; mutable branches and ordinary registry resolution are not support-bearing identities unless release policy says otherwise.
+
 After adoption, the repository's thin agent instructions normally route the agent through Workspace. When interacting manually, `start` is the ordinary first question; deeper commands such as `implement`, `proof`, `summary`, `skills`, `ownership`, and `report` are used when the current task or returned guidance calls for them.
 
 Agentic Workspace keeps its checked-in footprint deliberately small. Selected modules add their own owned state, while implementation packages, generated clients, caches, and local diagnostics keep separate ownership and lifecycle boundaries.
@@ -93,8 +95,12 @@ See [`docs/security/threat-model.md`](docs/security/threat-model.md) for the ful
 - [`docs/package/modules.md`](docs/package/modules.md) — first-party modules and ownership.
 - [`docs/architecture.md`](docs/architecture.md) — operating context, dynamic control, programmable instructions, and extension boundaries.
 - [`docs/extension-boundary.md`](docs/extension-boundary.md) — module and external-extension architecture.
+- [`docs/glossary.md`](docs/glossary.md) — stable public vocabulary.
+- [`docs/evidence-and-support.md`](docs/evidence-and-support.md) — deterministic and live evidence plus support limits.
 - [`docs/security/threat-model.md`](docs/security/threat-model.md) — trust and supply-chain boundary.
 - [`docs/package/contracts.md`](docs/package/contracts.md) — machine-readable contracts and generated references.
 - [`docs/index.md`](docs/index.md) — full documentation map.
+
+Exact current values live in the [CLI catalogue](docs/reference/cli-catalogue.md), [installed-surface catalogue](docs/reference/installed-surface-catalogue.md), and [support-bearing install reference](docs/reference/support-bearing-install.md), rather than duplicated conceptual prose.
 
 When maintaining Agentic Workspace itself rather than using it in another repository, follow [`AGENTS.md`](AGENTS.md) and the [`maintainer documentation`](docs/maintainer/index.md).

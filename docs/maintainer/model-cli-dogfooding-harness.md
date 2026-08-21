@@ -252,6 +252,14 @@ Postmortem feedback must be isolated from the copied repo and tool access. Adapt
 
 The #1600 external-agent evaluation lane is defined in `tools/model-cli-harness/external-agent-evaluation/`. Use that pack when maintainer work needs the scorecard/taxonomy, evaluator invariants, canonical scenario probes, historical failure fixtures, promotion decisions, surface simplification decisions, operational decision trace, or lane-level closure report. Validate it with:
 
+The same pack owns `module-extension-scenario-matrix.json` for the #2610
+module-use and extension-cost slice. It reuses the ordinary smoke runner and
+probe pack, keeps prompts free of module preselection, records the full
+ordinary-use metric set, and binds authoring-cost claims to the external
+fixture ledger. Its deterministic contract tests do not require proprietary
+model access; selective live evidence remains explicitly unavailable until a
+maintainer intentionally records a harness run.
+
 ```powershell
 uv run python scripts/model_cli_harness/external_agent_evaluation_lane.py validate
 ```

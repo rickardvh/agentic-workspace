@@ -1413,6 +1413,8 @@ def _external_readiness_results(
             {str(key): str(value) for key, value in raw_exceptions.items()} if isinstance(raw_exceptions, Mapping) else {}
         )
         valid_input = dict(raw_spec.get("valid_input", {})) if isinstance(raw_spec.get("valid_input"), Mapping) else {}
+        fixture_files = raw_spec.get("fixture_files", {})
+        fixture_files = dict(fixture_files) if isinstance(fixture_files, Mapping) else {}
         mutation_path = str(raw_spec.get("mutation_path") or "")
         for footprint in READINESS_FOOTPRINTS:
             if footprint in footprint_failures:
@@ -1445,6 +1447,14 @@ def _external_readiness_results(
                 (absent_root / ".git").mkdir()
                 (absent_root / ".git" / ".keep").write_text("", encoding="utf-8")
                 _write_local_invoke_config(base_root)
+                for relative, contents in fixture_files.items():
+                    destination = (base_root / str(relative)).resolve()
+                    try:
+                        destination.relative_to(base_root.resolve())
+                    except ValueError as exc:
+                        raise ValueError(f"external readiness fixture path escapes enabled root: {relative}") from exc
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    destination.write_text(str(contents), encoding="utf-8", newline="\n")
                 _write_local_invoke_config(stub_root)
                 disabled_config = disabled_root / ".agentic-workspace/config.toml"
                 disabled_config.parent.mkdir(parents=True, exist_ok=True)
@@ -1740,7 +1750,7 @@ def _run_case_target(
         )
     adapter_id = str(artifact.get("adapter_id", "cli.process"))
     if target_kind == "python" and adapter_id == "python.function":
-        return _run_python_function_case(case=case, artifact=artifact)
+        return _run_python_function_case(case=case, artifact=artifact, temp_root=temp_root)
     if target_kind == "typescript" and adapter_id == "typescript.function":
         return _run_typescript_function_case(case=case, artifact=artifact, temp_root=temp_root, require_node=require_node)
     process_case = _case_process_fixture(case)
@@ -1786,7 +1796,9 @@ def _run_case_target(
     }
 
 
-def _run_python_function_case(*, case: Mapping[str, object], artifact: Mapping[str, object]) -> dict[str, object]:
+def _run_python_function_case(
+    *, case: Mapping[str, object], artifact: Mapping[str, object], temp_root: Path
+) -> dict[str, object]:
     operation_ref = case.get("operation_ref", {})
     if not isinstance(operation_ref, Mapping):
         return _function_result(case=case, artifact=artifact, state="fail", message="malformed operation_ref")
@@ -1795,7 +1807,21 @@ def _run_python_function_case(*, case: Mapping[str, object], artifact: Mapping[s
         return _function_result(
             case=case, artifact=artifact, state="unavailable", message="python.function artifact has no importable symbol"
         )
+    process_case = _case_process_fixture(case)
+    fixture_root = materialize_case_fixture(
+        case=process_case,
+        root=temp_root / str(case.get("id", "case")).replace(".", "-") / "python-function",
+    )
     function_case = _case_function_fixture(case)
+    if function_case.input_values.get("target") == ".":
+        function_case = OperationConformanceCase(
+            conformance_ref=function_case.conformance_ref,
+            label=function_case.label,
+            input_values={**function_case.input_values, "target": str(fixture_root)},
+            selected_fields=function_case.selected_fields,
+            expected_fields=function_case.expected_fields,
+            expected_error_contains=function_case.expected_error_contains,
+        )
     result, failures = run_function_conformance_case(case=function_case, target=function_target)
     return {
         "case_id": str(case.get("id", "")),

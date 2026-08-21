@@ -1794,11 +1794,6 @@
           ],
           "description": "How strongly the packet depends on an available CLI."
         },
-        "module_slot": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Workspace module or sub-slot that owns the next action."
-        },
         "allowed_next_actions": {
           "type": "array",
           "items": {

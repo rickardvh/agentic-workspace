@@ -1,5 +1,7 @@
 # CLI Boundary Tests
 
+> Maintainer contract at a compatibility path. This page is not public product doctrine; it remains here because generated-behavior contracts name it as the wrapper-test owner.
+
 CLI boundary tests are wrapper tests. They prove that a shell-facing command faithfully presents and delegates to an already-tested operation layer; they are not the default place to prove operation semantics.
 
 ## Boundary

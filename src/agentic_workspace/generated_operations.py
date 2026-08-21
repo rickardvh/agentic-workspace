@@ -391,3 +391,73 @@ def evaluation_retry(values: Mapping[str, Any], *, target: str | Path, invocatio
         invocation=invocation,
         allow_runtime_backed=True,
     )
+
+
+def external_evidence_query(values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None) -> dict[str, Any]:
+    return invoke_operation(
+        "external-evidence.query",
+        values,
+        target=target,
+        invocation=invocation,
+        allow_runtime_backed=True,
+    )
+
+
+def external_evidence_submit(values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None) -> dict[str, Any]:
+    return invoke_operation(
+        "external-evidence.submit",
+        values,
+        target=target,
+        invocation=invocation,
+        allow_runtime_backed=True,
+    )
+
+
+def instructions_check(values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None) -> dict[str, Any]:
+    return invoke_operation(
+        "instructions.check",
+        values,
+        target=target,
+        invocation=invocation,
+        allow_runtime_backed=True,
+    )
+
+
+def instructions_create(values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None) -> dict[str, Any]:
+    return invoke_operation(
+        "instructions.create",
+        values,
+        target=target,
+        invocation=invocation,
+        allow_runtime_backed=True,
+    )
+
+
+def instructions_explain(values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None) -> dict[str, Any]:
+    return invoke_operation(
+        "instructions.explain",
+        values,
+        target=target,
+        invocation=invocation,
+        allow_runtime_backed=True,
+    )
+
+
+def instructions_list(values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None) -> dict[str, Any]:
+    return invoke_operation(
+        "instructions.list",
+        values,
+        target=target,
+        invocation=invocation,
+        allow_runtime_backed=True,
+    )
+
+
+def instructions_migrate(values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None) -> dict[str, Any]:
+    return invoke_operation(
+        "instructions.migrate",
+        values,
+        target=target,
+        invocation=invocation,
+        allow_runtime_backed=True,
+    )

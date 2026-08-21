@@ -115,6 +115,13 @@
       "modules": []
     },
     {
+      "source": ".agentic-workspace/fallback/no-cli-policy.json",
+      "target": ".agentic-workspace/fallback/no-cli-policy.json",
+      "kind": "installed-local",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": []
+    },
+    {
       "source": ".agentic-workspace/fallback/no_cli_startup.py",
       "target": ".agentic-workspace/fallback/no-cli-policy.json",
       "kind": "installed-local",

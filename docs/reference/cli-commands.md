@@ -14,4 +14,9 @@ CLI command manifest used to validate command metadata and parser parity.
 | `schema_version` | const `"agentic-workspace/cli-commands/v1"` | yes |  | Contract version for this document. |  |  |
 | `program` | string | yes |  | Program text value used by this contract. |  |  |
 | `description` | string | yes |  | Longer explanation or display text for this entry. |  |  |
+| `local_execution_effects` | object | no |  | Program-wide ignored local effects that may occur independently of shared command mutability. |  |  |
+| `local_execution_effects.authority` | string | yes |  | Authority class of the local effects. |  |  |
+| `local_execution_effects.condition` | string | yes |  | Runtime condition that enables the local effects. |  |  |
+| `local_execution_effects.effects` | array of string | yes |  | Possible ignored local writes. |  |  |
+| `local_execution_effects.rule` | string | yes |  | Boundary between local diagnostics and shared command authority. |  |  |
 | `commands` | array of ref `#/$defs/command` | yes |  | Commands associated with this check, proof, or workflow step. |  |  |

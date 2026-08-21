@@ -50,13 +50,13 @@ They should increasingly exercise the same generic capability path expected of i
 
 ### Independent modules
 
-Independent modules are part of the intended architecture, but the public contribution contract must remain narrower than the full internal registry/runtime vocabulary.
+Independent modules can publish an `agentic_workspace.modules` entry point whose value is an `agentic-workspace/module-capability/v2` descriptor. Core discovers and validates that descriptor without learning the module's identity, derives its bounded `resolve -> act -> reconcile` participation, and admits declared typed operations through the same effect and ownership checks used by first-party contributions.
 
-Until a versioned public compatibility profile is explicitly published and conformance-tested, independent authors should not assume that every lifecycle hook, posture fragment, workflow phase, renderer packet, report slot, callback, or internal descriptor field is stable API.
+The public contribution contract remains narrower than the full internal registry/runtime vocabulary. Independent authors should not assume that lifecycle hooks, posture fragments, workflow phases, renderer packets, report slots, callbacks, or internal descriptor fields are stable API.
 
-The public boundary should stabilize only the semantics necessary for safe capability composition through the existing operating decision.
+See [Module capability contract](module-capability-contract.md) for the exact authoring and compatibility boundary.
 
-### External adapters
+### External adapters and integrations
 
 External adapters follow an inverted dependency model: the integration knows about AW; AW does not need to know the integration package or vendor.
 

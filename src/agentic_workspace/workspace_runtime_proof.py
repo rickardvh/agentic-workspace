@@ -54,6 +54,7 @@ from agentic_workspace.runtime_source_review import (
     runtime_source_edit_review_for_changed_paths,
 )
 from agentic_workspace.runtime_symbol_working_set import LARGE_RUNTIME_PATHS, runtime_symbol_working_set_for_changed_paths
+from agentic_workspace.scoped_instructions import inspect_instructions
 from agentic_workspace.trusted_execution import run_trusted_shell
 from agentic_workspace.workspace_runtime_core import (
     _PROOF_EXECUTION_STATUSES,
@@ -2641,6 +2642,10 @@ def _proof_route_authority_for_lane(*, lane: dict[str, Any], route_source: str, 
         authority = "local-only-high-risk-profile"
         fallback_status = "local-only"
         surface = ".agentic-workspace/config.local.toml [local_overlay.high_risk]"
+    elif lane.get("scoped_instruction"):
+        authority = "repo-owned-scoped-instruction"
+        fallback_status = "repo-confirmed"
+        surface = str(lane.get("authority_surface") or ".agentic-workspace/instructions")
     elif lane.get("proof_profile") or lane.get("requirement_id") or lane.get("subsystem"):
         authority = "repo-owned-proof-policy"
         fallback_status = "repo-confirmed"
@@ -8328,6 +8333,34 @@ def _proof_selection_for_changed_paths(
             if cli_authority_classification.get("id") in {"root-workspace-cli-runtime", "package-cli-runtime"}:
                 _select("generated_command_packages", matched_path=changed_path)
     selected_lanes = [copy.deepcopy(_lane(lane_id)) for lane_id in selected_ids]
+    if target_root is not None:
+        instruction_inspection = inspect_instructions(
+            target_root,
+            task=str(task_text or ""),
+            changed_paths=changed_paths,
+        )
+        for instruction in _list_payload(instruction_inspection.get("instructions")):
+            instruction = _as_dict(instruction)
+            commands = [
+                str(check.get("command") or "").strip()
+                for check in _list_payload(instruction.get("checks"))
+                if isinstance(check, dict) and check.get("kind") == "inline" and str(check.get("command") or "").strip()
+            ]
+            if not instruction.get("applies") or not instruction.get("valid") or not commands:
+                continue
+            selected_lanes.append(
+                {
+                    "id": f"scoped-instruction:{instruction.get('id')}",
+                    "when": str(instruction.get("reason") or "matching scoped repository instruction"),
+                    "enough_proof": commands,
+                    "proof_kind": "targeted-test",
+                    "proof_purpose": "Satisfy the matching scoped Markdown completion check through the ordinary proof route.",
+                    "claim_boundary": "claim:complete",
+                    "scoped_instruction": True,
+                    "authority_surface": str(instruction.get("source_ref") or ".agentic-workspace/instructions"),
+                    "matched_paths": list(_list_payload(instruction.get("matched_paths"))),
+                }
+            )
     behavior_lane_present = any(str(lane.get("proof_kind", "targeted-test")) != "diff-review" for lane in selected_lanes)
     for lane in selected_lanes:
         lane_id = str(lane.get("id", ""))

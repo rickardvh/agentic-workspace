@@ -4620,6 +4620,98 @@
     "operation_path": "operations/defaults.report.json"
   },
   {
+    "adapter_id": "external-evidence.submit.cli",
+    "interface": {
+      "help": "Submit an external proof candidate by opaque signed host-result reference.",
+      "name": "external-evidence-submit",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Repository path.",
+          "name": "target"
+        },
+        {
+          "flags": [
+            "--candidate-json"
+          ],
+          "help": "Provider-neutral external evidence candidate JSON.",
+          "name": "candidate_json",
+          "required": true
+        },
+        {
+          "flags": [
+            "--host-result-ref"
+          ],
+          "help": "Opaque package-trusted host result reference.",
+          "name": "host_result_ref",
+          "required": true
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "operation_id": "external-evidence.submit",
+    "operation_path": "operations/external-evidence.submit.json"
+  },
+  {
+    "adapter_id": "external-evidence.query.cli",
+    "interface": {
+      "help": "Query and revalidate one admitted external proof result.",
+      "name": "external-evidence-query",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Repository path.",
+          "name": "target"
+        },
+        {
+          "flags": [
+            "--candidate-json"
+          ],
+          "help": "Provider-neutral external evidence candidate JSON.",
+          "name": "candidate_json",
+          "required": true
+        },
+        {
+          "flags": [
+            "--host-result-ref"
+          ],
+          "help": "Opaque package-trusted host result reference.",
+          "name": "host_result_ref",
+          "required": true
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "operation_id": "external-evidence.query",
+    "operation_path": "operations/external-evidence.query.json"
+  },
+  {
     "adapter_id": "proof.report.cli",
     "interface": {
       "help": "Show the canonical proof routes and current workspace proof summary.",
@@ -6496,6 +6588,215 @@
     },
     "operation_id": "uninstall.lifecycle",
     "operation_path": "operations/uninstall.lifecycle.json"
+  },
+  {
+    "adapter_id": "instructions.operations.cli",
+    "interface": {
+      "help": "Create, validate, and explain scoped Markdown instructions through generated operations.",
+      "name": "instructions",
+      "options": [],
+      "subcommand_dest": "instructions_command",
+      "subcommands": [
+        {
+          "help": "List scoped instructions without loading irrelevant bodies.",
+          "name": "list",
+          "operation_ref": {
+            "id": "instructions.list",
+            "path": "operations/instructions.list.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to current directory.",
+              "name": "target"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            }
+          ]
+        },
+        {
+          "help": "Scaffold one global or path-scoped Markdown instruction.",
+          "name": "new",
+          "operation_ref": {
+            "id": "instructions.create",
+            "path": "operations/instructions.create.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--name"
+              ],
+              "help": "Lowercase instruction identity used as the filename stem.",
+              "name": "name",
+              "required": true
+            },
+            {
+              "action": "append",
+              "default": [],
+              "flags": [
+                "--paths"
+              ],
+              "help": "Repository-relative applicability pattern. Repeat for multiple patterns.",
+              "name": "paths"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to current directory.",
+              "name": "target"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            }
+          ]
+        },
+        {
+          "help": "Validate instruction syntax and references without executing checks.",
+          "name": "check",
+          "operation_ref": {
+            "id": "instructions.check",
+            "path": "operations/instructions.check.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to current directory.",
+              "name": "target"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            }
+          ]
+        },
+        {
+          "help": "Explain task-specific applicability in repository vocabulary.",
+          "name": "explain",
+          "operation_ref": {
+            "id": "instructions.explain",
+            "path": "operations/instructions.explain.json"
+          },
+          "options": [
+            {
+              "default": "",
+              "flags": [
+                "--task"
+              ],
+              "help": "Optional task text used during applicability explanation.",
+              "name": "task"
+            },
+            {
+              "action": "append",
+              "default": [],
+              "flags": [
+                "--changed"
+              ],
+              "help": "Changed or target path. Repeat for multiple paths.",
+              "name": "changed"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--verbose"
+              ],
+              "help": "Include the compiled instruction program.",
+              "name": "verbose"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to current directory.",
+              "name": "target"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            }
+          ]
+        },
+        {
+          "help": "Give non-destructive incremental migration guidance.",
+          "name": "migrate",
+          "operation_ref": {
+            "id": "instructions.migrate",
+            "path": "operations/instructions.migrate.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--from"
+              ],
+              "help": "Repository-relative instruction source to inspect.",
+              "name": "source",
+              "required": true
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to current directory.",
+              "name": "target"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            }
+          ]
+        }
+      ],
+      "subcommands_required": true
+    },
+    "operation_id": "instructions.explain",
+    "operation_path": "operations/instructions.explain.json"
   },
   {
     "adapter_id": "agent-guidance.lifecycle.cli",

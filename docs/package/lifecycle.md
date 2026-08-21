@@ -41,10 +41,7 @@ Existing repositories that adopted AW before the necessary-surface default may s
 
 These commands are router views over checked-in state and package contracts. They should be queried before opening raw planning, memory, ownership, or contract files. When known sources may change task interpretation, proof, work shape, or completion claims, commands may surface compact [pre-work knowledge gates](knowledge-gates.md) instead of broad reading lists.
 
-The command list is not the ordinary workflow. The reviewed operating model in
-[Ordinary continuity loop and surface classification](ordinary-continuity-loop.md)
-classifies these commands as loop entrypoints, routed aids, diagnostics,
-lifecycle mutations, or advanced/module surfaces.
+The command list is not the ordinary workflow. The canonical [package overview](overview.md) owns the `resolve -> act -> reconcile` model; the generated [current CLI catalogue](../reference/cli-catalogue.md) owns exact command classification.
 
 Exact output contracts are documented in the generated [Startup context](../reference/startup-context.md), [Workspace report](../reference/workspace-report.md), [Workspace config](../reference/workspace-config.md), [Workspace local override](../reference/workspace-local-override.md), [Proof selection rules](../reference/proof-selection-rules.md), and [Preflight policy](../reference/preflight-policy.md) references.
 
@@ -59,4 +56,4 @@ Some commands are useful in advanced host repositories but are not ordinary star
 
 ## Command Contracts
 
-The declared root command surface lives in `src/agentic_workspace/contracts/cli_commands.json` and is documented in [CLI commands](../reference/cli-commands.md). Runtime behavior remains in the package code; the contract makes command roles, audiences, and options inspectable without reading the CLI implementation.
+The declared root command surface lives in `src/agentic_workspace/contracts/cli_commands.json`. Use the [current CLI catalogue](../reference/cli-catalogue.md) for values and [CLI commands](../reference/cli-commands.md) for schema shape. Runtime behavior remains in the package code.

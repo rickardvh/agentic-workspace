@@ -662,6 +662,7 @@
           "capabilities",
           "dependencies",
           "conflicts",
+          "public_contract",
           "participation",
           "components",
           "result_contract"
@@ -775,6 +776,31 @@
               "description": "One entry in the conflicts list."
             },
             "description": "Ordered conflicts entries used by this contract."
+          },
+          "public_contract": {
+            "type": "object",
+            "required": [
+              "schema_version",
+              "name",
+              "description",
+              "compatibility",
+              "ownership",
+              "relevance",
+              "capabilities",
+              "result_semantics"
+            ],
+            "properties": {
+              "schema_version": {"const": "agentic-workspace/module-capability/v2"},
+              "name": {"type": "string", "minLength": 1},
+              "description": {"type": "string", "minLength": 1},
+              "compatibility": {"type": "object"},
+              "ownership": {"type": "object"},
+              "relevance": {"type": "object"},
+              "capabilities": {"type": "object"},
+              "result_semantics": {"type": "object"}
+            },
+            "additionalProperties": true,
+            "description": "Capability-first public seam; broader participation metadata remains internal compatibility data."
           },
           "participation": {
             "type": "object",

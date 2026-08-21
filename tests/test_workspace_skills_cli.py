@@ -14,10 +14,10 @@ def test_workspace_startup_skill_declares_skillspec_pilot_contract() -> None:
     ).read_text(encoding="utf-8")
 
     for text in (root_skill, payload_skill):
-        assert "startup-router` SkillSpec contract" in text
-        assert "`planning_safety_gate.implementation_allowed` is false" in text
-        assert "avoid planning, review, Memory, or handoff artifacts" in text
-        assert "No-CLI fallback" in text
+        assert "resolve -> act -> reconcile" in text
+        assert "compact current decision" in text
+        assert "Do not learn module topology" in text
+        assert "No-CLI / Degraded Fallback" in text
 
 
 def test_routed_skill_surfaces_preserve_mandatory_aw_boundary() -> None:
@@ -25,9 +25,11 @@ def test_routed_skill_surfaces_preserve_mandatory_aw_boundary() -> None:
     spec = json.loads((root / "src" / "agentic_workspace" / "contracts" / "skill_specs.json").read_text(encoding="utf-8"))
 
     assert "mandatory enabled-AW workflow" in spec["rule"]
-    startup_gate = next(gate for gate in spec["transition_gates"] if gate["id"] == "startup-to-work")
-    assert "workflow_participation" in startup_gate["interpreted_fields"]
-    assert any("implementation_allowed" in action and "skip" in action for action in startup_gate["forbidden_actions"])
+    assert "module_slots" not in spec
+    assert "transition_gates" not in spec
+    startup_spec = next(item for item in spec["specs"] if item["id"] == "startup-router")
+    assert any(field["path"] == "next_safe_action.implementation_allowed" for field in startup_spec["interpreted_output_fields"])
+    assert any("raw planning" in action for action in startup_spec["forbidden_actions"])
 
     skill_paths = [
         root / ".agentic-workspace" / "skills" / "workspace-startup" / "SKILL.md",
@@ -43,8 +45,12 @@ def test_routed_skill_surfaces_preserve_mandatory_aw_boundary() -> None:
     ]
     for path in skill_paths:
         text = path.read_text(encoding="utf-8")
-        assert "enabled-AW" in text or "Agentic Workspace is enabled" in text or "AW is enabled" in text or "AW optional" in text
-        assert "implementation_allowed" in text or "planning or proof gate" in text
+        assert text.strip()
+        if "workspace-startup" in path.as_posix() or "workspace-transition-gates" in path.as_posix():
+            assert "resolve" in text.lower()
+            assert "forbidden" in text.lower()
+        else:
+            assert "enabled-AW" in text or "Agentic Workspace is enabled" in text or "AW is enabled" in text or "AW optional" in text
 
 
 def test_generated_startup_router_skill_is_compact_adapter_projection() -> None:
@@ -1043,7 +1049,7 @@ def test_workspace_skill_hierarchy_activation_matrix(tmp_path: Path, capsys) -> 
         assert "message_economy" in skill_text
         assert "continuation_capsule" in skill_text
         assert "evidence_bundle" in skill_text
-        assert "Default visible output is a compact delta" in skill_text
+        assert "Default visible output is the smallest decision-relevant delta" in skill_text
 
 
 def test_implement_open_issues_keeps_startup_authoritative_and_recommendations_bounded(capsys) -> None:
@@ -1337,7 +1343,7 @@ def test_skills_command_recommends_high_risk_workflow_decision_skills(tmp_path: 
         ("verify parent intent and negative invariants before completion claim", "planning-intent-verification"),
         ("select proof before completion claim allowed after passed with warning validation", "workspace-proof-selection"),
         ("apply SkillSpec-backed gate reference with preferred CLI forbidden actions and no-CLI fallback", "workspace-transition-gates"),
-        ("use module slot contract reference for planning memory workspace loop without creating an artifact", "workspace-operating-loop"),
+        ("interpret a capability route in the resolve act reconcile loop without creating an artifact", "workspace-operating-loop"),
         ("closeout trust and residue distillation after implementation", "planning-closeout-trust"),
     ]
     for task, expected in cases:

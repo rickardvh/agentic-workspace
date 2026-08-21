@@ -233,7 +233,6 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `next_safe_action.preferred_cli` | string | no |  | Preferred CLI command for the next action, or empty string when the packet is only a decision. |  |  |
 | `next_safe_action.preferred_cli_effect` | enum `"none"`, `"read-only"`, `"mutating"`, `"validating"`, `"reporting"` | yes |  | Effect class of the preferred CLI command. |  |  |
 | `next_safe_action.cli_availability` | enum `"available"`, `"not-needed"`, `"unknown"`, `"missing-warning"`, `"missing-blocking"` | no |  | How strongly the packet depends on an available CLI. |  |  |
-| `next_safe_action.module_slot` | string | no |  | Workspace module or sub-slot that owns the next action. |  |  |
 | `next_safe_action.allowed_next_actions` | array of string | yes |  | Actions allowed before the next wider context read or implementation step. |  |  |
 | `next_safe_action.forbidden_actions` | array of string | no |  | Actions forbidden by this packet until a newer compact packet supersedes it. |  |  |
 | `next_safe_action.implementation_allowed` | boolean | yes |  | Whether implementation may begin from this packet without additional planning, proof setup, or skill-guided escalation. |  |  |

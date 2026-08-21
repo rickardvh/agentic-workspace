@@ -40,6 +40,7 @@ from agentic_workspace import config as config_lib
 from agentic_workspace._schema import ModuleDescriptor, ModuleResultContract, RootAgentsCleanupBlock
 from agentic_workspace.actionability import derive_actionability, operation_invocation, proposed_action_input_revision
 from agentic_workspace.agent_guidance import correction_feedback_contract, target_identity_posture
+from agentic_workspace.assurance_authority import build_assurance_application, evaluate_assurance_disposition
 from agentic_workspace.authority_envelope import admit_live_mutation_boundary, revalidate_mutation_baseline
 from agentic_workspace.config import (
     DEFAULT_AGENT_INSTRUCTIONS_FILE,
@@ -145,6 +146,14 @@ from agentic_workspace.evaluation import evaluation_summary
 from agentic_workspace.evaluation_projection import specialist_evaluation_projection
 from agentic_workspace.intent_feedback import architecture_principles_intent_context
 from agentic_workspace.memory_effectiveness import memory_effectiveness_operation
+from agentic_workspace.module_contract import (
+    DiscoveredModule,
+    discover_module_contracts,
+    module_contract_compatibility,
+    module_contribution,
+    target_has_install_signal,
+    validate_module_contract,
+)
 from agentic_workspace.operating_decision import (
     admit_projection_surface_decision_input,
     attach_projection_surface_decision_input_consumption,
@@ -181,6 +190,7 @@ from agentic_workspace.reporting_support import (
 )
 from agentic_workspace.repository_scanning import repository_scan_files
 from agentic_workspace.result_adapter import adapt_module_result, serialise_value
+from agentic_workspace.review_stack_topology import validate_admitted_pr_topology
 from agentic_workspace.review_stack_transitions import command_text, record_review_stack_transition
 from agentic_workspace.runtime_compatibility import (
     READER_CAPABILITIES,
@@ -3515,6 +3525,7 @@ def _assurance_disposition_payload(value: Any) -> dict[str, Any]:
         "status": "recorded",
         "reason": str(getattr(value, "reason", "")),
         "owner": str(getattr(value, "owner", "")),
+        "applicability": dict(getattr(value, "applicability", {}) or {}),
     }
 
 
@@ -4039,6 +4050,7 @@ def _assurance_status_for_requirement(
     applies_because: list[str],
     planning_facts: dict[str, Any],
     activation_facts: list[dict[str, Any]] | None = None,
+    strict_policy: bool = False,
 ) -> dict[str, Any]:
     required_evidence = [str(item).strip() for item in _list_payload(requirement.get("required_evidence")) if str(item).strip()]
     evidence_by_requirement = planning_facts.get("evidence_by_requirement", {})
@@ -4052,11 +4064,35 @@ def _assurance_status_for_requirement(
     missing_evidence = [item for item in required_evidence if item not in evidence_present]
     waiver = requirement.get("waiver", {}) if isinstance(requirement.get("waiver"), dict) else {}
     dismissal = requirement.get("dismissal", {}) if isinstance(requirement.get("dismissal"), dict) else {}
+    classification_source = {key: value for key, value in requirement.items() if key not in {"waiver", "dismissal", "notes"}}
+    source_revision = "sha256:" + hashlib.sha256(json.dumps(classification_source, sort_keys=True, default=str).encode("utf-8")).hexdigest()
+    application = build_assurance_application(
+        requirement_id=str(requirement.get("id") or ""),
+        classification_owner=str((_list_payload(requirement.get("authority_refs")) or ["workspace-config"])[0]),
+        source_revision=source_revision,
+        applicability_input={
+            "applies_because": applies_because,
+            "activation_kinds": sorted(
+                {str(item.get("activation_kind")) for item in activation_facts or [] if item.get("activation_kind")}
+            ),
+        },
+        current_work_id=str(planning_facts.get("current_work_id") or ""),
+    )
+    waiver_evaluation = evaluate_assurance_disposition(
+        disposition=waiver if waiver.get("status") == "recorded" else None,
+        application=application,
+        strict_policy=strict_policy,
+    )
+    dismissal_evaluation = evaluate_assurance_disposition(
+        disposition=dismissal if dismissal.get("status") == "recorded" else None,
+        application=application,
+        strict_policy=strict_policy,
+    )
     state = "satisfied" if not missing_evidence else "missing-evidence"
-    if dismissal.get("status") == "recorded":
+    if dismissal.get("status") == "recorded" and not dismissal_evaluation["requirement_active"]:
         state = "dismissed"
         missing_evidence = []
-    elif waiver.get("status") == "recorded":
+    elif waiver.get("status") == "recorded" and not waiver_evaluation["requirement_active"]:
         state = "waived"
         missing_evidence = []
     elif missing_evidence and requirement.get("review_owner"):
@@ -4074,6 +4110,9 @@ def _assurance_status_for_requirement(
         "missing_evidence": missing_evidence,
         "waiver": waiver if waiver else {"status": "none"},
         "dismissal": dismissal if dismissal else {"status": "none"},
+        "application": application,
+        "waiver_evaluation": waiver_evaluation,
+        "dismissal_evaluation": dismissal_evaluation,
         "proof_profile": requirement.get("proof_profile"),
         "workflow_obligation_refs": _list_payload(requirement.get("workflow_obligation_refs")),
         "review_owner": requirement.get("review_owner"),
@@ -4127,6 +4166,7 @@ def _assurance_requirements_report_payload(
             applies_because=applies_because,
             planning_facts=planning_facts,
             activation_facts=activation_facts,
+            strict_policy=bool(config.assurance.strict_closeout) if config is not None else False,
         )
         matching.append(
             {
@@ -5340,6 +5380,10 @@ class ModuleRegistryEntry:
     conflicts: tuple[str, ...]
     participation: dict[str, Any]
     result_contract: ModuleResultContract
+    availability: str = "available"
+    availability_reason: str = ""
+    entry_point: str = ""
+    public_contract: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -5858,6 +5902,8 @@ def _repo_posture_payload(*, config: WorkspaceConfig, surface: str, compact: boo
         "workflow_artifact_profile_source": config.workflow_artifact_profile_source,
         "assurance": {
             "default_level": config.assurance.default_level,
+            "classification_owner": config.assurance.classification_owner,
+            "classification_source": config.assurance.classification_source,
             "strict_closeout": config.assurance.strict_closeout,
             "agent_may_escalate": config.assurance.agent_may_escalate,
             "agent_may_deescalate": config.assurance.agent_may_deescalate,
@@ -7371,6 +7417,70 @@ class _VerificationLifecycleResult:
     force: bool = False
 
 
+def _external_module_lifecycle_result(
+    *, module_name: str, target: str | None = None, dry_run: bool = True, force: bool = False
+) -> _VerificationLifecycleResult:
+    _ = force
+    return _VerificationLifecycleResult(
+        target_root=_resolve_target_root(target),
+        message=f"External module '{module_name}' uses its capability contract; no module-authored lifecycle hook is required.",
+        dry_run=dry_run,
+        actions=[],
+        warnings=[],
+    )
+
+
+def _external_module_descriptor(discovered: DiscoveredModule) -> ModuleDescriptor:
+    contract = discovered.contract
+    ownership = _as_dict(contract.get("ownership"))
+    capabilities = _as_dict(contract.get("capabilities"))
+    result_semantics = _as_dict(contract.get("result_semantics"))
+    install_signals = [str(item) for item in _list_payload(contract.get("install_signals")) if str(item).strip()]
+    roots = [str(item) for item in _list_payload(ownership.get("roots")) if str(item).strip()]
+    capability_ids = tuple(
+        f"{capability_class}:{str(item.get('id', ''))}"
+        for capability_class in ("resources", "skills", "operations")
+        for item in _list_payload(capabilities.get(capability_class))
+        if isinstance(item, dict) and str(item.get("id", "")).strip()
+    )
+    lifecycle_commands: dict[str, Any] = {
+        command_name: functools.partial(_external_module_lifecycle_result, module_name=discovered.name)
+        for command_name in MODULE_COMMAND_ARGS
+    }
+    return ModuleDescriptor(
+        name=discovered.name,
+        description=str(contract.get("description") or f"Unavailable module provider {discovered.entry_point}"),
+        commands=lifecycle_commands,
+        detector=lambda target_root, signals=install_signals: target_has_install_signal(target_root, signals),
+        selection_rank=int(contract.get("selection_rank", 100)),
+        install_signals=tuple(Path(path) for path in install_signals),
+        workflow_surfaces=tuple(Path(path) for path in roots),
+        generated_artifacts=(),
+        command_args=MODULE_COMMAND_ARGS,
+        startup_steps=(),
+        sources_of_truth=tuple(
+            str(item.get("ref") or item.get("id")) for item in _list_payload(capabilities.get("resources")) if isinstance(item, dict)
+        ),
+        root_agents_cleanup_blocks=(),
+        capabilities=capability_ids,
+        dependencies=tuple(str(item) for item in _list_payload(contract.get("dependencies"))),
+        conflicts=tuple(str(item) for item in _list_payload(contract.get("conflicts"))),
+        result_contract=ModuleResultContract(
+            schema_version=str(result_semantics.get("schema_version") or "agentic-workspace/module-result/v1"),
+            guaranteed_fields=tuple(str(item) for item in _list_payload(result_semantics.get("guaranteed_fields"))),
+            action_fields=tuple(str(item) for item in _list_payload(result_semantics.get("effect_fields"))),
+            warning_fields=tuple(str(item) for item in _list_payload(result_semantics.get("warning_fields"))),
+        ),
+        kind="external",
+        default_enabled=False,
+        availability=discovered.status,
+        availability_reason=discovered.reason,
+        entry_point=discovered.entry_point,
+        public_contract=copy.deepcopy(contract) if contract else None,
+        domain_operations=discovered.operations,
+    )
+
+
 def _module_operations() -> dict[str, ModuleDescriptor]:
     from repo_memory_bootstrap.installer import adopt_bootstrap as memory_adopt_bootstrap
     from repo_memory_bootstrap.installer import collect_status as memory_collect_status
@@ -7440,7 +7550,7 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
             "detector": lambda target_root: (target_root / ".agentic-workspace" / "verification" / "manifest.toml").exists(),
         },
     }
-    return {
+    descriptors = {
         module_name: _build_module_descriptor(
             name=module_name,
             metadata=_MODULE_REGISTRY_ENTRIES[module_name],
@@ -7454,6 +7564,13 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
         )
         for module_name, handler_bundle in handlers.items()
     }
+    for discovered in discover_module_contracts():
+        if discovered.name in descriptors:
+            raise ModuleSelectionError(
+                f"External module entry point '{discovered.entry_point}' collides with existing module '{discovered.name}'."
+            )
+        descriptors[discovered.name] = _external_module_descriptor(discovered)
+    return descriptors
 
 
 def _build_module_descriptor(
@@ -7468,6 +7585,8 @@ def _build_module_descriptor(
     status_handler: Callable[..., Any],
     detector: Callable[[Path], bool],
 ) -> ModuleDescriptor:
+    public_contract = validate_module_contract(metadata["public_contract"]) if metadata.get("public_contract") else None
+    availability, availability_reason = module_contract_compatibility(public_contract) if public_contract is not None else ("available", "")
     result_contract = ModuleResultContract(
         schema_version=str(metadata["result_contract"]["schema_version"]),
         guaranteed_fields=tuple(metadata["result_contract"]["guaranteed_fields"]),
@@ -7511,6 +7630,9 @@ def _build_module_descriptor(
         dependencies=tuple(metadata["dependencies"]),
         conflicts=tuple(metadata["conflicts"]),
         result_contract=result_contract,
+        availability=availability,
+        availability_reason=availability_reason,
+        public_contract=public_contract,
     )
 
 
@@ -9969,8 +10091,13 @@ def _parse_modules(module_arg: str, *, ordered_module_names: list[str]) -> set[s
 
 def _validate_selected_module_contract(*, selected_modules: list[str], descriptors: dict[str, ModuleDescriptor]) -> None:
     selected_set = set(selected_modules)
+    claimed_roots: dict[str, str] = {}
+    claimed_effects: dict[str, str] = {}
     for module_name in selected_modules:
         descriptor = descriptors[module_name]
+        if descriptor.availability != "available":
+            detail = f": {descriptor.availability_reason}" if descriptor.availability_reason else ""
+            raise ModuleSelectionError(f"Module '{module_name}' is {descriptor.availability}{detail}.")
         missing = [dependency for dependency in descriptor.dependencies if dependency not in selected_set]
         if missing:
             missing_text = ", ".join(missing)
@@ -9979,6 +10106,24 @@ def _validate_selected_module_contract(*, selected_modules: list[str], descripto
         if conflicts:
             conflict_text = ", ".join(conflicts)
             raise ModuleSelectionError(f"Module '{module_name}' conflicts with: {conflict_text}.")
+        contract = descriptor.public_contract or {}
+        ownership = _as_dict(contract.get("ownership"))
+        for root in [str(item) for item in _list_payload(ownership.get("roots")) if str(item).strip()]:
+            competing = claimed_roots.get(root)
+            if competing is not None:
+                raise ModuleSelectionError(
+                    f"Module ownership collision: '{competing}' and '{module_name}' both claim root '{root}'. "
+                    "Force=blocking; resolution owner=repository module configuration."
+                )
+            claimed_roots[root] = module_name
+        for effect in [str(item) for item in _list_payload(ownership.get("effect_classes")) if str(item).strip()]:
+            competing = claimed_effects.get(effect)
+            if competing is not None:
+                raise ModuleSelectionError(
+                    f"Module effect collision: '{competing}' and '{module_name}' both claim effect '{effect}'. "
+                    "Force=blocking; resolution owner=repository module configuration."
+                )
+            claimed_effects[effect] = module_name
 
 
 def _resolve_target_root(target: str | None) -> Path:
@@ -28488,20 +28633,6 @@ def _next_safe_action_packet(
             if isinstance(route, dict) and route.get("skill"):
                 skill = str(route.get("skill"))
                 break
-    if action == "archive-or-retire-completed-plan":
-        module_slot = "planning"
-    elif action.startswith(("create", "promote", "checkpoint", "update", "validate-planning", "continue-active-planning")):
-        module_slot = "planning"
-    elif "closeout" in action:
-        module_slot = "planning.closeout"
-    elif "proof" in action or "validation" in proof_hint:
-        module_slot = "workspace.proof"
-    elif "intent-discovery" in action:
-        module_slot = "workspace.intent"
-    elif "memory" in action:
-        module_slot = "memory"
-    else:
-        module_slot = "workspace"
     forbidden_actions: list[str] = []
     if action in {"create-prep-only-planning-state", "promote-or-create-active-execplan", "create-or-promote-active-execplan"}:
         forbidden_actions.extend(["edit product source", "claim implementation complete"])
@@ -28588,7 +28719,6 @@ def _next_safe_action_packet(
         ],
         observed_by_aw=[
             f"preferred_cli_effect={command_effect}",
-            f"module_slot={module_slot}",
             f"memory_consultation_status={memory_status}",
             f"read_only_allowed={read_only_allowance['read_only_allowed']}",
         ],
@@ -28617,7 +28747,6 @@ def _next_safe_action_packet(
         "preferred_cli": preferred_cli,
         "preferred_cli_effect": command_effect,
         "cli_availability": "unknown" if preferred_cli else "not-needed",
-        "module_slot": module_slot,
         "allowed_next_actions": allowed_next_actions,
         "forbidden_actions": sorted(set(forbidden_actions)),
         "implementation_allowed": implementation_allowed,
@@ -28631,7 +28760,7 @@ def _next_safe_action_packet(
         "continuation_owner_required": continuation_owner_required,
         "memory_consultation_status": memory_status,
         "authority_boundary": authority_boundary,
-        "fallback_if_cli_unavailable": "Use generated or documented workflow fallback for the same module slot; preserve forbidden actions and do not mutate managed state by hand.",
+        "fallback_if_cli_unavailable": "Use the exact routed skill or operation fallback; preserve forbidden actions and do not mutate managed state by hand.",
         "source_fields": ["immediate_next_allowed_action", "workflow_sufficiency", "skill_routing", "memory_consult"],
     }
 
@@ -30718,12 +30847,23 @@ def _pr_comment_pr_resolution_command(*, repo: str, branch: str) -> str:
     return f"gh pr list --repo {_shell_quote(repo)} --state open{branch_filter} --json number,url,headRefName,baseRefName"
 
 
+def _pr_topology_source_checkout_helper_command(*, repo: str, branch: str, cli_invoke: str) -> str:
+    return _command_with_cli_invoke(
+        command=(
+            "python scripts/github/pr_topology.py"
+            f" --repo {_shell_quote(repo)} --branch {_shell_quote(branch or '<branch>')} --target . --format json"
+        ),
+        cli_invoke=cli_invoke,
+    )
+
+
 def _pr_comment_live_inspection_routes_payload(*, repo: str, branch: str, pr_number: str, cli_invoke: str) -> dict[str, Any]:
     pr_resolution_command = _pr_comment_pr_resolution_command(repo=repo, branch=branch)
+    topology_admission_command = _pr_topology_source_checkout_helper_command(repo=repo, branch=branch, cli_invoke=cli_invoke)
     live_inspection_command = (
         _pr_comment_source_checkout_helper_command(repo=repo, pr_number=pr_number, cli_invoke=cli_invoke)
         if pr_number
-        else pr_resolution_command
+        else topology_admission_command
     )
     return {
         "kind": "agentic-workspace/pr-comment-live-inspection-routes/v1",
@@ -30733,6 +30873,7 @@ def _pr_comment_live_inspection_routes_payload(*, repo: str, branch: str, pr_num
         "pr_number": pr_number,
         "recommended_command": live_inspection_command,
         "pr_resolution_command": pr_resolution_command,
+        "topology_admission_command": topology_admission_command,
         "live_thread_inspection_command": live_inspection_command,
         "source_checkout_helper_command": _pr_comment_source_checkout_helper_command(repo=repo, pr_number=pr_number, cli_invoke=cli_invoke)
         if pr_number
@@ -30743,7 +30884,10 @@ def _pr_comment_live_inspection_routes_payload(*, repo: str, branch: str, pr_num
             "allowed_actions": ["read_pr_metadata", "read_review_threads", "refresh_local_comment_delta"],
             "forbidden_actions_without_user_request": ["reply_to_comment", "resolve_thread", "submit_review", "dismiss_review"],
         },
-        "rule": "Resolve the branch PR or inspect live thread-level comments before making review-readiness claims.",
+        "rule": (
+            "Admit bounded branch topology through the existing stack owner, then inspect thread-level comments separately "
+            "before making review-readiness claims."
+        ),
     }
 
 
@@ -31678,6 +31822,41 @@ def _pr_stack_comment_cache_payload(*, target_root: Path, repo: str, branch: str
             "thread_inspection": _pr_comment_thread_inspection_payload(repo=command_repo, pr_number="<number>", cli_invoke=cli_invoke),
             "unverified_context": ["Stack cache could not be read; stack members and thread-level comment state are unverified."],
         }
+    topology_current, topology_reason, topology_observation = validate_admitted_pr_topology(
+        target_root=target_root,
+        cache=cache,
+        expected_repository=repo,
+        expected_branch=branch,
+    )
+    if not topology_current:
+        live_inspection = _pr_comment_live_inspection_routes_payload(repo=repo, branch=branch, pr_number="", cli_invoke=cli_invoke)
+        return {
+            "kind": "agentic-workspace/pr-stack-comment-attention/v1",
+            "status": "stack_comment_status_unavailable",
+            "comment_state": "stack_discovery_stale_or_rejected",
+            "repository": repo,
+            "branch": branch,
+            "stack_member_count": 0,
+            "stack_members": [],
+            "cache_path": cache_path,
+            "stack_discovery": {
+                "status": "rejected",
+                "reason": topology_reason,
+                "repository": repo,
+                "branch": branch,
+                "cache_path": cache_path,
+                "observation_digest": str(topology_observation.get("observation_digest") or ""),
+                "refresh_command": live_inspection["recommended_command"],
+            },
+            "live_inspection": live_inspection,
+            "recommended_command": live_inspection["recommended_command"],
+            "unverified_context": [
+                "Cached stack topology does not match the current repository, branch, or head revision.",
+                "Thread-level PR comment state is unverified.",
+            ],
+            "claim_boundary": "A rejected or stale topology observation cannot support stack routing or review-readiness claims.",
+            "degraded_because": topology_reason,
+        }
     raw_members = [item for item in _list_payload(cache.get("stack_members")) if isinstance(item, dict)]
     if not raw_members:
         return {}
@@ -31710,12 +31889,22 @@ def _pr_stack_comment_cache_payload(*, target_root: Path, repo: str, branch: str
             unavailable_present = True
         refresh_command = _pr_comment_report_command(cli_invoke=cli_invoke)
         thread_inspection = _pr_comment_thread_inspection_payload(repo=command_repo, pr_number=pr_number, cli_invoke=cli_invoke)
-        comment_addressing = _pr_comment_addressing_packet_from_delta(
-            cache=member_cache,
-            repo=command_repo,
-            pr_number=pr_number,
-            cache_path=cache_path,
-            cli_invoke=cli_invoke,
+        comment_addressing = (
+            _pr_comment_addressing_packet_from_delta(
+                cache=member_cache,
+                repo=command_repo,
+                pr_number=pr_number,
+                cache_path=cache_path,
+                cli_invoke=cli_invoke,
+            )
+            if isinstance(item.get("delta"), dict)
+            else _pr_comment_addressing_unavailable_packet(
+                repo=command_repo,
+                pr_number=pr_number,
+                cache_path=cache_path,
+                reason="PR topology was admitted without review-thread evidence.",
+                cli_invoke=cli_invoke,
+            )
         )
         changed_effect_paths = _review_stack_changed_effect_paths(member=item, member_cache=member_cache)
         proof_hints = _review_stack_member_proof_hints(member=item, member_cache=member_cache)
@@ -31768,16 +31957,30 @@ def _pr_stack_comment_cache_payload(*, target_root: Path, repo: str, branch: str
         if unavailable_present
         else "stack_current_no_actionable_comments",
         "stack_discovery": {
-            "status": "from-cache",
+            "status": "admitted-live-topology" if topology_observation else "from-cache",
             "repository": command_repo,
             "branch": branch,
             "cache_path": cache_path,
             "member_count": len(members),
             "current_branch_pr_number": _pr_number_from_stack({"stack_members": members}, branch=branch),
+            **(
+                {
+                    "provider": topology_observation.get("provider"),
+                    "current_head_sha": topology_observation.get("current_head_sha"),
+                    "observation_digest": topology_observation.get("observation_digest"),
+                    "thread_comment_state": "unverified" if unavailable_present else "separately-admitted",
+                }
+                if topology_observation
+                else {}
+            ),
         },
         "unverified_context": []
         if not unavailable_present
-        else ["At least one stack member lacks PR-head freshness proof; refresh that member before readiness claims."],
+        else [
+            "Stack topology is current, but at least one member lacks separately admitted review-thread freshness proof."
+            if topology_observation
+            else "At least one stack member lacks PR-head freshness proof; refresh that member before readiness claims."
+        ],
         "claim_boundary": "A broad stack-ready claim is blocked while any stack member has actionable, stale, or unavailable comment status.",
         "degraded_because": "stale-or-missing-member-freshness" if unavailable_present else "",
         "comment_addressing": {
@@ -31840,17 +32043,19 @@ def _pr_stack_comment_unavailable_payload(*, repo: str, branch: str, pr_number: 
             "cache_path": cache_path,
             "refresh_command": recommended_command,
             "pr_resolution_command": live_inspection["pr_resolution_command"],
-            "source_checkout_refresh_command": _pr_comment_source_checkout_helper_command(
-                repo=repo, pr_number=pr_number, cli_invoke=cli_invoke
-            ),
+            "topology_admission_command": live_inspection["topology_admission_command"],
         },
         "comment_state": "stack_discovery_unavailable",
         "thread_inspection": _pr_comment_thread_inspection_payload(repo=repo, pr_number=pr_number, cli_invoke=cli_invoke),
         "live_inspection": live_inspection,
         "pr_resolution": {
             "status": "known" if pr_number else "required",
-            "command": live_inspection["pr_resolution_command"],
-            "rule": "Resolve the current branch PR before stack review-thread claims when stack cache is absent.",
+            "command": live_inspection["topology_admission_command"],
+            "provider_probe_command": live_inspection["pr_resolution_command"],
+            "rule": (
+                "Admit the bounded topology result into the existing stack owner before rerunning AW; "
+                "review-thread claims remain separately unverified."
+            ),
         },
         "recommended_command": recommended_command,
         "unverified_context": ["Stack membership is unverified.", "Thread-level PR comment state is unverified."],
@@ -32039,8 +32244,13 @@ def _pr_comment_attention_payload(*, target_root: Path, task_text: str | None, c
         "live_inspection": live_inspection,
         "pr_resolution": {
             "status": "known" if pr_number else "required",
-            "command": live_inspection["pr_resolution_command"],
-            "rule": "Resolve the current branch PR before claiming review comments are absent or handled.",
+            "command": live_inspection["topology_admission_command"] if not pr_number else live_inspection["pr_resolution_command"],
+            "provider_probe_command": live_inspection["pr_resolution_command"],
+            "rule": (
+                "Admit the current branch PR topology before rerunning AW; review comments remain separately unverified."
+                if not pr_number
+                else "Resolve the current branch PR before claiming review comments are absent or handled."
+            ),
         },
         "thread_inspection": _pr_comment_thread_inspection_payload(repo=repo, pr_number=pr_number, cli_invoke=cli_invoke),
         "comment_addressing": _pr_comment_addressing_unavailable_packet(
@@ -40330,7 +40540,9 @@ def _acceptance_reconciliation_prompt_payload(*, task_text: str | None, acceptan
     }
 
 
-def _planning_safety_path_classification(changed_paths: list[str]) -> dict[str, Any]:
+def _planning_safety_path_classification(
+    changed_paths: list[str], *, target_root: Path | None = None, task_text: str | None = None
+) -> dict[str, Any]:
     planning_paths = [
         path for path in changed_paths if path == ".agentic-workspace/planning" or path.startswith(".agentic-workspace/planning/")
     ]
@@ -40356,6 +40568,88 @@ def _planning_safety_path_classification(changed_paths: list[str]) -> dict[str, 
         dirty_shape = "planning-only"
     else:
         dirty_shape = "implementation-only"
+    effect_scope: dict[str, Any] = {"status": "not-proven", "effect_class": "repository-or-unknown"}
+    normalized_task = " ".join(str(task_text or "").lower().split())
+    cleanup_requested = any(token in normalized_task for token in ("cleanup", "clean up", "delete", "remove", "prune"))
+    preservation_declared = (
+        "preserve" in normalized_task and "tracked" in normalized_task and ".venv" in normalized_task and "config.local" in normalized_task
+    )
+    protected_prefixes = (".venv", ".agentic-workspace/config.local.toml")
+    transient_markers = (
+        ".agentic-workspace/local/",
+        "__pycache__/",
+        ".pytest_cache/",
+        ".ruff_cache/",
+        ".mypy_cache/",
+        "htmlcov/",
+        "build/",
+        "dist/",
+    )
+    transient_names = {".coverage", "coverage.xml"}
+    candidate_paths = [path.replace("\\", "/").strip("/") for path in changed_paths if path.strip()]
+    protected_paths = [path for path in candidate_paths if path == protected_prefixes[1] or path.startswith(f"{protected_prefixes[0]}/")]
+    transient_shape = [
+        path
+        for path in candidate_paths
+        if path in transient_names
+        or path.endswith((".pyc", ".pyo"))
+        or any(path == marker.rstrip("/") or marker in f"{path}/" for marker in transient_markers)
+    ]
+    ignored_paths: list[str] = []
+    tracked_paths: list[str] = []
+    if target_root is not None and candidate_paths:
+        for path in candidate_paths:
+            tracked = subprocess.run(
+                ["git", "ls-files", "--", path],
+                cwd=target_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            if tracked.returncode == 0 and tracked.stdout.strip():
+                tracked_paths.append(path)
+            ignored = subprocess.run(
+                ["git", "check-ignore", "--quiet", "--", path],
+                cwd=target_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            if ignored.returncode == 0:
+                ignored_paths.append(path)
+    safe_transient = (
+        bool(candidate_paths)
+        and cleanup_requested
+        and preservation_declared
+        and not protected_paths
+        and not tracked_paths
+        and sorted(candidate_paths) == sorted(transient_shape)
+        and sorted(candidate_paths) == sorted(ignored_paths)
+    )
+    if safe_transient:
+        effect_scope = {
+            "status": "proven-local-transient",
+            "effect_class": "local-transient-cleanup",
+            "allowed_paths": candidate_paths,
+            "preserved": ["tracked files", "meaningful untracked work", ".venv", ".agentic-workspace/config.local.toml"],
+            "claim_authority": "none-for-active-planning",
+            "rule": "This bounded deletion may mutate only recognized ignored transient residue and cannot advance or complete the selected Planning owner.",
+        }
+    elif candidate_paths and cleanup_requested:
+        effect_scope = {
+            **effect_scope,
+            "reason": "cleanup scope is not entirely recognized, ignored, explicitly preservation-bounded transient residue",
+            "candidate_paths": candidate_paths,
+            "protected_paths": protected_paths,
+            "tracked_paths": tracked_paths,
+            "not_ignored_paths": sorted(set(candidate_paths) - set(ignored_paths)),
+            "recognized_transient_paths": transient_shape,
+            "constructible_next_action": {
+                "action": "inspect-current-task-scope",
+                "command": "git status --short --ignored",
+                "required_decision": "remove ambiguous paths or explicitly authorize a separately owned mutation scope",
+            },
+        }
     return {
         "dirty_shape": dirty_shape,
         "planning_paths": planning_paths,
@@ -40364,6 +40658,7 @@ def _planning_safety_path_classification(changed_paths: list[str]) -> dict[str, 
         "surface_root_count": len(surface_roots),
         "scope_growth_detected": bool(implementation_paths and scope_growth_reasons),
         "scope_growth_reasons": scope_growth_reasons,
+        "effect_scope": effect_scope,
     }
 
 
@@ -44416,7 +44711,19 @@ def _task_posture_packet_payload(
     except Exception:
         registry = []
     trigger_text = " ".join([task_text or "", " ".join(normalized_paths), surface]).lower()
+    enabled_modules = set(config.enabled_modules)
     for entry in registry:
+        if entry.name not in enabled_modules or entry.availability != "available" or entry.installed is False:
+            continue
+        if entry.public_contract is not None:
+            contribution = module_contribution(
+                entry.public_contract,
+                task=task_text or surface,
+                changed_paths=normalized_paths,
+            )
+            if contribution is not None:
+                module_contributions.append(contribution)
+            continue
         participation = entry.participation if isinstance(entry.participation, dict) else {}
         triggers = [str(item) for item in _list_payload(participation.get("posture_triggers")) if str(item).strip()]
         declares = [str(item) for item in _list_payload(participation.get("declares")) if str(item).strip()]
@@ -47023,7 +47330,11 @@ def _emit_modules(*, format_name: str, target_root: Path | None, profile: str = 
                 "capabilities": list(entry.capabilities),
                 "dependencies": list(entry.dependencies),
                 "conflicts": list(entry.conflicts),
-                "participation": copy.deepcopy(_MODULE_REGISTRY_ENTRIES.get(entry.name, {}).get("participation", {})),
+                "availability": entry.availability,
+                "availability_reason": entry.availability_reason,
+                "entry_point": entry.entry_point,
+                "public_contract": copy.deepcopy(entry.public_contract),
+                "participation": copy.deepcopy(entry.participation),
                 "components": copy.deepcopy(_MODULE_REGISTRY_ENTRIES.get(entry.name, {}).get("components", {})),
                 "result_contract": {
                     "schema_version": entry.result_contract.schema_version,
@@ -49099,6 +49410,8 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
                 admitted_input=admitted_input,
             )
             if reused is not None:
+                for diagnostic_key in ("context", "owner_reconciliation"):
+                    reused.pop(diagnostic_key, None)
                 print(format_summary_json(reused))
                 return 0
         summary_started_at = time.perf_counter()
@@ -49215,6 +49528,9 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
                     reuse_result=reuse_result,
                     full_detail_command=full_detail_command,
                 )
+        if summary_profile == "tiny":
+            for diagnostic_key in ("context", "owner_reconciliation"):
+                summary.pop(diagnostic_key, None)
         if args.format == "json":
             print(format_summary_json(summary))
         elif summary_profile == "tiny":
@@ -51916,6 +52232,8 @@ def _proof_intent_for_lane(lane: dict[str, Any]) -> dict[str, Any]:
 
 
 def _proof_route_source_for_lane(*, lane: dict[str, Any], command: str, adjustments_by_replacement: dict[str, dict[str, str]]) -> str:
+    if lane.get("scoped_instruction"):
+        return "repo-scoped-instruction-check"
     if lane.get("domain_lane"):
         return "host-declared-domain-proof-lane"
     if lane.get("local_overlay"):
@@ -58117,6 +58435,33 @@ def _scan_skill_paths(skills_root: Path) -> list[Path]:
     return sorted((path for path in skills_root.rglob("SKILL.md") if "__pycache__" not in path.parts))
 
 
+def _descriptor_participation(descriptor: ModuleDescriptor) -> dict[str, Any]:
+    if descriptor.public_contract is None:
+        return copy.deepcopy(_MODULE_REGISTRY_ENTRIES.get(descriptor.name, {}).get("participation", {}))
+    contract = descriptor.public_contract
+    relevance = _as_dict(contract.get("relevance"))
+    capabilities = _as_dict(contract.get("capabilities"))
+    declared = [name for name in ("resources", "skills", "operations") if _list_payload(capabilities.get(name))]
+    return {
+        "loop_steps": ["resolve", "act", "reconcile"],
+        "declares": declared,
+        "posture_triggers": [
+            *[str(item) for item in _list_payload(relevance.get("task_terms"))],
+            *[str(item) for item in _list_payload(relevance.get("path_prefixes"))],
+        ],
+        "dynamic_projection": {
+            "startup_contribution": "Route only matched resources, skills, or operations from the module contract.",
+            "report_contribution": "Report availability, compatibility, relevance, and declared capabilities.",
+            "closeout_contribution": "Admit only declared result and effect semantics; module-local success cannot set global completion.",
+        },
+        "authority_boundaries": list(_as_dict(contract.get("ownership")).get("authority_exclusions", [])),
+        "conflict_provenance": [
+            *([descriptor.entry_point] if descriptor.entry_point else []),
+            "module capability contract",
+        ],
+    }
+
+
 def _module_registry(*, descriptors: dict[str, ModuleDescriptor], target_root: Path | None) -> list[ModuleRegistryEntry]:
     entries: list[ModuleRegistryEntry] = []
     for module_name in _ordered_module_names(descriptors):
@@ -58145,8 +58490,12 @@ def _module_registry(*, descriptors: dict[str, ModuleDescriptor], target_root: P
                 capabilities=descriptor.capabilities,
                 dependencies=descriptor.dependencies,
                 conflicts=descriptor.conflicts,
-                participation=copy.deepcopy(_MODULE_REGISTRY_ENTRIES.get(descriptor.name, {}).get("participation", {})),
+                participation=_descriptor_participation(descriptor),
                 result_contract=descriptor.result_contract,
+                availability=descriptor.availability,
+                availability_reason=descriptor.availability_reason,
+                entry_point=descriptor.entry_point,
+                public_contract=copy.deepcopy(descriptor.public_contract),
             )
         )
     return entries

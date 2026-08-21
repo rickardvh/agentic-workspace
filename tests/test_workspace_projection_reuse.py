@@ -139,6 +139,15 @@ def test_start_implement_and_proof_reuse_each_surface_admitted_decision(tmp_path
         assert cli.main(command) == 0
         warm = json.loads(capsys.readouterr().out)
         assert warm["kind"] == cold["kind"]
+        exposes_decision_receipt = "--select" in command or command[0] not in {"start", "implement"}
+        if not exposes_decision_receipt:
+            if command[0] == "implement":
+                assert "projection_reuse" not in cold
+                assert "projection_reuse" not in warm
+            else:
+                assert not str(cold.get("projection_reuse", {}).get("status", "")).startswith("decision+")
+                assert not str(warm.get("projection_reuse", {}).get("status", "")).startswith("decision+")
+            continue
         compact_receipt = cold["projection_reuse"]
         assert compact_receipt == {
             "decision_id": compact_receipt["decision_id"],

@@ -56,11 +56,18 @@ from . import evaluation_report_preview as _command_evaluation_report_preview
 from . import evaluation_retry as _command_evaluation_retry
 from . import evaluation_status as _command_evaluation_status
 from . import evaluation_transition as _command_evaluation_transition
+from . import external_evidence_query as _command_external_evidence_query
+from . import external_evidence_submit as _command_external_evidence_submit
 from . import external_intent_refresh_github as _command_external_intent_refresh_github
 from . import final_response_admit as _command_final_response_admit
 from . import implement_context as _command_implement_context
 from . import init_lifecycle as _command_init_lifecycle
 from . import install_lifecycle as _command_install_lifecycle
+from . import instructions_check as _command_instructions_check
+from . import instructions_create as _command_instructions_create
+from . import instructions_explain as _command_instructions_explain
+from . import instructions_list as _command_instructions_list
+from . import instructions_migrate as _command_instructions_migrate
 from . import memory_front_door as _command_memory_front_door
 from . import modules_report as _command_modules_report
 from . import ownership_report as _command_ownership_report
@@ -134,11 +141,18 @@ GENERATED_COMMAND_HANDLERS = {
     'evaluation.retry': _command_evaluation_retry.run,
     'evaluation.status': _command_evaluation_status.run,
     'evaluation.transition': _command_evaluation_transition.run,
+    'external-evidence.query': _command_external_evidence_query.run,
+    'external-evidence.submit': _command_external_evidence_submit.run,
     'external-intent.refresh-github': _command_external_intent_refresh_github.run,
     'final-response.admit': _command_final_response_admit.run,
     'implement.context': _command_implement_context.run,
     'init.lifecycle': _command_init_lifecycle.run,
     'install.lifecycle': _command_install_lifecycle.run,
+    'instructions.check': _command_instructions_check.run,
+    'instructions.create': _command_instructions_create.run,
+    'instructions.explain': _command_instructions_explain.run,
+    'instructions.list': _command_instructions_list.run,
+    'instructions.migrate': _command_instructions_migrate.run,
     'memory.front-door': _command_memory_front_door.run,
     'modules.report': _command_modules_report.run,
     'ownership.report': _command_ownership_report.run,

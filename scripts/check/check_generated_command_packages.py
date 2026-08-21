@@ -280,6 +280,7 @@ PYTHON_FULL_COMPLETION_BLOCKING_RUNTIME_SOURCE_PATHS = (
 )
 PYTHON_SHIPPED_SOURCE_EXECUTABLE_RETIREMENT_EXCEPTIONS = {
     "src/agentic_workspace/cli.py": {
+        "parser construction": "hand-owned local evaluation subcommand parser outside generated workspace command package ownership",
         "command parsing": "hand-owned local evaluation subcommand parser outside generated workspace command package ownership",
         "subparser ownership": "hand-owned local evaluation subcommand parser outside generated workspace command package ownership",
     },
@@ -1438,6 +1439,7 @@ TYPESCRIPT_SUPPORTED_EXACT_PRIMITIVES = {
     "assignment.lifecycle.apply",
     "correction.event.apply",
     "guidance.lifecycle.apply",
+    "instructions.execute",
     "workspace.selection.resolve",
 }
 

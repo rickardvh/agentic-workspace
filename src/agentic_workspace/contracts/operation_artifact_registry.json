@@ -9,6 +9,52 @@
   },
   "artifacts": [
     {
+      "artifact_id": "root-workspace.instructions-explain.python",
+      "operation_id": "instructions.explain",
+      "package_id": "root-workspace",
+      "target": "python",
+      "adapter_id": "python.function",
+      "proof_role": "operation-conformance",
+      "symbol": "generated.workspace.python.commands.instructions_explain:invoke",
+      "source_ref": "command_package_ir:root-workspace/instructions",
+      "wrapper_refs": ["instructions.operations.cli"],
+      "case_ids": ["instructions.explain.progressive-disclosure.success"],
+      "path_refs": [
+        "generated/workspace/python/commands/instructions_explain.py",
+        "generated/workspace/python/primitives/operation_executor.py",
+        "src/agentic_workspace/contracts/operations/instructions.explain.json",
+        "src/agentic_workspace/contracts/conformance/instructions.explain.process.json"
+      ],
+      "stale_when": [
+        "instructions.explain operation contract changes",
+        "scoped instruction result semantics change",
+        "instructions.explain.process expectations change"
+      ]
+    },
+    {
+      "artifact_id": "root-workspace.instructions-explain.typescript",
+      "operation_id": "instructions.explain",
+      "package_id": "root-workspace",
+      "target": "typescript",
+      "adapter_id": "typescript.function",
+      "proof_role": "operation-conformance",
+      "symbol": "generated/workspace/typescript/src/runtime.mjs:invokeGeneratedOperation",
+      "source_ref": "command_package_ir:root-workspace/instructions",
+      "wrapper_refs": ["instructions.operations.cli"],
+      "case_ids": ["instructions.explain.progressive-disclosure.success"],
+      "path_refs": [
+        "generated/workspace/typescript/src/runtime.mjs",
+        "generated/workspace/typescript/resources/operations/instructions.explain.json",
+        "src/agentic_workspace/contracts/operations/instructions.explain.json",
+        "src/agentic_workspace/contracts/conformance/instructions.explain.process.json"
+      ],
+      "stale_when": [
+        "instructions.explain operation contract changes",
+        "scoped instruction result semantics change",
+        "instructions.explain.process expectations change"
+      ]
+    },
+    {
       "artifact_id": "root-workspace.defaults.python",
       "operation_id": "defaults.report",
       "package_id": "root-workspace",
