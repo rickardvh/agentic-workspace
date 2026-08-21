@@ -19380,7 +19380,7 @@
     "external-evidence.query": {
       "identity": "external-evidence.query",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:9fffd9d63d6bfb58ec669a0183aeb7902c64862b4bb70ae2b6bd394b07ed53a4",
+      "fingerprint": "sha256:7fd208825573e2cd50c7c6d51d7a6c0e38b0bd0937be16975fa52be9e9781109",
       "compatibility_fingerprint": "sha256:bda8fed87f7ebdaf8cc5af82570648fd38fd40196b638963c76c3f8bade79765",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
@@ -19709,7 +19709,7 @@
     "external-evidence.submit": {
       "identity": "external-evidence.submit",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:6a8bd6649e9d4e1ad69a6ae6d5ff43974ce49fab826c88a6003756a98d760efd",
+      "fingerprint": "sha256:781c7effaf3a25f7316b5ed6881cf349e961856ba4c8dd99175b95066c91949f",
       "compatibility_fingerprint": "sha256:42c7818a5bd27be914d7baa8eaab4d620e965bba9237cc98c8f9151545c37d85",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
@@ -22791,25 +22791,30 @@
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "$id": "agentic-workspace/external-evidence-operation-input.schema.json",
         "title": "External Evidence Operation Input",
+        "description": "Public submit/query input that carries candidate JSON and an opaque trusted-host reference without custody assertions.",
         "type": "object",
         "properties": {
           "target": {
-            "type": "string"
+            "type": "string",
+            "description": "Repository root containing policy and proof-subject inputs."
           },
           "format": {
             "type": "string",
             "enum": [
               "text",
               "json"
-            ]
+            ],
+            "description": "Requested command output format."
           },
           "candidate_json": {
             "type": "string",
-            "minLength": 2
+            "minLength": 2,
+            "description": "Serialized provider-neutral external evidence candidate."
           },
           "host_result_ref": {
             "type": "string",
-            "pattern": "^external-evidence-host-result:[A-Za-z0-9._-]+$"
+            "pattern": "^external-evidence-host-result:[A-Za-z0-9._-]+$",
+            "description": "Opaque reference resolved only by the package-trusted host boundary."
           }
         },
         "additionalProperties": false,
@@ -22822,6 +22827,7 @@
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "$id": "agentic-workspace/external-evidence-operation-result.schema.json",
         "title": "External Evidence Operation Result",
+        "description": "Stateless external evidence admission or current-query result returned by the public operation boundary.",
         "type": "object",
         "required": [
           "kind",
@@ -22832,27 +22838,32 @@
         ],
         "properties": {
           "kind": {
-            "const": "agentic-workspace/external-evidence-operation-result/v1"
+            "const": "agentic-workspace/external-evidence-operation-result/v1",
+            "description": "Versioned operation-result contract identity."
           },
           "operation": {
             "type": "string",
             "enum": [
               "submit",
               "query"
-            ]
+            ],
+            "description": "Public operation mode that produced this result."
           },
           "status": {
             "type": "string",
             "enum": [
               "admitted",
               "rejected"
-            ]
+            ],
+            "description": "Current admission decision after custody, policy, and subject checks."
           },
           "admission": {
-            "type": "object"
+            "type": "object",
+            "description": "Compact reasoned evidence admission result."
           },
           "stored": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Always false because the operation creates no parallel evidence ledger."
           }
         },
         "additionalProperties": true,

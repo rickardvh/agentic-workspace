@@ -3,9 +3,9 @@
 
 Exact current command values generated from `cli_commands.json` and `cli_option_groups.json`. The schema-shape references remain at `cli-commands.md` and `cli-option-groups.md`.
 
-- Contract digest: `sha256:47b7c468d5e29719be9ad50f4293ab78d4898c39038c1bc8c78b7b2ad6657d88`
+- Contract digest: `sha256:bea03246a499a0afa335422b5bd4be0faa7c465a35b9577dd73c19e6b0be479b`
 - Program: `agentic-workspace`
-- Command/subcommand count: 114
+- Command/subcommand count: 116
 
 Shared-state mutability and ignored local diagnostics are separate. A `no` below means the command contract does not mutate shared workspace state. When local session logging is enabled, any command may still write ignored machine-local diagnostics:
 
@@ -90,6 +90,8 @@ Shared-state mutability and ignored local diagnostics are separate. A `no` below
 | `agentic-workspace skills` | `module_delegation_front_door` | `ordinary_host_repo` | no | 4 | List registered workspace skills from installed package registries and repo-owned skill registries. |
 | `agentic-workspace report` | `core_context_router` | `ordinary_host_repo` | no | 11 | Show a compact combined workspace report for installed modules, mixed-agent posture, and next-action guidance. |
 | `agentic-workspace reconcile` | `reusable_host_repo_diagnostics` | `advanced_host_repo` | yes | 4 | Show stale planning state against provider-agnostic external work evidence. |
+| `agentic-workspace external-evidence-submit` | `reusable_host_repo_diagnostics` | `advanced_host_repo` | no | 4 | Submit an external proof candidate by opaque signed host-result reference. |
+| `agentic-workspace external-evidence-query` | `reusable_host_repo_diagnostics` | `advanced_host_repo` | no | 4 | Query and revalidate one admitted external proof result. |
 | `agentic-workspace external-intent` | `reusable_host_repo_diagnostics` | `advanced_host_repo` | no | 0 | Refresh optional provider-agnostic external intent evidence through adapter subcommands. |
 | `agentic-workspace external-intent refresh-github` | `reusable_host_repo_diagnostics` | `advanced_host_repo` | yes | 9 | Refresh external intent evidence from GitHub issues through the optional gh CLI adapter. |
 | `agentic-workspace preflight` | `core_context_router` | `ordinary_host_repo` | no | 5 | Get compact takeover-safe context: startup defaults + resolved config + active planning state in one call. |
@@ -1121,6 +1123,28 @@ provider-agnostic external-work reconciliation
 | `--target` | no | `—` | — | `value` | Optional repository path used to reconcile planning state. |
 | `--apply-safe-prune` | no | `—` | — | `store_true` | Apply only reconcile cleanup targets that are already marked safe_to_prune. |
 | `--dry-run` | no | `—` | — | `store_true` | Preview --apply-safe-prune without writing files. |
+
+## `agentic-workspace external-evidence-submit`
+
+provider-neutral external proof submission through package-trusted host custody
+
+| Flags | Required | Default | Choices | Action / nargs | Description |
+| --- | --- | --- | --- | --- | --- |
+| `--format` | no | `text` | text, json | `value` | Output format. |
+| `--target` | no | `—` | — | `value` | Repository path. |
+| `--candidate-json` | yes | `—` | — | `value` | Provider-neutral external evidence candidate JSON. |
+| `--host-result-ref` | yes | `—` | — | `value` | Opaque package-trusted host result reference. |
+
+## `agentic-workspace external-evidence-query`
+
+provider-neutral current external proof query
+
+| Flags | Required | Default | Choices | Action / nargs | Description |
+| --- | --- | --- | --- | --- | --- |
+| `--format` | no | `text` | text, json | `value` | Output format. |
+| `--target` | no | `—` | — | `value` | Repository path. |
+| `--candidate-json` | yes | `—` | — | `value` | Provider-neutral external evidence candidate JSON. |
+| `--host-result-ref` | yes | `—` | — | `value` | Opaque package-trusted host result reference. |
 
 ## `agentic-workspace external-intent`
 
