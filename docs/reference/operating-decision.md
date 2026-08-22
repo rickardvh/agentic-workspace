@@ -35,6 +35,7 @@ Derived internal decision composed from admitted AW authority surfaces. It emits
 | `context_effects.convergence_rule` | string | yes |  | Rule for deduplication, terminal lifecycle, and continuation convergence. |  |  |
 | `intent_feedback` | object | no |  | Revision-bound applicable intent expectations, evidence evaluation, material findings, and quiet/rescope posture composed before the final decision. |  |  |
 | `memory_effectiveness` | object | no |  | Decision-bound Memory contributions, sparse outcome attribution, material findings, and stronger-owner lifecycle review. |  |  |
+| `bounded_adaptations` | object | no |  | Deduplicated currentness or missing-coverage candidates derived from existing improvement evidence and routed to canonical owner operations or explicit decisions. |  |  |
 | `source_guidance` | object | no |  | Compact references for admitted source-owned guidance whose registry contract declares a material decision dimension. |  |  |
 | `repo_improvement_action` | object | no |  | Mode-constrained initiative consequence for one admitted material repo-improvement candidate; empty when no candidate exists. Mutation still requires an existing owner operation. |  |  |
 | `repo_improvement_execution` | object | no |  | Existing-owner implementation, Planning promotion, review, or disposition mapping for the admitted repo-improvement action; empty when no candidate exists. |  |  |

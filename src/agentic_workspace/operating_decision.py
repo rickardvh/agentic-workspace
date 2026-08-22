@@ -11,6 +11,12 @@ from pathlib import Path
 from typing import Any, Callable
 
 from agentic_workspace.actionability import invocation_decision_input_revision, operation_invocation
+from agentic_workspace.adaptation import (
+    bounded_adaptation_projection,
+    coverage_candidate_findings,
+    coverage_signal_from_observation,
+    machine_observed_coverage_signals,
+)
 from agentic_workspace.assurance_authority import admit_repository_assurance_decision
 from agentic_workspace.context_authority_owner_operations import (
     registered_context_owner_operation_runner,
@@ -1064,6 +1070,59 @@ def resolve_context_authority_projection(
     }
 
 
+def context_authority_repair_action(projection: dict[str, Any]) -> dict[str, Any]:
+    """Compile the first owner-authorized repair into the ordinary typed-action path."""
+
+    repairs = [_as_dict(item) for item in _as_list(_as_dict(projection.get("repair_operation")).get("repairs")) if isinstance(item, dict)]
+    if not repairs:
+        return {}
+    repair = repairs[0]
+    arguments = _as_dict(repair.get("arguments"))
+    operation_id = str(repair.get("operation_id") or "")
+    surface = str(repair.get("surface") or "")
+    expected_registry_revision = str(arguments.get("expected_registry_revision") or "")
+    expected_source_revision = str(arguments.get("expected_source_revision") or "")
+    if not all((operation_id, surface, expected_registry_revision)):
+        return {}
+    invocation = operation_invocation(
+        operation_id=operation_id,
+        arguments=arguments,
+        effect_class="owner-reconciliation",
+        authority_class="source-owner-operation",
+        expected_transition=f"{surface} currentness becomes current or the owner operation rejects stale input",
+        preconditions={
+            "surface": surface,
+            "registry_revision": expected_registry_revision,
+            "source_revision": expected_source_revision,
+        },
+        owner_context_revision={
+            "surface": surface,
+            "owner": str(repair.get("owner") or ""),
+            "registry_revision": expected_registry_revision,
+            "source_revision": expected_source_revision,
+        },
+        mutation_boundary={
+            "writes_repo_state": True,
+            "allowed_surfaces": [surface],
+            "owner_operation_only": True,
+        },
+        proof_requirements=[
+            {
+                "owner": str(repair.get("owner") or ""),
+                "claim": f"{surface} resolves current and the same repair is not reissued",
+            }
+        ],
+    )
+    return {
+        "action": "reconcile-context-authority",
+        "surface": surface,
+        "owner": str(repair.get("owner") or ""),
+        "reason_code": str(repair.get("reason_code") or ""),
+        "operation_invocation": invocation,
+        "quiet_after": "the next equivalent resolve admits the surface as current and emits no repair",
+    }
+
+
 def _surface_gap_class(surface: dict[str, Any]) -> str:
     requirement_status = str(surface.get("requirement_status") or "").strip()
     population_status = str(surface.get("population_status") or "").strip()
@@ -1886,6 +1945,7 @@ def compile_projection_surface_operating_decision(
         or _as_dict(task_posture_packet.get("instruction_program"))
     )
     initiative_posture = _as_dict(_as_dict(task_posture_packet.get("operating_posture")).get("initiative_posture"))
+    improvement_intake = _as_dict(payload.get("improvement_intake")) or _as_dict(payload_context.get("improvement_intake"))
     improvement_candidate = next(
         (
             item
@@ -1927,6 +1987,29 @@ def compile_projection_surface_operating_decision(
             "instruction_program": instruction_program,
             "improvement_candidate": improvement_candidate,
             "improvement_latitude": str(initiative_posture.get("mode") or "conservative"),
+            "adaptation_signals": [
+                item for item in _as_list(improvement_intake.get("improvement_signal_candidates")) if isinstance(item, dict)
+            ],
+            "coverage_observations": [
+                item
+                for source in (
+                    payload.get("coverage_observations"),
+                    payload_context.get("coverage_observations"),
+                    task_posture_packet.get("coverage_observations"),
+                )
+                for item in _as_list(source)
+                if isinstance(item, dict)
+            ],
+            "structured_coverage_records": [
+                item
+                for source in (
+                    payload.get("structured_coverage_records"),
+                    payload_context.get("structured_coverage_records"),
+                    task_posture_packet.get("structured_coverage_records"),
+                )
+                for item in _as_list(source)
+                if isinstance(item, dict)
+            ],
         }
     )
     surface_input_revision = str(decision.get("admitted_input_revision") or "")
@@ -2714,6 +2797,14 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         contributions=[item for item in _as_list(inputs.get("memory_contributions")) if isinstance(item, dict)],
         outcomes=[item for item in _as_list(inputs.get("memory_outcomes")) if isinstance(item, dict)],
     )
+    adaptation_signals = [item for item in _as_list(inputs.get("adaptation_signals")) if isinstance(item, dict)]
+    adaptation_signals.extend(
+        machine_observed_coverage_signals([item for item in _as_list(inputs.get("structured_coverage_records")) if isinstance(item, dict)])
+    )
+    adaptation_signals.extend(
+        coverage_signal_from_observation(item) for item in _as_list(inputs.get("coverage_observations")) if isinstance(item, dict)
+    )
+    bounded_adaptations = bounded_adaptation_projection(adaptation_signals)
     reconciliation = compile_reconciliation(_as_dict(inputs.get("reconciliation")))
     control_inputs = compile_control_inputs([item for item in _as_list(inputs.get("control_inputs")) if isinstance(item, dict)])
     assurance_requested = "assurance_decision" in inputs
@@ -2802,6 +2893,8 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         revisions = {**revisions, "intent_feedback_revision": intent_feedback["input_revision"]}
     if memory_effectiveness["projected_contributions"]:
         revisions = {**revisions, "memory_effectiveness_revision": memory_effectiveness["input_revision"]}
+    if bounded_adaptations["candidate_count"]:
+        revisions = {**revisions, "coverage_candidate_revision": "sha256:" + _digest(bounded_adaptations)}
     if source_guidance["contributions"]:
         revisions = {**revisions, "source_guidance_revision": source_guidance["revision"]}
     if instruction_clause_projection["status"] != "not-requested":
@@ -2824,7 +2917,17 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         }
     authorities = _as_dict(inputs.get("authorities"))
     actionability = _as_dict(inputs.get("actionability"))
-    action = _as_dict(actionability.get("next_action") or inputs.get("primary_action"))
+    owner_repair_action = context_authority_repair_action(context_authority_projection)
+    action = owner_repair_action or _as_dict(actionability.get("next_action") or inputs.get("primary_action"))
+    if owner_repair_action and authorities:
+        action = {
+            **owner_repair_action,
+            "operation_invocation": bind_operation_invocation_to_authorities(
+                invocation=_as_dict(owner_repair_action.get("operation_invocation")),
+                authorities=authorities,
+            ),
+        }
+        owner_repair_action = action
     progress_check = _as_dict(actionability.get("progress_check"))
     invocation = _as_dict(action.get("operation_invocation"))
     invocation_expected_revision = str(invocation.get("expected_input_revision") or "").strip()
@@ -2884,6 +2987,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
             *_as_list(inputs.get("context_findings")),
             *_as_list(intent_feedback.get("findings")),
             *_as_list(memory_effectiveness.get("findings")),
+            *coverage_candidate_findings(bounded_adaptations),
         ]
         if isinstance(item, dict)
     ]
@@ -2985,18 +3089,25 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
     # A typed action cannot remain actionable when one of its registered
     # required inputs is absent, stale, ambiguous, or otherwise unadmitted.
     if context_authority_projection["status"] == "repair-required":
-        status = "blocked"
-        primary_action = {}
         repair_operations = _as_list(_as_dict(context_authority_projection.get("repair_operation")).get("repairs"))
         decision_requirements = _as_list(_as_dict(context_authority_projection.get("currentness")).get("decision_requirements"))
-        if repair_operations:
-            external_blocker = {
-                "kind": "agentic-workspace/operating-decision-blocker/v1",
-                "reason_code": "context-authority-unavailable",
-                "owner": "context-authority-registry",
-                "repair": "run the revision-bound typed owner repair operation before retrying the decision",
-            }
+        if repair_operations and owner_repair_action and not blocker:
+            status = "actionable"
+            primary_action = owner_repair_action
+            external_blocker = {}
+        elif repair_operations:
+            status = "blocked"
+            primary_action = {}
+            if not blocker:
+                external_blocker = {
+                    "kind": "agentic-workspace/operating-decision-blocker/v1",
+                    "reason_code": "context-authority-unavailable",
+                    "owner": "context-authority-registry",
+                    "repair": "satisfy the mutation baseline and run the revision-bound typed owner repair operation",
+                }
         else:
+            status = "blocked"
+            primary_action = {}
             decision_requirement = _as_dict(decision_requirements[0]) if decision_requirements else {}
             external_blocker = {
                 "kind": "agentic-workspace/operating-decision-blocker/v1",
@@ -3046,6 +3157,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         "context_effects": context_effects,
         "intent_feedback": intent_feedback,
         "memory_effectiveness": memory_effectiveness,
+        "bounded_adaptations": bounded_adaptations,
         "source_guidance": source_guidance,
         "repo_improvement_action": repo_improvement_action,
         "repo_improvement_execution": repo_improvement_execution,

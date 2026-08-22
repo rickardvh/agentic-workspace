@@ -8,6 +8,9 @@ from pathlib import Path
 from typing import Any
 
 _QUIET_DISPOSITIONS = {"fixed", "superseded", "dismissed", "not-applicable", "obsolete"}
+_MATERIAL_COVERAGE_EFFECTS = {"action", "authority", "proof", "claim", "procedure", "continuation"}
+_CONSEQUENTIAL_OWNER_CLASSES = {"architecture", "security", "authority", "public-contract"}
+_COVERAGE_SOURCE_CLASSES = {"machine", "repo", "human", "review", "agent"}
 _OPERATION_CONTRACT_ROOT = Path(__file__).parent / "contracts" / "operations"
 
 
@@ -35,6 +38,175 @@ def _candidate_id(*, source_owner: str, owner_class: str, symptom: str, proposed
         "proposed_delta": _normalized(proposed_delta),
     }
     return "adapt-" + hashlib.sha256(json.dumps(basis, sort_keys=True, separators=(",", ":")).encode()).hexdigest()[:20]
+
+
+def coverage_signal_from_observation(observation: dict[str, Any]) -> dict[str, Any]:
+    """Translate one bounded operating-fact observation into existing adaptation evidence."""
+
+    source_class = str(observation.get("source_class") or "agent").strip().lower()
+    if source_class not in _COVERAGE_SOURCE_CLASSES:
+        raise ValueError(f"unsupported coverage evidence source class: {source_class}")
+    effects = sorted(
+        {str(effect).strip() for effect in _list(observation.get("affected_effects")) if str(effect).strip() in _MATERIAL_COVERAGE_EFFECTS}
+    )
+    owner_class = str(observation.get("owner_class") or "").strip()
+    source_owner = str(observation.get("source_owner") or "").strip()
+    observed_addition = str(observation.get("observed_addition") or "").strip()
+    operation_id = str(observation.get("operation_id") or "").strip()
+    source_refs = sorted({str(ref).strip() for ref in _list(observation.get("source_refs")) if str(ref).strip()})
+    evidence_refs = sorted({str(ref).strip() for ref in _list(observation.get("evidence_refs")) if str(ref).strip()})
+    material = bool(observation.get("material", bool(effects))) and bool(effects)
+    deterministic = observation.get("admission") == "deterministic"
+    consequential = owner_class in _CONSEQUENTIAL_OWNER_CLASSES or bool(observation.get("consequential"))
+    authoritative_evidence = source_class in {"machine", "repo"}
+    mode = "existing-typed-operation" if deterministic and authoritative_evidence and not consequential else "explicit-owner-admission"
+    risk_class = "low" if mode == "existing-typed-operation" else "consequential"
+    owner_revision = str(observation.get("owner_revision") or "").strip()
+    recurrence_identity = str(observation.get("recurrence_identity") or "").strip()
+    if not recurrence_identity:
+        recurrence_identity = (
+            "coverage:"
+            + hashlib.sha256(
+                json.dumps(
+                    {
+                        "source_owner": source_owner,
+                        "owner_class": owner_class,
+                        "effects": effects,
+                        "source_refs": source_refs,
+                    },
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ).encode()
+            ).hexdigest()[:20]
+        )
+    proposed_delta = copy.deepcopy(observation.get("proposed_delta") or {})
+    simulation = copy.deepcopy(_dict(observation.get("simulation")))
+    if material and not all((owner_class, source_owner, observed_addition, operation_id, source_refs, evidence_refs)):
+        raise ValueError("material coverage observations require owner, operation, source, and evidence identity")
+    if not simulation:
+        simulation = {
+            "required_behaviors": [f"preserve-{effect}" for effect in effects] or ["no-operating-effect"],
+            "preserved_behaviors": [f"preserve-{effect}" for effect in effects] or ["no-operating-effect"],
+            "authority_delta": "none",
+            "allowed_owner_paths": [source_owner] if source_owner else [],
+            "before_cost": 1,
+            "after_cost": 1,
+        }
+    disposition = str(observation.get("disposition") or ("active" if material else "not-applicable"))
+    return {
+        "symptom": observed_addition or "repository observation has no material AW operating effect",
+        "cost": str(observation.get("rediscovery_cost") or "bounded operating-context rediscovery"),
+        "source": source_class,
+        "observed_during": str(observation.get("observed_during") or "ordinary-work-reconciliation"),
+        "recurrence": str(observation.get("recurrence") or "first-observation"),
+        "evidence_fingerprint": recurrence_identity,
+        "adaptation": {
+            "owner_class": owner_class or "outside-aw-responsibility",
+            "source_owner": source_owner or "none",
+            "proposed_delta": proposed_delta or {"action": "no-aw-change"},
+            "authority_requirement": {
+                "mode": mode,
+                "operation_id": operation_id,
+                "expected_owner_revision": owner_revision,
+                "current_owner_revision": owner_revision,
+            },
+            "risk_class": risk_class,
+            "expected_effect": {effect: "represented-by-canonical-owner" for effect in effects},
+            "validation_route": copy.deepcopy(_list(observation.get("validation_route"))),
+            "rollback": {"mode": "operation-transaction", "revision": owner_revision},
+            "retire_when": "the canonical owner admits or explicitly dismisses this source/effect identity",
+            "disposition": disposition,
+            "simulation": simulation,
+            "operation_inputs": copy.deepcopy(_dict(observation.get("operation_inputs"))),
+            "coverage": {
+                "kind": "agentic-workspace/coverage-candidate-evidence/v1",
+                "identity": recurrence_identity,
+                "observed_addition": observed_addition,
+                "source_class": source_class,
+                "source_refs": source_refs,
+                "evidence_refs": evidence_refs,
+                "affected_effects": effects,
+                "confidence": str(observation.get("confidence") or ("high" if authoritative_evidence else "advisory")),
+                "authority": "evidence" if source_class in {"agent", "human", "review"} else "structured-source",
+                "material": material,
+                "admission": "deterministic" if mode == "existing-typed-operation" else "decision-required",
+                "must_resolve_before_closeout": bool(observation.get("must_resolve_before_closeout", material)),
+                "defer_until": str(observation.get("defer_until") or ""),
+            },
+        },
+    }
+
+
+def machine_observed_coverage_signals(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Admit only structured owner declarations as machine-observed coverage evidence."""
+
+    supported = {
+        "proof-route-declaration": ("proof-route", "proof", "proof.report", ["proof", "claim"]),
+        "generated-surface-declaration": (
+            "generated-projection",
+            "generated-references",
+            "generated-command-packages.refresh",
+            ["action", "authority", "procedure"],
+        ),
+        "ownership-boundary-declaration": ("ownership", "ownership", "ownership.classify-paths", ["action", "authority"]),
+        "module-capability-declaration": (
+            "module-capability",
+            "assignment",
+            "assignment.resolve-target",
+            ["action", "procedure", "continuation"],
+        ),
+    }
+    signals: list[dict[str, Any]] = []
+    for record in records:
+        declaration_kind = str(record.get("declaration_kind") or "")
+        mapping = supported.get(declaration_kind)
+        if mapping is None:
+            continue
+        owner_class, default_owner, operation_id, default_effects = mapping
+        signals.append(
+            coverage_signal_from_observation(
+                {
+                    **record,
+                    "source_class": "machine",
+                    "owner_class": owner_class,
+                    "source_owner": str(record.get("source_owner") or default_owner),
+                    "operation_id": str(record.get("operation_id") or operation_id),
+                    "affected_effects": _list(record.get("affected_effects")) or default_effects,
+                    "admission": str(record.get("admission") or "deterministic"),
+                }
+            )
+        )
+    return signals
+
+
+def coverage_candidate_findings(projection: dict[str, Any]) -> list[dict[str, Any]]:
+    """Expose unresolved candidates through the existing context-consequence path."""
+
+    findings: list[dict[str, Any]] = []
+    for candidate in _list(projection.get("candidates")):
+        candidate = _dict(candidate)
+        coverage = _dict(candidate.get("coverage"))
+        if not coverage or candidate.get("status") == "quiet":
+            continue
+        defer_until = str(coverage.get("defer_until") or "")
+        must_resolve = coverage.get("must_resolve_before_closeout") is True and not defer_until
+        findings.append(
+            {
+                "kind": "agentic-workspace/coverage-candidate/v1",
+                "id": str(candidate.get("id") or ""),
+                "finding_class": "coverage-gap",
+                "lifecycle": "unresolved",
+                "severity": "material",
+                "owner": str(candidate.get("source_owner") or candidate.get("owner_class") or "workspace-maintainer"),
+                "task_relevant": coverage.get("material") is True,
+                "affected_decisions": copy.deepcopy(_list(coverage.get("affected_effects"))),
+                "evidence_refs": copy.deepcopy(_list(coverage.get("evidence_refs"))),
+                "current_task_effect": "requires disposition before broad clean closeout" if must_resolve else "",
+                **({"defer_until": defer_until} if defer_until else {}),
+                "coverage_candidate": copy.deepcopy(candidate),
+            }
+        )
+    return findings
 
 
 def simulate_adaptation(candidate: dict[str, Any]) -> dict[str, Any]:
@@ -84,6 +256,13 @@ def _registered_operation(operation_id: str) -> dict[str, Any] | None:
     if not isinstance(contract, dict) or str(contract.get("id") or "") != operation_id:
         return None
     return contract
+
+
+def _path_revision(path: Path) -> str:
+    try:
+        return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+    except OSError:
+        return ""
 
 
 def _operation_runtime_consumed(contract: dict[str, Any] | None) -> bool:
@@ -144,8 +323,9 @@ def adaptation_signal_from_proof_route_finding(
 def admit_bounded_adaptation(candidate: dict[str, Any], *, admitted_by: str) -> dict[str, Any]:
     """Record an explicit owner decision without weakening automatic-promotion policy."""
     admitted_by = str(admitted_by or "").strip()
-    if str(candidate.get("owner_class") or "") != "scoped-instruction":
-        raise ValueError("explicit owner admission is supported only for scoped-instruction adaptations")
+    owner_class = str(candidate.get("owner_class") or "")
+    if owner_class not in {"scoped-instruction", "memory"}:
+        raise ValueError("explicit owner admission is supported only for scoped-instruction or Memory adaptations")
     if candidate.get("status") != "owner-review-required":
         raise ValueError("owner admission requires an owner-review-required candidate")
     if not admitted_by:
@@ -180,17 +360,74 @@ def execute_bounded_adaptation(candidate: dict[str, Any], *, target_root: Path, 
         raise ValueError(f"adaptation operation is not registered: {operation_id}")
     if not _operation_runtime_consumed(contract):
         raise ValueError(f"adaptation operation is not runtime-consumed authority: {operation_id}")
-    if operation_id not in {"proof.report", "instructions.create"}:
+    if operation_id not in {"proof.report", "instructions.create", "workspace.memory-create-note.apply"}:
         raise ValueError(f"adaptation operation has no bounded execution adapter: {operation_id}")
     operation_inputs = _dict(candidate.get("operation_inputs"))
     proposed_delta = candidate.get("proposed_delta")
     if not isinstance(proposed_delta, dict):
         raise ValueError("bounded adaptation requires a typed semantic delta")
 
-    if operation_id == "instructions.create":
+    if operation_id in {"instructions.create", "workspace.memory-create-note.apply"}:
         admission = _dict(candidate.get("owner_admission"))
         if admission.get("status") != "admitted" or not str(admission.get("admitted_by") or "").strip():
-            raise ValueError("scoped-instruction adaptation requires explicit owner admission")
+            raise ValueError("consequential adaptation requires explicit owner admission")
+    if operation_id == "workspace.memory-create-note.apply":
+        from repo_memory_bootstrap.installer import create_memory_note
+
+        manifest_path = target_root / ".agentic-workspace/memory/repo/manifest.toml"
+        expected_revision = str(authority.get("expected_owner_revision") or "")
+        current_revision = _path_revision(manifest_path)
+        if not expected_revision or current_revision != expected_revision:
+            return {
+                "kind": "agentic-workspace/bounded-adaptation-execution/v1",
+                "status": "superseded",
+                "candidate_id": str(candidate.get("id") or ""),
+                "operation_id": operation_id,
+                "operation_contract": f"src/agentic_workspace/contracts/operations/{operation_id}.json",
+                "disposition": "superseded",
+                "automatic_promotion": False,
+                "owner_admission": copy.deepcopy(admission),
+                "expected_owner_revision": expected_revision,
+                "current_owner_revision": current_revision,
+                "mutation_applied": False,
+                "rule": "Memory coverage admission fails closed when its canonical manifest revision changed after owner review.",
+            }
+        if proposed_delta.get("action") != "create_memory_note":
+            raise ValueError("Memory coverage admission requires a create_memory_note semantic delta")
+        result = create_memory_note(
+            slug=str(proposed_delta.get("slug") or ""),
+            title=str(proposed_delta.get("title") or "") or None,
+            target=target_root,
+            folder=str(proposed_delta.get("folder") or "domains"),
+            note_type=str(proposed_delta.get("note_type") or "domain"),
+            summary=str(proposed_delta.get("summary") or ""),
+            applies_to=[str(item) for item in _list(proposed_delta.get("applies_to"))],
+            use_when=[str(item) for item in _list(proposed_delta.get("use_when"))],
+            routes_from=[str(item) for item in _list(proposed_delta.get("routes_from"))],
+            stale_when=[str(item) for item in _list(proposed_delta.get("stale_when"))],
+            evidence=[str(item) for item in _list(proposed_delta.get("evidence"))],
+            memory_role=str(proposed_delta.get("memory_role") or ""),
+            dry_run=dry_run,
+        ).to_dict()
+        actions = [_dict(item) for item in _list(result.get("actions"))]
+        blocked = any(item.get("kind") == "manual review" for item in actions)
+        applied = not dry_run and not blocked and any(item.get("kind") == "created" for item in actions)
+        return {
+            "kind": "agentic-workspace/bounded-adaptation-execution/v1",
+            "status": "blocked" if blocked else "simulated" if dry_run else "quiet" if applied else "blocked",
+            "candidate_id": str(candidate.get("id") or ""),
+            "operation_id": operation_id,
+            "operation_contract": f"src/agentic_workspace/contracts/operations/{operation_id}.json",
+            "disposition": "fixed" if applied else "active",
+            "automatic_promotion": False,
+            "owner_admission": copy.deepcopy(admission),
+            "expected_owner_revision": expected_revision,
+            "post_owner_revision": _path_revision(manifest_path),
+            "mutation_applied": applied,
+            "operation_result": result,
+            "rule": "Memory coverage enters the canonical manifest and note only after explicit owner admission and a matching manifest revision.",
+        }
+    if operation_id == "instructions.create":
         from agentic_workspace.scoped_instructions import apply_instruction_operation
 
         operation_result = apply_instruction_operation(
@@ -284,11 +521,16 @@ def bounded_adaptation_projection(signals: list[dict[str, Any]]) -> dict[str, An
             "cost": str(signal.get("cost") or ""),
             "recurrence": str(signal.get("recurrence") or ""),
         }
-        candidate_id = _candidate_id(
-            source_owner=str(candidate["source_owner"]),
-            owner_class=str(candidate["owner_class"]),
-            symptom=candidate["symptom"],
-            proposed_delta=str(candidate["proposed_delta"]),
+        coverage_identity = str(_dict(candidate.get("coverage")).get("identity") or "")
+        candidate_id = (
+            "adapt-" + hashlib.sha256(coverage_identity.encode()).hexdigest()[:20]
+            if coverage_identity
+            else _candidate_id(
+                source_owner=str(candidate["source_owner"]),
+                owner_class=str(candidate["owner_class"]),
+                symptom=candidate["symptom"],
+                proposed_delta=str(candidate["proposed_delta"]),
+            )
         )
         grouped.setdefault(candidate_id, []).append(candidate)
 
