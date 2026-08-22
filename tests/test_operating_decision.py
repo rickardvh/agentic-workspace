@@ -29,6 +29,7 @@ from agentic_workspace.operating_decision import (
     context_authority_coverage,
     context_authority_declarations,
     context_authority_obligations,
+    context_authority_repair_action,
     context_consequence_effects,
     context_surface_admission,
     derive_context_consequences,
@@ -297,6 +298,69 @@ def test_no_improvement_candidate_keeps_direct_work_quiet() -> None:
     assert decision["repo_improvement_action"] == {}
     assert decision["repo_improvement_execution"] == {}
     assert decision["repo_improvement_effectiveness"] == {}
+
+
+def _coverage_observation(**overrides: object) -> dict[str, object]:
+    observation: dict[str, object] = {
+        "source_class": "agent",
+        "owner_class": "scoped-instruction",
+        "source_owner": ".agentic-workspace/instructions/api.md",
+        "observed_addition": "API work repeatedly requires a compatibility procedure.",
+        "source_refs": ["src/api/router.py"],
+        "evidence_refs": ["tests/test_api_compat.py"],
+        "affected_effects": ["procedure", "proof"],
+        "operation_id": "instructions.create",
+        "owner_revision": "owner-r1",
+        "proposed_delta": {"action": "append_guidance"},
+        "validation_route": ["pytest tests/test_api_compat.py -q"],
+    }
+    observation.update(overrides)
+    return observation
+
+
+def test_material_coverage_candidate_enters_existing_closeout_gate() -> None:
+    decision = compile_operating_decision(
+        inputs={
+            "consumer": "unregistered-test-consumer",
+            "stage": "closeout",
+            "coverage_observations": [_coverage_observation()],
+        }
+    )
+
+    assert decision["bounded_adaptations"]["active_candidate_count"] == 1
+    assert decision["context_effects"]["closeout_obligations"][0]["owner"] == ".agentic-workspace/instructions/api.md"
+    assert {"full-intent-complete", "issue-closure"}.issubset(set(decision["blocked_claim_classes"]))
+    candidate = decision["bounded_adaptations"]["candidates"][0]
+    assert candidate["coverage"]["authority"] == "evidence"
+    assert candidate["status"] == "owner-review-required"
+
+
+def test_deferrable_coverage_candidate_does_not_block_unrelated_direct_work() -> None:
+    decision = compile_operating_decision(
+        inputs={
+            "consumer": "unregistered-test-consumer",
+            "coverage_observations": [_coverage_observation(defer_until="next src/api/** change")],
+        }
+    )
+
+    assert decision["context_effects"]["blocked_claim_classes"] == []
+    assert decision["context_effects"]["durable_dispositions"][0]["status"] == "deferred-with-owner"
+    assert decision["context_effects"]["durable_dispositions"][0]["reentry_trigger"] == "next src/api/** change"
+
+
+def test_disposed_or_absent_coverage_is_quiet() -> None:
+    no_signal = compile_operating_decision(inputs={"consumer": "unregistered-test-consumer"})
+    disposed = compile_operating_decision(
+        inputs={
+            "consumer": "unregistered-test-consumer",
+            "coverage_observations": [_coverage_observation(disposition="dismissed")],
+        }
+    )
+
+    assert no_signal["bounded_adaptations"]["status"] == "quiet"
+    assert no_signal["bounded_adaptations"]["candidate_count"] == 0
+    assert disposed["bounded_adaptations"]["status"] == "quiet"
+    assert disposed["context_effects"]["status"] == "quiet"
 
 
 def test_authorized_local_code_seam_reuses_ordinary_implementation_owner_and_proportionate_proof() -> None:
@@ -1805,6 +1869,86 @@ def test_generated_projection_drift_is_revision_bound_and_safely_repairable() ->
     assert currentness["operation_id"] == "generated-command-packages.refresh"
     assert currentness["expected_registry_revision"].startswith("sha256:")
     assert currentness["expected_source_revision"] == "sha256:generated-source-r1"
+
+
+def _repairable_context_projection() -> dict[str, object]:
+    return {
+        "kind": "agentic-workspace/context-authority-projection/v1",
+        "status": "repair-required",
+        "repair_operation": {
+            "repairs": [
+                {
+                    "surface": "generated-references",
+                    "owner": "generated command package owner",
+                    "reason_code": "source-fingerprint-mismatch",
+                    "operation_id": "generated-command-packages.refresh",
+                    "arguments": {
+                        "target": ".",
+                        "surface": "generated-references",
+                        "consumer": "implement",
+                        "expected_registry_revision": "sha256:registry-r1",
+                        "expected_source_revision": "sha256:source-r1",
+                    },
+                }
+            ]
+        },
+        "currentness": {"decision_requirements": []},
+    }
+
+
+def test_context_repair_uses_ordinary_revision_bound_typed_action() -> None:
+    action = context_authority_repair_action(_repairable_context_projection())
+
+    invocation = action["operation_invocation"]
+    assert action["action"] == "reconcile-context-authority"
+    assert invocation["operation_id"] == "generated-command-packages.refresh"
+    assert invocation["preconditions"]["registry_revision"] == "sha256:registry-r1"
+    assert invocation["preconditions"]["source_revision"] == "sha256:source-r1"
+    assert invocation["mutation_boundary"]["owner_operation_only"] is True
+    assert invocation["mutation_boundary"]["writes_repo_state"] is True
+
+
+@pytest.mark.parametrize(
+    ("surface", "owner", "operation_id"),
+    [
+        ("generated-references", "generated command package owner", "generated-command-packages.refresh"),
+        ("planning", "planning package", "planning.summary.report"),
+        ("proof", "verification and proof runtime", "proof.select"),
+        ("assignment", "workspace assignment gate", "assignment.resolve-target"),
+        ("memory", "memory package", "memory.route.report"),
+    ],
+)
+def test_independent_owner_classes_reconcile_through_exact_registered_operation(surface: str, owner: str, operation_id: str) -> None:
+    projection = _repairable_context_projection()
+    repair = projection["repair_operation"]["repairs"][0]
+    repair.update({"surface": surface, "owner": owner, "operation_id": operation_id})
+    repair["arguments"]["surface"] = surface
+
+    action = context_authority_repair_action(projection)
+
+    assert action["surface"] == surface
+    assert action["owner"] == owner
+    assert action["operation_invocation"]["operation_id"] == operation_id
+    assert action["quiet_after"].endswith("emits no repair")
+
+
+def test_operating_decision_routes_safe_context_repair_and_rejects_stale_baseline(monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentic_workspace import operating_decision
+
+    monkeypatch.setattr(operating_decision, "resolve_context_authority_projection", lambda **_kwargs: _repairable_context_projection())
+    live_authorities = {"mutation_baseline": _live_mutation_baseline()}
+
+    actionable = compile_operating_decision(inputs={"consumer": "implement", "authorities": live_authorities})
+    rejected = compile_operating_decision(
+        inputs={"consumer": "implement", "authorities": {"mutation_baseline": {"revalidation_status": "rejected"}}}
+    )
+
+    assert actionable["status"] == "actionable"
+    assert actionable["primary_action"]["operation_invocation"]["operation_id"] == "generated-command-packages.refresh"
+    assert actionable["external_blocker"] == {}
+    assert rejected["status"] == "blocked"
+    assert rejected["primary_action"] == {}
+    assert rejected["external_blocker"]["reason_code"] == "stale-mutation-baseline"
 
 
 def test_context_authority_projection_rejects_configured_empty_and_missing_required_sources(tmp_path: Path) -> None:
