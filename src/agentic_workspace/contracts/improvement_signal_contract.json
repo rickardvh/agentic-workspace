@@ -178,6 +178,32 @@
     "obsolete"
   ],
   "lifecycle_rule": "Only active pressure may compile into posture obligations or next-action pressure; mitigated, accepted-risk, promoted, and obsolete pressure remains quiet except for compact provenance and audit detail.",
+  "effectiveness_lifecycle": {
+    "owner": "existing Evaluation capability and originating source owner",
+    "sequence": [
+      "signal identity",
+      "improvement action and execution",
+      "present-tense implementation proof",
+      "later comparable observation only when needed",
+      "recurrence and shifted-cost classification",
+      "retain, refine, promote, revert, dismiss, or retire"
+    ],
+    "classifications": [
+      "resolved-deterministically",
+      "resolved",
+      "partial-improvement",
+      "local-improvement-global-regression",
+      "recurrence-failed-improvement",
+      "inconclusive-comparison",
+      "misclassified",
+      "obsolete-stronger-owner"
+    ],
+    "evaluation_rule": "Use present proof when it fully establishes the claim; register one owner-bound Evaluation only when later comparable use is genuinely required.",
+    "feedback_rule": "Recurrence or shifted cost returns to the originating source owner with the same candidate identity instead of creating duplicate improvement work.",
+    "retirement_rule": "Mature resolved, misclassified, or stronger-owner-obsolete outcomes retire or shrink active signal, Planning, review, and Memory residue; retain only expensive-to-rediscover rationale.",
+    "privacy_rule": "Later observations retain compact task-shape and evidence references, never raw prompts, transcripts, messages, or per-command event streams.",
+    "quiet_rule": "Terminal mature outcomes add no recurring ordinary projection or permanent per-task bookkeeping."
+  },
   "retirement_criteria_fields": [
     "state",
     "retire_when",
