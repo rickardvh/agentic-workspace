@@ -1,7 +1,7 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:94dde7d4b290a9c9015f6dc1bf8a17acd7e5e4bae359fd17deffd3961a5e2035",
+  "profile_fingerprint": "sha256:8220aad0215a29cd15a6904d444524d7d5781f1d68f24f0b45b7357f70faded8",
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",
@@ -16061,8 +16061,8 @@
     "evaluation.authority-refresh": {
       "identity": "evaluation.authority-refresh",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:0ed5c825d62d0cea1d7053157a6d2959bb78618a9a5dfe430469d369e5d7181d",
-      "compatibility_fingerprint": "sha256:af8bf4e66845c841532ecb0e50175e2ac94e2f9ca7387ba5929be21e7bfdb79f",
+      "fingerprint": "sha256:967386566bd2f51c9db0bc67a5849cd35d4e77fcc84f6a8ed4c10c26d8d8ece7",
+      "compatibility_fingerprint": "sha256:be97666c806af5f000e61b616b3716b359fb49734efbf00d9b2abfaed4856ae1",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
         "id": "evaluation.authority-refresh",
@@ -16071,7 +16071,7 @@
           "format_option": "format",
           "subcommand": "authority-refresh"
         },
-        "summary": "Refresh evaluation observation authority from the single live assignment and admitted public proof receipt.",
+        "summary": "Refresh evaluation observation authority from one live assignment or an explicitly selected active Planning owner plus an admitted public proof receipt.",
         "classification": "metadata-refresh",
         "inputs": [
           {
@@ -16084,6 +16084,11 @@
             "name": "evaluation_id",
             "source": "cli-option",
             "required": true
+          },
+          {
+            "name": "active_planning_owner",
+            "source": "cli-option",
+            "required": false
           },
           {
             "name": "format",
@@ -16109,7 +16114,7 @@
         },
         "reads": [
           {
-            "surface": ".agentic-workspace/planning/assignments/*.assignment.json",
+            "surface": ".agentic-workspace/planning/assignments/*.assignment.json or .agentic-workspace/local/planning/owner-selection.json",
             "required": true
           },
           {
@@ -16146,7 +16151,7 @@
           }
         ],
         "guards": [
-          "Exactly one current assignment is required.",
+          "Exactly one current assignment is required unless active Planning owner authority is explicitly requested.",
           "The public proof receipt must be admitted and passed.",
           "Caller dictionaries cannot create or override authority."
         ],
@@ -16279,6 +16284,11 @@
               "required": true
             },
             {
+              "name": "active_planning_owner",
+              "source": "cli-option",
+              "required": false
+            },
+            {
               "name": "format",
               "source": "cli-option",
               "required": false
@@ -16296,7 +16306,7 @@
             "requires_preflight_gate": false
           },
           "guards": [
-            "Exactly one current assignment is required.",
+            "Exactly one current assignment is required unless active Planning owner authority is explicitly requested.",
             "The public proof receipt must be admitted and passed.",
             "Caller dictionaries cannot create or override authority."
           ]
@@ -16314,6 +16324,9 @@
                 "evaluation_id": {
                   "type": "string",
                   "minLength": 1
+                },
+                "active_planning_owner": {
+                  "type": "boolean"
                 }
               },
               "additionalProperties": true
@@ -22722,6 +22735,10 @@
             "type": "string",
             "minLength": 1,
             "description": "Registered evaluation whose observation authority will be refreshed."
+          },
+          "active_planning_owner": {
+            "type": "boolean",
+            "description": "Use the current explicit Planning owner selection as local observation custody when no delegated assignment exists."
           }
         },
         "additionalProperties": true
