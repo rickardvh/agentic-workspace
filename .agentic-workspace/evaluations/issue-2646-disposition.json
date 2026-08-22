@@ -2,44 +2,46 @@
   "kind": "agentic-workspace/evaluation-issue-disposition/v1",
   "issue_ref": "#2646",
   "evaluation_id": "operating-context-cost-convergence-2646",
-  "status": "implementation-open-evaluation-open",
+  "status": "implementation-closed-evaluation-closed",
   "implementation_disposition": {
-    "present_tense_status": "evidence-incomplete",
+    "present_tense_status": "satisfied",
     "related_issue_ref": "#2647",
-    "decision_observation_count": 0,
-    "observed_criterion_count": 0,
+    "decision_observation_count": 6,
+    "observed_criterion_count": 6,
     "contradiction_count": 0,
     "required_current_observations": 6,
     "required_representative_sessions": 4,
-    "unmet_criteria": [
-      "direct-default-quality",
-      "scoped-instruction-quality",
-      "module-context-quality",
-      "planning-routing-quality",
-      "cross-session-resumption",
-      "adaptation-convergence"
+    "unmet_criteria": [],
+    "representative_sessions": [
+      {"session_ref": "session:open-lane-20260821", "workflow_classes": ["direct", "planning-independent"], "evidence_refs": ["PR #2653", "git:8fd8e1dc5"]},
+      {"session_ref": "session:reopened-implementation-20260822", "workflow_classes": ["scoped-instruction"], "evidence_refs": ["PR #2655", "git:f26a9b026"]},
+      {"session_ref": "session:pr2655-blocker-repair-20260822", "workflow_classes": ["module"], "evidence_refs": ["PR #2655", "git:36fa8ef8d"]},
+      {"session_ref": "session:postmerge-stack-20260822", "workflow_classes": ["cross-session", "direct", "planning-continuation"], "evidence_refs": ["PR #2658", "git:492630d0d"]}
     ],
-    "contextual_evidence": [
-      {
-        "class": "implementation-and-test-proof",
-        "evidence_refs": ["PR #2653", "PR #2654", "PR #2655"],
-        "limitation": "Implementation and test proof is not an admitted real-session observation."
-      },
-      {
-        "class": "archived-module-run",
-        "evidence_refs": ["tools/model-cli-harness/external-agent-evaluation/module-extension-scenario-measurements.json", "PR #2640"],
-        "limitation": "The 2026-08-21 archive predates the completed stack and cannot satisfy the fresh module observation criterion."
-      }
+    "criterion_results": [
+      {"criterion": "direct-default-quality", "result": "supports"},
+      {"criterion": "scoped-instruction-quality", "result": "supports"},
+      {"criterion": "module-context-quality", "result": "supports"},
+      {"criterion": "planning-routing-quality", "result": "supports"},
+      {"criterion": "cross-session-resumption", "result": "supports"},
+      {"criterion": "adaptation-convergence", "result": "supports"}
     ],
     "convergence": {
-      "status": "evidence-required",
-      "required_sequence": "matched real-session friction -> canonical adaptation -> later equivalent real task",
-      "required_measurements": ["actual recurrence", "actual cost", "human steering avoided"],
-      "human_steering_avoided_next_time": false,
-      "limitation": "The proof-route cost replay and deterministic tests establish implementation behavior but do not prove later-session convergence."
+      "status": "satisfied",
+      "task_class": "changed-path-proof-selection-with-active-planning-owner-and-no-planning-package-change",
+      "before_session_ref": "session:coordinated-release-20260821",
+      "later_session_ref": "session:postmerge-stack-20260822",
+      "canonical_owner_ref": ".agentic-workspace/verification/manifest.toml",
+      "adaptation_revision": "merge:be4784e7a",
+      "before_cost": {"total_work_units": 171.6, "unit": "unrelated-planning-proof-seconds", "planning_suite_runs": 2},
+      "after_cost": {"total_work_units": 0, "unit": "unrelated-planning-proof-seconds", "planning_suite_runs": 0, "focused_evaluation_seconds": 11.87},
+      "human_steering_avoided_next_time": true,
+      "original_friction_recurred": false,
+      "evidence_refs": [".agentic-workspace/planning/closeout-evidence/issue-2645-proof-route-cost-replay.replay.json", "PR #2654", "PR #2658"],
+      "comparison_caveat": "The pre-v0.42 archive is used only for the matched unrelated-Planning proof slice; current general-quality criteria use post-stack sessions."
     },
     "bounded_adaptation_proof": {
-      "status": "implementation-proved-evaluation-unproved",
+      "status": "implementation-and-convergence-proved",
       "owner_classes": ["proof-route", "scoped-instruction"],
       "covered_behaviors": [
         "deterministic deduplication",
@@ -60,16 +62,16 @@
   },
   "evaluation_disposition": {
     "definition_ref": ".agentic-workspace/evaluations.json#operating-context-cost-convergence-2646",
-    "lifecycle": "collecting",
-    "definition_revision": 2,
-    "current_admission_status": "no-current-real-session-observations-admitted",
-    "privacy": "Only compact findings, evidence references, and result identities may be retained; raw prompts and full transcripts remain local.",
+    "lifecycle": "satisfied",
+    "definition_revision": 3,
+    "current_admission_status": "owner-concluded-from-six-current-real-session-observations",
+    "privacy": "Only compact findings, evidence references, and result identities are retained; raw prompts and full transcripts remain local.",
     "report_sinks": ["#2646", "#2647"]
   },
   "future_evidence_audit": {
-    "status": "collection-required",
-    "next_safe_action": "Collect at least six criteria-bearing observations across at least four representative real sessions, including a fresh module session and a matched convergence sequence.",
-    "material_negative_followup": "route to the existing source owner or create a bounded follow-up",
-    "reopen_when": "not applicable; the Evaluation remains open until admitted evidence supports a terminal owner decision"
+    "status": "closed",
+    "next_safe_action": "Close #2646 and #2647 when the stacked implementation and evidence PRs merge.",
+    "material_negative_followup": "Route a new material negative finding to the existing source owner or create a bounded follow-up.",
+    "reopen_when": "A later equivalent task repeats the original friction, requires renewed human steering, or invalidates the matched cost comparison."
   }
 }

@@ -4,8 +4,8 @@
   "title": "Implement bounded operating-context self-optimisation",
   "owner_level": "slice",
   "lifecycle": "live",
-  "phase": "implementation",
-  "revision": 10,
+  "phase": "closeout",
+  "revision": 11,
   "intent": {
     "outcome": "Preserve the merged #2641-#2645 foundations and deliver the remaining #2646/#2647 work through a new two-PR stack: enforce representative real-session convergence in Evaluation, then admit and conclude the current evidence through the existing bounded-adaptation owners.",
     "non_goals": [
@@ -29,7 +29,7 @@
     "effects": [
       "Independent tasks receive a stable non-interference contract and compact closeout answers avoid optional recursive hydration.",
       "Review lifecycle writes fail closed unless current topology identity is admitted; validation manifests self-heal and proof reuse follows causal dependencies.",
-      "Recurring material friction produces deduplicated source-owner adaptation candidates; proof-route candidates can execute through registered guarded authority, while consequential instruction candidates require explicit owner admission before revision-guarded canonical mutation and deterministic applicability validation. Real-session evaluation remains open until later-task benefit is observed."
+      "Recurring material friction produces deduplicated source-owner adaptation candidates; proof-route candidates can execute through registered guarded authority, while consequential instruction candidates require explicit owner admission before revision-guarded canonical mutation and deterministic applicability validation. Representative real-session evidence now establishes later-task benefit and matched cost convergence."
     ]
   },
   "relationships": {
@@ -64,16 +64,14 @@
       "locator": ""
     }
   ],
-  "next_action": "Publish the session-aware Evaluation enforcement PR, then stack the privacy-safe real-session observations and final #2646/#2647 owner disposition on top.",
-  "blockers": [
-    "The evidence PR must not conclude #2646/#2647 until six current observations cover four representative sessions, all declared workflow classes, and the matched canonical-adaptation sequence."
-  ],
+  "next_action": "Review and merge PR #2658 followed by its convergence-evidence child, then close #2646 and #2647.",
+  "blockers": [],
   "proof": {
     "claims": [
       "Independent task routing is stable, bounded, and non-interfering while real owner overlap still fails closed.",
       "Review lifecycle and validation manifest mutation are identity-safe, transactional, and self-healing.",
       "Proof follow-through is delta-shaped; low-risk proof-route adaptation executes through typed proof.report write authority while consequential scoped-instruction adaptation requires explicit owner admission and executes through typed instructions.create authority.",
-      "Evaluation closure is intentionally unclaimed until current representative real sessions and a later equivalent-task convergence sequence are admitted."
+      "Evaluation closure is owner-authorized by six current observations spanning four representative sessions and every required workflow class, including a matched later-task convergence sequence."
     ],
     "requirements": [
       "Run focused runtime and review-stack tests for #2641-#2643 plus compact output byte/hydration assertions.",
@@ -95,13 +93,15 @@
       "Durable #2645 replay maps reused, rerun-required, and excluded-unrelated subjects and removes 171.6 seconds of attributable Planning work at .agentic-workspace/planning/closeout-evidence/issue-2645-proof-route-cost-replay.replay.json",
       "57 focused adaptation and Evaluation tests passed; one inherited #1969 lane-artifact assertion remains excluded because its parent lane file is absent",
       "make maintainer-surfaces passed after adding the generated bounded-adaptation schema reference",
-      "Evaluation operating-context-cost-convergence-2646 remains collecting: no current real-session observations are admitted, and six criteria-bearing observations across at least four sessions are still required",
-      "55 Evaluation tests pass with representative-session, workflow-coverage, privacy, matched-convergence, and same-second result-identity regression coverage"
+      "Evaluation operating-context-cost-convergence-2646 initially remained collecting until current real-session evidence was admitted",
+      "56 Evaluation tests pass with representative-session, workflow-coverage, privacy, matched-convergence, same-second result-identity, compact-context authority, and active Planning owner regression coverage",
+      "Evaluation operating-context-cost-convergence-2646 is satisfied with six supporting criteria, four representative sessions, all six workflow classes, no contradictions, and no stale admitted authority at conclusion time",
+      "Matched #2647 convergence removed two unrelated Planning suite runs and 171.6 seconds of attributable work; the later equivalent task required no renewed human steering and did not repeat the friction"
     ]
   },
   "continuation": {
     "owner": "issue-2647",
-    "residual_intent": "Do not close #2647 until a later equivalent real task proves canonical convergence, and keep #2646 collecting until all six criteria are represented across four current sessions."
+    "residual_intent": "Merge the new two-PR stack in order, then close #2646 and #2647; reopen only if later equivalent work contradicts the admitted convergence result."
   },
   "specialist_contracts": [
     {
