@@ -1,5 +1,5 @@
 {
-  "kind": "agentic-workspace/evaluation-owner-receipt-index/v1",
+  "kind": "agentic-workspace/trusted-producer-receipt-index/v1",
   "receipts": {
     "4394653aa7b43e41": {
       "path": "4394653aa7b43e41.json",
@@ -27,6 +27,13 @@
       "producer_class": "aw-proof",
       "revision": "2026-08-22T17:18:24+00:00",
       "source_ref": "proof://receipts/787aea064929d3e5",
+      "status": "current"
+    },
+    "e65594576eed38f0": {
+      "path": "e65594576eed38f0.json",
+      "producer_class": "aw-proof",
+      "revision": "2026-08-22T17:56:08+00:00",
+      "source_ref": "proof://receipts/e65594576eed38f0",
       "status": "current"
     },
     "evaluation-proof:2528308565d97011c4520934": {
