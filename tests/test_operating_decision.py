@@ -23,6 +23,7 @@ from agentic_workspace.operating_decision import (
     compile_operating_decision,
     compile_projection_surface_operating_decision,
     compile_repo_improvement_action,
+    compile_repo_improvement_execution,
     context_authority_coverage,
     context_authority_declarations,
     context_consequence_effects,
@@ -291,6 +292,138 @@ def test_no_improvement_candidate_keeps_direct_work_quiet() -> None:
     assert decision["status"] == "terminal"
     assert decision["primary_action"] == {}
     assert decision["repo_improvement_action"] == {}
+    assert decision["repo_improvement_execution"] == {}
+
+
+def test_authorized_local_code_seam_reuses_ordinary_implementation_owner_and_proportionate_proof() -> None:
+    candidate = _material_improvement_candidate(
+        proposed_paths=["src/router.py"],
+        ownership={
+            "current_owner": True,
+            "mutation_authority_admitted": True,
+            "source_owner": "routing-owner",
+            "owner_revision": "routing-owner:rev-7",
+        },
+        proof_boundary={
+            "status": "local",
+            "requirements": [{"command": "pytest tests/test_router.py -q", "owner": "routing-owner"}],
+        },
+        claim_effect="bounded routing seam only",
+    )
+    action = compile_repo_improvement_action(candidate=candidate, latitude="conservative")
+    execution = compile_repo_improvement_execution(
+        action=action,
+        candidate=candidate,
+        current_work={"requested_outcome": "Fix current routing behavior"},
+    )
+
+    Draft202012Validator(_schema("repo_improvement_execution.schema.json")).validate(execution)
+    Draft202012Validator(_schema("operation_invocation.schema.json")).validate(execution["operation_invocation"])
+    assert execution["status"] == "ready-for-ordinary-implementation"
+    assert execution["route"] == "ordinary-implementation"
+    assert execution["source_owner"] == "routing-owner"
+    assert execution["mutation_scope"]["allowed_paths"] == ["src/router.py"]
+    assert execution["operation_invocation"]["operation_id"] == "implement.context"
+    assert execution["proof_requirements"] == [{"command": "pytest tests/test_router.py -q", "owner": "routing-owner"}]
+    assert execution["claim_effect"] == "bounded routing seam only"
+    assert execution["continuation"]["durability"] == "current-task"
+    assert execution["parallel_workflow_created"] is False
+
+
+def test_proactive_tooling_affordance_creates_bounded_resumable_planning_owner() -> None:
+    candidate = _material_improvement_candidate(
+        id="candidate-proof-selector-affordance",
+        symptom="proof selector reruns unrelated checks",
+        scope_relation="standalone-repo",
+        proposed_paths=["src/proof_selector.py", "tests/test_proof_selector.py"],
+        ownership={
+            "current_owner": True,
+            "mutation_authority_admitted": True,
+            "source_owner": "proof-owner",
+            "owner_revision": "proof-owner:rev-2",
+        },
+        proof_boundary={
+            "status": "bounded",
+            "requirements": [{"command": "pytest tests/test_proof_selector.py -q", "owner": "proof-owner"}],
+        },
+    )
+    action = compile_repo_improvement_action(candidate=candidate, latitude="proactive")
+    execution = compile_repo_improvement_execution(action=action, candidate=candidate)
+
+    Draft202012Validator(_schema("repo_improvement_execution.schema.json")).validate(execution)
+    Draft202012Validator(_schema("operation_invocation.schema.json")).validate(execution["operation_invocation"])
+    assert action["action_class"] == "bounded-standalone-permitted"
+    assert execution["status"] == "promotion-required"
+    assert execution["route"] == "planning-new-plan"
+    assert execution["operation_invocation"]["operation_id"] == "planning.new-plan.lifecycle"
+    assert execution["operation_invocation"]["arguments"]["source"] == candidate["id"]
+    assert execution["operation_invocation"]["arguments"]["prep_only"] is True
+    assert execution["operation_invocation"]["mutation_boundary"]["repo_mutation_authorized"] is False
+    assert execution["continuation"]["durability"] == "checked-in-planning-owner"
+    assert execution["continuation"]["resume_ref"].endswith("candidate-proof-selector-affordance.plan.json")
+
+
+@pytest.mark.parametrize("surface_class", ["generated", "managed", "human-owned", "cross-owner", "high-risk"])
+def test_guarded_improvement_surfaces_route_to_normal_owner_before_mutation(surface_class: str) -> None:
+    candidate = _material_improvement_candidate(
+        scope_relation="standalone-repo",
+        surface_class=surface_class,
+        ownership={
+            "current_owner": True,
+            "mutation_authority_admitted": True,
+            "source_owner": "declared-surface-owner",
+            "owner_revision": "owner:rev-1",
+        },
+        proof_boundary={"status": "bounded", "requirements": [{"evidence": "owner proof"}]},
+    )
+    action = compile_repo_improvement_action(candidate=candidate, latitude="proactive")
+    execution = compile_repo_improvement_execution(action=action, candidate=candidate)
+
+    assert execution["status"] == "owner-review-required"
+    assert execution["route"] == "normal-surface-owner"
+    assert execution["operation_invocation"] == {}
+    assert execution["mutation_scope"]["writes_repo_state"] is False
+
+
+def test_balanced_scope_or_authority_drift_promotes_before_mutation() -> None:
+    candidate = _material_improvement_candidate(
+        scope_relation="adjacent-scope",
+        proposed_paths=["src/adjacent.py"],
+        ownership={"current_owner": False, "mutation_authority_admitted": False, "source_owner": "adjacent-owner"},
+        proof_boundary={"status": "missing"},
+    )
+    action = compile_repo_improvement_action(candidate=candidate, latitude="balanced")
+    execution = compile_repo_improvement_execution(action=action, candidate=candidate)
+
+    assert action["action_class"] == "promote-or-review"
+    assert execution["status"] == "promotion-required"
+    assert execution["operation_invocation"]["operation_id"] == "planning.new-plan.lifecycle"
+    assert execution["operation_invocation"]["mutation_boundary"]["repo_mutation_authorized"] is False
+
+
+def test_rejected_improvement_has_one_bounded_recovery_and_preserves_original_task() -> None:
+    candidate = _material_improvement_candidate(
+        added_costs=["cross-owner coupling"],
+        future_cost_effect={"net_effect": "negative"},
+    )
+    action = compile_repo_improvement_action(candidate=candidate, latitude="proactive")
+    execution = compile_repo_improvement_execution(action=action, candidate=candidate)
+
+    assert action["action_class"] == "dismiss-or-redesign"
+    assert execution["status"] == "disposition-only"
+    assert execution["operation_invocation"] == {}
+    assert execution["failure_boundary"]["original_task"] == "semantically intact"
+    assert execution["failure_boundary"]["unrelated_repo_state"] == "must remain unchanged"
+    assert "one owner disposition" in execution["failure_boundary"]["recovery"]
+
+
+def test_improvement_execution_uses_only_registered_existing_operations() -> None:
+    registry = json.loads(Path("src/agentic_workspace/contracts/operation_contracts.json").read_text(encoding="utf-8"))
+    registered = {str(item["id"]) for item in registry["operations"]}
+
+    assert {"implement.context", "planning.new-plan.lifecycle"}.issubset(registered)
+    source = Path("src/agentic_workspace/operating_decision.py").read_text(encoding="utf-8")
+    assert "repo-improvement.execute" not in source
 
 
 def test_operating_decision_fails_closed_without_typed_invocation() -> None:

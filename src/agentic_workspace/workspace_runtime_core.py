@@ -6798,6 +6798,10 @@ def _improvement_pressure_payload(improvement_intake: dict[str, Any]) -> dict[st
             "added_costs": [str(item) for item in _list_payload(candidate.get("added_costs")) if str(item)],
             "consequential_boundaries": [str(item) for item in _list_payload(candidate.get("consequential_boundaries")) if str(item)],
             "changes_requested_ends": bool(candidate.get("changes_requested_ends")),
+            "proposed_paths": [str(item) for item in _list_payload(candidate.get("proposed_paths")) if str(item)],
+            "surface_class": str(candidate.get("surface_class") or "ordinary-source"),
+            "proof_requirements": copy.deepcopy(_list_payload(candidate.get("proof_requirements"))),
+            "claim_effect": str(candidate.get("claim_effect") or ""),
             "owner_surface": owner,
             "resulting_owner": str(candidate.get("resulting_owner") or candidate.get("issue_ref") or owner),
             "retire_when": str(

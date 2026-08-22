@@ -1734,6 +1734,11 @@ def compile_projection_surface_operating_decision(
                 "id": str(admitted_input.get("selected_owner") or ""),
                 "source": "projection-decision-input",
             },
+            "current_work": {
+                "requested_outcome": str(material_inputs.get("task") or ""),
+                "changed_paths": [str(path) for path in _as_list(material_inputs.get("changed"))],
+                "owner_revision": str(input_revisions.get("selected_owner") or input_revisions.get("planning") or ""),
+            },
             "terminal_state": posture["terminal_state"],
             "primary_action": posture["primary_action"],
             "blockers": posture["blockers"],
@@ -2237,15 +2242,15 @@ def compile_repo_improvement_action(
     initiative_authorized = False
     next_action = "retain a compact owner and re-entry trigger"
     owner_route = owner
-    if workspace_owned:
+    if review_required:
+        action_class = "human-domain-review"
+        reason = "the proposal crosses a consequential human or domain-owned boundary"
+        next_action = "obtain explicit human/domain-owner admission before changing the requested ends or authority boundary"
+    elif workspace_owned:
         action_class = "route-package-owner"
         reason = "the candidate is AW/package-owned and does not consume repository improvement latitude"
         next_action = "route through #2647 or the package owner"
         owner_route = "#2647-or-package-owner"
-    elif review_required:
-        action_class = "human-domain-review"
-        reason = "the proposal crosses a consequential human or domain-owned boundary"
-        next_action = "obtain explicit human/domain-owner admission before changing the requested ends or authority boundary"
     elif disproportionate_cost:
         action_class = "dismiss-or-redesign"
         reason = "added abstraction, coupling, concept, proof, migration, or maintenance cost is not outweighed by future benefit"
@@ -2324,6 +2329,183 @@ def compile_repo_improvement_action(
             "net_effect": net_effect or ("supported" if net_value_supported else "not-established"),
         },
         "authority_boundary": "This consequence permits initiative only; an existing owner operation must separately admit any mutation.",
+    }
+
+
+def compile_repo_improvement_execution(
+    *,
+    action: dict[str, Any] | None,
+    candidate: dict[str, Any] | None,
+    current_work: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Map an initiative consequence onto existing owner and proof machinery."""
+
+    action = _as_dict(action)
+    candidate = _as_dict(candidate)
+    current_work = _as_dict(current_work)
+    if not action or not candidate:
+        return {}
+    candidate_id = str(action.get("candidate_id") or candidate.get("id") or "improvement")
+    action_class = str(action.get("action_class") or "defer-with-owner")
+    ownership = _as_dict(candidate.get("ownership"))
+    proof_boundary = _as_dict(candidate.get("proof_boundary"))
+    paths = [
+        str(path)
+        for source in (candidate.get("proposed_paths"), current_work.get("changed_paths"), current_work.get("touched_paths"))
+        for path in _as_list(source)
+        if str(path).strip()
+    ]
+    paths = list(dict.fromkeys(paths))
+    source_owner = str(
+        ownership.get("source_owner")
+        or candidate.get("resulting_owner")
+        or candidate.get("suspected_owner")
+        or action.get("owner")
+        or "unknown"
+    )
+    owner_revision = str(ownership.get("owner_revision") or current_work.get("owner_revision") or action.get("input_revision") or "")
+    proof_requirements = [
+        copy.deepcopy(item)
+        for source in (proof_boundary.get("requirements"), candidate.get("proof_requirements"), current_work.get("proof_requirements"))
+        for item in _as_list(source)
+        if item not in ("", None, {}, [])
+    ]
+    if not proof_requirements and proof_boundary.get("route"):
+        proof_requirements = [{"command": str(proof_boundary["route"]), "owner": source_owner}]
+    claim_effect = str(
+        candidate.get("claim_effect")
+        or "authorizes only the bounded improvement claim; the original requested outcome keeps its own completion proof"
+    )
+    surface_class = str(candidate.get("surface_class") or "ordinary-source")
+    guarded_surface = surface_class in {"generated", "managed", "human-owned", "cross-owner", "high-risk"}
+    direct_classes = {"improve-touched-scope", "bounded-current-slice"}
+    planning_classes = {"bounded-standalone-permitted", "promote-or-review"}
+    status = "disposition-only"
+    route = "record-disposition"
+    invocation: dict[str, Any] = {}
+    mutation_scope: dict[str, Any] = {"allowed_paths": [], "writes_repo_state": False}
+    continuation = {
+        "kind": "agentic-workspace/repo-improvement-continuation/v1",
+        "owner": source_owner,
+        "candidate_id": candidate_id,
+        "resume_ref": str(candidate.get("issue_ref") or candidate.get("posture_obligation_ref") or candidate_id),
+        "durability": "current-task" if action_class in direct_classes else "owner-route",
+    }
+
+    if action_class in direct_classes and action.get("initiative_authorized") is True and not guarded_surface:
+        if not paths or source_owner in {"", "unknown"} or not owner_revision or not proof_requirements:
+            status = "promotion-required"
+            route = "planning-or-owner-review"
+        else:
+            status = "ready-for-ordinary-implementation"
+            route = "ordinary-implementation"
+            mutation_scope = {
+                "allowed_paths": paths,
+                "writes_repo_state": True,
+                "source_owner": source_owner,
+                "owner_revision": owner_revision,
+                "scope_relation": str(candidate.get("scope_relation") or "current-scope"),
+            }
+            invocation = operation_invocation(
+                operation_id="implement.context",
+                arguments={"target": ".", "changed": paths, "task": str(current_work.get("requested_outcome") or "")},
+                effect_class="derived-output",
+                authority_class="ordinary-implementation-owner",
+                expected_transition="admit bounded improvement scope before ordinary owner implementation",
+                preconditions={
+                    "candidate_id": candidate_id,
+                    "requested_ends_unchanged": not bool(candidate.get("changes_requested_ends")),
+                },
+                owner_context_revision={"owner_id": source_owner, "owner_revision": owner_revision},
+                mutation_boundary=mutation_scope,
+                proof_requirements=proof_requirements,
+                claim_effect=claim_effect,
+                command_rendering="agentic-workspace implement --changed <admitted-paths> --task <original-outcome> --format json",
+            )
+    elif action_class in planning_classes:
+        if guarded_surface and action_class == "bounded-standalone-permitted":
+            status = "owner-review-required"
+            route = "normal-surface-owner"
+        else:
+            status = "promotion-required"
+            route = "planning-new-plan"
+            slice_id = "improvement-" + "".join(
+                character if character.isalnum() or character == "-" else "-" for character in candidate_id
+            )[:48].strip("-")
+            invocation = operation_invocation(
+                operation_id="planning.new-plan.lifecycle",
+                arguments={
+                    "id": slice_id,
+                    "title": str(candidate.get("symptom") or candidate.get("what_keeps_going_wrong") or "Bounded repo improvement"),
+                    "source": candidate_id,
+                    "target": ".",
+                    "prep_only": True,
+                },
+                effect_class="lifecycle-mutation",
+                authority_class="planning-owner",
+                expected_transition="create a bounded resumable Planning owner for the admitted improvement signal",
+                preconditions={"candidate_id": candidate_id, "owner_admission_required_before_repo_mutation": True},
+                owner_context_revision={"owner_id": "planning", "candidate_id": candidate_id},
+                mutation_boundary={
+                    "allowed_paths": [".agentic-workspace/planning/"],
+                    "writes_repo_state": True,
+                    "repo_mutation_authorized": False,
+                },
+                proof_requirements=[
+                    {"owner": "planning", "evidence": "schema-valid execplan and preserved candidate identity"},
+                    *proof_requirements,
+                ],
+                claim_effect=claim_effect,
+                command_rendering="agentic-planning new-plan --id <bounded-id> --title <signal> --prep-only --format json",
+            )
+            continuation = {
+                **continuation,
+                "owner": "planning",
+                "durability": "checked-in-planning-owner",
+                "resume_ref": f".agentic-workspace/planning/execplans/{slice_id}.plan.json",
+            }
+    elif action_class == "human-domain-review" or guarded_surface:
+        status = "owner-review-required"
+        route = "normal-surface-owner"
+    elif action_class == "route-package-owner":
+        status = "owner-route-required"
+        route = "#2647-or-package-owner"
+
+    revision_inputs = {
+        "action_input_revision": str(action.get("input_revision") or ""),
+        "candidate_id": candidate_id,
+        "status": status,
+        "route": route,
+        "source_owner": source_owner,
+        "owner_revision": owner_revision,
+        "paths": paths,
+        "proof_requirements": proof_requirements,
+        "claim_effect": claim_effect,
+        "surface_class": surface_class,
+        "operation_revision": str(invocation.get("producer_revision") or ""),
+    }
+    revision = "sha256:" + _digest(revision_inputs)
+    return {
+        "kind": "agentic-workspace/repo-improvement-execution/v1",
+        "execution_id": f"repo-improvement-execution:{_digest({'revision': revision})[:16]}",
+        "input_revision": revision,
+        "candidate_id": candidate_id,
+        "status": status,
+        "route": route,
+        "source_owner": source_owner,
+        "mutation_scope": mutation_scope,
+        "expected_transition": str(invocation.get("expected_transition") or action.get("next_action") or "record disposition"),
+        "proof_requirements": proof_requirements,
+        "claim_effect": claim_effect,
+        "operation_invocation": invocation,
+        "continuation": continuation,
+        "failure_boundary": {
+            "original_task": "semantically intact",
+            "unrelated_repo_state": "must remain unchanged",
+            "recovery": "refresh the operating decision, then retry the same idempotency key or record one owner disposition",
+        },
+        "parallel_workflow_created": False,
+        "rule": "Improvement initiative reuses ordinary implementation, Planning, source ownership, and proof; this packet is not an executor or backlog.",
     }
 
 
@@ -2412,6 +2594,11 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         latitude=str(inputs.get("improvement_latitude") or "conservative"),
         current_work=_as_dict(inputs.get("current_work")),
     )
+    repo_improvement_execution = compile_repo_improvement_execution(
+        action=repo_improvement_action,
+        candidate=_as_dict(inputs.get("improvement_candidate")),
+        current_work=_as_dict(inputs.get("current_work")),
+    )
     revisions = _as_dict(inputs.get("revisions"))
     if intent_feedback["applicable_expectations"]:
         revisions = {**revisions, "intent_feedback_revision": intent_feedback["input_revision"]}
@@ -2423,6 +2610,8 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         revisions = {**revisions, "instruction_clause_revision": instruction_clause_projection["snapshot_revision"]}
     if repo_improvement_action:
         revisions = {**revisions, "repo_improvement_action_revision": repo_improvement_action["input_revision"]}
+    if repo_improvement_execution:
+        revisions = {**revisions, "repo_improvement_execution_revision": repo_improvement_execution["input_revision"]}
     if reconciliation["status"] != "not-requested":
         revisions = {**revisions, "reconciliation_revision": reconciliation["input_revision"]}
     if control_inputs["effects"] or control_inputs["conflicts"]:
@@ -2646,6 +2835,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         "memory_effectiveness": memory_effectiveness,
         "source_guidance": source_guidance,
         "repo_improvement_action": repo_improvement_action,
+        "repo_improvement_execution": repo_improvement_execution,
         "instruction_clause_projection": instruction_clause_projection,
         "scoped_instruction_projection": scoped_instruction_projection,
         "reconciliation": reconciliation,

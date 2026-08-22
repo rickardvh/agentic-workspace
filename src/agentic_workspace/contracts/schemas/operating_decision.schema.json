@@ -80,6 +80,10 @@
       "type": "object",
       "description": "Mode-constrained initiative consequence for one admitted material repo-improvement candidate; empty when no candidate exists. Mutation still requires an existing owner operation."
     },
+    "repo_improvement_execution": {
+      "type": "object",
+      "description": "Existing-owner implementation, Planning promotion, review, or disposition mapping for the admitted repo-improvement action; empty when no candidate exists."
+    },
     "instruction_clause_projection": {
       "type": "object",
       "description": "Revision-bound explanation of source-owned facts, bounded clauses, composed effects, and target-scoped blockers feeding this compiler."
