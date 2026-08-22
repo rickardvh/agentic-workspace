@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from agentic_workspace.evaluation import register_evaluation
+from agentic_workspace.evaluation import register_evaluation, resolve_evaluation_result
 
 
 def _mapping(value: Any) -> dict[str, Any]:
@@ -45,6 +45,101 @@ def _compact_observation(value: dict[str, Any]) -> dict[str, Any]:
         "owner",
     )
     return {key: value[key] for key in allowed if value.get(key) not in (None, "", [], {})}
+
+
+def _admitted_evaluation_observations(
+    *,
+    result: dict[str, Any],
+    evaluation_id: str,
+    candidate_id: str,
+    owner: str,
+    comparable_shape: str,
+) -> tuple[list[dict[str, Any]], dict[str, Any], int]:
+    """Consume only current Evaluation-owned result identities."""
+
+    reasons: list[str] = []
+    if result.get("kind") != "agentic-workspace/evaluation-owned-result/v1" or result.get("status") != "current":
+        reasons.append("missing-current-evaluation-result")
+    if str(result.get("evaluation_id") or "") != evaluation_id:
+        reasons.append("wrong-evaluation-identity")
+    if str(_mapping(result.get("decision_owner")).get("id") or "") != owner:
+        reasons.append("wrong-decision-owner")
+    subject = _mapping(result.get("subject"))
+    if str(subject.get("candidate_id") or "") != candidate_id:
+        reasons.append("wrong-candidate-subject")
+    if str(subject.get("comparable_task_shape") or "") != comparable_shape:
+        reasons.append("wrong-comparable-task-shape")
+    criteria_status = _mapping(result.get("criteria_status"))
+    if _items(criteria_status.get("missing")):
+        reasons.append("required-criteria-missing")
+
+    current = _mapping(result.get("current_result"))
+    current_revision = int(result.get("definition_revision") or 0)
+    superseded_ids = {str(item) for item in _items(current.get("superseded_ids")) if str(item)}
+    freshness = {
+        str(item.get("result_identity") or ""): str(item.get("status") or "")
+        for item in _items(current.get("freshness_records"))
+        if isinstance(item, dict)
+    }
+    compact: dict[str, dict[str, Any]] = {}
+    result_identities: list[str] = []
+    raw_count = 0
+    for item in _items(current.get("current_observations")):
+        if not isinstance(item, dict):
+            reasons.append("malformed-current-observation")
+            continue
+        admission = _mapping(item.get("admission"))
+        identity = _mapping(item.get("result_identity"))
+        result_id = str(identity.get("id") or "")
+        if (
+            admission.get("status") != "admitted"
+            or admission.get("bound_context") is not True
+            or identity.get("status") != "current"
+            or str(identity.get("evaluation_id") or "") != evaluation_id
+            or int(identity.get("definition_revision") or 0) != current_revision
+            or not result_id
+            or result_id in superseded_ids
+            or freshness.get(result_id) != "fresh"
+        ):
+            reasons.append("stale-superseded-or-unadmitted-result")
+            continue
+        result_identities.append(result_id)
+        context = _mapping(item.get("context"))
+        observation_set = _items(context.get("repo_improvement_observations"))
+        if _contains_raw_context(observation_set):
+            raw_count += len(observation_set)
+            reasons.append("raw-context-rejected")
+            continue
+        for observation in observation_set:
+            if not isinstance(observation, dict):
+                continue
+            compact_observation = _compact_observation(observation)
+            observation_id = str(compact_observation.get("observation_id") or "")
+            if not observation_id:
+                reasons.append("observation-identity-missing")
+                continue
+            if str(compact_observation.get("candidate_id") or "") != candidate_id:
+                reasons.append("wrong-observation-candidate")
+                continue
+            if str(compact_observation.get("task_shape") or "") != comparable_shape:
+                reasons.append("wrong-observation-task-shape")
+                continue
+            if compact_observation.get("comparable") is not True:
+                reasons.append("observation-not-comparable")
+                continue
+            compact[observation_id] = compact_observation
+    authority = {
+        "kind": "agentic-workspace/repo-improvement-evaluation-authority/v1",
+        "status": "admitted" if not reasons and compact else "rejected",
+        "evaluation_id": evaluation_id,
+        "definition_revision": current_revision,
+        "decision_owner": owner,
+        "result_identities": sorted(set(result_identities)),
+        "criteria_status": criteria_status,
+        "reasons": sorted(set(reasons)),
+        "rule": "Longitudinal conclusions consume only fresh bound current results issued by Evaluation.",
+    }
+    return (list(compact.values()) if authority["status"] == "admitted" else [], authority, raw_count)
 
 
 def _evaluation_definition(*, candidate_id: str, claim: dict[str, Any], owner: str, evidence_refs: list[str]) -> dict[str, Any]:
@@ -129,7 +224,7 @@ def register_repo_improvement_evaluation(*, target_root: Path, effectiveness: di
     )
 
 
-def compile_repo_improvement_effectiveness(*, candidate: dict[str, Any] | None) -> dict[str, Any]:
+def compile_repo_improvement_effectiveness(*, candidate: dict[str, Any] | None, target_root: Path | None = None) -> dict[str, Any]:
     """Classify recurrence and retire or route the originating pressure."""
 
     candidate = _mapping(candidate)
@@ -151,18 +246,21 @@ def compile_repo_improvement_effectiveness(*, candidate: dict[str, Any] | None) 
         for item in _items(source)
         if str(item).strip()
     ]
+    caller_observations = [item for item in _items(candidate.get("later_observations")) if isinstance(item, dict)]
     rejected_observations = [
         item for item in _items(candidate.get("later_observations")) if isinstance(item, dict) and _contains_raw_context(item)
     ]
-    observations = [
-        _compact_observation(item)
-        for item in _items(candidate.get("later_observations"))
-        if isinstance(item, dict) and not _contains_raw_context(item)
-    ]
-    comparable_shape = str(claim.get("comparable_task_shape") or "")
-    comparable = [
-        item for item in observations if item.get("comparable") is True or (comparable_shape and item.get("task_shape") == comparable_shape)
-    ]
+    comparable_shape = str(claim.get("comparable_task_shape") or "equivalent owner and proof route")
+    expected_definition = _evaluation_definition(candidate_id=candidate_id, claim=claim, owner=owner, evidence_refs=evidence_refs)
+    evaluation_id = str(expected_definition["id"])
+    owned_result = resolve_evaluation_result(target_root=target_root, evaluation_id=evaluation_id) if target_root else {}
+    comparable, evaluation_authority, evaluation_raw_count = _admitted_evaluation_observations(
+        result=owned_result,
+        evaluation_id=evaluation_id,
+        candidate_id=candidate_id,
+        owner=owner,
+        comparable_shape=comparable_shape,
+    )
     minimum = max(2, int(claim.get("minimum_comparable_observations") or 2))
     stronger_owner = _mapping(candidate.get("stronger_owner"))
     misclassified = any(item.get("misclassified") is True for item in comparable)
@@ -229,7 +327,7 @@ def compile_repo_improvement_effectiveness(*, candidate: dict[str, Any] | None) 
 
     terminal = classification in {"resolved", "resolved-deterministically", "obsolete-stronger-owner", "misclassified"}
     evaluation_definition = (
-        _evaluation_definition(candidate_id=candidate_id, claim=claim, owner=owner, evidence_refs=evidence_refs)
+        expected_definition
         if longitudinal_required and not terminal and proof_complete and expected_benefit and regression_dimension
         else {}
     )
@@ -280,8 +378,10 @@ def compile_repo_improvement_effectiveness(*, candidate: dict[str, Any] | None) 
         "next_action": next_action,
         "human_visibility": human_visibility,
         "comparable_observation_count": len(comparable),
-        "rejected_raw_context_observation_count": len(rejected_observations),
+        "rejected_raw_context_observation_count": len(rejected_observations) + evaluation_raw_count,
+        "rejected_unadmitted_observation_count": len(caller_observations),
         "evaluation_definition": evaluation_definition,
+        "evaluation_result_authority": evaluation_authority,
         "residue": residue,
         "recurring_context_required": not terminal,
         "ordinary_projection": {} if terminal else {"classification": classification, "owner": owner, "next_action": next_action},

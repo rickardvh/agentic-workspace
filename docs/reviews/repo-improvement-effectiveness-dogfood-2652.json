@@ -19,6 +19,15 @@
     ]
   },
   "comparable_task_shape": "workspace runtime and contract change with changed-path-selected proof",
+  "evaluation": {
+    "definition_id": "repo-improvement-63df27661c943c4e",
+    "decision_owner": "workspace-proof-selection",
+    "required_criteria": ["recurrence", "operability-benefit", "shifted-cost"],
+    "result_authority": "agentic_workspace.evaluation.resolve_evaluation_result",
+    "admission_route": "evaluation.observe",
+    "evidence_reference": "docs/reviews/repo-improvement-effectiveness-dogfood-2652.json",
+    "rule": "This sequence is contextual evidence only; terminal retirement requires fresh bound current Evaluation result identities that reference it."
+  },
   "later_observations": [
     {
       "observation_id": "pr-2668-proof",
@@ -48,5 +57,5 @@
     "retirement": "Retire active improvement pressure; retain only the replay as expensive-to-rediscover counterexample rationale."
   },
   "privacy": "No raw prompt, transcript, message, or per-command event stream is retained.",
-  "authority_boundary": "The replay and later PR proof establish this repository-specific dogfood conclusion; the generic compiler only classifies admitted compact evidence."
+  "authority_boundary": "The replay and later PR proof are contextual evidence. Evaluation alone admits current result identities and authorizes the longitudinal conclusion consumed by the generic compiler."
 }

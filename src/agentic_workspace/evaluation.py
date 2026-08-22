@@ -2672,6 +2672,55 @@ def current_evaluation_results(
     }
 
 
+def resolve_evaluation_result(*, target_root: Path, evaluation_id: str) -> dict[str, Any]:
+    """Return Evaluation-owned current result authority for one definition.
+
+    Consumers receive the registered owner, subject, criteria, and the
+    current-result resolver in one payload so caller-authored observations
+    cannot substitute for Evaluation admission or freshness handling.
+    """
+
+    definitions = _definitions_payload(target_root)
+    definition = _definition_by_id(definitions, evaluation_id)
+    if definition is None:
+        return {
+            "kind": "agentic-workspace/evaluation-owned-result/v1",
+            "status": "missing-definition",
+            "evaluation_id": evaluation_id,
+            "current_result": {},
+        }
+    current = current_evaluation_results(
+        definition,
+        _load_observations(target_root, evaluation_id),
+        target_root=target_root,
+    )
+    required_criteria = [
+        str(item.get("id") or "")
+        for item in definition.get("criteria", [])
+        if isinstance(item, dict) and item.get("required", True) and str(item.get("id") or "")
+    ]
+    current_criteria = {str(item.get("criterion") or "") for item in current.get("current_observations", []) if isinstance(item, dict)}
+    return {
+        "kind": "agentic-workspace/evaluation-owned-result/v1",
+        "status": "current" if current.get("status") == "present" else "awaiting-current-result",
+        "evaluation_id": evaluation_id,
+        "definition_revision": int(definition.get("revision") or 0),
+        "lifecycle": str(definition.get("lifecycle") or ""),
+        "decision_owner": _as_mapping(definition.get("decision_owner")),
+        "subject": _as_mapping(definition.get("subject")),
+        "criteria": [dict(item) for item in definition.get("criteria", []) if isinstance(item, dict)],
+        "collection_policy": _as_mapping(definition.get("collection_policy")),
+        "criteria_status": {
+            "required": required_criteria,
+            "current": sorted(current_criteria),
+            "missing": sorted(set(required_criteria) - current_criteria),
+        },
+        "current_result": current,
+        "authority": "agentic_workspace.evaluation.resolve_evaluation_result",
+        "rule": "Only fresh, bound, non-superseded current results from Evaluation may authorize downstream longitudinal conclusions.",
+    }
+
+
 def _evaluation_specialist_authority(definition: dict[str, Any]) -> dict[str, Any]:
     evidence_classes = sorted(
         {

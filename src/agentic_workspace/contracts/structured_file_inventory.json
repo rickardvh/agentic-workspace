@@ -979,6 +979,18 @@
       "storage_class": "source-of-truth"
     },
     {
+      "checked_in_justification": "Maintainer-reviewed longitudinal dogfood evidence demonstrates the Evaluation admission route without becoming runtime result authority.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "notes": "The fixture supplies compact contextual evidence; only fresh, bound, non-superseded Evaluation result identities can authorize an effectiveness conclusion.",
+      "owner": "workspace-evaluation",
+      "pattern": "docs/reviews/repo-improvement-effectiveness-dogfood-2652.json",
+      "schema_or_validator": "validator: uv run pytest tests/test_repo_improvement_effectiveness.py::test_dogfood_artifact_is_complete_and_retires_resolved_pressure",
+      "status": "typed-validator-backed",
+      "storage_class": "diagnostic-fixture"
+    },
+    {
       "checked_in_justification": "Maintainer-reviewed dogfooding evidence used to prioritize product work; not package runtime authority.",
       "editable_by_agents": true,
       "format": "json",

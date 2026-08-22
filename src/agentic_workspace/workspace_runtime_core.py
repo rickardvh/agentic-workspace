@@ -6762,14 +6762,14 @@ def _improvement_consequence_for_record(record: dict[str, Any]) -> dict[str, Any
     }
 
 
-def _improvement_pressure_payload(improvement_intake: dict[str, Any]) -> dict[str, Any]:
+def _improvement_pressure_payload(improvement_intake: dict[str, Any], *, target_root: Path | None = None) -> dict[str, Any]:
     candidates = [item for item in _list_payload(improvement_intake.get("improvement_signal_candidates")) if isinstance(item, dict)]
     records: list[dict[str, Any]] = []
     for candidate in candidates:
         owner = str(candidate.get("suspected_owner") or candidate.get("source") or "unknown").strip()
         record_id = "pressure-" + _decision_slug(f"{candidate.get('kind', 'signal')}-{owner}")[:72]
         state = _improvement_pressure_state(candidate)
-        effectiveness = compile_repo_improvement_effectiveness(candidate=candidate)
+        effectiveness = compile_repo_improvement_effectiveness(candidate=candidate, target_root=target_root)
         if effectiveness.get("signal_state") in {"mitigated", "obsolete"}:
             state = str(effectiveness["signal_state"])
         record: dict[str, Any] = {
@@ -6903,7 +6903,7 @@ def _session_improvement_pressure_payload(
         candidate["posture_obligation_ref"] = f"session-improvement-pressure-{index}-owner-route"
         candidates.append(candidate)
     if candidates:
-        pressure = _improvement_pressure_payload({"improvement_signal_candidates": candidates})
+        pressure = _improvement_pressure_payload({"improvement_signal_candidates": candidates}, target_root=target_root)
         pressure["source_intake"] = "session_improvement_intake"
         pressure["intake_status"] = status
         pressure["detail_command"] = _command_with_cli_invoke(
@@ -12709,7 +12709,7 @@ def _run_report_command(
     )
     workflow_obligations = _workflow_obligations_report_payload(config=config, active_planning_record=active_planning_record)
     improvement_intake = _improvement_intake_payload(target_root=target_root, config=config, repo_friction=repo_friction)
-    improvement_pressure = _improvement_pressure_payload(improvement_intake)
+    improvement_pressure = _improvement_pressure_payload(improvement_intake, target_root=target_root)
     intent_custody = _intent_custody_payload(
         task_text=None,
         active_planning_record=raw_active_planning_record or active_planning_record,

@@ -2619,7 +2619,11 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         candidate=_as_dict(inputs.get("improvement_candidate")),
         current_work=_as_dict(inputs.get("current_work")),
     )
-    repo_improvement_effectiveness = compile_repo_improvement_effectiveness(candidate=_as_dict(inputs.get("improvement_candidate")))
+    improvement_target_root = str(inputs.get("target_root") or "").strip()
+    repo_improvement_effectiveness = compile_repo_improvement_effectiveness(
+        candidate=_as_dict(inputs.get("improvement_candidate")),
+        target_root=Path(improvement_target_root) if improvement_target_root else None,
+    )
     revisions = _as_dict(inputs.get("revisions"))
     if intent_feedback["applicable_expectations"]:
         revisions = {**revisions, "intent_feedback_revision": intent_feedback["input_revision"]}

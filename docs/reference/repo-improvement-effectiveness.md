@@ -25,7 +25,9 @@ Sparse owner-bound recurrence, shifted-cost, Evaluation, and residue-retirement 
 | `human_visibility` | enum `"background-owner-route"`, `"compact-owner-visible"` | yes |  | Whether unresolved or worsening pressure must be visible without polling. |  |  |
 | `comparable_observation_count` | integer | yes |  | Privacy-safe later observations admitted as task-shape comparable. |  |  |
 | `rejected_raw_context_observation_count` | integer | yes |  | Observations rejected because they contain raw prompt, transcript, or message context. |  |  |
+| `rejected_unadmitted_observation_count` | integer | yes |  | Caller-supplied later observations rejected because they did not pass through Evaluation result admission. |  |  |
 | `evaluation_definition` | object | yes |  | Existing Evaluation definition when later use is genuinely required; empty for deterministic or terminal outcomes. |  |  |
+| `evaluation_result_authority` | object | yes |  | Evaluation-owned current result identities, owner, criteria status, and fail-closed rejection reasons used for longitudinal conclusions. |  |  |
 | `residue` | object | yes |  | Signal, Planning, review, Memory, and counterexample rationale retirement plan. |  |  |
 | `recurring_context_required` | boolean | yes |  | False when mature success or stronger-owner state should disappear from recurring context. |  |  |
 | `ordinary_projection` | object | yes |  | Compact unresolved/worsening owner route; empty after mature terminal retirement. |  |  |

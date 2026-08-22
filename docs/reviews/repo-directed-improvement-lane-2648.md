@@ -12,7 +12,7 @@ The lane now uses one existing Resolve → Act → Reconcile chain:
 | Latitude-controlled consequence | canonical operating decision | one mode-independent-awareness action consequence for `none`, `reporting`, `conservative`, `balanced`, or `proactive` |
 | Bounded execution or promotion | source owner, ordinary implementation, and Planning | exact owner/scope/proof/claim mapping to `implement.context` or `planning.new-plan.lifecycle`; no improvement executor or backlog |
 | Present implementation proof | existing operation and proof contracts | revision-bound proof requirements remain proportional to the changed claim |
-| Later operability learning | existing Evaluation owner | one Evaluation definition only when later comparable use is necessary; deterministic claims close on present proof |
+| Later operability learning | existing Evaluation owner | one Evaluation definition only when later comparable use is necessary; longitudinal conclusions consume only fresh, bound, non-superseded Evaluation result identities, while deterministic claims close on present proof |
 | Recurrence and residue | originating signal owner, Planning, review, and Memory | refine/promote/revert on recurrence or shifted cost; retire/shrink mature, obsolete, or misclassified pressure |
 
 AW/package-owned friction routes to the package owner instead of consuming repository latitude. Product intent, architecture direction, security/trust, public compatibility, broader ownership, and broader claims require explicit human/domain admission in every mode.
@@ -31,7 +31,7 @@ After this lane:
 - ineffective or locally optimized changes return to the originating owner with their existing identity;
 - mature success removes recurring pressure instead of asking the human to keep polling a report.
 
-The real dogfood sequence in `docs/reviews/repo-improvement-effectiveness-dogfood-2652.json` records a proof-routing workaround becoming a repository improvement and being checked across later equivalent #2668 and #2669 work. Unrelated Planning suite runs fell from two to zero, removing 171.6 attributable seconds while focused changed-claim coverage remained present.
+The real dogfood sequence in `docs/reviews/repo-improvement-effectiveness-dogfood-2652.json` records a proof-routing workaround becoming a repository improvement and being checked across later equivalent #2668 and #2669 work. Its observations are admitted through the registered Evaluation definition and bound owner context; the artifact is evidence, not conclusion authority. Unrelated Planning suite runs fell from two to zero, removing 171.6 attributable seconds while focused changed-claim coverage remained present.
 
 ## Direct-work cost and residue
 
@@ -42,6 +42,7 @@ No-signal direct work remains structurally quiet:
 - candidate capture writes only the existing local session cache until evidence earns an owner route;
 - terminal `mitigated` or `obsolete` pressure is excluded from ordinary task posture and retains only compact audit provenance;
 - raw prompts, transcripts, messages, and per-command event streams are rejected from later-observation evidence.
+- caller-supplied later observations are rejected even when structurally plausible; terminal retirement requires current Evaluation-owned result identities for every required criterion.
 
 ## Counterexamples proved
 
