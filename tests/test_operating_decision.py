@@ -24,6 +24,7 @@ from agentic_workspace.operating_decision import (
     admit_projection_surface_decision_input,
     bind_operation_invocation_to_authorities,
     classify_context_currentness,
+    compile_context_maintenance_decision,
     compile_operating_decision,
     compile_projection_surface_operating_decision,
     compile_repo_improvement_action,
@@ -335,6 +336,8 @@ def test_material_coverage_candidate_enters_existing_closeout_gate() -> None:
     candidate = decision["bounded_adaptations"]["candidates"][0]
     assert candidate["coverage"]["authority"] == "evidence"
     assert candidate["status"] == "owner-review-required"
+    assert decision["primary_action"]["action"] == "request-context-maintenance-decision"
+    assert decision["primary_action"]["decision_id"] == decision["maintenance_decision"]["decision_id"]
 
 
 def test_deferrable_coverage_candidate_does_not_block_unrelated_direct_work() -> None:
@@ -1963,6 +1966,98 @@ def test_operating_decision_routes_read_only_context_refresh_without_mutation_ba
     assert rejected["status"] == "actionable"
     assert rejected["primary_action"]["operation_invocation"]["requested_mutation_boundary"]["writes_repo_state"] is False
     assert rejected["external_blocker"] == {}
+
+
+def _semantic_currentness_projection() -> dict[str, object]:
+    return {
+        "kind": "agentic-workspace/context-authority-projection/v1",
+        "status": "repair-required",
+        "repair_operation": {"repairs": []},
+        "currentness": {
+            "decision_requirements": [
+                {
+                    "surface": "scoped-instructions",
+                    "owner": "scoped instruction owner",
+                    "operation_id": "instructions.create",
+                    "disposition": "decision-required",
+                    "reason_code": "semantic-ambiguity",
+                    "observed_change": "A moved API path may establish a new policy boundary.",
+                    "why_semantic": "The move can mean either a rename or a distinct ownership boundary.",
+                    "evidence_refs": ["src/api_v2/router.py", "review:ownership-question"],
+                    "affected_effects": ["authority", "procedure"],
+                    "expected_registry_revision": "sha256:registry-r1",
+                    "expected_source_revision": "sha256:instruction-r1",
+                    "proposed_delta": {"action": "append_guidance", "guidance": "Treat api_v2 as a distinct boundary."},
+                }
+            ]
+        },
+    }
+
+
+def test_negative_drift_and_positive_coverage_reach_same_compact_decision_boundary() -> None:
+    negative = compile_context_maintenance_decision(
+        context_projection=_semantic_currentness_projection(),
+        bounded_adaptations={"candidates": []},
+    )
+    positive = compile_operating_decision(
+        inputs={"consumer": "unregistered-test-consumer", "coverage_observations": [_coverage_observation()]}
+    )["maintenance_decision"]
+
+    assert negative["kind"] == positive["kind"] == "agentic-workspace/context-maintenance-decision/v1"
+    assert negative["case_kind"] == "negative-drift"
+    assert positive["case_kind"] == "positive-coverage"
+    assert negative["first_line"]["detail_selector"] == "maintenance_decision.detail"
+    assert "evidence_refs" not in negative["first_line"]
+    assert {item["id"] for item in negative["alternatives"]} == {"admit", "retain", "defer", "dismiss"}
+    assert all(item["apply_operation"]["operation_id"] == "instructions.create" for item in negative["alternatives"])
+    assert all(item["apply_operation"]["preconditions"]["source_revision"] == "sha256:instruction-r1" for item in negative["alternatives"])
+
+
+def test_semantic_maintenance_surfaces_as_ordinary_agent_action(monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentic_workspace import operating_decision
+
+    monkeypatch.setattr(operating_decision, "resolve_context_authority_projection", lambda **_kwargs: _semantic_currentness_projection())
+
+    decision = compile_operating_decision(inputs={"consumer": "implement"})
+
+    assert decision["status"] == "blocked"
+    assert decision["primary_action"]["action"] == "request-context-maintenance-decision"
+    assert decision["primary_action"]["human_decision"]["choice_ids"] == ["admit", "retain", "defer", "dismiss"]
+    assert decision["primary_action"]["detail_selector"] == "maintenance_decision"
+    assert decision["external_blocker"]["reason_code"] == "conflicting-input"
+
+
+def test_deterministic_repair_bypasses_human_decision_and_consequential_observation_cannot() -> None:
+    deterministic = compile_context_maintenance_decision(
+        context_projection=_repairable_context_projection(),
+        bounded_adaptations={"candidates": []},
+    )
+    consequential = compile_operating_decision(
+        inputs={
+            "consumer": "unregistered-test-consumer",
+            "coverage_observations": [_coverage_observation(owner_class="security", consequential=True, admission="deterministic")],
+        }
+    )["maintenance_decision"]
+
+    assert deterministic["status"] == "not-required"
+    assert consequential["status"] == "decision-required"
+    assert consequential["requires_response_now"] is True
+    assert consequential["detail"]["why_not_automatic"].startswith("the observation is evidence")
+
+
+def test_deferred_semantic_decision_retains_exact_owner_trigger_without_blocking() -> None:
+    decision = compile_operating_decision(
+        inputs={
+            "consumer": "unregistered-test-consumer",
+            "coverage_observations": [_coverage_observation(defer_until="next src/api/** change")],
+        }
+    )
+
+    assert decision["maintenance_decision"]["status"] == "deferred"
+    assert decision["maintenance_decision"]["requires_response_now"] is False
+    assert decision["maintenance_decision"]["defer_until"] == "next src/api/** change"
+    assert decision["primary_action"] == {}
+    assert decision["context_effects"]["blocked_claim_classes"] == []
 
 
 def test_context_authority_projection_rejects_configured_empty_and_missing_required_sources(tmp_path: Path) -> None:

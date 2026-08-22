@@ -25,30 +25,48 @@
     {
       "id": "repo-evolution-reconciliation-coverage",
       "title": "Reconcile deterministic drift and admit coverage",
-      "status": "active",
+      "status": "completed",
       "execplan_ref": ".agentic-workspace/planning/execplans/repo-evolution-reconciliation-coverage.plan.json",
       "depends_on": [
         "repo-evolution-currentness-reconciliation"
       ],
       "purpose_for_lane": "Close #2663 and #2664 with contract-backed owner refresh/repair actions, fail-closed unsupported transitions, quiet repeated resolution, and bounded coverage candidates."
+    },
+    {
+      "id": "repo-evolution-semantic-proof",
+      "title": "Surface semantic decisions and prove repository evolution",
+      "status": "active",
+      "execplan_ref": ".agentic-workspace/planning/execplans/repo-evolution-semantic-proof.plan.json",
+      "depends_on": [
+        "repo-evolution-reconciliation-coverage"
+      ],
+      "purpose_for_lane": "Close #2665 and #2666 with persisted semantic decisions and actual multi-owner replay, then provide aggregate close permission for parent #2661."
     }
   ],
-  "current_slice": "repo-evolution-reconciliation-coverage",
+  "current_slice": "repo-evolution-semantic-proof",
   "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
   "proof_strategy": "Aggregate focused behavior proof per PR, then require #2666 deterministic multi-change and real dogfood evidence before parent closure.",
   "proof_aggregation": {
-    "status": "not-started",
-    "evidence": [],
-    "known_gaps": []
+    "status": "satisfied",
+    "evidence": [
+      "PR #2672 defines owner-bound currentness and exact owner obligations.",
+      "PR #2673 composes deterministic reconciliation and bounded coverage admission.",
+      "The final slice passes 137 focused tests, 42 supporting tests, and every routed validation command.",
+      "tests/fixtures/repo_evolution_scenario.json and docs/maintainer/repo-evolution-dogfood-2026-08-22.md provide deterministic and real-session evidence."
+    ],
+    "known_gaps": [
+      "Real pre-seam dogfood required one typed owner-select action and one direct Planning lifecycle edit; the mismatch and reopen trigger are retained explicitly.",
+      "Two voluntary broad checks expose unrelated existing harness/container gaps: composed-operation scenarios expect an omitted compact planning_safety_gate, and generated Docker conformance lacks /work/LICENSE. Neither surface changed in this stack or weakens selected proof."
+    ]
   },
-  "residual_lane_work": "not evaluated",
-  "lane_to_epic_contribution": "not evaluated",
-  "parent_close_permission": "not-evaluated",
+  "residual_lane_work": "Only stacked PR review and merge; no material product implementation gap remains.",
+  "lane_to_epic_contribution": "All five child outcomes are implemented across the three-PR stack, and aggregate configure-once evidence is current.",
+  "parent_close_permission": "may-close-parent-after-human-confirmation",
   "closeout_state": {
-    "status": "open",
-    "summary": "",
-    "residual_work": "",
-    "next_owner": ""
+    "status": "ready-for-closeout",
+    "summary": "Implementation and aggregate proof are complete across the minimal three-PR stack.",
+    "residual_work": "Review and merge PR #2672, then #2673, then #2674.",
+    "next_owner": "repository maintainers"
   },
   "references": [
     {

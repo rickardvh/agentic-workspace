@@ -17,6 +17,7 @@ from agentic_workspace.adaptation import (
     machine_observed_coverage_signals,
     simulate_adaptation,
 )
+from agentic_workspace.operating_decision import compile_context_maintenance_decision
 from agentic_workspace.scoped_instructions import read_instruction
 from agentic_workspace.workspace_runtime_core import _improvement_intake_payload
 
@@ -399,6 +400,96 @@ def test_memory_coverage_admission_uses_canonical_writer_and_revision_guard(tmp_
     stale_execution = execute_bounded_adaptation(admitted, target_root=stale_target)
     assert stale_execution["status"] == "superseded"
     assert stale_execution["mutation_applied"] is False
+
+
+def test_semantic_choice_applies_through_instruction_owner_then_stays_quiet_until_source_changes(tmp_path: Path) -> None:
+    instruction = tmp_path / ".agentic-workspace/instructions/api.md"
+    instruction.parent.mkdir(parents=True)
+    instruction.write_text("---\npaths:\n  - src/api/**\n---\n\n# API\n\nKeep current guidance.\n", encoding="utf-8")
+    revision = read_instruction(instruction, root=tmp_path).revision
+    observation = {
+        "source_class": "agent",
+        "owner_class": "scoped-instruction",
+        "source_owner": ".agentic-workspace/instructions/api.md",
+        "observed_addition": "The moved API boundary needs an explicit compatibility procedure.",
+        "source_refs": ["src/api/v2/router.py"],
+        "evidence_refs": ["review:api-boundary"],
+        "affected_effects": ["authority", "procedure", "proof"],
+        "operation_id": "instructions.create",
+        "owner_revision": revision,
+        "recurrence_identity": "api-v2-boundary",
+        "proposed_delta": {
+            "action": "append_guidance",
+            "heading": "API v2 compatibility",
+            "guidance": "Run the compatibility proof for API v2 boundary changes.",
+            "positive_paths": ["src/api/v2/router.py"],
+            "negative_paths": ["docs/api.md"],
+        },
+        "validation_route": ["pytest tests/test_api.py -q"],
+    }
+    projection = bounded_adaptation_projection([coverage_signal_from_observation(observation)])
+    candidate = projection["candidates"][0]
+    decision = compile_context_maintenance_decision(
+        context_projection={"currentness": {"decision_requirements": []}},
+        bounded_adaptations=projection,
+    )
+
+    admit = next(item for item in decision["alternatives"] if item["id"] == "admit")
+    assert admit["apply_operation"]["operation_id"] == "instructions.create"
+    assert admit["apply_operation"]["preconditions"]["source_revision"] == revision
+    deferred = execute_bounded_adaptation(
+        admit_bounded_adaptation(
+            candidate,
+            admitted_by="instruction-owner",
+            choice="defer",
+            decision_revision=decision["decision_revision"],
+            defer_until="next API v2 change",
+        ),
+        target_root=tmp_path,
+    )
+    assert deferred["status"] == "deferred"
+    assert deferred["mutation_applied"] is False
+    assert deferred["defer_until"] == "next API v2 change"
+
+    execution = execute_bounded_adaptation(
+        admit_bounded_adaptation(
+            candidate,
+            admitted_by="instruction-owner",
+            choice="admit",
+            decision_revision=decision["decision_revision"],
+        ),
+        target_root=tmp_path,
+    )
+    assert execution["status"] == "quiet"
+    assert "## API v2 compatibility" in instruction.read_text(encoding="utf-8")
+
+    stale_dismissal = execute_bounded_adaptation(
+        admit_bounded_adaptation(
+            candidate,
+            admitted_by="instruction-owner",
+            choice="dismiss",
+            decision_revision=decision["decision_revision"],
+        ),
+        target_root=tmp_path,
+    )
+    assert stale_dismissal["status"] == "superseded"
+    assert stale_dismissal["mutation_applied"] is False
+
+    resolved = deepcopy(candidate)
+    resolved.update({"status": "quiet", "disposition": "fixed"})
+    quiet = compile_context_maintenance_decision(
+        context_projection={"currentness": {"decision_requirements": []}},
+        bounded_adaptations={"candidates": [resolved]},
+    )
+    assert quiet["status"] == "not-required"
+
+    changed = {**observation, "owner_revision": execution["post_owner_revision"], "recurrence_identity": "api-v2-boundary-r2"}
+    changed_projection = bounded_adaptation_projection([coverage_signal_from_observation(changed)])
+    changed_decision = compile_context_maintenance_decision(
+        context_projection={"currentness": {"decision_requirements": []}},
+        bounded_adaptations=changed_projection,
+    )
+    assert changed_decision["decision_id"] != decision["decision_id"]
 
 
 def test_draft_operation_cannot_be_labeled_or_executed_as_automatic_authority(tmp_path: Path, monkeypatch) -> None:
