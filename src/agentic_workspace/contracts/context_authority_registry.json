@@ -2,6 +2,77 @@
   "kind": "agentic-workspace/context-authority-registry/v1",
   "schema_version": 1,
   "rule": "Operating decisions derive authority coverage from this versioned contract surface; runtime code loads this registry and must not maintain a parallel Python-only owner table.",
+  "currentness_contract": {
+    "kind": "agentic-workspace/context-currentness-contract/v1",
+    "rule": "Each declared surface owner is responsible for detecting drift against stale_when and revision_fields, preserving coverage for its declared consumers, and exposing only its registered repair operation.",
+    "dispositions": [
+      "current",
+      "derivably-stale",
+      "safely-repairable",
+      "missing-relevant-coverage",
+      "decision-required",
+      "outside-responsibility"
+    ],
+    "coverage_effects": ["action", "authority", "proof", "claim", "procedure", "continuation"],
+    "consumer_effects": {
+      "autopilot": ["action", "continuation"],
+      "closeout": ["claim", "continuation"],
+      "contract-checks": ["proof", "procedure"],
+      "implement": ["action", "authority"],
+      "next": ["action", "continuation"],
+      "proof": ["proof", "claim"],
+      "skills": ["procedure"],
+      "start": ["authority", "procedure"],
+      "status": ["proof", "claim", "continuation"],
+      "summary": ["continuation"]
+    },
+    "representative_owner_classes": {
+      "planning": {
+        "surfaces": ["planning"],
+        "disposition": "Current-work, lane, lifecycle, and external-work identity remain Planning-owned and revision-bound."
+      },
+      "scoped-instructions-config": {
+        "surfaces": ["scoped-instructions", "assignment", "target-guidance"],
+        "disposition": "Repository procedure and configured routing stay canonical; semantic policy changes require their owner."
+      },
+      "proof-verification": {
+        "surfaces": ["proof"],
+        "disposition": "Proof selection and claim authority are bound to the current proof subject and receipt revision."
+      },
+      "modules-capabilities": {
+        "surfaces": ["assignment", "skills", "autopilot-executor"],
+        "disposition": "Enabled capability contribution is derived from current config, dependency closure, and executor availability."
+      },
+      "generated-projections": {
+        "surfaces": ["generated-references"],
+        "disposition": "Generated output is never manual authority and must regenerate from its declared source manifest."
+      },
+      "review-external-context": {
+        "surfaces": ["planning", "evaluation", "memory"],
+        "disposition": "Admitted review or external evidence is revisioned Planning/evaluation input; Memory remains historical evidence only."
+      }
+    },
+    "deterministic_repair_operations": [
+      "architecture-principles.route",
+      "assignment.resolve-target",
+      "authority-envelope.mutation-baseline",
+      "autopilot.executor.bind",
+      "evaluation.status.report",
+      "generated-command-packages.refresh",
+      "memory.route.report",
+      "ownership.classify-paths",
+      "planning.summary.report",
+      "proof.select",
+      "system-intent.sync",
+      "target-guidance.resolve",
+      "terminal-outcome.inspect",
+      "workspace.instructions.route",
+      "workspace.skills.resolve-dependencies"
+    ],
+    "safe_repair_rule": "A repair is executable only when the selected surface owner registered the operation and the operation is bound to the current registry and source revisions.",
+    "decision_rule": "Missing canonical meaning, contradictions, or ambiguity require an owner decision and must never be synthesized by reconciliation.",
+    "quiet_rule": "Surfaces not selected by the current consumer, task, or changed paths are outside responsibility and create no repair pressure."
+  },
   "ordinary_decision_consumers": [
     "autopilot",
     "closeout",

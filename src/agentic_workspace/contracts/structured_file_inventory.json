@@ -615,6 +615,18 @@
       "storage_class": "source-of-truth"
     },
     {
+      "checked_in_justification": "Canonical issue relations preserve provider-neutral parent, child, dependency, and maturity authority across sessions and branches.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "notes": "Planning issue-relation operations validate these records against the checked-in issue-relation schema.",
+      "owner": "planning",
+      "pattern": ".agentic-workspace/planning/issue-relations/*.issue-relation.json",
+      "schema_or_validator": ".agentic-workspace/planning/schemas/planning-issue-relation.schema.json",
+      "status": "schema-backed",
+      "storage_class": "source-of-truth"
+    },
+    {
       "checked_in_justification": "Historical proof or review residue retained as distilled audit evidence rather than ordinary startup input.",
       "editable_by_agents": false,
       "format": "json",

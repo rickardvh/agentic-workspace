@@ -4,7 +4,7 @@
   "title": "Agentic Workspace Context Authority Registry",
   "description": "Versioned source of truth for ordinary operating-decision authority surfaces and consumer requirements.",
   "type": "object",
-  "required": ["kind", "schema_version", "rule", "ordinary_decision_consumers", "consumer_requirements", "surfaces"],
+  "required": ["kind", "schema_version", "rule", "currentness_contract", "ordinary_decision_consumers", "consumer_requirements", "surfaces"],
   "properties": {
     "kind": {
       "const": "agentic-workspace/context-authority-registry/v1",
@@ -12,6 +12,89 @@
     },
     "schema_version": {"type": "integer", "minimum": 1, "description": "Monotonic registry schema version."},
     "rule": {"type": "string", "minLength": 1, "description": "Contract rule explaining how runtime must consume the registry."},
+    "currentness_contract": {
+      "type": "object",
+      "description": "Shared taxonomy and derivation rules for owner-bound currentness, coverage, repair, and decision dispositions.",
+      "required": [
+        "kind",
+        "rule",
+        "dispositions",
+        "coverage_effects",
+        "consumer_effects",
+        "representative_owner_classes",
+        "deterministic_repair_operations",
+        "safe_repair_rule",
+        "decision_rule",
+        "quiet_rule"
+      ],
+      "properties": {
+        "kind": {"const": "agentic-workspace/context-currentness-contract/v1", "description": "Schema discriminator for the currentness contract."},
+        "rule": {"type": "string", "minLength": 1, "description": "Owner responsibility rule applied when obligations are projected."},
+        "dispositions": {
+          "type": "array",
+          "description": "Closed ordered vocabulary for state and action dispositions.",
+          "prefixItems": [
+            {"const": "current"},
+            {"const": "derivably-stale"},
+            {"const": "safely-repairable"},
+            {"const": "missing-relevant-coverage"},
+            {"const": "decision-required"},
+            {"const": "outside-responsibility"}
+          ],
+          "items": false
+        },
+        "coverage_effects": {
+          "type": "array",
+          "description": "Bounded operating-decision effects that make missing coverage material to AW.",
+          "items": {"enum": ["action", "authority", "proof", "claim", "procedure", "continuation"]},
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "consumer_effects": {
+          "type": "object",
+          "description": "Operating effects owned by each ordinary decision consumer.",
+          "additionalProperties": {
+            "type": "array",
+            "description": "Material operating effects for this consumer.",
+            "items": {"enum": ["action", "authority", "proof", "claim", "procedure", "continuation"]},
+            "minItems": 1,
+            "uniqueItems": true
+          }
+        },
+        "representative_owner_classes": {
+          "type": "object",
+          "description": "Audit map showing how major AW owner classes derive their obligations from registered surfaces.",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "object",
+            "description": "One representative owner class and its registry-backed disposition.",
+            "required": ["surfaces", "disposition"],
+            "properties": {
+              "surfaces": {
+                "type": "array",
+                "description": "Registered surfaces that supply this owner class's currentness and coverage semantics.",
+                "items": {"type": "string", "minLength": 1},
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "disposition": {"type": "string", "minLength": 1, "description": "Owner-specific authority and lifecycle posture."}
+            },
+            "additionalProperties": false
+          }
+        },
+        "deterministic_repair_operations": {
+          "type": "array",
+          "description": "Registered owner operations eligible for revision-bound deterministic repair routing.",
+          "items": {"type": "string", "minLength": 1},
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "safe_repair_rule": {"type": "string", "minLength": 1, "description": "Admission rule for executable repair dispositions."},
+        "decision_rule": {"type": "string", "minLength": 1, "description": "Conservative boundary for semantic or consequential ambiguity."},
+        "quiet_rule": {"type": "string", "minLength": 1, "description": "Proportionality rule preventing irrelevant surfaces from creating maintenance pressure."}
+      },
+      "additionalProperties": false
+    },
     "ordinary_decision_consumers": {
       "type": "array",
       "items": {"type": "string", "minLength": 1},

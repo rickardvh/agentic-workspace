@@ -21,12 +21,14 @@ from agentic_workspace.operating_decision import (
     _resolve_context_authority_source,
     admit_projection_surface_decision_input,
     bind_operation_invocation_to_authorities,
+    classify_context_currentness,
     compile_operating_decision,
     compile_projection_surface_operating_decision,
     compile_repo_improvement_action,
     compile_repo_improvement_execution,
     context_authority_coverage,
     context_authority_declarations,
+    context_authority_obligations,
     context_consequence_effects,
     context_surface_admission,
     derive_context_consequences,
@@ -813,6 +815,23 @@ def test_context_authority_declarations_and_gap_classes_validate() -> None:
     assert {"architecture-principles", "scoped-instructions", "ownership"}.issubset(set(coverage["surfaces"]))
     assert coverage["registry_authority"] == "versioned-contract"
     assert coverage["registry_source"] == "src/agentic_workspace/contracts/context_authority_registry.json"
+    obligations = context_authority_obligations()
+    assert obligations["status"] == "declared"
+    assert len(obligations["obligations"]) == len(registry["surfaces"])
+    planning_obligation = next(item for item in obligations["obligations"] if item["surface"] == "planning")
+    assert planning_obligation["owner"] == "planning package"
+    assert planning_obligation["repair_operation_id"] == "planning.summary.report"
+    assert {"action", "authority", "claim", "continuation", "proof"}.issubset(
+        set(planning_obligation["coverage_responsibility"]["effects"])
+    )
+    assert set(obligations["representative_owner_classes"]) == {
+        "planning",
+        "scoped-instructions-config",
+        "proof-verification",
+        "modules-capabilities",
+        "generated-projections",
+        "review-external-context",
+    }
 
     assert set(coverage["ordinary_consumers"]) == set(registry["ordinary_decision_consumers"])
     assert {"contract-checks", "skills"}.issubset(set(coverage["ordinary_consumers"]))
@@ -1397,15 +1416,32 @@ def test_context_authority_projection_requires_live_records_for_start() -> None:
         "target-guidance",
     }
     repair = projection["repair_operation"]
-    assert repair["status"] == "required"
+    assert repair["status"] == "not-required"
     assert repair["blocked_claims"] == ["mutation", "proof-claim", "completion-claim"]
-    planning = next(item for item in repair["repairs"] if item["surface"] == "planning")
-    assert planning["owner"] == "planning package"
-    assert planning["reason_code"] == "missing-target-root"
-    assert planning["action"] == "context-authority.planning.refresh-source"
-    assert planning["operation_id"] == "planning.summary.report"
-    assert planning["repair_owner"] == "planning package"
-    assert "source-owner admission result" in planning["required_record"]
+    planning = next(item for item in projection["currentness"]["decision_requirements"] if item["surface"] == "planning")
+    assert planning["state"] == "missing-relevant-coverage"
+    assert planning["disposition"] == "missing-relevant-coverage"
+    assert planning["operation_id"] == ""
+
+
+def test_context_currentness_never_repairs_semantic_ambiguity() -> None:
+    from agentic_workspace.operating_decision import CONTEXT_AUTHORITY_REGISTRY
+
+    planning = next(item for item in CONTEXT_AUTHORITY_REGISTRY if item["surface"] == "planning")
+    currentness = classify_context_currentness(
+        item=planning,
+        record={
+            "status": "stale",
+            "applicable": True,
+            "selected_required": True,
+            "reason": "semantic-ambiguity",
+        },
+        owner_identity_valid=False,
+    )
+
+    assert currentness["state"] == "derivably-stale"
+    assert currentness["disposition"] == "decision-required"
+    assert currentness["operation_id"] == ""
 
 
 def test_operating_decision_blocks_action_when_required_context_is_unadmitted() -> None:
@@ -1421,12 +1457,9 @@ def test_operating_decision_blocks_action_when_required_context_is_unadmitted() 
 
     assert decision["status"] == "blocked"
     assert decision["primary_action"] == {}
-    assert decision["external_blocker"] == {
-        "kind": "agentic-workspace/operating-decision-blocker/v1",
-        "reason_code": "context-authority-unavailable",
-        "owner": "context-authority-registry",
-        "repair": "run the typed context-authority repair operation before retrying the decision",
-    }
+    assert decision["external_blocker"]["reason_code"] == "context-coverage-gap"
+    assert decision["external_blocker"]["owner"] != ""
+    assert "source owner" in decision["external_blocker"]["repair"]
 
 
 def _write_context_authority_sources(root: Path) -> None:
@@ -1745,8 +1778,33 @@ stale_when = ["src/agentic_workspace/**"]
     assert projection["status"] == "repair-required"
     memory = next(item for item in projection["excluded_authorities"] if item["surface"] == "memory")
     assert memory["reason"] == "memory-curation-stale-review-required"
-    repair = next(item for item in projection["repair_operation"]["repairs"] if item["surface"] == "memory")
-    assert repair["operation_id"] == "memory.route.report"
+    currentness = next(item for item in projection["currentness"]["dispositions"] if item["surface"] == "memory")
+    assert currentness["state"] == "derivably-stale"
+    assert currentness["disposition"] == "decision-required"
+    assert projection["repair_operation"]["status"] == "not-required"
+
+
+def test_generated_projection_drift_is_revision_bound_and_safely_repairable() -> None:
+    from agentic_workspace.operating_decision import CONTEXT_AUTHORITY_REGISTRY
+
+    generated = next(item for item in CONTEXT_AUTHORITY_REGISTRY if item["surface"] == "generated-references")
+    currentness = classify_context_currentness(
+        item=generated,
+        record={
+            "status": "stale",
+            "applicable": True,
+            "selected_required": True,
+            "reason": "source-fingerprint-mismatch",
+            "revision": "sha256:generated-source-r1",
+        },
+        owner_identity_valid=False,
+    )
+
+    assert currentness["state"] == "derivably-stale"
+    assert currentness["disposition"] == "safely-repairable"
+    assert currentness["operation_id"] == "generated-command-packages.refresh"
+    assert currentness["expected_registry_revision"].startswith("sha256:")
+    assert currentness["expected_source_revision"] == "sha256:generated-source-r1"
 
 
 def test_context_authority_projection_rejects_configured_empty_and_missing_required_sources(tmp_path: Path) -> None:
@@ -1761,11 +1819,9 @@ def test_context_authority_projection_rejects_configured_empty_and_missing_requi
     assert projection["status"] == "repair-required"
     memory = next(item for item in projection["excluded_authorities"] if item["surface"] == "memory")
     assert memory["reason"] == "canonical-source-missing"
-    repair = next(item for item in projection["repair_operation"]["repairs"] if item["surface"] == "memory")
-    assert repair["action"] == "context-authority.memory.refresh-source"
-    assert repair["operation_id"] == "memory.route.report"
-    assert repair["repair_owner"] == "memory package"
-    assert "source-specific schema/population check" in repair["required_record"]
+    assert projection["repair_operation"]["status"] == "not-required"
+    decision = next(item for item in projection["currentness"]["decision_requirements"] if item["surface"] == "memory")
+    assert decision["disposition"] == "missing-relevant-coverage"
 
 
 def test_context_authority_projection_excludes_irrelevant_memory_without_repair(tmp_path: Path) -> None:
@@ -1785,6 +1841,9 @@ def test_context_authority_projection_excludes_irrelevant_memory_without_repair(
     assert memory["selected_required"] is False
     assert projection["missing_required_surfaces"] == []
     assert projection["repair_operation"]["status"] == "not-required"
+    currentness = next(item for item in projection["currentness"]["dispositions"] if item["surface"] == "memory")
+    assert currentness["disposition"] == "outside-responsibility"
+    assert currentness["task_effect"] == "quiet"
 
 
 def test_context_authority_projection_rejects_skill_dependency_owner_diagnostics(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

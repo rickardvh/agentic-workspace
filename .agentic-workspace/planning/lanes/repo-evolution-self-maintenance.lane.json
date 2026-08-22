@@ -1,0 +1,60 @@
+{
+  "kind": "planning-lane/v1",
+  "id": "repo-evolution-self-maintenance",
+  "title": "Keep AW current as repositories evolve",
+  "status": "active",
+  "parent_decomposition_ref": "",
+  "lane_outcome": "Close #2661 only after owner-bound currentness, deterministic reconciliation, coverage admission, semantic decision routing, and representative evolution proof are complete.",
+  "purpose_for_parent": "Execute issues #2662 through #2666 as the ordered implementation and evidence slices for parent #2661.",
+  "subsystems": [],
+  "technical_strategy": "Extend the existing context-authority registry and owner-issued result seam; compose deterministic repair through registered owner operations, reuse improvement/context-quality intake for positive coverage, reuse the operating human-decision boundary for semantics, and finish with one maintained evolution replay.",
+  "technology_choices": [
+    "Versioned JSON contracts and owner-issued revision identities remain the shared authority surface.",
+    "Generated Python and TypeScript projections are regenerated from command/operation IR and never hand-edited.",
+    "Existing Planning, Verification, Memory, module, review, and external-evidence owners retain their domain semantics."
+  ],
+  "slice_sequence": [
+    {
+      "id": "repo-evolution-currentness-reconciliation",
+      "title": "Implement owner currentness and deterministic reconciliation",
+      "status": "active",
+      "execplan_ref": ".agentic-workspace/planning/execplans/repo-evolution-currentness-reconciliation.plan.json",
+      "depends_on": [],
+      "purpose_for_lane": "Execute issues #2662 through #2666 as the ordered implementation and evidence slices for parent #2661."
+    }
+  ],
+  "current_slice": "repo-evolution-currentness-reconciliation",
+  "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
+  "proof_strategy": "Aggregate focused behavior proof per PR, then require #2666 deterministic multi-change and real dogfood evidence before parent closure.",
+  "proof_aggregation": {
+    "status": "not-started",
+    "evidence": [],
+    "known_gaps": []
+  },
+  "residual_lane_work": "not evaluated",
+  "lane_to_epic_contribution": "not evaluated",
+  "parent_close_permission": "not-evaluated",
+  "closeout_state": {
+    "status": "open",
+    "summary": "",
+    "residual_work": "",
+    "next_owner": ""
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#2661",
+      "label": "Configure-once self-maintenance parent lane",
+      "role": "parent",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/2661"
+    },
+    {
+      "kind": "issue-range",
+      "target": "#2662-#2666",
+      "label": "Ordered implementation and evidence children",
+      "role": "children",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/2662"
+    }
+  ],
+  "notes": "Minimal three-PR stack: #2662+#2663, then #2664+#2665, then #2666+#2661."
+}
