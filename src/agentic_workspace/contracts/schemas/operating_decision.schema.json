@@ -76,6 +76,10 @@
       "type": "object",
       "description": "Compact references for admitted source-owned guidance whose registry contract declares a material decision dimension."
     },
+    "repo_improvement_action": {
+      "type": "object",
+      "description": "Mode-constrained initiative consequence for one admitted material repo-improvement candidate; empty when no candidate exists. Mutation still requires an existing owner operation."
+    },
     "instruction_clause_projection": {
       "type": "object",
       "description": "Revision-bound explanation of source-owned facts, bounded clauses, composed effects, and target-scoped blockers feeding this compiler."

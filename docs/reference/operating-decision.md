@@ -36,6 +36,7 @@ Derived internal decision composed from admitted AW authority surfaces. It emits
 | `intent_feedback` | object | no |  | Revision-bound applicable intent expectations, evidence evaluation, material findings, and quiet/rescope posture composed before the final decision. |  |  |
 | `memory_effectiveness` | object | no |  | Decision-bound Memory contributions, sparse outcome attribution, material findings, and stronger-owner lifecycle review. |  |  |
 | `source_guidance` | object | no |  | Compact references for admitted source-owned guidance whose registry contract declares a material decision dimension. |  |  |
+| `repo_improvement_action` | object | no |  | Mode-constrained initiative consequence for one admitted material repo-improvement candidate; empty when no candidate exists. Mutation still requires an existing owner operation. |  |  |
 | `instruction_clause_projection` | object | no |  | Revision-bound explanation of source-owned facts, bounded clauses, composed effects, and target-scoped blockers feeding this compiler. |  |  |
 | `scoped_instruction_projection` | object | no |  | Human-facing matched and suppressed scoped Markdown instructions; irrelevant bodies remain unloaded. |  |  |
 | `reconciliation` | object | no |  | Generic post-action result, bounded claim, residue, continuation, and constructible next-action composition supplied by domain owners. |  |  |

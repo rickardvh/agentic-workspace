@@ -140,6 +140,7 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `task_posture_packet.optimization_effect` | object | no |  | Operational effects of the configured optimization posture. |  |  |
 | `task_posture_packet.operational_effectiveness` | object | no |  | Operational effectiveness matrix combining friction, proof, output, and optimization signals. |  |  |
 | `task_posture_packet.improvement_obligations` | array of object | yes |  | Active improvement-pressure obligations that affect proof, closeout, allowed actions, or posture adherence. |  |  |
+| `task_posture_packet.improvement_pressure_records` | array of object | yes |  | Admitted improvement-pressure candidate facts preserved for the canonical operating decision. |  |  |
 | `task_posture_packet.skill_routes` | array of object | yes |  | Task-selected skills, prompts, or routing fragments. |  |  |
 | `task_posture_packet.allowed_actions` | array of string | yes |  | Actions allowed under the resolved posture. |  |  |
 | `task_posture_packet.forbidden_actions` | array of string | yes |  | Actions forbidden under the resolved posture. |  |  |
