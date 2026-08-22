@@ -83,7 +83,7 @@ VALID_TRANSITIONS: dict[str, set[str]] = {
     "collecting": {"enough-signal", "satisfied", "contradicted", "inconclusive", "paused", "superseded", "archived"},
     "enough-signal": {"collecting", "satisfied", "contradicted", "inconclusive", "paused", "superseded", "archived"},
     "paused": {"collecting", "superseded", "archived"},
-    "satisfied": {"archived"},
+    "satisfied": {"collecting", "archived"},
     "contradicted": {"archived"},
     "inconclusive": {"collecting", "archived"},
     "superseded": {"archived"},
@@ -3819,6 +3819,14 @@ def transition_evaluation(
     current = str(definition.get("lifecycle"))
     if lifecycle not in VALID_TRANSITIONS.get(current, set()):
         raise WorkspaceUsageError(f"invalid evaluation lifecycle transition: {current} -> {lifecycle}.")
+    if current == "satisfied" and lifecycle == "collecting":
+        if not reason.strip():
+            raise WorkspaceUsageError("reopening a satisfied evaluation requires a non-empty reason.")
+        summary = evaluation_summary(target_root=target_root, evaluation_id=evaluation_id)["summaries"][0]
+        if bool(summary.get("conclusion_readiness", {}).get("ready")):
+            raise WorkspaceUsageError(
+                "cannot reopen a satisfied evaluation while its admitted current results still satisfy conclusion readiness."
+            )
     definition["lifecycle"] = lifecycle
     definition["updated_at"] = _now()
     definition["last_transition"] = {"from": current, "to": lifecycle, "reason": reason, "recorded_at": definition["updated_at"]}

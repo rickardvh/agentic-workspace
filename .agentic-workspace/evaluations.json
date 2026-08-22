@@ -294,19 +294,6 @@
       },
       "collection_policy": {
         "admitted_archive": "2026-08-21 implementation-round is limited validation-cost evidence and does not prove orientation or convergence",
-        "minimum_observations": 6,
-        "mode": "local-first",
-        "privacy": "compact structured observations only; raw prompts and full transcripts remain local or externally referenced",
-        "privacy_safe_context_required": true,
-        "required_workflow_classes": [
-          "cross-session",
-          "direct",
-          "module",
-          "planning-continuation",
-          "planning-independent",
-          "scoped-instruction"
-        ],
-        "representative_session_minimum": 4,
         "convergence": {
           "criterion": "adaptation-convergence",
           "required_fields": [
@@ -321,6 +308,19 @@
             "original_friction_recurred"
           ]
         },
+        "minimum_observations": 6,
+        "mode": "local-first",
+        "privacy": "compact structured observations only; raw prompts and full transcripts remain local or externally referenced",
+        "privacy_safe_context_required": true,
+        "representative_session_minimum": 4,
+        "required_workflow_classes": [
+          "cross-session",
+          "direct",
+          "module",
+          "planning-continuation",
+          "planning-independent",
+          "scoped-instruction"
+        ],
         "retention": "latest-current-per-criterion"
       },
       "conclusion_policy": {
@@ -402,7 +402,13 @@
         }
       ],
       "id": "operating-context-cost-convergence-2646",
-      "lifecycle": "collecting",
+      "last_transition": {
+        "from": "collecting",
+        "reason": "Owner conclusion uses matched coordinated-release before/after evidence bound to the #2654 proof-lane implementation; current observations show zero unrelated Planning runs and no renewed human steering.",
+        "recorded_at": "2026-08-22T17:59:05Z",
+        "to": "satisfied"
+      },
+      "lifecycle": "satisfied",
       "question": "Is AW acceptably efficient from a cold/default state and measurably cheaper on equivalent work after bounded canonical adaptation?",
       "report_sinks": [
         {
@@ -443,7 +449,7 @@
         "type": "workspace-operating-context",
         "version_range": "v0.42-current through merged PRs #2653, #2654, and #2655 on master"
       },
-      "updated_at": "2026-08-22T00:00:00Z"
+      "updated_at": "2026-08-22T17:59:05Z"
     }
   ],
   "kind": "agentic-workspace/evaluations/v1"

@@ -1571,6 +1571,55 @@ def test_evaluation_lifecycle_transitions_fail_closed(tmp_path: Path) -> None:
         )
 
 
+def test_evaluation_reopens_satisfied_conclusion_only_after_results_become_stale(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    register_evaluation(target_root=tmp_path, **_definition_kwargs())
+    append_observation(
+        target_root=tmp_path,
+        evaluation_id="eval-1969-operating-loop",
+        criterion="reconstruction-cost",
+        result="supports",
+        evidence_refs=["proof-receipts/run-1.json"],
+        context=_bound_context(tmp_path),
+    )
+    transition_evaluation(
+        target_root=tmp_path,
+        evaluation_id="eval-1969-operating-loop",
+        lifecycle="satisfied",
+        reason="owner accepted the current result",
+        expected_revision=1,
+    )
+
+    with pytest.raises(WorkspaceUsageError, match="still satisfy conclusion readiness"):
+        transition_evaluation(
+            target_root=tmp_path,
+            evaluation_id="eval-1969-operating-loop",
+            lifecycle="collecting",
+            reason="attempted unnecessary reopen",
+            expected_revision=1,
+        )
+
+    register_evaluation(target_root=tmp_path, **_definition_kwargs())
+    with pytest.raises(WorkspaceUsageError, match="requires a non-empty reason"):
+        transition_evaluation(
+            target_root=tmp_path,
+            evaluation_id="eval-1969-operating-loop",
+            lifecycle="collecting",
+            expected_revision=2,
+        )
+
+    result = transition_evaluation(
+        target_root=tmp_path,
+        evaluation_id="eval-1969-operating-loop",
+        lifecycle="collecting",
+        reason="the admitted result belongs to an earlier definition revision",
+        expected_revision=2,
+    )
+    assert result["from"] == "satisfied"
+    assert result["to"] == "collecting"
+    assert result["revision_guard"] == "matched"
+
+
 def test_evaluation_observation_binds_fresh_assignment_authority_and_proof(tmp_path: Path) -> None:
     _init_git_repo(tmp_path)
     register_evaluation(target_root=tmp_path, **_definition_kwargs())
@@ -2505,7 +2554,10 @@ def test_operating_context_convergence_evaluation_is_owner_bound_and_privacy_saf
     Draft202012Validator(contract_schema("evaluation_definition.schema.json")).validate(payload)
     evaluation = next(item for item in payload["evaluations"] if item["id"] == "operating-context-cost-convergence-2646")
 
-    assert evaluation["lifecycle"] == "collecting"
+    assert evaluation["lifecycle"] in {"collecting", "satisfied"}
+    if evaluation["lifecycle"] == "collecting":
+        assert evaluation["last_transition"]["from"] == "satisfied"
+        assert evaluation["last_transition"]["reason"]
     assert evaluation["subject"]["version_range"] == "v0.42-current through merged PRs #2653, #2654, and #2655 on master"
     assert evaluation["decision_owner"] == {"class": "maintainer", "id": "workspace-maintainer"}
     assert evaluation["collection_policy"]["minimum_observations"] == 6
@@ -2536,12 +2588,44 @@ def test_operating_context_convergence_evaluation_is_owner_bound_and_privacy_saf
     }
     disposition = json.loads((ROOT / ".agentic-workspace/evaluations/issue-2646-disposition.json").read_text(encoding="utf-8"))
     implementation = disposition["implementation_disposition"]
-    assert disposition["status"] == "implementation-open-evaluation-open"
-    assert implementation["decision_observation_count"] == 0
+    assert disposition["status"] == "implementation-closed-evaluation-closed"
+    assert implementation["decision_observation_count"] == 6
+    assert implementation["observed_criterion_count"] == 6
     assert implementation["required_current_observations"] == 6
     assert implementation["required_representative_sessions"] == 4
-    assert len(implementation["unmet_criteria"]) == 6
-    assert implementation["convergence"]["human_steering_avoided_next_time"] is False
-    assert disposition["evaluation_disposition"]["current_admission_status"] == "no-current-real-session-observations-admitted"
+    assert implementation["unmet_criteria"] == []
+    assert len(implementation["representative_sessions"]) == 5
+    assert {item["criterion"] for item in implementation["criterion_results"]} == {
+        "direct-default-quality",
+        "scoped-instruction-quality",
+        "module-context-quality",
+        "planning-routing-quality",
+        "cross-session-resumption",
+        "adaptation-convergence",
+    }
+    assert {item["result"] for item in implementation["criterion_results"]} == {"supports"}
+    assert len({item["result_identity"] for item in implementation["criterion_results"]}) == 6
+    assert {item["admission"]["status"] for item in implementation["criterion_results"]} == {"admitted-current"}
+    assert {item["admission"]["baseline_id"] for item in implementation["criterion_results"]} == {"cb3540b4d6caba0c"}
+    assert implementation["conclusion_authority"]["status"] == "ready"
+    assert implementation["conclusion_authority"]["current_result_count"] == 6
+    assert implementation["conclusion_authority"]["stale_authority_count"] == 0
+    assert implementation["convergence"]["before_cost"]["total_work_units"] == 171.6
+    assert implementation["convergence"]["after_cost"]["total_work_units"] == 0
+    assert (
+        implementation["convergence"]["canonical_owner_ref"]
+        == "src/agentic_workspace/workspace_runtime_proof.py::_coordinated_release_proof_lane"
+    )
+    assert implementation["convergence"]["mechanism_revision"] == "merge:be4784e7a"
+    assert implementation["convergence"]["adaptation_revision"] == "merge:be4784e7a"
+    assert implementation["convergence"]["later_session_ref"] == "session:matched-coordinated-release-20260822"
+    assert implementation["convergence"]["selected_route"] == "coordinated_release_proof"
+    assert implementation["convergence"]["excluded_command"] == "make test-planning"
+    assert implementation["bounded_adaptation_proof"]["convergence_receipt_ref"] == "proof://receipts/e65594576eed38f0"
+    assert implementation["convergence"]["human_steering_avoided_next_time"] is True
+    assert implementation["convergence"]["original_friction_recurred"] is False
+    assert disposition["evaluation_disposition"]["current_admission_status"] == (
+        "owner-concluded-from-six-current-real-session-observations"
+    )
     assert set(implementation["bounded_adaptation_proof"]["owner_classes"]) == {"proof-route", "scoped-instruction"}
     assert "raw prompts and full transcripts remain local" in disposition["evaluation_disposition"]["privacy"]

@@ -424,3 +424,19 @@ proof_profiles = ["workspace_behavior"]
 purpose = "Focused root Workspace startup, report, defaults, generated-guidance, and diagnostic-intake behavior."
 review_aids = ["Confirm host-target localization, diagnostic intake, maintained proof discovery, output budgets, type posture, and runtime mirror parity remain covered without the broad workspace CLI suite."]
 route_role = "behavior"
+
+[assurance.domain_proof_lanes.evaluation_conclusion_evidence]
+allowed_composition = ["behavior", "maintenance", "broad"]
+applies_to_paths = [".agentic-workspace/evaluations.json", ".agentic-workspace/evaluations/*.json", "src/agentic_workspace/contracts/schemas/evaluation_issue_disposition.schema.json"]
+authority_refs = [".agentic-workspace/config.toml", "src/agentic_workspace/contracts/schemas/evaluation_issue_disposition.schema.json"]
+claim_boundary = "focused-current-evaluation-evidence-contract-required-before-conclusion-claim"
+commands = ["uv run --active python scripts/check/check_contract_tooling_surfaces.py --quiet-success"]
+escalation = ["the disposition changes Evaluation runtime semantics or closes over evidence that is not currently admitted"]
+escalation_conditions = ["cross-owner", "focused-route-insufficient", "explicit-request"]
+evidence_concepts = ["evaluation-conclusion-evidence", "current-result-admission", "durable-real-session-proof"]
+owner = "workspace-cli-runtime"
+precedence = "71"
+proof_profiles = ["workspace_behavior"]
+purpose = "Focused durable Evaluation observation, conclusion, and disposition evidence contract proof."
+review_aids = ["Confirm conclusion artifacts cite current admitted result identities, current authority receipts, and compact real-session measurements; pair semantic runtime changes with the evaluation_operation_runtime lane."]
+route_role = "evidence"
