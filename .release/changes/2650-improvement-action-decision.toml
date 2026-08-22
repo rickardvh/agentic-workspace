@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Compile improvement latitude, scope, authority, proof, materiality, and future-cost evidence into the canonical operating decision."
