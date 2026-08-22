@@ -2606,7 +2606,7 @@ def test_operating_context_convergence_evaluation_is_owner_bound_and_privacy_saf
     assert {item["result"] for item in implementation["criterion_results"]} == {"supports"}
     assert len({item["result_identity"] for item in implementation["criterion_results"]}) == 6
     assert {item["admission"]["status"] for item in implementation["criterion_results"]} == {"admitted-current"}
-    assert {item["admission"]["baseline_id"] for item in implementation["criterion_results"]} == {"06e9519f58f6b95e"}
+    assert {item["admission"]["baseline_id"] for item in implementation["criterion_results"]} == {"59d813cb83d108da"}
     assert implementation["conclusion_authority"]["status"] == "ready"
     assert implementation["conclusion_authority"]["current_result_count"] == 6
     assert implementation["conclusion_authority"]["stale_authority_count"] == 0

@@ -729,6 +729,23 @@
       "storage_class": "non-reconstructable-decision"
     },
     {
+      "checked_in_justification": "Evaluation assignment receipts bind admitted result identities to the exact Planning owner and authority revision used at conclusion time.",
+      "editable_by_agents": false,
+      "format": "json",
+      "generated": false,
+      "guardrails": {
+        "max_items": 100,
+        "preferred_refs": ["receipt_id", "revision", "target_identity_ref", "context_key"]
+      },
+      "notes": "Evaluation authority refresh writes indexed, compact owner receipts that report and disposition artifacts can resolve without retaining session transcripts.",
+      "owner": "planning",
+      "pattern": ".agentic-workspace/planning/assignment-receipts/*.json",
+      "routed_to": "#2646",
+      "schema_or_validator": "agentic-workspace evaluation authority-refresh owner-receipt validator",
+      "status": "typed-validator-backed",
+      "storage_class": "historical-audit-distillation"
+    },
+    {
       "checked_in_justification": "Trusted proof receipts bind reusable validation evidence to exact commands, paths, and repository state.",
       "editable_by_agents": false,
       "format": "json",
