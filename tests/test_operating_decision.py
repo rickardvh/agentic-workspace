@@ -1874,24 +1874,32 @@ def test_generated_projection_drift_fails_closed_without_dispatch_contract() -> 
     assert currentness["expected_source_revision"] == "sha256:generated-source-r1"
 
 
-def _repairable_context_projection() -> dict[str, object]:
+def _refreshable_context_projection(
+    *,
+    surface: str = "planning",
+    owner: str = "planning package",
+    operation_id: str = "planning.summary.report",
+) -> dict[str, object]:
+    from agentic_workspace.operating_decision import _context_reconciliation_invocation
+
+    currentness = {"operation_id": operation_id, "expected_source_revision": "sha256:source-r1"}
+    invocation = _context_reconciliation_invocation(
+        currentness=currentness,
+        consumer="implement",
+        task="refresh selected context",
+        paths=["src/app.py"],
+    )
     return {
         "kind": "agentic-workspace/context-authority-projection/v1",
         "status": "repair-required",
-        "repair_operation": {
-            "repairs": [
+        "repair_operation": {"repairs": []},
+        "refresh_operation": {
+            "refreshes": [
                 {
-                    "surface": "generated-references",
-                    "owner": "generated command package owner",
-                    "reason_code": "source-fingerprint-mismatch",
-                    "operation_id": "generated-command-packages.refresh",
-                    "arguments": {
-                        "target": ".",
-                        "surface": "generated-references",
-                        "consumer": "implement",
-                        "expected_registry_revision": "sha256:registry-r1",
-                        "expected_source_revision": "sha256:source-r1",
-                    },
+                    "surface": surface,
+                    "owner": owner,
+                    "reason_code": "source-revision-changed",
+                    **invocation,
                 }
             ]
         },
@@ -1899,46 +1907,49 @@ def _repairable_context_projection() -> dict[str, object]:
     }
 
 
-def test_context_repair_uses_ordinary_revision_bound_typed_action() -> None:
-    action = context_authority_repair_action(_repairable_context_projection())
+def test_context_refresh_uses_contract_derived_read_only_typed_action() -> None:
+    action = context_authority_repair_action(_refreshable_context_projection())
 
     invocation = action["operation_invocation"]
-    assert action["action"] == "reconcile-context-authority"
-    assert invocation["operation_id"] == "generated-command-packages.refresh"
-    assert invocation["preconditions"]["registry_revision"] == "sha256:registry-r1"
-    assert invocation["preconditions"]["source_revision"] == "sha256:source-r1"
+    assert action["action"] == "refresh-context-authority"
+    assert invocation["operation_id"] == "planning.summary.report"
+    assert invocation["preconditions"] == {"surface": "planning"}
     assert invocation["mutation_boundary"]["owner_operation_only"] is True
-    assert invocation["mutation_boundary"]["writes_repo_state"] is True
+    assert invocation["mutation_boundary"]["writes_repo_state"] is False
 
 
 @pytest.mark.parametrize(
-    ("surface", "owner", "operation_id"),
+    ("surface", "owner", "operation_id", "action_available"),
     [
-        ("generated-references", "generated command package owner", "generated-command-packages.refresh"),
-        ("planning", "planning package", "planning.summary.report"),
-        ("proof", "verification and proof runtime", "proof.select"),
-        ("assignment", "workspace assignment gate", "assignment.resolve-target"),
-        ("memory", "memory package", "memory.route.report"),
+        ("generated-references", "generated command package owner", "generated-command-packages.refresh", False),
+        ("planning", "planning package", "planning.summary.report", True),
+        ("proof", "verification and proof runtime", "verification.report.report", True),
+        ("assignment", "workspace assignment gate", "assignment.resolve-target", False),
+        ("memory", "memory package", "memory.route.report", True),
     ],
 )
-def test_independent_owner_classes_reconcile_through_exact_registered_operation(surface: str, owner: str, operation_id: str) -> None:
-    projection = _repairable_context_projection()
-    repair = projection["repair_operation"]["repairs"][0]
-    repair.update({"surface": surface, "owner": owner, "operation_id": operation_id})
-    repair["arguments"]["surface"] = surface
-
+def test_independent_owner_classes_dispatch_or_fail_closed_by_contract(
+    surface: str, owner: str, operation_id: str, action_available: bool
+) -> None:
+    projection = _refreshable_context_projection(surface=surface, owner=owner, operation_id=operation_id)
     action = context_authority_repair_action(projection)
 
+    if not action_available:
+        assert action == {}
+        return
     assert action["surface"] == surface
     assert action["owner"] == owner
     assert action["operation_invocation"]["operation_id"] == operation_id
-    assert action["quiet_after"].endswith("emits no repair")
+    assert action["operation_invocation"]["mutation_boundary"]["writes_repo_state"] is False
+    assert action["quiet_after"].endswith("emits no repeated action")
 
 
-def test_operating_decision_routes_safe_context_repair_and_rejects_stale_baseline(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_operating_decision_routes_read_only_context_refresh_without_mutation_baseline(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     from agentic_workspace import operating_decision
 
-    monkeypatch.setattr(operating_decision, "resolve_context_authority_projection", lambda **_kwargs: _repairable_context_projection())
+    monkeypatch.setattr(operating_decision, "resolve_context_authority_projection", lambda **_kwargs: _refreshable_context_projection())
     live_authorities = {"mutation_baseline": _live_mutation_baseline()}
 
     actionable = compile_operating_decision(inputs={"consumer": "implement", "authorities": live_authorities})
@@ -1947,11 +1958,11 @@ def test_operating_decision_routes_safe_context_repair_and_rejects_stale_baselin
     )
 
     assert actionable["status"] == "actionable"
-    assert actionable["primary_action"]["operation_invocation"]["operation_id"] == "generated-command-packages.refresh"
+    assert actionable["primary_action"]["operation_invocation"]["operation_id"] == "planning.summary.report"
     assert actionable["external_blocker"] == {}
-    assert rejected["status"] == "blocked"
-    assert rejected["primary_action"] == {}
-    assert rejected["external_blocker"]["reason_code"] == "stale-mutation-baseline"
+    assert rejected["status"] == "actionable"
+    assert rejected["primary_action"]["operation_invocation"]["requested_mutation_boundary"]["writes_repo_state"] is False
+    assert rejected["external_blocker"] == {}
 
 
 def test_context_authority_projection_rejects_configured_empty_and_missing_required_sources(tmp_path: Path) -> None:
@@ -2264,6 +2275,57 @@ def test_context_authority_owner_operation_receipt_currentness_is_recomputable_a
     system_intent = next(item for item in projection["authorities"] if item["surface"] == "system-intent")
     receipt = system_intent["source"]["admission"]["owner_result"]["owner_execution_receipt"]
     assert receipt["current_resolution"]["resolution_mode"] == "deterministic-source-revision"
+
+
+def test_repeated_owner_resolution_is_quiet_across_representative_owner_classes(tmp_path: Path) -> None:
+    _write_context_authority_sources(tmp_path)
+    legacy_generated_manifest = json.dumps({"kind": "generated-cli-owner-source-manifest/v1", "owner": "command-generation"})
+    for package in ("workspace", "planning", "memory", "verification"):
+        (tmp_path / f"generated/{package}/.agentic-workspace-cli-fingerprint.json").write_text(
+            legacy_generated_manifest,
+            encoding="utf-8",
+        )
+    (tmp_path / "src/agentic_workspace/contracts/structured_file_inventory.json").write_text("{}\n", encoding="utf-8")
+
+    first = resolve_context_authority_projection(
+        consumer="implement",
+        task="shape planning proof assignment memory and generated context",
+        changed_paths=["src/agentic_workspace/operating_decision.py", "generated/workspace/python/cli.py"],
+        target_root=tmp_path,
+    )
+    repeated = resolve_context_authority_projection(
+        consumer="implement",
+        task="shape planning proof assignment memory and generated context",
+        changed_paths=["src/agentic_workspace/operating_decision.py", "generated/workspace/python/cli.py"],
+        target_root=tmp_path,
+    )
+    first_generated = resolve_context_authority_projection(
+        consumer="contract-checks",
+        task="check generated references",
+        changed_paths=["generated/workspace/python/cli.py"],
+        target_root=tmp_path,
+    )
+    repeated_generated = resolve_context_authority_projection(
+        consumer="contract-checks",
+        task="check generated references",
+        changed_paths=["generated/workspace/python/cli.py"],
+        target_root=tmp_path,
+    )
+
+    representative = {"generated-references", "planning", "proof", "assignment", "memory"}
+    first_by_surface = {item["surface"]: item for item in first["currentness"]["dispositions"]}
+    repeated_by_surface = {item["surface"]: item for item in repeated["currentness"]["dispositions"]}
+    first_by_surface.update({item["surface"]: item for item in first_generated["currentness"]["dispositions"]})
+    repeated_by_surface.update({item["surface"]: item for item in repeated_generated["currentness"]["dispositions"]})
+    assert representative <= set(first_by_surface)
+    assert {surface: first_by_surface[surface]["disposition"] for surface in representative} == {
+        surface: repeated_by_surface[surface]["disposition"] for surface in representative
+    }
+    assert all(repeated_by_surface[surface]["disposition"] in {"current", "outside-responsibility"} for surface in representative)
+    assert repeated["repair_operation"]["status"] == "not-required"
+    assert repeated["refresh_operation"]["status"] == "not-required"
+    assert repeated_generated["repair_operation"]["status"] == "not-required"
+    assert repeated_generated["refresh_operation"]["status"] == "not-required"
 
 
 def test_context_authority_rejects_parseable_file_without_owner_boundary(tmp_path: Path) -> None:

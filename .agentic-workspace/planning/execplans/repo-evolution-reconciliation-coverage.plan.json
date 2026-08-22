@@ -7,11 +7,11 @@
   "phase": "implementation",
   "revision": 2,
   "canonical_core": {
-    "requested_outcome": "Close #2664 and implement the shared #2663 reconciliation seam by routing deterministic drift into ordinary typed owner actions and newly encountered operating facts into existing bounded adaptation and context-consequence paths.",
+    "requested_outcome": "Close #2663 and #2664 by routing contract-backed refresh or guarded repair into ordinary typed owner actions and newly encountered operating facts into existing bounded adaptation and context-consequence paths.",
     "hard_constraints": "No generic repair executor, learned overlay, transcript store, global coverage database, or automatic semantic policy mutation.",
     "agent_may_decide": "Compact candidate fields, deterministic owner-action composition, and focused proof fixtures within existing adaptation and operating-decision owners.",
     "escalate_when": "A candidate needs human-owned architecture, security, authority, or public-contract meaning, or an owner lacks a supported typed operation.",
-    "next_action": "Validate this stack slice, open its PR on #2672, then complete #2663 evidence with #2665/#2666 integrated evolution proof.",
+    "next_action": "Validate the corrected #2663/#2664 slice, update its stacked PR, then continue #2665 semantic decisions.",
     "proof_expectations": [
       "Focused adaptation and operating-decision tests prove repair routing, baseline rejection, coverage deduplication, owner authority, canonical writers, closeout pressure, deferral, and quiet paths.",
       "Routed contract, schema-reference, generated-package, Planning, Memory, and Verification checks pass."
@@ -26,8 +26,8 @@
       ".release/changes/**"
     ],
     "completion_criteria": [
-      "Deterministic stale state becomes a revision-bound ordinary typed owner action and stale baselines fail closed; #2663 remains open for the representative integrated proof required by its completion rule.",
-      "At least four independent owner classes route through their exact registered operations and current repeated resolution stays quiet.",
+      "Read-only stale state becomes a contract-backed typed refresh, state mutation requires declared revision guards, and unsupported owner transitions fail closed.",
+      "Planning, proof, and Memory dispatch through exact operation contracts; generated and assignment transitions fail closed until a supported contract exists; repeated resolution across all five stays quiet.",
       "Machine- and agent-observed additions become stable owner/effect-bound candidates with correct authority differences.",
       "Material candidates reach an existing closeout/decision disposition while deferrable, disposed, and non-operating facts stay quiet.",
       "Proof, scoped-instruction, and Memory destination owners use existing canonical operations, including revision-guarded apply paths."
@@ -45,8 +45,8 @@
   },
   "parent": {
     "owner_id": "repo-evolution-self-maintenance",
-    "contribution": "Close #2664 and provide #2663's shared composition seam while preserving #2665 semantic decisions and #2666 integrated evolution proof as explicit continuation.",
-    "closure_boundary": "This slice may close #2664 only; #2663 and parent #2661 remain open until the integrated evolution proof."
+    "contribution": "Close #2663 and #2664 with contract-conformant owner reconciliation and bounded coverage admission while preserving #2665 semantic decisions and #2666 integration proof as continuation.",
+    "closure_boundary": "This slice may close #2663 and #2664 only; #2661 remains open for #2665 and #2666."
   },
   "scope": {
     "owned": [
@@ -55,7 +55,7 @@
       "Operating-decision schema, focused tests, Planning records, and release change"
     ],
     "effects": [
-      "Safely repairable currentness becomes the next typed owner action only with current source/registry and mutation-baseline authority.",
+      "Derived refresh becomes the next typed owner action without mutation authority; state repair remains unavailable unless its contract declares source and registry revision guards.",
       "Coverage observations retain evidence authority, affected operating dimensions, canonical owner hint, stable recurrence identity, and deterministic-or-decision posture.",
       "Existing context consequences enforce closeout disposition without blocking unrelated deferrable work."
     ]
@@ -88,7 +88,7 @@
     }
   },
   "references": [],
-  "next_action": "Validate this stack slice, open its PR on #2672, then complete #2663 evidence with #2665/#2666 integrated evolution proof.",
+  "next_action": "Validate the corrected #2663/#2664 slice, update its stacked PR, then continue #2665 semantic decisions.",
   "blockers": [
     "None."
   ],
@@ -104,7 +104,7 @@
   },
   "continuation": {
     "owner": "repo-evolution-self-maintenance",
-    "residual_intent": "Continue with #2665 semantic decisions and #2666 integrated evolution proof, including the remaining representative #2663 acceptance evidence, before #2661 closure."
+    "residual_intent": "Continue with #2665 semantic decisions and #2666 integrated evolution proof before #2661 closure."
   },
   "validation_commands": [
     "uv run pytest tests/test_adaptation.py tests/test_operating_decision.py -q",
@@ -113,8 +113,8 @@
     "make schema-reference-docs"
   ],
   "completion_criteria": [
-    "Deterministic stale state becomes a revision-bound ordinary typed owner action and stale baselines fail closed.",
-    "At least four independent owner classes route through exact registered operations.",
+    "Read-only stale state becomes a contract-backed ordinary typed refresh; only revision-guarded mutation may become a repair.",
+    "Planning, proof, and Memory dispatch through exact contracts; generated and assignment fail closed; repeated resolution across all five is quiet.",
     "Machine- and agent-observed additions deduplicate with correct evidence authority and owner/effect identity.",
     "Material, deferrable, disposed, and non-operating observations have proportionate existing context consequences.",
     "Proof, scoped-instruction, and Memory destinations exercise canonical operation paths."

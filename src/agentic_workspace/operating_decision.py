@@ -1171,39 +1171,53 @@ def resolve_context_authority_projection(
 
 
 def context_authority_repair_action(projection: dict[str, Any]) -> dict[str, Any]:
-    """Compile the first owner-authorized repair into the ordinary typed-action path."""
+    """Compile the first contract-backed refresh or repair into the typed-action path."""
 
     repairs = [_as_dict(item) for item in _as_list(_as_dict(projection.get("repair_operation")).get("repairs")) if isinstance(item, dict)]
-    if not repairs:
+    refreshes = [
+        _as_dict(item) for item in _as_list(_as_dict(projection.get("refresh_operation")).get("refreshes")) if isinstance(item, dict)
+    ]
+    actions = repairs or refreshes
+    if not actions:
         return {}
-    repair = repairs[0]
+    repair = actions[0]
     arguments = _as_dict(repair.get("arguments"))
     operation_id = str(repair.get("operation_id") or "")
     surface = str(repair.get("surface") or "")
+    contract = _context_reconciliation_contract(operation_id)
+    declared_boundary = _as_dict(repair.get("mutation_boundary"))
+    writes_repo_state = contract.get("writes_repo_state") is True
     expected_registry_revision = str(arguments.get("expected_registry_revision") or "")
     expected_source_revision = str(arguments.get("expected_source_revision") or "")
-    if not all((operation_id, surface, expected_registry_revision)):
+    if not operation_id or not surface or not contract:
+        return {}
+    if declared_boundary.get("writes_repo_state") is not writes_repo_state:
+        return {}
+    if set(arguments) - set(contract["inputs"]):
+        return {}
+    if writes_repo_state and (not contract.get("revision_guarded") or not expected_registry_revision or not expected_source_revision):
         return {}
     invocation = operation_invocation(
         operation_id=operation_id,
         arguments=arguments,
-        effect_class="owner-reconciliation",
+        effect_class=str(repair.get("effect_class") or ("owner-reconciliation" if writes_repo_state else "read-only-report")),
         authority_class="source-owner-operation",
-        expected_transition=f"{surface} currentness becomes current or the owner operation rejects stale input",
+        expected_transition=(
+            f"{surface} canonical state becomes current or the guarded owner operation rejects stale input"
+            if writes_repo_state
+            else f"{surface} derived currentness is recomputed without canonical state mutation"
+        ),
         preconditions={
             "surface": surface,
-            "registry_revision": expected_registry_revision,
-            "source_revision": expected_source_revision,
+            **({"registry_revision": expected_registry_revision, "source_revision": expected_source_revision} if writes_repo_state else {}),
         },
         owner_context_revision={
             "surface": surface,
             "owner": str(repair.get("owner") or ""),
-            "registry_revision": expected_registry_revision,
-            "source_revision": expected_source_revision,
+            **({"registry_revision": expected_registry_revision, "source_revision": expected_source_revision} if writes_repo_state else {}),
         },
         mutation_boundary={
-            "writes_repo_state": True,
-            "allowed_surfaces": [surface],
+            **declared_boundary,
             "owner_operation_only": True,
         },
         proof_requirements=[
@@ -1214,12 +1228,12 @@ def context_authority_repair_action(projection: dict[str, Any]) -> dict[str, Any
         ],
     )
     return {
-        "action": "reconcile-context-authority",
+        "action": "reconcile-context-authority" if writes_repo_state else "refresh-context-authority",
         "surface": surface,
         "owner": str(repair.get("owner") or ""),
         "reason_code": str(repair.get("reason_code") or ""),
         "operation_invocation": invocation,
-        "quiet_after": "the next equivalent resolve admits the surface as current and emits no repair",
+        "quiet_after": "the next equivalent resolve admits the surface as current and emits no repeated action",
     }
 
 
@@ -3066,6 +3080,8 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
             }
         )
     authority_blockers = derive_operating_blockers_from_authorities(authorities=authorities)
+    if invocation and not _invocation_requires_mutation_baseline(invocation):
+        authority_blockers = [item for item in authority_blockers if item.get("reason_code") != "stale-mutation-baseline"]
     blockers.extend(authority_blockers)
     if (
         invocation
@@ -3190,12 +3206,14 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
     # required inputs is absent, stale, ambiguous, or otherwise unadmitted.
     if context_authority_projection["status"] == "repair-required":
         repair_operations = _as_list(_as_dict(context_authority_projection.get("repair_operation")).get("repairs"))
+        refresh_operations = _as_list(_as_dict(context_authority_projection.get("refresh_operation")).get("refreshes"))
+        reconciliation_operations = [*repair_operations, *refresh_operations]
         decision_requirements = _as_list(_as_dict(context_authority_projection.get("currentness")).get("decision_requirements"))
-        if repair_operations and owner_repair_action and not blocker:
+        if reconciliation_operations and owner_repair_action and not blocker:
             status = "actionable"
             primary_action = owner_repair_action
             external_blocker = {}
-        elif repair_operations:
+        elif reconciliation_operations:
             status = "blocked"
             primary_action = {}
             if not blocker:
@@ -3203,7 +3221,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
                     "kind": "agentic-workspace/operating-decision-blocker/v1",
                     "reason_code": "context-authority-unavailable",
                     "owner": "context-authority-registry",
-                    "repair": "satisfy the mutation baseline and run the revision-bound typed owner repair operation",
+                    "repair": "run the contract-backed owner refresh, or satisfy mutation guards for a state-changing repair",
                 }
         else:
             status = "blocked"

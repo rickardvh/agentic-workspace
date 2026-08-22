@@ -30,7 +30,7 @@
       "depends_on": [
         "repo-evolution-currentness-reconciliation"
       ],
-      "purpose_for_lane": "Close #2663 and #2664 by composing deterministic owner actions and bounded coverage candidates through the ordinary operating decision."
+      "purpose_for_lane": "Close #2663 and #2664 with contract-backed owner refresh/repair actions, fail-closed unsupported transitions, quiet repeated resolution, and bounded coverage candidates."
     }
   ],
   "current_slice": "repo-evolution-reconciliation-coverage",
