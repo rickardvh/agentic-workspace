@@ -7,6 +7,7 @@
       "status",
       "new-session",
       "note",
+      "signal",
       "analyze",
       "repair",
       "export"
@@ -35,6 +36,16 @@
       "command_visibility": "runtime-only",
       "description": "Runtime field populated only by the note subcommand."
     },
+    {"name": "kind", "source": "cli-option", "required": false, "command_visibility": "runtime-only"},
+    {"name": "symptom", "source": "cli-option", "required": false, "command_visibility": "runtime-only"},
+    {"name": "cost", "source": "cli-option", "required": false, "command_visibility": "runtime-only"},
+    {"name": "expected_benefit", "source": "cli-option", "required": false, "command_visibility": "runtime-only"},
+    {"name": "evidence_class", "source": "cli-option", "required": false, "command_visibility": "runtime-only"},
+    {"name": "owner_hint", "source": "cli-option", "required": false, "command_visibility": "runtime-only"},
+    {"name": "scope_relation", "source": "cli-option", "required": false, "command_visibility": "runtime-only"},
+    {"name": "recurrence", "source": "cli-option", "required": false, "command_visibility": "runtime-only"},
+    {"name": "evidence_ref", "source": "cli-option", "required": false, "command_visibility": "runtime-only"},
+    {"name": "likely_remediation", "source": "cli-option", "required": false, "command_visibility": "runtime-only"},
     {
       "name": "path",
       "source": "cli-option",
@@ -114,6 +125,11 @@
       "surface": ".agentic-workspace/local/logs/exports/",
       "required": false,
       "when": "create an explicit local diagnostic export bundle"
+    },
+    {
+      "surface": ".agentic-workspace/local/cache/dogfooding-signal-status.json",
+      "required": false,
+      "when": "capture or strengthen a compact local improvement-signal observation"
     }
   ],
   "steps": [
@@ -125,7 +141,7 @@
     {
       "id": "manage_session_log",
       "uses": "workspace.session-log.manage",
-      "description": "Read status, create a new session, append a note, analyze or repair an index, or export a local diagnostic bundle."
+      "description": "Read status, create a new session, append a note, capture candidate improvement evidence, analyze or repair an index, or export a local diagnostic bundle."
     },
     {
       "id": "emit_output",
@@ -134,7 +150,8 @@
     }
   ],
   "guards": [
-    "Write only under .agentic-workspace/local/session-logging/ and .agentic-workspace/local/logs/.",
+    "Write only under .agentic-workspace/local/session-logging/, .agentic-workspace/local/logs/, and the bounded improvement-signal cache.",
+    "Captured improvement signals are candidate evidence only and never authorize repository mutation.",
     "Do not capture non-AW shell output.",
     "Do not treat local session logs as proof, Planning state, Memory, or closeout authority.",
     "Session-log analysis is local diagnostic evidence only and never Planning, Memory, proof, or closeout authority.",

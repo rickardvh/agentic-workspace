@@ -37,6 +37,8 @@ PYTEST_CAPTURE_MODE_ENV = "AW_SESSION_LOG_PYTEST_CAPTURE"
 SESSION_LOG_KIND = "agentic-workspace/session-log/v1"
 SESSION_LOG_INDEX_KIND = "agentic-workspace/session-log-index/v2"
 SESSION_LOG_INDEX_KINDS = {SESSION_LOG_INDEX_KIND, "agentic-workspace/session-log-index/v1"}
+SESSION_IMPROVEMENT_SIGNAL_CACHE_PATH = Path(".agentic-workspace") / "local" / "cache" / "dogfooding-signal-status.json"
+SESSION_IMPROVEMENT_SIGNAL_CACHE_KIND = "agentic-workspace/session-improvement-signal-cache/v1"
 DEFAULT_MAX_INLINE_OUTPUT_BYTES = 64 * 1024
 DEFAULT_SLOW_COMMAND_DURATION_MS = 120000
 LARGE_OUTPUT_SUMMARY_LIMIT = 5
@@ -254,6 +256,20 @@ def _run_session_log_adapter(args: Any) -> int:
         command = str(getattr(args, "session_log_command", "status") or "status")
         if command == "note":
             payload = append_note(state=state, text=str(getattr(args, "text", "")))
+        elif command == "signal":
+            payload = capture_improvement_signal(
+                state=state,
+                signal_kind=str(getattr(args, "kind", "workaround") or "workaround"),
+                symptom=str(getattr(args, "symptom", "") or ""),
+                cost=str(getattr(args, "cost", "") or ""),
+                expected_benefit=str(getattr(args, "expected_benefit", "") or ""),
+                evidence_class=str(getattr(args, "evidence_class", "agent_observed") or "agent_observed"),
+                owner_hint=str(getattr(args, "owner_hint", "unknown") or "unknown"),
+                scope_relation=str(getattr(args, "scope_relation", "current-scope") or "current-scope"),
+                recurrence=str(getattr(args, "recurrence", "first_seen") or "first_seen"),
+                evidence_refs=[str(item) for item in (getattr(args, "evidence_ref", []) or [])],
+                likely_remediation=str(getattr(args, "likely_remediation", "unknown") or "unknown"),
+            )
         elif command == "new-session":
             payload = reset_session(state=state)
         elif command == "analyze":
@@ -381,6 +397,133 @@ def append_note(*, state: SessionLoggingState, text: str) -> dict[str, Any]:
         "path": session["log_path"],
         "session_id": session["session_id"],
         "timestamp": timestamp,
+    }
+
+
+def _improvement_signal_fingerprint(*, signal_kind: str, symptom: str, owner_hint: str) -> str:
+    def normalize(value: str) -> str:
+        text = re.sub(r"https?://\S+", "<url>", value.strip().lower())
+        text = re.sub(r"#[0-9]+", "#<issue>", text)
+        text = re.sub(r"\b[0-9a-f]{8,}\b", "<identity>", text)
+        text = re.sub(r"\b\d+\b", "<n>", text)
+        return " ".join(text.split())
+
+    identity = {"kind": signal_kind, "owner": normalize(owner_hint), "symptom": normalize(symptom)}
+    return hashlib.sha256(json.dumps(identity, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:20]
+
+
+def _read_improvement_signal_cache(*, state: SessionLoggingState) -> dict[str, Any]:
+    path = state.target_root / SESSION_IMPROVEMENT_SIGNAL_CACHE_PATH
+    if not path.is_file():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def capture_improvement_signal(
+    *,
+    state: SessionLoggingState,
+    signal_kind: str,
+    symptom: str,
+    cost: str,
+    expected_benefit: str,
+    evidence_class: str,
+    owner_hint: str,
+    scope_relation: str,
+    recurrence: str,
+    evidence_refs: list[str],
+    likely_remediation: str,
+) -> dict[str, Any]:
+    """Capture one compact local observation for the existing improvement intake."""
+    symptom = " ".join(symptom.split())
+    cost = " ".join(cost.split())
+    expected_benefit = " ".join(expected_benefit.split())
+    if not symptom or not cost:
+        return {
+            "kind": "agentic-workspace/session-improvement-signal-capture/v1",
+            "status": "rejected",
+            "reason": "symptom and concrete cost are required; preference-only observations are not admitted",
+            "mutation_authorized": False,
+        }
+    if signal_kind == "opportunity" and not expected_benefit:
+        return {
+            "kind": "agentic-workspace/session-improvement-signal-capture/v1",
+            "status": "rejected",
+            "reason": "opportunity signals require a concrete expected future-cost or operability benefit",
+            "mutation_authorized": False,
+        }
+    normalized_kind = "improvement_opportunity" if signal_kind == "opportunity" else "workflow_cost"
+    fingerprint = _improvement_signal_fingerprint(
+        signal_kind=normalized_kind,
+        symptom=symptom,
+        owner_hint=owner_hint,
+    )
+    cache = _read_improvement_signal_cache(state=state)
+    raw_signals = cache.get("signals", [])
+    signals = [dict(item) for item in raw_signals if isinstance(item, dict)] if isinstance(raw_signals, list) else []
+    existing = next((item for item in signals if str(item.get("evidence_fingerprint") or "") == fingerprint), None)
+    now = datetime.now(UTC).isoformat()
+    if existing is None:
+        existing = {
+            "signal": symptom,
+            "kind": normalized_kind,
+            "symptom": symptom,
+            "cost": cost,
+            "expected_benefit": expected_benefit,
+            "evidence_classes": [evidence_class],
+            "evidence_refs": sorted({item.strip() for item in evidence_refs if item.strip()}),
+            "owner_hint": owner_hint.strip() or "unknown",
+            "scope_relation": scope_relation,
+            "recurrence": recurrence,
+            "occurrence_count": 1,
+            "likely_remediation": likely_remediation,
+            "evidence_fingerprint": fingerprint,
+            "outcome": "unresolved",
+            "first_seen_at": now,
+            "last_seen_at": now,
+        }
+        signals.append(existing)
+        outcome = "captured"
+    else:
+        existing["occurrence_count"] = max(1, int(existing.get("occurrence_count") or 1)) + 1
+        existing["last_seen_at"] = now
+        existing["evidence_classes"] = sorted(
+            {str(item) for item in existing.get("evidence_classes", []) if str(item).strip()} | {evidence_class}
+        )
+        existing["evidence_refs"] = sorted(
+            {str(item) for item in existing.get("evidence_refs", []) if str(item).strip()}
+            | {item.strip() for item in evidence_refs if item.strip()}
+        )
+        if evidence_class == "human_confirmed":
+            existing["recurrence"] = "human_confirmed"
+        elif existing["occurrence_count"] > 1 and existing.get("recurrence") == "first_seen":
+            existing["recurrence"] = "repeated"
+        outcome = "strengthened"
+    payload = {
+        "kind": SESSION_IMPROVEMENT_SIGNAL_CACHE_KIND,
+        "status": "unresolved",
+        "signals": signals,
+        "routing_decision": "route_now",
+        "updated_at": now,
+        "local_only": True,
+        "authoritative": False,
+        "mutation_authorized": False,
+    }
+    _write_json_atomic(state.target_root / SESSION_IMPROVEMENT_SIGNAL_CACHE_PATH, payload)
+    return {
+        "kind": "agentic-workspace/session-improvement-signal-capture/v1",
+        "status": outcome,
+        "evidence_fingerprint": fingerprint,
+        "occurrence_count": existing["occurrence_count"],
+        "recurrence": existing["recurrence"],
+        "evidence_classes": existing["evidence_classes"],
+        "cache_path": SESSION_IMPROVEMENT_SIGNAL_CACHE_PATH.as_posix(),
+        "candidate_only": True,
+        "mutation_authorized": False,
+        "next_route": "agentic-workspace report --target . --section improvement_intake --format json",
     }
 
 
@@ -1742,6 +1885,7 @@ def _slow_command_friction_candidates(entries: list[dict[str, Any]]) -> list[dic
                     "observed_during": "session-log analyze",
                     "symptom": f"{command} exceeded the slow-command threshold.",
                     "cost": f"{occurrence_count} run(s), total {duration_ms_total}ms, max {duration_ms_max}ms.",
+                    "expected_benefit": "Select a dependency-bound focused proof route and avoid unrelated broad reruns.",
                     "suspected_owner": "proof-router",
                     "likely_remediation": "validation",
                     "confidence": "medium" if severity == "protective-action" else "low",
@@ -1750,6 +1894,10 @@ def _slow_command_friction_candidates(entries: list[dict[str, Any]]) -> list[dic
                     "immediate_action": "route" if severity == "protective-action" else "review",
                     "retention": "shrink_after_fix",
                     "source": "session_log.slow_command",
+                    "scope_relation": "current-scope",
+                    "occurrence_count": occurrence_count,
+                    "evidence_classes": ["machine_observed"],
+                    "mutation_authorized": False,
                     "route_identity": f"proof-route-friction:{digest}",
                     "allowed_lifecycle_states": ["active", "mitigated", "accepted-risk", "promoted-to-issue", "obsolete"],
                     "consumption_rule": (
@@ -1790,11 +1938,33 @@ def _friction_candidates(
             }
         )
     for item in repeated[:LARGE_OUTPUT_SUMMARY_LIMIT]:
+        command = str(item["command"])
+        digest = hashlib.sha256(command.encode("utf-8")).hexdigest()[:10]
         candidates.append(
             {
                 "id": "repeated-command",
-                "summary": f"Repeated {item['count']} times: {item['command']}",
+                "summary": f"Repeated {item['count']} times: {command}",
                 "owner": "operating-loop",
+                "improvement_signal": {
+                    "candidate_kind": "improvement_signal_candidate",
+                    "kind": "workflow_cost",
+                    "observed_during": "session-log analyze",
+                    "symptom": f"{command} was re-entered {item['count']} times in one session.",
+                    "cost": "Repeated routing or maintenance re-entry adds command, reconstruction, and correction cost.",
+                    "expected_benefit": "Route the task once through the existing owner and avoid repeated maintenance entry.",
+                    "suspected_owner": "operating-loop",
+                    "likely_remediation": "agent_aid",
+                    "confidence": "medium",
+                    "recurrence": "repeated",
+                    "immediate_action": "route",
+                    "retention": "shrink_after_fix",
+                    "source": "session_log.repeated_command",
+                    "scope_relation": "current-scope",
+                    "occurrence_count": int(item["count"]),
+                    "evidence_classes": ["machine_observed"],
+                    "evidence_refs": [f"session-log:repeated-command:{digest}"],
+                    "mutation_authorized": False,
+                },
             }
         )
     for item in duplicates[:LARGE_OUTPUT_SUMMARY_LIMIT]:

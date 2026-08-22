@@ -6348,6 +6348,9 @@ def _improvement_signal_contract_payload() -> dict[str, Any]:
         "required_fields": list(_IMPROVEMENT_SIGNAL_CONTRACT["required_fields"]),
         "kinds": list(_IMPROVEMENT_SIGNAL_CONTRACT["kinds"]),
         "likely_remediations": list(_IMPROVEMENT_SIGNAL_CONTRACT["likely_remediations"]),
+        "evidence_classes": list(_IMPROVEMENT_SIGNAL_CONTRACT.get("evidence_classes", [])),
+        "scope_relations": list(_IMPROVEMENT_SIGNAL_CONTRACT.get("scope_relations", [])),
+        "ordinary_work_intake": copy.deepcopy(_IMPROVEMENT_SIGNAL_CONTRACT.get("ordinary_work_intake", {})),
         "validation_failure_classes": list(_IMPROVEMENT_SIGNAL_CONTRACT.get("validation_failure_classes", [])),
         "validation_remedy_order": list(_IMPROVEMENT_SIGNAL_CONTRACT.get("validation_remedy_order", [])),
         "correct_by_design_review": dict(_IMPROVEMENT_SIGNAL_CONTRACT.get("correct_by_design_review", {})),
@@ -6374,6 +6377,11 @@ def _improvement_signal_candidate(
     immediate_action: str,
     retention: str,
     source: str,
+    evidence_classes: list[str] | None = None,
+    evidence_refs: list[str] | None = None,
+    expected_benefit: str = "",
+    scope_relation: str = "current-scope",
+    occurrence_count: int = 1,
 ) -> dict[str, Any]:
     candidate: dict[str, Any] = {
         "candidate_kind": str(_IMPROVEMENT_SIGNAL_CONTRACT["candidate_kind"]),
@@ -6388,6 +6396,12 @@ def _improvement_signal_candidate(
         "immediate_action": immediate_action,
         "retention": retention,
         "source": source,
+        "evidence_classes": list(evidence_classes or ["machine_observed"]),
+        "evidence_refs": list(evidence_refs or []),
+        "expected_benefit": expected_benefit,
+        "scope_relation": scope_relation,
+        "occurrence_count": max(1, occurrence_count),
+        "mutation_authorized": False,
     }
     candidate["evidence_fingerprint"] = _improvement_evidence_fingerprint(candidate)
     candidate["routing_decision"] = {
@@ -6438,6 +6452,18 @@ def _dedupe_improvement_candidates(candidates: list[dict[str, Any]]) -> list[dic
             }
         )
         candidate["equivalent_evidence_count"] = sum(max(1, int(record.get("equivalent_evidence_count") or 1)) for record in records)
+        candidate["occurrence_count"] = sum(max(1, int(record.get("occurrence_count") or 1)) for record in records)
+        candidate["evidence_classes"] = sorted(
+            {str(item) for record in records for item in _list_payload(record.get("evidence_classes")) if str(item).strip()}
+        )
+        candidate["evidence_refs"] = sorted(
+            {str(item) for record in records for item in _list_payload(record.get("evidence_refs")) if str(item).strip()}
+        )
+        if "human_confirmed" in candidate["evidence_classes"]:
+            candidate["confidence"] = "high"
+            candidate["recurrence"] = "human_confirmed"
+        elif candidate["occurrence_count"] > 1:
+            candidate["recurrence"] = "repeated"
         candidate["evidence_exemplars"] = [str(record.get("symptom") or "") for record in records[:3]]
         if issue_refs:
             candidate["issue_ref"] = issue_refs[0]
@@ -6593,7 +6619,7 @@ def _improvement_signal_candidates_from_session_intake(
     session_intake = _session_improvement_intake_payload(target_root=target_root, config=config, cli_invoke=config.cli_invoke)
     status = str(session_intake.get("status") or "unknown")
     candidates: list[dict[str, Any]] = []
-    active_outcomes = {"unresolved", "recorded_chat_only", "recorded_session_only", "routed_to_issue"}
+    active_outcomes = {"unresolved", "recorded_chat_only", "recorded_session_only", "routed_to_issue", "review_required"}
     destinations = [
         str(item)
         for decision in _list_payload(session_intake.get("routing_decisions"))
@@ -6605,19 +6631,33 @@ def _improvement_signal_candidates_from_session_intake(
     for signal in _list_payload(session_intake.get("session_observed_signals")):
         if not isinstance(signal, dict) or str(signal.get("outcome") or "") not in active_outcomes:
             continue
+        evidence_classes = [str(item) for item in _list_payload(signal.get("evidence_classes")) if str(item).strip()]
         candidate = _improvement_signal_candidate(
-            kind="workflow_cost",
+            kind=str(signal.get("kind") or "workflow_cost"),
             observed_during="current agent session",
-            symptom=str(signal.get("signal") or "session friction needs an explicit intake decision"),
-            cost="Current-session friction can repeat or disappear unless it enters the durable intake route.",
-            suspected_owner="workspace",
-            likely_remediation="agent_aid",
-            confidence="high" if "minute" in str(signal.get("signal") or "").lower() else "medium",
-            recurrence="repeated" if "repeat" in str(signal.get("signal") or "").lower() else "first_seen",
+            symptom=str(signal.get("symptom") or signal.get("signal") or "session friction needs an explicit intake decision"),
+            cost=str(signal.get("cost") or "Current-session friction can repeat or disappear unless it enters the durable intake route."),
+            suspected_owner=str(signal.get("owner_hint") or "workspace"),
+            likely_remediation=str(signal.get("likely_remediation") or "agent_aid"),
+            confidence=(
+                "high"
+                if "human_confirmed" in evidence_classes or "minute" in str(signal.get("signal") or "").lower()
+                else "medium"
+                if {"machine_observed", "review_derived"}.intersection(evidence_classes)
+                else "low"
+            ),
+            recurrence=str(signal.get("recurrence") or "first_seen"),
             immediate_action="route",
             retention="shrink_after_fix",
             source="session_improvement_intake.session_observed_signals",
+            evidence_classes=evidence_classes or ["agent_observed"],
+            evidence_refs=[str(item) for item in _list_payload(signal.get("evidence_refs")) if str(item).strip()],
+            expected_benefit=str(signal.get("expected_benefit") or ""),
+            scope_relation=str(signal.get("scope_relation") or "current-scope"),
+            occurrence_count=max(1, int(signal.get("occurrence_count") or 1)),
         )
+        if signal.get("evidence_fingerprint"):
+            candidate["evidence_fingerprint"] = str(signal["evidence_fingerprint"])
         if issue_ref:
             candidate["issue_ref"] = issue_ref
         candidates.append(candidate)
@@ -7069,7 +7109,12 @@ def _improvement_intake_payload(
 
 
 def _dogfooding_signal_status_outcome(cache: dict[str, Any]) -> dict[str, Any]:
-    signals = [str(item) for item in _list_payload(cache.get("signals")) if str(item).strip()]
+    signal_records = [copy.deepcopy(item) for item in _list_payload(cache.get("signals")) if isinstance(item, dict)]
+    signals = [
+        str(item.get("signal") or item.get("symptom") or "").strip()
+        for item in signal_records
+        if str(item.get("signal") or item.get("symptom") or "").strip()
+    ] or [str(item) for item in _list_payload(cache.get("signals")) if not isinstance(item, dict) and str(item).strip()]
     destinations = [str(item) for item in _list_payload(cache.get("destinations")) if str(item).strip()]
     raw_status = str(cache.get("status") or cache.get("outcome") or "").strip()
     dismissal_reason = str(cache.get("dismissal_reason") or cache.get("reason") or "").strip()
@@ -7128,6 +7173,7 @@ def _dogfooding_signal_status_outcome(cache: dict[str, Any]) -> dict[str, Any]:
     return {
         "status": status,
         "signals": signals,
+        "signal_records": signal_records,
         "destinations": destinations,
         "dismissal_reason": dismissal_reason,
         "deferred_reason": deferred_reason,
@@ -7140,6 +7186,17 @@ def _dogfooding_signal_status_outcome(cache: dict[str, Any]) -> dict[str, Any]:
 
 def _session_improvement_capture_routes(*, cli_invoke: str, target_root: Path | None = None) -> dict[str, Any]:
     target_arg = _command_target_arg(target_root)
+    signal_command = _command_with_cli_invoke(
+        command=(
+            "agentic-workspace session-log signal --target ./repo --kind <workaround|opportunity> "
+            '--symptom "<observed symptom>" --cost "<concrete future cost>" '
+            '--expected-benefit "<required for opportunity>" --owner-hint <owner> '
+            "--evidence-class <agent_observed|machine_observed|human_confirmed|review_derived> "
+            "--evidence-ref <ref> --format json"
+        ),
+        cli_invoke=cli_invoke,
+        target_arg=target_arg,
+    )
     memory_command = _command_with_cli_invoke(
         command=(
             "agentic-workspace memory capture-note --target ./repo --slug <slug> "
@@ -7158,6 +7215,15 @@ def _session_improvement_capture_routes(*, cli_invoke: str, target_root: Path | 
         "status": "available",
         "cache_path": ".agentic-workspace/local/cache/dogfooding-signal-status.json",
         "ordinary_routes": [
+            {
+                "id": "capture-material-signal",
+                "outcome": "unresolved",
+                "command": signal_command,
+                "effect": "captures or strengthens one compact candidate in the existing improvement intake",
+                "authority": "candidate-evidence-only",
+                "mutation_authorized": False,
+                "requires_manual_issue_filing": False,
+            },
             {
                 "id": "record-no-signal",
                 "outcome": "checked_none",
@@ -7290,17 +7356,31 @@ def _session_improvement_intake_payload(*, target_root: Path, config: WorkspaceC
         }
     outcome = _dogfooding_signal_status_outcome(cache)
     signals = cast(list[str], outcome["signals"])
+    signal_records = [item for item in _list_payload(outcome.get("signal_records")) if isinstance(item, dict)]
     destinations = cast(list[str], outcome["destinations"])
     routing_decision = str(cache.get("routing_decision") or outcome["status"])
-    session_signals = [
-        {
-            "signal": signal,
-            "outcome": outcome["status"],
-            "routing_decision": routing_decision,
-            "durability": outcome["durability"],
-        }
-        for signal in signals
-    ]
+    session_signals = (
+        [
+            {
+                **record,
+                "signal": str(record.get("signal") or record.get("symptom") or ""),
+                "outcome": str(record.get("outcome") or outcome["status"]),
+                "routing_decision": routing_decision,
+                "durability": outcome["durability"],
+            }
+            for record in signal_records
+        ]
+        if signal_records
+        else [
+            {
+                "signal": signal,
+                "outcome": outcome["status"],
+                "routing_decision": routing_decision,
+                "durability": outcome["durability"],
+            }
+            for signal in signals
+        ]
+    )
     status = "checked_none" if outcome["status"] == "checked_none" else "session_observed"
     return {
         "kind": "workspace-session-improvement-intake/v1",
@@ -7359,18 +7439,27 @@ def _session_index_improvement_intake(*, target_root: Path, config: WorkspaceCon
     decisions = []
     seen_fingerprints: set[str] = set()
     for candidate in candidates:
-        fingerprint = hashlib.sha256(json.dumps(candidate, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")).hexdigest()
+        improvement_signal = _as_dict(candidate.get("improvement_signal"))
+        fingerprint = (
+            str(improvement_signal.get("evidence_fingerprint") or "")
+            or hashlib.sha256(json.dumps(candidate, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")).hexdigest()
+        )
         if fingerprint in seen_fingerprints:
             continue
         seen_fingerprints.add(fingerprint)
         signals.append(
             {
-                "signal": str(candidate.get("summary") or candidate.get("id") or "session-log candidate"),
+                **copy.deepcopy(improvement_signal),
+                "signal": str(
+                    improvement_signal.get("symptom") or candidate.get("summary") or candidate.get("id") or "session-log candidate"
+                ),
                 "outcome": "review_required",
                 "routing_decision": "review-before-promotion",
                 "durability": "fingerprinted-local-index",
                 "fingerprint": fingerprint,
                 "reviewed": False,
+                "evidence_classes": ["machine_observed"],
+                "evidence_refs": [str(item) for item in _list_payload(improvement_signal.get("evidence_refs")) if str(item).strip()],
             }
         )
         decisions.append(

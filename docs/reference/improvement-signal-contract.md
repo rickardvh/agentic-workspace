@@ -29,6 +29,14 @@ Contract for classifying improvement signals and routing them to the right owner
 | `correct_by_design_review.preferred_remediation_order` | array of string | yes |  | Ordered preferred remediation order entries used by this contract. |  |  |
 | `correct_by_design_review.closeout_field` | string | yes |  | Closeout field text value used by this contract. |  |  |
 | `confidence` | array of enum `"low"`, `"medium"`, `"high"` | yes |  | Ordered confidence entries used by this contract. |  |  |
+| `evidence_classes` | array of enum `"agent_observed"`, `"machine_observed"`, `"human_confirmed"`, `"review_derived"` | yes |  | Evidence provenance classes accepted by ordinary-work signal intake. |  |  |
+| `scope_relations` | array of enum `"current-scope"`, `"adjacent-scope"`, `"standalone-repo"`, `"aw-internal"` | yes |  | Relations between the observation and current task scope used by later owner classification. |  |  |
+| `ordinary_work_intake` | object | yes |  | Ordinary-work capture, evidence, admission, and closeout contract for improvement candidates. |  |  |
+| `ordinary_work_intake.capture_operation` | string | yes |  | Existing typed command used to capture local candidate evidence. |  |  |
+| `ordinary_work_intake.candidate_destination` | string | yes |  | Existing intake route that classifies captured observations. |  |  |
+| `ordinary_work_intake.source_classes` | array of object | yes |  | Evidence source classes and their non-mutation authority. |  |  |
+| `ordinary_work_intake.admission_guards` | array of string | yes |  | Rules that reject preference-only input and preserve candidate-only authority. |  |  |
+| `ordinary_work_intake.closeout_rule` | string | yes |  | Rule that makes material unresolved observations visible without burdening no-signal work. |  |  |
 | `recurrence` | array of enum `"first_seen"`, `"repeated"`, `"human_confirmed"` | yes |  | Ordered recurrence entries used by this contract. |  |  |
 | `lifecycle_states` | array of enum `"active"`, `"mitigated"`, `"accepted-risk"`, `"promoted-to-issue"`, `"obsolete"` | yes |  | Ordered lifecycle states entries used by this contract. |  |  |
 | `lifecycle_rule` | string | yes |  | Policy rule that explains how improvement pressure lifecycle state affects routing. |  |  |

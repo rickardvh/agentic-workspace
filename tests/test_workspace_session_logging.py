@@ -428,6 +428,13 @@ def test_session_log_analyze_reports_counts_repeats_failures_artifacts_and_packe
         "repeated-command",
         "duplicate-output",
     }
+    repeated_signal = next(item["improvement_signal"] for item in payload["friction_candidates"] if item["id"] == "repeated-command")
+    assert repeated_signal["kind"] == "workflow_cost"
+    assert repeated_signal["evidence_classes"] == ["machine_observed"]
+    assert repeated_signal["recurrence"] == "repeated"
+    assert repeated_signal["occurrence_count"] == 2
+    assert repeated_signal["suspected_owner"] == "operating-loop"
+    assert repeated_signal["mutation_authorized"] is False
 
     pointer = json.loads((target / ".agentic-workspace/local/session-logging/current.json").read_text(encoding="utf-8"))
     assert source_cli.main(["session-log", "--target", str(target), "analyze", "--id", pointer["session_id"], "--format", "json"]) == 0
@@ -1865,6 +1872,9 @@ def test_session_log_slow_commands_surface_proof_route_friction(tmp_path: Path, 
     assert slow["improvement_signal"]["applicable_to_current_route"] is True
     assert slow["improvement_signal"]["applicable_live"] is False
     assert slow["improvement_signal"]["recurrence"] == "first_seen"
+    assert slow["improvement_signal"]["evidence_classes"] == ["machine_observed"]
+    assert slow["improvement_signal"]["expected_benefit"]
+    assert slow["improvement_signal"]["mutation_authorized"] is False
 
 
 def test_session_log_repeated_slow_commands_surface_recurring_proof_friction() -> None:

@@ -1380,13 +1380,22 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
                     "candidate_kind",
                     "source",
                     "symptom",
+                    "cost",
                     "suspected_owner",
+                    "confidence",
+                    "recurrence",
                     "summary",
                     "recommended_destination",
                     "recommended_action",
                     "routing_decision",
                     "evidence_fingerprint",
                     "equivalent_evidence_count",
+                    "occurrence_count",
+                    "evidence_classes",
+                    "evidence_refs",
+                    "expected_benefit",
+                    "scope_relation",
+                    "mutation_authorized",
                 )
                 if isinstance(item, dict) and key in item
             }
