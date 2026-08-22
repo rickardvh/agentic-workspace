@@ -13,7 +13,14 @@
     "task": {"type": "string", "description": "Optional task text used when explaining applicability."},
     "changed": {"type": "array", "description": "Changed or target paths used to evaluate applicability.", "items": {"type": "string", "description": "One repository-relative changed or target path."}},
     "verbose": {"type": "boolean", "description": "Whether explanation output includes the compiled instruction program."},
-    "source": {"type": "string", "description": "Repository-relative static instruction source used for migration advice."}
+    "source": {"type": "string", "description": "Repository-relative static instruction source used for migration advice."},
+    "adaptation_mode": {"const": "apply", "description": "Select the explicitly owner-admitted guarded adaptation mode."},
+    "adaptation_authority_path": {"type": "string", "description": "Existing canonical Markdown instruction inside .agentic-workspace/instructions."},
+    "adaptation_expected_revision": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$", "description": "Exact pre-apply instruction revision."},
+    "adaptation_delta_json": {"type": "string", "description": "JSON object describing one bounded append_guidance semantic delta."},
+    "owner_admission": {"const": "admitted", "description": "Explicit consequential-change admission decision."},
+    "owner_admission_by": {"type": "string", "minLength": 1, "description": "Human or instruction-owner identity that admitted this exact candidate revision."},
+    "dry_run": {"type": "boolean", "description": "Simulate the admitted adaptation without writing canonical state."}
   },
   "additionalProperties": false
 }

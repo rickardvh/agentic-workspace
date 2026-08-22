@@ -44,12 +44,16 @@
       "covered_behaviors": [
         "deterministic deduplication",
         "registered proof.report operation lookup",
+        "typed proof.report canonical write-surface parity",
         "current owner revision recheck",
         "simulation before mutation",
         "canonical proof-route mutation with independent validation",
+        "explicit scoped-instruction owner admission",
+        "canonical scoped-instruction mutation with positive and negative applicability validation",
         "fresh post-mutation revision receipt",
         "rollback on validation failure",
-        "quiet or superseded execution disposition"
+        "quiet or superseded execution disposition",
+        "no automatic consequential instruction promotion"
       ],
       "residue_boundary": "No learned override, optimiser, event store, or second adaptation framework was added."
     }

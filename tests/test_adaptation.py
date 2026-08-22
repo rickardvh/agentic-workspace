@@ -6,10 +6,12 @@ from pathlib import Path
 
 from agentic_workspace.adaptation import (
     adaptation_signal_from_proof_route_finding,
+    admit_bounded_adaptation,
     bounded_adaptation_projection,
     execute_bounded_adaptation,
     simulate_adaptation,
 )
+from agentic_workspace.scoped_instructions import read_instruction
 from agentic_workspace.workspace_runtime_core import _improvement_intake_payload
 
 
@@ -85,6 +87,83 @@ def test_bounded_adaptation_keeps_consequential_instruction_change_owner_bound()
     assert candidate["promotion"]["status"] == "owner-admission-required"
     assert candidate["promotion"]["operation_id"] == "instructions.create"
     assert candidate["promotion"]["operation_registered"] is True
+    assert "owner_admission" not in candidate
+
+
+def _instruction_candidate(tmp_path: Path, *, negative_paths: list[str] | None = None) -> tuple[dict[str, object], Path]:
+    instruction = tmp_path / ".agentic-workspace/instructions/example.md"
+    instruction.parent.mkdir(parents=True)
+    instruction.write_text("---\npaths:\n  - src/**\n---\n\n# Example\n\nKeep existing guidance.\n", encoding="utf-8")
+    revision = read_instruction(instruction, root=tmp_path).revision
+    signal = _signal(owner_class="scoped-instruction")
+    signal["adaptation"]["source_owner"] = ".agentic-workspace/instructions/example.md"
+    signal["adaptation"]["proposed_delta"] = {
+        "action": "append_guidance",
+        "heading": "Focused follow-through",
+        "guidance": "Use the focused check after changing an applicable source path.",
+        "positive_paths": ["src/example.py"],
+        "negative_paths": negative_paths or ["docs/example.md"],
+    }
+    signal["adaptation"]["authority_requirement"].update({"expected_owner_revision": revision, "current_owner_revision": revision})
+    signal["adaptation"]["simulation"]["allowed_owner_paths"] = [".agentic-workspace/instructions/example.md"]
+    return bounded_adaptation_projection([signal])["candidates"][0], instruction
+
+
+def test_scoped_instruction_adaptation_requires_admission_then_mutates_validates_and_quiets(tmp_path: Path) -> None:
+    candidate, instruction = _instruction_candidate(tmp_path)
+
+    assert candidate["status"] == "owner-review-required"
+    admitted = admit_bounded_adaptation(candidate, admitted_by="maintainer@example")
+    execution = execute_bounded_adaptation(admitted, target_root=tmp_path)
+
+    assert admitted["promotion"]["automatic"] is False
+    assert execution["status"] == "quiet"
+    assert execution["automatic_promotion"] is False
+    assert execution["validation_status"] == "passed"
+    assert execution["operation_result"]["mutation_applied"] is True
+    assert execution["post_owner_revision"] != execution["expected_owner_revision"]
+    assert "## Focused follow-through" in instruction.read_text(encoding="utf-8")
+
+
+def test_scoped_instruction_adaptation_stale_revision_is_superseded_without_mutation(tmp_path: Path) -> None:
+    candidate, instruction = _instruction_candidate(tmp_path)
+    admitted = admit_bounded_adaptation(candidate, admitted_by="instruction-owner")
+    instruction.write_text(instruction.read_text(encoding="utf-8") + "\nConcurrent edit.\n", encoding="utf-8")
+    concurrent = instruction.read_bytes()
+
+    execution = execute_bounded_adaptation(admitted, target_root=tmp_path)
+
+    assert execution["status"] == "superseded"
+    assert execution["disposition"] == "superseded"
+    assert execution["operation_result"]["mutation_applied"] is False
+    assert instruction.read_bytes() == concurrent
+
+
+def test_scoped_instruction_adaptation_rejects_unsafe_delta(tmp_path: Path) -> None:
+    candidate, instruction = _instruction_candidate(tmp_path)
+    candidate["proposed_delta"]["guidance"] = "---\npaths:\n  - **"
+    admitted = admit_bounded_adaptation(candidate, admitted_by="instruction-owner")
+    previous = instruction.read_bytes()
+
+    execution = execute_bounded_adaptation(admitted, target_root=tmp_path)
+
+    assert execution["status"] == "blocked"
+    assert execution["operation_result"]["reason_code"] == "instruction-operation-rejected"
+    assert instruction.read_bytes() == previous
+
+
+def test_scoped_instruction_adaptation_rolls_back_failed_applicability_validation(tmp_path: Path) -> None:
+    candidate, instruction = _instruction_candidate(tmp_path, negative_paths=["src/unexpected.py"])
+    admitted = admit_bounded_adaptation(candidate, admitted_by="instruction-owner")
+    previous = instruction.read_bytes()
+
+    execution = execute_bounded_adaptation(admitted, target_root=tmp_path)
+
+    assert execution["status"] == "blocked"
+    assert execution["validation_status"] == "failed"
+    assert execution["rollback"]["restored_pre_apply_bytes"] is True
+    assert execution["operation_result"]["mutation_applied"] is False
+    assert instruction.read_bytes() == previous
 
 
 def test_adaptation_simulation_rejects_removed_behavior_authority_widening_and_cost_regression() -> None:
@@ -235,6 +314,8 @@ def test_real_route_health_signal_executes_registered_owner_operation(tmp_path: 
     assert execution["validation_status"] == "passed"
     assert execution["post_owner_revision"] != execution["expected_owner_revision"]
     assert execution["operation_result"]["semantic_delta"]["lane_id"] == "example_focused"
+    contract = json.loads(Path("src/agentic_workspace/contracts/operations/proof.report.json").read_text(encoding="utf-8"))
+    assert execution["operation_result"]["authority_path"] in {item["surface"].split(" [", 1)[0] for item in contract["writes"]}
     assert (
         json.loads((tmp_path / ".agentic-workspace/local/proof-route-repairs/history.jsonl").read_text().splitlines()[0])["status"]
         == "applied"

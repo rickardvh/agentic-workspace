@@ -137,6 +137,33 @@ def adaptation_signal_from_proof_route_finding(
     return signal
 
 
+def admit_bounded_adaptation(candidate: dict[str, Any], *, admitted_by: str) -> dict[str, Any]:
+    """Record an explicit owner decision without weakening automatic-promotion policy."""
+    admitted_by = str(admitted_by or "").strip()
+    if str(candidate.get("owner_class") or "") != "scoped-instruction":
+        raise ValueError("explicit owner admission is supported only for scoped-instruction adaptations")
+    if candidate.get("status") != "owner-review-required":
+        raise ValueError("owner admission requires an owner-review-required candidate")
+    if not admitted_by:
+        raise ValueError("owner admission must identify the admitting human or owner")
+    admitted = copy.deepcopy(candidate)
+    admitted["owner_admission"] = {
+        "kind": "agentic-workspace/adaptation-owner-admission/v1",
+        "status": "admitted",
+        "admitted_by": admitted_by,
+        "scope": "one-candidate-one-owner-revision",
+        "candidate_id": str(candidate.get("id") or ""),
+        "expected_owner_revision": str(_dict(candidate.get("authority_requirement")).get("expected_owner_revision") or ""),
+    }
+    admitted["status"] = "promotion-ready"
+    admitted["promotion"] = {
+        **_dict(admitted.get("promotion")),
+        "status": "owner-admitted",
+        "automatic": False,
+    }
+    return admitted
+
+
 def execute_bounded_adaptation(candidate: dict[str, Any], *, target_root: Path, dry_run: bool = False) -> dict[str, Any]:
     """Execute an admitted low-risk adaptation through its canonical owner operation."""
     authority = _dict(candidate.get("authority_requirement"))
@@ -147,12 +174,51 @@ def execute_bounded_adaptation(candidate: dict[str, Any], *, target_root: Path, 
         raise ValueError("adaptation execution requires a promotion-ready candidate with a passed simulation")
     if contract is None:
         raise ValueError(f"adaptation operation is not registered: {operation_id}")
-    if operation_id != "proof.report":
+    if operation_id not in {"proof.report", "instructions.create"}:
         raise ValueError(f"adaptation operation has no bounded execution adapter: {operation_id}")
     operation_inputs = _dict(candidate.get("operation_inputs"))
     proposed_delta = candidate.get("proposed_delta")
     if not isinstance(proposed_delta, dict):
-        raise ValueError("proof-route adaptation requires a typed semantic delta")
+        raise ValueError("bounded adaptation requires a typed semantic delta")
+
+    if operation_id == "instructions.create":
+        admission = _dict(candidate.get("owner_admission"))
+        if admission.get("status") != "admitted" or not str(admission.get("admitted_by") or "").strip():
+            raise ValueError("scoped-instruction adaptation requires explicit owner admission")
+        from agentic_workspace.scoped_instructions import apply_instruction_operation
+
+        operation_result = apply_instruction_operation(
+            target_root=target_root,
+            operation_id=operation_id,
+            values={
+                "adaptation_mode": "apply",
+                "adaptation_authority_path": str(candidate.get("source_owner") or ""),
+                "adaptation_expected_revision": str(authority.get("expected_owner_revision") or ""),
+                "adaptation_delta_json": json.dumps(proposed_delta, sort_keys=True),
+                "owner_admission": "admitted",
+                "owner_admission_by": str(admission.get("admitted_by") or ""),
+                "dry_run": dry_run,
+            },
+        )
+        operation_status = str(operation_result.get("status") or "")
+        stale = operation_status == "blocked-stale-authority-revision"
+        applied = operation_status in {"applied", "already-applied"}
+        return {
+            "kind": "agentic-workspace/bounded-adaptation-execution/v1",
+            "status": "superseded" if stale else "quiet" if applied else "simulated" if dry_run else "blocked",
+            "candidate_id": str(candidate.get("id") or ""),
+            "operation_id": operation_id,
+            "operation_contract": f"src/agentic_workspace/contracts/operations/{operation_id}.json",
+            "disposition": "superseded" if stale else "fixed" if applied else "active",
+            "automatic_promotion": False,
+            "owner_admission": copy.deepcopy(admission),
+            "expected_owner_revision": str(authority.get("expected_owner_revision") or ""),
+            "post_owner_revision": str(operation_result.get("post_authority_revision") or ""),
+            "validation_status": str(operation_result.get("validation_status") or "not-run"),
+            "rollback": copy.deepcopy(operation_result.get("rollback")),
+            "operation_result": operation_result,
+            "rule": "Consequential instruction changes require explicit owner admission and a registered, revision-guarded canonical operation; failed validation restores the pre-apply bytes.",
+        }
 
     from agentic_workspace.workspace_runtime_proof import _proof_route_repair_operation_payload
 

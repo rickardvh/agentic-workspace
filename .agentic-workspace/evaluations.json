@@ -418,7 +418,7 @@
         "comparison_boundary": "Pre-v0.42 evidence is contextual only unless task shape and runtime are matched.",
         "ref": "#2646",
         "type": "workspace-operating-context",
-        "version_range": "v0.42-current through stacked PRs #2653-#2655"
+        "version_range": "v0.42-current through merged PRs #2653/#2654 and PR #2655 on master"
       },
       "updated_at": "2026-08-22T00:00:00Z"
     }

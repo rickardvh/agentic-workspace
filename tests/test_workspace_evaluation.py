@@ -2294,7 +2294,7 @@ def test_operating_context_convergence_evaluation_is_owner_bound_and_privacy_saf
     evaluation = next(item for item in payload["evaluations"] if item["id"] == "operating-context-cost-convergence-2646")
 
     assert evaluation["lifecycle"] == "collecting"
-    assert evaluation["subject"]["version_range"] == "v0.42-current through stacked PRs #2653-#2655"
+    assert evaluation["subject"]["version_range"] == "v0.42-current through merged PRs #2653/#2654 and PR #2655 on master"
     assert evaluation["decision_owner"] == {"class": "maintainer", "id": "workspace-maintainer"}
     assert evaluation["collection_policy"]["minimum_observations"] == 6
     assert evaluation["collection_policy"]["representative_session_minimum"] == 4

@@ -19,3 +19,10 @@ Inputs shared by generated scoped Markdown instruction operations.
 | `changed` | array of string | no |  | Changed or target paths used to evaluate applicability. |  |  |
 | `verbose` | boolean | no |  | Whether explanation output includes the compiled instruction program. |  |  |
 | `source` | string | no |  | Repository-relative static instruction source used for migration advice. |  |  |
+| `adaptation_mode` | const `"apply"` | no |  | Select the explicitly owner-admitted guarded adaptation mode. |  |  |
+| `adaptation_authority_path` | string | no |  | Existing canonical Markdown instruction inside .agentic-workspace/instructions. |  |  |
+| `adaptation_expected_revision` | string | no |  | Exact pre-apply instruction revision. |  |  |
+| `adaptation_delta_json` | string | no |  | JSON object describing one bounded append_guidance semantic delta. |  |  |
+| `owner_admission` | const `"admitted"` | no |  | Explicit consequential-change admission decision. |  |  |
+| `owner_admission_by` | string | no |  | Human or instruction-owner identity that admitted this exact candidate revision. |  |  |
+| `dry_run` | boolean | no |  | Simulate the admitted adaptation without writing canonical state. |  |  |
