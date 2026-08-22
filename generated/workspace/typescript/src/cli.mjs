@@ -510,7 +510,7 @@ const commandDefinitions = [
                 "--lane"
               ],
               "help": "Strategic Planning lane id; defaults to ungrouped.",
-              "name": "lane"
+              "name": "issue_lane"
             },
             {
               "default": "",

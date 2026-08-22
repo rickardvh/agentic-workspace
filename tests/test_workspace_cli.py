@@ -11915,13 +11915,9 @@ def test_start_explicit_changed_path_still_uses_changed_path_startup(tmp_path: P
     )
     payload = json.loads(capsys.readouterr().out)
 
-    assert payload["next_safe_action"]["next_safe_action"] == "select-changed-path-proof"
-    assert payload["context"]["primary_action"]["command"].endswith("proof --changed AGENTS.md --format json")
-    projection = payload["context"]["context_authority_projection"]
-    assert projection["consumer"] == "start"
-    assert projection["changed_path_count"] == 1
-    assert len(projection["authorities"]) >= 1
-    assert projection["registry_revision"].startswith("sha256:")
+    assert payload["decision_packet"]["next_action"] == "select-changed-path-proof"
+    assert payload["decision_packet"]["required_commands"] == ["agentic-workspace proof --changed AGENTS.md --format json"]
+    assert payload["serialization_budget"]["status"] == "detail-withheld"
 
 
 def test_start_context_authority_projection_fails_closed_for_missing_scoped_instruction_source(tmp_path: Path, capsys) -> None:
@@ -11951,8 +11947,12 @@ def test_start_context_authority_projection_fails_closed_for_missing_scoped_inst
 
     assert projection["status"] == "repair-required"
     assert "scoped-instructions" in projection["missing_required_surfaces"]
-    repair = next(item for item in projection["repair_operation"]["repairs"] if item["surface"] == "scoped-instructions")
-    assert repair["operation_id"] == "workspace.instructions.route"
+    decision = next(item for item in projection["currentness"]["decision_requirements"] if item["surface"] == "scoped-instructions")
+    assert decision["state"] == "missing-relevant-coverage"
+    assert decision["task_effect"] == "material"
+    assert decision["operation_id"] == ""
+    assert projection["repair_operation"]["status"] == "not-required"
+    assert projection["repair_operation"]["repairs"] == []
 
 
 def test_local_chat_checkpoint_write_creates_valid_local_record_and_startup_packet(tmp_path: Path, capsys) -> None:

@@ -1387,6 +1387,34 @@
                 "attr": "issue"
               },
               {
+                "option": "--external-ref",
+                "attr": "external_ref"
+              },
+              {
+                "option": "--lane",
+                "attr": "issue_lane"
+              },
+              {
+                "option": "--priority",
+                "attr": "priority"
+              },
+              {
+                "option": "--depends-on",
+                "attr": "depends_on"
+              },
+              {
+                "option": "--rationale",
+                "attr": "rationale"
+              },
+              {
+                "option": "--maturity",
+                "attr": "maturity"
+              },
+              {
+                "option": "--expect-relation-revision",
+                "attr": "expect_relation_revision"
+              },
+              {
                 "option": "--parent-lane-closeout",
                 "attr": "parent_lane_closeout"
               },
@@ -2565,7 +2593,7 @@
                       "--lane"
                     ],
                     "help": "Strategic Planning lane id; defaults to ungrouped.",
-                    "name": "lane"
+                    "name": "issue_lane"
                   },
                   {
                     "default": "",
@@ -15901,6 +15929,30 @@
               {
                 "attr": "external_ref",
                 "option": "--external-ref"
+              },
+              {
+                "attr": "issue_lane",
+                "option": "--lane"
+              },
+              {
+                "attr": "priority",
+                "option": "--priority"
+              },
+              {
+                "attr": "depends_on",
+                "option": "--depends-on"
+              },
+              {
+                "attr": "rationale",
+                "option": "--rationale"
+              },
+              {
+                "attr": "maturity",
+                "option": "--maturity"
+              },
+              {
+                "attr": "expect_relation_revision",
+                "option": "--expect-relation-revision"
               },
               {
                 "attr": "requested_transition",

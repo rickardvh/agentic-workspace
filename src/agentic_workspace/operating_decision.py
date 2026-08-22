@@ -79,6 +79,7 @@ def _load_context_authority_registry_contract() -> dict[str, Any]:
 
 
 _CONTEXT_AUTHORITY_REGISTRY_CONTRACT = _load_context_authority_registry_contract()
+CONTEXT_CURRENTNESS_CONTRACT = _as_dict(_CONTEXT_AUTHORITY_REGISTRY_CONTRACT.get("currentness_contract"))
 ORDINARY_DECISION_CONSUMERS = [str(item) for item in _as_list(_CONTEXT_AUTHORITY_REGISTRY_CONTRACT.get("ordinary_decision_consumers"))]
 ORDINARY_DECISION_CONSUMER_REQUIREMENTS = {
     str(consumer): [str(surface) for surface in _as_list(surfaces)]
@@ -212,6 +213,138 @@ def context_authority_declarations() -> list[dict[str, Any]]:
         {key: value for key, value in {**item, "consumer": ", ".join(item["consumers"])}.items() if key in schema_keys}
         for item in CONTEXT_AUTHORITY_REGISTRY
     ]
+
+
+def context_authority_obligations() -> dict[str, Any]:
+    """Project owner-bound currentness and coverage duties from the registry."""
+
+    deterministic_operations = {
+        str(operation_id)
+        for operation_id in _as_list(CONTEXT_CURRENTNESS_CONTRACT.get("deterministic_repair_operations"))
+        if str(operation_id)
+    }
+    consumer_effects = {
+        str(consumer): [str(effect) for effect in _as_list(effects) if str(effect)]
+        for consumer, effects in _as_dict(CONTEXT_CURRENTNESS_CONTRACT.get("consumer_effects")).items()
+    }
+    obligations: list[dict[str, Any]] = []
+    invalid: list[str] = []
+    for item in CONTEXT_AUTHORITY_REGISTRY:
+        surface = str(item.get("surface") or "")
+        owner_contract = _as_dict(item.get("source_owner_contract"))
+        operation_id = str(owner_contract.get("repair_operation_id") or "")
+        consumers = _registry_consumers(item)
+        effects = sorted({effect for consumer in consumers for effect in consumer_effects.get(consumer, [])})
+        if not operation_id:
+            invalid.append(f"{surface}:missing-repair-operation")
+        if not effects:
+            invalid.append(f"{surface}:missing-coverage-effects")
+        obligations.append(
+            {
+                "kind": "agentic-workspace/context-authority-obligation/v1",
+                "surface": surface,
+                "owner": str(item.get("owner") or ""),
+                "source_owner": str(owner_contract.get("owner_module") or ""),
+                "source_posture": str(item.get("authority_class") or ""),
+                "currentness_basis": {
+                    "stale_when": str(item.get("stale_when") or ""),
+                    "revision_fields": [str(field) for field in _as_list(item.get("revision_fields"))],
+                },
+                "coverage_responsibility": {"consumers": consumers, "effects": effects},
+                "repair_operation_id": operation_id,
+                "repair_mode": "deterministic" if operation_id in deterministic_operations else "decision-required",
+                "proof_route": str(item.get("proof_route") or ""),
+            }
+        )
+    obligation_by_surface = {str(item["surface"]): item for item in obligations}
+    representative_classes: dict[str, Any] = {}
+    for owner_class, raw in _as_dict(CONTEXT_CURRENTNESS_CONTRACT.get("representative_owner_classes")).items():
+        declaration = _as_dict(raw)
+        surface_ids = [str(surface) for surface in _as_list(declaration.get("surfaces")) if str(surface)]
+        unknown = [surface for surface in surface_ids if surface not in obligation_by_surface]
+        invalid.extend(f"{owner_class}:unknown-surface:{surface}" for surface in unknown)
+        representative_classes[str(owner_class)] = {
+            "surfaces": [obligation_by_surface[surface] for surface in surface_ids if surface in obligation_by_surface],
+            "disposition": str(declaration.get("disposition") or ""),
+        }
+    return {
+        "kind": "agentic-workspace/context-authority-obligations/v1",
+        "status": "declared" if not invalid else "contract-gap",
+        "registry_revision": CONTEXT_AUTHORITY_REGISTRY_REVISION,
+        "obligations": obligations,
+        "representative_owner_classes": representative_classes,
+        "invalid_obligations": invalid,
+        "rule": str(CONTEXT_CURRENTNESS_CONTRACT.get("rule") or ""),
+    }
+
+
+def classify_context_currentness(
+    *,
+    item: dict[str, Any],
+    record: dict[str, Any],
+    owner_identity_valid: bool,
+    owner_operation_reason: str = "",
+) -> dict[str, Any]:
+    """Classify selected drift without inventing semantic repair authority."""
+
+    surface = str(item.get("surface") or "")
+    owner_contract = _as_dict(item.get("source_owner_contract"))
+    operation_id = str(owner_contract.get("repair_operation_id") or "")
+    deterministic_operations = {
+        str(candidate) for candidate in _as_list(CONTEXT_CURRENTNESS_CONTRACT.get("deterministic_repair_operations")) if str(candidate)
+    }
+    record_status = str(record.get("status") or "missing")
+    reason = str(record.get("reason") or owner_operation_reason or record_status)
+    selected = record.get("applicable") is not False and record.get("selected_required") is not False
+    current = record_status == "current" and owner_identity_valid
+    ambiguous_reasons = {
+        "ambiguous-owner",
+        "conflicting-input",
+        "contradictory-source",
+        "memory-curation-stale-review-required",
+        "owner-conflict",
+        "owner-module-symbol-missing",
+        "owner-module-syntax-invalid",
+        "owner-source-contract-marker-missing",
+        "owner-source-required-key-missing",
+        "owner-source-schema-invalid",
+        "semantic-ambiguity",
+    }
+    missing_coverage_reasons = {
+        "canonical-source-missing",
+        "configured-source-empty",
+        "missing-target-root",
+    }
+    if not selected:
+        state = disposition = "outside-responsibility"
+    elif current:
+        state = disposition = "current"
+    elif reason in ambiguous_reasons:
+        state = "derivably-stale"
+        disposition = "decision-required"
+    elif reason in missing_coverage_reasons and str(item.get("authority_class") or "") != "generated":
+        state = "missing-relevant-coverage"
+        disposition = "missing-relevant-coverage"
+    elif operation_id in deterministic_operations:
+        state = "derivably-stale"
+        disposition = "safely-repairable"
+    else:
+        state = "derivably-stale"
+        disposition = "decision-required"
+    source = _as_dict(record.get("admission"))
+    return {
+        "kind": "agentic-workspace/context-currentness-disposition/v1",
+        "surface": surface,
+        "state": state,
+        "disposition": disposition,
+        "reason_code": reason,
+        "owner": str(item.get("owner") or ""),
+        "source_owner": str(owner_contract.get("owner_module") or ""),
+        "operation_id": operation_id if disposition == "safely-repairable" else "",
+        "expected_registry_revision": CONTEXT_AUTHORITY_REGISTRY_REVISION,
+        "expected_source_revision": str(source.get("source_revision") or record.get("revision") or ""),
+        "task_effect": "quiet" if disposition in {"current", "outside-responsibility"} else "material",
+    }
 
 
 def _context_authority_registry_items(declarations: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
@@ -598,6 +731,7 @@ def context_authority_coverage(
     consumer_requirements: dict[str, list[str]] | None = None,
 ) -> dict[str, Any]:
     registry = _context_authority_registry_items(declarations)
+    obligations = context_authority_obligations() if declarations is None else {}
     expected_consumers = sorted({str(item).strip() for item in (observed_consumers or ORDINARY_DECISION_CONSUMERS) if str(item).strip()})
     requirements = {
         str(consumer): [str(surface) for surface in surfaces]
@@ -649,7 +783,14 @@ def context_authority_coverage(
         > 4
     )
     status = "measured"
-    if uncovered_consumers or missing_required_sources or missing_owner_surfaces or duplicate_surfaces or duplicate_canonical_owners:
+    if (
+        uncovered_consumers
+        or missing_required_sources
+        or missing_owner_surfaces
+        or duplicate_surfaces
+        or duplicate_canonical_owners
+        or obligations.get("status") == "contract-gap"
+    ):
         status = "coverage-gap"
     return {
         "kind": "agentic-workspace/context-authority-coverage/v1",
@@ -669,6 +810,7 @@ def context_authority_coverage(
         "duplicate_surfaces": sorted(set(duplicate_surfaces)),
         "duplicate_canonical_owners": duplicate_canonical_owners,
         "duplicate_consumer_authorities": duplicate_consumer_authorities,
+        "owner_obligations": obligations,
         "rule": "Operating decisions measure the versioned context-authority registry against ordinary consumers and fail closed on missing owners, duplicate surfaces, missing required sources, or uncovered consumers.",
     }
 
@@ -738,6 +880,7 @@ def resolve_context_authority_projection(
     required = set(ORDINARY_DECISION_CONSUMER_REQUIREMENTS.get(consumer, []))
     selected: list[dict[str, Any]] = []
     excluded: list[dict[str, Any]] = []
+    currentness_dispositions: list[dict[str, Any]] = []
     for item in CONTEXT_AUTHORITY_REGISTRY:
         surface = str(item.get("surface") or "")
         if surface not in required:
@@ -787,6 +930,13 @@ def resolve_context_authority_projection(
             and owner_identity_valid
             and _as_dict(record.get("freshness_enforcement")).get("status") == "active"
         )
+        currentness = classify_context_currentness(
+            item=item,
+            record=record,
+            owner_identity_valid=owner_identity_valid,
+            owner_operation_reason=owner_operation_reason,
+        )
+        currentness_dispositions.append(currentness)
         authority = {
             "surface": surface,
             "owner": str(item.get("owner") or ""),
@@ -798,6 +948,7 @@ def resolve_context_authority_projection(
             "repair_operation_id": expected_operation_id,
             "revision_fields": [str(field) for field in _as_list(item.get("revision_fields"))],
             "disposition": str(item.get("disposition") or ""),
+            "currentness": currentness,
             "source": {
                 "id": str(record.get("source_id") or record.get("source") or ""),
                 "revision": str(record.get("revision") or ""),
@@ -828,6 +979,9 @@ def resolve_context_authority_projection(
     }
     missing = sorted(selected_required_missing)
     status = "admitted" if not missing and coverage["status"] == "measured" else "repair-required"
+    safely_repairable = {
+        str(item.get("surface") or ""): item for item in currentness_dispositions if item.get("disposition") == "safely-repairable"
+    }
     repairs = [
         {
             "surface": item["surface"],
@@ -853,13 +1007,21 @@ def resolve_context_authority_projection(
                 "producer-owned admission receipt",
                 "freshness=current",
             ],
-            "arguments": {"target": ".", "surface": item["surface"], "consumer": consumer, "changed_path_count": len(paths)},
+            "arguments": {
+                "target": ".",
+                "surface": item["surface"],
+                "consumer": consumer,
+                "changed_path_count": len(paths),
+                "expected_registry_revision": CONTEXT_AUTHORITY_REGISTRY_REVISION,
+                "expected_source_revision": str(safely_repairable[item["surface"]].get("expected_source_revision") or ""),
+            },
         }
         for item in sorted(
-            (item for item in CONTEXT_AUTHORITY_REGISTRY if str(item.get("surface") or "") in missing),
+            (item for item in CONTEXT_AUTHORITY_REGISTRY if str(item.get("surface") or "") in safely_repairable),
             key=lambda item: str(item.get("surface") or ""),
         )
     ]
+    decisions = [item for item in currentness_dispositions if item.get("disposition") in {"decision-required", "missing-relevant-coverage"}]
     changed_path_guardrail = context_authority_changed_path_guardrail(
         consumer=consumer,
         changed_paths=paths,
@@ -879,15 +1041,26 @@ def resolve_context_authority_projection(
         "authorities": selected,
         "excluded_authorities": excluded,
         "missing_required_surfaces": missing,
+        "currentness": {
+            "kind": "agentic-workspace/context-currentness-projection/v1",
+            "status": "current" if not missing else "attention-required",
+            "dispositions": currentness_dispositions,
+            "decision_requirements": decisions,
+            "quiet_surface_count": sum(1 for item in currentness_dispositions if item.get("task_effect") == "quiet"),
+        },
         "repair_operation": {
             "kind": "agentic-workspace/context-authority-repair/v1",
             "status": "required" if repairs else "not-required",
             "consumer": consumer,
             "repairs": repairs,
-            "blocked_claims": ["mutation", "proof-claim", "completion-claim"] if repairs else [],
+            "blocked_claims": ["mutation", "proof-claim", "completion-claim"] if missing else [],
         },
         "changed_path_guardrail": changed_path_guardrail,
-        "repair": ("repair the registry declaration or consumer requirement before mutation" if status == "repair-required" else ""),
+        "repair": (
+            "resolve the material currentness disposition through the named source owner before mutation"
+            if status == "repair-required"
+            else ""
+        ),
     }
 
 
@@ -2814,12 +2987,25 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
     if context_authority_projection["status"] == "repair-required":
         status = "blocked"
         primary_action = {}
-        external_blocker = {
-            "kind": "agentic-workspace/operating-decision-blocker/v1",
-            "reason_code": "context-authority-unavailable",
-            "owner": "context-authority-registry",
-            "repair": "run the typed context-authority repair operation before retrying the decision",
-        }
+        repair_operations = _as_list(_as_dict(context_authority_projection.get("repair_operation")).get("repairs"))
+        decision_requirements = _as_list(_as_dict(context_authority_projection.get("currentness")).get("decision_requirements"))
+        if repair_operations:
+            external_blocker = {
+                "kind": "agentic-workspace/operating-decision-blocker/v1",
+                "reason_code": "context-authority-unavailable",
+                "owner": "context-authority-registry",
+                "repair": "run the revision-bound typed owner repair operation before retrying the decision",
+            }
+        else:
+            decision_requirement = _as_dict(decision_requirements[0]) if decision_requirements else {}
+            external_blocker = {
+                "kind": "agentic-workspace/operating-decision-blocker/v1",
+                "reason_code": (
+                    "conflicting-input" if decision_requirement.get("disposition") == "decision-required" else "context-coverage-gap"
+                ),
+                "owner": str(decision_requirement.get("owner") or "context-authority-registry"),
+                "repair": "obtain the named source owner's semantic or coverage decision before retrying the decision",
+            }
     terminal_state = str(inputs.get("terminal_state") or ("COMPLETE" if reconciliation.get("status") == "terminal" else "CONTINUE"))
     blocked_claim_classes = list(
         dict.fromkeys(
