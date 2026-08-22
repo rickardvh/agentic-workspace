@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Route deterministic context drift into revision-bound owner actions and newly encountered operating facts into deduplicated canonical-owner coverage candidates."

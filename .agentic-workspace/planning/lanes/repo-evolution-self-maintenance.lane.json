@@ -17,13 +17,23 @@
     {
       "id": "repo-evolution-currentness-reconciliation",
       "title": "Implement owner-bound context currentness",
-      "status": "active",
+      "status": "completed",
       "execplan_ref": ".agentic-workspace/planning/execplans/repo-evolution-currentness-reconciliation.plan.json",
       "depends_on": [],
-      "purpose_for_lane": "Execute issues #2662 through #2666 as the ordered implementation and evidence slices for parent #2661."
+      "purpose_for_lane": "Define owner-bound currentness for #2662 and establish the registry consumed by later reconciliation slices."
+    },
+    {
+      "id": "repo-evolution-reconciliation-coverage",
+      "title": "Reconcile deterministic drift and admit coverage",
+      "status": "active",
+      "execplan_ref": ".agentic-workspace/planning/execplans/repo-evolution-reconciliation-coverage.plan.json",
+      "depends_on": [
+        "repo-evolution-currentness-reconciliation"
+      ],
+      "purpose_for_lane": "Close #2663 and #2664 by composing deterministic owner actions and bounded coverage candidates through the ordinary operating decision."
     }
   ],
-  "current_slice": "repo-evolution-currentness-reconciliation",
+  "current_slice": "repo-evolution-reconciliation-coverage",
   "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
   "proof_strategy": "Aggregate focused behavior proof per PR, then require #2666 deterministic multi-change and real dogfood evidence before parent closure.",
   "proof_aggregation": {

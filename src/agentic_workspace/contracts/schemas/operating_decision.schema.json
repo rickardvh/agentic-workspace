@@ -72,6 +72,10 @@
       "type": "object",
       "description": "Decision-bound Memory contributions, sparse outcome attribution, material findings, and stronger-owner lifecycle review."
     },
+    "bounded_adaptations": {
+      "type": "object",
+      "description": "Deduplicated currentness or missing-coverage candidates derived from existing improvement evidence and routed to canonical owner operations or explicit decisions."
+    },
     "source_guidance": {
       "type": "object",
       "description": "Compact references for admitted source-owned guidance whose registry contract declares a material decision dimension."
