@@ -15,15 +15,15 @@
     "conclusion_authority": {
       "status": "ready",
       "source": "current-definition-plus-admitted-summary",
-      "report_authority_revision": "d46469bdd8eac2735aca2c93",
+      "report_authority_revision": "505dc9963b397c9947200a30",
       "definition_revision": 3,
       "lifecycle": "satisfied",
-      "baseline_head": "e0f20f9472a709ee4dd9e676f7225d694cb3babe",
-      "baseline_id": "59d813cb83d108da",
+      "baseline_head": "f2d12e20287dfb17d76e62132ddd259f31993a1d",
+      "baseline_id": "cb3540b4d6caba0c",
       "assignment_revision": "sha256:ec16fbc0929d4f9b6084858b",
       "assignment_receipt_ref": "aw://.agentic-workspace/planning/assignment-receipts/evaluation-assignment-21c87a14286a745d91f0",
-      "proof_revision": "sha256:2528308565d97011c4520934",
-      "proof_receipt_ref": "aw://.agentic-workspace/proof/receipts/evaluation-proof-2528308565d97011c4520934",
+      "proof_revision": "sha256:b234e0aabdeb2a13cc06ed06",
+      "proof_receipt_ref": "aw://.agentic-workspace/proof/receipts/evaluation-proof-b234e0aabdeb2a13cc06ed06",
       "current_result_count": 6,
       "stale_authority_count": 0
     },
@@ -32,14 +32,14 @@
       {"session_ref": "session:reopened-implementation-20260822", "workflow_classes": ["scoped-instruction"], "evidence_refs": ["PR#2655", "git:f26a9b026", "proof://receipts/787aea064929d3e5"]},
       {"session_ref": "session:pr2655-blocker-repair-20260822", "workflow_classes": ["module"], "evidence_refs": ["PR#2655", "git:36fa8ef8d", "proof://receipts/787aea064929d3e5"]},
       {"session_ref": "session:postmerge-stack-20260822", "workflow_classes": ["cross-session", "planning-continuation"], "evidence_refs": ["PR#2658", "git:492630d0d", "proof://receipts/787aea064929d3e5"]},
-      {"session_ref": "session:pr2659-review-correction-20260822", "workflow_classes": ["direct"], "evidence_refs": ["proof://receipts/4394653aa7b43e41", "proof://receipts/787aea064929d3e5", "apply-receipt:b4d981a8d11f877a1737"]}
+      {"session_ref": "session:matched-coordinated-release-20260822", "workflow_classes": ["direct"], "evidence_refs": [".agentic-workspace/planning/closeout-evidence/issue-2645-proof-route-cost-replay.replay.json", "git:be4784e7a", "proof://receipts/e65594576eed38f0", "src/agentic_workspace/workspace_runtime_proof.py"]}
     ],
     "criterion_results": [
       {
         "criterion": "direct-default-quality",
         "result": "supports",
-        "result_identity": "sha256:95a7bcbe5fa832c72ca6fd05",
-        "admission": {"status": "admitted-current", "baseline_id": "59d813cb83d108da", "assignment_revision": "sha256:ec16fbc0929d4f9b6084858b", "proof_revision": "sha256:2528308565d97011c4520934"},
+        "result_identity": "sha256:179f09edec938dd8a0121ca9",
+        "admission": {"status": "admitted-current", "baseline_id": "cb3540b4d6caba0c", "assignment_revision": "sha256:ec16fbc0929d4f9b6084858b", "proof_revision": "sha256:b234e0aabdeb2a13cc06ed06"},
         "session_ref": "session:open-lane-20260821",
         "workflow_classes": ["direct", "planning-independent"],
         "evidence_refs": ["PR#2653", "git:8fd8e1dc5", "proof://receipts/787aea064929d3e5"],
@@ -48,8 +48,8 @@
       {
         "criterion": "scoped-instruction-quality",
         "result": "supports",
-        "result_identity": "sha256:0da22b5218c2ddb757628389",
-        "admission": {"status": "admitted-current", "baseline_id": "59d813cb83d108da", "assignment_revision": "sha256:ec16fbc0929d4f9b6084858b", "proof_revision": "sha256:2528308565d97011c4520934"},
+        "result_identity": "sha256:e8b96c487fd5667e9f0b16f2",
+        "admission": {"status": "admitted-current", "baseline_id": "cb3540b4d6caba0c", "assignment_revision": "sha256:ec16fbc0929d4f9b6084858b", "proof_revision": "sha256:b234e0aabdeb2a13cc06ed06"},
         "session_ref": "session:reopened-implementation-20260822",
         "workflow_classes": ["scoped-instruction"],
         "evidence_refs": ["PR#2655", "git:f26a9b026", "proof://receipts/787aea064929d3e5"],
@@ -58,8 +58,8 @@
       {
         "criterion": "module-context-quality",
         "result": "supports",
-        "result_identity": "sha256:fdee02ef89fa518fa46e154f",
-        "admission": {"status": "admitted-current", "baseline_id": "59d813cb83d108da", "assignment_revision": "sha256:ec16fbc0929d4f9b6084858b", "proof_revision": "sha256:2528308565d97011c4520934"},
+        "result_identity": "sha256:c282aabf495265fe5f606900",
+        "admission": {"status": "admitted-current", "baseline_id": "cb3540b4d6caba0c", "assignment_revision": "sha256:ec16fbc0929d4f9b6084858b", "proof_revision": "sha256:b234e0aabdeb2a13cc06ed06"},
         "session_ref": "session:pr2655-blocker-repair-20260822",
         "workflow_classes": ["module"],
         "evidence_refs": ["PR#2655", "git:36fa8ef8d", "proof://receipts/787aea064929d3e5"],
@@ -68,8 +68,8 @@
       {
         "criterion": "planning-routing-quality",
         "result": "supports",
-        "result_identity": "sha256:f138d7c5c58944ac241303fd",
-        "admission": {"status": "admitted-current", "baseline_id": "59d813cb83d108da", "assignment_revision": "sha256:ec16fbc0929d4f9b6084858b", "proof_revision": "sha256:2528308565d97011c4520934"},
+        "result_identity": "sha256:5a8c9f2b61065119ac7c0ae3",
+        "admission": {"status": "admitted-current", "baseline_id": "cb3540b4d6caba0c", "assignment_revision": "sha256:ec16fbc0929d4f9b6084858b", "proof_revision": "sha256:b234e0aabdeb2a13cc06ed06"},
         "session_ref": "session:postmerge-stack-20260822",
         "workflow_classes": ["planning-continuation"],
         "evidence_refs": ["PR#2658", ".agentic-workspace/planning/execplans/operating-context-self-optimisation.plan.json", "proof://receipts/787aea064929d3e5"],
@@ -78,8 +78,8 @@
       {
         "criterion": "cross-session-resumption",
         "result": "supports",
-        "result_identity": "sha256:a1569c5d1ef428d584297b4a",
-        "admission": {"status": "admitted-current", "baseline_id": "59d813cb83d108da", "assignment_revision": "sha256:ec16fbc0929d4f9b6084858b", "proof_revision": "sha256:2528308565d97011c4520934"},
+        "result_identity": "sha256:257de67f246a8263548986e9",
+        "admission": {"status": "admitted-current", "baseline_id": "cb3540b4d6caba0c", "assignment_revision": "sha256:ec16fbc0929d4f9b6084858b", "proof_revision": "sha256:b234e0aabdeb2a13cc06ed06"},
         "session_ref": "session:postmerge-stack-20260822",
         "workflow_classes": ["cross-session"],
         "evidence_refs": [".agentic-workspace/planning/execplans/operating-context-self-optimisation.plan.json", "git:492630d0d", "proof://receipts/787aea064929d3e5"],
@@ -88,29 +88,31 @@
       {
         "criterion": "adaptation-convergence",
         "result": "supports",
-        "result_identity": "sha256:6adc35e0ea02f16657c8a0cf",
-        "admission": {"status": "admitted-current", "baseline_id": "59d813cb83d108da", "assignment_revision": "sha256:ec16fbc0929d4f9b6084858b", "proof_revision": "sha256:2528308565d97011c4520934"},
-        "session_ref": "session:pr2659-review-correction-20260822",
+        "result_identity": "sha256:1ac70b1c34273b7fa050e6ac",
+        "admission": {"status": "admitted-current", "baseline_id": "cb3540b4d6caba0c", "assignment_revision": "sha256:ec16fbc0929d4f9b6084858b", "proof_revision": "sha256:b234e0aabdeb2a13cc06ed06"},
+        "session_ref": "session:matched-coordinated-release-20260822",
         "workflow_classes": ["direct"],
-        "evidence_refs": [".agentic-workspace/planning/closeout-evidence/issue-2645-proof-route-cost-replay.replay.json", "git:492630d0d", "proof://receipts/4394653aa7b43e41", "proof://receipts/787aea064929d3e5", "apply-receipt:b4d981a8d11f877a1737"],
-        "measurements": {"focused_evaluation_seconds": 12.516, "planning_suite_runs": 0, "proof_selection_runs": 1, "renewed_human_steering": 0, "route_reversals": 0}
+        "evidence_refs": [".agentic-workspace/planning/closeout-evidence/issue-2645-proof-route-cost-replay.replay.json", "git:be4784e7a", "proof://receipts/e65594576eed38f0", "src/agentic_workspace/workspace_runtime_proof.py"],
+        "measurements": {"coordinated_release_test_seconds": 1.645, "coordinated_release_tests_passed": 5, "matched_changed_path_count": 3, "operation_conformance_passed": 296, "planning_suite_runs": 0, "proof_selection_runs": 1, "release_workflow_tests_passed": 16, "renewed_human_steering": 0, "route_reversals": 0}
       }
     ],
     "convergence": {
       "status": "satisfied",
-      "task_class": "changed-path-proof-selection-with-active-planning-owner-and-no-planning-package-change",
+      "task_class": "coordinated-release-runtime-and-payload-provenance-correction",
       "before_session_ref": "session:coordinated-release-20260821",
-      "later_session_ref": "session:pr2659-review-correction-20260822",
-      "canonical_owner_ref": ".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
-      "mechanism_revision": "merge:492630d0d",
-      "adaptation_revision": "proof-route-authority:01b2fa3083df95af",
-      "apply_receipt_id": "b4d981a8d11f877a1737",
+      "later_session_ref": "session:matched-coordinated-release-20260822",
+      "canonical_owner_ref": "src/agentic_workspace/workspace_runtime_proof.py::_coordinated_release_proof_lane",
+      "mechanism_revision": "merge:be4784e7a",
+      "adaptation_revision": "merge:be4784e7a",
+      "selected_route": "coordinated_release_proof",
+      "excluded_command": "make test-planning",
+      "matched_changed_paths": ["scripts/release/coordinated_release.py", "tests/test_coordinated_release.py", ".agentic-workspace/payload-provenance.json"],
       "before_cost": {"total_work_units": 171.6, "unit": "unrelated-planning-proof-seconds", "planning_suite_runs": 2},
-      "after_cost": {"total_work_units": 0, "unit": "unrelated-planning-proof-seconds", "planning_suite_runs": 0, "focused_evaluation_seconds": 12.516},
+      "after_cost": {"total_work_units": 0, "unit": "unrelated-planning-proof-seconds", "planning_suite_runs": 0, "focused_coordinated_release_seconds": 1.645},
       "human_steering_avoided_next_time": true,
       "original_friction_recurred": false,
-      "evidence_refs": [".agentic-workspace/planning/closeout-evidence/issue-2645-proof-route-cost-replay.replay.json", "git:492630d0d", "proof://receipts/4394653aa7b43e41", "proof://receipts/787aea064929d3e5", "apply-receipt:b4d981a8d11f877a1737"],
-      "comparison_caveat": "The pre-v0.42 archive is used only for the matched unrelated-Planning proof slice; current general-quality criteria use post-stack sessions."
+      "evidence_refs": [".agentic-workspace/planning/closeout-evidence/issue-2645-proof-route-cost-replay.replay.json", "git:be4784e7a", "proof://receipts/e65594576eed38f0", "src/agentic_workspace/workspace_runtime_proof.py"],
+      "comparison_caveat": "The exact 171.6-second reduction covers only the two unrelated Planning runs; focused coordinated-release command durations are recorded separately and are not subtracted from that slice."
     },
     "bounded_adaptation_proof": {
       "status": "implementation-and-convergence-proved",
@@ -122,6 +124,9 @@
       "route_apply_receipt_id": "b4d981a8d11f877a1737",
       "route_validation_receipt_ref": "proof://receipts/4394653aa7b43e41",
       "later_task_receipt_ref": "proof://receipts/787aea064929d3e5",
+      "convergence_owner": "src/agentic_workspace/workspace_runtime_proof.py::_coordinated_release_proof_lane",
+      "convergence_revision": "merge:be4784e7a",
+      "convergence_receipt_ref": "proof://receipts/e65594576eed38f0",
       "covered_behaviors": [
         "registered proof.report operation lookup",
         "typed field-scoped canonical config mutation",
@@ -140,7 +145,7 @@
     "lifecycle": "satisfied",
     "definition_revision": 3,
     "current_admission_status": "owner-concluded-from-six-current-real-session-observations",
-    "report_authority_revision": "d46469bdd8eac2735aca2c93",
+    "report_authority_revision": "505dc9963b397c9947200a30",
     "privacy": "Only compact findings, evidence references, result identities, authority identities, and minimal measurements are retained; raw prompts and full transcripts remain local.",
     "report_sinks": ["#2646", "#2647"]
   },

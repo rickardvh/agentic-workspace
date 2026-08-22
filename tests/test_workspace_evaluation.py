@@ -2606,16 +2606,22 @@ def test_operating_context_convergence_evaluation_is_owner_bound_and_privacy_saf
     assert {item["result"] for item in implementation["criterion_results"]} == {"supports"}
     assert len({item["result_identity"] for item in implementation["criterion_results"]}) == 6
     assert {item["admission"]["status"] for item in implementation["criterion_results"]} == {"admitted-current"}
-    assert {item["admission"]["baseline_id"] for item in implementation["criterion_results"]} == {"59d813cb83d108da"}
+    assert {item["admission"]["baseline_id"] for item in implementation["criterion_results"]} == {"cb3540b4d6caba0c"}
     assert implementation["conclusion_authority"]["status"] == "ready"
     assert implementation["conclusion_authority"]["current_result_count"] == 6
     assert implementation["conclusion_authority"]["stale_authority_count"] == 0
     assert implementation["convergence"]["before_cost"]["total_work_units"] == 171.6
     assert implementation["convergence"]["after_cost"]["total_work_units"] == 0
-    assert implementation["convergence"]["canonical_owner_ref"] == (".agentic-workspace/config.toml [assurance.domain_proof_lanes]")
-    assert implementation["convergence"]["mechanism_revision"] == "merge:492630d0d"
-    assert implementation["convergence"]["adaptation_revision"] == "proof-route-authority:01b2fa3083df95af"
-    assert implementation["convergence"]["later_session_ref"] == "session:pr2659-review-correction-20260822"
+    assert (
+        implementation["convergence"]["canonical_owner_ref"]
+        == "src/agentic_workspace/workspace_runtime_proof.py::_coordinated_release_proof_lane"
+    )
+    assert implementation["convergence"]["mechanism_revision"] == "merge:be4784e7a"
+    assert implementation["convergence"]["adaptation_revision"] == "merge:be4784e7a"
+    assert implementation["convergence"]["later_session_ref"] == "session:matched-coordinated-release-20260822"
+    assert implementation["convergence"]["selected_route"] == "coordinated_release_proof"
+    assert implementation["convergence"]["excluded_command"] == "make test-planning"
+    assert implementation["bounded_adaptation_proof"]["convergence_receipt_ref"] == "proof://receipts/e65594576eed38f0"
     assert implementation["convergence"]["human_steering_avoided_next_time"] is True
     assert implementation["convergence"]["original_friction_recurred"] is False
     assert disposition["evaluation_disposition"]["current_admission_status"] == (

@@ -404,8 +404,8 @@
       "id": "operating-context-cost-convergence-2646",
       "last_transition": {
         "from": "collecting",
-        "reason": "Maintainer conclusion from six current admitted results on durable head e0f20f947, five representative sessions, config apply receipt b4d981a8d11f877a1737, and proof receipts 4394653aa7b43e41 and 787aea064929d3e5.",
-        "recorded_at": "2026-08-22T17:25:11Z",
+        "reason": "Owner conclusion uses matched coordinated-release before/after evidence bound to the #2654 proof-lane implementation; current observations show zero unrelated Planning runs and no renewed human steering.",
+        "recorded_at": "2026-08-22T17:59:05Z",
         "to": "satisfied"
       },
       "lifecycle": "satisfied",
@@ -449,7 +449,7 @@
         "type": "workspace-operating-context",
         "version_range": "v0.42-current through merged PRs #2653, #2654, and #2655 on master"
       },
-      "updated_at": "2026-08-22T17:25:11Z"
+      "updated_at": "2026-08-22T17:59:05Z"
     }
   ],
   "kind": "agentic-workspace/evaluations/v1"
