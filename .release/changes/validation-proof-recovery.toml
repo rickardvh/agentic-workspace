@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Make interrupted validation manifests self-healing and keep follow-up proof scoped to exact dependency subjects."

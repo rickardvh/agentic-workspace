@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Route independent tasks around protected planning owners, bind review lifecycle writes to live PR identity, and keep default closeout context compact."

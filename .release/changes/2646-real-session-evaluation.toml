@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Require representative real-session, workflow-class, and matched convergence evidence before Evaluation can declare operating-context conclusions ready."
