@@ -13,7 +13,7 @@
     "writes_repo_state": false
   },
   "guards": [
-    "Exactly one current assignment is required.",
+    "Exactly one current assignment is required unless active Planning owner authority is explicitly requested.",
     "The public proof receipt must be admitted and passed.",
     "Caller dictionaries cannot create or override authority."
   ],
@@ -28,6 +28,11 @@
     {
       "name": "evaluation_id",
       "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "active_planning_owner",
+      "required": false,
       "source": "cli-option"
     },
     {
@@ -74,7 +79,7 @@
   "reads": [
     {
       "required": true,
-      "surface": ".agentic-workspace/planning/assignments/*.assignment.json"
+      "surface": ".agentic-workspace/planning/assignments/*.assignment.json or .agentic-workspace/local/planning/owner-selection.json"
     },
     {
       "required": true,
@@ -103,7 +108,7 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Refresh evaluation observation authority from the single live assignment and admitted public proof receipt.",
+  "summary": "Refresh evaluation observation authority from one live assignment or an explicitly selected active Planning owner plus an admitted public proof receipt.",
   "writes": [
     {
       "required": true,

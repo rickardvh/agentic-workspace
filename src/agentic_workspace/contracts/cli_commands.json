@@ -2236,7 +2236,7 @@
         },
         {
           "name": "authority-refresh",
-          "help": "Refresh observation authority from the current public assignment and admitted proof receipt.",
+          "help": "Refresh observation authority from the current public assignment or explicit active Planning owner and admitted proof receipt.",
           "uses_option_groups": [
             "format"
           ],
@@ -2254,6 +2254,14 @@
                 "--evaluation-id"
               ],
               "required": true
+            },
+            {
+              "name": "active_planning_owner",
+              "flags": [
+                "--active-planning-owner"
+              ],
+              "action": "store_true",
+              "help": "Use the explicitly selected active Planning owner when no current delegated assignment exists."
             }
           ],
           "role": "core_lifecycle",

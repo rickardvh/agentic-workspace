@@ -3,7 +3,7 @@
 
 Exact current command values generated from `cli_commands.json` and `cli_option_groups.json`. The schema-shape references remain at `cli-commands.md` and `cli-option-groups.md`.
 
-- Contract digest: `sha256:bdf355d92fdedfc108bc21432e1e6c1e8a7dcb317b099394dca067a81b697795`
+- Contract digest: `sha256:64fc38aa88358366d26a439f02cc09bc22c1ac7829e669751cec2b61e2a66b80`
 - Program: `agentic-workspace`
 - Command/subcommand count: 122
 
@@ -54,7 +54,7 @@ Shared-state mutability and ignored local diagnostics are separate. A `no` below
 | `agentic-workspace evaluation` | `core_lifecycle` | `ordinary_host_repo` | yes | 2 | Manage local-first workspace evaluations. |
 | `agentic-workspace evaluation register` | `core_lifecycle` | `ordinary_host_repo` | yes | 12 | Register or update one evaluation definition. |
 | `agentic-workspace evaluation observe` | `core_lifecycle` | `ordinary_host_repo` | yes | 10 | Append one local observation. |
-| `agentic-workspace evaluation authority-refresh` | `core_lifecycle` | `ordinary_host_repo` | yes | 3 | Refresh observation authority from the current public assignment and admitted proof receipt. |
+| `agentic-workspace evaluation authority-refresh` | `core_lifecycle` | `ordinary_host_repo` | yes | 4 | Refresh observation authority from the current public assignment or explicit active Planning owner and admitted proof receipt. |
 | `agentic-workspace evaluation status` | `core_lifecycle` | `ordinary_host_repo` | no | 4 | Inspect derived evaluation status. |
 | `agentic-workspace evaluation report-preview` | `core_lifecycle` | `ordinary_host_repo` | no | 4 | Compile the current evaluation report authority without claiming external delivery. |
 | `agentic-workspace evaluation local-delivery` | `core_lifecycle` | `ordinary_host_repo` | yes | 4 | Record a local report compilation receipt without claiming external sink delivery. |
@@ -668,6 +668,7 @@ repair local evaluation observation authority from current public owner receipts
 | `--format` | no | `text` | text, json | `value` | Output format. |
 | `--target` | no | `—` | — | `value` | Repository path. |
 | `--evaluation-id` | yes | `—` | — | `value` | — |
+| `--active-planning-owner` | no | `—` | — | `store_true` | Use the explicitly selected active Planning owner when no current delegated assignment exists. |
 
 ## `agentic-workspace evaluation status`
 
