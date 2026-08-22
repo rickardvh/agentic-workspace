@@ -18,8 +18,11 @@ from agentic_workspace.actionability import (
 )
 from agentic_workspace.operating_decision import (
     _resolve_context_authority_source,
+    admit_projection_surface_decision_input,
     bind_operation_invocation_to_authorities,
     compile_operating_decision,
+    compile_projection_surface_operating_decision,
+    compile_repo_improvement_action,
     context_authority_coverage,
     context_authority_declarations,
     context_consequence_effects,
@@ -106,6 +109,188 @@ def test_operating_decision_emits_one_typed_primary_action() -> None:
     assert decision["primary_action"]["operation_invocation"]["stale_action_rejection"]["status"] == "reject-on-input-revision-mismatch"
     assert decision["external_blocker"] == {}
     assert decision["replacement_map"]["next_action.command"].startswith("display rendering only")
+
+
+def _material_improvement_candidate(**overrides: object) -> dict[str, object]:
+    candidate: dict[str, object] = {
+        "id": "candidate-routing-reentry",
+        "kind": "workflow_cost",
+        "symptom": "agents repeatedly re-enter the same owner route",
+        "cost": "three repeated maintenance passes",
+        "confidence": "high",
+        "recurrence": "repeated",
+        "occurrence_count": 3,
+        "evidence_classes": ["machine_observed", "review_derived"],
+        "expected_benefit": "remove repeated routing and proof-selection work",
+        "scope_relation": "current-scope",
+        "suspected_owner": "repository-routing",
+        "ownership": {"current_owner": True, "mutation_authority_admitted": True},
+        "proof_boundary": {"status": "local"},
+        "future_cost_effect": {"net_effect": "positive", "added_costs": []},
+    }
+    candidate.update(overrides)
+    return candidate
+
+
+@pytest.mark.parametrize(
+    ("mode", "expected_class", "initiative_authorized"),
+    [
+        ("none", "report-only", False),
+        ("reporting", "report-only", False),
+        ("conservative", "improve-touched-scope", True),
+        ("balanced", "bounded-current-slice", True),
+        ("proactive", "bounded-current-slice", True),
+    ],
+)
+def test_repo_improvement_action_enforces_full_latitude_matrix(mode: str, expected_class: str, initiative_authorized: bool) -> None:
+    action = compile_repo_improvement_action(candidate=_material_improvement_candidate(), latitude=mode)
+
+    assert action["action_class"] == expected_class
+    assert action["initiative_authorized"] is initiative_authorized
+    assert action["awareness"] == {"materiality": "material", "material": True, "mode_independent": True}
+    assert action["authority_boundary"].startswith("This consequence permits initiative only")
+    if not initiative_authorized:
+        assert action["human_visibility"] == "compact-owner-visible"
+
+
+def test_proactive_requires_strong_evidence_owner_proof_and_positive_future_value_for_standalone_work() -> None:
+    permitted = compile_repo_improvement_action(
+        candidate=_material_improvement_candidate(scope_relation="standalone-repo"), latitude="proactive"
+    )
+    weak = compile_repo_improvement_action(
+        candidate=_material_improvement_candidate(
+            scope_relation="standalone-repo",
+            confidence="low",
+            recurrence="first_seen",
+            occurrence_count=1,
+            evidence_classes=["agent_observed"],
+        ),
+        latitude="proactive",
+    )
+    missing_proof = compile_repo_improvement_action(
+        candidate=_material_improvement_candidate(scope_relation="standalone-repo", proof_boundary={"status": "missing"}),
+        latitude="proactive",
+    )
+
+    assert permitted["action_class"] == "bounded-standalone-permitted"
+    assert permitted["initiative_authorized"] is True
+    assert weak["action_class"] == "defer-with-owner"
+    assert weak["initiative_authorized"] is False
+    assert missing_proof["action_class"] == "promote-or-review"
+
+
+def test_suspected_owner_does_not_infer_mutation_or_proof_authority() -> None:
+    candidate = _material_improvement_candidate()
+    candidate.pop("ownership")
+    candidate.pop("proof_boundary")
+
+    action = compile_repo_improvement_action(candidate=candidate, latitude="proactive")
+
+    assert action["action_class"] == "promote-or-review"
+    assert action["initiative_authorized"] is False
+    assert action["proof_boundary"] == "missing"
+
+
+def test_repo_improvement_action_routes_aw_owned_work_without_consuming_repo_latitude() -> None:
+    action = compile_repo_improvement_action(
+        candidate=_material_improvement_candidate(scope_relation="aw-internal", suspected_owner="agentic-workspace-package"),
+        latitude="none",
+    )
+
+    assert action["action_class"] == "route-package-owner"
+    assert action["owner"] == "#2647-or-package-owner"
+    assert action["initiative_authorized"] is False
+
+
+def test_repo_improvement_action_routes_explicit_package_owner_class_without_consuming_repo_latitude() -> None:
+    action = compile_repo_improvement_action(
+        candidate=_material_improvement_candidate(
+            suspected_owner="runtime-owner",
+            ownership={"owner_class": "package-owned", "current_owner": True, "mutation_authority_admitted": True},
+        ),
+        latitude="balanced",
+    )
+
+    assert action["action_class"] == "route-package-owner"
+    assert action["owner"] == "#2647-or-package-owner"
+    assert action["initiative_authorized"] is False
+
+
+@pytest.mark.parametrize("repo_owner", ["packages/frontend", "workspace-tools"])
+def test_repo_owner_name_cannot_infer_package_ownership(repo_owner: str) -> None:
+    action = compile_repo_improvement_action(
+        candidate=_material_improvement_candidate(
+            suspected_owner=repo_owner,
+            ownership={"owner_class": "repo-owned", "current_owner": True, "mutation_authority_admitted": True},
+        ),
+        latitude="balanced",
+    )
+
+    assert action["action_class"] == "bounded-current-slice"
+    assert action["owner"] == repo_owner
+    assert action["initiative_authorized"] is True
+
+
+@pytest.mark.parametrize(
+    "boundary",
+    ["product-intent", "architecture-direction", "security-trust", "public-compatibility", "broader-ownership", "broader-claim"],
+)
+def test_repo_improvement_action_requires_human_domain_admission_for_consequential_boundaries(boundary: str) -> None:
+    action = compile_repo_improvement_action(
+        candidate=_material_improvement_candidate(consequential_boundaries=[boundary]), latitude="proactive"
+    )
+
+    assert action["action_class"] == "human-domain-review"
+    assert action["initiative_authorized"] is False
+
+
+def test_local_convenience_is_demoted_when_added_future_cost_is_not_outweighed() -> None:
+    action = compile_repo_improvement_action(
+        candidate=_material_improvement_candidate(
+            added_costs=["new abstraction", "cross-owner coupling", "maintenance surface"],
+            future_cost_effect={"net_effect": "uncertain"},
+        ),
+        latitude="proactive",
+    )
+
+    assert action["action_class"] == "dismiss-or-redesign"
+    assert action["initiative_authorized"] is False
+    assert action["cost_boundary"]["added_costs"] == ["new abstraction", "cross-owner coupling", "maintenance surface"]
+
+
+def test_repo_improvement_action_is_one_canonical_operating_decision_dimension_across_projections() -> None:
+    payload = {
+        "task_posture_packet": {
+            "operating_posture": {"initiative_posture": {"mode": "balanced"}},
+            "improvement_pressure_records": [{**_material_improvement_candidate(), "state": "active"}],
+        }
+    }
+    decisions = []
+    for consumer in ("start", "implement", "reconcile", "closeout"):
+        admitted = admit_projection_surface_decision_input(
+            input_revisions={"current_work": "rev-a", "improvement_pressure": "rev-pressure"},
+            consumer=consumer,
+        )
+        decisions.append(compile_projection_surface_operating_decision(payload=payload, admitted_input=admitted, consumer=consumer))
+
+    assert {item["decision_id"] for item in decisions} == {decisions[0]["decision_id"]}
+    assert {item["repo_improvement_action"]["decision_id"] for item in decisions} == {
+        decisions[0]["repo_improvement_action"]["decision_id"]
+    }
+    assert {item["repo_improvement_action"]["initiative_authorized"] for item in decisions} == {True}
+    assert {item["repo_improvement_action"]["next_action"] for item in decisions} == {
+        decisions[0]["repo_improvement_action"]["next_action"]
+    }
+    assert all(item["repo_improvement_action"] == decisions[0]["repo_improvement_action"] for item in decisions)
+    assert all(item["producer_function"] == "compile_operating_decision" for item in decisions)
+
+
+def test_no_improvement_candidate_keeps_direct_work_quiet() -> None:
+    decision = compile_operating_decision(inputs={"revisions": {"current_work": "rev-a"}})
+
+    assert decision["status"] == "terminal"
+    assert decision["primary_action"] == {}
+    assert decision["repo_improvement_action"] == {}
 
 
 def test_operating_decision_fails_closed_without_typed_invocation() -> None:

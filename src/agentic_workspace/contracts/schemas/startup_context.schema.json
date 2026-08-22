@@ -872,6 +872,7 @@
         "operating_posture",
         "workflow_obligations",
         "improvement_obligations",
+        "improvement_pressure_records",
         "skill_routes",
         "allowed_actions",
         "forbidden_actions",
@@ -912,6 +913,11 @@
             "additionalProperties": true
           },
           "description": "Active improvement-pressure obligations that affect proof, closeout, allowed actions, or posture adherence."
+        },
+        "improvement_pressure_records": {
+          "type": "array",
+          "items": {"type": "object", "additionalProperties": true},
+          "description": "Admitted improvement-pressure candidate facts preserved for the canonical operating decision."
         },
         "skill_routes": {
           "type": "array",

@@ -1024,6 +1024,7 @@ def test_implement_compiles_session_improvement_pressure_into_task_posture(tmp_p
     payload = json.loads(capsys.readouterr().out)
     packet = payload["task_posture_packet"]
     assert packet["improvement_pressure_evaluation"]["status"] == "active"
+    assert packet["improvement_pressure_records"][0]["state"] == "active"
     assert packet["improvement_obligations"][0]["id"].endswith("-owner-route")
     assert "show owner route, mitigation, accepted-risk decision, or obsolete evidence for this pressure" in packet["proof_boundaries"]
     assert "active improvement pressure has a recorded owner, mitigation, or accepted-risk disposition" in packet["closeout_boundaries"]

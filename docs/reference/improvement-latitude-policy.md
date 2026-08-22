@@ -15,6 +15,15 @@ Policy describing how much improvement initiative agents may take by latitude se
 | `default_mode` | string | yes |  | Default mode text value used by this contract. |  |  |
 | `owner_surface` | string | yes |  | Owner surface text value used by this contract. |  |  |
 | `policy_target` | string | yes |  | Policy target text value used by this contract. |  |  |
+| `action_decision` | object | yes |  | Mechanical initiative decision compiled as one dimension of the canonical operating decision. |  |  |
+| `action_decision.owner` | string | yes |  | Canonical compiler that owns the initiative consequence. |  |  |
+| `action_decision.kind` | const `"agentic-workspace/repo-improvement-action/v1"` | yes |  | Schema discriminator for the compiled initiative consequence. |  |  |
+| `action_decision.inputs` | array of string | yes |  | Admitted evidence and authority dimensions consumed by the decision. |  |  |
+| `action_decision.action_classes` | array of string | yes |  | Small public vocabulary of possible initiative consequences. |  |  |
+| `action_decision.awareness_rule` | string | yes |  | Invariant separating signal awareness from initiative authority. |  |  |
+| `action_decision.execution_boundary` | string | yes |  | Invariant preserving owner-operation mutation authority. |  |  |
+| `action_decision.cost_rule` | string | yes |  | Qualitative total-future-cost comparison rule. |  |  |
+| `action_decision.quiet_rule` | string | yes |  | No-candidate compactness invariant. |  |  |
 | `mode_interpretation` | object | yes |  | Mode interpretation details used by this contract. |  |  |
 | `mode_interpretation.<name>` | string | no |  | Named entry in the mode interpretation mapping. |  |  |
 | `examples` | object | yes |  | Examples details used by this contract. |  |  |

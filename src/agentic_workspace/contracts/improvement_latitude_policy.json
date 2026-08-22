@@ -3,6 +3,35 @@
   "default_mode": "conservative",
   "owner_surface": "workspace",
   "policy_target": "repo-directed-improvement",
+  "action_decision": {
+    "owner": "agentic_workspace.operating_decision.compile_operating_decision",
+    "kind": "agentic-workspace/repo-improvement-action/v1",
+    "inputs": [
+      "candidate identity and evidence",
+      "configured latitude",
+      "current scope and requested-end relation",
+      "ownership and mutation authority",
+      "proof boundary",
+      "materiality and recurrence",
+      "expected benefit and added future costs",
+      "consequential human/domain boundaries"
+    ],
+    "action_classes": [
+      "report-only",
+      "improve-touched-scope",
+      "bounded-current-slice",
+      "bounded-standalone-permitted",
+      "promote-or-review",
+      "human-domain-review",
+      "defer-with-owner",
+      "dismiss-or-redesign",
+      "route-package-owner"
+    ],
+    "awareness_rule": "Materiality is evaluated in every mode; latitude constrains initiative, not awareness.",
+    "execution_boundary": "The decision never grants mutation authority. A permitted initiative must still execute through an existing owner operation and proof route.",
+    "cost_rule": "Prefer the smallest change that plausibly lowers total future successful-completion cost; demote local convenience when added abstraction, coupling, conceptual surface, proof, migration, or maintenance cost is not outweighed.",
+    "quiet_rule": "No candidate yields no repo-improvement action field or visible ceremony."
+  },
   "mode_interpretation": {
     "none": "Repo-directed initiative stays off, but bounded workspace self-adaptation remains allowed.",
     "reporting": "Repo-directed follow-through stays reporting-only, but bounded workspace self-adaptation remains allowed.",

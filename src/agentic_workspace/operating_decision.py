@@ -1711,6 +1711,15 @@ def compile_projection_surface_operating_decision(
         or _as_dict(payload_context.get("instruction_program"))
         or _as_dict(task_posture_packet.get("instruction_program"))
     )
+    initiative_posture = _as_dict(_as_dict(task_posture_packet.get("operating_posture")).get("initiative_posture"))
+    improvement_candidate = next(
+        (
+            item
+            for item in [_as_dict(value) for value in _as_list(task_posture_packet.get("improvement_pressure_records"))]
+            if item.get("state") == "active"
+        ),
+        {},
+    )
     decision = compile_operating_decision(
         inputs={
             "consumer": consumer,
@@ -1737,6 +1746,8 @@ def compile_projection_surface_operating_decision(
             "instruction_mechanisms": instruction_mechanisms,
             "instruction_capabilities": instruction_capabilities,
             "instruction_program": instruction_program,
+            "improvement_candidate": improvement_candidate,
+            "improvement_latitude": str(initiative_posture.get("mode") or "conservative"),
         }
     )
     surface_input_revision = str(decision.get("admitted_input_revision") or "")
@@ -2153,6 +2164,169 @@ def _project_source_owned_guidance(context_authority_projection: dict[str, Any])
     }
 
 
+def compile_repo_improvement_action(
+    *,
+    candidate: dict[str, Any] | None,
+    latitude: str,
+    current_work: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Compile one initiative consequence without granting execution authority.
+
+    This is a decision dimension of ``compile_operating_decision`` rather than a
+    peer posture engine.  Candidate sources own their evidence, repository and
+    package owners own mutation, and the operating decision only determines
+    which initiative class the admitted facts permit now.
+    """
+
+    candidate = _as_dict(candidate)
+    if not candidate:
+        return {}
+    current_work = _as_dict(current_work)
+    mode = latitude if latitude in {"none", "reporting", "conservative", "balanced", "proactive"} else "conservative"
+    candidate_id = str(
+        candidate.get("id")
+        or candidate.get("evidence_fingerprint")
+        or candidate.get("finding_ref")
+        or f"improvement:{_digest(candidate)[:16]}"
+    )
+    scope_relation = str(candidate.get("scope_relation") or "current-scope")
+    confidence = str(candidate.get("confidence") or _as_dict(candidate.get("cost_or_frequency")).get("confidence") or "low")
+    recurrence = str(candidate.get("recurrence") or _as_dict(candidate.get("cost_or_frequency")).get("recurrence") or "first_seen")
+    occurrence_count = max(1, int(candidate.get("occurrence_count") or 1))
+    evidence_classes = {str(item) for item in _as_list(candidate.get("evidence_classes")) if str(item)}
+    strong_evidence = (
+        confidence == "high"
+        or recurrence in {"repeated", "recurring", "human_confirmed"}
+        or occurrence_count > 1
+        or bool(evidence_classes.intersection({"human_confirmed", "review_derived"}))
+    )
+    materiality = str(candidate.get("materiality") or ("material" if strong_evidence else "weak-one-off"))
+    material = materiality in {"material", "high", "blocking"} or strong_evidence
+
+    ownership = _as_dict(candidate.get("ownership"))
+    owner = str(candidate.get("resulting_owner") or candidate.get("suspected_owner") or candidate.get("owner_surface") or "unknown")
+    owner_class = str(ownership.get("owner_class") or candidate.get("owner_class") or "")
+    workspace_owned = scope_relation == "aw-internal" or owner_class in {
+        "aw-owned",
+        "package-owned",
+        "workspace-owned",
+    }
+    proof = _as_dict(candidate.get("proof_boundary"))
+    owner_local = bool(ownership.get("current_owner", candidate.get("owner_local", False)))
+    mutation_admitted = bool(ownership.get("mutation_authority_admitted", candidate.get("mutation_authority_admitted", owner_local)))
+    proof_status = str(proof.get("status") or candidate.get("proof_status") or "missing")
+    proof_local = proof_status in {"local", "admitted", "current", "bounded"}
+
+    boundary_changes = [str(item) for item in _as_list(candidate.get("consequential_boundaries")) if str(item).strip()]
+    changes_requested_ends = bool(candidate.get("changes_requested_ends") or current_work.get("changes_requested_ends"))
+    review_required = changes_requested_ends or bool(
+        set(boundary_changes).intersection(
+            {"product-intent", "architecture-direction", "security-trust", "public-compatibility", "broader-ownership", "broader-claim"}
+        )
+    )
+
+    future_cost = _as_dict(candidate.get("future_cost_effect"))
+    added_costs = [str(item) for item in _as_list(future_cost.get("added_costs") or candidate.get("added_costs")) if str(item)]
+    net_effect = str(future_cost.get("net_effect") or candidate.get("net_future_value") or "")
+    expected_benefit = str(candidate.get("expected_benefit") or future_cost.get("expected_benefit") or "")
+    disproportionate_cost = net_effect in {"negative", "cost-exceeds-benefit"} or bool(added_costs) and net_effect != "positive"
+    net_value_supported = bool(expected_benefit) and not disproportionate_cost and net_effect not in {"unknown", "uncertain"}
+
+    action_class = "defer-with-owner"
+    reason = "weak or one-off evidence does not justify repo-directed action"
+    initiative_authorized = False
+    next_action = "retain a compact owner and re-entry trigger"
+    owner_route = owner
+    if workspace_owned:
+        action_class = "route-package-owner"
+        reason = "the candidate is AW/package-owned and does not consume repository improvement latitude"
+        next_action = "route through #2647 or the package owner"
+        owner_route = "#2647-or-package-owner"
+    elif review_required:
+        action_class = "human-domain-review"
+        reason = "the proposal crosses a consequential human or domain-owned boundary"
+        next_action = "obtain explicit human/domain-owner admission before changing the requested ends or authority boundary"
+    elif disproportionate_cost:
+        action_class = "dismiss-or-redesign"
+        reason = "added abstraction, coupling, concept, proof, migration, or maintenance cost is not outweighed by future benefit"
+        next_action = "dismiss the local convenience or redesign it with evidence of positive total future cost"
+    elif not material:
+        pass
+    elif mode == "none":
+        action_class = "report-only"
+        reason = "material awareness remains active, but latitude none forbids opportunistic mutation"
+        next_action = "surface the evidence compactly to the owner"
+    elif mode == "reporting":
+        action_class = "report-only"
+        reason = "reporting latitude permits routing but not opportunistic mutation"
+        next_action = "route the material evidence to its owner"
+    elif not owner_local or not mutation_admitted or not proof_local:
+        action_class = "promote-or-review"
+        reason = "ownership, mutation authority, or proof is outside the admitted current boundary"
+        next_action = "promote to Planning, an issue, or owner review with the missing authority/proof boundary"
+    elif mode == "conservative" and scope_relation == "current-scope":
+        action_class = "improve-touched-scope"
+        reason = "bounded improvement stays in already-touched scope with local ownership and proof"
+        initiative_authorized = True
+        next_action = "prepare the smallest touched-scope improvement through the existing owner"
+    elif mode == "balanced" and scope_relation in {"current-scope", "adjacent-scope"}:
+        action_class = "bounded-current-slice"
+        reason = "material evidence supports bounded improvement inside the current ownership and proof boundary"
+        initiative_authorized = True
+        next_action = "prepare a bounded current-slice improvement without changing requested ends"
+    elif mode == "proactive" and scope_relation in {"current-scope", "adjacent-scope", "standalone-repo"} and net_value_supported:
+        action_class = "bounded-standalone-permitted" if scope_relation == "standalone-repo" else "bounded-current-slice"
+        reason = "strong or repeated evidence, admitted ownership/proof, and positive future value support bounded initiative"
+        initiative_authorized = True
+        next_action = "prepare the bounded improvement through the existing owner and proof route"
+    else:
+        action_class = "promote-or-review" if material else "defer-with-owner"
+        reason = "the configured latitude does not authorize this scope relation or the future-value evidence is incomplete"
+        next_action = "promote or defer with an exact owner and trigger"
+
+    visibility = "compact-owner-visible" if material and not initiative_authorized else "decision-detail"
+    decision_inputs = {
+        "candidate_id": candidate_id,
+        "latitude": mode,
+        "scope_relation": scope_relation,
+        "owner": owner,
+        "owner_local": owner_local,
+        "mutation_authority_admitted": mutation_admitted,
+        "proof_status": proof_status,
+        "materiality": materiality,
+        "confidence": confidence,
+        "recurrence": recurrence,
+        "occurrence_count": occurrence_count,
+        "expected_benefit": expected_benefit,
+        "net_effect": net_effect,
+        "added_costs": added_costs,
+        "boundary_changes": boundary_changes,
+        "changes_requested_ends": changes_requested_ends,
+    }
+    revision = "sha256:" + _digest(decision_inputs)
+    return {
+        "kind": "agentic-workspace/repo-improvement-action/v1",
+        "decision_id": f"repo-improvement-action:{_digest({'revision': revision})[:16]}",
+        "input_revision": revision,
+        "candidate_id": candidate_id,
+        "latitude": mode,
+        "awareness": {"materiality": materiality, "material": material, "mode_independent": True},
+        "action_class": action_class,
+        "initiative_authorized": initiative_authorized,
+        "owner": owner_route,
+        "proof_boundary": proof_status,
+        "reason": reason,
+        "next_action": next_action,
+        "human_visibility": visibility,
+        "cost_boundary": {
+            "expected_benefit": expected_benefit,
+            "added_costs": added_costs,
+            "net_effect": net_effect or ("supported" if net_value_supported else "not-established"),
+        },
+        "authority_boundary": "This consequence permits initiative only; an existing owner operation must separately admit any mutation.",
+    }
+
+
 def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
     """Return one primary typed action or one typed external blocker."""
 
@@ -2233,6 +2407,11 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
             )
             instruction_clause_projection = compile_instruction_program(instruction_program, current_targets=instruction_targets)
     source_guidance = _project_source_owned_guidance(context_authority_projection)
+    repo_improvement_action = compile_repo_improvement_action(
+        candidate=_as_dict(inputs.get("improvement_candidate")),
+        latitude=str(inputs.get("improvement_latitude") or "conservative"),
+        current_work=_as_dict(inputs.get("current_work")),
+    )
     revisions = _as_dict(inputs.get("revisions"))
     if intent_feedback["applicable_expectations"]:
         revisions = {**revisions, "intent_feedback_revision": intent_feedback["input_revision"]}
@@ -2242,6 +2421,8 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         revisions = {**revisions, "source_guidance_revision": source_guidance["revision"]}
     if instruction_clause_projection["status"] != "not-requested":
         revisions = {**revisions, "instruction_clause_revision": instruction_clause_projection["snapshot_revision"]}
+    if repo_improvement_action:
+        revisions = {**revisions, "repo_improvement_action_revision": repo_improvement_action["input_revision"]}
     if reconciliation["status"] != "not-requested":
         revisions = {**revisions, "reconciliation_revision": reconciliation["input_revision"]}
     if control_inputs["effects"] or control_inputs["conflicts"]:
@@ -2464,6 +2645,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         "intent_feedback": intent_feedback,
         "memory_effectiveness": memory_effectiveness,
         "source_guidance": source_guidance,
+        "repo_improvement_action": repo_improvement_action,
         "instruction_clause_projection": instruction_clause_projection,
         "scoped_instruction_projection": scoped_instruction_projection,
         "reconciliation": reconciliation,

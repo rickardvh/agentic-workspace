@@ -12,8 +12,6 @@ Secondary generated adapter. Prefer `AGENTS.md`, then `tools/AGENT_QUICKSTART.md
 - Use `tools/AGENT_QUICKSTART.md` for the ordinary startup path.
 - Run `uv run agentic-workspace implement --changed <paths> --format json` when paths are known; otherwise run `uv run agentic-workspace start --task "<task>" --format json`.
 - Run `uv run agentic-workspace summary --format json` when active planning state matters.
-- Route issue shaping to `tools/skills/github-issue-shaping/SKILL.md` before issue creation.
-- Route PR review and recheck to `tools/skills/pr-review-recheck/SKILL.md`.
 
 ## Boundary
 

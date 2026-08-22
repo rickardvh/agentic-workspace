@@ -9,6 +9,7 @@
     "default_mode",
     "owner_surface",
     "policy_target",
+    "action_decision",
     "mode_interpretation",
     "examples",
     "incidental_finding_policy",
@@ -32,6 +33,22 @@
     "policy_target": {
       "type": "string",
       "description": "Policy target text value used by this contract."
+    },
+    "action_decision": {
+      "type": "object",
+      "required": ["owner", "kind", "inputs", "action_classes", "awareness_rule", "execution_boundary", "cost_rule", "quiet_rule"],
+      "properties": {
+        "owner": {"type": "string", "minLength": 1, "description": "Canonical compiler that owns the initiative consequence."},
+        "kind": {"const": "agentic-workspace/repo-improvement-action/v1", "description": "Schema discriminator for the compiled initiative consequence."},
+        "inputs": {"type": "array", "minItems": 1, "items": {"type": "string"}, "description": "Admitted evidence and authority dimensions consumed by the decision."},
+        "action_classes": {"type": "array", "minItems": 1, "items": {"type": "string"}, "description": "Small public vocabulary of possible initiative consequences."},
+        "awareness_rule": {"type": "string", "minLength": 1, "description": "Invariant separating signal awareness from initiative authority."},
+        "execution_boundary": {"type": "string", "minLength": 1, "description": "Invariant preserving owner-operation mutation authority."},
+        "cost_rule": {"type": "string", "minLength": 1, "description": "Qualitative total-future-cost comparison rule."},
+        "quiet_rule": {"type": "string", "minLength": 1, "description": "No-candidate compactness invariant."}
+      },
+      "additionalProperties": false,
+      "description": "Mechanical initiative decision compiled as one dimension of the canonical operating decision."
     },
     "mode_interpretation": {
       "type": "object",
