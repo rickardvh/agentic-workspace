@@ -431,9 +431,11 @@ def test_completed_child_reconciliation_is_cross_consumer_idempotent_and_fails_c
     )
     blocked_start = json.loads(capsys.readouterr().out)
     selected = blocked_start["values"]
-    assert selected["next_safe_action"]["next_safe_action"] == "inspect-current-task-scope"
-    assert selected["next_safe_action"]["implementation_allowed"] is False
+    assert selected["next_safe_action"]["next_safe_action"] == "inspect-current-task"
+    assert selected["next_safe_action"]["implementation_allowed"] is True
     route = selected["planning_safety_gate"]["route_decision"]
+    assert route["required_transition"] == "none"
+    assert "claim-active-plan-progress" in route["blocked_claims"]
     assert route["selected_owner"].endswith("merged-child.plan.json")
     assert route["owner_admission"]["repair_route"]["status"] == "available"
 
@@ -2813,6 +2815,44 @@ def test_closeout_claim_boundary_returns_fast_claim_packet(tmp_path: Path, capsy
     assert f"--target {expected_target} " in section["command"]
 
 
+def test_closeout_trust_default_is_budgeted_before_optional_hydration(tmp_path: Path, capsys, monkeypatch: pytest.MonkeyPatch) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    capsys.readouterr()
+    _write_issue_1981_closeout_fixture(tmp_path, include_proof=True, active_milestone_status="completed")
+
+    def fail_optional_builder(**_: Any) -> dict[str, Any]:
+        raise AssertionError("compact closeout_trust must not hydrate optional detail")
+
+    for name in (
+        "_knowledge_authority_review_payload",
+        "_architecture_decision_closeout_payload",
+        "_closeout_report_final_response_rendering_payload",
+        "_memory_consult_payload",
+        "_memory_decision_packet_payload",
+        "_historical_review_artifacts_policy",
+        "_closeout_protocol_payload",
+    ):
+        monkeypatch.setattr(workspace_runtime_core, name, fail_optional_builder)
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "closeout_trust", "--format", "json"]) == 0
+    output = capsys.readouterr().out
+    payload = json.loads(output)["answer"]
+
+    assert len(output.encode("utf-8")) < 65_536
+    assert payload["completion_gate"]["status"] == "allowed"
+    assert payload["terminal_outcome_contract"]["state"] == "DELIVERED"
+    assert payload["computation"]["profile"] == "compact"
+    assert payload["computation"]["optional_builders_avoided"] is True
+    assert payload["knowledge_authority_review"]["status"] == "omitted"
+    assert payload["closeout_protocol"]["selectors"] == ["closeout_trust --verbose", "closeout_report"]
+    enforcement = payload["terminal_outcome_contract"]["final_response_enforcement"]
+    assert enforcement["detail"]["omitted_fields"] == [
+        "issue_2239_closure_evidence",
+        "integrated_host_boundaries",
+    ]
+
+
 def test_closeout_trust_does_not_block_on_stale_satisfied_task_posture_residue(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
@@ -2857,34 +2897,13 @@ def test_closeout_trust_blocks_full_closeout_when_active_execplan_proof_is_missi
     assert "intent_proof" not in claim_work["blocking_fields"]
     rendering = payload["final_response_rendering"]
     assert rendering["status"] == "continue-not-finalizable"
-    assert rendering["terminal_outcome_contract"]["state"] == "CONTINUE"
-    admission = rendering["final_response_admission"]
-    assert admission["kind"] == "agentic-workspace/final-response-admission-route/v1"
-    assert admission["status"] == "host_integrated_admission_required"
-    assert admission["host_operation"] == "final-response.admit"
-    assert '--attempt "<model-authored final response>"' in admission["command_template"]
-    assert "autopilot" in admission["ordinary_execution_command_template"]
-    assert "--executor-command" in admission["ordinary_execution_command_template"]
-    assert admission["host_boundary_integrated"] is True
-    assert admission["ordinary_host_path_unavoidable"] is True
-    assert admission["issue_2239_closure_ready"] is True
-    assert admission["issue_2239_closure_gap"] == ""
-    closure_evidence = admission["issue_2239_closure_evidence"]
-    assert closure_evidence["status"] == "complete"
-    assert {item["id"] for item in closure_evidence["evidence"]} >= {
-        "continue-final-rejection",
-        "ordinary-autopilot-loop",
-        "compaction-resume",
-        "pseudo-blocker-rejection",
-        "review-comment-reconciliation",
-        "direct-work-counterexample",
-    }
-    assert admission["integrated_host_boundaries"][0]["id"] == "agentic-workspace.autopilot"
-    assert admission["integrated_host_boundaries"][0]["ordinary_path_unavoidable"] is True
-    assert admission["integrated_host_boundaries"][1]["entrypoint"] == "scripts/model_cli_harness/run_sbx_codex_adapter.py"
-    assert "covered by issue_2239_closure_evidence" in admission["integration_gap"]
-    assert rendering["plain_done_allowed"] is False
-    assert any("terminal final response" in item for item in rendering["must_not_claim"])
+    assert rendering["terminal_state"] == "CONTINUE"
+    assert rendering["final_response_authorized"] is False
+    assert rendering["selectors"] == ["closeout_trust --verbose", "closeout_report"]
+    assert enforcement["host_boundary_integrated"] is True
+    assert enforcement["ordinary_host_path_unavoidable"] is True
+    assert enforcement["issue_2239_closure_ready"] is True
+    assert enforcement["detail"]["status"] == "omitted"
 
 
 def test_final_response_admit_rejects_final_runs_continuation_and_persists_resume_slices(tmp_path: Path, capsys) -> None:
@@ -8695,6 +8714,7 @@ candidates = []
     assert payload["next_safe_action"]["next_safe_action"] == "produce-bounded-reflection-report"
     assert payload["next_safe_action"]["implementation_allowed"] is True
     assert payload["action_signals"]["implementation_allowed"] is True
+    assert payload["action_signals"]["proof_required"] is False
     _assert_json_payload_under(payload, 9_000, label="active-plan reflection start payload", sort_keys=False)
     decision = payload["decision_packet"]
     assert decision["phase_question"] == "Startup posture?"
@@ -8769,7 +8789,7 @@ candidates = []
     assert "work_threads" not in payload["context"]
 
 
-def test_start_keeps_mixed_issue_shaping_and_mutation_on_task_switch_route(tmp_path: Path, capsys) -> None:
+def test_start_routes_established_mixed_issue_work_as_bounded_independent(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
     capsys.readouterr()
@@ -8817,9 +8837,10 @@ candidates = []
     payload = json.loads(capsys.readouterr().out)
     route = payload["context"]["route_decision"]
 
-    assert payload["next_safe_action"]["next_safe_action"] == "inspect-current-task-scope"
-    assert route["task_relation"] == "independent-pending-scope"
-    assert route["required_transition"] == "inspect-current-task-scope"
+    assert payload["next_safe_action"]["next_safe_action"] == "inspect-current-task"
+    assert route["task_relation"] == "bounded-independent"
+    assert route["required_transition"] == "none"
+    assert route["implementation_allowed"] is True
     assert "claim-active-plan-progress" in route["blocked_claims"]
 
 
@@ -8866,8 +8887,10 @@ candidates = []
     payload = json.loads(capsys.readouterr().out)
 
     _assert_json_payload_under(payload, 12_000, label="active-plan issue start payload", sort_keys=False)
-    assert payload["decision_packet"]["next_action"] == "inspect-current-task-scope"
+    assert payload["decision_packet"]["next_action"] == "inspect-current-task"
     assert payload["decision_packet"]["absence_states"]["full_selector_inventory"] == "hidden_behind_detail_route"
+    assert "active_owner_intent_outcome" not in payload["context"]["active_state"]
+    assert payload["context"]["active_state"]["status"] == "protected-non-interference"
     assert (
         cli.main(
             [
@@ -8886,11 +8909,12 @@ candidates = []
     )
     route = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]["route_decision"]
     start_route = route
-    assert route["task_relation"] == "independent-pending-scope"
-    assert route["required_transition"] == "inspect-current-task-scope"
-    assert route["implementation_allowed"] is False
-    assert payload["action_signals"]["implementation_allowed"] is False
-    assert route["next_safe_action"]["action"] == "inspect-current-task-scope"
+    assert route["task_relation"] == "bounded-independent"
+    assert route["required_transition"] == "none"
+    assert route["implementation_allowed"] is True
+    assert payload["action_signals"]["implementation_allowed"] is True
+    assert route["next_safe_action"]["action"] == "inspect-current-task"
+    assert route["non_interference_boundary"]["restriction"]
 
     assert (
         cli.main(
@@ -8910,11 +8934,70 @@ candidates = []
     )
     selected = json.loads(capsys.readouterr().out)
     route = selected["values"]["planning_route_decision"]
-    assert route["task_relation"] == "independent-pending-scope"
-    assert route["required_transition"] == "inspect-current-task-scope"
-    assert route["implementation_allowed"] is False
+    assert route["task_relation"] == "bounded-independent"
+    assert route["required_transition"] == "none"
+    assert route["implementation_allowed"] is True
     assert route["consumer_contract"] == start_route["consumer_contract"]
     assert route["identity_effects"] == start_route["identity_effects"]
+    assert route["non_interference_boundary"] == start_route["non_interference_boundary"]
+
+
+def test_start_blocks_independent_task_that_overlaps_active_owner_scope(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "active-plan", title = "Unrelated active plan", status = "active", surface = ".agentic-workspace/planning/execplans/active-plan.plan.json" },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write_json(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "active-plan.plan.json",
+        {
+            "kind": "planning-execplan/v1",
+            "id": "active-plan",
+            "title": "Unrelated active plan",
+            "scope": {"owned": ["src/owned.py"]},
+        },
+    )
+    _write(tmp_path / "src" / "owned.py", "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Implement parser cache eviction for issue routing",
+                "--changed",
+                "src/owned.py",
+                "--select",
+                "planning_safety_gate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    route = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]["route_decision"]
+
+    assert route["task_relation"] == "ambiguous"
+    assert route["implementation_allowed"] is False
+    assert route["non_interference_boundary"]["status"] == "overlap-blocked"
+    assert route["non_interference_boundary"]["overlap_paths"] == ["src/owned.py"]
 
 
 def test_start_routes_completed_active_plan_to_archive_before_new_reflection(tmp_path: Path, capsys) -> None:
@@ -9066,7 +9149,7 @@ def test_implement_routes_post_closeout_archive_residue_as_verification(tmp_path
     assert gate["changed_path_facts"]["archived_planning_residue"]["status"] == "completed-closeout-residue"
 
 
-def test_start_keeps_incomplete_active_plan_on_task_switch_route(tmp_path: Path, capsys) -> None:
+def test_start_does_not_force_unrelated_active_plan_closeout_for_independent_task(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
     capsys.readouterr()
@@ -9089,9 +9172,11 @@ def test_start_keeps_incomplete_active_plan_on_task_switch_route(tmp_path: Path,
     payload = json.loads(capsys.readouterr().out)
     route = payload["context"]["route_decision"]
 
-    assert payload["next_safe_action"]["next_safe_action"] == "inspect-current-task-scope"
-    assert route["task_relation"] == "independent-pending-scope"
-    assert route["required_transition"] == "closeout-or-archive"
+    assert payload["next_safe_action"]["next_safe_action"] == "inspect-current-task"
+    assert route["task_relation"] == "bounded-independent"
+    assert route["required_transition"] == "none"
+    assert route["implementation_allowed"] is True
+    assert "claim-active-plan-progress" in route["blocked_claims"]
 
 
 def test_implement_acknowledges_current_task_switch_with_return_and_cleanup_routes(tmp_path: Path, capsys) -> None:
@@ -9359,7 +9444,10 @@ active_items = [{ id = "issue-2290", status = "active", surface = ".agentic-work
     gate = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]
     route = gate["route_decision"]
     assert route["selected_owner"] == shared_ref
-    assert route["task_relation"] == "independent-pending-scope"
+    assert route["task_relation"] == "bounded-independent"
+    assert route["required_transition"] == "none"
+    assert route["implementation_allowed"] is True
+    assert "claim-active-plan-progress" in route["blocked_claims"]
     assert route["owner_admission"]["rejected_candidates"][0]["ref"] == selected_ref
     assert route["owner_admission"]["rejected_candidates"][0]["reason"] == "local-selection-missing-planning-revision"
     assert gate["owner_admission"] == route["owner_admission"]
@@ -14168,12 +14256,14 @@ def test_live_pr_topology_admission_populates_continuity_without_claiming_thread
             [
                 {
                     "number": 41,
+                    "state": "OPEN",
                     "headRefName": "codex/foundation",
                     "baseRefName": "main",
                     "headRefOid": "a" * 40,
                 },
                 {
                     "number": 42,
+                    "state": "OPEN",
                     "headRefName": "codex/live-topology",
                     "baseRefName": "codex/foundation",
                     "headRefOid": head_sha,
@@ -14247,6 +14337,7 @@ def test_pr_topology_admission_rejects_mismatched_ambiguous_and_stale_observatio
     head_sha = _init_committed_pr_topology_repo(tmp_path, branch="codex/live-topology")
     member = {
         "pr_number": 42,
+        "pr_state": "open",
         "branch": "codex/live-topology",
         "base_branch": "main",
         "head_sha": head_sha,
@@ -14255,6 +14346,12 @@ def test_pr_topology_admission_rejects_mismatched_ambiguous_and_stale_observatio
         {"repository": "other/project", "branch": "codex/live-topology", "head_sha": head_sha, "members": [member]},
         {"repository": "example/project", "branch": "codex/other", "head_sha": head_sha, "members": [member]},
         {"repository": "example/project", "branch": "codex/live-topology", "head_sha": "b" * 40, "members": [member]},
+        {
+            "repository": "example/project",
+            "branch": "codex/live-topology",
+            "head_sha": head_sha,
+            "members": [{**member, "pr_state": "closed"}],
+        },
         {
             "repository": "example/project",
             "branch": "codex/live-topology",
@@ -14305,14 +14402,29 @@ def test_github_pr_topology_adapter_selects_only_the_current_linear_stack() -> N
     from agentic_workspace.review_stack_topology import TopologyAdmissionError
 
     pull_requests = [
-        {"number": 41, "headRefName": "codex/foundation", "baseRefName": "main", "headRefOid": "a" * 40},
+        {"number": 41, "state": "OPEN", "headRefName": "codex/foundation", "baseRefName": "main", "headRefOid": "a" * 40},
+        {
+            "number": 40,
+            "state": "CLOSED",
+            "headRefName": "codex/foundation",
+            "baseRefName": "main",
+            "headRefOid": "z" * 40,
+        },
         {
             "number": 42,
+            "state": "OPEN",
             "headRefName": "codex/live-topology",
             "baseRefName": "codex/foundation",
             "headRefOid": "b" * 40,
         },
-        {"number": 99, "headRefName": "codex/unrelated", "baseRefName": "main", "headRefOid": "c" * 40},
+        {
+            "number": 43,
+            "state": "MERGED",
+            "headRefName": "codex/live-topology",
+            "baseRefName": "codex/foundation",
+            "headRefOid": "d" * 40,
+        },
+        {"number": 99, "state": "OPEN", "headRefName": "codex/unrelated", "baseRefName": "main", "headRefOid": "c" * 40},
     ]
     observation = github_topology_observation(
         repository="example/project",
@@ -14330,12 +14442,28 @@ def test_github_pr_topology_adapter_selects_only_the_current_linear_stack() -> N
             head_sha="d" * 40,
             pull_requests=pull_requests,
         )
+    with pytest.raises(TopologyAdmissionError, match="no open pull request"):
+        github_topology_observation(
+            repository="example/project",
+            branch="codex/closed-only",
+            head_sha="d" * 40,
+            pull_requests=[
+                *pull_requests,
+                {
+                    "number": 44,
+                    "state": "CLOSED",
+                    "headRefName": "codex/closed-only",
+                    "baseRefName": "main",
+                    "headRefOid": "d" * 40,
+                },
+            ],
+        )
     with pytest.raises(TopologyAdmissionError, match="multiple open pull requests"):
         github_topology_observation(
             repository="example/project",
             branch="codex/live-topology",
             head_sha="b" * 40,
-            pull_requests=[*pull_requests, dict(pull_requests[1])],
+            pull_requests=[*pull_requests, dict(pull_requests[2])],
         )
 
 
@@ -14369,6 +14497,7 @@ def test_github_pr_topology_adapter_fails_closed_for_provider_errors_and_incompl
             pull_requests=[
                 {
                     "number": 42,
+                    "state": "OPEN",
                     "headRefName": "codex/live-topology",
                     "baseRefName": "main",
                 }
@@ -14393,6 +14522,7 @@ def test_admitted_pr_topology_is_rejected_after_head_changes(tmp_path: Path, cap
             "members": [
                 {
                     "pr_number": 42,
+                    "pr_state": "open",
                     "branch": "codex/live-topology",
                     "base_branch": "main",
                     "head_sha": head_sha,
@@ -14449,9 +14579,17 @@ def test_unrelated_startup_does_not_execute_live_pr_provider(tmp_path: Path, cap
     assert not any(command and command[0] == "gh" for command in observed_commands)
 
 
-def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_commands(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
+def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_commands(
+    tmp_path: Path, capsys, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from agentic_workspace import review_stack_topology, review_stack_transitions
+
+    _init_real_git_repo_with_commit(tmp_path)
     _set_git_branch(tmp_path, current="codex/stack-comments", default="main")
+    monkeypatch.setattr(review_stack_topology, "current_git_head_sha", lambda _target_root: "bbb222")
+    monkeypatch.setattr(workspace_runtime_core, "_current_git_branch", lambda _target_root: "codex/stack-comments")
+    monkeypatch.setattr(workspace_runtime_core, "_github_repo_from_origin", lambda _target_root: "rickardvh/agentic-workspace")
+    monkeypatch.setattr(review_stack_transitions, "_current_branch", lambda _target_root: "codex/stack-comments")
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
     capsys.readouterr()
     assert (
@@ -14473,6 +14611,23 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
         == 0
     )
     capsys.readouterr()
+    review_owner_identity = review_stack_topology.current_review_owner_identity(tmp_path)
+    assert review_owner_identity is not None
+    monkeypatch.setattr(
+        review_stack_transitions,
+        "current_provider_pr_identity",
+        lambda **_kwargs: {
+            "pr_number": "1841",
+            "pr_state": "open",
+            "branch": "codex/stack-comments",
+            "head_sha": "bbb222",
+        },
+    )
+    monkeypatch.setattr(
+        review_stack_transitions,
+        "current_review_owner_identity",
+        lambda _target_root: review_owner_identity,
+    )
     cache_path = tmp_path / ".agentic-workspace" / "local" / "cache" / "pr-comment-stack.json"
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     changed_path = tmp_path / "src" / "app.py"
@@ -14522,40 +14677,61 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
     assert unavailable_attention["stack_member_count"] == 0
     assert unavailable_attention["absence_states"]["thread_level_comments"] == "hidden_behind_detail_route"
 
-    fresh_stack = {
+    current_head = "bbb222"
+    stack_members = [
+        {
+            "pr_number": 1840,
+            "pr_state": "open",
+            "branch": "codex/proof-reuse",
+            "base_branch": "main",
+            "head_sha": "aaa111",
+            "delta": {
+                "category_counts": {
+                    "actionable_code_doc_body_change": 0,
+                    "pr_metadata_body_only_change": 0,
+                    "ci_label_only_issue": 0,
+                    "ambiguous_needs_human": 0,
+                },
+                "freshness": {"status": "current_at_observed_head", "pr_head_sha": "aaa111"},
+            },
+        },
+        {
+            "pr_number": 1841,
+            "pr_state": "open",
+            "branch": "codex/stack-comments",
+            "base_branch": "codex/proof-reuse",
+            "head_sha": current_head,
+            "changed_paths": ["src/app.py", "tests/test_app.py"],
+            "proof_hints": ["Run changed-effect proof."],
+            "delta": {
+                "category_counts": {
+                    "actionable_code_doc_body_change": 0,
+                    "pr_metadata_body_only_change": 0,
+                    "ci_label_only_issue": 0,
+                    "ambiguous_needs_human": 0,
+                },
+                "freshness": {"status": "current_at_observed_head", "pr_head_sha": current_head},
+            },
+        },
+    ]
+    topology_observation = {
+        "kind": "agentic-workspace/pr-topology-observation/v1",
+        "status": "admitted",
+        "provider": "fixture",
         "repository": "rickardvh/agentic-workspace",
-        "stack_members": [
-            {
-                "pr_number": 1840,
-                "branch": "codex/proof-reuse",
-                "head_sha": "aaa111",
-                "delta": {
-                    "category_counts": {
-                        "actionable_code_doc_body_change": 0,
-                        "pr_metadata_body_only_change": 0,
-                        "ci_label_only_issue": 0,
-                        "ambiguous_needs_human": 0,
-                    },
-                    "freshness": {"status": "current_at_observed_head", "pr_head_sha": "aaa111"},
-                },
-            },
-            {
-                "pr_number": 1841,
-                "branch": "codex/stack-comments",
-                "head_sha": "bbb222",
-                "changed_paths": ["src/app.py", "tests/test_app.py"],
-                "proof_hints": ["Run changed-effect proof."],
-                "delta": {
-                    "category_counts": {
-                        "actionable_code_doc_body_change": 0,
-                        "pr_metadata_body_only_change": 0,
-                        "ci_label_only_issue": 0,
-                        "ambiguous_needs_human": 0,
-                    },
-                    "freshness": {"status": "current_at_observed_head", "pr_head_sha": "bbb222"},
-                },
-            },
-        ],
+        "current_branch": "codex/stack-comments",
+        "current_head_sha": current_head,
+        "current_pr_number": "1841",
+        "current_pr_state": "open",
+        "review_owner_identity": review_owner_identity,
+        "members": copy.deepcopy(stack_members),
+    }
+    topology_observation["observation_digest"] = review_stack_topology._observation_digest(topology_observation)
+    fresh_stack = {
+        "kind": "agentic-workspace/pr-comment-stack/v2",
+        "repository": "rickardvh/agentic-workspace",
+        "topology_observation": topology_observation,
+        "stack_members": stack_members,
     }
     cache_path.write_text(json.dumps(fresh_stack), encoding="utf-8")
 
@@ -14611,7 +14787,7 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
                 "src/app.py",
                 "tests/test_app.py",
                 "--task",
-                "Address review findings for PR #1841",
+                "Stack review plan",
                 "--format",
                 "json",
             ]
