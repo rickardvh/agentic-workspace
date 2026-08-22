@@ -9,7 +9,13 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Sequence
 
-from agentic_workspace.review_stack_topology import TOPOLOGY_OBSERVATION_KIND, validate_admitted_pr_topology
+from agentic_workspace.review_stack_topology import (
+    TOPOLOGY_OBSERVATION_KIND,
+    TopologyAdmissionError,
+    current_provider_pr_identity,
+    current_review_owner_identity,
+    validate_admitted_pr_topology,
+)
 
 STACK_CACHE_PATH = Path(".agentic-workspace") / "local" / "cache" / "pr-comment-stack.json"
 
@@ -210,6 +216,15 @@ def record_review_stack_transition(
         }
     selected_pr = str(admitted.get("current_pr_number") or "").strip()
     selected_head = str(admitted.get("current_head_sha") or "").strip()
+    selected_state = str(admitted.get("current_pr_state") or "").strip().lower()
+    if selected_state != "open":
+        return {
+            "status": "skipped",
+            "reason": "current PR is not open",
+            "pr_number": selected_pr,
+            "pr_state": selected_state or "unknown",
+            "recovery": "refresh-current-pr-topology",
+        }
     if pr_number and str(pr_number).strip() != selected_pr:
         return {
             "status": "skipped",
@@ -229,6 +244,42 @@ def record_review_stack_transition(
     )
     if not selected_member:
         return {"status": "skipped", "reason": "admitted current PR member unavailable", "recovery": "refresh-current-pr-topology"}
+    try:
+        live_pr = current_provider_pr_identity(repository=repository, pr_number=selected_pr)
+    except TopologyAdmissionError as exc:
+        return {"status": "skipped", "reason": str(exc), "recovery": "refresh-current-pr-topology"}
+    expected_live = {
+        "pr_number": selected_pr,
+        "pr_state": selected_state,
+        "branch": branch,
+        "head_sha": selected_head,
+    }
+    live_mismatches = [field for field, expected in expected_live.items() if live_pr.get(field) != expected]
+    if live_mismatches:
+        return {
+            "status": "skipped",
+            "reason": "live PR identity mismatch",
+            "mismatched_fields": live_mismatches,
+            "recovery": "refresh-current-pr-topology",
+        }
+    admitted_owner = admitted.get("review_owner_identity")
+    live_owner = current_review_owner_identity(target_root)
+    if not isinstance(admitted_owner, dict) or not live_owner:
+        return {
+            "status": "skipped",
+            "reason": "current source-owned review owner unavailable",
+            "recovery": "create-or-refresh-current-review-owner",
+        }
+    owner_mismatches = [
+        field for field in ("owner_ref", "owner_revision") if str(admitted_owner.get(field) or "").strip() != live_owner[field]
+    ]
+    if owner_mismatches:
+        return {
+            "status": "skipped",
+            "reason": "review owner revision mismatch",
+            "mismatched_fields": owner_mismatches,
+            "recovery": "create-or-refresh-current-review-owner",
+        }
     member_paths = _member_paths(selected_member)
     if (
         normalized_paths
@@ -240,9 +291,11 @@ def record_review_stack_transition(
         "repository": repository,
         "branch": branch,
         "pr_number": selected_pr,
-        "pr_state": "open",
+        "pr_state": selected_state,
         "head_sha": selected_head,
         "topology_observation_digest": str(admitted.get("observation_digest") or ""),
+        "review_owner_ref": live_owner["owner_ref"],
+        "review_owner_revision": live_owner["owner_revision"],
     }
     slug = _safe_slug(f"review-stack-{selected_pr}-lifecycle")
     record_path = _review_record_path(target_root, slug)
@@ -270,7 +323,16 @@ def record_review_stack_transition(
         if isinstance(existing_identity, dict):
             mismatched = [
                 field
-                for field in ("repository", "branch", "pr_number")
+                for field in (
+                    "repository",
+                    "branch",
+                    "pr_number",
+                    "pr_state",
+                    "head_sha",
+                    "topology_observation_digest",
+                    "review_owner_ref",
+                    "review_owner_revision",
+                )
                 if str(existing_identity.get(field) or "").strip() != identity[field]
             ]
             if mismatched:
@@ -304,7 +366,8 @@ def record_review_stack_transition(
             "path": record_path.relative_to(target_root).as_posix(),
             "pr_number": selected_pr,
             "head_sha": selected_head,
-            "owner_revision": str(existing_lifecycle.get("review_owner_revision") or owner_revision_before),
+            "owner_revision": live_owner["owner_revision"],
+            "lifecycle_revision": str(existing_lifecycle.get("lifecycle_revision") or owner_revision_before),
             "idempotency_key": idempotency_key,
         }
     transition_payload = {
@@ -326,7 +389,7 @@ def record_review_stack_transition(
     }
     title = f"Review Stack {selected_pr} Lifecycle".replace("-", " ").title()
     updated_transitions = [*existing_transitions, transition_payload]
-    owner_revision = (
+    lifecycle_revision = (
         "sha256:"
         + hashlib.sha256(
             json.dumps({"identity": identity, "transitions": updated_transitions}, sort_keys=True, separators=(",", ":")).encode()
@@ -341,7 +404,8 @@ def record_review_stack_transition(
         "updated_at": transition_payload["recorded_at"],
         "source": "ordinary-command",
         "review_owner_identity": identity,
-        "review_owner_revision": owner_revision,
+        "review_owner_revision": live_owner["owner_revision"],
+        "lifecycle_revision": lifecycle_revision,
         "transitions": updated_transitions,
     }
     if dry_run:
@@ -378,7 +442,8 @@ def record_review_stack_transition(
         "path": record_path.relative_to(target_root).as_posix(),
         "pr_number": selected_pr,
         "head_sha": selected_head,
-        "owner_revision": owner_revision,
+        "owner_revision": live_owner["owner_revision"],
+        "lifecycle_revision": lifecycle_revision,
         "idempotency_key": idempotency_key,
         "phase": phase,
         "phase_after": phase_after,

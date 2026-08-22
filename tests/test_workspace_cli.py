@@ -14256,12 +14256,14 @@ def test_live_pr_topology_admission_populates_continuity_without_claiming_thread
             [
                 {
                     "number": 41,
+                    "state": "OPEN",
                     "headRefName": "codex/foundation",
                     "baseRefName": "main",
                     "headRefOid": "a" * 40,
                 },
                 {
                     "number": 42,
+                    "state": "OPEN",
                     "headRefName": "codex/live-topology",
                     "baseRefName": "codex/foundation",
                     "headRefOid": head_sha,
@@ -14335,6 +14337,7 @@ def test_pr_topology_admission_rejects_mismatched_ambiguous_and_stale_observatio
     head_sha = _init_committed_pr_topology_repo(tmp_path, branch="codex/live-topology")
     member = {
         "pr_number": 42,
+        "pr_state": "open",
         "branch": "codex/live-topology",
         "base_branch": "main",
         "head_sha": head_sha,
@@ -14393,14 +14396,15 @@ def test_github_pr_topology_adapter_selects_only_the_current_linear_stack() -> N
     from agentic_workspace.review_stack_topology import TopologyAdmissionError
 
     pull_requests = [
-        {"number": 41, "headRefName": "codex/foundation", "baseRefName": "main", "headRefOid": "a" * 40},
+        {"number": 41, "state": "OPEN", "headRefName": "codex/foundation", "baseRefName": "main", "headRefOid": "a" * 40},
         {
             "number": 42,
+            "state": "OPEN",
             "headRefName": "codex/live-topology",
             "baseRefName": "codex/foundation",
             "headRefOid": "b" * 40,
         },
-        {"number": 99, "headRefName": "codex/unrelated", "baseRefName": "main", "headRefOid": "c" * 40},
+        {"number": 99, "state": "OPEN", "headRefName": "codex/unrelated", "baseRefName": "main", "headRefOid": "c" * 40},
     ]
     observation = github_topology_observation(
         repository="example/project",
@@ -14457,6 +14461,7 @@ def test_github_pr_topology_adapter_fails_closed_for_provider_errors_and_incompl
             pull_requests=[
                 {
                     "number": 42,
+                    "state": "OPEN",
                     "headRefName": "codex/live-topology",
                     "baseRefName": "main",
                 }
@@ -14481,6 +14486,7 @@ def test_admitted_pr_topology_is_rejected_after_head_changes(tmp_path: Path, cap
             "members": [
                 {
                     "pr_number": 42,
+                    "pr_state": "open",
                     "branch": "codex/live-topology",
                     "base_branch": "main",
                     "head_sha": head_sha,
@@ -14569,6 +14575,23 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
         == 0
     )
     capsys.readouterr()
+    review_owner_identity = review_stack_topology.current_review_owner_identity(tmp_path)
+    assert review_owner_identity is not None
+    monkeypatch.setattr(
+        review_stack_transitions,
+        "current_provider_pr_identity",
+        lambda **_kwargs: {
+            "pr_number": "1841",
+            "pr_state": "open",
+            "branch": "codex/stack-comments",
+            "head_sha": "bbb222",
+        },
+    )
+    monkeypatch.setattr(
+        review_stack_transitions,
+        "current_review_owner_identity",
+        lambda _target_root: review_owner_identity,
+    )
     cache_path = tmp_path / ".agentic-workspace" / "local" / "cache" / "pr-comment-stack.json"
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     changed_path = tmp_path / "src" / "app.py"
@@ -14619,53 +14642,60 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
     assert unavailable_attention["absence_states"]["thread_level_comments"] == "hidden_behind_detail_route"
 
     current_head = "bbb222"
+    stack_members = [
+        {
+            "pr_number": 1840,
+            "pr_state": "open",
+            "branch": "codex/proof-reuse",
+            "base_branch": "main",
+            "head_sha": "aaa111",
+            "delta": {
+                "category_counts": {
+                    "actionable_code_doc_body_change": 0,
+                    "pr_metadata_body_only_change": 0,
+                    "ci_label_only_issue": 0,
+                    "ambiguous_needs_human": 0,
+                },
+                "freshness": {"status": "current_at_observed_head", "pr_head_sha": "aaa111"},
+            },
+        },
+        {
+            "pr_number": 1841,
+            "pr_state": "open",
+            "branch": "codex/stack-comments",
+            "base_branch": "codex/proof-reuse",
+            "head_sha": current_head,
+            "changed_paths": ["src/app.py", "tests/test_app.py"],
+            "proof_hints": ["Run changed-effect proof."],
+            "delta": {
+                "category_counts": {
+                    "actionable_code_doc_body_change": 0,
+                    "pr_metadata_body_only_change": 0,
+                    "ci_label_only_issue": 0,
+                    "ambiguous_needs_human": 0,
+                },
+                "freshness": {"status": "current_at_observed_head", "pr_head_sha": current_head},
+            },
+        },
+    ]
+    topology_observation = {
+        "kind": "agentic-workspace/pr-topology-observation/v1",
+        "status": "admitted",
+        "provider": "fixture",
+        "repository": "rickardvh/agentic-workspace",
+        "current_branch": "codex/stack-comments",
+        "current_head_sha": current_head,
+        "current_pr_number": "1841",
+        "current_pr_state": "open",
+        "review_owner_identity": review_owner_identity,
+        "members": copy.deepcopy(stack_members),
+    }
+    topology_observation["observation_digest"] = review_stack_topology._observation_digest(topology_observation)
     fresh_stack = {
         "kind": "agentic-workspace/pr-comment-stack/v2",
         "repository": "rickardvh/agentic-workspace",
-        "topology_observation": {
-            "kind": "agentic-workspace/pr-topology-observation/v1",
-            "status": "admitted",
-            "provider": "fixture",
-            "repository": "rickardvh/agentic-workspace",
-            "current_branch": "codex/stack-comments",
-            "current_head_sha": current_head,
-            "current_pr_number": "1841",
-            "observation_digest": "sha256:stack-comments-fixture",
-        },
-        "stack_members": [
-            {
-                "pr_number": 1840,
-                "branch": "codex/proof-reuse",
-                "base_branch": "main",
-                "head_sha": "aaa111",
-                "delta": {
-                    "category_counts": {
-                        "actionable_code_doc_body_change": 0,
-                        "pr_metadata_body_only_change": 0,
-                        "ci_label_only_issue": 0,
-                        "ambiguous_needs_human": 0,
-                    },
-                    "freshness": {"status": "current_at_observed_head", "pr_head_sha": "aaa111"},
-                },
-            },
-            {
-                "pr_number": 1841,
-                "branch": "codex/stack-comments",
-                "base_branch": "codex/proof-reuse",
-                "head_sha": current_head,
-                "changed_paths": ["src/app.py", "tests/test_app.py"],
-                "proof_hints": ["Run changed-effect proof."],
-                "delta": {
-                    "category_counts": {
-                        "actionable_code_doc_body_change": 0,
-                        "pr_metadata_body_only_change": 0,
-                        "ci_label_only_issue": 0,
-                        "ambiguous_needs_human": 0,
-                    },
-                    "freshness": {"status": "current_at_observed_head", "pr_head_sha": current_head},
-                },
-            },
-        ],
+        "topology_observation": topology_observation,
+        "stack_members": stack_members,
     }
     cache_path.write_text(json.dumps(fresh_stack), encoding="utf-8")
 
@@ -14721,7 +14751,7 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
                 "src/app.py",
                 "tests/test_app.py",
                 "--task",
-                "Address review findings for PR #1841",
+                "Stack review plan",
                 "--format",
                 "json",
             ]

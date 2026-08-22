@@ -13,13 +13,14 @@ from agentic_workspace.review_stack_topology import (
     TopologyAdmissionError,
     admit_pr_topology_observation,
     current_git_head_sha,
+    current_review_owner_identity,
 )
 
 
 def _validated_pull_requests(payload: Any) -> list[dict[str, Any]]:
     if not isinstance(payload, list):
         raise TopologyAdmissionError("GitHub PR topology provider returned an unexpected shape")
-    required_fields = ("number", "headRefName", "baseRefName", "headRefOid")
+    required_fields = ("number", "state", "headRefName", "baseRefName", "headRefOid")
     if any(not isinstance(item, dict) or any(not str(item.get(field) or "").strip() for field in required_fields) for item in payload):
         raise TopologyAdmissionError("GitHub PR topology provider returned an incomplete PR record")
     return payload
@@ -35,11 +36,11 @@ def _github_pull_requests(*, repository: str) -> list[dict[str, Any]]:
                 "--repo",
                 repository,
                 "--state",
-                "open",
+                "all",
                 "--limit",
                 "100",
                 "--json",
-                "number,url,headRefName,baseRefName,headRefOid",
+                "number,state,url,headRefName,baseRefName,headRefOid",
             ],
             text=True,
             stdout=subprocess.PIPE,
@@ -118,6 +119,9 @@ def main(argv: list[str] | None = None) -> int:
             head_sha=current_git_head_sha(target_root),
             pull_requests=pull_requests,
         )
+        review_owner_identity = current_review_owner_identity(target_root)
+        if review_owner_identity:
+            observation["review_owner_identity"] = review_owner_identity
         result = admit_pr_topology_observation(
             target_root=target_root,
             observation=observation,

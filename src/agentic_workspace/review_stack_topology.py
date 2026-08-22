@@ -54,10 +54,11 @@ def _normalized_members(raw_members: Any) -> list[dict[str, str]]:
             "branch": _text(raw.get("branch") or raw.get("head_ref") or raw.get("headRefName")),
             "base_branch": _text(raw.get("base_branch") or raw.get("base_ref") or raw.get("baseRefName")),
             "head_sha": _text(raw.get("head_sha") or raw.get("headRefOid")),
+            "pr_state": _text(raw.get("pr_state") or raw.get("state")).lower(),
             "url": _text(raw.get("url")),
         }
-        if not all(member[field] for field in ("pr_number", "branch", "base_branch", "head_sha")):
-            raise TopologyAdmissionError("every topology member requires PR number, head branch, base branch, and head SHA")
+        if not all(member[field] for field in ("pr_number", "branch", "base_branch", "head_sha", "pr_state")):
+            raise TopologyAdmissionError("every topology member requires PR number, state, head branch, base branch, and head SHA")
         members.append(member)
     if len({member["pr_number"] for member in members}) != len(members):
         raise TopologyAdmissionError("topology observation contains duplicate PR identities")
@@ -91,6 +92,70 @@ def _observation_digest(observation: dict[str, Any]) -> str:
     return f"sha256:{hashlib.sha256(encoded).hexdigest()}"
 
 
+def current_review_owner_identity(target_root: Path) -> dict[str, str]:
+    """Resolve the selected source-owned Planning record and its exact content revision."""
+
+    from agentic_workspace.current_work_context import _selected_planning_owner
+
+    owner_id, owner_ref = _selected_planning_owner(target_root)
+    if not owner_id or not owner_ref:
+        return {}
+    candidate = (target_root / owner_ref).resolve()
+    planning_root = (target_root / ".agentic-workspace" / "planning" / "execplans").resolve()
+    try:
+        candidate.relative_to(planning_root)
+        content = candidate.read_bytes()
+        payload = json.loads(content.decode("utf-8-sig"))
+    except (OSError, ValueError, json.JSONDecodeError, UnicodeDecodeError):
+        return {}
+    if not isinstance(payload, dict) or payload.get("kind") != "planning-execplan/v1" or _text(payload.get("id")) != owner_id:
+        return {}
+    return {
+        "owner_ref": candidate.relative_to(target_root.resolve()).as_posix(),
+        "owner_revision": f"sha256:{hashlib.sha256(content).hexdigest()}",
+    }
+
+
+def current_provider_pr_identity(*, repository: str, pr_number: str) -> dict[str, str]:
+    """Read the current provider-owned PR identity immediately before mutation."""
+
+    try:
+        result = subprocess.run(
+            [
+                "gh",
+                "pr",
+                "view",
+                pr_number,
+                "--repo",
+                repository,
+                "--json",
+                "number,state,headRefName,headRefOid",
+            ],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            timeout=15,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise TopologyAdmissionError("current PR provider state is unavailable") from exc
+    if result.returncode != 0:
+        raise TopologyAdmissionError("current PR provider state read failed")
+    try:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        raise TopologyAdmissionError("current PR provider state is malformed") from exc
+    identity = {
+        "pr_number": _text(payload.get("number")),
+        "pr_state": _text(payload.get("state")).lower(),
+        "branch": _text(payload.get("headRefName")),
+        "head_sha": _text(payload.get("headRefOid")),
+    }
+    if not all(identity.values()):
+        raise TopologyAdmissionError("current PR provider identity is incomplete")
+    return identity
+
+
 def admit_pr_topology_observation(
     *,
     target_root: Path,
@@ -118,7 +183,7 @@ def admit_pr_topology_observation(
     if current_member["head_sha"] != current_head_sha:
         raise TopologyAdmissionError("current PR head does not match the current Git HEAD")
 
-    normalized_observation = {
+    normalized_observation: dict[str, Any] = {
         "kind": TOPOLOGY_OBSERVATION_KIND,
         "status": "admitted",
         "provider": provider,
@@ -126,8 +191,18 @@ def admit_pr_topology_observation(
         "current_branch": branch,
         "current_head_sha": current_head_sha,
         "current_pr_number": current_member["pr_number"],
+        "current_pr_state": current_member["pr_state"],
         "members": members,
     }
+    review_owner_identity = observation.get("review_owner_identity")
+    if isinstance(review_owner_identity, dict):
+        owner_ref = _text(review_owner_identity.get("owner_ref"))
+        owner_revision = _text(review_owner_identity.get("owner_revision"))
+        if owner_ref and owner_revision:
+            normalized_observation["review_owner_identity"] = {
+                "owner_ref": owner_ref,
+                "owner_revision": owner_revision,
+            }
     cache_path = target_root / STACK_CACHE_PATH
     prior: dict[str, Any] = {}
     if cache_path.is_file():
@@ -176,6 +251,7 @@ def admit_pr_topology_observation(
         "current_branch": branch,
         "current_head_sha": current_head_sha,
         "current_pr_number": current_member["pr_number"],
+        "current_pr_state": current_member["pr_state"],
         "dependency_order": [member["pr_number"] for member in members],
         "stack_member_count": len(members),
         "thread_comment_state": "unverified",
@@ -206,6 +282,10 @@ def validate_admitted_pr_topology(
         return False, "current-head-unavailable", observation
     if _text(observation.get("current_head_sha")) != current_head_sha:
         return False, "topology-head-stale", observation
+    observed_digest = _text(observation.get("observation_digest"))
+    digest_subject = {key: value for key, value in observation.items() if key != "observation_digest"}
+    if not observed_digest or observed_digest != _observation_digest(digest_subject):
+        return False, "topology-observation-digest-mismatch", observation
     try:
         members = _ordered_current_chain(members=_normalized_members(cache.get("stack_members")), current_branch=expected_branch)
     except TopologyAdmissionError:
@@ -213,4 +293,6 @@ def validate_admitted_pr_topology(
     current_member = next(member for member in members if member["branch"] == expected_branch)
     if current_member["head_sha"] != current_head_sha:
         return False, "topology-current-pr-head-stale", observation
+    if current_member["pr_state"] != _text(observation.get("current_pr_state")):
+        return False, "topology-current-pr-state-mismatch", observation
     return True, "current", observation
