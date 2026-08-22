@@ -9,6 +9,7 @@ from typing import Any
 
 import pytest
 from jsonschema import Draft202012Validator
+from tests.workspace_cli_support import cli
 
 from agentic_workspace.actionability import (
     derive_actionability,
@@ -356,7 +357,9 @@ def test_proactive_tooling_affordance_creates_bounded_resumable_planning_owner()
     assert execution["status"] == "promotion-required"
     assert execution["route"] == "planning-new-plan"
     assert execution["operation_invocation"]["operation_id"] == "planning.new-plan.lifecycle"
-    assert execution["operation_invocation"]["arguments"]["source"] == candidate["id"]
+    planning_source = execution["operation_invocation"]["arguments"]["source"]
+    assert planning_source.startswith("repo-improvement:")
+    assert json.loads(planning_source.removeprefix("repo-improvement:"))["candidate_id"] == candidate["id"]
     assert execution["operation_invocation"]["arguments"]["prep_only"] is True
     assert execution["operation_invocation"]["mutation_boundary"]["repo_mutation_authorized"] is False
     assert execution["continuation"]["durability"] == "checked-in-planning-owner"
@@ -415,6 +418,189 @@ def test_rejected_improvement_has_one_bounded_recovery_and_preserves_original_ta
     assert execution["failure_boundary"]["original_task"] == "semantically intact"
     assert execution["failure_boundary"]["unrelated_repo_state"] == "must remain unchanged"
     assert "one owner disposition" in execution["failure_boundary"]["recovery"]
+
+
+def test_local_improvement_dispatches_registered_implement_context_without_parallel_state(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    source_path = tmp_path / "src" / "router.py"
+    source_path.parent.mkdir(parents=True)
+    source_path.write_text("ROUTE = 'current'\n", encoding="utf-8")
+    candidate = _material_improvement_candidate(
+        proposed_paths=["src/router.py"],
+        ownership={
+            "current_owner": True,
+            "mutation_authority_admitted": True,
+            "source_owner": "routing-owner",
+            "owner_revision": "routing-owner:rev-7",
+        },
+        proof_boundary={
+            "status": "local",
+            "requirements": [{"command": "pytest tests/test_router.py -q", "owner": "routing-owner"}],
+        },
+        claim_effect="bounded routing seam only",
+    )
+    action = compile_repo_improvement_action(candidate=candidate, latitude="conservative")
+    execution = compile_repo_improvement_execution(
+        action=action,
+        candidate=candidate,
+        current_work={"requested_outcome": "Fix current routing behavior", "owner_revision": "routing-owner:rev-7"},
+    )
+    arguments = execution["operation_invocation"]["arguments"]
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                *arguments["changed"],
+                "--task",
+                arguments["task"],
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["context"]["scope"]["changed_paths"] == ["src/router.py"]
+    assert execution["operation_invocation"]["owner_context_revision"] == {
+        "owner_id": "routing-owner",
+        "owner_revision": "routing-owner:rev-7",
+    }
+    assert execution["proof_requirements"] == [{"command": "pytest tests/test_router.py -q", "owner": "routing-owner"}]
+    assert execution["operation_invocation"]["preconditions"]["requested_ends_unchanged"] is True
+    assert source_path.read_text(encoding="utf-8") == "ROUTE = 'current'\n"
+    assert not list(tmp_path.rglob("*repo-improvement*"))
+
+
+def test_standalone_improvement_dispatches_planning_owner_and_resumes_exact_continuation(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    candidate = _material_improvement_candidate(
+        id="candidate-proof-selector-affordance",
+        evidence_fingerprint="sha256:evidence-7",
+        evidence_refs=["session-observation:7", "review:#2651"],
+        symptom="proof selector reruns unrelated checks",
+        scope_relation="standalone-repo",
+        proposed_paths=["src/proof_selector.py", "tests/test_proof_selector.py"],
+        ownership={
+            "current_owner": True,
+            "mutation_authority_admitted": True,
+            "source_owner": "proof-owner",
+            "owner_revision": "proof-owner:rev-2",
+        },
+        proof_boundary={
+            "status": "bounded",
+            "requirements": [{"command": "pytest tests/test_proof_selector.py -q", "owner": "proof-owner"}],
+        },
+        claim_effect="bounded proof-selection improvement only",
+    )
+    action = compile_repo_improvement_action(candidate=candidate, latitude="proactive")
+    execution = compile_repo_improvement_execution(action=action, candidate=candidate)
+    arguments = execution["operation_invocation"]["arguments"]
+
+    assert (
+        cli.main(
+            [
+                "planning",
+                "new-plan",
+                "--id",
+                arguments["id"],
+                "--title",
+                arguments["title"],
+                "--source",
+                arguments["source"],
+                "--target",
+                str(tmp_path),
+                "--prep-only",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+
+    plan_path = tmp_path / execution["continuation"]["resume_ref"]
+    resumed_plan = json.loads(plan_path.read_text(encoding="utf-8"))
+    persisted_source = resumed_plan["references"][0]["target"]
+    resumed = json.loads(persisted_source.removeprefix("repo-improvement:"))
+
+    assert resumed == {
+        "action_input_revision": action["input_revision"],
+        "allowed_paths": ["src/proof_selector.py", "tests/test_proof_selector.py"],
+        "candidate_id": candidate["id"],
+        "claim_effect": "bounded proof-selection improvement only",
+        "evidence_fingerprint": "sha256:evidence-7",
+        "evidence_refs": ["session-observation:7", "review:#2651"],
+        "owner_revision": "proof-owner:rev-2",
+        "proof_requirements": [{"command": "pytest tests/test_proof_selector.py -q", "owner": "proof-owner"}],
+        "source_owner": "proof-owner",
+    }
+    assert execution["continuation"]["durability"] == "checked-in-planning-owner"
+
+
+def test_improvement_execution_rejects_stale_owner_and_failed_plan_without_unrelated_mutation(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    unrelated = tmp_path / "README.md"
+    unrelated.write_text("unchanged\n", encoding="utf-8")
+    candidate = _material_improvement_candidate(
+        proposed_paths=["src/router.py"],
+        ownership={
+            "current_owner": True,
+            "mutation_authority_admitted": True,
+            "source_owner": "routing-owner",
+            "owner_revision": "routing-owner:stale",
+        },
+        proof_boundary={"status": "local", "requirements": [{"evidence": "focused proof"}]},
+    )
+    action = compile_repo_improvement_action(candidate=candidate, latitude="balanced")
+    stale = compile_repo_improvement_execution(action=action, candidate=candidate, current_work={"owner_revision": "routing-owner:current"})
+
+    assert stale["status"] == "owner-revision-stale"
+    assert stale["route"] == "refresh-owner-decision"
+    assert stale["operation_invocation"] == {}
+    assert unrelated.read_text(encoding="utf-8") == "unchanged\n"
+
+    standalone = _material_improvement_candidate(
+        id="duplicate-owner",
+        scope_relation="standalone-repo",
+        ownership={"source_owner": "proof-owner", "owner_revision": "proof-owner:rev-1"},
+        proof_boundary={"status": "bounded", "requirements": [{"evidence": "focused proof"}]},
+    )
+    standalone_action = compile_repo_improvement_action(candidate=standalone, latitude="proactive")
+    planned = compile_repo_improvement_execution(action=standalone_action, candidate=standalone)
+    arguments = planned["operation_invocation"]["arguments"]
+    command = [
+        "planning",
+        "new-plan",
+        "--id",
+        arguments["id"],
+        "--title",
+        arguments["title"],
+        "--source",
+        arguments["source"],
+        "--target",
+        str(tmp_path),
+        "--prep-only",
+        "--format",
+        "json",
+    ]
+    assert cli.main(command) == 0
+    capsys.readouterr()
+    before = {path.relative_to(tmp_path).as_posix(): path.read_bytes() for path in tmp_path.rglob("*") if path.is_file()}
+    assert cli.main(command) == 0
+    failure = json.loads(capsys.readouterr().out)
+    after = {path.relative_to(tmp_path).as_posix(): path.read_bytes() for path in tmp_path.rglob("*") if path.is_file()}
+
+    assert failure["reason_code"] == "target-already-exists"
+    assert after == before
+    assert "one owner disposition" in planned["failure_boundary"]["recovery"]
 
 
 def test_improvement_execution_uses_only_registered_existing_operations() -> None:

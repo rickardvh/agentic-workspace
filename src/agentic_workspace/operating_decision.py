@@ -2364,6 +2364,7 @@ def compile_repo_improvement_execution(
         or "unknown"
     )
     owner_revision = str(ownership.get("owner_revision") or current_work.get("owner_revision") or action.get("input_revision") or "")
+    current_owner_revision = str(current_work.get("owner_revision") or "")
     proof_requirements = [
         copy.deepcopy(item)
         for source in (proof_boundary.get("requirements"), candidate.get("proof_requirements"), current_work.get("proof_requirements"))
@@ -2392,7 +2393,10 @@ def compile_repo_improvement_execution(
         "durability": "current-task" if action_class in direct_classes else "owner-route",
     }
 
-    if action_class in direct_classes and action.get("initiative_authorized") is True and not guarded_surface:
+    if current_owner_revision and owner_revision and current_owner_revision != owner_revision:
+        status = "owner-revision-stale"
+        route = "refresh-owner-decision"
+    elif action_class in direct_classes and action.get("initiative_authorized") is True and not guarded_surface:
         if not paths or source_owner in {"", "unknown"} or not owner_revision or not proof_requirements:
             status = "promotion-required"
             route = "planning-or-owner-review"
@@ -2432,12 +2436,27 @@ def compile_repo_improvement_execution(
             slice_id = "improvement-" + "".join(
                 character if character.isalnum() or character == "-" else "-" for character in candidate_id
             )[:48].strip("-")
+            planning_source = "repo-improvement:" + json.dumps(
+                {
+                    "action_input_revision": str(action.get("input_revision") or ""),
+                    "allowed_paths": paths,
+                    "candidate_id": candidate_id,
+                    "claim_effect": claim_effect,
+                    "evidence_fingerprint": str(candidate.get("evidence_fingerprint") or ""),
+                    "evidence_refs": [str(item) for item in _as_list(candidate.get("evidence_refs")) if str(item)],
+                    "owner_revision": owner_revision,
+                    "proof_requirements": proof_requirements,
+                    "source_owner": source_owner,
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            )
             invocation = operation_invocation(
                 operation_id="planning.new-plan.lifecycle",
                 arguments={
                     "id": slice_id,
                     "title": str(candidate.get("symptom") or candidate.get("what_keeps_going_wrong") or "Bounded repo improvement"),
-                    "source": candidate_id,
+                    "source": planning_source,
                     "target": ".",
                     "prep_only": True,
                 },

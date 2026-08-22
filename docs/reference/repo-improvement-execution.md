@@ -15,7 +15,7 @@ Existing-owner execution, promotion, review, or disposition mapping for one admi
 | `execution_id` | string | yes |  | Stable identity for retry, resume, and review. |  |  |
 | `input_revision` | string | yes |  | Revision of the action, candidate, owner, scope, proof, and claim inputs. |  |  |
 | `candidate_id` | string | yes |  | Original signal identity preserved across execution and promotion. |  |  |
-| `status` | enum `"ready-for-ordinary-implementation"`, `"promotion-required"`, `"owner-review-required"`, `"owner-route-required"`, `"disposition-only"` | yes |  | Current execution readiness or non-mutating disposition. |  |  |
+| `status` | enum `"ready-for-ordinary-implementation"`, `"promotion-required"`, `"owner-review-required"`, `"owner-route-required"`, `"owner-revision-stale"`, `"disposition-only"` | yes |  | Current execution readiness or non-mutating disposition. |  |  |
 | `route` | string | yes |  | Existing owner surface selected for the next transition. |  |  |
 | `source_owner` | string | yes |  | Source owner that retains mutation authority. |  |  |
 | `mutation_scope` | object | yes |  | Exact permitted paths and owner revision, or an explicit non-mutating boundary. |  |  |

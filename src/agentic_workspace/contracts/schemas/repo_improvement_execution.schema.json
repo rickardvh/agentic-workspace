@@ -27,7 +27,7 @@
     "execution_id": {"type": "string", "pattern": "^repo-improvement-execution:[0-9a-f]{16}$", "description": "Stable identity for retry, resume, and review."},
     "input_revision": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$", "description": "Revision of the action, candidate, owner, scope, proof, and claim inputs."},
     "candidate_id": {"type": "string", "minLength": 1, "description": "Original signal identity preserved across execution and promotion."},
-    "status": {"enum": ["ready-for-ordinary-implementation", "promotion-required", "owner-review-required", "owner-route-required", "disposition-only"], "description": "Current execution readiness or non-mutating disposition."},
+    "status": {"enum": ["ready-for-ordinary-implementation", "promotion-required", "owner-review-required", "owner-route-required", "owner-revision-stale", "disposition-only"], "description": "Current execution readiness or non-mutating disposition."},
     "route": {"type": "string", "minLength": 1, "description": "Existing owner surface selected for the next transition."},
     "source_owner": {"type": "string", "minLength": 1, "description": "Source owner that retains mutation authority."},
     "mutation_scope": {"type": "object", "description": "Exact permitted paths and owner revision, or an explicit non-mutating boundary."},
