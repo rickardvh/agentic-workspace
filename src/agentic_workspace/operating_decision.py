@@ -22,6 +22,7 @@ from agentic_workspace.instruction_clause_ir import compile_instruction_program,
 from agentic_workspace.intent_feedback import compile_intent_feedback, intent_evidence_from_observed_behavior
 from agentic_workspace.memory_effectiveness import compile_memory_effectiveness
 from agentic_workspace.reconciliation import compile_reconciliation
+from agentic_workspace.repo_improvement_effectiveness import compile_repo_improvement_effectiveness
 from agentic_workspace.scoped_instructions import inspect_instructions
 
 BLOCKER_PRECEDENCE = [
@@ -2618,6 +2619,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         candidate=_as_dict(inputs.get("improvement_candidate")),
         current_work=_as_dict(inputs.get("current_work")),
     )
+    repo_improvement_effectiveness = compile_repo_improvement_effectiveness(candidate=_as_dict(inputs.get("improvement_candidate")))
     revisions = _as_dict(inputs.get("revisions"))
     if intent_feedback["applicable_expectations"]:
         revisions = {**revisions, "intent_feedback_revision": intent_feedback["input_revision"]}
@@ -2631,6 +2633,8 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         revisions = {**revisions, "repo_improvement_action_revision": repo_improvement_action["input_revision"]}
     if repo_improvement_execution:
         revisions = {**revisions, "repo_improvement_execution_revision": repo_improvement_execution["input_revision"]}
+    if repo_improvement_effectiveness:
+        revisions = {**revisions, "repo_improvement_effectiveness_revision": repo_improvement_effectiveness["input_revision"]}
     if reconciliation["status"] != "not-requested":
         revisions = {**revisions, "reconciliation_revision": reconciliation["input_revision"]}
     if control_inputs["effects"] or control_inputs["conflicts"]:
@@ -2855,6 +2859,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         "source_guidance": source_guidance,
         "repo_improvement_action": repo_improvement_action,
         "repo_improvement_execution": repo_improvement_execution,
+        "repo_improvement_effectiveness": repo_improvement_effectiveness,
         "instruction_clause_projection": instruction_clause_projection,
         "scoped_instruction_projection": scoped_instruction_projection,
         "reconciliation": reconciliation,

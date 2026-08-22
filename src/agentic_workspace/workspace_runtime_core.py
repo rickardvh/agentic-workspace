@@ -174,6 +174,7 @@ from agentic_workspace.projection_reuse import (
 )
 from agentic_workspace.proof_receipt_admission import proof_receipt_admission
 from agentic_workspace.proof_subject import build_proof_subject
+from agentic_workspace.repo_improvement_effectiveness import compile_repo_improvement_effectiveness
 from agentic_workspace.reporting_support import (
     StateDeltaRouteMeasurement,
     closeout_claim_boundary_payload,
@@ -6768,6 +6769,9 @@ def _improvement_pressure_payload(improvement_intake: dict[str, Any]) -> dict[st
         owner = str(candidate.get("suspected_owner") or candidate.get("source") or "unknown").strip()
         record_id = "pressure-" + _decision_slug(f"{candidate.get('kind', 'signal')}-{owner}")[:72]
         state = _improvement_pressure_state(candidate)
+        effectiveness = compile_repo_improvement_effectiveness(candidate=candidate)
+        if effectiveness.get("signal_state") in {"mitigated", "obsolete"}:
+            state = str(effectiveness["signal_state"])
         record: dict[str, Any] = {
             "kind": "workspace-improvement-pressure-record/v1",
             "id": record_id,
@@ -6802,6 +6806,14 @@ def _improvement_pressure_payload(improvement_intake: dict[str, Any]) -> dict[st
             "surface_class": str(candidate.get("surface_class") or "ordinary-source"),
             "proof_requirements": copy.deepcopy(_list_payload(candidate.get("proof_requirements"))),
             "claim_effect": str(candidate.get("claim_effect") or ""),
+            "action_id": str(candidate.get("action_id") or ""),
+            "execution_id": str(candidate.get("execution_id") or ""),
+            "improvement_claim": copy.deepcopy(_as_dict(candidate.get("improvement_claim"))),
+            "implementation_proof": copy.deepcopy(_as_dict(candidate.get("implementation_proof"))),
+            "later_observations": copy.deepcopy(_list_payload(candidate.get("later_observations"))),
+            "stronger_owner": copy.deepcopy(_as_dict(candidate.get("stronger_owner"))),
+            "counterexample_rationale": str(candidate.get("counterexample_rationale") or ""),
+            "expensive_to_rediscover": bool(candidate.get("expensive_to_rediscover")),
             "owner_surface": owner,
             "resulting_owner": str(candidate.get("resulting_owner") or candidate.get("issue_ref") or owner),
             "retire_when": str(
@@ -6813,6 +6825,8 @@ def _improvement_pressure_payload(improvement_intake: dict[str, Any]) -> dict[st
                 {"source": str(candidate.get("source") or "unknown")},
             ],
         }
+        if effectiveness:
+            record["effectiveness"] = effectiveness
         validation_failure_class = str(candidate.get("validation_failure_class") or "").strip()
         if validation_failure_class:
             record["validation_failure_class"] = validation_failure_class
@@ -45094,7 +45108,9 @@ def _task_posture_packet_payload(
         "workflow_obligation_effects": workflow_effects,
         "improvement_pressure_evaluation": improvement_pressure_evaluation,
         "improvement_pressure_records": [
-            dict(item) for item in _list_payload(improvement_pressure.get("records")) if isinstance(item, dict)
+            dict(item)
+            for item in _list_payload(improvement_pressure.get("records"))
+            if isinstance(item, dict) and item.get("state") == "active"
         ],
         "improvement_obligations": improvement_obligations,
         "dogfooding_signal_status": dogfooding_signal_status,

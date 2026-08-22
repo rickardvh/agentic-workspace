@@ -294,6 +294,7 @@ def test_no_improvement_candidate_keeps_direct_work_quiet() -> None:
     assert decision["primary_action"] == {}
     assert decision["repo_improvement_action"] == {}
     assert decision["repo_improvement_execution"] == {}
+    assert decision["repo_improvement_effectiveness"] == {}
 
 
 def test_authorized_local_code_seam_reuses_ordinary_implementation_owner_and_proportionate_proof() -> None:

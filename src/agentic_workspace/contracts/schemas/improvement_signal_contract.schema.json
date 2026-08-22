@@ -23,6 +23,7 @@
     "recurrence",
     "lifecycle_states",
     "lifecycle_rule",
+    "effectiveness_lifecycle",
     "retirement_criteria_fields",
     "bounded_adaptation",
     "immediate_actions",
@@ -284,6 +285,22 @@
       "type": "string",
       "minLength": 1,
       "description": "Policy rule that explains how improvement pressure lifecycle state affects routing."
+    },
+    "effectiveness_lifecycle": {
+      "type": "object",
+      "required": ["owner", "sequence", "classifications", "evaluation_rule", "feedback_rule", "retirement_rule", "privacy_rule", "quiet_rule"],
+      "properties": {
+        "owner": {"type": "string", "minLength": 1, "description": "Existing owner surfaces responsible for later Evaluation and disposition."},
+        "sequence": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}, "description": "Sparse signal-to-retirement lifecycle."},
+        "classifications": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}, "description": "Explicit recurrence, shifted-cost, and obsolescence outcomes."},
+        "evaluation_rule": {"type": "string", "minLength": 1, "description": "Boundary between deterministic proof and longitudinal Evaluation."},
+        "feedback_rule": {"type": "string", "minLength": 1, "description": "Rule returning ineffective outcomes to the originating owner and identity."},
+        "retirement_rule": {"type": "string", "minLength": 1, "description": "Rule for shrinking active signal, Planning, review, and Memory residue."},
+        "privacy_rule": {"type": "string", "minLength": 1, "description": "Privacy and retention boundary for later ordinary-work observations."},
+        "quiet_rule": {"type": "string", "minLength": 1, "description": "Recurring-context suppression after a mature terminal conclusion."}
+      },
+      "additionalProperties": false,
+      "description": "Owner-bound operability feedback and signal-retirement contract."
     },
     "retirement_criteria_fields": {
       "type": "array",

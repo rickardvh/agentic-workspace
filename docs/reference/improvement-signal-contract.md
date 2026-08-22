@@ -40,6 +40,15 @@ Contract for classifying improvement signals and routing them to the right owner
 | `recurrence` | array of enum `"first_seen"`, `"repeated"`, `"human_confirmed"` | yes |  | Ordered recurrence entries used by this contract. |  |  |
 | `lifecycle_states` | array of enum `"active"`, `"mitigated"`, `"accepted-risk"`, `"promoted-to-issue"`, `"obsolete"` | yes |  | Ordered lifecycle states entries used by this contract. |  |  |
 | `lifecycle_rule` | string | yes |  | Policy rule that explains how improvement pressure lifecycle state affects routing. |  |  |
+| `effectiveness_lifecycle` | object | yes |  | Owner-bound operability feedback and signal-retirement contract. |  |  |
+| `effectiveness_lifecycle.owner` | string | yes |  | Existing owner surfaces responsible for later Evaluation and disposition. |  |  |
+| `effectiveness_lifecycle.sequence` | array of string | yes |  | Sparse signal-to-retirement lifecycle. |  |  |
+| `effectiveness_lifecycle.classifications` | array of string | yes |  | Explicit recurrence, shifted-cost, and obsolescence outcomes. |  |  |
+| `effectiveness_lifecycle.evaluation_rule` | string | yes |  | Boundary between deterministic proof and longitudinal Evaluation. |  |  |
+| `effectiveness_lifecycle.feedback_rule` | string | yes |  | Rule returning ineffective outcomes to the originating owner and identity. |  |  |
+| `effectiveness_lifecycle.retirement_rule` | string | yes |  | Rule for shrinking active signal, Planning, review, and Memory residue. |  |  |
+| `effectiveness_lifecycle.privacy_rule` | string | yes |  | Privacy and retention boundary for later ordinary-work observations. |  |  |
+| `effectiveness_lifecycle.quiet_rule` | string | yes |  | Recurring-context suppression after a mature terminal conclusion. |  |  |
 | `retirement_criteria_fields` | array of string | yes |  | Fields that explain what retires or promotes an improvement pressure record. |  |  |
 | `bounded_adaptation` | object | yes |  | Contract for deriving safe source-owned adaptations from admitted improvement signals. |  |  |
 | `bounded_adaptation.kind` | const `"agentic-workspace/bounded-adaptation-candidate/v1"` | yes |  | Discriminator for a source-owned bounded adaptation candidate. |  |  |

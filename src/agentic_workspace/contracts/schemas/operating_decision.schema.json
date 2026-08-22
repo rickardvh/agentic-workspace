@@ -84,6 +84,10 @@
       "type": "object",
       "description": "Existing-owner implementation, Planning promotion, review, or disposition mapping for the admitted repo-improvement action; empty when no candidate exists."
     },
+    "repo_improvement_effectiveness": {
+      "type": "object",
+      "description": "Sparse recurrence, shifted-cost, Evaluation, and retirement result for a completed improvement claim; empty before a claim exists."
+    },
     "instruction_clause_projection": {
       "type": "object",
       "description": "Revision-bound explanation of source-owned facts, bounded clauses, composed effects, and target-scoped blockers feeding this compiler."
