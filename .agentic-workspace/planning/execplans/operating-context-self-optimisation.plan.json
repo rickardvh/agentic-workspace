@@ -4,8 +4,8 @@
   "title": "Implement bounded operating-context self-optimisation",
   "owner_level": "slice",
   "lifecycle": "live",
-  "phase": "closeout",
-  "revision": 11,
+  "phase": "validation",
+  "revision": 12,
   "intent": {
     "outcome": "Preserve the merged #2641-#2645 foundations and deliver the remaining #2646/#2647 work through a new two-PR stack: enforce representative real-session convergence in Evaluation, then admit and conclude the current evidence through the existing bounded-adaptation owners.",
     "non_goals": [
@@ -64,8 +64,10 @@
       "locator": ""
     }
   ],
-  "next_action": "Review and merge PR #2658 followed by its convergence-evidence child, then close #2646 and #2647.",
-  "blockers": [],
+  "next_action": "Correct PR #2659 by reopening the stale conclusion, admitting six current Evaluation results, and publishing the route-apply and later-task proof receipts requested in review.",
+  "blockers": [
+    "PR #2659 review requires current admitted result identities, corrected proof-route authority provenance, and durable later-task execution evidence before conclusion."
+  ],
   "proof": {
     "claims": [
       "Independent task routing is stable, bounded, and non-interfering while real owner overlap still fails closed.",
@@ -101,7 +103,7 @@
   },
   "continuation": {
     "owner": "issue-2647",
-    "residual_intent": "Merge the new two-PR stack in order, then close #2646 and #2647; reopen only if later equivalent work contradicts the admitted convergence result."
+    "residual_intent": "Resolve the PR #2659 evidence-integrity review from current admitted Evaluation results, then return the owner to closeout only after exact-head proof and review are green."
   },
   "specialist_contracts": [
     {

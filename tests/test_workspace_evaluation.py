@@ -1571,6 +1571,55 @@ def test_evaluation_lifecycle_transitions_fail_closed(tmp_path: Path) -> None:
         )
 
 
+def test_evaluation_reopens_satisfied_conclusion_only_after_results_become_stale(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    register_evaluation(target_root=tmp_path, **_definition_kwargs())
+    append_observation(
+        target_root=tmp_path,
+        evaluation_id="eval-1969-operating-loop",
+        criterion="reconstruction-cost",
+        result="supports",
+        evidence_refs=["proof-receipts/run-1.json"],
+        context=_bound_context(tmp_path),
+    )
+    transition_evaluation(
+        target_root=tmp_path,
+        evaluation_id="eval-1969-operating-loop",
+        lifecycle="satisfied",
+        reason="owner accepted the current result",
+        expected_revision=1,
+    )
+
+    with pytest.raises(WorkspaceUsageError, match="still satisfy conclusion readiness"):
+        transition_evaluation(
+            target_root=tmp_path,
+            evaluation_id="eval-1969-operating-loop",
+            lifecycle="collecting",
+            reason="attempted unnecessary reopen",
+            expected_revision=1,
+        )
+
+    register_evaluation(target_root=tmp_path, **_definition_kwargs())
+    with pytest.raises(WorkspaceUsageError, match="requires a non-empty reason"):
+        transition_evaluation(
+            target_root=tmp_path,
+            evaluation_id="eval-1969-operating-loop",
+            lifecycle="collecting",
+            expected_revision=2,
+        )
+
+    result = transition_evaluation(
+        target_root=tmp_path,
+        evaluation_id="eval-1969-operating-loop",
+        lifecycle="collecting",
+        reason="the admitted result belongs to an earlier definition revision",
+        expected_revision=2,
+    )
+    assert result["from"] == "satisfied"
+    assert result["to"] == "collecting"
+    assert result["revision_guard"] == "matched"
+
+
 def test_evaluation_observation_binds_fresh_assignment_authority_and_proof(tmp_path: Path) -> None:
     _init_git_repo(tmp_path)
     register_evaluation(target_root=tmp_path, **_definition_kwargs())

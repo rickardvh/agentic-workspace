@@ -403,12 +403,12 @@
       ],
       "id": "operating-context-cost-convergence-2646",
       "last_transition": {
-        "from": "collecting",
-        "reason": "Six admitted privacy-safe observations cover all required criteria and workflow classes across four representative sessions; matched convergence shows unrelated Planning proof cost falling from 171.6 seconds and two suite runs to zero with later steering avoided and no friction recurrence.",
-        "recorded_at": "2026-08-22T16:33:27Z",
-        "to": "satisfied"
+        "from": "satisfied",
+        "reason": "PR #2659 review found that the admitted result identities are stale and the conclusion provenance names the wrong proof-route authority.",
+        "recorded_at": "2026-08-22T17:11:55Z",
+        "to": "collecting"
       },
-      "lifecycle": "satisfied",
+      "lifecycle": "collecting",
       "question": "Is AW acceptably efficient from a cold/default state and measurably cheaper on equivalent work after bounded canonical adaptation?",
       "report_sinks": [
         {
@@ -449,7 +449,7 @@
         "type": "workspace-operating-context",
         "version_range": "v0.42-current through merged PRs #2653, #2654, and #2655 on master"
       },
-      "updated_at": "2026-08-22T16:33:27Z"
+      "updated_at": "2026-08-22T17:11:55Z"
     }
   ],
   "kind": "agentic-workspace/evaluations/v1"
