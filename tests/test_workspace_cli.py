@@ -14350,6 +14350,12 @@ def test_pr_topology_admission_rejects_mismatched_ambiguous_and_stale_observatio
             "repository": "example/project",
             "branch": "codex/live-topology",
             "head_sha": head_sha,
+            "members": [{**member, "pr_state": "closed"}],
+        },
+        {
+            "repository": "example/project",
+            "branch": "codex/live-topology",
+            "head_sha": head_sha,
             "members": [member, {**member, "pr_number": 43}],
         },
         {
@@ -14398,11 +14404,25 @@ def test_github_pr_topology_adapter_selects_only_the_current_linear_stack() -> N
     pull_requests = [
         {"number": 41, "state": "OPEN", "headRefName": "codex/foundation", "baseRefName": "main", "headRefOid": "a" * 40},
         {
+            "number": 40,
+            "state": "CLOSED",
+            "headRefName": "codex/foundation",
+            "baseRefName": "main",
+            "headRefOid": "z" * 40,
+        },
+        {
             "number": 42,
             "state": "OPEN",
             "headRefName": "codex/live-topology",
             "baseRefName": "codex/foundation",
             "headRefOid": "b" * 40,
+        },
+        {
+            "number": 43,
+            "state": "MERGED",
+            "headRefName": "codex/live-topology",
+            "baseRefName": "codex/foundation",
+            "headRefOid": "d" * 40,
         },
         {"number": 99, "state": "OPEN", "headRefName": "codex/unrelated", "baseRefName": "main", "headRefOid": "c" * 40},
     ]
@@ -14422,12 +14442,28 @@ def test_github_pr_topology_adapter_selects_only_the_current_linear_stack() -> N
             head_sha="d" * 40,
             pull_requests=pull_requests,
         )
+    with pytest.raises(TopologyAdmissionError, match="no open pull request"):
+        github_topology_observation(
+            repository="example/project",
+            branch="codex/closed-only",
+            head_sha="d" * 40,
+            pull_requests=[
+                *pull_requests,
+                {
+                    "number": 44,
+                    "state": "CLOSED",
+                    "headRefName": "codex/closed-only",
+                    "baseRefName": "main",
+                    "headRefOid": "d" * 40,
+                },
+            ],
+        )
     with pytest.raises(TopologyAdmissionError, match="multiple open pull requests"):
         github_topology_observation(
             repository="example/project",
             branch="codex/live-topology",
             head_sha="b" * 40,
-            pull_requests=[*pull_requests, dict(pull_requests[1])],
+            pull_requests=[*pull_requests, dict(pull_requests[2])],
         )
 
 

@@ -63,6 +63,8 @@ def github_topology_observation(*, repository: str, branch: str, head_sha: str, 
     pull_requests = _validated_pull_requests(pull_requests)
     by_branch: dict[str, list[dict[str, Any]]] = {}
     for pull_request in pull_requests:
+        if str(pull_request.get("state") or "").strip().upper() != "OPEN":
+            continue
         by_branch.setdefault(str(pull_request.get("headRefName") or "").strip(), []).append(pull_request)
     selected = by_branch.get(branch, [])
     if not selected:

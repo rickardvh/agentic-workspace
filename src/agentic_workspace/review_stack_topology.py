@@ -180,6 +180,8 @@ def admit_pr_topology_observation(
         raise TopologyAdmissionError("topology observation is stale for the current Git HEAD")
     members = _ordered_current_chain(members=_normalized_members(observation.get("members")), current_branch=branch)
     current_member = next(member for member in members if member["branch"] == branch)
+    if current_member["pr_state"] != "open":
+        raise TopologyAdmissionError("current PR must be open before topology admission")
     if current_member["head_sha"] != current_head_sha:
         raise TopologyAdmissionError("current PR head does not match the current Git HEAD")
 
