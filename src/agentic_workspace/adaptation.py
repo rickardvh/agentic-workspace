@@ -4,9 +4,11 @@ import copy
 import hashlib
 import json
 import re
+from pathlib import Path
 from typing import Any
 
 _QUIET_DISPOSITIONS = {"fixed", "superseded", "dismissed", "not-applicable", "obsolete"}
+_OPERATION_CONTRACT_ROOT = Path(__file__).parent / "contracts" / "operations"
 
 
 def _list(value: Any) -> list[Any]:
@@ -73,6 +75,119 @@ def simulate_adaptation(candidate: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _registered_operation(operation_id: str) -> dict[str, Any] | None:
+    contract_path = _OPERATION_CONTRACT_ROOT / f"{operation_id}.json"
+    try:
+        contract = json.loads(contract_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(contract, dict) or str(contract.get("id") or "") != operation_id:
+        return None
+    return contract
+
+
+def adaptation_signal_from_proof_route_finding(
+    finding: dict[str, Any],
+    *,
+    semantic_delta: dict[str, Any],
+    simulation: dict[str, Any],
+    expected_effect: dict[str, Any],
+) -> dict[str, Any]:
+    """Bind a real route-health signal to its guarded, registered owner operation."""
+    signal = copy.deepcopy(_dict(finding.get("improvement_signal_candidate")))
+    repair = _dict(finding.get("repair_operation"))
+    apply_contract = _dict(repair.get("apply_contract"))
+    canonical_surface = str(finding.get("canonical_edit_surface") or "")
+    authority_path = str(apply_contract.get("authority_path") or canonical_surface.split("[", 1)[0].strip())
+    field_selector = str(apply_contract.get("field_selector") or "")
+    changed_paths = [str(path) for path in _list(_dict(signal.get("applicability_identity")).get("changed_paths")) if str(path)]
+    operation_id = str(repair.get("operation_id") or "")
+    if not signal or not operation_id or not authority_path or not field_selector or not changed_paths:
+        raise ValueError("proof-route adaptation requires a current route-health signal and guarded repair operation")
+    expected_revision = str(repair.get("expected_authority_revision") or "")
+    signal["adaptation"] = {
+        "owner_class": "proof-route",
+        "source_owner": authority_path,
+        "proposed_delta": copy.deepcopy(semantic_delta),
+        "authority_requirement": {
+            "mode": "existing-typed-operation",
+            "operation_id": operation_id,
+            "expected_owner_revision": expected_revision,
+            "current_owner_revision": str(finding.get("route_authority_revision") or ""),
+        },
+        "risk_class": "low",
+        "expected_effect": copy.deepcopy(expected_effect),
+        "validation_route": copy.deepcopy(finding.get("validation_commands") or []),
+        "rollback": {
+            "mode": "operation-transaction",
+            "rule": str(apply_contract.get("rollback_on_failure") or "restore pre-apply owner bytes"),
+        },
+        "retire_when": "the guarded apply validates and a later equivalent route-health projection is quiet",
+        "disposition": "active",
+        "simulation": copy.deepcopy(simulation),
+        "operation_inputs": {
+            "finding_id": str(finding.get("id") or ""),
+            "authority_path": authority_path,
+            "field_selector": field_selector,
+            "changed_paths": changed_paths,
+            "idempotency_key": str(apply_contract.get("idempotency_key") or ""),
+            "disposition": "fixed",
+        },
+    }
+    return signal
+
+
+def execute_bounded_adaptation(candidate: dict[str, Any], *, target_root: Path, dry_run: bool = False) -> dict[str, Any]:
+    """Execute an admitted low-risk adaptation through its canonical owner operation."""
+    authority = _dict(candidate.get("authority_requirement"))
+    operation_id = str(authority.get("operation_id") or "")
+    contract = _registered_operation(operation_id)
+    simulation = _dict(candidate.get("simulation_result")) or simulate_adaptation(candidate)
+    if candidate.get("status") != "promotion-ready" or simulation.get("status") != "passed":
+        raise ValueError("adaptation execution requires a promotion-ready candidate with a passed simulation")
+    if contract is None:
+        raise ValueError(f"adaptation operation is not registered: {operation_id}")
+    if operation_id != "proof.report":
+        raise ValueError(f"adaptation operation has no bounded execution adapter: {operation_id}")
+    operation_inputs = _dict(candidate.get("operation_inputs"))
+    proposed_delta = candidate.get("proposed_delta")
+    if not isinstance(proposed_delta, dict):
+        raise ValueError("proof-route adaptation requires a typed semantic delta")
+
+    from agentic_workspace.workspace_runtime_proof import _proof_route_repair_operation_payload
+
+    operation_result = _proof_route_repair_operation_payload(
+        target_root=target_root,
+        changed_paths=[str(path) for path in _list(operation_inputs.get("changed_paths")) if str(path)],
+        mode="apply",
+        finding_id=str(operation_inputs.get("finding_id") or ""),
+        authority_path=str(operation_inputs.get("authority_path") or ""),
+        field_selector=str(operation_inputs.get("field_selector") or ""),
+        expected_revision=str(authority.get("expected_owner_revision") or ""),
+        delta_json=json.dumps(proposed_delta, sort_keys=True),
+        disposition=str(operation_inputs.get("disposition") or "fixed"),
+        idempotency_key=str(operation_inputs.get("idempotency_key") or ""),
+        dry_run=dry_run,
+    )
+    operation_status = str(operation_result.get("status") or "")
+    stale = operation_status == "blocked-stale-authority-revision"
+    applied = operation_status in {"applied", "already-applied"}
+    return {
+        "kind": "agentic-workspace/bounded-adaptation-execution/v1",
+        "status": "superseded" if stale else "quiet" if applied else "simulated" if dry_run else "blocked",
+        "candidate_id": str(candidate.get("id") or ""),
+        "operation_id": operation_id,
+        "operation_contract": f"src/agentic_workspace/contracts/operations/{operation_id}.json",
+        "disposition": "superseded" if stale else "fixed" if applied else "active",
+        "expected_owner_revision": str(authority.get("expected_owner_revision") or ""),
+        "post_owner_revision": str(operation_result.get("post_authority_revision") or ""),
+        "validation_status": str(_dict(operation_result.get("apply_receipt")).get("validation_status") or "not-run"),
+        "rollback": copy.deepcopy(operation_result.get("rollback")),
+        "operation_result": operation_result,
+        "rule": "Only a registered operation can mutate the canonical owner; stale revisions supersede the candidate and failed validation rolls back before an execution receipt is returned.",
+    }
+
+
 def bounded_adaptation_projection(signals: list[dict[str, Any]]) -> dict[str, Any]:
     grouped: dict[str, list[dict[str, Any]]] = {}
     for signal in signals:
@@ -111,13 +226,15 @@ def bounded_adaptation_projection(signals: list[dict[str, Any]]) -> dict[str, An
         authority = _dict(candidate.get("authority_requirement"))
         disposition = str(candidate.get("disposition") or "active")
         simulation = simulate_adaptation(candidate)
+        operation_id = str(authority.get("operation_id") or "")
+        operation_registered = _registered_operation(operation_id) is not None
         revision_matched = bool(authority.get("expected_owner_revision")) and authority.get("expected_owner_revision") == authority.get(
             "current_owner_revision"
         )
         auto_eligible = (
             candidate.get("risk_class") == "low"
             and authority.get("mode") == "existing-typed-operation"
-            and bool(authority.get("operation_id"))
+            and operation_registered
             and revision_matched
             and simulation["status"] == "passed"
         )
@@ -144,6 +261,7 @@ def bounded_adaptation_projection(signals: list[dict[str, Any]]) -> dict[str, An
                     if simulation["status"] == "rejected"
                     else "owner-admission-required",
                     "operation_id": authority.get("operation_id"),
+                    "operation_registered": operation_registered,
                     "revision_guard": "matched" if revision_matched else "missing-or-stale",
                     "canonical_source_only": True,
                     "learned_override_created": False,

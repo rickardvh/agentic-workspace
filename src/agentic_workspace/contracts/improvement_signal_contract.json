@@ -164,6 +164,7 @@
     "automatic_promotion_requires": [
       "risk_class=low",
       "authority_requirement.mode=existing-typed-operation",
+      "operation id resolves to a registered contract and bounded execution adapter",
       "current owner revision matches",
       "simulation passed"
     ],
