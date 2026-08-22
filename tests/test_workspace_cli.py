@@ -14548,7 +14548,7 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
 ) -> None:
     from agentic_workspace import review_stack_topology, review_stack_transitions
 
-    _init_git_repo(tmp_path)
+    _init_real_git_repo_with_commit(tmp_path)
     _set_git_branch(tmp_path, current="codex/stack-comments", default="main")
     monkeypatch.setattr(review_stack_topology, "current_git_head_sha", lambda _target_root: "bbb222")
     monkeypatch.setattr(workspace_runtime_core, "_current_git_branch", lambda _target_root: "codex/stack-comments")
