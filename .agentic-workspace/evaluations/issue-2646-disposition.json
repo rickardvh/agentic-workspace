@@ -12,49 +12,124 @@
     "required_current_observations": 6,
     "required_representative_sessions": 4,
     "unmet_criteria": [],
+    "conclusion_authority": {
+      "status": "ready",
+      "source": "current-definition-plus-admitted-summary",
+      "report_authority_revision": "67516cbdfdd606e0e88a0375",
+      "definition_revision": 3,
+      "lifecycle": "satisfied",
+      "baseline_head": "267b1425461fef097fd90fba99e719d6d71ce5ab",
+      "baseline_id": "06e9519f58f6b95e",
+      "assignment_revision": "sha256:ec16fbc0929d4f9b6084858b",
+      "assignment_receipt_ref": "aw://.agentic-workspace/planning/assignment-receipts/evaluation-assignment-21c87a14286a745d91f0",
+      "proof_revision": "sha256:2528308565d97011c4520934",
+      "proof_receipt_ref": "aw://.agentic-workspace/proof/receipts/evaluation-proof-2528308565d97011c4520934",
+      "current_result_count": 6,
+      "stale_authority_count": 0
+    },
     "representative_sessions": [
-      {"session_ref": "session:open-lane-20260821", "workflow_classes": ["direct", "planning-independent"], "evidence_refs": ["PR #2653", "git:8fd8e1dc5"]},
-      {"session_ref": "session:reopened-implementation-20260822", "workflow_classes": ["scoped-instruction"], "evidence_refs": ["PR #2655", "git:f26a9b026"]},
-      {"session_ref": "session:pr2655-blocker-repair-20260822", "workflow_classes": ["module"], "evidence_refs": ["PR #2655", "git:36fa8ef8d"]},
-      {"session_ref": "session:postmerge-stack-20260822", "workflow_classes": ["cross-session", "direct", "planning-continuation"], "evidence_refs": ["PR #2658", "git:492630d0d"]}
+      {"session_ref": "session:open-lane-20260821", "workflow_classes": ["direct", "planning-independent"], "evidence_refs": ["PR#2653", "git:8fd8e1dc5", "proof://receipts/787aea064929d3e5"]},
+      {"session_ref": "session:reopened-implementation-20260822", "workflow_classes": ["scoped-instruction"], "evidence_refs": ["PR#2655", "git:f26a9b026", "proof://receipts/787aea064929d3e5"]},
+      {"session_ref": "session:pr2655-blocker-repair-20260822", "workflow_classes": ["module"], "evidence_refs": ["PR#2655", "git:36fa8ef8d", "proof://receipts/787aea064929d3e5"]},
+      {"session_ref": "session:postmerge-stack-20260822", "workflow_classes": ["cross-session", "planning-continuation"], "evidence_refs": ["PR#2658", "git:492630d0d", "proof://receipts/787aea064929d3e5"]},
+      {"session_ref": "session:pr2659-review-correction-20260822", "workflow_classes": ["direct"], "evidence_refs": ["proof://receipts/4394653aa7b43e41", "proof://receipts/787aea064929d3e5", "apply-receipt:b4d981a8d11f877a1737"]}
     ],
     "criterion_results": [
-      {"criterion": "direct-default-quality", "result": "supports"},
-      {"criterion": "scoped-instruction-quality", "result": "supports"},
-      {"criterion": "module-context-quality", "result": "supports"},
-      {"criterion": "planning-routing-quality", "result": "supports"},
-      {"criterion": "cross-session-resumption", "result": "supports"},
-      {"criterion": "adaptation-convergence", "result": "supports"}
+      {
+        "criterion": "direct-default-quality",
+        "result": "supports",
+        "result_identity": "sha256:3ca317d16a6c265249ec4282",
+        "admission": {"status": "admitted-current", "baseline_id": "06e9519f58f6b95e", "assignment_revision": "sha256:ec16fbc0929d4f9b6084858b", "proof_revision": "sha256:2528308565d97011c4520934"},
+        "session_ref": "session:open-lane-20260821",
+        "workflow_classes": ["direct", "planning-independent"],
+        "evidence_refs": ["PR#2653", "git:8fd8e1dc5", "proof://receipts/787aea064929d3e5"],
+        "measurements": {"aw_invocations_before_productive_action": 2, "broad_repo_rereads": 0, "human_corrections": 0, "route_reversals": 0}
+      },
+      {
+        "criterion": "scoped-instruction-quality",
+        "result": "supports",
+        "result_identity": "sha256:3b6bc3d9469f2d7f7e5c248d",
+        "admission": {"status": "admitted-current", "baseline_id": "06e9519f58f6b95e", "assignment_revision": "sha256:ec16fbc0929d4f9b6084858b", "proof_revision": "sha256:2528308565d97011c4520934"},
+        "session_ref": "session:reopened-implementation-20260822",
+        "workflow_classes": ["scoped-instruction"],
+        "evidence_refs": ["PR#2655", "git:f26a9b026", "proof://receipts/787aea064929d3e5"],
+        "measurements": {"broad_instruction_rereads": 0, "human_corrections": 0, "instructions_explain_calls": 0, "scoped_instruction_routed_before_edit": true}
+      },
+      {
+        "criterion": "module-context-quality",
+        "result": "supports",
+        "result_identity": "sha256:1cd1994c8b79a6c539cfca88",
+        "admission": {"status": "admitted-current", "baseline_id": "06e9519f58f6b95e", "assignment_revision": "sha256:ec16fbc0929d4f9b6084858b", "proof_revision": "sha256:2528308565d97011c4520934"},
+        "session_ref": "session:pr2655-blocker-repair-20260822",
+        "workflow_classes": ["module"],
+        "evidence_refs": ["PR#2655", "git:36fa8ef8d", "proof://receipts/787aea064929d3e5"],
+        "measurements": {"downstream_module_rereads": 0, "first_line_module_route_used": true, "human_corrections_after_route": 0, "module_packages": ["memory", "planning", "verification", "workspace"]}
+      },
+      {
+        "criterion": "planning-routing-quality",
+        "result": "supports",
+        "result_identity": "sha256:5a6f5e67daadb56445898241",
+        "admission": {"status": "admitted-current", "baseline_id": "06e9519f58f6b95e", "assignment_revision": "sha256:ec16fbc0929d4f9b6084858b", "proof_revision": "sha256:2528308565d97011c4520934"},
+        "session_ref": "session:postmerge-stack-20260822",
+        "workflow_classes": ["planning-continuation"],
+        "evidence_refs": ["PR#2658", ".agentic-workspace/planning/execplans/operating-context-self-optimisation.plan.json", "proof://receipts/787aea064929d3e5"],
+        "measurements": {"broad_plan_rereads_before_next_action": 0, "human_corrections": 0, "startup_calls": 1, "summary_calls": 1}
+      },
+      {
+        "criterion": "cross-session-resumption",
+        "result": "supports",
+        "result_identity": "sha256:168b44287bdaf41b538ef716",
+        "admission": {"status": "admitted-current", "baseline_id": "06e9519f58f6b95e", "assignment_revision": "sha256:ec16fbc0929d4f9b6084858b", "proof_revision": "sha256:2528308565d97011c4520934"},
+        "session_ref": "session:postmerge-stack-20260822",
+        "workflow_classes": ["cross-session"],
+        "evidence_refs": [".agentic-workspace/planning/execplans/operating-context-self-optimisation.plan.json", "git:492630d0d", "proof://receipts/787aea064929d3e5"],
+        "measurements": {"chat_reconstruction_required": false, "durable_next_action_present": true, "durable_proof_boundary_present": true, "durable_residue_present": true, "human_corrections": 0}
+      },
+      {
+        "criterion": "adaptation-convergence",
+        "result": "supports",
+        "result_identity": "sha256:9b08c4c6d1f9d39c3a9d8164",
+        "admission": {"status": "admitted-current", "baseline_id": "06e9519f58f6b95e", "assignment_revision": "sha256:ec16fbc0929d4f9b6084858b", "proof_revision": "sha256:2528308565d97011c4520934"},
+        "session_ref": "session:pr2659-review-correction-20260822",
+        "workflow_classes": ["direct"],
+        "evidence_refs": [".agentic-workspace/planning/closeout-evidence/issue-2645-proof-route-cost-replay.replay.json", "git:492630d0d", "proof://receipts/4394653aa7b43e41", "proof://receipts/787aea064929d3e5", "apply-receipt:b4d981a8d11f877a1737"],
+        "measurements": {"focused_evaluation_seconds": 12.516, "planning_suite_runs": 0, "proof_selection_runs": 1, "renewed_human_steering": 0, "route_reversals": 0}
+      }
     ],
     "convergence": {
       "status": "satisfied",
       "task_class": "changed-path-proof-selection-with-active-planning-owner-and-no-planning-package-change",
       "before_session_ref": "session:coordinated-release-20260821",
-      "later_session_ref": "session:postmerge-stack-20260822",
-      "canonical_owner_ref": ".agentic-workspace/verification/manifest.toml",
-      "adaptation_revision": "merge:be4784e7a",
+      "later_session_ref": "session:pr2659-review-correction-20260822",
+      "canonical_owner_ref": ".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
+      "mechanism_revision": "merge:492630d0d",
+      "adaptation_revision": "proof-route-authority:01b2fa3083df95af",
+      "apply_receipt_id": "b4d981a8d11f877a1737",
       "before_cost": {"total_work_units": 171.6, "unit": "unrelated-planning-proof-seconds", "planning_suite_runs": 2},
-      "after_cost": {"total_work_units": 0, "unit": "unrelated-planning-proof-seconds", "planning_suite_runs": 0, "focused_evaluation_seconds": 11.87},
+      "after_cost": {"total_work_units": 0, "unit": "unrelated-planning-proof-seconds", "planning_suite_runs": 0, "focused_evaluation_seconds": 12.516},
       "human_steering_avoided_next_time": true,
       "original_friction_recurred": false,
-      "evidence_refs": [".agentic-workspace/planning/closeout-evidence/issue-2645-proof-route-cost-replay.replay.json", "PR #2654", "PR #2658"],
+      "evidence_refs": [".agentic-workspace/planning/closeout-evidence/issue-2645-proof-route-cost-replay.replay.json", "git:492630d0d", "proof://receipts/4394653aa7b43e41", "proof://receipts/787aea064929d3e5", "apply-receipt:b4d981a8d11f877a1737"],
       "comparison_caveat": "The pre-v0.42 archive is used only for the matched unrelated-Planning proof slice; current general-quality criteria use post-stack sessions."
     },
     "bounded_adaptation_proof": {
       "status": "implementation-and-convergence-proved",
       "owner_classes": ["proof-route", "scoped-instruction"],
+      "mechanism_revision": "merge:492630d0d",
+      "current_route_authority": ".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
+      "route_authority_revision_before": "62a1bd0752ff6d94",
+      "route_authority_revision_after": "01b2fa3083df95af",
+      "route_apply_receipt_id": "b4d981a8d11f877a1737",
+      "route_validation_receipt_ref": "proof://receipts/4394653aa7b43e41",
+      "later_task_receipt_ref": "proof://receipts/787aea064929d3e5",
       "covered_behaviors": [
-        "deterministic deduplication",
         "registered proof.report operation lookup",
-        "typed proof.report canonical write-surface parity",
-        "current owner revision recheck",
-        "simulation before mutation",
-        "canonical proof-route mutation with independent validation",
-        "explicit scoped-instruction owner admission",
-        "canonical scoped-instruction mutation with positive and negative applicability validation",
+        "typed field-scoped canonical config mutation",
+        "current authority revision recheck",
+        "candidate route execution and independent validation",
         "fresh post-mutation revision receipt",
         "rollback on validation failure",
-        "quiet or superseded execution disposition",
+        "current later-task proof selection with zero unrelated Planning suite runs",
         "no automatic consequential instruction promotion"
       ],
       "residue_boundary": "No learned override, optimiser, event store, or second adaptation framework was added."
@@ -65,12 +140,13 @@
     "lifecycle": "satisfied",
     "definition_revision": 3,
     "current_admission_status": "owner-concluded-from-six-current-real-session-observations",
-    "privacy": "Only compact findings, evidence references, and result identities are retained; raw prompts and full transcripts remain local.",
+    "report_authority_revision": "67516cbdfdd606e0e88a0375",
+    "privacy": "Only compact findings, evidence references, result identities, authority identities, and minimal measurements are retained; raw prompts and full transcripts remain local.",
     "report_sinks": ["#2646", "#2647"]
   },
   "future_evidence_audit": {
     "status": "closed",
-    "next_safe_action": "Close #2646 and #2647 when the stacked implementation and evidence PRs merge.",
+    "next_safe_action": "Merge PR #2659 after exact-head validation and review are green, then close #2646 and #2647.",
     "material_negative_followup": "Route a new material negative finding to the existing source owner or create a bounded follow-up.",
     "reopen_when": "A later equivalent task repeats the original friction, requires renewed human steering, or invalidates the matched cost comparison."
   }

@@ -1,6 +1,13 @@
 {
-  "kind": "agentic-workspace/trusted-producer-receipt-index/v1",
+  "kind": "agentic-workspace/evaluation-owner-receipt-index/v1",
   "receipts": {
+    "4394653aa7b43e41": {
+      "path": "4394653aa7b43e41.json",
+      "producer_class": "aw-proof",
+      "revision": "2026-08-22T17:18:13+00:00",
+      "source_ref": "proof://receipts/4394653aa7b43e41",
+      "status": "current"
+    },
     "5ae77eca70306629": {
       "path": "5ae77eca70306629.json",
       "producer_class": "aw-proof",
@@ -13,6 +20,18 @@
       "producer_class": "aw-proof",
       "revision": "2026-08-09T17:34:45+00:00",
       "source_ref": "proof://receipts/6b78016940cb8b39",
+      "status": "current"
+    },
+    "787aea064929d3e5": {
+      "path": "787aea064929d3e5.json",
+      "producer_class": "aw-proof",
+      "revision": "2026-08-22T17:18:24+00:00",
+      "source_ref": "proof://receipts/787aea064929d3e5",
+      "status": "current"
+    },
+    "evaluation-proof:2528308565d97011c4520934": {
+      "path": "evaluation-proof-2528308565d97011c4520934.json",
+      "revision": "sha256:2528308565d97011c4520934",
       "status": "current"
     }
   }

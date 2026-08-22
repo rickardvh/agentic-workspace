@@ -1,0 +1,10 @@
+{
+  "kind": "agentic-workspace/evaluation-owner-receipt-index/v1",
+  "receipts": {
+    "evaluation-assignment:21c87a14286a745d91f0": {
+      "path": "evaluation-assignment-21c87a14286a745d91f0.json",
+      "revision": "sha256:ec16fbc0929d4f9b6084858b",
+      "status": "current"
+    }
+  }
+}
