@@ -107,10 +107,17 @@ def _resolve_run_context(args: argparse.Namespace) -> dict[str, object]:
     }
 
 
-def _atomic_write_json(path: Path, payload: dict[str, object]) -> None:
+def _atomic_write_json(
+    path: Path,
+    payload: dict[str, object],
+    *,
+    before_replace: Callable[[Path, Path], None] | None = None,
+) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    temp_path = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    temp_path = path.with_name(f".{path.name}.{os.getpid()}.{secrets.token_hex(4)}.tmp")
     temp_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    if before_replace is not None:
+        before_replace(temp_path, path)
     temp_path.replace(path)
 
 
@@ -269,22 +276,93 @@ def _record_paths_for_run(run_root: Path) -> list[Path]:
     return sorted(paths)
 
 
-def _update_manifest(*, result_root: Path, run_id: str) -> None:
+def _manifest_record_identity(records: list[dict[str, object]]) -> str:
+    identity_records = [
+        {
+            "result_path": record.get("result_path"),
+            "run_id": record.get("run_id"),
+            "constituent_id": record.get("constituent_id"),
+            "outcome": record.get("outcome"),
+            "started_at": record.get("started_at"),
+            "ended_at": record.get("ended_at"),
+            "duration_seconds": record.get("duration_seconds"),
+            "plan_identity": record.get("plan_identity"),
+            "repository": record.get("repository"),
+            "attempt_identity": record.get("attempt_identity"),
+        }
+        for record in records
+    ]
+    return _sha256_json(identity_records)
+
+
+def _manifest_content_identity(payload: dict[str, object]) -> str:
+    return _sha256_json(
+        {
+            key: payload.get(key)
+            for key in (
+                "run_id",
+                "status",
+                "completion_admissible",
+                "result_set_identity",
+                "plan_identity",
+                "repository",
+                "result_count",
+                "outcomes",
+                "critical_path_seconds",
+                "summed_work_seconds",
+                "results",
+            )
+        }
+    )
+
+
+def _update_manifest(
+    *,
+    result_root: Path,
+    run_id: str,
+    before_replace: Callable[[Path, Path], None] | None = None,
+) -> dict[str, object]:
     run_root = result_root / _slugify(run_id)
     manifest_path = run_root / "manifest.json"
     lock_path = run_root / "manifest.lock"
     fd = _acquire_lock(lock_path)
     try:
         records: list[dict[str, object]] = []
+        excluded_results: list[dict[str, str]] = []
         for path in _record_paths_for_run(run_root):
             try:
                 payload = json.loads(path.read_text(encoding="utf-8"))
-            except (OSError, json.JSONDecodeError):
+            except (OSError, json.JSONDecodeError) as exc:
+                excluded_results.append(
+                    {
+                        "path": _repo_relative(path),
+                        "reason": "unreadable-or-malformed-json",
+                        "detail": str(exc),
+                    }
+                )
                 continue
-            if isinstance(payload, dict) and payload.get("kind") == "agentic-workspace/validation-constituent-result/v1":
-                payload["result_path"] = path.relative_to(REPO_ROOT).as_posix()
-                records.append(payload)
+            if not isinstance(payload, dict) or payload.get("kind") != "agentic-workspace/validation-constituent-result/v1":
+                excluded_results.append(
+                    {
+                        "path": _repo_relative(path),
+                        "reason": "not-a-validation-constituent-result",
+                        "detail": str(payload.get("kind", "missing-kind")) if isinstance(payload, dict) else type(payload).__name__,
+                    }
+                )
+                continue
+            if str(payload.get("run_id") or "") != run_id:
+                excluded_results.append(
+                    {
+                        "path": _repo_relative(path),
+                        "reason": "run-identity-mismatch",
+                        "detail": str(payload.get("run_id") or "missing-run-id"),
+                    }
+                )
+                continue
+            payload["result_path"] = _repo_relative(path)
+            records.append(payload)
         records.sort(key=lambda item: (str(item.get("started_at", "")), str(item.get("constituent_id", ""))))
+        excluded_results.sort(key=lambda item: item["path"])
         outcomes = {}
         for record in records:
             outcome = str(record.get("outcome") or "unknown")
@@ -308,10 +386,16 @@ def _update_manifest(*, result_root: Path, run_id: str) -> None:
             critical_path_seconds = summed_work_seconds
         plan_identity = next((record.get("plan_identity") for record in records if isinstance(record.get("plan_identity"), dict)), {})
         repository_identity = next((record.get("repository") for record in records if isinstance(record.get("repository"), dict)), {})
-        payload = {
+        orphan_temp_paths = sorted(_repo_relative(path) for path in run_root.glob(".manifest.json.*.tmp") if path.is_file())
+        result_set_identity = _manifest_record_identity(records)
+        payload: dict[str, object] = {
             "kind": "agentic-workspace/validation-run-manifest/v1",
+            "schema_version": 2,
             "run_id": run_id,
             "updated_at": _utc_now(),
+            "status": "incomplete" if excluded_results else "complete",
+            "completion_admissible": not excluded_results,
+            "result_set_identity": result_set_identity,
             "plan_identity": plan_identity,
             "repository": repository_identity,
             "result_count": len(records),
@@ -319,8 +403,49 @@ def _update_manifest(*, result_root: Path, run_id: str) -> None:
             "critical_path_seconds": round(critical_path_seconds, 6),
             "summed_work_seconds": round(summed_work_seconds, 6),
             "results": records,
+            "recovery": {
+                "source_of_truth": "constituent-result-files",
+                "excluded_results": excluded_results,
+                "orphan_temp_residue": orphan_temp_paths,
+                "orphan_temp_disposition": "removed-after-successful-canonical-replace" if orphan_temp_paths else "none",
+            },
         }
-        _atomic_write_json(manifest_path, payload)
+        payload["manifest_content_identity"] = _manifest_content_identity(payload)
+        try:
+            current = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            current = {}
+        current_identity = str(current.get("result_set_identity") or "") if isinstance(current, dict) else ""
+        current_content_identity = _manifest_content_identity(current) if isinstance(current, dict) else ""
+        current_admissible = bool(current.get("completion_admissible")) if isinstance(current, dict) else False
+        needs_rebuild = (
+            current_identity != result_set_identity
+            or current_content_identity != payload["manifest_content_identity"]
+            or current_admissible != bool(payload["completion_admissible"])
+            or int(current.get("result_count", -1) if isinstance(current, dict) else -1) != len(records)
+            or bool(orphan_temp_paths)
+        )
+        if needs_rebuild:
+            _atomic_write_json(manifest_path, payload, before_replace=before_replace)
+            for orphan_path in orphan_temp_paths:
+                try:
+                    (REPO_ROOT / orphan_path).unlink()
+                except OSError:
+                    pass
+        else:
+            payload = current
+        return {
+            "kind": "agentic-workspace/validation-manifest-reconciliation/v1",
+            "status": "rebuilt" if needs_rebuild else "current",
+            "run_id": run_id,
+            "manifest_path": _repo_relative(manifest_path),
+            "result_set_identity": result_set_identity,
+            "result_count": len(records),
+            "completion_admissible": not excluded_results,
+            "excluded_results": excluded_results,
+            "orphan_temp_residue": orphan_temp_paths,
+            "manifest": payload,
+        }
     finally:
         _release_lock(lock_path, fd)
 
@@ -525,7 +650,13 @@ def _run_command(
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run a command with compact success output and tailed failure logs.")
-    parser.add_argument("--label", required=True, help="Short human-readable label for the command.")
+    parser.add_argument("--label", default="", help="Short human-readable label for the command.")
+    parser.add_argument(
+        "--reconcile-manifest",
+        metavar="RUN_ID",
+        default="",
+        help="Rebuild or verify one run manifest from its durable constituent result files, then exit.",
+    )
     parser.add_argument("--id", default="", help="Stable constituent id. Defaults to a slug of --label.")
     parser.add_argument("--cwd", default=".", help="Working directory relative to the repository root.")
     parser.add_argument(
@@ -599,8 +730,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     args = parser.parse_args(argv)
     if args.command and args.command[0] == "--":
         args.command = args.command[1:]
-    if not args.command:
+    if not args.command and not args.reconcile_manifest:
         parser.error("missing command to execute; pass it after '--'")
+    if args.command and not str(args.label).strip():
+        parser.error("--label is required when executing a command")
     if (args.retry or args.allow_repeat) and not str(args.retry_reason).strip():
         parser.error("--retry requires --retry-reason so the new attempt is auditable")
     return args
@@ -608,6 +741,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    if str(args.reconcile_manifest).strip():
+        result_root = (REPO_ROOT / args.result_dir).resolve()
+        reconciliation = _update_manifest(result_root=result_root, run_id=str(args.reconcile_manifest).strip())
+        print(json.dumps({key: value for key, value in reconciliation.items() if key != "manifest"}, sort_keys=True))
+        return 0 if reconciliation["completion_admissible"] else 1
     try:
         run_identity = _resolve_run_context(args)
     except ValueError as exc:

@@ -135,6 +135,90 @@ def test_compact_runner_success_writes_machine_readable_result(tmp_path, capsys)
     assert abs(manifest["summed_work_seconds"] - manifest["critical_path_seconds"]) < 0.01
 
 
+def test_manifest_reconcile_repairs_interrupted_publish_without_rerunning_result(tmp_path) -> None:
+    runner = _load_runner()
+    runner.REPO_ROOT = tmp_path
+    runner.LOG_ROOT = tmp_path / "scratch" / "command-logs"
+    runner.RESULT_ROOT = tmp_path / "scratch" / "validation-results"
+
+    assert runner.main(["--label", "proof", "--run-id", "repair", "--", sys.executable, "-c", "print('ok')"]) == 0
+    run_root = runner.RESULT_ROOT / "repair"
+    manifest_path = run_root / "manifest.json"
+    original = json.loads(manifest_path.read_text(encoding="utf-8"))
+    (run_root / "proof-two.json").write_text(
+        json.dumps({**original["results"][0], "constituent_id": "proof-two", "duration_seconds": 2.5}),
+        encoding="utf-8",
+    )
+
+    def interrupt(_temp_path: Path, _manifest_path: Path) -> None:
+        raise RuntimeError("fault after durable temp write")
+
+    try:
+        runner._update_manifest(result_root=runner.RESULT_ROOT, run_id="repair", before_replace=interrupt)
+    except RuntimeError as exc:
+        assert "fault after durable temp write" in str(exc)
+    else:
+        raise AssertionError("fault injection did not interrupt manifest publication")
+
+    assert json.loads(manifest_path.read_text(encoding="utf-8"))["result_count"] == 1
+    residue = list(run_root.glob(".manifest.json.*.tmp"))
+    assert len(residue) == 1
+    result_mtimes = {path: path.stat().st_mtime_ns for path in runner._record_paths_for_run(run_root)}
+
+    healed = runner._update_manifest(result_root=runner.RESULT_ROOT, run_id="repair")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert healed["status"] == "rebuilt"
+    assert healed["orphan_temp_residue"] == [runner._repo_relative(residue[0])]
+    assert manifest["result_count"] == 2
+    assert manifest["outcomes"] == {"passed": 2}
+    assert manifest["summed_work_seconds"] == round(float(original["results"][0]["duration_seconds"]) + 2.5, 6)
+    assert manifest["result_set_identity"] == healed["result_set_identity"]
+    assert manifest["completion_admissible"] is True
+    assert not list(run_root.glob(".manifest.json.*.tmp"))
+    assert result_mtimes == {path: path.stat().st_mtime_ns for path in runner._record_paths_for_run(run_root)}
+
+
+def test_manifest_reconcile_excludes_malformed_records_and_fails_closed(tmp_path, capsys) -> None:
+    runner = _load_runner()
+    runner.REPO_ROOT = tmp_path
+    runner.RESULT_ROOT = tmp_path / "scratch" / "validation-results"
+    run_root = runner.RESULT_ROOT / "malformed"
+    run_root.mkdir(parents=True)
+    (run_root / "broken.json").write_text("{not-json", encoding="utf-8")
+
+    assert runner.main(["--reconcile-manifest", "malformed"]) == 1
+    response = json.loads(capsys.readouterr().out)
+    manifest = json.loads((run_root / "manifest.json").read_text(encoding="utf-8"))
+    assert response["completion_admissible"] is False
+    assert response["excluded_results"][0]["reason"] == "unreadable-or-malformed-json"
+    assert manifest["status"] == "incomplete"
+    assert manifest["result_count"] == 0
+
+
+def test_manifest_reconcile_is_idempotent_when_result_identity_is_current(tmp_path) -> None:
+    runner = _load_runner()
+    runner.REPO_ROOT = tmp_path
+    runner.LOG_ROOT = tmp_path / "scratch" / "command-logs"
+    runner.RESULT_ROOT = tmp_path / "scratch" / "validation-results"
+
+    assert runner.main(["--label", "proof", "--run-id", "stable", "--", sys.executable, "-c", "print('ok')"]) == 0
+    manifest_path = runner.RESULT_ROOT / "stable" / "manifest.json"
+    before = manifest_path.read_bytes()
+    before_mtime = manifest_path.stat().st_mtime_ns
+    reconciliation = runner._update_manifest(result_root=runner.RESULT_ROOT, run_id="stable")
+
+    assert reconciliation["status"] == "current"
+    assert manifest_path.read_bytes() == before
+    assert manifest_path.stat().st_mtime_ns == before_mtime
+
+    corrupted = json.loads(before)
+    corrupted["outcomes"] = {"passed": 999}
+    manifest_path.write_text(json.dumps(corrupted), encoding="utf-8")
+    repaired = runner._update_manifest(result_root=runner.RESULT_ROOT, run_id="stable")
+    assert repaired["status"] == "rebuilt"
+    assert json.loads(manifest_path.read_text(encoding="utf-8"))["outcomes"] == {"passed": 1}
+
+
 def test_compact_runner_records_no_heartbeat_for_short_success(tmp_path, capsys) -> None:
     runner = _load_runner()
     runner.REPO_ROOT = tmp_path

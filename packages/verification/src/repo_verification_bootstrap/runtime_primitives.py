@@ -2094,6 +2094,7 @@ def validation_evidence_admissions(target_root: Path) -> list[dict[str, Any]]:
     result_root = target_root / "scratch" / "validation-results"
     paths = sorted(result_root.glob("**/*.json"), key=lambda path: path.stat().st_mtime, reverse=True) if result_root.exists() else []
     decisions: list[dict[str, Any]] = []
+    manifest_admissions: dict[Path, tuple[bool, list[str]]] = {}
     for path in paths[:200]:
         if path.name == "manifest.json":
             continue
@@ -2104,7 +2105,46 @@ def validation_evidence_admissions(target_root: Path) -> list[dict[str, Any]]:
         if not isinstance(record, dict):
             continue
         record["result_path"] = path.relative_to(target_root).as_posix()
-        decisions.append(validation_result_admission(record=record, current_head=current_head, authority=authority))
+        run_root = path.parent.parent if path.parent.name == "attempts" else path.parent
+        if run_root not in manifest_admissions:
+            manifest_path = run_root / "manifest.json"
+            reasons: list[str] = []
+            if manifest_path.is_file():
+                try:
+                    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                except (OSError, json.JSONDecodeError):
+                    manifest = {}
+                    reasons.append("validation-run-manifest-unreadable")
+                constituent_paths = [candidate for candidate in run_root.glob("*.json") if candidate.name != "manifest.json"]
+                attempts_root = run_root / "attempts"
+                if attempts_root.is_dir():
+                    constituent_paths.extend(attempts_root.glob("*.json"))
+                manifest_results = _list_payload(manifest.get("results") if isinstance(manifest, dict) else [])
+                listed_paths = {
+                    str(item.get("result_path") or "") for item in manifest_results if isinstance(item, dict) and item.get("result_path")
+                }
+                durable_paths = {candidate.relative_to(target_root).as_posix() for candidate in constituent_paths}
+                if not isinstance(manifest, dict) or manifest.get("completion_admissible") is not True:
+                    reasons.append("validation-run-manifest-incomplete")
+                if not str(manifest.get("result_set_identity") or ""):
+                    reasons.append("validation-run-manifest-identity-missing")
+                if int(manifest.get("result_count", -1) or -1) != len(manifest_results) or listed_paths != durable_paths:
+                    reasons.append("validation-run-manifest-result-set-mismatch")
+            else:
+                reasons.append("validation-run-manifest-missing")
+            manifest_admissions[run_root] = (not reasons, _dedupe(reasons))
+        manifest_admitted, manifest_reasons = manifest_admissions[run_root]
+        decision = validation_result_admission(record=record, current_head=current_head, authority=authority)
+        if not manifest_admitted:
+            decision.pop("bundle", None)
+            decision["status"] = "rejected"
+            decision["admitted"] = False
+            decision["reason_codes"] = _dedupe([*_list_payload(decision.get("reason_codes")), *manifest_reasons])
+            decision["safe_recovery"] = (
+                "Run scripts/check/run_compact_command.py --reconcile-manifest "
+                f"{record.get('run_id')} to rebuild the canonical manifest from durable result files."
+            )
+        decisions.append(decision)
     return decisions
 
 

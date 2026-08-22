@@ -8,8 +8,10 @@ from typing import Any
 
 import pytest
 
+import repo_verification_bootstrap.runtime_primitives as runtime_primitives
 from repo_verification_bootstrap.runtime_primitives import (
     VerificationUsageError,
+    validation_evidence_admissions,
     validation_result_admission,
     verification_report_payload,
 )
@@ -143,6 +145,55 @@ def test_validation_result_admission_rejects_dirty_path_outside_declared_transit
 
     assert decision["status"] == "rejected"
     assert "dirty-repository-subject" in decision["reason_codes"]
+
+
+def test_validation_evidence_rejects_an_undercounted_run_manifest(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(runtime_primitives, "_current_validation_authority", lambda _target: _validation_authority())
+    run_root = tmp_path / "scratch" / "validation-results" / "run-1"
+    run_root.mkdir(parents=True)
+    first = _validation_result()
+    second = {**_validation_result(), "constituent_id": "proof-two"}
+    first_path = run_root / "test.workspace-integration.json"
+    second_path = run_root / "proof-two.json"
+    first_path.write_text(json.dumps(first), encoding="utf-8")
+    second_path.write_text(json.dumps(second), encoding="utf-8")
+    (run_root / "manifest.json").write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/validation-run-manifest/v1",
+                "result_set_identity": "stale-result-set",
+                "completion_admissible": True,
+                "result_count": 1,
+                "results": [{**first, "result_path": first_path.relative_to(tmp_path).as_posix()}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    decisions = validation_evidence_admissions(tmp_path)
+
+    assert len(decisions) == 2
+    assert all(not decision["admitted"] for decision in decisions)
+    assert all("validation-run-manifest-result-set-mismatch" in decision["reason_codes"] for decision in decisions)
+    assert all("--reconcile-manifest run-1" in decision["safe_recovery"] for decision in decisions)
+
+
+def test_validation_evidence_rejects_a_missing_run_manifest(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(runtime_primitives, "_current_validation_authority", lambda _target: _validation_authority())
+    run_root = tmp_path / "scratch" / "validation-results" / "run-1"
+    run_root.mkdir(parents=True)
+    result_path = run_root / "test.workspace-integration.json"
+    result_path.write_text(json.dumps(_validation_result()), encoding="utf-8")
+
+    decisions = validation_evidence_admissions(tmp_path)
+
+    assert len(decisions) == 1
+    decision = decisions[0]
+    assert decision["status"] == "rejected"
+    assert decision["admitted"] is False
+    assert "bundle" not in decision
+    assert "validation-run-manifest-missing" in decision["reason_codes"]
+    assert "--reconcile-manifest run-1" in decision["safe_recovery"]
 
 
 def test_verification_report_absent_manifest(tmp_path: Path) -> None:

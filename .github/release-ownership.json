@@ -106,6 +106,7 @@
       "sdist_prefix": "agentic_workspace",
       "payload_schema": "agentic-workspace/payload/v1",
       "payload_provenance": ".agentic-workspace/payload-provenance.json",
+      "proof_commands": ["make test-workspace", "make lint-workspace"],
       "generated_command_contract": "agentic-workspace/command-package-ir/v1"
     },
     {
@@ -115,6 +116,7 @@
       "sdist_prefix": "agentic_workspace_memory",
       "payload_schema": "agentic-memory/payload/v1",
       "payload_provenance": ".agentic-workspace/memory/UPGRADE-SOURCE.toml",
+      "proof_commands": ["make test-memory", "make lint-memory"],
       "generated_command_contract": "agentic-workspace/command-package-ir/v1"
     },
     {
@@ -124,6 +126,7 @@
       "sdist_prefix": "agentic_workspace_planning",
       "payload_schema": "agentic-planning/payload/v1",
       "payload_provenance": ".agentic-workspace/planning/UPGRADE-SOURCE.toml",
+      "proof_commands": ["make test-planning", "make lint-planning", "make typecheck-planning"],
       "generated_command_contract": "agentic-workspace/command-package-ir/v1"
     },
     {
@@ -133,6 +136,7 @@
       "sdist_prefix": "agentic_workspace_verification",
       "payload_schema": "agentic-workspace/verification-manifest/v1",
       "payload_provenance": ".agentic-workspace/verification/manifest.toml",
+      "proof_commands": ["make test-verification", "make lint-verification"],
       "generated_command_contract": "agentic-workspace/command-package-ir/v1"
     }
   ],

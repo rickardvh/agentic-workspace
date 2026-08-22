@@ -5,7 +5,7 @@
   "owner_level": "slice",
   "lifecycle": "live",
   "phase": "implementation",
-  "revision": 3,
+  "revision": 5,
   "intent": {
     "outcome": "Close #2641 through #2647 in three stacked PRs that make independent routing and closeout compact, make review/validation writes recoverable and identity-safe, and prove bounded source-owned adaptation with real-session evaluation.",
     "non_goals": [
@@ -59,7 +59,7 @@
       "locator": ""
     }
   ],
-  "next_action": "Publish the first stacked PR for #2641 #2642 #2643, then implement #2644 #2645 on its exact head.",
+  "next_action": "Publish the second stacked PR for #2644 #2645, then implement #2646 #2647 on its exact head.",
   "blockers": [],
   "proof": {
     "claims": [
@@ -77,7 +77,13 @@
       "411 tests passed: tests/test_review_stack_transitions.py and tests/test_workspace_cli.py",
       "make lint-workspace passed",
       "make typecheck passed",
-      "Default closeout_trust measured at 15,150 answer bytes before the final compact projection update"
+      "Default closeout_trust measured at 15,150 answer bytes before the final compact projection update",
+      "PR #2653 is the published draft base for #2641 #2642 #2643",
+      "66 focused manifest, Verification, proof reuse, and release-selection tests passed; all 51 Verification package tests passed",
+      "38 changed-selector proof scenarios, contract tooling, structured inventory, workspace lint, and all package type checks passed",
+      "Full proof-selector suite initially reported 209 passed and 10 failed; exact repaired-base replay reproduced nine failures with identical assertions, while the attributable docs-only tiny budget failure was fixed and now passes",
+      "Validation-plan catalogue replay produced the same two missing compact labels on repaired base dbf011637 and this head: contract catalogues and render contract catalogues",
+      "Durable #2645 replay maps reused, rerun-required, and excluded-unrelated subjects and removes 171.6 seconds of attributable Planning work at .agentic-workspace/planning/closeout-evidence/issue-2645-proof-route-cost-replay.replay.json"
     ]
   },
   "continuation": {
