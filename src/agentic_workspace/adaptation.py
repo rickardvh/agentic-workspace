@@ -320,7 +320,14 @@ def adaptation_signal_from_proof_route_finding(
     return signal
 
 
-def admit_bounded_adaptation(candidate: dict[str, Any], *, admitted_by: str) -> dict[str, Any]:
+def admit_bounded_adaptation(
+    candidate: dict[str, Any],
+    *,
+    admitted_by: str,
+    choice: str = "admit",
+    decision_revision: str = "",
+    defer_until: str = "",
+) -> dict[str, Any]:
     """Record an explicit owner decision without weakening automatic-promotion policy."""
     admitted_by = str(admitted_by or "").strip()
     owner_class = str(candidate.get("owner_class") or "")
@@ -330,11 +337,18 @@ def admit_bounded_adaptation(candidate: dict[str, Any], *, admitted_by: str) -> 
         raise ValueError("owner admission requires an owner-review-required candidate")
     if not admitted_by:
         raise ValueError("owner admission must identify the admitting human or owner")
+    if choice not in {"admit", "update", "retain", "defer", "dismiss"}:
+        raise ValueError(f"unsupported maintenance decision choice: {choice}")
+    if choice == "defer" and not defer_until:
+        raise ValueError("deferred maintenance decisions require an exact re-entry trigger")
     admitted = copy.deepcopy(candidate)
     admitted["owner_admission"] = {
         "kind": "agentic-workspace/adaptation-owner-admission/v1",
         "status": "admitted",
         "admitted_by": admitted_by,
+        "choice": choice,
+        "decision_revision": decision_revision,
+        "defer_until": defer_until,
         "scope": "one-candidate-one-owner-revision",
         "candidate_id": str(candidate.get("id") or ""),
         "expected_owner_revision": str(_dict(candidate.get("authority_requirement")).get("expected_owner_revision") or ""),
@@ -371,6 +385,42 @@ def execute_bounded_adaptation(candidate: dict[str, Any], *, target_root: Path, 
         admission = _dict(candidate.get("owner_admission"))
         if admission.get("status") != "admitted" or not str(admission.get("admitted_by") or "").strip():
             raise ValueError("consequential adaptation requires explicit owner admission")
+        choice = str(admission.get("choice") or "admit")
+        if choice in {"retain", "defer", "dismiss"}:
+            source_path = target_root / str(candidate.get("source_owner") or "")
+            expected_revision = str(authority.get("expected_owner_revision") or "")
+            if operation_id == "instructions.create" and source_path.exists():
+                from agentic_workspace.scoped_instructions import read_instruction
+
+                current_revision = read_instruction(source_path, root=target_root).revision
+            else:
+                current_revision = _path_revision(source_path)
+            if not expected_revision or current_revision != expected_revision:
+                return {
+                    "kind": "agentic-workspace/bounded-adaptation-execution/v1",
+                    "status": "superseded",
+                    "candidate_id": str(candidate.get("id") or ""),
+                    "operation_id": operation_id,
+                    "disposition": "superseded",
+                    "expected_owner_revision": expected_revision,
+                    "current_owner_revision": current_revision,
+                    "mutation_applied": False,
+                    "owner_admission": copy.deepcopy(admission),
+                    "rule": "A non-mutating semantic disposition is rejected when its presented owner revision is no longer current.",
+                }
+            return {
+                "kind": "agentic-workspace/bounded-adaptation-execution/v1",
+                "status": "deferred" if choice == "defer" else "quiet",
+                "candidate_id": str(candidate.get("id") or ""),
+                "operation_id": operation_id,
+                "disposition": choice,
+                "expected_owner_revision": expected_revision,
+                "current_owner_revision": current_revision,
+                "mutation_applied": False,
+                "owner_admission": copy.deepcopy(admission),
+                "defer_until": str(admission.get("defer_until") or ""),
+                "rule": "The canonical owner adapter records the source-bound decision result without a maintenance ledger or unrelated mutation.",
+            }
     if operation_id == "workspace.memory-create-note.apply":
         from repo_memory_bootstrap.installer import create_memory_note
 

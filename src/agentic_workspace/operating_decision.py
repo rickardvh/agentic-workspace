@@ -1123,6 +1123,198 @@ def context_authority_repair_action(projection: dict[str, Any]) -> dict[str, Any
     }
 
 
+def _maintenance_choice_invocation(
+    *,
+    operation_id: str,
+    owner: str,
+    surface: str,
+    choice: str,
+    decision_revision: str,
+    expected_registry_revision: str,
+    expected_source_revision: str,
+    semantic_delta: dict[str, Any],
+) -> dict[str, Any]:
+    return operation_invocation(
+        operation_id=operation_id,
+        arguments={
+            "target": ".",
+            "surface": surface,
+            "maintenance_choice": choice,
+            "decision_revision": decision_revision,
+            "expected_registry_revision": expected_registry_revision,
+            "expected_source_revision": expected_source_revision,
+            "semantic_delta": semantic_delta,
+        },
+        effect_class="owner-maintenance-decision",
+        authority_class="explicit-human-or-domain-decision",
+        expected_transition=f"{surface} records the {choice} disposition through {owner}",
+        preconditions={
+            "decision_revision": decision_revision,
+            "registry_revision": expected_registry_revision,
+            "source_revision": expected_source_revision,
+        },
+        owner_context_revision={
+            "surface": surface,
+            "owner": owner,
+            "registry_revision": expected_registry_revision,
+            "source_revision": expected_source_revision,
+        },
+        mutation_boundary={
+            "writes_repo_state": choice in {"admit", "update", "retain"},
+            "allowed_surfaces": [surface],
+            "owner_operation_only": True,
+        },
+        proof_requirements=[
+            {
+                "claim": "the selected disposition is current, source-bound, and does not recur for equivalent facts",
+                "owner": owner,
+            }
+        ],
+    )
+
+
+def compile_context_maintenance_decision(*, context_projection: dict[str, Any], bounded_adaptations: dict[str, Any]) -> dict[str, Any]:
+    """Compile at most one genuinely semantic maintenance case for ordinary agent presentation."""
+
+    cases: list[dict[str, Any]] = []
+    for raw in _as_list(_as_dict(context_projection.get("currentness")).get("decision_requirements")):
+        requirement = _as_dict(raw)
+        if requirement.get("disposition") != "decision-required":
+            continue
+        surface = str(requirement.get("surface") or "")
+        contract = _surface_owner_contract(surface)
+        cases.append(
+            {
+                "case_kind": "negative-drift",
+                "case_id": f"currentness:{surface}:{requirement.get('reason_code', '')}",
+                "surface": surface,
+                "owner": str(requirement.get("owner") or "context-authority-owner"),
+                "operation_id": str(requirement.get("operation_id") or contract.get("repair_operation_id") or ""),
+                "why_semantic": str(
+                    requirement.get("why_semantic") or "the current source state admits more than one owner-valid interpretation"
+                ),
+                "observed_change": str(requirement.get("observed_change") or requirement.get("reason_code") or "context changed"),
+                "evidence_refs": _as_list(requirement.get("evidence_refs")) or [f"context-authority:{surface}"],
+                "confidence": str(requirement.get("confidence") or "high"),
+                "affected_effects": _as_list(requirement.get("affected_effects")) or ["authority", "action", "claim"],
+                "expected_registry_revision": str(requirement.get("expected_registry_revision") or CONTEXT_AUTHORITY_REGISTRY_REVISION),
+                "expected_source_revision": str(requirement.get("expected_source_revision") or ""),
+                "semantic_delta": _as_dict(requirement.get("proposed_delta")),
+                "defer_until": str(requirement.get("defer_until") or ""),
+            }
+        )
+    for raw in _as_list(bounded_adaptations.get("candidates")):
+        candidate = _as_dict(raw)
+        coverage = _as_dict(candidate.get("coverage"))
+        authority = _as_dict(candidate.get("authority_requirement"))
+        if not coverage or candidate.get("status") != "owner-review-required":
+            continue
+        cases.append(
+            {
+                "case_kind": "positive-coverage",
+                "case_id": str(candidate.get("id") or ""),
+                "surface": str(candidate.get("source_owner") or ""),
+                "owner": str(candidate.get("owner_class") or "workspace-owner"),
+                "operation_id": str(authority.get("operation_id") or ""),
+                "why_semantic": "the observation is evidence, not authority, or changes consequential operating policy",
+                "observed_change": str(coverage.get("observed_addition") or candidate.get("symptom") or ""),
+                "evidence_refs": _as_list(coverage.get("evidence_refs")),
+                "confidence": str(coverage.get("confidence") or "advisory"),
+                "affected_effects": _as_list(coverage.get("affected_effects")),
+                "expected_registry_revision": CONTEXT_AUTHORITY_REGISTRY_REVISION,
+                "expected_source_revision": str(authority.get("expected_owner_revision") or ""),
+                "semantic_delta": _as_dict(candidate.get("proposed_delta")),
+                "defer_until": str(coverage.get("defer_until") or ""),
+            }
+        )
+    if not cases:
+        return {
+            "kind": "agentic-workspace/context-maintenance-decision/v1",
+            "status": "not-required",
+            "first_line_cost": "none",
+        }
+    case = sorted(cases, key=lambda item: (bool(item.get("defer_until")), str(item.get("case_id"))))[0]
+    required = ["case_id", "surface", "owner", "operation_id", "expected_source_revision"]
+    if any(not case.get(field) for field in required):
+        return {
+            "kind": "agentic-workspace/context-maintenance-decision/v1",
+            "status": "blocked-missing-owner-operation",
+            "case_kind": case.get("case_kind"),
+            "owner": case.get("owner"),
+            "surface": case.get("surface"),
+            "missing_fields": [field for field in required if not case.get(field)],
+            "rule": "A semantic maintenance question is not surfaced until its owner can provide source identity and a typed apply operation.",
+        }
+    decision_revision = "sha256:" + _digest(case)
+    option_specs = [
+        ("admit", "Admit smallest owner update", "Apply the proposed bounded delta to the canonical owner."),
+        ("retain", "Retain current behavior", "Record that current owner behavior remains intentional for this source revision."),
+        ("defer", "Defer with trigger", "Leave current work unblocked and surface again only at the named trigger."),
+        ("dismiss", "Dismiss this condition", "Retire this exact source/evidence identity without hiding materially changed facts."),
+    ]
+    alternatives = []
+    for choice, label, consequence in option_specs:
+        alternatives.append(
+            {
+                "id": choice,
+                "label": label,
+                "consequence": consequence,
+                "apply_operation": _maintenance_choice_invocation(
+                    operation_id=str(case["operation_id"]),
+                    owner=str(case["owner"]),
+                    surface=str(case["surface"]),
+                    choice=choice,
+                    decision_revision=decision_revision,
+                    expected_registry_revision=str(case["expected_registry_revision"]),
+                    expected_source_revision=str(case["expected_source_revision"]),
+                    semantic_delta=_as_dict(case.get("semantic_delta")),
+                ),
+            }
+        )
+    deferred = bool(case.get("defer_until"))
+    return {
+        "kind": "agentic-workspace/context-maintenance-decision/v1",
+        "status": "deferred" if deferred else "decision-required",
+        "decision_id": "maintenance:" + _digest({"case": case["case_id"], "revision": decision_revision})[:20],
+        "decision_revision": decision_revision,
+        "case_kind": case["case_kind"],
+        "summary": f"Choose how {case['owner']} should represent: {case['observed_change']}",
+        "owner": case["owner"],
+        "surface": case["surface"],
+        "requires_response_now": not deferred,
+        "defer_until": case.get("defer_until", ""),
+        "alternatives": alternatives,
+        "detail": {
+            "observed_change": case["observed_change"],
+            "why_not_automatic": case["why_semantic"],
+            "affected_effects": case["affected_effects"],
+            "evidence_refs": case["evidence_refs"],
+            "confidence": case["confidence"],
+            "expected_registry_revision": case["expected_registry_revision"],
+            "expected_source_revision": case["expected_source_revision"],
+        },
+        "first_line": {
+            "summary": f"A repository change needs one {case['owner']} decision.",
+            "choice_ids": [item["id"] for item in alternatives],
+            "detail_selector": "maintenance_decision.detail",
+        },
+        "rule": "Deterministic cases bypass this boundary; one semantic case is surfaced through ordinary agent work with owner-bound choices.",
+    }
+
+
+def maintenance_decision_action(decision: dict[str, Any]) -> dict[str, Any]:
+    if decision.get("status") != "decision-required":
+        return {}
+    return {
+        "action": "request-context-maintenance-decision",
+        "human_decision": decision.get("first_line"),
+        "decision_id": decision.get("decision_id"),
+        "owner": decision.get("owner"),
+        "surface": decision.get("surface"),
+        "detail_selector": "maintenance_decision",
+    }
+
+
 def _surface_gap_class(surface: dict[str, Any]) -> str:
     requirement_status = str(surface.get("requirement_status") or "").strip()
     population_status = str(surface.get("population_status") or "").strip()
@@ -2853,6 +3045,10 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         target_root=Path(str(inputs["target_root"])) if inputs.get("target_root") else None,
         source_records=_as_dict(inputs.get("authority_sources")) or _as_dict(inputs.get("authorities")),
     )
+    maintenance_decision = compile_context_maintenance_decision(
+        context_projection=context_authority_projection,
+        bounded_adaptations=bounded_adaptations,
+    )
     if instruction_clause_projection["status"] == "not-requested" and requested_consumer in {"start", "implement"}:
         scoped_mechanisms: list[dict[str, Any]] = []
         for authority in [_as_dict(item) for item in _as_list(context_authority_projection.get("authorities"))]:
@@ -2918,7 +3114,8 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
     authorities = _as_dict(inputs.get("authorities"))
     actionability = _as_dict(inputs.get("actionability"))
     owner_repair_action = context_authority_repair_action(context_authority_projection)
-    action = owner_repair_action or _as_dict(actionability.get("next_action") or inputs.get("primary_action"))
+    human_maintenance_action = maintenance_decision_action(maintenance_decision)
+    action = owner_repair_action or human_maintenance_action or _as_dict(actionability.get("next_action") or inputs.get("primary_action"))
     if owner_repair_action and authorities:
         action = {
             **owner_repair_action,
@@ -3016,6 +3213,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
     if (
         not invocation
         and action
+        and not action.get("human_decision")
         and str(action.get("action") or "") not in {"no-immediate-action", ""}
         and progress_check.get("result") != "rejected-stale-action"
     ):
@@ -3076,8 +3274,8 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
             "repair": str(blocker.get("repair") or "refresh or resolve the owning authority"),
         }
     else:
-        status = "actionable" if invocation else "terminal"
-        primary_action = action if invocation else {}
+        status = "decision-required" if human_maintenance_action else "actionable" if invocation else "terminal"
+        primary_action = action if invocation or human_maintenance_action else {}
         external_blocker = {}
     if primary_action and context_effects["action_narrowing"]["status"] == "narrowed":
         primary_action = {
@@ -3107,7 +3305,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
                 }
         else:
             status = "blocked"
-            primary_action = {}
+            primary_action = human_maintenance_action
             decision_requirement = _as_dict(decision_requirements[0]) if decision_requirements else {}
             external_blocker = {
                 "kind": "agentic-workspace/operating-decision-blocker/v1",
@@ -3158,6 +3356,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         "intent_feedback": intent_feedback,
         "memory_effectiveness": memory_effectiveness,
         "bounded_adaptations": bounded_adaptations,
+        "maintenance_decision": maintenance_decision,
         "source_guidance": source_guidance,
         "repo_improvement_action": repo_improvement_action,
         "repo_improvement_execution": repo_improvement_execution,

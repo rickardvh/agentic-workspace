@@ -76,6 +76,10 @@
       "type": "object",
       "description": "Deduplicated currentness or missing-coverage candidates derived from existing improvement evidence and routed to canonical owner operations or explicit decisions."
     },
+    "maintenance_decision": {
+      "type": "object",
+      "description": "At most one compact semantic currentness or coverage decision with source-bound alternatives and canonical owner apply operations."
+    },
     "source_guidance": {
       "type": "object",
       "description": "Compact references for admitted source-owned guidance whose registry contract declares a material decision dimension."
