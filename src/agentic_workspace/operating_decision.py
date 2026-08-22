@@ -2203,12 +2203,14 @@ def compile_repo_improvement_action(
     materiality = str(candidate.get("materiality") or ("material" if strong_evidence else "weak-one-off"))
     material = materiality in {"material", "high", "blocking"} or strong_evidence
 
-    owner = str(candidate.get("resulting_owner") or candidate.get("suspected_owner") or candidate.get("owner_surface") or "unknown")
-    normalized_owner = owner.lower()
-    workspace_owned = scope_relation == "aw-internal" or any(
-        marker in normalized_owner for marker in ("agentic-workspace", "workspace", "package")
-    )
     ownership = _as_dict(candidate.get("ownership"))
+    owner = str(candidate.get("resulting_owner") or candidate.get("suspected_owner") or candidate.get("owner_surface") or "unknown")
+    owner_class = str(ownership.get("owner_class") or candidate.get("owner_class") or "")
+    workspace_owned = scope_relation == "aw-internal" or owner_class in {
+        "aw-owned",
+        "package-owned",
+        "workspace-owned",
+    }
     proof = _as_dict(candidate.get("proof_boundary"))
     owner_local = bool(ownership.get("current_owner", candidate.get("owner_local", False)))
     mutation_admitted = bool(ownership.get("mutation_authority_admitted", candidate.get("mutation_authority_admitted", owner_local)))

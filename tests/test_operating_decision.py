@@ -202,6 +202,35 @@ def test_repo_improvement_action_routes_aw_owned_work_without_consuming_repo_lat
     assert action["initiative_authorized"] is False
 
 
+def test_repo_improvement_action_routes_explicit_package_owner_class_without_consuming_repo_latitude() -> None:
+    action = compile_repo_improvement_action(
+        candidate=_material_improvement_candidate(
+            suspected_owner="runtime-owner",
+            ownership={"owner_class": "package-owned", "current_owner": True, "mutation_authority_admitted": True},
+        ),
+        latitude="balanced",
+    )
+
+    assert action["action_class"] == "route-package-owner"
+    assert action["owner"] == "#2647-or-package-owner"
+    assert action["initiative_authorized"] is False
+
+
+@pytest.mark.parametrize("repo_owner", ["packages/frontend", "workspace-tools"])
+def test_repo_owner_name_cannot_infer_package_ownership(repo_owner: str) -> None:
+    action = compile_repo_improvement_action(
+        candidate=_material_improvement_candidate(
+            suspected_owner=repo_owner,
+            ownership={"owner_class": "repo-owned", "current_owner": True, "mutation_authority_admitted": True},
+        ),
+        latitude="balanced",
+    )
+
+    assert action["action_class"] == "bounded-current-slice"
+    assert action["owner"] == repo_owner
+    assert action["initiative_authorized"] is True
+
+
 @pytest.mark.parametrize(
     "boundary",
     ["product-intent", "architecture-direction", "security-trust", "public-compatibility", "broader-ownership", "broader-claim"],
@@ -237,7 +266,7 @@ def test_repo_improvement_action_is_one_canonical_operating_decision_dimension_a
         }
     }
     decisions = []
-    for consumer in ("start", "implement", "closeout"):
+    for consumer in ("start", "implement", "reconcile", "closeout"):
         admitted = admit_projection_surface_decision_input(
             input_revisions={"current_work": "rev-a", "improvement_pressure": "rev-pressure"},
             consumer=consumer,
@@ -248,6 +277,11 @@ def test_repo_improvement_action_is_one_canonical_operating_decision_dimension_a
     assert {item["repo_improvement_action"]["decision_id"] for item in decisions} == {
         decisions[0]["repo_improvement_action"]["decision_id"]
     }
+    assert {item["repo_improvement_action"]["initiative_authorized"] for item in decisions} == {True}
+    assert {item["repo_improvement_action"]["next_action"] for item in decisions} == {
+        decisions[0]["repo_improvement_action"]["next_action"]
+    }
+    assert all(item["repo_improvement_action"] == decisions[0]["repo_improvement_action"] for item in decisions)
     assert all(item["producer_function"] == "compile_operating_decision" for item in decisions)
 
 
