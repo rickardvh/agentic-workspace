@@ -721,7 +721,7 @@
     {
       "command": "proof",
       "id": "proof.report",
-      "migration_status": "draft-contract-only",
+      "migration_status": "runtime-consumed",
       "path": "operations/proof.report.json"
     },
     {

@@ -123,5 +123,5 @@
     "proof receipt tests cover explicit execution evidence recording, failed-receipt retry ladders, route repair receipts, failed-log summaries, and planning closeout consumption",
     "bounded adaptation conformance proves the declared canonical write surface matches the runtime authority path and that stale revisions supersede without mutation"
   ],
-  "migration_status": "draft-contract-only"
+  "migration_status": "runtime-consumed"
 }

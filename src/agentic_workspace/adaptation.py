@@ -86,6 +86,10 @@ def _registered_operation(operation_id: str) -> dict[str, Any] | None:
     return contract
 
 
+def _operation_runtime_consumed(contract: dict[str, Any] | None) -> bool:
+    return isinstance(contract, dict) and contract.get("migration_status") == "runtime-consumed"
+
+
 def adaptation_signal_from_proof_route_finding(
     finding: dict[str, Any],
     *,
@@ -174,6 +178,8 @@ def execute_bounded_adaptation(candidate: dict[str, Any], *, target_root: Path, 
         raise ValueError("adaptation execution requires a promotion-ready candidate with a passed simulation")
     if contract is None:
         raise ValueError(f"adaptation operation is not registered: {operation_id}")
+    if not _operation_runtime_consumed(contract):
+        raise ValueError(f"adaptation operation is not runtime-consumed authority: {operation_id}")
     if operation_id not in {"proof.report", "instructions.create"}:
         raise ValueError(f"adaptation operation has no bounded execution adapter: {operation_id}")
     operation_inputs = _dict(candidate.get("operation_inputs"))
@@ -293,7 +299,9 @@ def bounded_adaptation_projection(signals: list[dict[str, Any]]) -> dict[str, An
         disposition = str(candidate.get("disposition") or "active")
         simulation = simulate_adaptation(candidate)
         operation_id = str(authority.get("operation_id") or "")
-        operation_registered = _registered_operation(operation_id) is not None
+        operation_contract = _registered_operation(operation_id)
+        operation_registered = operation_contract is not None
+        operation_runtime_consumed = _operation_runtime_consumed(operation_contract)
         revision_matched = bool(authority.get("expected_owner_revision")) and authority.get("expected_owner_revision") == authority.get(
             "current_owner_revision"
         )
@@ -301,6 +309,7 @@ def bounded_adaptation_projection(signals: list[dict[str, Any]]) -> dict[str, An
             candidate.get("risk_class") == "low"
             and authority.get("mode") == "existing-typed-operation"
             and operation_registered
+            and operation_runtime_consumed
             and revision_matched
             and simulation["status"] == "passed"
         )
@@ -328,6 +337,7 @@ def bounded_adaptation_projection(signals: list[dict[str, Any]]) -> dict[str, An
                     else "owner-admission-required",
                     "operation_id": authority.get("operation_id"),
                     "operation_registered": operation_registered,
+                    "operation_runtime_consumed": operation_runtime_consumed,
                     "revision_guard": "matched" if revision_matched else "missing-or-stale",
                     "canonical_source_only": True,
                     "learned_override_created": False,

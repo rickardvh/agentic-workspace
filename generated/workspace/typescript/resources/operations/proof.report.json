@@ -224,7 +224,7 @@
     "outside_repo_writes": "forbidden",
     "requires_repo": false
   },
-  "migration_status": "draft-contract-only",
+  "migration_status": "runtime-consumed",
   "output": {
     "description": "Reports preserve existing proof fields; guarded route-repair results additionally expose status/mode, authority path and selector, expected/current/post revisions, semantic delta/digest, validation and candidate-route results, apply receipt, disposition/idempotency identity, and rollback restoration fields.",
     "kind": "text-or-json"

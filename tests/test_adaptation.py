@@ -4,6 +4,8 @@ import json
 from copy import deepcopy
 from pathlib import Path
 
+import pytest
+
 from agentic_workspace.adaptation import (
     adaptation_signal_from_proof_route_finding,
     admit_bounded_adaptation,
@@ -72,6 +74,7 @@ def test_bounded_adaptation_deduplicates_and_routes_to_existing_owner_operation(
         "status": "existing-operation-ready",
         "operation_id": "proof.report",
         "operation_registered": True,
+        "operation_runtime_consumed": True,
         "revision_guard": "matched",
         "canonical_source_only": True,
         "learned_override_created": False,
@@ -87,6 +90,7 @@ def test_bounded_adaptation_keeps_consequential_instruction_change_owner_bound()
     assert candidate["promotion"]["status"] == "owner-admission-required"
     assert candidate["promotion"]["operation_id"] == "instructions.create"
     assert candidate["promotion"]["operation_registered"] is True
+    assert candidate["promotion"]["operation_runtime_consumed"] is True
     assert "owner_admission" not in candidate
 
 
@@ -235,6 +239,27 @@ def test_unregistered_operation_cannot_be_labeled_promotion_ready() -> None:
     assert candidate["status"] == "owner-review-required"
     assert candidate["promotion"]["status"] == "owner-admission-required"
     assert candidate["promotion"]["operation_registered"] is False
+    assert candidate["promotion"]["operation_runtime_consumed"] is False
+
+
+def test_draft_operation_cannot_be_labeled_or_executed_as_automatic_authority(tmp_path: Path, monkeypatch) -> None:
+    from agentic_workspace import adaptation
+
+    operation_root = tmp_path / "operations"
+    operation_root.mkdir()
+    contract = json.loads(Path("src/agentic_workspace/contracts/operations/proof.report.json").read_text(encoding="utf-8"))
+    contract["migration_status"] = "draft-contract-only"
+    (operation_root / "proof.report.json").write_text(json.dumps(contract), encoding="utf-8")
+    monkeypatch.setattr(adaptation, "_OPERATION_CONTRACT_ROOT", operation_root)
+
+    candidate = bounded_adaptation_projection([_signal()])["candidates"][0]
+
+    assert candidate["status"] == "owner-review-required"
+    assert candidate["promotion"]["operation_registered"] is True
+    assert candidate["promotion"]["operation_runtime_consumed"] is False
+    candidate["status"] = "promotion-ready"
+    with pytest.raises(ValueError, match="not runtime-consumed authority"):
+        execute_bounded_adaptation(candidate, target_root=tmp_path)
 
 
 def test_real_route_health_signal_executes_registered_owner_operation(tmp_path: Path, monkeypatch) -> None:
