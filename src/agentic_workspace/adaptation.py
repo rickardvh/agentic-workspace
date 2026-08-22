@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-_QUIET_DISPOSITIONS = {"fixed", "superseded", "dismissed", "not-applicable", "obsolete"}
+_QUIET_DISPOSITIONS = {"fixed", "retained", "deferred", "dismissed", "not-applicable", "obsolete"}
 _MATERIAL_COVERAGE_EFFECTS = {"action", "authority", "proof", "claim", "procedure", "continuation"}
 _CONSEQUENTIAL_OWNER_CLASSES = {"architecture", "security", "authority", "public-contract"}
 _COVERAGE_SOURCE_CLASSES = {"machine", "repo", "human", "review", "agent"}
@@ -387,6 +387,8 @@ def execute_bounded_adaptation(candidate: dict[str, Any], *, target_root: Path, 
             raise ValueError("consequential adaptation requires explicit owner admission")
         choice = str(admission.get("choice") or "admit")
         if choice in {"retain", "defer", "dismiss"}:
+            if operation_id != "instructions.create":
+                raise ValueError(f"{operation_id} does not support persisted {choice} disposition")
             source_path = target_root / str(candidate.get("source_owner") or "")
             expected_revision = str(authority.get("expected_owner_revision") or "")
             if operation_id == "instructions.create" and source_path.exists():
@@ -408,19 +410,6 @@ def execute_bounded_adaptation(candidate: dict[str, Any], *, target_root: Path, 
                     "owner_admission": copy.deepcopy(admission),
                     "rule": "A non-mutating semantic disposition is rejected when its presented owner revision is no longer current.",
                 }
-            return {
-                "kind": "agentic-workspace/bounded-adaptation-execution/v1",
-                "status": "deferred" if choice == "defer" else "quiet",
-                "candidate_id": str(candidate.get("id") or ""),
-                "operation_id": operation_id,
-                "disposition": choice,
-                "expected_owner_revision": expected_revision,
-                "current_owner_revision": current_revision,
-                "mutation_applied": False,
-                "owner_admission": copy.deepcopy(admission),
-                "defer_until": str(admission.get("defer_until") or ""),
-                "rule": "The canonical owner adapter records the source-bound decision result without a maintenance ledger or unrelated mutation.",
-            }
     if operation_id == "workspace.memory-create-note.apply":
         from repo_memory_bootstrap.installer import create_memory_note
 
@@ -480,14 +469,24 @@ def execute_bounded_adaptation(candidate: dict[str, Any], *, target_root: Path, 
     if operation_id == "instructions.create":
         from agentic_workspace.scoped_instructions import apply_instruction_operation
 
+        choice = str(admission.get("choice") or "admit")
+        disposition_record = {
+            "candidate_id": str(candidate.get("id") or ""),
+            "choice": choice,
+            "decision_revision": str(admission.get("decision_revision") or ""),
+            "defer_until": str(admission.get("defer_until") or ""),
+            "admitted_by": str(admission.get("admitted_by") or ""),
+        }
         operation_result = apply_instruction_operation(
             target_root=target_root,
             operation_id=operation_id,
             values={
-                "adaptation_mode": "apply",
+                "name": Path(str(candidate.get("source_owner") or "")).stem,
+                "adaptation_mode": "disposition" if choice in {"retain", "defer", "dismiss"} else "apply",
                 "adaptation_authority_path": str(candidate.get("source_owner") or ""),
                 "adaptation_expected_revision": str(authority.get("expected_owner_revision") or ""),
                 "adaptation_delta_json": json.dumps(proposed_delta, sort_keys=True),
+                "adaptation_disposition_json": json.dumps(disposition_record, sort_keys=True),
                 "owner_admission": "admitted",
                 "owner_admission_by": str(admission.get("admitted_by") or ""),
                 "dry_run": dry_run,
@@ -498,19 +497,30 @@ def execute_bounded_adaptation(candidate: dict[str, Any], *, target_root: Path, 
         applied = operation_status in {"applied", "already-applied"}
         return {
             "kind": "agentic-workspace/bounded-adaptation-execution/v1",
-            "status": "superseded" if stale else "quiet" if applied else "simulated" if dry_run else "blocked",
+            "status": (
+                "superseded"
+                if stale
+                else "deferred"
+                if applied and choice == "defer"
+                else "quiet"
+                if applied
+                else "simulated"
+                if dry_run
+                else "blocked"
+            ),
             "candidate_id": str(candidate.get("id") or ""),
             "operation_id": operation_id,
             "operation_contract": f"src/agentic_workspace/contracts/operations/{operation_id}.json",
-            "disposition": "superseded" if stale else "fixed" if applied else "active",
+            "disposition": "superseded" if stale else choice if applied else "active",
             "automatic_promotion": False,
             "owner_admission": copy.deepcopy(admission),
             "expected_owner_revision": str(authority.get("expected_owner_revision") or ""),
             "post_owner_revision": str(operation_result.get("post_authority_revision") or ""),
             "validation_status": str(operation_result.get("validation_status") or "not-run"),
+            "mutation_applied": bool(operation_result.get("mutation_applied", applied)),
             "rollback": copy.deepcopy(operation_result.get("rollback")),
             "operation_result": operation_result,
-            "rule": "Consequential instruction changes require explicit owner admission and a registered, revision-guarded canonical operation; failed validation restores the pre-apply bytes.",
+            "rule": "Consequential instruction choices dispatch through the registered canonical operation, persist source-bound disposition, and restore pre-apply bytes on failed validation.",
         }
 
     from agentic_workspace.workspace_runtime_proof import _proof_route_repair_operation_payload
@@ -547,7 +557,7 @@ def execute_bounded_adaptation(candidate: dict[str, Any], *, target_root: Path, 
     }
 
 
-def bounded_adaptation_projection(signals: list[dict[str, Any]]) -> dict[str, Any]:
+def bounded_adaptation_projection(signals: list[dict[str, Any]], *, target_root: Path | None = None) -> dict[str, Any]:
     grouped: dict[str, list[dict[str, Any]]] = {}
     for signal in signals:
         adaptation = _dict(signal.get("adaptation"))
@@ -589,6 +599,26 @@ def bounded_adaptation_projection(signals: list[dict[str, Any]]) -> dict[str, An
         candidate = equivalents[0]
         authority = _dict(candidate.get("authority_requirement"))
         disposition = str(candidate.get("disposition") or "active")
+        persisted_disposition: dict[str, Any] = {}
+        if target_root is not None and candidate.get("owner_class") == "scoped-instruction":
+            from agentic_workspace.scoped_instructions import instruction_maintenance_disposition
+
+            persisted_disposition = instruction_maintenance_disposition(
+                target_root / str(candidate.get("source_owner") or ""),
+                candidate_id=candidate_id,
+            )
+            coverage = _dict(candidate.get("coverage"))
+            trigger_matches = str(persisted_disposition.get("defer_until") or "") == str(coverage.get("defer_until") or "")
+            if persisted_disposition.get("status") == "current" and trigger_matches:
+                disposition = {
+                    "admit": "fixed",
+                    "update": "fixed",
+                    "retain": "retained",
+                    "defer": "deferred",
+                    "dismiss": "dismissed",
+                }.get(str(persisted_disposition.get("choice") or ""), disposition)
+            elif persisted_disposition and not trigger_matches:
+                persisted_disposition = {**persisted_disposition, "status": "stale-trigger-changed"}
         simulation = simulate_adaptation(candidate)
         operation_id = str(authority.get("operation_id") or "")
         operation_contract = _registered_operation(operation_id)
@@ -618,6 +648,7 @@ def bounded_adaptation_projection(signals: list[dict[str, Any]]) -> dict[str, An
                 if simulation["status"] == "rejected"
                 else "owner-review-required",
                 "disposition": disposition,
+                "persisted_disposition": persisted_disposition,
                 "equivalent_signal_count": len(equivalents),
                 "evidence": [item["evidence"] for item in equivalents[:3]],
                 "simulation_result": simulation,

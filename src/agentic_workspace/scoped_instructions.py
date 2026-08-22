@@ -13,6 +13,7 @@ from typing import Any, Iterable
 INSTRUCTION_DIR = Path(".agentic-workspace/instructions")
 FRONTMATTER_FIELDS = ("paths", "read", "use", "checks", "protect")
 _NAME = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+_DISPOSITION_PREFIX = "<!-- agentic-workspace:context-disposition "
 
 
 @dataclass(frozen=True)
@@ -29,6 +30,51 @@ class InstructionDocument:
 
 def _digest(value: str) -> str:
     return "sha256:" + hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _instruction_text_without_dispositions(text: str) -> str:
+    return "\n".join(line for line in text.splitlines() if not line.startswith(_DISPOSITION_PREFIX)).rstrip() + "\n"
+
+
+def instruction_maintenance_disposition(path: Path, *, candidate_id: str) -> dict[str, Any]:
+    """Read one source-owned semantic disposition and revalidate its source semantics."""
+
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return {}
+    for line in reversed(text.splitlines()):
+        if not line.startswith(_DISPOSITION_PREFIX) or not line.endswith(" -->"):
+            continue
+        try:
+            record = json.loads(line[len(_DISPOSITION_PREFIX) : -4])
+        except json.JSONDecodeError:
+            continue
+        if isinstance(record, dict) and record.get("candidate_id") == candidate_id:
+            current_semantic_revision = _digest(_instruction_text_without_dispositions(text))
+            return {
+                **record,
+                "current_semantic_revision": current_semantic_revision,
+                "status": "current" if record.get("source_semantic_revision") == current_semantic_revision else "stale",
+            }
+    return {}
+
+
+def _instruction_disposition_marker(*, base_text: str, record: dict[str, Any]) -> str:
+    clean = _instruction_text_without_dispositions(base_text)
+    payload = {**record, "source_semantic_revision": _digest(clean)}
+    retained_lines: list[str] = []
+    for line in base_text.splitlines():
+        if line.startswith(_DISPOSITION_PREFIX) and line.endswith(" -->"):
+            try:
+                existing = json.loads(line[len(_DISPOSITION_PREFIX) : -4])
+            except json.JSONDecodeError:
+                existing = {}
+            if isinstance(existing, dict) and existing.get("candidate_id") == record.get("candidate_id"):
+                continue
+        retained_lines.append(line)
+    retained = "\n".join(retained_lines).rstrip()
+    return retained + "\n\n" + _DISPOSITION_PREFIX + json.dumps(payload, sort_keys=True, separators=(",", ":")) + " -->\n"
 
 
 def _valid_repo_pattern(value: str) -> bool:
@@ -417,6 +463,81 @@ def _apply_admitted_adaptation(root: Path, *, values: dict[str, Any]) -> dict[st
             "validation_status": "not-run",
             "rollback": {"available": True, "performed": False, "restored_pre_apply_bytes": False},
         }
+    disposition_raw = str(values.get("adaptation_disposition_json") or "").strip()
+    disposition: dict[str, Any] = {}
+    if disposition_raw:
+        try:
+            parsed_disposition = json.loads(disposition_raw)
+        except json.JSONDecodeError as exc:
+            raise ValueError("instruction adaptation disposition must be a JSON object") from exc
+        if not isinstance(parsed_disposition, dict):
+            raise ValueError("instruction adaptation disposition must be a JSON object")
+        allowed_disposition_fields = {"candidate_id", "choice", "decision_revision", "defer_until", "admitted_by"}
+        if set(parsed_disposition) - allowed_disposition_fields:
+            raise ValueError("instruction adaptation disposition contains unsupported fields")
+        if not str(parsed_disposition.get("candidate_id") or "") or parsed_disposition.get("choice") not in {
+            "admit",
+            "update",
+            "retain",
+            "defer",
+            "dismiss",
+        }:
+            raise ValueError("instruction adaptation disposition requires candidate identity and supported choice")
+        if parsed_disposition.get("choice") == "defer" and not str(parsed_disposition.get("defer_until") or ""):
+            raise ValueError("deferred instruction disposition requires a re-entry trigger")
+        disposition = {**parsed_disposition, "admitted_by": admitted_by}
+    prior_bytes = authority_path.read_bytes()
+    prior_text = prior_bytes.decode("utf-8")
+    if str(values.get("adaptation_mode") or "") == "disposition":
+        if not disposition:
+            raise ValueError("instruction disposition mode requires a source-owned disposition record")
+        updated_text = _instruction_disposition_marker(base_text=prior_text, record=disposition)
+        if bool(values.get("dry_run")):
+            return {
+                "kind": "agentic-workspace/scoped-instruction-adaptation-result/v1",
+                "status": "dry-run",
+                "authority_path": authority_ref,
+                "expected_authority_revision": expected_revision,
+                "post_authority_revision": current.revision,
+                "validation_status": "simulated",
+                "disposition_record": disposition,
+                "rollback": {"available": True, "performed": False, "restored_pre_apply_bytes": False},
+            }
+        temporary = authority_path.with_name(f"{authority_path.name}.{expected_revision.removeprefix('sha256:')[:12]}.tmp")
+        try:
+            temporary.write_text(updated_text, encoding="utf-8")
+            temporary.replace(authority_path)
+            updated = read_instruction(authority_path, root=root, load_body=True)
+            if updated.diagnostics:
+                authority_path.write_bytes(prior_bytes)
+                return {
+                    "kind": "agentic-workspace/scoped-instruction-adaptation-result/v1",
+                    "status": "blocked-validation-failed",
+                    "authority_path": authority_ref,
+                    "expected_authority_revision": expected_revision,
+                    "post_authority_revision": expected_revision,
+                    "validation_status": "failed",
+                    "validation_failures": [dict(item) for item in updated.diagnostics],
+                    "rollback": {"available": True, "performed": True, "restored_pre_apply_bytes": True},
+                }
+            persisted = instruction_maintenance_disposition(authority_path, candidate_id=str(disposition["candidate_id"]))
+            return {
+                "kind": "agentic-workspace/scoped-instruction-adaptation-result/v1",
+                "status": "applied",
+                "authority_path": authority_ref,
+                "expected_authority_revision": expected_revision,
+                "post_authority_revision": updated.revision,
+                "validation_status": "passed",
+                "disposition_record": persisted,
+                "owner_admission": {"status": "admitted", "admitted_by": admitted_by},
+                "rollback": {"available": True, "performed": False, "restored_pre_apply_bytes": False},
+            }
+        except Exception:
+            if authority_path.read_bytes() != prior_bytes:
+                authority_path.write_bytes(prior_bytes)
+            raise
+        finally:
+            temporary.unlink(missing_ok=True)
     try:
         delta = json.loads(str(values.get("adaptation_delta_json") or ""))
     except json.JSONDecodeError as exc:
@@ -435,10 +556,8 @@ def _apply_admitted_adaptation(root: Path, *, values: dict[str, Any]) -> dict[st
         raise ValueError("instruction adaptation cannot inject frontmatter or hidden controls")
     if not positive_paths or any(not _valid_repo_pattern(path) for path in [*positive_paths, *negative_paths]):
         raise ValueError("instruction adaptation requires valid positive applicability paths")
-    prior_bytes = authority_path.read_bytes()
-    prior_text = prior_bytes.decode("utf-8")
     section = f"## {heading}\n\n{guidance}"
-    if section in prior_text:
+    if section in prior_text and not disposition:
         return {
             "kind": "agentic-workspace/scoped-instruction-adaptation-result/v1",
             "status": "already-applied",
@@ -473,7 +592,10 @@ def _apply_admitted_adaptation(root: Path, *, values: dict[str, Any]) -> dict[st
                 "validation_status": "not-run",
                 "rollback": {"available": True, "performed": False, "restored_pre_apply_bytes": False},
             }
-        temporary.write_text(prior_text.rstrip() + f"\n\n{section}\n", encoding="utf-8")
+        updated_text = prior_text if section in prior_text else prior_text.rstrip() + f"\n\n{section}\n"
+        if disposition:
+            updated_text = _instruction_disposition_marker(base_text=updated_text, record=disposition)
+        temporary.write_text(updated_text, encoding="utf-8")
         temporary.replace(authority_path)
         updated = read_instruction(authority_path, root=root, load_body=True)
         failures = [dict(item) for item in updated.diagnostics]

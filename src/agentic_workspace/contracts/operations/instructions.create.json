@@ -13,6 +13,7 @@
     {"name": "adaptation_authority_path", "source": "derived", "command_visibility": "runtime-only", "required": false},
     {"name": "adaptation_expected_revision", "source": "derived", "command_visibility": "runtime-only", "required": false},
     {"name": "adaptation_delta_json", "source": "derived", "command_visibility": "runtime-only", "required": false},
+    {"name": "adaptation_disposition_json", "source": "derived", "command_visibility": "runtime-only", "required": false},
     {"name": "owner_admission", "source": "derived", "command_visibility": "runtime-only", "required": false},
     {"name": "owner_admission_by", "source": "derived", "command_visibility": "runtime-only", "required": false},
     {"name": "dry_run", "source": "derived", "command_visibility": "runtime-only", "required": false}
@@ -41,7 +42,8 @@
   "guards": [
     "Reject invalid names and repository-relative path patterns.",
     "Never overwrite an existing instruction file during scaffold creation.",
-    "Adaptation never auto-promotes: it requires an explicit admitted owner identity, an exact current revision, one existing Markdown authority inside .agentic-workspace/instructions, and a bounded append_guidance delta.",
+    "Adaptation never auto-promotes: it requires an explicit admitted owner identity, an exact current revision, one existing Markdown authority inside .agentic-workspace/instructions, and either a bounded append_guidance delta or source-owned semantic disposition.",
+    "Retain, defer, and dismiss persist a candidate- and source-semantic-revision-bound disposition in the canonical instruction; a source semantic or re-entry-trigger change reactivates the candidate.",
     "Validate instruction syntax plus declared positive and negative applicability after mutation; restore pre-apply bytes on any failure."
   ],
   "proof": [

@@ -5,27 +5,15 @@
   "explicit_generic_maintenance_steps": 0,
   "steps": [
     {
-      "id": "path-test-movement",
-      "change_class": "path-and-test-movement",
-      "expected_outcome": "semantic-decision",
-      "owner_class": "scoped-instruction"
-    },
-    {
-      "id": "structured-path-rename",
-      "change_class": "mechanically-known-path-movement",
-      "expected_outcome": "deterministic-owner-update-once",
-      "owner_class": "ownership"
-    },
-    {
       "id": "generated-source-change",
       "change_class": "generated-derived-source",
       "expected_outcome": "deterministic-repair-once",
       "owner_class": "generated-projection"
     },
     {
-      "id": "terminal-work-owner",
-      "change_class": "completed-terminal-owner",
-      "expected_outcome": "retired-from-live-authority",
+      "id": "planning-owner-selection",
+      "change_class": "planning-owner-lifecycle",
+      "expected_outcome": "selected-once-then-no-op",
       "owner_class": "planning-lifecycle"
     },
     {
@@ -60,18 +48,6 @@
       "owner_class": "scoped-instruction"
     },
     {
-      "id": "ordinary-fact",
-      "change_class": "non-operating-repository-fact",
-      "expected_outcome": "quiet",
-      "owner_class": "outside-aw"
-    },
-    {
-      "id": "deferred-pressure",
-      "change_class": "safe-deferral",
-      "expected_outcome": "unrelated-work-unblocked",
-      "owner_class": "memory"
-    },
-    {
       "id": "equivalent-work-repeat",
       "change_class": "post-admission-repeat",
       "expected_outcome": "quiet-no-rediscovery",
@@ -80,7 +56,7 @@
   ],
   "expected_metrics": {
     "manual_aw_maintenance": 0,
-    "semantic_user_decisions": 2,
+    "semantic_user_decisions": 1,
     "redundant_rediscovery": 0,
     "destination_owner_class_minimum": 3,
     "stable_first_line_cost": "none"

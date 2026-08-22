@@ -1240,6 +1240,7 @@ def context_authority_repair_action(projection: dict[str, Any]) -> dict[str, Any
 def _maintenance_choice_invocation(
     *,
     operation_id: str,
+    case_id: str,
     owner: str,
     surface: str,
     choice: str,
@@ -1247,18 +1248,38 @@ def _maintenance_choice_invocation(
     expected_registry_revision: str,
     expected_source_revision: str,
     semantic_delta: dict[str, Any],
+    defer_until: str = "",
 ) -> dict[str, Any]:
+    if operation_id != "instructions.create":
+        return {}
+    if semantic_delta.get("action") != "append_guidance" or any(
+        not semantic_delta.get(field) for field in ("heading", "guidance", "positive_paths")
+    ):
+        return {}
+    disposition = {
+        "candidate_id": case_id,
+        "choice": choice,
+        "decision_revision": decision_revision,
+        "defer_until": defer_until if choice == "defer" else "",
+        "admitted_by": owner,
+    }
+    arguments = {
+        "target": ".",
+        "name": Path(surface).stem,
+        "adaptation_mode": "disposition" if choice in {"retain", "defer", "dismiss"} else "apply",
+        "adaptation_authority_path": surface,
+        "adaptation_expected_revision": expected_source_revision,
+        "adaptation_delta_json": json.dumps(semantic_delta, sort_keys=True),
+        "adaptation_disposition_json": json.dumps(disposition, sort_keys=True),
+        "owner_admission": "admitted",
+        "owner_admission_by": owner,
+    }
+    contract = _context_reconciliation_contract(operation_id)
+    if not contract or set(arguments) - set(contract["inputs"]):
+        return {}
     return operation_invocation(
         operation_id=operation_id,
-        arguments={
-            "target": ".",
-            "surface": surface,
-            "maintenance_choice": choice,
-            "decision_revision": decision_revision,
-            "expected_registry_revision": expected_registry_revision,
-            "expected_source_revision": expected_source_revision,
-            "semantic_delta": semantic_delta,
-        },
+        arguments=arguments,
         effect_class="owner-maintenance-decision",
         authority_class="explicit-human-or-domain-decision",
         expected_transition=f"{surface} records the {choice} disposition through {owner}",
@@ -1274,7 +1295,7 @@ def _maintenance_choice_invocation(
             "source_revision": expected_source_revision,
         },
         mutation_boundary={
-            "writes_repo_state": choice in {"admit", "update", "retain"},
+            "writes_repo_state": True,
             "allowed_surfaces": [surface],
             "owner_operation_only": True,
         },
@@ -1360,14 +1381,27 @@ def compile_context_maintenance_decision(*, context_projection: dict[str, Any], 
             "rule": "A semantic maintenance question is not surfaced until its owner can provide source identity and a typed apply operation.",
         }
     decision_revision = "sha256:" + _digest(case)
+    if case["case_kind"] == "positive-coverage" and case["operation_id"] == "instructions.create" and case["owner"] != "scoped-instruction":
+        return {
+            "kind": "agentic-workspace/context-maintenance-decision/v1",
+            "status": "blocked-missing-owner-operation",
+            "case_kind": case["case_kind"],
+            "owner": case["owner"],
+            "surface": case["surface"],
+            "operation_id": case["operation_id"],
+            "rule": "The referenced operation does not own this candidate's semantic class, so no choice is advertised.",
+        }
     option_specs = [
         ("admit", "Admit smallest owner update", "Apply the proposed bounded delta to the canonical owner."),
+        ("update", "Update the owner representation", "Apply the revised bounded delta to the canonical owner."),
         ("retain", "Retain current behavior", "Record that current owner behavior remains intentional for this source revision."),
         ("defer", "Defer with trigger", "Leave current work unblocked and surface again only at the named trigger."),
         ("dismiss", "Dismiss this condition", "Retire this exact source/evidence identity without hiding materially changed facts."),
     ]
     alternatives = []
     for choice, label, consequence in option_specs:
+        if choice == "defer" and not str(case.get("defer_until") or ""):
+            continue
         alternatives.append(
             {
                 "id": choice,
@@ -1375,6 +1409,7 @@ def compile_context_maintenance_decision(*, context_projection: dict[str, Any], 
                 "consequence": consequence,
                 "apply_operation": _maintenance_choice_invocation(
                     operation_id=str(case["operation_id"]),
+                    case_id=str(case["case_id"]),
                     owner=str(case["owner"]),
                     surface=str(case["surface"]),
                     choice=choice,
@@ -1382,9 +1417,21 @@ def compile_context_maintenance_decision(*, context_projection: dict[str, Any], 
                     expected_registry_revision=str(case["expected_registry_revision"]),
                     expected_source_revision=str(case["expected_source_revision"]),
                     semantic_delta=_as_dict(case.get("semantic_delta")),
+                    defer_until=str(case.get("defer_until") or ""),
                 ),
             }
         )
+    alternatives = [item for item in alternatives if item["apply_operation"]]
+    if not alternatives:
+        return {
+            "kind": "agentic-workspace/context-maintenance-decision/v1",
+            "status": "blocked-missing-owner-operation",
+            "case_kind": case.get("case_kind"),
+            "owner": case.get("owner"),
+            "surface": case.get("surface"),
+            "operation_id": case.get("operation_id"),
+            "rule": "Only choices implemented by a canonical persisted owner operation are advertised.",
+        }
     deferred = bool(case.get("defer_until"))
     return {
         "kind": "agentic-workspace/context-maintenance-decision/v1",

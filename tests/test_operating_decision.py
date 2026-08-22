@@ -314,7 +314,13 @@ def _coverage_observation(**overrides: object) -> dict[str, object]:
         "affected_effects": ["procedure", "proof"],
         "operation_id": "instructions.create",
         "owner_revision": "owner-r1",
-        "proposed_delta": {"action": "append_guidance"},
+        "proposed_delta": {
+            "action": "append_guidance",
+            "heading": "API compatibility",
+            "guidance": "Run API compatibility proof after boundary changes.",
+            "positive_paths": ["src/api/**"],
+            "negative_paths": ["docs/**"],
+        },
         "validation_route": ["pytest tests/test_api_compat.py -q"],
     }
     observation.update(overrides)
@@ -1987,7 +1993,13 @@ def _semantic_currentness_projection() -> dict[str, object]:
                     "affected_effects": ["authority", "procedure"],
                     "expected_registry_revision": "sha256:registry-r1",
                     "expected_source_revision": "sha256:instruction-r1",
-                    "proposed_delta": {"action": "append_guidance", "guidance": "Treat api_v2 as a distinct boundary."},
+                    "proposed_delta": {
+                        "action": "append_guidance",
+                        "heading": "API v2 boundary",
+                        "guidance": "Treat api_v2 as a distinct boundary.",
+                        "positive_paths": ["src/api_v2/**"],
+                        "negative_paths": ["docs/**"],
+                    },
                 }
             ]
         },
@@ -2008,7 +2020,7 @@ def test_negative_drift_and_positive_coverage_reach_same_compact_decision_bounda
     assert positive["case_kind"] == "positive-coverage"
     assert negative["first_line"]["detail_selector"] == "maintenance_decision.detail"
     assert "evidence_refs" not in negative["first_line"]
-    assert {item["id"] for item in negative["alternatives"]} == {"admit", "retain", "defer", "dismiss"}
+    assert {item["id"] for item in negative["alternatives"]} == {"admit", "update", "retain", "dismiss"}
     assert all(item["apply_operation"]["operation_id"] == "instructions.create" for item in negative["alternatives"])
     assert all(item["apply_operation"]["preconditions"]["source_revision"] == "sha256:instruction-r1" for item in negative["alternatives"])
 
@@ -2022,14 +2034,14 @@ def test_semantic_maintenance_surfaces_as_ordinary_agent_action(monkeypatch: pyt
 
     assert decision["status"] == "blocked"
     assert decision["primary_action"]["action"] == "request-context-maintenance-decision"
-    assert decision["primary_action"]["human_decision"]["choice_ids"] == ["admit", "retain", "defer", "dismiss"]
+    assert decision["primary_action"]["human_decision"]["choice_ids"] == ["admit", "update", "retain", "dismiss"]
     assert decision["primary_action"]["detail_selector"] == "maintenance_decision"
     assert decision["external_blocker"]["reason_code"] == "conflicting-input"
 
 
 def test_deterministic_repair_bypasses_human_decision_and_consequential_observation_cannot() -> None:
     deterministic = compile_context_maintenance_decision(
-        context_projection=_repairable_context_projection(),
+        context_projection=_refreshable_context_projection(),
         bounded_adaptations={"candidates": []},
     )
     consequential = compile_operating_decision(
@@ -2040,9 +2052,9 @@ def test_deterministic_repair_bypasses_human_decision_and_consequential_observat
     )["maintenance_decision"]
 
     assert deterministic["status"] == "not-required"
-    assert consequential["status"] == "decision-required"
-    assert consequential["requires_response_now"] is True
-    assert consequential["detail"]["why_not_automatic"].startswith("the observation is evidence")
+    assert consequential["status"] == "blocked-missing-owner-operation"
+    assert consequential["owner"] == "security"
+    assert consequential["operation_id"] == "instructions.create"
 
 
 def test_deferred_semantic_decision_retains_exact_owner_trigger_without_blocking() -> None:

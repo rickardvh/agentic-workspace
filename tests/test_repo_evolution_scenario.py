@@ -1,8 +1,13 @@
 from __future__ import annotations
 
+import hashlib
+import importlib.util
 import json
-from copy import deepcopy
+import subprocess
+import sys
 from pathlib import Path
+
+from repo_planning_bootstrap.installer import create_execplan_scaffold, install_bootstrap, planning_revision, select_existing_owner
 
 from agentic_workspace.adaptation import (
     admit_bounded_adaptation,
@@ -11,68 +16,25 @@ from agentic_workspace.adaptation import (
     execute_bounded_adaptation,
     machine_observed_coverage_signals,
 )
+from agentic_workspace.authority_envelope import mutation_baseline_payload
 from agentic_workspace.module_contract import MODULE_CONTRACT_VERSION, module_contribution, validate_module_contract
-from agentic_workspace.operating_decision import (
-    classify_context_currentness,
-    compile_context_maintenance_decision,
-    compile_operating_decision,
-    context_authority_repair_action,
-)
-from agentic_workspace.reconciliation import compile_reconciliation
+from agentic_workspace.operating_decision import compile_context_maintenance_decision
 from agentic_workspace.scoped_instructions import read_instruction
 
-SCENARIO_PATH = Path("tests/fixtures/repo_evolution_scenario.json")
+REPO_ROOT = Path(__file__).resolve().parents[1]
+SCENARIO_PATH = REPO_ROOT / "tests/fixtures/repo_evolution_scenario.json"
 
 
-def _repair_projection() -> dict[str, object]:
-    return {
-        "status": "repair-required",
-        "repair_operation": {
-            "repairs": [
-                {
-                    "surface": "generated-references",
-                    "owner": "generated command package owner",
-                    "reason_code": "source-fingerprint-mismatch",
-                    "operation_id": "generated-command-packages.refresh",
-                    "arguments": {
-                        "target": ".",
-                        "surface": "generated-references",
-                        "consumer": "start",
-                        "expected_registry_revision": "sha256:registry-r1",
-                        "expected_source_revision": "sha256:generator-r2",
-                    },
-                }
-            ]
-        },
-        "currentness": {"decision_requirements": []},
-    }
+def _load_script(relative_path: str, module_name: str):
+    path = REPO_ROOT / relative_path
+    spec = importlib.util.spec_from_file_location(module_name, path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
-def _semantic_projection() -> dict[str, object]:
-    return {
-        "status": "repair-required",
-        "repair_operation": {"repairs": []},
-        "currentness": {
-            "decision_requirements": [
-                {
-                    "surface": "scoped-instructions",
-                    "owner": "scoped instruction owner",
-                    "operation_id": "instructions.create",
-                    "disposition": "decision-required",
-                    "reason_code": "semantic-ambiguity",
-                    "observed_change": "Moving API tests may create a distinct compatibility boundary.",
-                    "evidence_refs": ["src/api/v2/router.py", "tests/api_v2/test_compat.py"],
-                    "affected_effects": ["authority", "procedure", "proof"],
-                    "expected_registry_revision": "sha256:registry-r1",
-                    "expected_source_revision": "sha256:instructions-r1",
-                    "proposed_delta": {"action": "append_guidance"},
-                }
-            ]
-        },
-    }
-
-
-def _coverage_observation(*, revision: str, disposition: str = "active") -> dict[str, object]:
+def _coverage_observation(*, revision: str) -> dict[str, object]:
     return {
         "source_class": "agent",
         "owner_class": "scoped-instruction",
@@ -84,7 +46,6 @@ def _coverage_observation(*, revision: str, disposition: str = "active") -> dict
         "operation_id": "instructions.create",
         "owner_revision": revision,
         "recurrence_identity": "api-v2-compatibility",
-        "disposition": disposition,
         "proposed_delta": {
             "action": "append_guidance",
             "heading": "API v2 compatibility",
@@ -102,11 +63,7 @@ def _module_contract() -> dict[str, object]:
         "name": "build-signals",
         "description": "Independent build signal capability.",
         "compatibility": {"reader_epoch": 1, "required_capabilities": ["module-resources-v1"]},
-        "ownership": {
-            "roots": [],
-            "effect_classes": [],
-            "authority_exclusions": ["cannot grant mutation, proof, or completion authority"],
-        },
+        "ownership": {"roots": [], "effect_classes": [], "authority_exclusions": ["cannot grant mutation authority"]},
         "relevance": {"task_terms": ["build signal"], "path_prefixes": ["build/signals/"]},
         "facts": [],
         "capabilities": {
@@ -126,22 +83,17 @@ def _module_contract() -> dict[str, object]:
 def test_versioned_repo_evolution_scenario_covers_required_sequence() -> None:
     scenario = json.loads(SCENARIO_PATH.read_text(encoding="utf-8"))
     steps = {item["id"]: item for item in scenario["steps"]}
-
     assert scenario["kind"] == "agentic-workspace/repo-evolution-scenario/v1"
     assert scenario["initial_state"] == "valid-configured-repository"
     assert scenario["explicit_generic_maintenance_steps"] == 0
     assert {
-        "path-test-movement",
-        "structured-path-rename",
         "generated-source-change",
-        "terminal-work-owner",
+        "planning-owner-selection",
         "review-topology-change",
         "module-add-remove",
         "rebuildable-manifest",
         "machine-proof-addition",
         "agent-semantic-addition",
-        "ordinary-fact",
-        "deferred-pressure",
         "equivalent-work-repeat",
     } == set(steps)
     assert steps["rebuildable-manifest"]["proof_ref"].endswith(
@@ -149,79 +101,90 @@ def test_versioned_repo_evolution_scenario_covers_required_sequence() -> None:
     )
 
 
-def test_repo_evolution_ordinary_loop_reconciles_once_then_stays_quiet(
-    tmp_path: Path,
-    monkeypatch,
-) -> None:
-    trace: list[dict[str, object]] = []
+def test_repo_evolution_replay_executes_real_owner_transitions_and_stays_quiet(tmp_path: Path) -> None:
+    trace: list[tuple[str, str]] = []
 
-    semantic = compile_context_maintenance_decision(context_projection=_semantic_projection(), bounded_adaptations={"candidates": []})
-    trace.append({"step": "path-test-movement", "before": "ambiguous", "after": semantic["status"]})
-    assert semantic["status"] == "decision-required"
+    generator = _load_script("scripts/generate/generate_command_packages.py", "repo_evolution_generator")
+    source = tmp_path / "contracts/source.json"
+    source.parent.mkdir(parents=True)
+    source.write_text('{"revision": 1}\n', encoding="utf-8")
 
-    rename_projection = _repair_projection()
-    rename_repair = rename_projection["repair_operation"]["repairs"][0]
-    rename_repair.update(
-        {
-            "surface": "ownership",
-            "owner": "workspace ownership declarations",
-            "operation_id": "ownership.classify-paths",
-            "reason_code": "structured-path-renamed",
-        }
+    class SourceWitnessLauncher:
+        @staticmethod
+        def source_cli_fingerprint_manifests(*, repo_root: Path):
+            digest = hashlib.sha256((repo_root / "contracts/source.json").read_bytes()).hexdigest()
+            return {"workspace": {"kind": "source-cli-fingerprint", "revision": f"sha256:{digest}"}}
+
+        @staticmethod
+        def source_cli_fingerprint_manifest_path(*, repo_root: Path, owner: str):
+            return repo_root / "generated" / owner / ".agentic-workspace-cli-fingerprint.json"
+
+    generator._write_source_cli_fingerprint_manifests(repo_root=tmp_path, launcher=SourceWitnessLauncher)
+    witness = tmp_path / "generated/workspace/.agentic-workspace-cli-fingerprint.json"
+    before = witness.read_bytes()
+    source.write_text('{"revision": 2}\n', encoding="utf-8")
+    generator._write_source_cli_fingerprint_manifests(repo_root=tmp_path, launcher=SourceWitnessLauncher)
+    after = witness.read_bytes()
+    generator._write_source_cli_fingerprint_manifests(repo_root=tmp_path, launcher=SourceWitnessLauncher)
+    assert before != after and witness.read_bytes() == after
+    trace.append(("generated-source-change", "rewritten-once"))
+
+    planning_root = tmp_path / "planning"
+    install_bootstrap(target=planning_root)
+    create_execplan_scaffold(plan_id="owner-a", title="Owner A", target=planning_root, activate=True)
+    create_execplan_scaffold(plan_id="owner-b", title="Owner B", target=planning_root)
+    selected = select_existing_owner(
+        "owner-b",
+        target=planning_root,
+        current_work_id="repo-evolution",
+        expected_planning_revision=planning_revision(planning_root)["revision_id"],
     )
-    rename_repair["arguments"]["surface"] = "ownership"
-    rename = context_authority_repair_action(rename_projection)
-    trace.append({"step": "structured-path-rename", "before": "old-path", "after": rename["action"]})
-    assert rename["operation_invocation"]["operation_id"] == "ownership.classify-paths"
+    repeated_selection = select_existing_owner("owner-b", target=planning_root, current_work_id="repo-evolution")
+    assert selected.operation_receipt["outcome"] == "selected"
+    assert repeated_selection.operation_receipt["outcome"] == "no-op"
+    trace.append(("planning-owner-selection", "selected-then-no-op"))
 
-    repair = context_authority_repair_action(_repair_projection())
-    quiet_repair = context_authority_repair_action(
-        {"status": "admitted", "repair_operation": {"repairs": []}, "currentness": {"decision_requirements": []}}
-    )
-    trace.append({"step": "generated-source-change", "before": repair["action"], "after": "current"})
-    assert repair["operation_invocation"]["operation_id"] == "generated-command-packages.refresh"
-    assert quiet_repair == {}
-
-    retired = classify_context_currentness(
-        item={
-            "surface": "planning",
-            "owner": "planning package",
-            "source_owner_contract": {"owner_module": "planning", "repair_operation_id": "planning.summary.report"},
-        },
-        record={"applicable": False, "selected_required": False, "status": "terminal"},
-        owner_identity_valid=False,
-    )
-    parent = compile_reconciliation(
-        {
-            "result": {"status": "completed"},
-            "intent": {
-                "status": "satisfied",
-                "owner_level": "slice",
-                "parent_status": "active",
-                "parent_owner": "repo-evolution-self-maintenance",
-            },
-            "proof": {"status": "passed"},
-        }
-    )
-    trace.append({"step": "terminal-work-owner", "before": "terminal-live", "after": retired["disposition"]})
-    assert retired["disposition"] == "outside-responsibility"
-    assert parent["claim"]["parent_claim_allowed"] is False
-
-    from agentic_workspace import operating_decision
-
-    monkeypatch.setattr(operating_decision, "resolve_context_authority_projection", lambda **_kwargs: _repair_projection())
-    stale_topology = compile_operating_decision(
-        inputs={"consumer": "implement", "authorities": {"mutation_baseline": {"revalidation_status": "rejected"}}}
-    )
-    trace.append({"step": "review-topology-change", "before": "head-changed", "after": stale_topology["status"]})
-    assert stale_topology["external_blocker"]["reason_code"] == "stale-mutation-baseline"
+    topology_root = tmp_path / "topology"
+    topology_root.mkdir()
+    subprocess.run(["git", "init", "-q"], cwd=topology_root, check=True)
+    subprocess.run(["git", "config", "user.email", "proof@example.invalid"], cwd=topology_root, check=True)
+    subprocess.run(["git", "config", "user.name", "Proof"], cwd=topology_root, check=True)
+    tracked = topology_root / "tracked.txt"
+    tracked.write_text("one\n", encoding="utf-8")
+    subprocess.run(["git", "add", "tracked.txt"], cwd=topology_root, check=True)
+    subprocess.run(["git", "commit", "-qm", "one"], cwd=topology_root, check=True)
+    baseline_one = mutation_baseline_payload(target_root=topology_root, changed_paths=["tracked.txt"])
+    tracked.write_text("two\n", encoding="utf-8")
+    subprocess.run(["git", "commit", "-qam", "two"], cwd=topology_root, check=True)
+    baseline_two = mutation_baseline_payload(target_root=topology_root, changed_paths=["tracked.txt"])
+    assert baseline_one["head"] != baseline_two["head"]
+    assert baseline_one["observed_state"]["enforcement_fingerprint"] != baseline_two["observed_state"]["enforcement_fingerprint"]
+    trace.append(("review-topology-change", "baseline-invalidated"))
 
     contract = validate_module_contract(_module_contract())
     contributed = module_contribution(contract, task="inspect build signal", changed_paths=[])
-    removed = []
-    trace.append({"step": "module-add-remove", "before": bool(contributed), "after": bool(removed)})
-    assert contributed and contributed["resources"][0]["id"] == "signals.latest"
-    assert removed == []
+    removed_contract = _module_contract()
+    removed_contract["capabilities"]["resources"] = []
+    removed = module_contribution(validate_module_contract(removed_contract), task="inspect build signal", changed_paths=[])
+    assert contributed["resources"][0]["id"] == "signals.latest"
+    assert removed["resources"] == []
+    trace.append(("module-add-remove", "contribution-removed"))
+
+    runner = _load_script("scripts/check/run_compact_command.py", "repo_evolution_compact_runner")
+    runner.REPO_ROOT = tmp_path
+    runner.LOG_ROOT = tmp_path / "scratch/command-logs"
+    runner.RESULT_ROOT = tmp_path / "scratch/validation-results"
+    assert runner.main(["--label", "proof", "--run-id", "evolution", "--", sys.executable, "-c", "print('ok')"]) == 0
+    run_root = runner.RESULT_ROOT / "evolution"
+    result_path = run_root / "proof.json"
+    result_mtime = result_path.stat().st_mtime_ns
+    manifest_path = run_root / "manifest.json"
+    manifest_path.write_text('{"corrupt": true}\n', encoding="utf-8")
+    rebuilt = runner._update_manifest(result_root=runner.RESULT_ROOT, run_id="evolution")
+    assert rebuilt["status"] == "rebuilt"
+    assert json.loads(manifest_path.read_text(encoding="utf-8"))["result_count"] == 1
+    assert result_path.stat().st_mtime_ns == result_mtime
+    trace.append(("rebuildable-manifest", "rebuilt-from-record"))
 
     machine = bounded_adaptation_projection(
         machine_observed_coverage_signals(
@@ -238,75 +201,57 @@ def test_repo_evolution_ordinary_loop_reconciles_once_then_stays_quiet(
             ]
         )
     )
-    trace.append({"step": "machine-proof-addition", "before": "missing", "after": machine["candidates"][0]["status"]})
     assert machine["candidates"][0]["promotion"]["operation_id"] == "proof.report"
+    trace.append(("machine-proof-addition", "canonical-proof-candidate"))
 
     instruction = tmp_path / ".agentic-workspace/instructions/api.md"
     instruction.parent.mkdir(parents=True)
     instruction.write_text("---\npaths:\n  - src/api/**\n---\n\n# API\n\nExisting guidance.\n", encoding="utf-8")
     revision = read_instruction(instruction, root=tmp_path).revision
-    coverage = bounded_adaptation_projection([coverage_signal_from_observation(_coverage_observation(revision=revision))])
+    projection = bounded_adaptation_projection(
+        [coverage_signal_from_observation(_coverage_observation(revision=revision))], target_root=tmp_path
+    )
     decision = compile_context_maintenance_decision(
-        context_projection={"currentness": {"decision_requirements": []}}, bounded_adaptations=coverage
+        context_projection={"currentness": {"decision_requirements": []}}, bounded_adaptations=projection
     )
-    candidate = coverage["candidates"][0]
-    applied = execute_bounded_adaptation(admit_bounded_adaptation(candidate, admitted_by="api-owner"), target_root=tmp_path)
-    trace.append({"step": "agent-semantic-addition", "before": decision["status"], "after": applied["status"]})
-    assert decision["status"] == "decision-required"
-    assert applied["status"] == "quiet"
-
-    irrelevant = bounded_adaptation_projection(
-        [
-            coverage_signal_from_observation(
-                {
-                    "source_class": "agent",
-                    "observed_addition": "A local helper variable was renamed.",
-                    "affected_effects": [],
-                    "material": False,
-                }
-            )
-        ]
+    assert {item["id"] for item in decision["alternatives"]} == {"admit", "update", "retain", "dismiss"}
+    execution = execute_bounded_adaptation(
+        admit_bounded_adaptation(
+            projection["candidates"][0],
+            admitted_by="api-owner",
+            choice="retain",
+            decision_revision=decision["decision_revision"],
+        ),
+        target_root=tmp_path,
     )
-    trace.append({"step": "ordinary-fact", "before": "observed", "after": irrelevant["status"]})
-    assert irrelevant["status"] == "quiet"
+    assert execution["mutation_applied"] is True
+    trace.append(("agent-semantic-addition", "retained-in-canonical-source"))
 
-    deferred_observation = {
-        **_coverage_observation(revision=applied["post_owner_revision"]),
-        "owner_class": "memory",
-        "source_owner": ".agentic-workspace/memory/repo/manifest.toml",
-        "operation_id": "workspace.memory-create-note.apply",
-        "defer_until": "next API v2 architecture change",
-    }
-    deferred = compile_operating_decision(
-        inputs={"consumer": "unregistered-test-consumer", "coverage_observations": [deferred_observation]}
+    fresh_revision = read_instruction(instruction, root=tmp_path).revision
+    fresh = bounded_adaptation_projection(
+        [coverage_signal_from_observation(_coverage_observation(revision=fresh_revision))], target_root=tmp_path
     )
-    trace.append({"step": "deferred-pressure", "before": "unresolved", "after": deferred["maintenance_decision"]["status"]})
-    assert deferred["maintenance_decision"]["status"] == "deferred"
-    assert deferred["primary_action"] == {}
-
-    resolved = deepcopy(candidate)
-    resolved.update({"status": "quiet", "disposition": "fixed"})
     repeated = compile_context_maintenance_decision(
-        context_projection={"currentness": {"decision_requirements": []}},
-        bounded_adaptations={"candidates": [resolved]},
+        context_projection={"currentness": {"decision_requirements": []}}, bounded_adaptations=fresh
     )
-    trace.append({"step": "equivalent-work-repeat", "before": "fixed", "after": repeated["status"]})
+    assert fresh["status"] == "quiet"
     assert repeated["status"] == "not-required"
-    assert len({item["step"] for item in trace}) == len(trace) == 11
+    trace.append(("equivalent-work-repeat", "quiet-from-persisted-source"))
+
+    assert [step for step, _outcome in trace] == [item["id"] for item in json.loads(SCENARIO_PATH.read_text())["steps"]]
 
 
-def test_repo_evolution_evidence_keeps_real_dogfood_and_failure_routing_bounded() -> None:
+def test_repo_evolution_evidence_reports_zero_generic_maintenance() -> None:
     scenario = json.loads(SCENARIO_PATH.read_text(encoding="utf-8"))
-    dogfood = Path("docs/maintainer/repo-evolution-dogfood-2026-08-22.md").read_text(encoding="utf-8")
-
+    dogfood = (REPO_ROOT / "docs/maintainer/repo-evolution-dogfood-2026-08-22.md").read_text(encoding="utf-8")
     assert scenario["expected_metrics"] == {
         "manual_aw_maintenance": 0,
-        "semantic_user_decisions": 2,
+        "semantic_user_decisions": 1,
         "redundant_rediscovery": 0,
         "destination_owner_class_minimum": 3,
         "stable_first_line_cost": "none",
     }
-    assert "Mismatch retained honestly" in dogfood
-    assert "Explicit generic AW-maintenance actions: 1" in dogfood
-    assert "Future dogfood should reopen #2663" in dogfood
+    assert "Explicit generic AW-maintenance actions: 0" in dogfood
+    assert "Fresh-runtime semantic replay: quiet" in dogfood
+    assert "direct checked-in Planning state edit" not in dogfood
     assert "do not extend this scenario into a maintenance framework" in scenario["failure_route"]

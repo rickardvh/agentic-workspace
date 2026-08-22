@@ -5,9 +5,9 @@
   "owner_level": "slice",
   "lifecycle": "live",
   "phase": "implementation",
-  "revision": 5,
+  "revision": 6,
   "canonical_core": {
-    "requested_outcome": "Close #2665 and #2666, complete the retained #2663 evidence, and close parent #2661 with one compact semantic-decision seam plus maintained deterministic and real dogfood evolution proof.",
+    "requested_outcome": "Close #2665 and #2666 and close parent #2661 with persisted semantic decisions plus maintained deterministic and real dogfood evolution proof; #2663 and #2664 are delivered by the lower PR #2673.",
     "hard_constraints": "No approval ledger, maintenance inbox, background watcher, generic repair executor, transcript store, or hand-edited generated authority.",
     "agent_may_decide": "Compact decision shape, scenario structure, focused proof composition, and evidence wording grounded in this stack's observed behavior.",
     "escalate_when": "A scenario reveals unresolved product drift, a typed owner operation is unavailable, or parent acceptance cannot be supported by current evidence.",
@@ -32,8 +32,8 @@
     "completion_criteria": [
       "One source-bound semantic maintenance decision exposes compact alternatives and exact canonical owner operations through ordinary agent output.",
       "Negative drift, positive coverage, consequential authority, deferral, dismissal/no-repeat, typed apply, and stale baseline cases are proven.",
-      "The maintained scenario covers all #2666 evolution classes, at least three destination owners, zero generic maintenance steps, quiet repeat behavior, and an honest real dogfood mismatch.",
-      "Aggregate evidence supports #2663, #2665, #2666, and #2661 closure without hiding residual product gaps."
+      "The maintained scenario executes the #2666 evolution classes through actual owners, covers at least three destination owners, records zero generic maintenance steps, and proves fresh-runtime quiet repeat behavior.",
+      "Aggregate evidence from this PR and lower PRs #2672 and #2673 supports #2665, #2666, and #2661 closure without hiding residual product gaps."
     ],
     "continuation_owner": "repository maintainers",
     "closeout_decision": "Proof and parent acceptance are satisfied; ready for stacked PR review and merge."
@@ -48,7 +48,7 @@
   },
   "parent": {
     "owner_id": "repo-evolution-self-maintenance",
-    "contribution": "Complete #2663 acceptance, close #2665 and #2666, and provide the final aggregate evidence for parent #2661.",
+    "contribution": "Close #2665 and #2666 and provide the final aggregate evidence for parent #2661 after lower PRs #2672 and #2673 deliver #2662 through #2664.",
     "closure_boundary": "The parent may close only after all routed proof passes and no material residual evolution gap remains."
   },
   "scope": {
@@ -87,14 +87,14 @@
     },
     "external_posture": {
       "state": "current",
-      "refs": ["GitHub #2661 #2663 #2665 #2666; PRs #2672 #2673 and #2674"]
+      "refs": ["GitHub #2661 #2665 #2666; PR #2674 stacked on #2673 and #2672"]
     }
   },
   "references": [
     {
       "kind": "source",
-      "target": "GitHub #2665 and #2666; completes #2663 and parent #2661; stacked on PR #2673",
-      "label": "GitHub #2665 and #2666; completes #2663 and parent #2661; stacked on PR #2673",
+      "target": "GitHub #2665 and #2666; completes parent #2661 after lower-stack #2662-#2664; stacked on PR #2673",
+      "label": "GitHub #2665 and #2666; parent #2661; stacked on PR #2673",
       "role": "intake",
       "locator": ""
     }
@@ -105,7 +105,7 @@
   ],
   "proof": {
     "claims": [
-      "Semantic maintenance decisions and configure-once repository evolution are implemented and evidenced strongly enough to close #2663, #2665, #2666, and #2661."
+      "Semantic maintenance decisions and configure-once repository evolution are implemented and evidenced strongly enough to close #2665, #2666, and parent #2661 after the lower stack lands."
     ],
     "requirements": [
       "Run focused operating-decision, adaptation, and repo-evolution scenario tests.",
@@ -119,14 +119,14 @@
     ]
   },
   "proof_report": {
-    "validation proof": "137 focused semantic/adaptation/evolution tests and 42 supporting lifecycle/topology/module tests passed; every implement-routed lint, typecheck, contract, inventory, schema/reference, Planning, Verification, proof-route, and strict Memory command passed.",
-    "proof achieved now": "yes; changed-path proof and manual evidence-owner review are current for this branch.",
-    "evidence for \"proof achieved\" state": "Focused 137 passed; support 42 passed; lint-workspace, typecheck, contract tooling, structured inventory, ruff, maintainer-surfaces, summary, Planning doctor, schema-reference-docs, Verification report, proof CLI selection, and memory-freshness-strict exited zero. Manual review retained the new tests as behavior-class and high-risk orchestration evidence under docs/maintainer/testing-strategy.md, docs/maintainer/test-knowledge-inventory.md, .agentic-workspace/config.toml, .agentic-workspace/verification/manifest.toml, and Verification runtime primitives."
+    "validation proof": "144 focused semantic/adaptation/evolution tests and 42 supporting lifecycle/topology/module tests passed; routed lint, typecheck, contract, inventory, generated-package static, Python/TypeScript conformance, Planning, Verification, and maintainer-surface checks exited zero.",
+    "proof achieved now": "yes; changed-path proof and evidence-owner review are current for this branch",
+    "evidence for \"proof achieved\" state": "Every advertised choice dispatches through instructions.create; fresh-runtime quietness and stale-source re-entry pass; the integrated scenario executes real owner transitions. Test evidence is retained as a behavior-class scenario matrix for high-risk root orchestration, while stable generated behavior is covered by contract-owned Python and TypeScript conformance."
   },
   "intent_satisfaction": {
-    "original intent": "Implement #2663, #2665, and #2666 and provide aggregate closure evidence for #2661 in the minimal stacked PR set.",
+    "original intent": "Implement #2665 and #2666 and provide aggregate closure evidence for #2661 in the final PR of the minimal three-PR stack.",
     "was original intent fully satisfied?": "yes, subject to ordinary stacked PR review and merge",
-    "evidence of intent satisfaction": "The ordinary decision surface now distinguishes deterministic repair, semantic choice, and safe deferral; typed owner operations are revision guarded; the maintained replay covers every requested evolution class and becomes quiet; the real dogfood note preserves its one manual lifecycle mismatch honestly.",
+    "evidence of intent satisfaction": "The ordinary decision surface advertises only persisted canonical choices; typed owner operations are revision guarded; the maintained replay executes each representative transition and becomes quiet from canonical source; the dogfood follow-up records zero generic maintenance actions.",
     "unsolved intent passed to": "No product implementation residue; repository maintainers own stacked review and merge."
   },
   "continuation": {
@@ -143,8 +143,8 @@
   "completion_criteria": [
     "Negative and positive semantic cases share one bounded decision boundary with compact first-line and selector-backed detail.",
     "Deterministic, consequential, stale, deferrable, dismiss/fixed, and post-admission repeat behavior is proportionate.",
-    "The scenario and supporting fixtures exercise path movement, generated projection, terminal owner, topology, module lifecycle, rebuildable manifest, coverage acquisition, semantic apply, quiet facts, and direct-work deferral.",
-    "Real dogfood records counts, mismatch, failure route, and configure-once conclusion honestly.",
+    "The scenario executes generated projection, Planning lifecycle, topology, module capability removal, rebuildable manifest, machine coverage acquisition, semantic persistence, and fresh-runtime quiet replay.",
+    "Real dogfood records counts, the closed semantic mismatch, failure route, and configure-once conclusion honestly.",
     "Planning aggregate evidence permits parent closure with no unresolved material residue."
   ],
   "specialist_contracts": []
