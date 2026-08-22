@@ -178,6 +178,24 @@ def test_validation_evidence_rejects_an_undercounted_run_manifest(tmp_path: Path
     assert all("--reconcile-manifest run-1" in decision["safe_recovery"] for decision in decisions)
 
 
+def test_validation_evidence_rejects_a_missing_run_manifest(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(runtime_primitives, "_current_validation_authority", lambda _target: _validation_authority())
+    run_root = tmp_path / "scratch" / "validation-results" / "run-1"
+    run_root.mkdir(parents=True)
+    result_path = run_root / "test.workspace-integration.json"
+    result_path.write_text(json.dumps(_validation_result()), encoding="utf-8")
+
+    decisions = validation_evidence_admissions(tmp_path)
+
+    assert len(decisions) == 1
+    decision = decisions[0]
+    assert decision["status"] == "rejected"
+    assert decision["admitted"] is False
+    assert "bundle" not in decision
+    assert "validation-run-manifest-missing" in decision["reason_codes"]
+    assert "--reconcile-manifest run-1" in decision["safe_recovery"]
+
+
 def test_verification_report_absent_manifest(tmp_path: Path) -> None:
     payload = verification_report_payload(target_root=tmp_path, changed_paths=[], task_text="")
 

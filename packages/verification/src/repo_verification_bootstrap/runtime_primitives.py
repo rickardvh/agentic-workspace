@@ -2130,6 +2130,8 @@ def validation_evidence_admissions(target_root: Path) -> list[dict[str, Any]]:
                     reasons.append("validation-run-manifest-identity-missing")
                 if int(manifest.get("result_count", -1) or -1) != len(manifest_results) or listed_paths != durable_paths:
                     reasons.append("validation-run-manifest-result-set-mismatch")
+            else:
+                reasons.append("validation-run-manifest-missing")
             manifest_admissions[run_root] = (not reasons, _dedupe(reasons))
         manifest_admitted, manifest_reasons = manifest_admissions[run_root]
         decision = validation_result_admission(record=record, current_head=current_head, authority=authority)
