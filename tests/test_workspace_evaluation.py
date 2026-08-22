@@ -2282,7 +2282,9 @@ def test_checked_in_1969_evaluation_disposition_closes_present_gap_while_evaluat
             "issue_disposition": "close-present-implementation; continue-longitudinal-evaluation",
         }
     ]
-    lane = json.loads((ROOT / ".agentic-workspace/planning/lanes/issue-1969-state-delta-loop.lane.json").read_text(encoding="utf-8"))
+    lane = json.loads(
+        (ROOT / ".agentic-workspace/planning/lanes/archive/issue-1969-state-delta-loop.lane.json").read_text(encoding="utf-8")
+    )
     assert lane["proof_aggregation"]["status"] == "satisfied"
     assert lane["parent_close_permission"] == "may-close-parent"
     assert lane["closeout_state"]["status"] == "closed"
