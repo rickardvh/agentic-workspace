@@ -12,6 +12,7 @@
       "enum": [
         "agentic-workspace/scoped-instruction-inspection/v1",
         "agentic-workspace/scoped-instruction-create-result/v1",
+        "agentic-workspace/scoped-instruction-adaptation-result/v1",
         "agentic-workspace/scoped-instruction-migration-advice/v1",
         "agentic-workspace/scoped-instruction-error/v1"
       ]

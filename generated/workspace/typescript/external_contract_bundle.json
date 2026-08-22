@@ -1,19 +1,19 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:ad5e38b332e1d3ca1db231ac89bf960bf3a2a60a16b43be149d152eeeb30cd3a",
+  "profile_fingerprint": "sha256:94dde7d4b290a9c9015f6dc1bf8a17acd7e5e4bae359fd17deffd3961a5e2035",
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",
-    "client_package": "0.41.1",
+    "client_package": "0.42.0",
     "runtime_protocol": "1.0.0",
     "python_package": {
       "name": "agentic-workspace",
-      "version": "0.41.1"
+      "version": "0.42.0"
     },
     "typescript_package": {
       "name": "@agentic-workspace/workspace-cli",
-      "version": "0.41.1"
+      "version": "0.42.0"
     }
   },
   "operations": {
@@ -20044,8 +20044,8 @@
     "instructions.check": {
       "identity": "instructions.check",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:4fb444c53ce8299dd1b59fae19cf8ecf2df46ec1df2deba920687264d2d51339",
-      "compatibility_fingerprint": "sha256:3b9651047753180ed94b079c17dd6f0cccd4e691aa2ae32aa63e1e8b08183409",
+      "fingerprint": "sha256:cd3e4ed0b8944965985e8b9d222fc5c984b75ce410e8cc7a379caeb677fac4a9",
+      "compatibility_fingerprint": "sha256:0395f218aecec6e24c0985d1440ed2123807c918548fce81923e340f88423955",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
         "id": "instructions.check",
@@ -20295,6 +20295,29 @@
                 },
                 "source": {
                   "type": "string"
+                },
+                "adaptation_mode": {
+                  "const": "apply"
+                },
+                "adaptation_authority_path": {
+                  "type": "string"
+                },
+                "adaptation_expected_revision": {
+                  "type": "string",
+                  "pattern": "^sha256:[0-9a-f]{64}$"
+                },
+                "adaptation_delta_json": {
+                  "type": "string"
+                },
+                "owner_admission": {
+                  "const": "admitted"
+                },
+                "owner_admission_by": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "dry_run": {
+                  "type": "boolean"
                 }
               },
               "additionalProperties": false
@@ -20315,6 +20338,7 @@
                   "enum": [
                     "agentic-workspace/scoped-instruction-inspection/v1",
                     "agentic-workspace/scoped-instruction-create-result/v1",
+                    "agentic-workspace/scoped-instruction-adaptation-result/v1",
                     "agentic-workspace/scoped-instruction-migration-advice/v1",
                     "agentic-workspace/scoped-instruction-error/v1"
                   ]
@@ -20383,8 +20407,8 @@
     "instructions.create": {
       "identity": "instructions.create",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:01b7d9706e06acc93a09136fe2ab4fe20c8062e0cf3ff0ca120dd7d92bdbf9d0",
-      "compatibility_fingerprint": "sha256:8658c9da8ab0f6b5541c6ca99225547353b87aa92b7b66539c620d40a5c2df64",
+      "fingerprint": "sha256:bf30cd69e48feef447f44667951dbf01eb8f18779983c417ccf80484124dcbc6",
+      "compatibility_fingerprint": "sha256:bd2e0e56591b3d792614c548d6ccd8810c1b74f490f1d18824b1c0bf52530e8a",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
         "id": "instructions.create",
@@ -20393,7 +20417,7 @@
           "subcommand": "new",
           "format_option": "format"
         },
-        "summary": "Create one scoped Markdown instruction without overwriting an existing file.",
+        "summary": "Create one scoped Markdown instruction without overwriting an existing file, or apply one explicitly owner-admitted revision-guarded guidance append to an existing canonical instruction.",
         "classification": "lifecycle-mutation",
         "inputs": [
           {
@@ -20415,11 +20439,54 @@
             "name": "paths",
             "source": "cli-option",
             "required": false
+          },
+          {
+            "name": "adaptation_mode",
+            "source": "derived",
+            "command_visibility": "runtime-only",
+            "required": false
+          },
+          {
+            "name": "adaptation_authority_path",
+            "source": "derived",
+            "command_visibility": "runtime-only",
+            "required": false
+          },
+          {
+            "name": "adaptation_expected_revision",
+            "source": "derived",
+            "command_visibility": "runtime-only",
+            "required": false
+          },
+          {
+            "name": "adaptation_delta_json",
+            "source": "derived",
+            "command_visibility": "runtime-only",
+            "required": false
+          },
+          {
+            "name": "owner_admission",
+            "source": "derived",
+            "command_visibility": "runtime-only",
+            "required": false
+          },
+          {
+            "name": "owner_admission_by",
+            "source": "derived",
+            "command_visibility": "runtime-only",
+            "required": false
+          },
+          {
+            "name": "dry_run",
+            "source": "derived",
+            "command_visibility": "runtime-only",
+            "required": false
           }
         ],
         "output": {
           "kind": "text-or-json",
-          "schema_ref": "schemas/scoped_instruction_operation_result.schema.json"
+          "schema_ref": "schemas/scoped_instruction_operation_result.schema.json",
+          "description": "Scaffold results preserve the no-overwrite fields; adaptation results additionally expose status, mutation_applied, expected/current/post authority revisions, owner admission, validation status/failures, and rollback restoration fields."
         },
         "effects": {
           "read_only": false,
@@ -20437,14 +20504,25 @@
           {
             "surface": ".agentic-workspace/instructions/<name>.md",
             "required": false
+          },
+          {
+            "surface": ".agentic-workspace/instructions/<admitted-authority>.md",
+            "required": false,
+            "description": "current bytes and revision for an explicitly owner-admitted adaptation"
           }
         ],
         "writes": [
           {
             "surface": ".agentic-workspace/instructions/<name>.md",
-            "required": true,
-            "when": "the destination does not exist",
+            "required": false,
+            "when": "the destination does not exist and adaptation mode is absent",
             "description": "one new scoped instruction scaffold"
+          },
+          {
+            "surface": ".agentic-workspace/instructions/<admitted-authority>.md",
+            "required": false,
+            "when": "adaptation mode is apply, owner admission is explicit, the expected revision matches, and static applicability validation passes",
+            "description": "one canonical guidance append; pre-apply bytes are restored on failed validation"
           }
         ],
         "steps": [
@@ -20495,11 +20573,14 @@
         },
         "guards": [
           "Reject invalid names and repository-relative path patterns.",
-          "Never overwrite an existing instruction file."
+          "Never overwrite an existing instruction file during scaffold creation.",
+          "Adaptation never auto-promotes: it requires an explicit admitted owner identity, an exact current revision, one existing Markdown authority inside .agentic-workspace/instructions, and a bounded append_guidance delta.",
+          "Validate instruction syntax plus declared positive and negative applicability after mutation; restore pre-apply bytes on any failure."
         ],
         "proof": [
           "instructions.create.process",
-          "generated Python and TypeScript operation clients preserve the no-overwrite boundary"
+          "generated Python and TypeScript operation clients preserve the no-overwrite boundary",
+          "bounded adaptation tests cover explicit admission, canonical mutation, fresh revision, static applicability, stale revision, unsafe rejection, rollback, quiet/superseded disposition, and no automatic promotion"
         ],
         "migration_status": "runtime-consumed"
       },
@@ -20603,11 +20684,54 @@
               "name": "paths",
               "source": "cli-option",
               "required": false
+            },
+            {
+              "name": "adaptation_mode",
+              "source": "derived",
+              "command_visibility": "runtime-only",
+              "required": false
+            },
+            {
+              "name": "adaptation_authority_path",
+              "source": "derived",
+              "command_visibility": "runtime-only",
+              "required": false
+            },
+            {
+              "name": "adaptation_expected_revision",
+              "source": "derived",
+              "command_visibility": "runtime-only",
+              "required": false
+            },
+            {
+              "name": "adaptation_delta_json",
+              "source": "derived",
+              "command_visibility": "runtime-only",
+              "required": false
+            },
+            {
+              "name": "owner_admission",
+              "source": "derived",
+              "command_visibility": "runtime-only",
+              "required": false
+            },
+            {
+              "name": "owner_admission_by",
+              "source": "derived",
+              "command_visibility": "runtime-only",
+              "required": false
+            },
+            {
+              "name": "dry_run",
+              "source": "derived",
+              "command_visibility": "runtime-only",
+              "required": false
             }
           ],
           "output": {
             "kind": "text-or-json",
-            "schema_ref": "schemas/scoped_instruction_operation_result.schema.json"
+            "schema_ref": "schemas/scoped_instruction_operation_result.schema.json",
+            "description": "Scaffold results preserve the no-overwrite fields; adaptation results additionally expose status, mutation_applied, expected/current/post authority revisions, owner admission, validation status/failures, and rollback restoration fields."
           },
           "effects": {
             "read_only": false,
@@ -20618,7 +20742,9 @@
           },
           "guards": [
             "Reject invalid names and repository-relative path patterns.",
-            "Never overwrite an existing instruction file."
+            "Never overwrite an existing instruction file during scaffold creation.",
+            "Adaptation never auto-promotes: it requires an explicit admitted owner identity, an exact current revision, one existing Markdown authority inside .agentic-workspace/instructions, and a bounded append_guidance delta.",
+            "Validate instruction syntax plus declared positive and negative applicability after mutation; restore pre-apply bytes on any failure."
           ]
         },
         "schemas": {
@@ -20661,6 +20787,29 @@
                 },
                 "source": {
                   "type": "string"
+                },
+                "adaptation_mode": {
+                  "const": "apply"
+                },
+                "adaptation_authority_path": {
+                  "type": "string"
+                },
+                "adaptation_expected_revision": {
+                  "type": "string",
+                  "pattern": "^sha256:[0-9a-f]{64}$"
+                },
+                "adaptation_delta_json": {
+                  "type": "string"
+                },
+                "owner_admission": {
+                  "const": "admitted"
+                },
+                "owner_admission_by": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "dry_run": {
+                  "type": "boolean"
                 }
               },
               "additionalProperties": false
@@ -20681,6 +20830,7 @@
                   "enum": [
                     "agentic-workspace/scoped-instruction-inspection/v1",
                     "agentic-workspace/scoped-instruction-create-result/v1",
+                    "agentic-workspace/scoped-instruction-adaptation-result/v1",
                     "agentic-workspace/scoped-instruction-migration-advice/v1",
                     "agentic-workspace/scoped-instruction-error/v1"
                   ]
@@ -20749,8 +20899,8 @@
     "instructions.explain": {
       "identity": "instructions.explain",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:b1fa8e777aae923a2e5edb4cb622871b904c98a404a0924c9cb1f029eb1233dc",
-      "compatibility_fingerprint": "sha256:df100a14cbd7c0fad8a0941107b51c0aa59c548ea036cabc7000abfc22404707",
+      "fingerprint": "sha256:bee14dd144a1cd59f7d636acc1b0d524ff83636907def5839de0864b1ceee808",
+      "compatibility_fingerprint": "sha256:7cf1ee34001c11098e8439f769eaad1841f003a3d3853cc86ec20ac494ea4ca4",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
         "id": "instructions.explain",
@@ -21030,6 +21180,29 @@
                 },
                 "source": {
                   "type": "string"
+                },
+                "adaptation_mode": {
+                  "const": "apply"
+                },
+                "adaptation_authority_path": {
+                  "type": "string"
+                },
+                "adaptation_expected_revision": {
+                  "type": "string",
+                  "pattern": "^sha256:[0-9a-f]{64}$"
+                },
+                "adaptation_delta_json": {
+                  "type": "string"
+                },
+                "owner_admission": {
+                  "const": "admitted"
+                },
+                "owner_admission_by": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "dry_run": {
+                  "type": "boolean"
                 }
               },
               "additionalProperties": false
@@ -21050,6 +21223,7 @@
                   "enum": [
                     "agentic-workspace/scoped-instruction-inspection/v1",
                     "agentic-workspace/scoped-instruction-create-result/v1",
+                    "agentic-workspace/scoped-instruction-adaptation-result/v1",
                     "agentic-workspace/scoped-instruction-migration-advice/v1",
                     "agentic-workspace/scoped-instruction-error/v1"
                   ]
@@ -21118,8 +21292,8 @@
     "instructions.list": {
       "identity": "instructions.list",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:7826c8e5503f1a2d47821dc3baa575011ed51305912716ddcc0c116dd1928ae6",
-      "compatibility_fingerprint": "sha256:de64f6a24c99a3d61878aba47aa0e30b3a02adcf9b98f688a2dc87e853bf9103",
+      "fingerprint": "sha256:3e2a0e10a92083e7d660058864876b0cf4efe9f56dff87f1c540010cd339ec45",
+      "compatibility_fingerprint": "sha256:b1be98827de8b51f347d9e9f64bf1048a5671ae5bf425522fb26537173bb6036",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
         "id": "instructions.list",
@@ -21369,6 +21543,29 @@
                 },
                 "source": {
                   "type": "string"
+                },
+                "adaptation_mode": {
+                  "const": "apply"
+                },
+                "adaptation_authority_path": {
+                  "type": "string"
+                },
+                "adaptation_expected_revision": {
+                  "type": "string",
+                  "pattern": "^sha256:[0-9a-f]{64}$"
+                },
+                "adaptation_delta_json": {
+                  "type": "string"
+                },
+                "owner_admission": {
+                  "const": "admitted"
+                },
+                "owner_admission_by": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "dry_run": {
+                  "type": "boolean"
                 }
               },
               "additionalProperties": false
@@ -21389,6 +21586,7 @@
                   "enum": [
                     "agentic-workspace/scoped-instruction-inspection/v1",
                     "agentic-workspace/scoped-instruction-create-result/v1",
+                    "agentic-workspace/scoped-instruction-adaptation-result/v1",
                     "agentic-workspace/scoped-instruction-migration-advice/v1",
                     "agentic-workspace/scoped-instruction-error/v1"
                   ]
@@ -21457,8 +21655,8 @@
     "instructions.migrate": {
       "identity": "instructions.migrate",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:64bce546a0991b944886fc1bf7ec197a707b51125adb88f04d9b030a934fda21",
-      "compatibility_fingerprint": "sha256:e68b047261f2064d04022e41904afff78dce0e0aeb8a2f60f7363cc35dbc3f0e",
+      "fingerprint": "sha256:cc8d50dcb3b09d4d6425e4769058e9ce4a9c1e105cf143aea6341c8ddf678f32",
+      "compatibility_fingerprint": "sha256:dd0b4d48f5ed76fc54f6b296873105372bc5e59e5431da460485801aac88aa31",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
         "id": "instructions.migrate",
@@ -21718,6 +21916,29 @@
                 },
                 "source": {
                   "type": "string"
+                },
+                "adaptation_mode": {
+                  "const": "apply"
+                },
+                "adaptation_authority_path": {
+                  "type": "string"
+                },
+                "adaptation_expected_revision": {
+                  "type": "string",
+                  "pattern": "^sha256:[0-9a-f]{64}$"
+                },
+                "adaptation_delta_json": {
+                  "type": "string"
+                },
+                "owner_admission": {
+                  "const": "admitted"
+                },
+                "owner_admission_by": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "dry_run": {
+                  "type": "boolean"
                 }
               },
               "additionalProperties": false
@@ -21738,6 +21959,7 @@
                   "enum": [
                     "agentic-workspace/scoped-instruction-inspection/v1",
                     "agentic-workspace/scoped-instruction-create-result/v1",
+                    "agentic-workspace/scoped-instruction-adaptation-result/v1",
                     "agentic-workspace/scoped-instruction-migration-advice/v1",
                     "agentic-workspace/scoped-instruction-error/v1"
                   ]
@@ -23129,6 +23351,36 @@
           "source": {
             "type": "string",
             "description": "Repository-relative static instruction source used for migration advice."
+          },
+          "adaptation_mode": {
+            "const": "apply",
+            "description": "Select the explicitly owner-admitted guarded adaptation mode."
+          },
+          "adaptation_authority_path": {
+            "type": "string",
+            "description": "Existing canonical Markdown instruction inside .agentic-workspace/instructions."
+          },
+          "adaptation_expected_revision": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "description": "Exact pre-apply instruction revision."
+          },
+          "adaptation_delta_json": {
+            "type": "string",
+            "description": "JSON object describing one bounded append_guidance semantic delta."
+          },
+          "owner_admission": {
+            "const": "admitted",
+            "description": "Explicit consequential-change admission decision."
+          },
+          "owner_admission_by": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Human or instruction-owner identity that admitted this exact candidate revision."
+          },
+          "dry_run": {
+            "type": "boolean",
+            "description": "Simulate the admitted adaptation without writing canonical state."
           }
         },
         "additionalProperties": false
@@ -23154,6 +23406,7 @@
             "enum": [
               "agentic-workspace/scoped-instruction-inspection/v1",
               "agentic-workspace/scoped-instruction-create-result/v1",
+              "agentic-workspace/scoped-instruction-adaptation-result/v1",
               "agentic-workspace/scoped-instruction-migration-advice/v1",
               "agentic-workspace/scoped-instruction-error/v1"
             ]

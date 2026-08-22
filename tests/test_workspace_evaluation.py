@@ -2282,7 +2282,47 @@ def test_checked_in_1969_evaluation_disposition_closes_present_gap_while_evaluat
             "issue_disposition": "close-present-implementation; continue-longitudinal-evaluation",
         }
     ]
-    lane = json.loads((ROOT / ".agentic-workspace/planning/lanes/issue-1969-state-delta-loop.lane.json").read_text(encoding="utf-8"))
+    lane = json.loads(
+        (ROOT / ".agentic-workspace/planning/lanes/archive/issue-1969-state-delta-loop.lane.json").read_text(encoding="utf-8")
+    )
     assert lane["proof_aggregation"]["status"] == "satisfied"
     assert lane["parent_close_permission"] == "may-close-parent"
     assert lane["closeout_state"]["status"] == "closed"
+
+
+def test_operating_context_convergence_evaluation_is_owner_bound_and_privacy_safe() -> None:
+    payload = json.loads((ROOT / ".agentic-workspace/evaluations.json").read_text(encoding="utf-8"))
+    Draft202012Validator(contract_schema("evaluation_definition.schema.json")).validate(payload)
+    evaluation = next(item for item in payload["evaluations"] if item["id"] == "operating-context-cost-convergence-2646")
+
+    assert evaluation["lifecycle"] == "collecting"
+    assert evaluation["subject"]["version_range"] == "v0.42-current through merged PRs #2653/#2654 and PR #2655 on master"
+    assert evaluation["decision_owner"] == {"class": "maintainer", "id": "workspace-maintainer"}
+    assert evaluation["collection_policy"]["minimum_observations"] == 6
+    assert evaluation["collection_policy"]["representative_session_minimum"] == 4
+    assert "raw prompts and full transcripts remain local" in evaluation["collection_policy"]["privacy"]
+    assert {criterion["id"] for criterion in evaluation["criteria"]} == {
+        "direct-default-quality",
+        "scoped-instruction-quality",
+        "module-context-quality",
+        "planning-routing-quality",
+        "cross-session-resumption",
+        "adaptation-convergence",
+    }
+    assert {source["id"] for source in evaluation["evidence_sources"]} == {
+        "implementation-round-2026-08-21",
+        "current-stack-session-observations",
+        "evaluation-local-observations",
+        "proof-receipts",
+    }
+    disposition = json.loads((ROOT / ".agentic-workspace/evaluations/issue-2646-disposition.json").read_text(encoding="utf-8"))
+    implementation = disposition["implementation_disposition"]
+    assert disposition["status"] == "implementation-open-evaluation-open"
+    assert implementation["decision_observation_count"] == 0
+    assert implementation["required_current_observations"] == 6
+    assert implementation["required_representative_sessions"] == 4
+    assert len(implementation["unmet_criteria"]) == 6
+    assert implementation["convergence"]["human_steering_avoided_next_time"] is False
+    assert disposition["evaluation_disposition"]["current_admission_status"] == "no-current-real-session-observations-admitted"
+    assert set(implementation["bounded_adaptation_proof"]["owner_classes"]) == {"proof-route", "scoped-instruction"}
+    assert "raw prompts and full transcripts remain local" in disposition["evaluation_disposition"]["privacy"]

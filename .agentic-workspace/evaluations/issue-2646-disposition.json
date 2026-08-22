@@ -1,0 +1,75 @@
+{
+  "kind": "agentic-workspace/evaluation-issue-disposition/v1",
+  "issue_ref": "#2646",
+  "evaluation_id": "operating-context-cost-convergence-2646",
+  "status": "implementation-open-evaluation-open",
+  "implementation_disposition": {
+    "present_tense_status": "evidence-incomplete",
+    "related_issue_ref": "#2647",
+    "decision_observation_count": 0,
+    "observed_criterion_count": 0,
+    "contradiction_count": 0,
+    "required_current_observations": 6,
+    "required_representative_sessions": 4,
+    "unmet_criteria": [
+      "direct-default-quality",
+      "scoped-instruction-quality",
+      "module-context-quality",
+      "planning-routing-quality",
+      "cross-session-resumption",
+      "adaptation-convergence"
+    ],
+    "contextual_evidence": [
+      {
+        "class": "implementation-and-test-proof",
+        "evidence_refs": ["PR #2653", "PR #2654", "PR #2655"],
+        "limitation": "Implementation and test proof is not an admitted real-session observation."
+      },
+      {
+        "class": "archived-module-run",
+        "evidence_refs": ["tools/model-cli-harness/external-agent-evaluation/module-extension-scenario-measurements.json", "PR #2640"],
+        "limitation": "The 2026-08-21 archive predates the completed stack and cannot satisfy the fresh module observation criterion."
+      }
+    ],
+    "convergence": {
+      "status": "evidence-required",
+      "required_sequence": "matched real-session friction -> canonical adaptation -> later equivalent real task",
+      "required_measurements": ["actual recurrence", "actual cost", "human steering avoided"],
+      "human_steering_avoided_next_time": false,
+      "limitation": "The proof-route cost replay and deterministic tests establish implementation behavior but do not prove later-session convergence."
+    },
+    "bounded_adaptation_proof": {
+      "status": "implementation-proved-evaluation-unproved",
+      "owner_classes": ["proof-route", "scoped-instruction"],
+      "covered_behaviors": [
+        "deterministic deduplication",
+        "registered proof.report operation lookup",
+        "typed proof.report canonical write-surface parity",
+        "current owner revision recheck",
+        "simulation before mutation",
+        "canonical proof-route mutation with independent validation",
+        "explicit scoped-instruction owner admission",
+        "canonical scoped-instruction mutation with positive and negative applicability validation",
+        "fresh post-mutation revision receipt",
+        "rollback on validation failure",
+        "quiet or superseded execution disposition",
+        "no automatic consequential instruction promotion"
+      ],
+      "residue_boundary": "No learned override, optimiser, event store, or second adaptation framework was added."
+    }
+  },
+  "evaluation_disposition": {
+    "definition_ref": ".agentic-workspace/evaluations.json#operating-context-cost-convergence-2646",
+    "lifecycle": "collecting",
+    "definition_revision": 2,
+    "current_admission_status": "no-current-real-session-observations-admitted",
+    "privacy": "Only compact findings, evidence references, and result identities may be retained; raw prompts and full transcripts remain local.",
+    "report_sinks": ["#2646", "#2647"]
+  },
+  "future_evidence_audit": {
+    "status": "collection-required",
+    "next_safe_action": "Collect at least six criteria-bearing observations across at least four representative real sessions, including a fresh module session and a matched convergence sequence.",
+    "material_negative_followup": "route to the existing source owner or create a bounded follow-up",
+    "reopen_when": "not applicable; the Evaluation remains open until admitted evidence supports a terminal owner decision"
+  }
+}

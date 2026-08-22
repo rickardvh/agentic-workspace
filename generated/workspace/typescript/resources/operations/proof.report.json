@@ -20,7 +20,8 @@
     "Proof receipts use caller-supplied structured duration, timeout, environment, route identity, and claim-sufficiency fields; route-health must not infer authoritative timeout or sufficiency from result/log strings.",
     "Route repair receipts must name the stable finding id, authority revision, and disposition before route-health retirement is allowed.",
     "Failed proof receipts may include repair retry ladders, but those ladders guide iteration only and must not replace the originally selected closeout proof.",
-    "Failed proof log summaries must stay compact, keep full-log access as a reference, and avoid semantic correctness claims from log text."
+    "Failed proof log summaries must stay compact, keep full-log access as a reference, and avoid semantic correctness claims from log text.",
+    "Route repair apply accepts only the declared canonical config proof-route surface, requires an exact authority revision plus idempotency key, and restores pre-apply bytes when deterministic validation fails."
   ],
   "id": "proof.report",
   "inputs": [
@@ -223,8 +224,9 @@
     "outside_repo_writes": "forbidden",
     "requires_repo": false
   },
-  "migration_status": "draft-contract-only",
+  "migration_status": "runtime-consumed",
   "output": {
+    "description": "Reports preserve existing proof fields; guarded route-repair results additionally expose status/mode, authority path and selector, expected/current/post revisions, semantic delta/digest, validation and candidate-route results, apply receipt, disposition/idempotency identity, and rollback restoration fields.",
     "kind": "text-or-json"
   },
   "proof": [
@@ -233,7 +235,8 @@
     "proof changed-path tests cover accepted existing durable-surface updates and flagged additive-only surfaces",
     "proof changed-path tests cover subsystem proof hints",
     "proof tiny profile omits selected-lane and provenance detail while preserving required commands",
-    "proof receipt tests cover explicit execution evidence recording, failed-receipt retry ladders, route repair receipts, failed-log summaries, and planning closeout consumption"
+    "proof receipt tests cover explicit execution evidence recording, failed-receipt retry ladders, route repair receipts, failed-log summaries, and planning closeout consumption",
+    "bounded adaptation conformance proves the declared canonical write surface matches the runtime authority path and that stale revisions supersede without mutation"
   ],
   "reads": [
     {
@@ -271,6 +274,10 @@
     {
       "required": false,
       "surface": "structured proof execution metadata supplied by receipt caller"
+    },
+    {
+      "required": false,
+      "surface": "route-repair authority revision, field selector, semantic delta, and idempotency identity"
     }
   ],
   "schema_version": "agentic-workspace/operation/v1",
@@ -281,7 +288,7 @@
       "uses": "workspace.target-root.resolve"
     },
     {
-      "description": "Resolve route, current proof, changed-path proof output, subsystem proof hints, or explicit receipt payload.",
+      "description": "Resolve route, current proof, changed-path proof output, subsystem proof hints, explicit receipt payload, or a revision-guarded canonical route repair with independent validation and rollback.",
       "id": "resolve_proof",
       "uses": "proof.routes.resolve"
     },
@@ -317,6 +324,18 @@
       "required": false,
       "surface": ".agentic-workspace/local/proof-receipts/history.jsonl",
       "when": "--record-receipt and not a dry run"
+    },
+    {
+      "description": "guarded canonical proof-route mutation; pre-apply bytes are restored when schema, route audit, validation, or receipt persistence fails",
+      "required": false,
+      "surface": ".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
+      "when": "--route-repair-mode apply with a matching expected authority revision and successful independent validation"
+    },
+    {
+      "description": "apply receipt containing the fresh authority revision and validation/rollback outcome",
+      "required": false,
+      "surface": ".agentic-workspace/local/proof-route-repairs/history.jsonl",
+      "when": "a non-dry-run guarded route repair is applied and validated"
     }
   ]
 }

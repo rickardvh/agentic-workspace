@@ -3431,6 +3431,7 @@ def _proof_route_revision_guard(
     return {
         "kind": "agentic-workspace/proof-route-repair-operation/v1",
         "status": operation_status,
+        "operation_id": "proof.report",
         "finding_id": finding_id,
         "canonical_edit_surface": canonical_edit_surface,
         "field_selector": field_selector,

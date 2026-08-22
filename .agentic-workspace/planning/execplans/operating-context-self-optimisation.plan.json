@@ -5,9 +5,9 @@
   "owner_level": "slice",
   "lifecycle": "live",
   "phase": "implementation",
-  "revision": 5,
+  "revision": 8,
   "intent": {
-    "outcome": "Close #2641 through #2647 in three stacked PRs that make independent routing and closeout compact, make review/validation writes recoverable and identity-safe, and prove bounded source-owned adaptation with real-session evaluation.",
+    "outcome": "Deliver #2641 through #2647 through a three-PR sequence that makes independent routing and closeout compact, makes review/validation writes recoverable and identity-safe, and proves bounded source-owned adaptation with real-session evaluation; #2653 and #2654 are merged and #2655 now targets master.",
     "non_goals": [
       "Do not add a second workflow, proof cache, PR tracker, event store, optimiser, or learned override layer.",
       "Do not weaken active-owner overlap protection, proof admission, authority, or closeout claim boundaries to reduce cost.",
@@ -17,7 +17,7 @@
   "parent": {
     "owner_id": "issue-2647",
     "contribution": "Deliver the concrete routing, lifecycle, validation, adaptation, and evaluation slices required for bounded self-optimisation.",
-    "closure_boundary": "The three-PR stack may close #2641-#2647 only after integrated proof and a current evaluation conclusion; each lower PR claims only its owned issue slice."
+    "closure_boundary": "The delivery sequence may close #2641-#2647 only after integrated proof and a current evaluation conclusion; merged lower PRs retain their owned issue slices and PR #2655 cannot close #2647 without later-task convergence evidence."
   },
   "scope": {
     "owned": [
@@ -29,7 +29,7 @@
     "effects": [
       "Independent tasks receive a stable non-interference contract and compact closeout answers avoid optional recursive hydration.",
       "Review lifecycle writes fail closed unless current topology identity is admitted; validation manifests self-heal and proof reuse follows causal dependencies.",
-      "Recurring material friction converges into deduplicated source-owner adaptation candidates and real-session evaluation proves later-task benefit."
+      "Recurring material friction produces deduplicated source-owner adaptation candidates; proof-route candidates can execute through registered guarded authority, while consequential instruction candidates require explicit owner admission before revision-guarded canonical mutation and deterministic applicability validation. Real-session evaluation remains open until later-task benefit is observed."
     ]
   },
   "relationships": {
@@ -59,14 +59,16 @@
       "locator": ""
     }
   ],
-  "next_action": "Publish the second stacked PR for #2644 #2645, then implement #2646 #2647 on its exact head.",
-  "blockers": [],
+  "next_action": "Collect six current criteria-bearing observations across at least four representative real sessions, including a fresh module observation and a matched friction/adaptation/later-equivalent-task sequence, before concluding #2646.",
+  "blockers": [
+    "No current real-session observations are admitted for operating-context-cost-convergence-2646; implementation and deterministic test artifacts cannot substitute for the required session evidence."
+  ],
   "proof": {
     "claims": [
       "Independent task routing is stable, bounded, and non-interfering while real owner overlap still fails closed.",
       "Review lifecycle and validation manifest mutation are identity-safe, transactional, and self-healing.",
-      "Proof follow-through is delta-shaped and source-owned adaptation converges across at least two owner classes.",
-      "A current Evaluation result covers representative real sessions and one later equivalent-task convergence sequence."
+      "Proof follow-through is delta-shaped; low-risk proof-route adaptation executes through typed proof.report write authority while consequential scoped-instruction adaptation requires explicit owner admission and executes through typed instructions.create authority.",
+      "Evaluation closure is intentionally unclaimed until current representative real sessions and a later equivalent-task convergence sequence are admitted."
     ],
     "requirements": [
       "Run focused runtime and review-stack tests for #2641-#2643 plus compact output byte/hydration assertions.",
@@ -78,17 +80,22 @@
       "make lint-workspace passed",
       "make typecheck passed",
       "Default closeout_trust measured at 15,150 answer bytes before the final compact projection update",
-      "PR #2653 is the published draft base for #2641 #2642 #2643",
+      "PR #2653 merged to master for #2641 #2642 #2643",
+      "PR #2654 merged to master for #2644 #2645",
+      "PR #2655 now targets master directly and carries the remaining #2646 Evaluation setup plus partial #2647 adaptation work",
       "66 focused manifest, Verification, proof reuse, and release-selection tests passed; all 51 Verification package tests passed",
       "38 changed-selector proof scenarios, contract tooling, structured inventory, workspace lint, and all package type checks passed",
       "Full proof-selector suite initially reported 209 passed and 10 failed; exact repaired-base replay reproduced nine failures with identical assertions, while the attributable docs-only tiny budget failure was fixed and now passes",
       "Validation-plan catalogue replay produced the same two missing compact labels on repaired base dbf011637 and this head: contract catalogues and render contract catalogues",
-      "Durable #2645 replay maps reused, rerun-required, and excluded-unrelated subjects and removes 171.6 seconds of attributable Planning work at .agentic-workspace/planning/closeout-evidence/issue-2645-proof-route-cost-replay.replay.json"
+      "Durable #2645 replay maps reused, rerun-required, and excluded-unrelated subjects and removes 171.6 seconds of attributable Planning work at .agentic-workspace/planning/closeout-evidence/issue-2645-proof-route-cost-replay.replay.json",
+      "57 focused adaptation and Evaluation tests passed; one inherited #1969 lane-artifact assertion remains excluded because its parent lane file is absent",
+      "make maintainer-surfaces passed after adding the generated bounded-adaptation schema reference",
+      "Evaluation operating-context-cost-convergence-2646 remains collecting: no current real-session observations are admitted, and six criteria-bearing observations across at least four sessions are still required"
     ]
   },
   "continuation": {
     "owner": "issue-2647",
-    "residual_intent": "Do not close the parent until all three stack layers, integrated proof, and the real-session evaluation conclusion are present."
+    "residual_intent": "Do not close #2647 until a later equivalent real task proves canonical convergence, and keep #2646 collecting until all six criteria are represented across four current sessions."
   },
   "specialist_contracts": []
 }

@@ -39,6 +39,7 @@ from agentic_workspace import __version__, doctor
 from agentic_workspace import config as config_lib
 from agentic_workspace._schema import ModuleDescriptor, ModuleResultContract, RootAgentsCleanupBlock
 from agentic_workspace.actionability import derive_actionability, operation_invocation, proposed_action_input_revision
+from agentic_workspace.adaptation import bounded_adaptation_projection
 from agentic_workspace.agent_guidance import correction_feedback_contract, target_identity_posture
 from agentic_workspace.assurance_authority import build_assurance_application, evaluate_assurance_disposition
 from agentic_workspace.authority_envelope import admit_live_mutation_boundary, revalidate_mutation_baseline
@@ -6353,6 +6354,7 @@ def _improvement_signal_contract_payload() -> dict[str, Any]:
         "lifecycle_states": list(_IMPROVEMENT_SIGNAL_CONTRACT["lifecycle_states"]),
         "lifecycle_rule": str(_IMPROVEMENT_SIGNAL_CONTRACT["lifecycle_rule"]),
         "retirement_criteria_fields": list(_IMPROVEMENT_SIGNAL_CONTRACT["retirement_criteria_fields"]),
+        "bounded_adaptation": copy.deepcopy(_IMPROVEMENT_SIGNAL_CONTRACT.get("bounded_adaptation", {})),
         "closeout_statuses": list(_IMPROVEMENT_SIGNAL_CONTRACT["closeout_statuses"]),
         "destinations": list(_IMPROVEMENT_SIGNAL_CONTRACT["destinations"]),
         "guardrails": list(_IMPROVEMENT_SIGNAL_CONTRACT["guardrails"]),
@@ -6575,6 +6577,7 @@ def _improvement_signal_candidates_from_repo_friction(repo_friction: dict[str, A
                 "posture_obligation_ref",
                 "evidence_ref",
                 "issue_ref",
+                "adaptation",
             ):
                 if optional_field in item:
                     candidate[optional_field] = copy.deepcopy(item[optional_field])
@@ -6881,6 +6884,7 @@ def _improvement_intake_payload(
     repo_candidates = _improvement_signal_candidates_from_repo_friction(repo_friction)
     session_candidates, session_admission = _improvement_signal_candidates_from_session_intake(target_root=target_root, config=config)
     signal_candidates = _dedupe_improvement_candidates([*repo_candidates, *session_candidates])[:5]
+    adaptation_candidates = bounded_adaptation_projection(signal_candidates)
     source_checkout = _is_agentic_workspace_source_checkout(target_root)
     subtypes: list[dict[str, Any]] = [
         {
@@ -7016,6 +7020,7 @@ def _improvement_intake_payload(
             "Preserve provenance and confidence when a signal is routed.",
         ],
         "improvement_signal_candidates": signal_candidates,
+        "bounded_adaptations": adaptation_candidates,
         "session_admission": session_admission,
         "candidate_decisions": [copy.deepcopy(item.get("routing_decision", {})) for item in signal_candidates],
         "non_candidate_decisions": []

@@ -391,6 +391,135 @@ def _write_scaffold(root: Path, *, name: str, paths: list[str]) -> dict[str, Any
     }
 
 
+def _apply_admitted_adaptation(root: Path, *, values: dict[str, Any]) -> dict[str, Any]:
+    authority_ref = str(values.get("adaptation_authority_path") or "").strip().replace("\\", "/")
+    expected_revision = str(values.get("adaptation_expected_revision") or "").strip()
+    admitted_by = str(values.get("owner_admission_by") or "").strip()
+    if str(values.get("owner_admission") or "") != "admitted" or not admitted_by:
+        raise ValueError("instruction adaptation requires explicit owner admission and an admitting owner")
+    authority_path = (root / authority_ref).resolve()
+    instruction_root = (root / INSTRUCTION_DIR).resolve()
+    try:
+        authority_path.relative_to(instruction_root)
+    except ValueError as exc:
+        raise ValueError("instruction adaptation authority must stay inside .agentic-workspace/instructions") from exc
+    if authority_path.suffix != ".md" or not authority_path.is_file():
+        raise ValueError("instruction adaptation authority must name one existing Markdown instruction")
+    current = read_instruction(authority_path, root=root, load_body=True)
+    if current.revision != expected_revision:
+        return {
+            "kind": "agentic-workspace/scoped-instruction-adaptation-result/v1",
+            "status": "blocked-stale-authority-revision",
+            "authority_path": authority_ref,
+            "expected_authority_revision": expected_revision,
+            "current_authority_revision": current.revision,
+            "post_authority_revision": current.revision,
+            "validation_status": "not-run",
+            "rollback": {"available": True, "performed": False, "restored_pre_apply_bytes": False},
+        }
+    try:
+        delta = json.loads(str(values.get("adaptation_delta_json") or ""))
+    except json.JSONDecodeError as exc:
+        raise ValueError("instruction adaptation delta must be a JSON object") from exc
+    if not isinstance(delta, dict) or set(delta) - {"action", "heading", "guidance", "positive_paths", "negative_paths"}:
+        raise ValueError("instruction adaptation delta contains unsupported fields")
+    if delta.get("action") != "append_guidance":
+        raise ValueError("instruction adaptation supports only append_guidance")
+    heading = str(delta.get("heading") or "").strip()
+    guidance = str(delta.get("guidance") or "").strip()
+    positive_paths = [str(item) for item in delta.get("positive_paths", [])] if isinstance(delta.get("positive_paths"), list) else []
+    negative_paths = [str(item) for item in delta.get("negative_paths", [])] if isinstance(delta.get("negative_paths"), list) else []
+    if not heading or not guidance or len(heading) > 120 or len(guidance) > 4000:
+        raise ValueError("instruction adaptation requires bounded heading and guidance text")
+    if any(marker in heading or marker in guidance for marker in ("---", "<!--")):
+        raise ValueError("instruction adaptation cannot inject frontmatter or hidden controls")
+    if not positive_paths or any(not _valid_repo_pattern(path) for path in [*positive_paths, *negative_paths]):
+        raise ValueError("instruction adaptation requires valid positive applicability paths")
+    prior_bytes = authority_path.read_bytes()
+    prior_text = prior_bytes.decode("utf-8")
+    section = f"## {heading}\n\n{guidance}"
+    if section in prior_text:
+        return {
+            "kind": "agentic-workspace/scoped-instruction-adaptation-result/v1",
+            "status": "already-applied",
+            "authority_path": authority_ref,
+            "expected_authority_revision": expected_revision,
+            "post_authority_revision": current.revision,
+            "validation_status": "passed",
+            "owner_admission": {"status": "admitted", "admitted_by": admitted_by},
+            "rollback": {"available": True, "performed": False, "restored_pre_apply_bytes": False},
+        }
+    if bool(values.get("dry_run")):
+        return {
+            "kind": "agentic-workspace/scoped-instruction-adaptation-result/v1",
+            "status": "dry-run",
+            "authority_path": authority_ref,
+            "expected_authority_revision": expected_revision,
+            "post_authority_revision": current.revision,
+            "validation_status": "simulated",
+            "owner_admission": {"status": "admitted", "admitted_by": admitted_by},
+            "rollback": {"available": True, "performed": False, "restored_pre_apply_bytes": False},
+        }
+    temporary = authority_path.with_name(f"{authority_path.name}.{expected_revision.removeprefix('sha256:')[:12]}.tmp")
+    try:
+        if read_instruction(authority_path, root=root).revision != expected_revision:
+            return {
+                "kind": "agentic-workspace/scoped-instruction-adaptation-result/v1",
+                "status": "blocked-stale-authority-revision",
+                "authority_path": authority_ref,
+                "expected_authority_revision": expected_revision,
+                "current_authority_revision": read_instruction(authority_path, root=root).revision,
+                "post_authority_revision": read_instruction(authority_path, root=root).revision,
+                "validation_status": "not-run",
+                "rollback": {"available": True, "performed": False, "restored_pre_apply_bytes": False},
+            }
+        temporary.write_text(prior_text.rstrip() + f"\n\n{section}\n", encoding="utf-8")
+        temporary.replace(authority_path)
+        updated = read_instruction(authority_path, root=root, load_body=True)
+        failures = [dict(item) for item in updated.diagnostics]
+        for path in positive_paths:
+            applies, _, _ = instruction_applies(updated, changed_paths=[path])
+            if not applies:
+                failures.append({"field": "positive_paths", "code": "not-applicable", "message": path})
+        for path in negative_paths:
+            applies, _, _ = instruction_applies(updated, changed_paths=[path])
+            if applies:
+                failures.append({"field": "negative_paths", "code": "unexpectedly-applicable", "message": path})
+        if inspect_instructions(root, changed_paths=positive_paths).get("status") != "valid":
+            failures.append({"field": "instruction-set", "code": "invalid", "message": "static instruction check failed"})
+        if failures:
+            authority_path.write_bytes(prior_bytes)
+            return {
+                "kind": "agentic-workspace/scoped-instruction-adaptation-result/v1",
+                "status": "blocked-validation-failed",
+                "authority_path": authority_ref,
+                "expected_authority_revision": expected_revision,
+                "post_authority_revision": expected_revision,
+                "validation_status": "failed",
+                "validation_failures": failures,
+                "owner_admission": {"status": "admitted", "admitted_by": admitted_by},
+                "rollback": {"available": True, "performed": True, "restored_pre_apply_bytes": True},
+            }
+        return {
+            "kind": "agentic-workspace/scoped-instruction-adaptation-result/v1",
+            "status": "applied",
+            "authority_path": authority_ref,
+            "expected_authority_revision": expected_revision,
+            "post_authority_revision": updated.revision,
+            "validation_status": "passed",
+            "validated_positive_paths": positive_paths,
+            "validated_negative_paths": negative_paths,
+            "owner_admission": {"status": "admitted", "admitted_by": admitted_by},
+            "rollback": {"available": True, "performed": False, "restored_pre_apply_bytes": False},
+        }
+    except Exception:
+        if authority_path.read_bytes() != prior_bytes:
+            authority_path.write_bytes(prior_bytes)
+        raise
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
 def _migration_advice(root: Path, source: str) -> dict[str, Any]:
     path = (root / source).resolve()
     try:
@@ -419,10 +548,14 @@ def apply_instruction_operation(*, target_root: Path, operation_id: str, values:
 
     try:
         if operation_id == "instructions.create":
-            payload = _write_scaffold(
-                target_root,
-                name=str(values.get("name") or ""),
-                paths=[str(item) for item in values.get("paths", [])],
+            payload = (
+                _apply_admitted_adaptation(target_root, values=values)
+                if values.get("adaptation_mode")
+                else _write_scaffold(
+                    target_root,
+                    name=str(values.get("name") or ""),
+                    paths=[str(item) for item in values.get("paths", [])],
+                )
             )
         elif operation_id == "instructions.migrate":
             payload = _migration_advice(target_root, str(values.get("source") or ""))
@@ -452,7 +585,20 @@ def apply_instruction_operation(*, target_root: Path, operation_id: str, values:
     payload["message"] = _render_text(payload)
     if operation_id == "instructions.check" and payload.get("status") == "invalid":
         payload["exit_status"] = 2
-    if operation_id == "instructions.create":
+    if operation_id == "instructions.create" and values.get("adaptation_mode"):
+        status = str(payload.get("status") or "")
+        payload.update(
+            {
+                "outcome": "applied" if status in {"applied", "already-applied"} else "planned" if status == "dry-run" else "blocked",
+                "mutation_applied": status == "applied",
+                "reason_code": f"instruction-adaptation-{status}",
+                "conflict_owner": "" if status in {"applied", "already-applied", "dry-run"} else "scoped-instructions",
+                "recovery_command": ""
+                if status in {"applied", "already-applied", "dry-run"}
+                else "agentic-workspace instructions check --target . --format json",
+            }
+        )
+    elif operation_id == "instructions.create" and payload.get("status") == "created":
         payload.update(
             {
                 "outcome": "applied",

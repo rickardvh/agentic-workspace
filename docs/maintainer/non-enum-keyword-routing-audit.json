@@ -4,6 +4,15 @@
   "rule": "Substring marker tables are allowed only when decision_authority is advisory-only, checker-only, enum-owned, or structured-owned. Repo-specific routing must come from explicit labels, structured state, or learned metadata.",
   "entries": [
     {
+      "path": "src/agentic_workspace/adaptation.py",
+      "function": "bounded_adaptation_projection",
+      "variable": "required",
+      "classification": "structured-field-projection",
+      "authority": "The tuple validates explicit bounded-adaptation record fields supplied by the existing improvement-signal contract; it does not infer an owner or route from prose.",
+      "decision_authority": "structured-owned",
+      "agent_judgment_boundary": "Source owner, authority requirement, expected effect, validation route, and rollback must arrive as explicit structured evidence before a candidate exists."
+    },
+    {
       "path": "src/agentic_workspace/workspace_runtime_core.py",
       "function": "_read_only_meta_task",
       "variable": "meta_terms",
