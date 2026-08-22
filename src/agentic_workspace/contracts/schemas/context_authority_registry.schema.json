@@ -22,7 +22,8 @@
         "coverage_effects",
         "consumer_effects",
         "representative_owner_classes",
-        "deterministic_repair_operations",
+        "read_only_refresh_operations",
+        "revision_guarded_repair_operations",
         "safe_repair_rule",
         "decision_rule",
         "quiet_rule"
@@ -36,6 +37,7 @@
           "prefixItems": [
             {"const": "current"},
             {"const": "derivably-stale"},
+            {"const": "refreshable-derived"},
             {"const": "safely-repairable"},
             {"const": "missing-relevant-coverage"},
             {"const": "decision-required"},
@@ -82,11 +84,17 @@
             "additionalProperties": false
           }
         },
-        "deterministic_repair_operations": {
+        "read_only_refresh_operations": {
           "type": "array",
-          "description": "Registered owner operations eligible for revision-bound deterministic repair routing.",
+          "description": "Dispatch-contract-backed operations that recompute derived authority without repository mutation.",
           "items": {"type": "string", "minLength": 1},
           "minItems": 1,
+          "uniqueItems": true
+        },
+        "revision_guarded_repair_operations": {
+          "type": "array",
+          "description": "Dispatch-contract-backed mutations that accept both registry and source revision guards.",
+          "items": {"type": "string", "minLength": 1},
           "uniqueItems": true
         },
         "safe_repair_rule": {"type": "string", "minLength": 1, "description": "Admission rule for executable repair dispositions."},
@@ -156,6 +164,11 @@
               "owner_module": {"type": "string", "minLength": 1},
               "owner_result_kind": {"type": "string", "minLength": 1},
               "repair_operation_id": {"type": "string", "minLength": 1},
+              "reconciliation_operation_id": {"type": "string", "minLength": 1},
+              "reconciliation_mode": {
+                "type": "string",
+                "enum": ["read-only-refresh", "state-mutation", "unavailable"]
+              },
               "activation_terms": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
               "baseline_for": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true}
             },

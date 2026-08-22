@@ -25,7 +25,8 @@ Versioned source of truth for ordinary operating-decision authority surfaces and
 | `currentness_contract.representative_owner_classes.<name>` | object | no |  | One representative owner class and its registry-backed disposition. |  |  |
 | `currentness_contract.representative_owner_classes.<name>.surfaces` | array of string | yes |  | Registered surfaces that supply this owner class's currentness and coverage semantics. |  |  |
 | `currentness_contract.representative_owner_classes.<name>.disposition` | string | yes |  | Owner-specific authority and lifecycle posture. |  |  |
-| `currentness_contract.deterministic_repair_operations` | array of string | yes |  | Registered owner operations eligible for revision-bound deterministic repair routing. |  |  |
+| `currentness_contract.read_only_refresh_operations` | array of string | yes |  | Dispatch-contract-backed operations that recompute derived authority without repository mutation. |  |  |
+| `currentness_contract.revision_guarded_repair_operations` | array of string | yes |  | Dispatch-contract-backed mutations that accept both registry and source revision guards. |  |  |
 | `currentness_contract.safe_repair_rule` | string | yes |  | Admission rule for executable repair dispositions. |  |  |
 | `currentness_contract.decision_rule` | string | yes |  | Conservative boundary for semantic or consequential ambiguity. |  |  |
 | `currentness_contract.quiet_rule` | string | yes |  | Proportionality rule preventing irrelevant surfaces from creating maintenance pressure. |  |  |

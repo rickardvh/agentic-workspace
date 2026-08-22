@@ -14,6 +14,8 @@ from typing import Any, Mapping, Sequence, cast
 
 from jsonschema import Draft202012Validator
 
+from agentic_workspace.contract_tooling import operation_contracts_manifest
+
 FAILURE_KINDS = {
     "absent",
     "disabled",
@@ -533,6 +535,33 @@ def _operation_contract(entry: Mapping[str, Any]) -> dict[str, Any]:
     resource_ref = entry["operation_resources"]["python"]
     resource = _resource(resource_ref["path"], resource_ref["package"])
     return json.loads(resource.read_text(encoding="utf-8"))
+
+
+def operation_contract(operation_id: str) -> dict[str, Any] | None:
+    """Return one externally dispatchable operation contract by stable id."""
+
+    entry = next(
+        (item for item in external_consumer_profile()["operations"] if item["id"] == operation_id),
+        None,
+    )
+    if entry is None:
+        return None
+    try:
+        return _operation_contract(entry)
+    except FileNotFoundError:
+        manifest_entry = next(
+            (item for item in operation_contracts_manifest()["operations"] if item["id"] == operation_id),
+            None,
+        )
+        if manifest_entry is None:
+            return None
+        relative_path = Path(str(manifest_entry["path"]))
+        source_root = Path(__file__).resolve().parent / "contracts"
+        candidates = [source_root / relative_path]
+        repo_root = Path(__file__).resolve().parents[2]
+        candidates.extend(repo_root.glob(f"packages/*/src/*/contracts/{relative_path.as_posix()}"))
+        contract_path = next((path for path in candidates if path.is_file()), None)
+        return json.loads(contract_path.read_text(encoding="utf-8")) if contract_path is not None else None
 
 
 def _validate_schema(entry: Mapping[str, Any], schema_name: str, value: Any, *, phase: str) -> None:

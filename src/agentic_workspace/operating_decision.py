@@ -217,10 +217,14 @@ def context_authority_declarations() -> list[dict[str, Any]]:
 
 def context_authority_obligations() -> dict[str, Any]:
     """Project owner-bound currentness and coverage duties from the registry."""
-
-    deterministic_operations = {
+    declared_read_only = {
         str(operation_id)
-        for operation_id in _as_list(CONTEXT_CURRENTNESS_CONTRACT.get("deterministic_repair_operations"))
+        for operation_id in _as_list(CONTEXT_CURRENTNESS_CONTRACT.get("read_only_refresh_operations"))
+        if str(operation_id)
+    }
+    declared_mutations = {
+        str(operation_id)
+        for operation_id in _as_list(CONTEXT_CURRENTNESS_CONTRACT.get("revision_guarded_repair_operations"))
         if str(operation_id)
     }
     consumer_effects = {
@@ -233,12 +237,25 @@ def context_authority_obligations() -> dict[str, Any]:
         surface = str(item.get("surface") or "")
         owner_contract = _as_dict(item.get("source_owner_contract"))
         operation_id = str(owner_contract.get("repair_operation_id") or "")
+        reconciliation_operation_id = str(owner_contract.get("reconciliation_operation_id") or "")
+        reconciliation_mode = str(owner_contract.get("reconciliation_mode") or "unavailable")
         consumers = _registry_consumers(item)
         effects = sorted({effect for consumer in consumers for effect in consumer_effects.get(consumer, [])})
         if not operation_id:
-            invalid.append(f"{surface}:missing-repair-operation")
+            invalid.append(f"{surface}:missing-currentness-operation")
         if not effects:
             invalid.append(f"{surface}:missing-coverage-effects")
+        reconciliation_contract = _context_reconciliation_contract(reconciliation_operation_id)
+        if reconciliation_mode == "read-only-refresh":
+            if reconciliation_operation_id not in declared_read_only:
+                invalid.append(f"{surface}:unregistered-read-only-refresh")
+            if not reconciliation_contract or reconciliation_contract.get("writes_repo_state") is not False:
+                invalid.append(f"{surface}:refresh-contract-is-not-read-only")
+        elif reconciliation_mode == "state-mutation":
+            if reconciliation_operation_id in declared_mutations and not reconciliation_contract.get("revision_guarded"):
+                invalid.append(f"{surface}:repair-contract-missing-revision-guards")
+        elif reconciliation_operation_id:
+            invalid.append(f"{surface}:unavailable-reconciliation-has-operation")
         obligations.append(
             {
                 "kind": "agentic-workspace/context-authority-obligation/v1",
@@ -251,12 +268,27 @@ def context_authority_obligations() -> dict[str, Any]:
                     "revision_fields": [str(field) for field in _as_list(item.get("revision_fields"))],
                 },
                 "coverage_responsibility": {"consumers": consumers, "effects": effects},
-                "repair_operation_id": operation_id,
-                "repair_mode": "deterministic" if operation_id in deterministic_operations else "decision-required",
+                "currentness_operation_id": operation_id,
+                "reconciliation_operation_id": reconciliation_operation_id,
+                "repair_mode": reconciliation_mode,
                 "proof_route": str(item.get("proof_route") or ""),
             }
         )
     obligation_by_surface = {str(item["surface"]): item for item in obligations}
+    projected_read_only = {
+        str(item["reconciliation_operation_id"])
+        for item in obligations
+        if item["repair_mode"] == "read-only-refresh" and item["reconciliation_operation_id"]
+    }
+    projected_mutations = {
+        str(item["reconciliation_operation_id"])
+        for item in obligations
+        if item["repair_mode"] == "state-mutation"
+        and item["reconciliation_operation_id"]
+        and _context_reconciliation_contract(str(item["reconciliation_operation_id"])).get("revision_guarded")
+    }
+    invalid.extend(f"currentness-contract:orphan-read-only-refresh:{item}" for item in sorted(declared_read_only - projected_read_only))
+    invalid.extend(f"currentness-contract:orphan-repair:{item}" for item in sorted(declared_mutations - projected_mutations))
     representative_classes: dict[str, Any] = {}
     for owner_class, raw in _as_dict(CONTEXT_CURRENTNESS_CONTRACT.get("representative_owner_classes")).items():
         declaration = _as_dict(raw)
@@ -289,10 +321,8 @@ def classify_context_currentness(
 
     surface = str(item.get("surface") or "")
     owner_contract = _as_dict(item.get("source_owner_contract"))
-    operation_id = str(owner_contract.get("repair_operation_id") or "")
-    deterministic_operations = {
-        str(candidate) for candidate in _as_list(CONTEXT_CURRENTNESS_CONTRACT.get("deterministic_repair_operations")) if str(candidate)
-    }
+    reconciliation_operation_id = str(owner_contract.get("reconciliation_operation_id") or "")
+    reconciliation_mode = str(owner_contract.get("reconciliation_mode") or "unavailable")
     record_status = str(record.get("status") or "missing")
     reason = str(record.get("reason") or owner_operation_reason or record_status)
     selected = record.get("applicable") is not False and record.get("selected_required") is not False
@@ -325,7 +355,14 @@ def classify_context_currentness(
     elif reason in missing_coverage_reasons and str(item.get("authority_class") or "") != "generated":
         state = "missing-relevant-coverage"
         disposition = "missing-relevant-coverage"
-    elif operation_id in deterministic_operations:
+    elif reconciliation_mode == "read-only-refresh" and reconciliation_operation_id:
+        state = "derivably-stale"
+        disposition = "refreshable-derived"
+    elif (
+        reconciliation_mode == "state-mutation"
+        and reconciliation_operation_id
+        and _context_reconciliation_contract(reconciliation_operation_id).get("revision_guarded")
+    ):
         state = "derivably-stale"
         disposition = "safely-repairable"
     else:
@@ -340,7 +377,8 @@ def classify_context_currentness(
         "reason_code": reason,
         "owner": str(item.get("owner") or ""),
         "source_owner": str(owner_contract.get("owner_module") or ""),
-        "operation_id": operation_id if disposition == "safely-repairable" else "",
+        "operation_id": reconciliation_operation_id if disposition in {"refreshable-derived", "safely-repairable"} else "",
+        "transition_mode": reconciliation_mode,
         "expected_registry_revision": CONTEXT_AUTHORITY_REGISTRY_REVISION,
         "expected_source_revision": str(source.get("source_revision") or record.get("revision") or ""),
         "task_effect": "quiet" if disposition in {"current", "outside-responsibility"} else "material",
@@ -861,6 +899,65 @@ def context_authority_changed_path_guardrail(
     }
 
 
+def _context_reconciliation_contract(operation_id: str) -> dict[str, Any]:
+    """Resolve executable currentness effects from the dispatch contract."""
+
+    if not operation_id:
+        return {}
+    from agentic_workspace.client import operation_contract
+
+    contract = operation_contract(operation_id)
+    if not contract:
+        return {}
+    inputs = {
+        str(item.get("name") or "") for item in _as_list(contract.get("inputs")) if isinstance(item, dict) and str(item.get("name") or "")
+    }
+    effects = _as_dict(contract.get("effects"))
+    writes_repo_state = effects.get("writes_repo_state") is True
+    required_guards = {"expected_registry_revision", "expected_source_revision"}
+    return {
+        "operation_id": operation_id,
+        "inputs": inputs,
+        "effects": effects,
+        "writes_repo_state": writes_repo_state,
+        "revision_guarded": not writes_repo_state or required_guards.issubset(inputs),
+    }
+
+
+def _context_reconciliation_invocation(*, currentness: dict[str, Any], consumer: str, task: str, paths: list[str]) -> dict[str, Any]:
+    operation_id = str(currentness.get("operation_id") or "")
+    contract = _context_reconciliation_contract(operation_id)
+    if not contract:
+        return {}
+    candidates: dict[str, Any] = {
+        "target": ".",
+        "task": task,
+        "changed": paths,
+        "changed_paths": paths,
+        "files": paths,
+        "task_text": task,
+        "format": "json",
+        "expected_registry_revision": CONTEXT_AUTHORITY_REGISTRY_REVISION,
+        "expected_source_revision": str(currentness.get("expected_source_revision") or ""),
+    }
+    arguments = {name: candidates[name] for name in contract["inputs"] if name in candidates and candidates[name] not in ("", None)}
+    return {
+        "operation_id": operation_id,
+        "arguments": arguments,
+        "effect_class": "workspace-state-mutation" if contract["writes_repo_state"] else "read-only-report",
+        "mutation_boundary": {
+            "writes_repo_state": contract["writes_repo_state"],
+            "read_only": contract["effects"].get("read_only") is True,
+        },
+        "contract_conformance": {
+            "status": "accepted",
+            "declared_inputs": sorted(contract["inputs"]),
+            "undeclared_arguments": sorted(set(arguments) - contract["inputs"]),
+            "consumer": consumer,
+        },
+    }
+
+
 def resolve_context_authority_projection(
     *,
     consumer: str,
@@ -979,10 +1076,12 @@ def resolve_context_authority_projection(
     }
     missing = sorted(selected_required_missing)
     status = "admitted" if not missing and coverage["status"] == "measured" else "repair-required"
-    safely_repairable = {
-        str(item.get("surface") or ""): item for item in currentness_dispositions if item.get("disposition") == "safely-repairable"
+    actionable = {
+        str(item.get("surface") or ""): item
+        for item in currentness_dispositions
+        if item.get("disposition") in {"refreshable-derived", "safely-repairable"}
     }
-    repairs = [
+    actions = [
         {
             "surface": item["surface"],
             "owner": item["owner"],
@@ -994,10 +1093,10 @@ def resolve_context_authority_projection(
                 ),
                 "missing",
             ),
-            "action": f"context-authority.{item['surface']}.refresh-source",
-            "operation_id": str(
-                _surface_owner_contract(str(item["surface"])).get("repair_operation_id")
-                or f"context-authority.{item['surface']}.refresh-source"
+            "action": (
+                "refresh-derived-authority"
+                if actionable[item["surface"]]["disposition"] == "refreshable-derived"
+                else "reconcile-owner-state"
             ),
             "repair_owner": str(item.get("owner") or "context-authority-source-adapter"),
             "required_record": [
@@ -1007,20 +1106,15 @@ def resolve_context_authority_projection(
                 "producer-owned admission receipt",
                 "freshness=current",
             ],
-            "arguments": {
-                "target": ".",
-                "surface": item["surface"],
-                "consumer": consumer,
-                "changed_path_count": len(paths),
-                "expected_registry_revision": CONTEXT_AUTHORITY_REGISTRY_REVISION,
-                "expected_source_revision": str(safely_repairable[item["surface"]].get("expected_source_revision") or ""),
-            },
+            **_context_reconciliation_invocation(currentness=actionable[item["surface"]], consumer=consumer, task=task, paths=paths),
         }
         for item in sorted(
-            (item for item in CONTEXT_AUTHORITY_REGISTRY if str(item.get("surface") or "") in safely_repairable),
+            (item for item in CONTEXT_AUTHORITY_REGISTRY if str(item.get("surface") or "") in actionable),
             key=lambda item: str(item.get("surface") or ""),
         )
     ]
+    repairs = [item for item in actions if _as_dict(item.get("mutation_boundary")).get("writes_repo_state") is True]
+    refreshes = [item for item in actions if _as_dict(item.get("mutation_boundary")).get("writes_repo_state") is False]
     decisions = [item for item in currentness_dispositions if item.get("disposition") in {"decision-required", "missing-relevant-coverage"}]
     changed_path_guardrail = context_authority_changed_path_guardrail(
         consumer=consumer,
@@ -1054,6 +1148,12 @@ def resolve_context_authority_projection(
             "consumer": consumer,
             "repairs": repairs,
             "blocked_claims": ["mutation", "proof-claim", "completion-claim"] if missing else [],
+        },
+        "refresh_operation": {
+            "kind": "agentic-workspace/context-authority-refresh/v1",
+            "status": "required" if refreshes else "not-required",
+            "consumer": consumer,
+            "refreshes": refreshes,
         },
         "changed_path_guardrail": changed_path_guardrail,
         "repair": (

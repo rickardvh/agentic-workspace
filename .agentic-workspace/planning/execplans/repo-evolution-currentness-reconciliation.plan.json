@@ -1,13 +1,13 @@
 {
   "kind": "planning-execplan/v1",
   "id": "repo-evolution-currentness-reconciliation",
-  "title": "Implement owner currentness and deterministic reconciliation",
+  "title": "Implement owner-bound context currentness",
   "owner_level": "slice",
   "lifecycle": "live",
   "phase": "implementation",
   "revision": 3,
   "canonical_core": {
-    "requested_outcome": "Implement owner-bound currentness and deterministic reconciliation for #2662 and #2663 as the first parent-lane stack segment.",
+    "requested_outcome": "Implement owner-bound currentness and coverage obligations for #2662 as the first parent-lane stack segment.",
     "hard_constraints": "Do not invent canonical meaning, add a parallel drift registry, or weaken revision and proof guards.",
     "agent_may_decide": "Exact compact projection shape, focused test structure, and generated-command contract repair within the declared scope.",
     "escalate_when": "A correct repair would change human-owned policy, require a generic executor, or exceed the declared write scope.",
@@ -28,14 +28,14 @@
     "completion_criteria": [
       "Representative owners expose explicit currentness and coverage obligations.",
       "Stale state, missing coverage, semantic decisions, and irrelevant surfaces have distinct runtime dispositions.",
-      "Safe repair routes are revision-bound and semantic ambiguity has no executable repair.",
+      "Read-only refresh is distinct from revision-guarded mutation repair, and semantic ambiguity has no executable repair.",
       "The root Planning issue-shape route forwards every semantic option."
     ],
     "continuation_owner": "repo-evolution-self-maintenance",
     "closeout_decision": "pending"
   },
   "intent": {
-    "outcome": "Make AW-consumed context expose owner-bound currentness and coverage obligations, then route deterministic stale state through revision-bound canonical repair actions while semantic ambiguity remains decision-owned.",
+    "outcome": "Make AW-consumed context expose owner-bound currentness and coverage obligations, distinguish derived refresh from canonical mutation, and fail closed when no contract-backed transition exists.",
     "non_goals": [
       "Do not add a central drift registry, repository crawler, watcher, maintenance phase, or generic repair executor.",
       "Do not implement positive coverage-candidate capture or semantic apply flows owned by #2664 and #2665.",
@@ -44,14 +44,14 @@
   },
   "parent": {
     "owner_id": "repo-evolution-self-maintenance",
-    "contribution": "Close #2662 and #2663 by establishing the common obligation/disposition contract and deterministic negative-drift route required by later lane slices.",
-    "closure_boundary": "This slice may close #2662 and #2663 only; #2661 remains open for coverage acquisition, semantic decision routing, and evolution evidence."
+    "contribution": "Close #2662 by establishing the common obligation/disposition contract required by later reconciliation and coverage slices.",
+    "closure_boundary": "This slice may close #2662 only; #2663 remains the next continuation and #2661 remains open."
   },
   "scope": {
     "owned": [
       "Context-authority registry, schemas, source-owner result protocol, operating-decision projection, and focused tests under src/agentic_workspace/ and tests/test_operating_decision.py",
       "Planning front-door option forwarding regression in src/agentic_workspace/contracts/command_package_ir.json and generated command-package projections",
-      "Issue #2662/#2663 documentation, release change, and checked-in Planning lane state"
+      "Issue #2662 documentation, release change, and checked-in Planning lane state"
     ],
     "effects": [
       "Every registered owner exposes currentness basis, invalidation, source posture, bounded coverage responsibility, and exact repair/decision routes.",
@@ -86,7 +86,7 @@
     "external_posture": {
       "state": "current",
       "refs": [
-        "GitHub issues #2661 #2662 #2663"
+        "GitHub issues #2661 #2662; #2663 is continuation"
       ]
     },
     "delegation": {
@@ -98,8 +98,8 @@
   "references": [
     {
       "kind": "source",
-      "target": "GitHub #2662 and #2663; parent #2661",
-      "label": "GitHub #2662 and #2663; parent #2661",
+      "target": "GitHub #2662; parent #2661",
+      "label": "GitHub #2662; #2663 continuation; parent #2661",
       "role": "intake",
       "locator": ""
     }
@@ -112,7 +112,7 @@
     "claims": [
       "Representative Planning, instructions/config, proof, module, generated, and review/external owner classes expose explicit currentness and coverage obligations.",
       "Current, stale, safely repairable, missing-coverage, decision-required, derived, local, and historical states produce owner-bound dispositions without a parallel maintenance registry.",
-      "Deterministic stale-state actions are revision guarded, semantic ambiguity is not auto-repaired, unrelated work stays quiet, and repeated current resolution does not reissue repair pressure.",
+      "Read-only refresh invocations conform to dispatch contracts, unguarded mutations fail closed, semantic ambiguity is not auto-repaired, and unrelated work stays quiet.",
       "The root Planning issue-shape front door forwards every supported semantic option to the package owner."
     ],
     "requirements": [
@@ -132,12 +132,12 @@
   "completion_criteria": [
     "All representative owner classes project explicit owner-bound currentness and coverage obligations.",
     "Stale state, missing coverage, semantic decisions, and irrelevant surfaces have distinct runtime dispositions.",
-    "Safe repair routes carry registry and source revisions; semantic ambiguity never receives an executable repair.",
+    "Read-only refreshes carry only contract-declared arguments; state repair requires contract-declared registry and source revision guards.",
     "The root Planning issue-shape front door forwards every semantic option and generated projections conform."
   ],
   "continuation": {
     "owner": "repo-evolution-self-maintenance",
-    "residual_intent": "After #2662/#2663 land, continue with #2664/#2665 coverage acquisition and semantic decisions, then #2666 integration evidence before #2661 closure."
+    "residual_intent": "After #2662 lands, continue #2663 deterministic reconciliation, then #2664/#2665 coverage and semantic decisions, and #2666 integration evidence before #2661 closure."
   },
   "specialist_contracts": [
     {

@@ -3,7 +3,7 @@
   "authority": "command_package_ir.json",
   "compatibility": {
     "protocol": "1.0.0",
-    "fingerprint": "sha256:ade11d723f463a0515b023ad9b30b154f9950dabe9ed22dff9aae1e677a0bac8",
+    "fingerprint": "sha256:fd9b84aab3723f8ec9673b23321a9efcd9a4f53cbbe9c06aff7ab6613228868d",
     "additive_fields": "allowed"
   },
   "support_rule": "Operations fail closed unless generated status, effects, conformance, and Python/TypeScript target accounting are present.",
@@ -11,9 +11,9 @@
     "kind": "agentic-workspace/external-readiness-authority/v1",
     "status": "current",
     "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:425a5834df23b26ab25d241fdc6500185b601f93d4eaa7e56b1fa285792f7419",
-    "client_semantics_revision": "sha256:2612b08f6a4639bd5b85ce2943cb354471d8004dcfc0933448e1f4ba46ff64bf",
+    "client_semantics_revision": "sha256:a832c458ff7c47b635f771febd2cc753c601ad89a226f4e2810ed47e6ae346e0",
     "client_artifact_revisions": {
-      "public_python_client": "src/agentic_workspace/client.py@sha256:f99ef3d3337cbd7a7a0499c1458be9ac8099bd6210cf8fb96d5f21fb9c0bf221",
+      "public_python_client": "src/agentic_workspace/client.py@sha256:8269c72aa653ee28a46846f70ce3e7e12fa27ae67ac96bdf915c8056cbcc3ca1",
       "generated_client_generator": "scripts/generate/generate_external_consumer_profile.py@sha256:a0499b9668478a00e07081c071129a43fee557f9a38deb7ba344bea6c0d219a3",
       "typescript_client_template": "scripts/generate/templates/external_client.mjs@sha256:99e55285734b7776d64794ffd0d810a6b9e0181c3ca11f55bc3cbb53d09e8a2c"
     }

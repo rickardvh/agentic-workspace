@@ -8,6 +8,7 @@
     "dispositions": [
       "current",
       "derivably-stale",
+      "refreshable-derived",
       "safely-repairable",
       "missing-relevant-coverage",
       "decision-required",
@@ -52,24 +53,14 @@
         "disposition": "Admitted review or external evidence is revisioned Planning/evaluation input; Memory remains historical evidence only."
       }
     },
-    "deterministic_repair_operations": [
-      "architecture-principles.route",
-      "assignment.resolve-target",
-      "authority-envelope.mutation-baseline",
-      "autopilot.executor.bind",
-      "evaluation.status.report",
-      "generated-command-packages.refresh",
+    "read_only_refresh_operations": [
+      "evaluation.status",
       "memory.route.report",
-      "ownership.classify-paths",
       "planning.summary.report",
-      "proof.select",
-      "system-intent.sync",
-      "target-guidance.resolve",
-      "terminal-outcome.inspect",
-      "workspace.instructions.route",
-      "workspace.skills.resolve-dependencies"
+      "verification.report.report"
     ],
-    "safe_repair_rule": "A repair is executable only when the selected surface owner registered the operation and the operation is bound to the current registry and source revisions.",
+    "revision_guarded_repair_operations": [],
+    "safe_repair_rule": "A state repair is executable only when its dispatch contract declares repository mutation plus registry and source revision guards; read-only operations are refreshes and never claim canonical mutation.",
     "decision_rule": "Missing canonical meaning, contradictions, or ambiguity require an owner decision and must never be synthesized by reconciliation.",
     "quiet_rule": "Surfaces not selected by the current consumer, task, or changed paths are outside responsibility and create no repair pressure."
   },
@@ -113,6 +104,8 @@
         "owner_module": "agentic_workspace.workspace_runtime_core.system_intent",
         "owner_result_kind": "agentic-workspace/system-intent-mirror/v1",
         "repair_operation_id": "system-intent.sync",
+        "reconciliation_operation_id": "system-intent.sync",
+        "reconciliation_mode": "state-mutation",
         "activation_terms": ["intent", "system", "architecture", "principle", "shape", "product"],
         "baseline_for": ["start"]
       }
@@ -188,6 +181,8 @@
         "owner_module": "agentic_planning.state",
         "owner_result_kind": "agentic-planning/current-work-selection/v1",
         "repair_operation_id": "planning.summary.report",
+        "reconciliation_operation_id": "planning.summary.report",
+        "reconciliation_mode": "read-only-refresh",
         "activation_terms": ["plan", "planning", "lane", "issue", "owner", "current"],
         "baseline_for": ["start", "summary", "next", "status"]
       }
@@ -207,6 +202,8 @@
         "owner_module": "agentic_memory.manifest",
         "owner_result_kind": "agentic-workspace/memory-route-curation/v1",
         "repair_operation_id": "memory.route.report",
+        "reconciliation_operation_id": "memory.route.report",
+        "reconciliation_mode": "read-only-refresh",
         "activation_terms": ["memory", "knowledge", "note", "context", "rediscovery", "trap"]
       }
     },
@@ -243,6 +240,8 @@
         "owner_module": "agentic_workspace.evaluation",
         "owner_result_kind": "agentic-workspace/evaluation-definition/v1",
         "repair_operation_id": "evaluation.status.report",
+        "reconciliation_operation_id": "evaluation.status",
+        "reconciliation_mode": "read-only-refresh",
         "activation_terms": ["evaluation", "report", "longitudinal", "dogfood"]
       }
     },
@@ -261,6 +260,8 @@
         "owner_module": "agentic_verification.proof",
         "owner_result_kind": "agentic-workspace/proof-selection/v1",
         "repair_operation_id": "proof.select",
+        "reconciliation_operation_id": "verification.report.report",
+        "reconciliation_mode": "read-only-refresh",
         "activation_terms": ["proof", "validate", "test", "check", "ci", "claim"]
       }
     },
@@ -372,6 +373,7 @@
         "owner_module": "agentic_workspace.contract_tooling.generated_references",
         "owner_result_kind": "generated-cli-owner-source-manifest/v1",
         "repair_operation_id": "generated-command-packages.refresh",
+        "reconciliation_mode": "unavailable",
         "activation_terms": ["generated", "contract", "schema", "operation", "adapter", "package"]
       }
     }

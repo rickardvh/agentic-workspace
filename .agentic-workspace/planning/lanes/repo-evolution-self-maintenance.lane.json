@@ -16,7 +16,7 @@
   "slice_sequence": [
     {
       "id": "repo-evolution-currentness-reconciliation",
-      "title": "Implement owner currentness and deterministic reconciliation",
+      "title": "Implement owner-bound context currentness",
       "status": "active",
       "execplan_ref": ".agentic-workspace/planning/execplans/repo-evolution-currentness-reconciliation.plan.json",
       "depends_on": [],
@@ -56,5 +56,5 @@
       "locator": "https://github.com/rickardvh/agentic-workspace/issues/2662"
     }
   ],
-  "notes": "Minimal three-PR stack: #2662+#2663, then #2664+#2665, then #2666+#2661."
+  "notes": "Minimal three-PR stack: #2662, then #2663+#2664, then #2665+#2666; #2661 closes only after aggregate proof."
 }
