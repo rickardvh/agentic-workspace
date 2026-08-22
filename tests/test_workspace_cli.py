@@ -15483,6 +15483,113 @@ def test_session_improvement_intake_separates_session_and_repo_wide_scopes(tmp_p
     assert decision["routing_decision"]["confidence"] == "high"
 
 
+def test_session_log_signal_captures_strengthens_and_routes_structured_candidate(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    rejected_argv = [
+        "session-log",
+        "signal",
+        "--target",
+        str(tmp_path),
+        "--kind",
+        "opportunity",
+        "--symptom",
+        "A helper might be cleaner",
+        "--cost",
+        "No concrete cost is established",
+        "--format",
+        "json",
+    ]
+    assert cli.main(rejected_argv) == 0
+    rejected = json.loads(capsys.readouterr().out)
+    assert rejected["status"] == "rejected"
+    assert rejected["mutation_authorized"] is False
+    assert not (tmp_path / ".agentic-workspace/local/cache/dogfooding-signal-status.json").exists()
+
+    base_argv = [
+        "session-log",
+        "signal",
+        "--target",
+        str(tmp_path),
+        "--kind",
+        "opportunity",
+        "--symptom",
+        "Release proof repeatedly selects unrelated Planning suites",
+        "--cost",
+        "Two unrelated runs add 171.6 seconds",
+        "--expected-benefit",
+        "Select only release-owned proof dependencies",
+        "--owner-hint",
+        "src/agentic_workspace/workspace_runtime_proof.py",
+        "--scope-relation",
+        "adjacent-scope",
+        "--likely-remediation",
+        "validation",
+        "--evidence-ref",
+        "proof://before-release-route",
+        "--format",
+        "json",
+    ]
+    assert cli.main(base_argv) == 0
+    captured = json.loads(capsys.readouterr().out)
+    assert captured["status"] == "captured"
+    assert captured["candidate_only"] is True
+    assert captured["mutation_authorized"] is False
+
+    confirmed_argv = [
+        *base_argv[:-2],
+        "--evidence-class",
+        "human_confirmed",
+        "--evidence-ref",
+        "review://release-route-confirmation",
+        "--format",
+        "json",
+    ]
+    assert cli.main(confirmed_argv) == 0
+    strengthened = json.loads(capsys.readouterr().out)
+    assert strengthened["status"] == "strengthened"
+    assert strengthened["occurrence_count"] == 2
+    assert strengthened["recurrence"] == "human_confirmed"
+    assert strengthened["evidence_classes"] == ["agent_observed", "human_confirmed"]
+
+    reviewed_argv = [
+        *base_argv[:-2],
+        "--evidence-class",
+        "review_derived",
+        "--evidence-ref",
+        "review://bounded-finding",
+        "--format",
+        "json",
+    ]
+    assert cli.main(reviewed_argv) == 0
+    reviewed = json.loads(capsys.readouterr().out)
+    assert reviewed["status"] == "strengthened"
+    assert reviewed["occurrence_count"] == 3
+    assert reviewed["evidence_classes"] == ["agent_observed", "human_confirmed", "review_derived"]
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "improvement_intake", "--format", "json"]) == 0
+    intake = json.loads(capsys.readouterr().out)["answer"]
+    candidate = next(item for item in intake["candidate_sample"] if item["kind"] == "improvement_opportunity")
+    assert candidate["expected_benefit"] == "Select only release-owned proof dependencies"
+    assert candidate["scope_relation"] == "adjacent-scope"
+    assert candidate["occurrence_count"] == 3
+    assert candidate["recurrence"] == "human_confirmed"
+    assert candidate["confidence"] == "high"
+    assert candidate["mutation_authorized"] is False
+    assert candidate["evidence_refs"] == [
+        "proof://before-release-route",
+        "review://bounded-finding",
+        "review://release-route-confirmation",
+    ]
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "session_improvement_intake", "--format", "json"]) == 0
+    session = json.loads(capsys.readouterr().out)["answer"]
+    assert session["operational_effect"]["status"] == "closeout-blocking"
+    assert session["routing_decisions"][0]["closeout_blocked"] is True
+
+
 def test_session_improvement_intake_self_admits_complete_index_for_review(tmp_path: Path, capsys, monkeypatch) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0

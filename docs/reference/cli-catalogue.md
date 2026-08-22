@@ -3,9 +3,9 @@
 
 Exact current command values generated from `cli_commands.json` and `cli_option_groups.json`. The schema-shape references remain at `cli-commands.md` and `cli-option-groups.md`.
 
-- Contract digest: `sha256:64fc38aa88358366d26a439f02cc09bc22c1ac7829e669751cec2b61e2a66b80`
+- Contract digest: `sha256:b12c2e8a8479928dc09301ed9a7a68e5cc1f0c4ff3204ec335275932ff4bf251`
 - Program: `agentic-workspace`
-- Command/subcommand count: 122
+- Command/subcommand count: 123
 
 Shared-state mutability and ignored local diagnostics are separate. A `no` below means the command contract does not mutate shared workspace state. When local session logging is enabled, any command may still write ignored machine-local diagnostics:
 
@@ -81,6 +81,7 @@ Shared-state mutability and ignored local diagnostics are separate. A `no` below
 | `agentic-workspace session-log status` | `reusable_host_repo_diagnostics` | `local_only` | no | 2 | Report local AW session logging status. |
 | `agentic-workspace session-log new-session` | `reusable_host_repo_diagnostics` | `local_only` | yes | 2 | Start a new ignored local AW session log. |
 | `agentic-workspace session-log note` | `reusable_host_repo_diagnostics` | `local_only` | yes | 3 | Append an optional note to the current ignored local AW session log. |
+| `agentic-workspace session-log signal` | `reusable_host_repo_diagnostics` | `local_only` | yes | 12 | Capture compact workaround or opportunity evidence for the existing improvement intake. |
 | `agentic-workspace session-log analyze` | `reusable_host_repo_diagnostics` | `local_only` | no | 6 | Analyze an ignored local AW session log into counts, repeated commands, failures, artifacts, packet kinds, and friction candidates. |
 | `agentic-workspace session-log repair` | `reusable_host_repo_diagnostics` | `local_only` | yes | 4 | Repair or backfill a partial local session-log index from its Markdown entries. |
 | `agentic-workspace session-log export` | `reusable_host_repo_diagnostics` | `local_only` | yes | 5 | Export an existing local session log as a local diagnostic bundle with known local paths normalized. |
@@ -971,6 +972,25 @@ local-only session log note; not durable proof
 | `--format` | no | `text` | text, json | `value` | Output format. |
 | `--target` | no | `—` | — | `value` | Optional repository path. |
 | `--text` | yes | `—` | — | `value` | Note text to append. |
+
+## `agentic-workspace session-log signal`
+
+local-only improvement-signal observation; candidate evidence only and never mutation authority
+
+| Flags | Required | Default | Choices | Action / nargs | Description |
+| --- | --- | --- | --- | --- | --- |
+| `--format` | no | `text` | text, json | `value` | Output format. |
+| `--target` | no | `—` | — | `value` | Optional repository path. |
+| `--kind` | no | `workaround` | workaround, opportunity | `value` | Observation class. |
+| `--symptom` | yes | `—` | — | `value` | Observed workaround, friction, or concrete opportunity. |
+| `--cost` | yes | `—` | — | `value` | Concrete current or future repository cost. |
+| `--expected-benefit` | no | `—` | — | `value` | Expected future-cost or operability benefit; required for opportunities. |
+| `--evidence-class` | no | `agent_observed` | agent_observed, machine_observed, human_confirmed, review_derived | `value` | Evidence provenance class. |
+| `--owner-hint` | no | `unknown` | — | `value` | Suspected repository or AW owner. |
+| `--scope-relation` | no | `current-scope` | current-scope, adjacent-scope, standalone-repo, aw-internal | `value` | Relation to the current task scope. |
+| `--recurrence` | no | `first_seen` | first_seen, repeated, human_confirmed | `value` | Observed recurrence state. |
+| `--evidence-ref` | no | `—` | — | `append` | Compact evidence reference; repeat for multiple references. |
+| `--likely-remediation` | no | `unknown` | — | `value` | Likely existing remediation class. |
 
 ## `agentic-workspace session-log analyze`
 

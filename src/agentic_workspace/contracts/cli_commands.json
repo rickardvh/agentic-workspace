@@ -3343,6 +3343,28 @@
         },
         {
           "audience": "local_only",
+          "classification_note": "local-only improvement-signal observation; candidate evidence only and never mutation authority",
+          "help": "Capture compact workaround or opportunity evidence for the existing improvement intake.",
+          "mutates_state": true,
+          "name": "signal",
+          "options": [
+            {"flags": ["--target"], "help": "Optional repository path.", "name": "target"},
+            {"choices": ["workaround", "opportunity"], "default": "workaround", "flags": ["--kind"], "help": "Observation class.", "name": "kind"},
+            {"flags": ["--symptom"], "help": "Observed workaround, friction, or concrete opportunity.", "name": "symptom", "required": true},
+            {"flags": ["--cost"], "help": "Concrete current or future repository cost.", "name": "cost", "required": true},
+            {"flags": ["--expected-benefit"], "help": "Expected future-cost or operability benefit; required for opportunities.", "name": "expected_benefit"},
+            {"choices": ["agent_observed", "machine_observed", "human_confirmed", "review_derived"], "default": "agent_observed", "flags": ["--evidence-class"], "help": "Evidence provenance class.", "name": "evidence_class"},
+            {"flags": ["--owner-hint"], "help": "Suspected repository or AW owner.", "name": "owner_hint", "default": "unknown"},
+            {"choices": ["current-scope", "adjacent-scope", "standalone-repo", "aw-internal"], "default": "current-scope", "flags": ["--scope-relation"], "help": "Relation to the current task scope.", "name": "scope_relation"},
+            {"choices": ["first_seen", "repeated", "human_confirmed"], "default": "first_seen", "flags": ["--recurrence"], "help": "Observed recurrence state.", "name": "recurrence"},
+            {"action": "append", "default": [], "flags": ["--evidence-ref"], "help": "Compact evidence reference; repeat for multiple references.", "name": "evidence_ref"},
+            {"flags": ["--likely-remediation"], "help": "Likely existing remediation class.", "name": "likely_remediation", "default": "unknown"}
+          ],
+          "role": "reusable_host_repo_diagnostics",
+          "uses_option_groups": ["format"]
+        },
+        {
+          "audience": "local_only",
           "classification_note": "local-only session log analysis; not durable proof",
           "help": "Analyze an ignored local AW session log into counts, repeated commands, failures, artifacts, packet kinds, and friction candidates.",
           "mutates_state": false,

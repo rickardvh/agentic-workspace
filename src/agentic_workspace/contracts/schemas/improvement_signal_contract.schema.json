@@ -17,6 +17,9 @@
     "validation_remedy_order",
     "correct_by_design_review",
     "confidence",
+    "evidence_classes",
+    "scope_relations",
+    "ordinary_work_intake",
     "recurrence",
     "lifecycle_states",
     "lifecycle_rule",
@@ -209,6 +212,45 @@
         "description": "One entry in the confidence list."
       },
       "description": "Ordered confidence entries used by this contract."
+    },
+    "evidence_classes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"enum": ["agent_observed", "machine_observed", "human_confirmed", "review_derived"]},
+      "description": "Evidence provenance classes accepted by ordinary-work signal intake."
+    },
+    "scope_relations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"enum": ["current-scope", "adjacent-scope", "standalone-repo", "aw-internal"]},
+      "description": "Relations between the observation and current task scope used by later owner classification."
+    },
+    "ordinary_work_intake": {
+      "type": "object",
+      "required": ["capture_operation", "candidate_destination", "source_classes", "admission_guards", "closeout_rule"],
+      "properties": {
+        "capture_operation": {"type": "string", "minLength": 1, "description": "Existing typed command used to capture local candidate evidence."},
+        "candidate_destination": {"type": "string", "minLength": 1, "description": "Existing intake route that classifies captured observations."},
+        "source_classes": {
+          "type": "array",
+          "minItems": 4,
+          "description": "Evidence source classes and their non-mutation authority.",
+          "items": {
+            "type": "object",
+            "required": ["id", "authority", "example"],
+            "properties": {
+              "id": {"enum": ["agent_observed", "machine_observed", "human_confirmed", "review_derived"]},
+              "authority": {"type": "string", "minLength": 1},
+              "example": {"type": "string", "minLength": 1}
+            },
+            "additionalProperties": false
+          }
+        },
+        "admission_guards": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}, "description": "Rules that reject preference-only input and preserve candidate-only authority."},
+        "closeout_rule": {"type": "string", "minLength": 1, "description": "Rule that makes material unresolved observations visible without burdening no-signal work."}
+      },
+      "additionalProperties": false,
+      "description": "Ordinary-work capture, evidence, admission, and closeout contract for improvement candidates."
     },
     "recurrence": {
       "type": "array",

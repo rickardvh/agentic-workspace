@@ -14,7 +14,12 @@
     "confidence",
     "recurrence",
     "immediate_action",
-    "retention"
+    "retention",
+    "evidence_classes",
+    "evidence_refs",
+    "expected_benefit",
+    "scope_relation",
+    "occurrence_count"
   ],
   "kinds": [
     "workflow_cost",
@@ -26,7 +31,8 @@
     "repeated_human_steering",
     "weak_agent_failure",
     "shipped_footprint",
-    "default_feature_creep"
+    "default_feature_creep",
+    "improvement_opportunity"
   ],
   "likely_remediations": [
     "docs",
@@ -130,6 +136,35 @@
     "medium",
     "high"
   ],
+  "evidence_classes": [
+    "agent_observed",
+    "machine_observed",
+    "human_confirmed",
+    "review_derived"
+  ],
+  "scope_relations": [
+    "current-scope",
+    "adjacent-scope",
+    "standalone-repo",
+    "aw-internal"
+  ],
+  "ordinary_work_intake": {
+    "capture_operation": "session-log.manage signal",
+    "candidate_destination": "agentic-workspace report --section improvement_intake",
+    "source_classes": [
+      {"id": "agent_observed", "authority": "candidate-only", "example": "explicit workaround or concrete opportunity"},
+      {"id": "machine_observed", "authority": "candidate-or-strengthening-evidence", "example": "repeated validation, repair, routing, or maintenance re-entry"},
+      {"id": "human_confirmed", "authority": "strengthening-evidence", "example": "human confirmation of an equivalent fingerprint"},
+      {"id": "review_derived", "authority": "strengthening-evidence", "example": "bounded review finding with an evidence reference"}
+    ],
+    "admission_guards": [
+      "symptom and concrete cost are required",
+      "positive opportunities require an expected future-cost or operability benefit",
+      "stable fingerprint deduplicates equivalent evidence and strengthens recurrence",
+      "candidate capture never authorizes repository mutation"
+    ],
+    "closeout_rule": "Material unresolved observations must be captured, routed, or dismissed before broad clean closeout; absent signals add no mandatory artifact."
+  },
   "recurrence": [
     "first_seen",
     "repeated",
