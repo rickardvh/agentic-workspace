@@ -1,5 +1,6 @@
 {
   "kind": "agentic-workspace/proof-route-cost-replay/v1",
+  "title": "Issue #2645 proof-route cost replay",
   "status": "current",
   "issue": "#2645",
   "source": {

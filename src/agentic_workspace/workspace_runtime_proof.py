@@ -2664,7 +2664,7 @@ def _release_proof_profile_payload(
         "selection_posture": str(release_lane.get("selection_posture") or "focused-release-runtime"),
         "package_dependencies": list(release_lane.get("package_dependencies", [])),
         "command_dependencies": list(release_lane.get("command_dependencies", [])),
-        "cost_replay_evidence_ref": (".agentic-workspace/planning/closeout-evidence/issue-2645-proof-route-cost-replay.closeout.json"),
+        "cost_replay_evidence_ref": (".agentic-workspace/planning/closeout-evidence/issue-2645-proof-route-cost-replay.replay.json"),
         "rule": (
             "This profile groups selected proof by protected release subject. Package-wide proof requires an explicit "
             "requirement, subject dependency, and distinct claim; otherwise the focused release/runtime lane applies."

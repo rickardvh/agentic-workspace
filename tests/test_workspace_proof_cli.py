@@ -3089,7 +3089,7 @@ def test_proof_changed_release_version_surface_exposes_named_release_profile(cap
     assert profile["package_dependencies"][0]["requirement"] == "agentic-workspace-package-release-integrity"
     assert profile["package_dependencies"][0]["subject_dependency"] == ["pyproject.toml"]
     assert profile["command_dependencies"][0]["requirement"] == "coordinated-release-runtime-behavior"
-    assert profile["cost_replay_evidence_ref"].endswith("issue-2645-proof-route-cost-replay.closeout.json")
+    assert profile["cost_replay_evidence_ref"].endswith("issue-2645-proof-route-cost-replay.replay.json")
 
 
 def test_proof_changed_release_package_surface_names_exact_package_dependency(capsys) -> None:

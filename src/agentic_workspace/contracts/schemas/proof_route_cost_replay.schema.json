@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentic-workspace.local/schemas/proof_route_cost_replay.schema.json",
+  "title": "Proof Route Cost Replay",
+  "type": "object",
+  "required": [
+    "kind",
+    "title",
+    "status",
+    "issue",
+    "source",
+    "before",
+    "after",
+    "comparison",
+    "exact_base_attribution",
+    "proof_refs",
+    "claim_boundary"
+  ],
+  "properties": {
+    "kind": {"const": "agentic-workspace/proof-route-cost-replay/v1"},
+    "title": {"type": "string", "minLength": 1},
+    "status": {"enum": ["current", "superseded"]},
+    "issue": {"type": "string", "pattern": "^#[0-9]+$"},
+    "source": {"type": "object", "minProperties": 1},
+    "before": {"$ref": "#/$defs/replay_side"},
+    "after": {"$ref": "#/$defs/replay_side"},
+    "comparison": {
+      "type": "object",
+      "required": [
+        "summed_work_seconds_removed",
+        "critical_path_seconds_removed",
+        "planning_suite_run_count_before",
+        "planning_suite_run_count_after",
+        "claim_coverage_preserved",
+        "claim_coverage_evidence"
+      ]
+    },
+    "exact_base_attribution": {"type": "object", "minProperties": 1},
+    "proof_refs": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+    "claim_boundary": {"type": "string", "minLength": 1}
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "replay_side": {
+      "type": "object",
+      "required": ["selection", "subject_decisions", "attributable_summed_work_seconds", "attributable_critical_path_seconds"],
+      "properties": {
+        "selection": {"type": "string", "minLength": 1},
+        "subject_decisions": {"type": "array", "minItems": 1, "items": {"type": "object", "minProperties": 1}},
+        "attributable_summed_work_seconds": {"type": "number", "minimum": 0},
+        "attributable_critical_path_seconds": {"type": "number", "minimum": 0}
+      },
+      "additionalProperties": false
+    }
+  }
+}

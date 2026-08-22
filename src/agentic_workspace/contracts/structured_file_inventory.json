@@ -798,6 +798,32 @@
       "storage_class": "historical-audit-distillation"
     },
     {
+      "checked_in_justification": "A bounded before/after proof-route replay preserves exact attribution, causal subject decisions, and claim coverage without retaining full session logs.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "guardrails": {
+        "max_bytes": 20000,
+        "preferred_refs": [
+          "issue",
+          "proof tests",
+          "exact repaired-base commit"
+        ],
+        "routed_to": "#2645"
+      },
+      "notes": "Replay evidence is not Planning closeout evidence and therefore uses a distinct filename and schema.",
+      "owner": "workspace-proof-runtime",
+      "pattern": ".agentic-workspace/planning/closeout-evidence/*.replay.json",
+      "reconstructable_from": [
+        "the cited source archive",
+        "the exact repaired-base replay",
+        "the referenced proof tests"
+      ],
+      "schema_or_validator": "src/agentic_workspace/contracts/schemas/proof_route_cost_replay.schema.json",
+      "status": "schema-backed",
+      "storage_class": "historical-audit-distillation"
+    },
+    {
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy.",
       "editable_by_agents": true,
       "format": "json",

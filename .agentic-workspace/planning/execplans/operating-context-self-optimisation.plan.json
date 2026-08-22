@@ -83,7 +83,7 @@
       "38 changed-selector proof scenarios, contract tooling, structured inventory, workspace lint, and all package type checks passed",
       "Full proof-selector suite initially reported 209 passed and 10 failed; exact repaired-base replay reproduced nine failures with identical assertions, while the attributable docs-only tiny budget failure was fixed and now passes",
       "Validation-plan catalogue replay produced the same two missing compact labels on repaired base dbf011637 and this head: contract catalogues and render contract catalogues",
-      "Durable #2645 replay maps reused, rerun-required, and excluded-unrelated subjects and removes 171.6 seconds of attributable Planning work at .agentic-workspace/planning/closeout-evidence/issue-2645-proof-route-cost-replay.closeout.json"
+      "Durable #2645 replay maps reused, rerun-required, and excluded-unrelated subjects and removes 171.6 seconds of attributable Planning work at .agentic-workspace/planning/closeout-evidence/issue-2645-proof-route-cost-replay.replay.json"
     ]
   },
   "continuation": {
