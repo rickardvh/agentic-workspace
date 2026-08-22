@@ -3088,6 +3088,8 @@ def test_proof_changed_release_version_surface_exposes_named_release_profile(cap
     assert profile["selection_posture"] == "focused-release-runtime"
     assert profile["package_dependencies"][0]["requirement"] == "agentic-workspace-package-release-integrity"
     assert profile["package_dependencies"][0]["subject_dependency"] == ["pyproject.toml"]
+    assert profile["command_dependencies"][0]["requirement"] == "coordinated-release-runtime-behavior"
+    assert profile["cost_replay_evidence_ref"].endswith("issue-2645-proof-route-cost-replay.closeout.json")
 
 
 def test_proof_changed_release_package_surface_names_exact_package_dependency(capsys) -> None:
@@ -3118,6 +3120,161 @@ def test_proof_changed_release_package_surface_names_exact_package_dependency(ca
     assert dependency["requirement"] == "agentic-workspace-planning-package-release-integrity"
     assert dependency["subject_dependency"] == ["packages/planning/pyproject.toml"]
     assert "agentic-workspace-planning package" in dependency["distinct_claim"]
+
+
+def test_coordinated_release_replay_removes_unrelated_planning_runs_and_preserves_claim_coverage(capsys) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    changed_paths = [
+        "scripts/release/coordinated_release.py",
+        "tests/test_coordinated_release.py",
+        ".agentic-workspace/payload-provenance.json",
+    ]
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(repo_root),
+                "--changed",
+                *changed_paths,
+                "--select",
+                "required_commands,release_proof_profile,focused_route_coverage_audit,route_refinement_required,proof_route_maintenance",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    values = json.loads(capsys.readouterr().out)["values"]
+    assert "make test-planning" not in values["required_commands"]
+    assert values["focused_route_coverage_audit"]["status"] == "covered"
+    assert values["focused_route_coverage_audit"]["missing_focused_route_paths"] == []
+    assert values["route_refinement_required"]["status"] == "not-required"
+    assert values["proof_route_maintenance"]["route_health"]["findings"] == []
+    dependency = values["release_proof_profile"]["command_dependencies"][0]
+    assert dependency["subject_dependency"] == [
+        "scripts/release/coordinated_release.py",
+        ".agentic-workspace/payload-provenance.json",
+    ]
+    assert dependency["requirement"] == "coordinated-release-runtime-behavior"
+    assert dependency["distinct_claim"]
+
+    evidence_path = repo_root / values["release_proof_profile"]["cost_replay_evidence_ref"]
+    replay = json.loads(evidence_path.read_text(encoding="utf-8"))
+    assert replay["comparison"] == {
+        "summed_work_seconds_removed": 171.6,
+        "critical_path_seconds_removed": 171.6,
+        "planning_suite_run_count_before": 2,
+        "planning_suite_run_count_after": 0,
+        "claim_coverage_preserved": True,
+        "claim_coverage_evidence": replay["comparison"]["claim_coverage_evidence"],
+    }
+    assert {item["decision"] for item in replay["after"]["subject_decisions"]} == {
+        "rerun-required",
+        "reused",
+        "excluded-unrelated",
+    }
+
+
+def test_unrelated_planning_timing_route_emits_generic_bound_improvement_signal() -> None:
+    import agentic_workspace.workspace_runtime_proof as proof_runtime
+
+    changed_paths = [
+        "scripts/release/coordinated_release.py",
+        "tests/test_coordinated_release.py",
+        ".agentic-workspace/payload-provenance.json",
+    ]
+    selected_command = {
+        "command": "make test-planning",
+        "command_identity": "planning-timing-suite",
+        "route_id": "legacy-coordinated-release-proof",
+        "lane": "legacy-coordinated-release-proof",
+        "selected_from": "live-confirmed-proof-rule",
+        "route_authority": "package-seed-or-default-route",
+        "authority_surface": "package proof defaults",
+        "proof_kind": "full-test",
+        "subject_contract": {
+            "kind": "agentic-workspace/proof-subject-request/v1",
+            "changed_paths": changed_paths,
+            "declared_dependencies": [],
+            "dependency_binding": "implicit",
+            "requirement": "",
+            "distinct_claim": "",
+        },
+    }
+
+    health = proof_runtime._proof_route_health_payload(
+        selected_commands=[selected_command],
+        stale_hints=[],
+        invalid_hints=[],
+        manual_missing=[],
+        changed_paths=changed_paths,
+        target_root=None,
+        cli_invoke="agentic-workspace",
+        focused_route_coverage_audit={},
+        route_refinement_required={},
+        unavailable_commands=[],
+        proof_execution_evidence={},
+    )
+
+    finding = next(item for item in health["findings"] if item["finding_class"] == "excessive_breadth_cost")
+    signal = finding["improvement_signal_candidate"]
+    assert signal["candidate_kind"] == "workspace-improvement-signal-candidate/v1"
+    assert signal["source_owner_identity"] == {
+        "route_id": "legacy-coordinated-release-proof",
+        "authority": "package-seed-or-default-route",
+        "authority_surface": "package proof defaults",
+        "selected_from": "live-confirmed-proof-rule",
+    }
+    assert signal["applicability_identity"]["status"] == "unbound"
+    assert signal["applicability_identity"]["changed_paths"] == changed_paths
+    assert signal["dependency_claim_identity"] == {
+        "requirement": "",
+        "distinct_claim": "",
+        "command_identity": "planning-timing-suite",
+    }
+    assert signal["consumer_contract"]["consumer"] == "bounded-route-adaptation"
+    assert health["improvement_signal_candidates"] == [signal]
+
+
+def test_explicit_broad_dependency_and_claim_do_not_emit_disproportionate_signal() -> None:
+    import agentic_workspace.workspace_runtime_proof as proof_runtime
+
+    changed_paths = ["packages/planning/pyproject.toml"]
+    health = proof_runtime._proof_route_health_payload(
+        selected_commands=[
+            {
+                "command": "make test-planning",
+                "command_identity": "planning-release-suite",
+                "route_id": "coordinated_release_proof",
+                "lane": "coordinated_release_proof",
+                "proof_kind": "full-test",
+                "subject_contract": {
+                    "kind": "agentic-workspace/proof-subject-request/v1",
+                    "changed_paths": changed_paths,
+                    "declared_dependencies": changed_paths,
+                    "dependency_binding": "explicit",
+                    "requirement": "agentic-workspace-planning-package-release-integrity",
+                    "distinct_claim": "the changed Planning package remains releasable",
+                },
+            }
+        ],
+        stale_hints=[],
+        invalid_hints=[],
+        manual_missing=[],
+        changed_paths=changed_paths,
+        target_root=None,
+        cli_invoke="agentic-workspace",
+        focused_route_coverage_audit={},
+        route_refinement_required={},
+        unavailable_commands=[],
+        proof_execution_evidence={},
+    )
+
+    assert health["findings"] == []
+    assert health["improvement_signal_candidates"] == []
 
 
 def test_proof_changed_uses_python_pytest_capability_without_makefile(tmp_path: Path, capsys) -> None:

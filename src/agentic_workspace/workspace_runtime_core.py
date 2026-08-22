@@ -49378,6 +49378,9 @@ def _emit_proof(
                     reuse_result=reuse_result,
                     full_detail_command=full_detail_command,
                 )
+        tiny_commands = [str(command) for command in _list_payload(payload.get("required_commands"))]
+        if tiny_commands and all(command.startswith("git diff --") for command in tiny_commands):
+            payload.pop("projection_reuse", None)
         if format_name == "json":
             print(json.dumps(serialise_value(payload), indent=2))
             return 0

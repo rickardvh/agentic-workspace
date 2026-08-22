@@ -92,6 +92,7 @@ from agentic_workspace.workspace_runtime_core import (
     _docs_only_reduction_lane,
     _guidance_with_cli_invoke,
     _host_repo_learning_posture_payload,
+    _improvement_signal_candidate,
     _intent_decision_projection,
     _intent_proof_prompt_payload,
     _issue_scope_evidence_payload,
@@ -527,6 +528,8 @@ def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CL
                 ),
             )
             next_decision = _guidance_with_cli_invoke(value=next_decision, cli_invoke=cli_invoke)
+            if tiny_required_commands and all(command.startswith("git diff --") for command in tiny_required_commands):
+                next_decision.pop("projection_reuse", None)
             return next_decision
         required_commands = tiny_required_commands
         validation_plan = answer.get("validation_plan", {}) if isinstance(answer, dict) else {}
@@ -2478,6 +2481,11 @@ def _coordinated_release_proof_lane(*, target_root: Path | None, changed_paths: 
         ".github/workflows/release.yml",
         "docs/release-and-versioning.md",
         "tests/test_release_workflows.py",
+        *[
+            str(package.get("payload_provenance") or "").strip()
+            for package in _list_payload(ownership.get("packages"))
+            if isinstance(package, dict)
+        ],
     }
     release_surface_exact = {path for path in release_surface_exact if path}
     release_surface_prefixes = ("scripts/release/",)
@@ -2524,6 +2532,14 @@ def _coordinated_release_proof_lane(*, target_root: Path | None, changed_paths: 
         "uv run python scripts/run_agentic_workspace.py defaults --section root_cli_authority --format json",
         "uv run pytest tests/test_release_workflows.py -q",
     ]
+    command_dependencies = [
+        {
+            "requirement": "coordinated-release-runtime-behavior",
+            "subject_dependency": matched,
+            "distinct_claim": "the changed coordinated-release runtime and workflow preserve release behavior",
+            "commands": _dedupe(focused_commands),
+        }
+    ]
     return {
         "id": "coordinated_release_proof",
         "when": "changed paths touch release-owned coordinated version or release workflow surfaces",
@@ -2538,6 +2554,7 @@ def _coordinated_release_proof_lane(*, target_root: Path | None, changed_paths: 
         "release_ownership_path": ".github/release-ownership.json",
         "selection_posture": "focused-release-runtime",
         "package_dependencies": package_dependencies,
+        "command_dependencies": command_dependencies,
         "broad_proof_contract": (
             "A package-wide suite is selected only when matched_paths names that package as an exact subject dependency; "
             "each selected package dependency records its requirement, subject, and distinct claim before execution."
@@ -2646,6 +2663,8 @@ def _release_proof_profile_payload(
         "groups": groups,
         "selection_posture": str(release_lane.get("selection_posture") or "focused-release-runtime"),
         "package_dependencies": list(release_lane.get("package_dependencies", [])),
+        "command_dependencies": list(release_lane.get("command_dependencies", [])),
+        "cost_replay_evidence_ref": (".agentic-workspace/planning/closeout-evidence/issue-2645-proof-route-cost-replay.closeout.json"),
         "rule": (
             "This profile groups selected proof by protected release subject. Package-wide proof requires an explicit "
             "requirement, subject dependency, and distinct claim; otherwise the focused release/runtime lane applies."
@@ -4734,6 +4753,7 @@ def _proof_route_health_payload(
         claim_effect: str = "repair-required-before-route-claim",
         execution_evidence: dict[str, Any] | None = None,
         stable_identity: dict[str, Any] | None = None,
+        improvement_signal: dict[str, Any] | None = None,
     ) -> None:
         basis = json.dumps(
             {
@@ -4800,6 +4820,8 @@ def _proof_route_health_payload(
         }
         if execution_evidence is not None:
             finding_payload["execution_evidence"] = execution_evidence
+        if improvement_signal is not None:
+            finding_payload["improvement_signal_candidate"] = improvement_signal
         findings.append(finding_payload)
 
     uncovered_paths = [str(path) for path in _list_payload(route_refinement_required.get("uncovered_paths")) if str(path).strip()]
@@ -4902,7 +4924,7 @@ def _proof_route_health_payload(
         )
 
     broad_commands = [
-        str(command.get("command", ""))
+        command
         for command in selected_commands
         if isinstance(command, dict)
         and _proof_route_command_is_broad(str(command.get("command", "")), proof_kind=str(command.get("proof_kind", "")))
@@ -4910,11 +4932,57 @@ def _proof_route_health_payload(
     affected_generic_lanes = [
         str(lane_id) for lane_id in _list_payload(route_refinement_required.get("affected_generic_lanes")) if str(lane_id).strip()
     ]
-    for command_text in broad_commands:
+    for command in broad_commands:
+        command_text = str(command.get("command") or "")
+        subject_contract = _as_dict(command.get("subject_contract"))
+        declared_dependencies = [str(path) for path in _list_payload(subject_contract.get("declared_dependencies")) if str(path).strip()]
+        distinct_claim = str(subject_contract.get("distinct_claim") or "").strip()
+        binding_status = str(subject_contract.get("dependency_binding") or "implicit")
+        if binding_status == "explicit" and declared_dependencies and distinct_claim:
+            continue
+        route_id = str(command.get("route_id") or command.get("lane") or "selected-required-proof")
+        source_owner_identity = {
+            "route_id": route_id,
+            "authority": str(command.get("route_authority") or ""),
+            "authority_surface": str(command.get("authority_surface") or ""),
+            "selected_from": str(command.get("selected_from") or ""),
+        }
+        applicability_identity = {
+            "status": "unbound",
+            "changed_paths": _proof_route_normalize_paths(changed_paths),
+            "changed_paths_digest": _proof_route_scope_digest(changed_paths),
+            "declared_subject_dependencies": declared_dependencies,
+        }
+        dependency_claim_identity = {
+            "requirement": str(subject_contract.get("requirement") or ""),
+            "distinct_claim": distinct_claim,
+            "command_identity": str(command.get("command_identity") or hashlib.sha256(command_text.encode()).hexdigest()[:16]),
+        }
+        signal = _improvement_signal_candidate(
+            kind="workflow_cost",
+            observed_during="proof-route-selection",
+            symptom=f"Broad proof command lacks an explicit dependency and distinct claim: {command_text}",
+            cost="disproportionate or unrelated local proof can dominate the changed claim",
+            suspected_owner=str(command.get("authority_surface") or "repo proof-route authority"),
+            likely_remediation="command",
+            confidence="high",
+            recurrence="human_confirmed",
+            immediate_action="route",
+            retention="shrink_after_fix",
+            source="proof_route_maintenance.route_health",
+        )
+        signal["source_owner_identity"] = source_owner_identity
+        signal["applicability_identity"] = applicability_identity
+        signal["dependency_claim_identity"] = dependency_claim_identity
+        signal["consumer_contract"] = {
+            "consumer": "bounded-route-adaptation",
+            "consume_when": "source owner and applicability identity still match",
+            "dedupe_identity": signal["evidence_fingerprint"],
+        }
         add_finding(
             finding_class="excessive_breadth_cost",
-            affected_route="selected-required-proof",
-            evidence=[command_text],
+            affected_route=route_id,
+            evidence=[command_text, "dependency_binding: implicit", "distinct_claim: missing"],
             consequence="safe-typed-repair-or-explicit-escalation",
             owner="repo proof-route authority",
             canonical_edit_surface=".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
@@ -4922,6 +4990,12 @@ def _proof_route_health_payload(
             validation_commands=[
                 "uv run --active python scripts/run_agentic_workspace.py proof --target . --changed <paths> --select proof_route_strategy_decision,proof_narrowness,required_commands --format json"
             ],
+            stable_identity={
+                "command_identity": dependency_claim_identity["command_identity"],
+                "source_owner_identity": source_owner_identity,
+                "applicability_identity": applicability_identity,
+            },
+            improvement_signal=signal,
         )
     for lane_id in affected_generic_lanes:
         add_finding(
@@ -5122,12 +5196,17 @@ def _proof_route_health_payload(
     ]
     lifecycle_store = _improvement_consequence_summary(target_root=target_root, active_finding_ids=active_finding_ids)
     health_status = "attention" if findings or retirement_candidates or retirement_rejections else "quiet"
+    improvement_signal_candidates = [
+        candidate for finding in findings if isinstance((candidate := finding.get("improvement_signal_candidate")), dict)
+    ]
     return {
         "kind": "agentic-workspace/proof-route-health/v1",
         "status": health_status,
         "taxonomy": taxonomy,
         "finding_count": len(findings),
         "findings": findings,
+        "improvement_signal_candidates": improvement_signal_candidates,
+        "improvement_signal_candidate_count": len(improvement_signal_candidates),
         "execution_observations": execution_observations,
         "retirement_candidates": retirement_candidates,
         "retirement_candidate_count": len(retirement_candidates),
@@ -8626,12 +8705,22 @@ def _proof_selection_for_changed_paths(
         make_targets=make_targets,
     )
     focused_domain_lanes = _focused_domain_lanes(domain_lanes)
+    dependency_bound_lanes = [
+        lane
+        for lane in selected_lanes
+        if _list_payload(lane.get("matched_paths"))
+        and (_list_payload(lane.get("command_dependencies")) or _list_payload(lane.get("package_dependencies")))
+    ]
+    focused_coverage_lanes = [
+        *focused_domain_lanes,
+        *[lane for lane in dependency_bound_lanes if lane not in focused_domain_lanes],
+    ]
     domain_handled_paths = {
-        str(path) for lane in focused_domain_lanes for path in _list_payload(lane.get("matched_paths")) if str(path).strip()
+        str(path) for lane in focused_coverage_lanes for path in _list_payload(lane.get("matched_paths")) if str(path).strip()
     }
     preliminary_focused_route_audit = _focused_route_coverage_audit(
         changed_paths=changed_paths,
-        domain_lanes=focused_domain_lanes,
+        domain_lanes=focused_coverage_lanes,
         unavailable_commands=[],
     )
     preliminary_route_refinement = _route_refinement_required_payload(
@@ -8887,6 +8976,20 @@ def _proof_selection_for_changed_paths(
     }
     proof_intents = [_proof_intent_for_lane(lane) for lane in selected_lanes]
     intent_by_lane_id = {intent["id"]: intent for intent in proof_intents}
+    declared_dependencies_by_command: dict[str, list[dict[str, Any]]] = {}
+    all_declared_dependencies: list[dict[str, Any]] = []
+    for selected_lane in selected_lanes:
+        for raw_dependency in [
+            *_list_payload(selected_lane.get("command_dependencies")),
+            *_list_payload(selected_lane.get("package_dependencies")),
+        ]:
+            if not isinstance(raw_dependency, dict):
+                continue
+            all_declared_dependencies.append(raw_dependency)
+            for dependency_command in _list_payload(raw_dependency.get("commands")):
+                dependency_command_text = str(dependency_command).strip()
+                if dependency_command_text:
+                    declared_dependencies_by_command.setdefault(dependency_command_text, []).append(raw_dependency)
     selected_commands: list[dict[str, Any]] = []
     for lane in selected_lanes:
         intent = intent_by_lane_id.get(str(lane.get("id", "")), {})
@@ -8903,6 +9006,19 @@ def _proof_selection_for_changed_paths(
                 route_source=route_source,
                 learned_confirmed=command_text in learned_confirmed_commands and route_source == "live-adapted-target-capability",
             )
+            declared_dependencies = declared_dependencies_by_command.get(command_text, [])
+            if not declared_dependencies:
+                declared_dependencies = [
+                    candidate
+                    for candidate in all_declared_dependencies
+                    if any(
+                        _proof_receipt_command_equivalent(command_text, str(candidate_command))
+                        for candidate_command in _list_payload(candidate.get("commands"))
+                    )
+                ]
+            dependency = declared_dependencies[0] if declared_dependencies else {}
+            subject_dependencies = [str(path) for path in _list_payload(dependency.get("subject_dependency")) if str(path).strip()]
+            distinct_claim = str(dependency.get("distinct_claim") or "").strip()
             selected_commands.append(
                 {
                     "kind": "proof-command/v1",
@@ -8924,6 +9040,10 @@ def _proof_selection_for_changed_paths(
                     "subject_contract": {
                         "kind": "agentic-workspace/proof-subject-request/v1",
                         "changed_paths": changed_paths,
+                        "declared_dependencies": subject_dependencies,
+                        "dependency_binding": "explicit" if subject_dependencies and distinct_claim else "implicit",
+                        "requirement": str(dependency.get("requirement") or ""),
+                        "distinct_claim": distinct_claim,
                         "revision_source": "proof_subject",
                         "run_attempt_identity_source": "validation receipt",
                     },
@@ -8951,7 +9071,7 @@ def _proof_selection_for_changed_paths(
     ]
     focused_route_coverage_audit = _focused_route_coverage_audit(
         changed_paths=changed_paths,
-        domain_lanes=_focused_domain_lanes(domain_lanes),
+        domain_lanes=focused_coverage_lanes,
         unavailable_commands=unavailable_commands,
     )
     route_refinement_required = _route_refinement_required_payload(
