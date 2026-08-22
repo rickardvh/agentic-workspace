@@ -1196,13 +1196,16 @@ def _producer_receipt(
 
 
 def _authority_producer_resolution(*, target_root: Path, assignment: dict[str, Any], proof: dict[str, Any]) -> dict[str, Any]:
+    assignment_producer = str(_as_mapping(assignment.get("receipt")).get("producer") or "assignment.lifecycle")
+    if assignment_producer not in {"assignment.lifecycle", "planning.owner-selection"}:
+        assignment_producer = "assignment.lifecycle"
     assignment_receipt = _producer_receipt(
         assignment,
         target_root=target_root,
         store_root=ASSIGNMENT_AUTHORITY_RECEIPT_DIR,
         field="assignment",
         expected_kind="agentic-workspace/assignment-authority-receipt/v1",
-        expected_producer="assignment.lifecycle",
+        expected_producer=assignment_producer,
     )
     proof_receipt = _producer_receipt(
         proof,
@@ -1243,6 +1246,7 @@ def _result_identity_payload(
     criterion: str,
     result: str,
     recorded_at: str,
+    observation_fingerprint: str,
     admission: dict[str, Any],
     proof: dict[str, Any],
 ) -> dict[str, Any]:
@@ -1252,6 +1256,7 @@ def _result_identity_payload(
         "criterion": criterion,
         "result": result,
         "recorded_at": recorded_at,
+        "observation_fingerprint": observation_fingerprint,
         "baseline_id": admission.get("baseline_id"),
         "baseline_head": admission.get("baseline_head"),
         "target_identity_ref": admission.get("target_identity_ref"),
@@ -1279,6 +1284,7 @@ def _observation_admission(
     criterion: str,
     result: str,
     recorded_at: str,
+    observation_fingerprint: str,
     previous_current_results: list[dict[str, Any]],
 ) -> dict[str, Any]:
     envelope = authority.get("authority_envelope", {}) if isinstance(authority.get("authority_envelope"), dict) else {}
@@ -1411,6 +1417,7 @@ def _observation_admission(
         criterion=criterion,
         result=result,
         recorded_at=recorded_at,
+        observation_fingerprint=observation_fingerprint,
         admission={
             "baseline_id": baseline.get("baseline_id"),
             "baseline_head": baseline.get("head"),
@@ -1644,8 +1651,8 @@ def _observation_authority_status(*, target_root: Path, evaluation_id: str) -> d
         )
         if stored_baseline.get("baseline_id") != live_baseline.get("baseline_id"):
             reason = "stale-mutation-baseline"
-    elif len(live_assignments) != 1:
-        reason = "missing-current-assignment" if not live_assignments else "ambiguous-current-assignment"
+    elif len(live_assignments) > 1:
+        reason = "ambiguous-current-assignment"
     elif (
         public_proof.get("kind") != "agentic-workspace/proof-receipt/v1"
         or public_proof.get("result") != "passed"
@@ -1653,12 +1660,31 @@ def _observation_authority_status(*, target_root: Path, evaluation_id: str) -> d
     ):
         reason = "missing-current-admitted-proof"
     else:
-        live_assignment = live_assignments[0]
-        gate = _as_mapping(live_assignment.get("assignment_gate"))
-        live_target = str(gate.get("target_identity_ref") or "").strip()
-        live_assignment_revision = str(live_assignment.get("current_revision") or gate.get("assignment_decision_revision") or "").strip()
+        assignment_receipt = _as_mapping(assignment.get("receipt"))
+        if live_assignments:
+            live_assignment = live_assignments[0]
+            gate = _as_mapping(live_assignment.get("assignment_gate"))
+            live_target = str(gate.get("target_identity_ref") or "").strip()
+            live_assignment_revision = str(
+                live_assignment.get("current_revision") or gate.get("assignment_decision_revision") or ""
+            ).strip()
+        elif assignment_receipt.get("producer") == "planning.owner-selection":
+            try:
+                active_owner = _active_planning_owner_assignment(target_root)
+                live_target = active_owner["target_identity_ref"]
+                live_assignment_revision = active_owner["revision"]
+            except WorkspaceUsageError:
+                live_target = ""
+                live_assignment_revision = ""
+                reason = "stale-active-planning-owner"
+        else:
+            live_target = ""
+            live_assignment_revision = ""
+            reason = "missing-current-assignment"
         live_proof_revision = "sha256:" + hashlib.sha256(json.dumps(public_proof, sort_keys=True, default=str).encode()).hexdigest()[:24]
-        if not live_target or not live_assignment_revision:
+        if reason:
+            pass
+        elif not live_target or not live_assignment_revision:
             reason = "incomplete-current-assignment"
         elif assignment.get("target_identity_ref") != live_target or assignment.get("assignment_revision") != live_assignment_revision:
             reason = "stale-assignment-authority"
@@ -1691,9 +1717,13 @@ def _observation_authority_status(*, target_root: Path, evaluation_id: str) -> d
     }
 
 
-def refresh_observation_authority(*, target_root: Path, evaluation_id: str) -> dict[str, Any]:
+def refresh_observation_authority(*, target_root: Path, evaluation_id: str, active_planning_owner: bool = False) -> dict[str, Any]:
     """Execute the public repair transition from live assignment and proof state."""
-    authority = _derive_observation_authority_from_public_state(target_root=target_root, evaluation_id=evaluation_id)
+    authority = _derive_observation_authority_from_public_state(
+        target_root=target_root,
+        evaluation_id=evaluation_id,
+        allow_active_planning_owner=active_planning_owner,
+    )
     return {
         "kind": "agentic-workspace/evaluation-observation-authority-refresh/v1",
         "operation_id": "evaluation.authority-refresh",
@@ -1704,7 +1734,28 @@ def refresh_observation_authority(*, target_root: Path, evaluation_id: str) -> d
     }
 
 
-def _derive_observation_authority_from_public_state(*, target_root: Path, evaluation_id: str) -> dict[str, Any]:
+def _active_planning_owner_assignment(target_root: Path) -> dict[str, str]:
+    selection = _load_json(target_root / ".agentic-workspace" / "local" / "planning" / "owner-selection.json", default={})
+    selected = _as_mapping(selection.get("selected_owner"))
+    owner_id = str(selected.get("id") or "").strip()
+    owner_ref = str(selected.get("ref") or "").strip()
+    if not owner_id or not owner_ref:
+        raise WorkspaceUsageError("evaluation observation authority unavailable (missing-active-planning-owner).")
+    owner = _load_json(target_root / owner_ref, default={})
+    if owner.get("kind") != "planning-execplan/v1" or owner.get("id") != owner_id or owner.get("lifecycle") != "live":
+        raise WorkspaceUsageError("evaluation observation authority unavailable (stale-active-planning-owner).")
+    revision = "sha256:" + hashlib.sha256(json.dumps(owner, sort_keys=True, default=str).encode()).hexdigest()[:24]
+    return {
+        "target_identity_ref": f"planning:{owner_id}",
+        "revision": revision,
+        "context_key": f"planning-owner::{owner_id}",
+        "producer": "planning.owner-selection",
+    }
+
+
+def _derive_observation_authority_from_public_state(
+    *, target_root: Path, evaluation_id: str, allow_active_planning_owner: bool = False
+) -> dict[str, Any]:
     """Bind observe to current public assignment and admitted proof state."""
     assignments_root = target_root / ".agentic-workspace" / "planning" / "assignments"
     assignments: list[dict[str, Any]] = []
@@ -1718,10 +1769,14 @@ def _derive_observation_authority_from_public_state(*, target_root: Path, evalua
     proof_path = target_root / ".agentic-workspace" / "local" / "proof-receipts" / "last.json"
     proof = _load_json(proof_path, default={})
     repair_command = f"agentic-workspace evaluation authority-refresh --target . --evaluation-id {evaluation_id} --format json"
-    if len(assignments) != 1:
+    stored_authority = _load_json(_observation_authority_path(target_root, evaluation_id), default={})
+    stored_assignment = _as_mapping(stored_authority.get("assignment"))
+    stored_receipt = _as_mapping(stored_assignment.get("receipt"))
+    use_active_owner = allow_active_planning_owner or stored_receipt.get("producer") == "planning.owner-selection"
+    if len(assignments) > 1 or (not assignments and not use_active_owner):
         raise WorkspaceUsageError(
             f"evaluation observation authority unavailable ({'missing' if not assignments else 'ambiguous'}-current-assignment); "
-            f"repair with public assignment lifecycle operations, then run `{repair_command}`."
+            f"repair with public assignment lifecycle operations or explicit active Planning owner authority, then run `{repair_command}`."
         )
     if (
         proof.get("kind") != "agentic-workspace/proof-receipt/v1"
@@ -1732,11 +1787,19 @@ def _derive_observation_authority_from_public_state(*, target_root: Path, evalua
             "evaluation observation authority unavailable (missing-current-admitted-proof); "
             f"record the selected proof through public `agentic-workspace proof --record-receipt`, then run `{repair_command}`."
         )
-    assignment = assignments[0]
-    gate = _as_mapping(assignment.get("assignment_gate"))
-    target_identity_ref = str(gate.get("target_identity_ref") or "").strip()
-    revision = str(assignment.get("current_revision") or gate.get("assignment_decision_revision") or "").strip()
-    context_key = f"{str(gate.get('task_class') or 'workspace-task')}::{str(gate.get('scope_class') or 'bounded-work')}"
+    if assignments:
+        assignment = assignments[0]
+        gate = _as_mapping(assignment.get("assignment_gate"))
+        target_identity_ref = str(gate.get("target_identity_ref") or "").strip()
+        revision = str(assignment.get("current_revision") or gate.get("assignment_decision_revision") or "").strip()
+        context_key = f"{str(gate.get('task_class') or 'workspace-task')}::{str(gate.get('scope_class') or 'bounded-work')}"
+        assignment_producer = "assignment.lifecycle"
+    else:
+        active_owner = _active_planning_owner_assignment(target_root)
+        target_identity_ref = active_owner["target_identity_ref"]
+        revision = active_owner["revision"]
+        context_key = active_owner["context_key"]
+        assignment_producer = active_owner["producer"]
     if not target_identity_ref or not revision:
         raise WorkspaceUsageError(f"evaluation observation authority unavailable (incomplete-current-assignment); run `{repair_command}`.")
     assignment_receipt_id = f"evaluation-assignment:{hashlib.sha256((target_identity_ref + revision).encode()).hexdigest()[:20]}"
@@ -1747,7 +1810,7 @@ def _derive_observation_authority_from_public_state(*, target_root: Path, evalua
         payload={
             "kind": "agentic-workspace/assignment-authority-receipt/v1",
             "receipt_id": assignment_receipt_id,
-            "producer": "assignment.lifecycle",
+            "producer": assignment_producer,
             "revision": revision,
             "target_identity_ref": target_identity_ref,
             "context_key": context_key,
@@ -1778,7 +1841,7 @@ def _derive_observation_authority_from_public_state(*, target_root: Path, evalua
         "receipt": {
             "kind": "agentic-workspace/assignment-authority-receipt/v1",
             "receipt_id": assignment_receipt_id,
-            "producer": "assignment.lifecycle",
+            "producer": assignment_producer,
             "revision": revision,
             "source_ref": assignment_ref,
         },
@@ -1893,6 +1956,9 @@ def _observation_idempotency_key(observation: dict[str, Any], authority: dict[st
         else None
     )
     source["proof_revision"] = authority.get("proof", {}).get("revision") if isinstance(authority.get("proof"), dict) else None
+    context = _as_mapping(observation.get("context"))
+    source["real_session"] = context.get("real_session")
+    source["convergence"] = context.get("convergence")
     return (
         "evaluation-observe:"
         + hashlib.sha256(json.dumps(source, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")).hexdigest()[:24]
@@ -1901,6 +1967,63 @@ def _observation_idempotency_key(observation: dict[str, Any], authority: dict[st
 
 def _jsonl_bytes(observations: list[dict[str, Any]]) -> int:
     return len("".join(json.dumps(item, sort_keys=True) + "\n" for item in observations).encode("utf-8"))
+
+
+def _validate_real_session_context(*, definition: dict[str, Any], criterion: str, result: str, context: dict[str, Any]) -> None:
+    policy = _as_mapping(definition.get("collection_policy"))
+    minimum = max(0, int(policy.get("representative_session_minimum", 0) or 0))
+    if not minimum:
+        return
+    session = _as_mapping(context.get("real_session"))
+    session_ref = str(session.get("session_ref") or "").strip()
+    workflow_classes = _string_list(session.get("workflow_classes"))
+    if not session_ref or not workflow_classes:
+        raise WorkspaceUsageError("real-session evaluation observations require context.real_session.session_ref and workflow_classes.")
+    if len(session_ref) > 160 or any(character.isspace() for character in session_ref):
+        raise WorkspaceUsageError("real-session session_ref must be a compact privacy-safe reference without whitespace.")
+    required_workflows = set(_string_list(policy.get("required_workflow_classes")))
+    unknown_workflows = sorted(set(workflow_classes) - required_workflows) if required_workflows else []
+    if unknown_workflows:
+        raise WorkspaceUsageError("real-session workflow_classes are not declared by collection policy: " + ", ".join(unknown_workflows))
+    if policy.get("privacy_safe_context_required"):
+        forbidden_keys = {"prompt", "raw_prompt", "transcript", "raw_transcript", "messages", "conversation"}
+
+        def contains_forbidden(value: Any) -> bool:
+            if isinstance(value, dict):
+                return any(str(key).lower() in forbidden_keys or contains_forbidden(item) for key, item in value.items())
+            if isinstance(value, list):
+                return any(contains_forbidden(item) for item in value)
+            return False
+
+        if contains_forbidden(context):
+            raise WorkspaceUsageError("real-session observation context must not contain raw prompts, transcripts, or messages.")
+    convergence_policy = _as_mapping(policy.get("convergence"))
+    if criterion != str(convergence_policy.get("criterion") or ""):
+        return
+    convergence = _as_mapping(context.get("convergence"))
+    required_fields = _string_list(convergence_policy.get("required_fields"))
+    missing = [field for field in required_fields if convergence.get(field) in (None, "", [], {})]
+    if missing:
+        raise WorkspaceUsageError("matched convergence context is missing required fields: " + ", ".join(missing))
+    if str(convergence.get("before_session_ref") or "") == str(convergence.get("later_session_ref") or ""):
+        raise WorkspaceUsageError("matched convergence evidence requires a distinct later real session.")
+    for field in ("human_steering_avoided_next_time", "original_friction_recurred"):
+        if not isinstance(convergence.get(field), bool):
+            raise WorkspaceUsageError(f"matched convergence context requires boolean {field}.")
+    before_cost = _as_mapping(convergence.get("before_cost"))
+    after_cost = _as_mapping(convergence.get("after_cost"))
+    before_units = before_cost.get("total_work_units")
+    after_units = after_cost.get("total_work_units")
+    if not isinstance(before_units, (int, float)) or not isinstance(after_units, (int, float)):
+        raise WorkspaceUsageError("matched convergence costs require numeric before_cost/after_cost.total_work_units.")
+    if result == "supports" and not (
+        after_units < before_units
+        and convergence["human_steering_avoided_next_time"] is True
+        and convergence["original_friction_recurred"] is False
+    ):
+        raise WorkspaceUsageError(
+            "supporting convergence evidence requires lower work units, avoided human steering, and no recurring friction."
+        )
 
 
 def _retention_plan(observations: list[dict[str, Any]]) -> dict[str, Any]:
@@ -1986,6 +2109,13 @@ def append_observation(
         raise WorkspaceUsageError(f"confidence must be one of: {', '.join(sorted(VALID_CONFIDENCE))}.")
     if burden not in VALID_BURDEN:
         raise WorkspaceUsageError(f"burden must be one of: {', '.join(sorted(VALID_BURDEN))}.")
+    observation_context = context or {}
+    _validate_real_session_context(
+        definition=definition,
+        criterion=criterion,
+        result=result,
+        context=observation_context,
+    )
     recorded_at = _now()
     observation = {
         "kind": EVALUATION_OBSERVATION_KIND,
@@ -1994,13 +2124,26 @@ def append_observation(
         "definition_revision": definition["revision"],
         "criterion": criterion,
         "result": result,
-        "context": context or {},
+        "context": observation_context,
         "evidence_refs": evidence_refs,
         "confidence": confidence,
         "burden": burden,
         "finding": finding,
         "recommended_action": recommended_action,
     }
+    observation_fingerprint = hashlib.sha256(
+        json.dumps(
+            {
+                "context": observation_context,
+                "evidence_refs": evidence_refs,
+                "finding": finding,
+                "recommended_action": recommended_action,
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+            default=str,
+        ).encode("utf-8")
+    ).hexdigest()
     assignments_root = target_root / ".agentic-workspace" / "planning" / "assignments"
     public_proof_path = target_root / ".agentic-workspace" / "local" / "proof-receipts" / "last.json"
     public_state_present = bool(list(assignments_root.glob("*.assignment.json"))) or public_proof_path.is_file()
@@ -2012,12 +2155,12 @@ def append_observation(
         if public_state_present
         else _load_observation_authority(target_root, evaluation_id)
     )
-    if not observation["context"]:
-        observation["context"] = {
-            "assignment": authority["assignment"],
-            "authority_envelope": authority["authority_envelope"],
-            "proof": authority["proof"],
-        }
+    observation["context"] = {
+        "assignment": authority["assignment"],
+        "authority_envelope": authority["authority_envelope"],
+        "proof": authority["proof"],
+        **observation["context"],
+    }
     observation["idempotency_key"] = _observation_idempotency_key(observation, authority)
     path = _observation_path(target_root, evaluation_id)
     lock_path = path.with_suffix(path.suffix + ".lock")
@@ -2056,6 +2199,7 @@ def append_observation(
             criterion=criterion,
             result=result,
             recorded_at=recorded_at,
+            observation_fingerprint=observation_fingerprint,
             previous_current_results=previous_current_results,
         )
         if admission["status"] == "rejected":
@@ -2660,6 +2804,106 @@ def _evaluation_operating_loop_projection(
     }
 
 
+def _real_session_coverage(definition: dict[str, Any], observations: list[dict[str, Any]]) -> dict[str, Any]:
+    """Resolve configured real-session and convergence gates from compact observation context."""
+    policy = _as_mapping(definition.get("collection_policy"))
+    minimum = max(0, int(policy.get("representative_session_minimum", 0) or 0))
+    required_workflows = sorted(set(_string_list(policy.get("required_workflow_classes"))))
+    sessions: dict[str, set[str]] = {}
+    observations_without_session: list[str] = []
+    for observation in observations:
+        context = _as_mapping(observation.get("context"))
+        session = _as_mapping(context.get("real_session"))
+        session_ref = str(session.get("session_ref") or "").strip()
+        workflow_classes = set(_string_list(session.get("workflow_classes")))
+        if not session_ref or not workflow_classes:
+            observations_without_session.append(str(observation.get("criterion") or "unknown"))
+            continue
+        sessions.setdefault(session_ref, set()).update(workflow_classes)
+
+    observed_workflows = sorted({workflow for workflows in sessions.values() for workflow in workflows})
+    missing_workflows = sorted(set(required_workflows) - set(observed_workflows))
+    convergence_policy = _as_mapping(policy.get("convergence"))
+    convergence_required = bool(convergence_policy)
+    convergence_criterion = str(convergence_policy.get("criterion") or "").strip()
+    convergence_observation = next(
+        (item for item in reversed(observations) if item.get("criterion") == convergence_criterion),
+        {},
+    )
+    convergence = _as_mapping(_as_mapping(convergence_observation.get("context")).get("convergence"))
+    required_convergence_fields = _string_list(convergence_policy.get("required_fields"))
+    missing_convergence_fields = [field for field in required_convergence_fields if convergence.get(field) in (None, "", [], {})]
+    before_ref = str(convergence.get("before_session_ref") or "").strip()
+    later_ref = str(convergence.get("later_session_ref") or "").strip()
+    distinct_later_session = bool(before_ref and later_ref and before_ref != later_ref)
+    convergence_complete = not convergence_required or (
+        bool(convergence_observation)
+        and not missing_convergence_fields
+        and distinct_later_session
+        and isinstance(convergence.get("human_steering_avoided_next_time"), bool)
+        and isinstance(convergence.get("original_friction_recurred"), bool)
+    )
+    before_cost = _as_mapping(convergence.get("before_cost"))
+    after_cost = _as_mapping(convergence.get("after_cost"))
+    before_units = before_cost.get("total_work_units")
+    after_units = after_cost.get("total_work_units")
+    cost_reduced = after_units < before_units if isinstance(before_units, (int, float)) and isinstance(after_units, (int, float)) else None
+    return {
+        "status": ("satisfied" if len(sessions) >= minimum and not missing_workflows and convergence_complete else "collecting"),
+        "required_representative_sessions": minimum,
+        "representative_session_count": len(sessions),
+        "session_refs": sorted(sessions),
+        "required_workflow_classes": required_workflows,
+        "observed_workflow_classes": observed_workflows,
+        "missing_workflow_classes": missing_workflows,
+        "observations_without_session_context": observations_without_session,
+        "convergence": {
+            "required": convergence_required,
+            "criterion": convergence_criterion or None,
+            "status": "satisfied" if convergence_complete else "evidence-required",
+            "missing_fields": missing_convergence_fields,
+            "distinct_later_session": distinct_later_session if convergence_required else None,
+            "human_steering_avoided_next_time": convergence.get("human_steering_avoided_next_time"),
+            "original_friction_recurred": convergence.get("original_friction_recurred"),
+            "cost_reduced": cost_reduced,
+        },
+    }
+
+
+def _conclusion_readiness(
+    *,
+    definition: dict[str, Any],
+    current_observations: list[dict[str, Any]],
+    required_criteria: list[dict[str, Any]],
+    contradictions: list[dict[str, Any]],
+    finding_followup: dict[str, Any],
+) -> tuple[bool, str, dict[str, Any]]:
+    policy = _as_mapping(definition.get("collection_policy"))
+    minimum_observations = int(policy.get("minimum_observations", 1))
+    session_coverage = _real_session_coverage(definition, current_observations)
+    criteria_complete = len([item for item in required_criteria if item["state"] == "satisfied"]) == len(required_criteria)
+    criteria_terminal = criteria_complete or bool(contradictions) or definition.get("lifecycle") == "enough-signal"
+    ready = (
+        len(current_observations) >= minimum_observations
+        and criteria_terminal
+        and session_coverage["status"] == "satisfied"
+        and finding_followup["status"] != "unresolved"
+    )
+    if ready:
+        reason = "ready"
+    elif finding_followup["status"] == "unresolved":
+        reason = "material-finding-followup-unresolved"
+    elif session_coverage["representative_session_count"] < session_coverage["required_representative_sessions"]:
+        reason = "requires-representative-real-sessions"
+    elif session_coverage["missing_workflow_classes"]:
+        reason = "requires-representative-workflow-coverage"
+    elif session_coverage["convergence"]["status"] != "satisfied":
+        reason = "requires-matched-convergence-evidence"
+    else:
+        reason = "needs-more-observations-or-owner-review"
+    return ready, reason, session_coverage
+
+
 def evaluation_summary(*, target_root: Path, evaluation_id: str | None = None) -> dict[str, Any]:
     definitions = _definitions_payload(target_root)
     selected = [
@@ -2686,14 +2930,15 @@ def evaluation_summary(*, target_root: Path, evaluation_id: str | None = None) -
         stale_revision_count = len(bound_observations) - len(current_bound_observations)
         criteria = _criterion_status(definition, current_bound_observations)
         required = [item for item in criteria if item["required"]]
-        satisfied = [item for item in required if item["state"] == "satisfied"]
         contradictions = [item for item in criteria if item["state"] == "contradicted"]
         min_observations = int(definition.get("collection_policy", {}).get("minimum_observations", 1))
         finding_followup = _material_finding_followup(target_root, definition, current_bound_observations)
-        conclusion_ready = (
-            len(current_bound_observations) >= min_observations
-            and (len(satisfied) == len(required) or bool(contradictions) or definition.get("lifecycle") == "enough-signal")
-            and finding_followup["status"] != "unresolved"
+        conclusion_ready, readiness_reason, session_coverage = _conclusion_readiness(
+            definition=definition,
+            current_observations=current_bound_observations,
+            required_criteria=required,
+            contradictions=contradictions,
+            finding_followup=finding_followup,
         )
         freshness_status = (
             "fresh-bound"
@@ -2705,11 +2950,7 @@ def evaluation_summary(*, target_root: Path, evaluation_id: str | None = None) -
             else "missing"
         )
         not_ready_reason = (
-            "material-finding-followup-unresolved"
-            if finding_followup["status"] == "unresolved"
-            else "requires-bound-current-observation"
-            if historical_observations
-            else "needs-more-observations-or-owner-review"
+            "requires-bound-current-observation" if historical_observations and not current_bound_observations else readiness_reason
         )
         current_result = current_bound_observations[-1] if current_bound_observations else {}
         current_admission = current_result.get("admission", {}) if isinstance(current_result.get("admission"), dict) else {}
@@ -2744,6 +2985,7 @@ def evaluation_summary(*, target_root: Path, evaluation_id: str | None = None) -
                 "stale_authority_count": len(stale_observations),
                 "superseded_result_count": superseded_count,
                 "minimum_observations": min_observations,
+                "real_sessions": session_coverage,
             },
             "criterion_status": criteria,
             "contradictions": contradictions,
@@ -2832,14 +3074,15 @@ def _default_evaluation_status_item(*, target_root: Path, definition: dict[str, 
     superseded_ids = set(current_results["superseded_ids"])
     criteria = _criterion_status(definition, current_observations)
     required = [item for item in criteria if item["required"]]
-    satisfied = [item for item in required if item["state"] == "satisfied"]
     contradictions = [item for item in criteria if item["state"] == "contradicted"]
     minimum_observations = int(definition.get("collection_policy", {}).get("minimum_observations", 1))
     finding_followup = _material_finding_followup(target_root, definition, current_observations)
-    conclusion_ready = (
-        len(current_observations) >= minimum_observations
-        and (len(satisfied) == len(required) or bool(contradictions) or definition.get("lifecycle") == "enough-signal")
-        and finding_followup["status"] != "unresolved"
+    conclusion_ready, readiness_reason, session_coverage = _conclusion_readiness(
+        definition=definition,
+        current_observations=current_observations,
+        required_criteria=required,
+        contradictions=contradictions,
+        finding_followup=finding_followup,
     )
     freshness_status = (
         "fresh-bound"
@@ -2850,13 +3093,7 @@ def _default_evaluation_status_item(*, target_root: Path, definition: dict[str, 
         if legacy_observations
         else "missing"
     )
-    not_ready_reason = (
-        "material-finding-followup-unresolved"
-        if finding_followup["status"] == "unresolved"
-        else "requires-bound-current-observation"
-        if historical_observations
-        else "needs-more-observations-or-owner-review"
-    )
+    not_ready_reason = "requires-bound-current-observation" if historical_observations and not current_observations else readiness_reason
     current_result = current_observations[-1] if current_observations else {}
     identity = _as_mapping(current_result.get("result_identity"))
     compact_identity = {
@@ -2878,6 +3115,7 @@ def _default_evaluation_status_item(*, target_root: Path, definition: dict[str, 
             [item for item in bound_observations if str(_as_mapping(item.get("result_identity")).get("id") or "") in superseded_ids]
         ),
         "minimum_observations": minimum_observations,
+        "real_sessions": session_coverage,
     }
     conclusion = {"ready": conclusion_ready, "reason_code": "ready" if conclusion_ready else not_ready_reason}
     next_action = (
@@ -3629,6 +3867,7 @@ def _evaluation_adapter_payload(args: Any, *, target_root: Path) -> dict[str, An
         return refresh_observation_authority(
             target_root=target_root,
             evaluation_id=_require_non_empty(getattr(args, "evaluation_id", ""), "evaluation_id"),
+            active_planning_owner=bool(getattr(args, "active_planning_owner", False)),
         )
     if command == "status":
         return evaluation_status_payload(

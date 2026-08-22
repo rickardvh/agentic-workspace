@@ -297,7 +297,30 @@
         "minimum_observations": 6,
         "mode": "local-first",
         "privacy": "compact structured observations only; raw prompts and full transcripts remain local or externally referenced",
+        "privacy_safe_context_required": true,
+        "required_workflow_classes": [
+          "cross-session",
+          "direct",
+          "module",
+          "planning-continuation",
+          "planning-independent",
+          "scoped-instruction"
+        ],
         "representative_session_minimum": 4,
+        "convergence": {
+          "criterion": "adaptation-convergence",
+          "required_fields": [
+            "adaptation_revision",
+            "after_cost",
+            "before_cost",
+            "before_session_ref",
+            "canonical_owner_ref",
+            "equivalent_task_class",
+            "human_steering_avoided_next_time",
+            "later_session_ref",
+            "original_friction_recurred"
+          ]
+        },
         "retention": "latest-current-per-criterion"
       },
       "conclusion_policy": {
@@ -391,7 +414,7 @@
           "id": "#2647"
         }
       ],
-      "revision": 2,
+      "revision": 3,
       "selectors": {
         "commands": [
           "start",
@@ -418,7 +441,7 @@
         "comparison_boundary": "Pre-v0.42 evidence is contextual only unless task shape and runtime are matched.",
         "ref": "#2646",
         "type": "workspace-operating-context",
-        "version_range": "v0.42-current through merged PRs #2653/#2654 and PR #2655 on master"
+        "version_range": "v0.42-current through merged PRs #2653, #2654, and #2655 on master"
       },
       "updated_at": "2026-08-22T00:00:00Z"
     }

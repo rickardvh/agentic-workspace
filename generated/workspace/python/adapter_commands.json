@@ -3047,7 +3047,7 @@
           ]
         },
         {
-          "help": "Refresh observation authority from live public assignment and proof state.",
+          "help": "Refresh observation authority from a live public assignment or explicit active Planning owner and proof state.",
           "name": "authority-refresh",
           "operation_ref": {
             "id": "evaluation.authority-refresh",
@@ -3079,6 +3079,14 @@
               ],
               "name": "evaluation_id",
               "required": true
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--active-planning-owner"
+              ],
+              "help": "Use the explicitly selected active Planning owner when no current delegated assignment exists.",
+              "name": "active_planning_owner"
             }
           ]
         },

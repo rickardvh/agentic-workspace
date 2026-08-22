@@ -5,9 +5,9 @@
   "owner_level": "slice",
   "lifecycle": "live",
   "phase": "implementation",
-  "revision": 8,
+  "revision": 10,
   "intent": {
-    "outcome": "Deliver #2641 through #2647 through a three-PR sequence that makes independent routing and closeout compact, makes review/validation writes recoverable and identity-safe, and proves bounded source-owned adaptation with real-session evaluation; #2653 and #2654 are merged and #2655 now targets master.",
+    "outcome": "Preserve the merged #2641-#2645 foundations and deliver the remaining #2646/#2647 work through a new two-PR stack: enforce representative real-session convergence in Evaluation, then admit and conclude the current evidence through the existing bounded-adaptation owners.",
     "non_goals": [
       "Do not add a second workflow, proof cache, PR tracker, event store, optimiser, or learned override layer.",
       "Do not weaken active-owner overlap protection, proof admission, authority, or closeout claim boundaries to reduce cost.",
@@ -48,6 +48,11 @@
       "refs": [
         "GitHub issues #2641 #2642 #2643 #2644 #2645 #2646 #2647"
       ]
+    },
+    "delegation": {
+      "state": "recorded",
+      "route": "keep-local",
+      "reason": "User requested implementation in this task; the active multi-agent policy does not authorize sub-agent delegation, and the evidence-admission slice shares one live worktree and evaluation authority."
     }
   },
   "references": [
@@ -59,9 +64,9 @@
       "locator": ""
     }
   ],
-  "next_action": "Collect six current criteria-bearing observations across at least four representative real sessions, including a fresh module observation and a matched friction/adaptation/later-equivalent-task sequence, before concluding #2646.",
+  "next_action": "Publish the session-aware Evaluation enforcement PR, then stack the privacy-safe real-session observations and final #2646/#2647 owner disposition on top.",
   "blockers": [
-    "No current real-session observations are admitted for operating-context-cost-convergence-2646; implementation and deterministic test artifacts cannot substitute for the required session evidence."
+    "The evidence PR must not conclude #2646/#2647 until six current observations cover four representative sessions, all declared workflow classes, and the matched canonical-adaptation sequence."
   ],
   "proof": {
     "claims": [
@@ -90,12 +95,19 @@
       "Durable #2645 replay maps reused, rerun-required, and excluded-unrelated subjects and removes 171.6 seconds of attributable Planning work at .agentic-workspace/planning/closeout-evidence/issue-2645-proof-route-cost-replay.replay.json",
       "57 focused adaptation and Evaluation tests passed; one inherited #1969 lane-artifact assertion remains excluded because its parent lane file is absent",
       "make maintainer-surfaces passed after adding the generated bounded-adaptation schema reference",
-      "Evaluation operating-context-cost-convergence-2646 remains collecting: no current real-session observations are admitted, and six criteria-bearing observations across at least four sessions are still required"
+      "Evaluation operating-context-cost-convergence-2646 remains collecting: no current real-session observations are admitted, and six criteria-bearing observations across at least four sessions are still required",
+      "55 Evaluation tests pass with representative-session, workflow-coverage, privacy, matched-convergence, and same-second result-identity regression coverage"
     ]
   },
   "continuation": {
     "owner": "issue-2647",
     "residual_intent": "Do not close #2647 until a later equivalent real task proves canonical convergence, and keep #2646 collecting until all six criteria are represented across four current sessions."
   },
-  "specialist_contracts": []
+  "specialist_contracts": [
+    {
+      "kind": "planning-delegation/v1",
+      "target": "planning://delegation/keep-local",
+      "revision": 1
+    }
+  ]
 }

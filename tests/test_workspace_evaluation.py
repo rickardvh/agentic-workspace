@@ -1351,6 +1351,138 @@ def test_evaluation_register_observe_and_summary_are_schema_valid(tmp_path: Path
     assert "universal_lifecycle_authority" in operating_loop["specialist_authority"]
 
 
+def test_evaluation_requires_distinct_real_sessions_and_matched_convergence(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    definition = _definition_kwargs()
+    definition["collection_policy"] = {
+        "mode": "local-first",
+        "minimum_observations": 2,
+        "representative_session_minimum": 2,
+        "privacy_safe_context_required": True,
+        "required_workflow_classes": ["direct", "module"],
+        "convergence": {
+            "criterion": "coverage",
+            "required_fields": [
+                "before_session_ref",
+                "later_session_ref",
+                "canonical_owner_ref",
+                "adaptation_revision",
+                "equivalent_task_class",
+                "before_cost",
+                "after_cost",
+                "human_steering_avoided_next_time",
+                "original_friction_recurred",
+            ],
+        },
+    }
+    register_evaluation(target_root=tmp_path, **definition)
+
+    _bound_context(tmp_path)
+    first_context = {"real_session": {"session_ref": "session:before", "workflow_classes": ["direct"]}}
+    append_observation(
+        target_root=tmp_path,
+        evaluation_id="eval-1969-operating-loop",
+        criterion="reconstruction-cost",
+        result="supports",
+        evidence_refs=["receipt:before"],
+        context=first_context,
+    )
+    convergence = {
+        "before_session_ref": "session:before",
+        "later_session_ref": "session:later",
+        "canonical_owner_ref": ".agentic-workspace/proof-route-hints.json",
+        "adaptation_revision": "sha256:canonical-owner-revision",
+        "equivalent_task_class": "focused-proof-selection",
+        "before_cost": {"total_work_units": 4, "reruns": 2},
+        "after_cost": {"total_work_units": 1, "reruns": 0},
+        "human_steering_avoided_next_time": True,
+        "original_friction_recurred": False,
+    }
+    same_session_context = {
+        "real_session": {"session_ref": "session:before", "workflow_classes": ["module"]},
+        "convergence": convergence,
+    }
+    append_observation(
+        target_root=tmp_path,
+        evaluation_id="eval-1969-operating-loop",
+        criterion="coverage",
+        result="supports",
+        evidence_refs=["receipt:same-session"],
+        context=same_session_context,
+    )
+
+    collecting = evaluation_summary(target_root=tmp_path, evaluation_id="eval-1969-operating-loop")["summaries"][0]
+    assert collecting["conclusion_readiness"] == {
+        "ready": False,
+        "reason_code": "requires-representative-real-sessions",
+    }
+    assert collecting["coverage"]["real_sessions"]["representative_session_count"] == 1
+
+    later_context = {
+        "real_session": {"session_ref": "session:later", "workflow_classes": ["module"]},
+        "convergence": convergence,
+    }
+    append_observation(
+        target_root=tmp_path,
+        evaluation_id="eval-1969-operating-loop",
+        criterion="coverage",
+        result="supports",
+        evidence_refs=["receipt:later-session"],
+        context=later_context,
+    )
+
+    ready = evaluation_summary(target_root=tmp_path, evaluation_id="eval-1969-operating-loop")["summaries"][0]
+    assert ready["conclusion_readiness"] == {"ready": True, "reason_code": "ready"}
+    assert ready["coverage"]["real_sessions"] == {
+        "status": "satisfied",
+        "required_representative_sessions": 2,
+        "representative_session_count": 2,
+        "session_refs": ["session:before", "session:later"],
+        "required_workflow_classes": ["direct", "module"],
+        "observed_workflow_classes": ["direct", "module"],
+        "missing_workflow_classes": [],
+        "observations_without_session_context": [],
+        "convergence": {
+            "required": True,
+            "criterion": "coverage",
+            "status": "satisfied",
+            "missing_fields": [],
+            "distinct_later_session": True,
+            "human_steering_avoided_next_time": True,
+            "original_friction_recurred": False,
+            "cost_reduced": True,
+        },
+    }
+
+
+def test_real_session_observation_rejects_raw_transcript_context(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    definition = _definition_kwargs()
+    definition["collection_policy"] = {
+        "mode": "local-first",
+        "minimum_observations": 1,
+        "representative_session_minimum": 1,
+        "privacy_safe_context_required": True,
+        "required_workflow_classes": ["direct"],
+    }
+    register_evaluation(target_root=tmp_path, **definition)
+    _bound_context(tmp_path)
+    context = {
+        "real_session": {"session_ref": "session:1", "workflow_classes": ["direct"]},
+        "transcript": "raw conversation text",
+    }
+
+    with pytest.raises(WorkspaceUsageError, match="must not contain raw prompts, transcripts, or messages"):
+        append_observation(
+            target_root=tmp_path,
+            evaluation_id="eval-1969-operating-loop",
+            criterion="reconstruction-cost",
+            result="supports",
+            evidence_refs=["receipt:1"],
+            context=context,
+        )
+
+
 def test_evaluation_update_increments_revision_without_rewriting_observations(tmp_path: Path) -> None:
     _init_git_repo(tmp_path)
     register_evaluation(target_root=tmp_path, **_definition_kwargs())
@@ -2119,6 +2251,84 @@ def test_evaluation_observe_derives_and_revalidates_authority_from_public_assign
     assert proof_stale["summaries"][0]["observation_authority"]["freshness_reason"] == "stale-proof-authority"
 
 
+def test_evaluation_authority_refresh_uses_explicit_active_planning_owner_without_assignment(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    feature_path = tmp_path / "src/feature.py"
+    feature_path.parent.mkdir(parents=True, exist_ok=True)
+    feature_path.write_text("pass\n", encoding="utf-8")
+    subprocess.run(["git", "add", "src/feature.py"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "commit", "-m", "add feature"], cwd=tmp_path, check=True, capture_output=True)
+    register_evaluation(target_root=tmp_path, **_definition_kwargs())
+    plan_ref = ".agentic-workspace/planning/execplans/current.plan.json"
+    plan_path = tmp_path / plan_ref
+    plan_path.parent.mkdir(parents=True)
+    plan_path.write_text(
+        json.dumps({"kind": "planning-execplan/v1", "id": "current-plan", "lifecycle": "live", "revision": 1}),
+        encoding="utf-8",
+    )
+    selection_path = tmp_path / ".agentic-workspace/local/planning/owner-selection.json"
+    selection_path.parent.mkdir(parents=True)
+    selection_path.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-planning/owner-selection/v1",
+                "selected_owner": {"id": "current-plan", "ref": plan_ref},
+            }
+        ),
+        encoding="utf-8",
+    )
+    proof_path = tmp_path / ".agentic-workspace/local/proof-receipts/last.json"
+    proof_path.parent.mkdir(parents=True)
+    proof_path.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/proof-receipt/v1",
+                "result": "passed",
+                "changed_paths": ["src/feature.py"],
+                "proof_subject": {
+                    "repository_head": subprocess.run(
+                        ["git", "rev-parse", "HEAD"], cwd=tmp_path, capture_output=True, text=True
+                    ).stdout.strip()
+                },
+                "admission": {"admitted": True, "proof_sufficient": True},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    refreshed = evaluation_module.refresh_observation_authority(
+        target_root=tmp_path,
+        evaluation_id="eval-1969-operating-loop",
+        active_planning_owner=True,
+    )
+    assert refreshed["authority"]["status"] == "current"
+    authority = json.loads((tmp_path / ".agentic-workspace/local/evaluations/eval-1969-operating-loop.authority.json").read_text())
+    assert authority["assignment"]["target_identity_ref"] == "planning:current-plan"
+    assert authority["assignment"]["receipt"]["producer"] == "planning.owner-selection"
+
+    observed = append_observation(
+        target_root=tmp_path,
+        evaluation_id="eval-1969-operating-loop",
+        criterion="reconstruction-cost",
+        result="supports",
+        evidence_refs=["proof:active-owner"],
+    )
+    assert observed["outcome"] == "appended"
+    assert (
+        evaluation_summary(target_root=tmp_path, evaluation_id="eval-1969-operating-loop")["summaries"][0]["observation_authority"][
+            "status"
+        ]
+        == "current"
+    )
+
+    plan_path.write_text(
+        json.dumps({"kind": "planning-execplan/v1", "id": "current-plan", "lifecycle": "live", "revision": 2}),
+        encoding="utf-8",
+    )
+    stale = evaluation_summary(target_root=tmp_path, evaluation_id="eval-1969-operating-loop")["summaries"][0]
+    assert stale["observation_authority"]["freshness_reason"] == "stale-assignment-authority"
+
+
 def test_evaluation_authority_refresh_fails_closed_for_ambiguous_assignment_and_forged_proof(tmp_path: Path) -> None:
     _init_git_repo(tmp_path)
     register_evaluation(target_root=tmp_path, **_definition_kwargs())
@@ -2296,10 +2506,19 @@ def test_operating_context_convergence_evaluation_is_owner_bound_and_privacy_saf
     evaluation = next(item for item in payload["evaluations"] if item["id"] == "operating-context-cost-convergence-2646")
 
     assert evaluation["lifecycle"] == "collecting"
-    assert evaluation["subject"]["version_range"] == "v0.42-current through merged PRs #2653/#2654 and PR #2655 on master"
+    assert evaluation["subject"]["version_range"] == "v0.42-current through merged PRs #2653, #2654, and #2655 on master"
     assert evaluation["decision_owner"] == {"class": "maintainer", "id": "workspace-maintainer"}
     assert evaluation["collection_policy"]["minimum_observations"] == 6
     assert evaluation["collection_policy"]["representative_session_minimum"] == 4
+    assert evaluation["collection_policy"]["privacy_safe_context_required"] is True
+    assert set(evaluation["collection_policy"]["required_workflow_classes"]) == {
+        "direct",
+        "scoped-instruction",
+        "module",
+        "planning-continuation",
+        "planning-independent",
+        "cross-session",
+    }
     assert "raw prompts and full transcripts remain local" in evaluation["collection_policy"]["privacy"]
     assert {criterion["id"] for criterion in evaluation["criteria"]} == {
         "direct-default-quality",

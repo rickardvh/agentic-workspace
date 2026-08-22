@@ -7,7 +7,8 @@
   "type": "object",
   "required": ["evaluation_id"],
   "properties": {
-    "evaluation_id": {"type": "string", "minLength": 1, "description": "Registered evaluation whose observation authority will be refreshed."}
+    "evaluation_id": {"type": "string", "minLength": 1, "description": "Registered evaluation whose observation authority will be refreshed."},
+    "active_planning_owner": {"type": "boolean", "description": "Use the current explicit Planning owner selection as local observation custody when no delegated assignment exists."}
   },
   "additionalProperties": true
 }

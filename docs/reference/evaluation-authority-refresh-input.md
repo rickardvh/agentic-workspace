@@ -12,3 +12,4 @@ Input accepted by the generated evaluation.authority-refresh operation.
 | --- | --- | --- | --- | --- | --- | --- |
 | (root) | object | yes |  | Input accepted by the generated evaluation.authority-refresh operation. |  | x-agentic-workspace-doc-role: "schema-reference" |
 | `evaluation_id` | string | yes |  | Registered evaluation whose observation authority will be refreshed. |  |  |
+| `active_planning_owner` | boolean | no |  | Use the current explicit Planning owner selection as local observation custody when no delegated assignment exists. |  |  |
