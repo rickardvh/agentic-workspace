@@ -26,8 +26,7 @@ from agentic_workspace.current_work_context import resolve_current_work_context
 from agentic_workspace.result_adapter import serialise_value
 
 SESSION_LOG_ROOT = Path(".agentic-workspace") / "local" / "logs"
-SESSION_POINTER_PATH = Path(".agentic-workspace") / "local" / "session-logging" / "current.json"
-SESSION_POINTER_KIND = "agentic-workspace/session-logging-current/v1"
+SESSION_RECORD_KIND = "agentic-workspace/session-logging-record/v1"
 SESSION_REGISTRY_PATH = Path(".agentic-workspace") / "local" / "session-logging" / "sessions.json"
 SESSION_REGISTRY_LOCK_PATH = Path(".agentic-workspace") / "local" / "session-logging" / ".sessions.lock"
 SESSION_REGISTRY_KIND = "agentic-workspace/session-logging-registry/v1"
@@ -130,7 +129,7 @@ def run_with_session_logging(
 ) -> int:
     argv_list = list(argv)
     state = load_state_for_argv(argv_list, cwd=cwd)
-    if not state.enabled:
+    if not state.enabled or not _logical_session_identity():
         return runner(argv_list)
     if _suppress_pytest_origin_capture():
         return runner(argv_list)
@@ -318,7 +317,7 @@ def append_command_entry(
     capture: CommandCapture,
     parent_context: dict[str, str] | None = None,
 ) -> str | None:
-    if not state.enabled:
+    if not state.enabled or not _logical_session_identity():
         return None
     try:
         session = ensure_session(state=state)
@@ -382,6 +381,8 @@ def append_note(*, state: SessionLoggingState, text: str) -> dict[str, Any]:
             "path": "",
             "rule": "Notes are optional and local-only; disabled logging is not a warning.",
         }
+    if not _logical_session_identity():
+        return _identity_required_payload(kind="agentic-workspace/session-log-note/v1")
     session = ensure_session(state=state)
     timestamp = datetime.now(UTC).isoformat()
     note = _normalize_for_log(state, text.strip())
@@ -530,6 +531,8 @@ def capture_improvement_signal(
 def reset_session(*, state: SessionLoggingState) -> dict[str, Any]:
     if not state.enabled:
         return status_payload(state=state)
+    if not _logical_session_identity():
+        return _identity_required_payload(kind="agentic-workspace/session-log-session/v1")
     session = ensure_session(state=state, force_new=True)
     return {
         "kind": "agentic-workspace/session-log-session/v1",
@@ -543,15 +546,18 @@ def reset_session(*, state: SessionLoggingState) -> dict[str, Any]:
 def status_payload(*, state: SessionLoggingState) -> dict[str, Any]:
     logical_identity = _logical_session_identity()
     session = _session_for_caller(target_root=state.target_root, logical_identity=logical_identity)
+    session_scope = _session_scope_payload(session=session, explicit_selection=False)
     return {
         "kind": "agentic-workspace/session-logging-status/v1",
+        "status": "ready" if logical_identity else "logical-session-identity-required",
         "enabled": state.enabled,
         "target": state.target_root.as_posix(),
         "config_source": _logging_config_source(state),
         "path": session.get("log_path", "") if session else "",
         "index_path": _index_path_for_session(session).as_posix() if session else "",
         "session_id": session.get("session_id", "") if session else "",
-        "logical_session_resolution": "identity-registry" if logical_identity else "legacy-default-bucket",
+        "logical_session_resolution": "identity-registry" if logical_identity else "identity-required",
+        "session_scope": session_scope,
         "logical_session_identity_source": LOGICAL_SESSION_IDENTITY_ENV if logical_identity else "",
         "raw_logical_session_identity_stored": False,
         "path_normalization": _path_normalization_payload(state),
@@ -564,33 +570,26 @@ def status_payload(*, state: SessionLoggingState) -> dict[str, Any]:
 
 def ensure_session(*, state: SessionLoggingState, force_new: bool = False, logical_identity: str | None = None) -> dict[str, str]:
     identity = _logical_session_identity() if logical_identity is None else logical_identity.strip()
+    if not identity:
+        raise ValueError(f"{LOGICAL_SESSION_IDENTITY_ENV} is required for session logging")
     with _session_registry_lock(target_root=state.target_root):
-        registry_existed = (state.target_root / SESSION_REGISTRY_PATH).is_file()
         registry = _read_session_registry(target_root=state.target_root)
         sessions = registry.setdefault("sessions", {})
-        legacy_pointer = read_session_pointer(target_root=state.target_root)
-        if not registry_existed and isinstance(sessions, dict) and "default" not in sessions and legacy_pointer is not None:
-            sessions["default"] = legacy_pointer
-            registry["updated_at"] = datetime.now(UTC).isoformat()
-        registry_key = _logical_identity_fingerprint(identity=identity, registry=registry) if identity else "default"
+        registry_key = _logical_identity_fingerprint(identity=identity, registry=registry)
         current = None
         if not force_new:
             current = _registered_session(registry=registry, registry_key=registry_key, target_root=state.target_root)
-            if current is None and not identity and not registry_existed:
-                current = read_session_pointer(target_root=state.target_root)
         if current:
             if isinstance(sessions, dict) and sessions.get(registry_key) != current:
                 sessions[registry_key] = current
                 registry["updated_at"] = datetime.now(UTC).isoformat()
                 _write_json_atomic(state.target_root / SESSION_REGISTRY_PATH, registry)
-            _write_session_pointer(target_root=state.target_root, session=current)
             return current
         session = _create_session(state=state)
         if isinstance(sessions, dict):
             sessions[registry_key] = session
         registry["updated_at"] = datetime.now(UTC).isoformat()
         _write_json_atomic(state.target_root / SESSION_REGISTRY_PATH, registry)
-        _write_session_pointer(target_root=state.target_root, session=session)
         return session
 
 
@@ -599,7 +598,7 @@ def _create_session(*, state: SessionLoggingState) -> dict[str, str]:
     session_id = f"{created_at.strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8]}"
     log_path = SESSION_LOG_ROOT / f"aw-session-{session_id}" / "session.md"
     session = {
-        "kind": SESSION_POINTER_KIND,
+        "kind": SESSION_RECORD_KIND,
         "session_id": session_id,
         "created_at": created_at.isoformat(),
         "log_path": log_path.as_posix(),
@@ -657,17 +656,56 @@ def _registered_session(*, registry: dict[str, Any], registry_key: str, target_r
 
 
 def _session_for_caller(*, target_root: Path, logical_identity: str) -> dict[str, str] | None:
-    registry_existed = (target_root / SESSION_REGISTRY_PATH).is_file()
+    if not logical_identity:
+        return None
     registry = _read_session_registry(target_root=target_root)
-    registry_key = _logical_identity_fingerprint(identity=logical_identity, registry=registry) if logical_identity else "default"
-    registered = _registered_session(registry=registry, registry_key=registry_key, target_root=target_root)
-    if registered is not None or logical_identity or registry_existed:
-        return registered
-    return read_session_pointer(target_root=target_root)
+    registry_key = _logical_identity_fingerprint(identity=logical_identity, registry=registry)
+    return _registered_session(registry=registry, registry_key=registry_key, target_root=target_root)
 
 
-def _write_session_pointer(*, target_root: Path, session: dict[str, str]) -> None:
-    _write_json_atomic(target_root / SESSION_POINTER_PATH, session)
+def _session_scope_payload(
+    *,
+    session: dict[str, str] | None,
+    explicit_selection: bool,
+) -> dict[str, Any]:
+    logical_identity = _logical_session_identity()
+    if explicit_selection:
+        scope_kind = "explicit-artifact"
+        breadth = "one-selected-artifact"
+    elif logical_identity and session:
+        scope_kind = "distinct-logical-session"
+        breadth = "one-logical-session"
+    else:
+        scope_kind = "unavailable"
+        breadth = "none"
+    return {
+        "kind": scope_kind,
+        "breadth": breadth,
+        "selection": "explicit" if explicit_selection else "caller-identity",
+        "distinct_logical_session": scope_kind == "distinct-logical-session",
+        "current_logical_session": scope_kind == "distinct-logical-session",
+        "rule": (
+            "The selected path/id is an explicit local artifact, not proof of current-session identity."
+            if scope_kind == "explicit-artifact"
+            else "This scope is one caller identity registered by the host."
+            if scope_kind == "distinct-logical-session"
+            else f"Session logging requires a host-provided {LOGICAL_SESSION_IDENTITY_ENV}."
+        ),
+    }
+
+
+def _identity_required_payload(*, kind: str) -> dict[str, Any]:
+    return {
+        "kind": kind,
+        "status": "logical-session-identity-required",
+        "enabled": True,
+        "path": "",
+        "session_id": "",
+        "required_environment": LOGICAL_SESSION_IDENTITY_ENV,
+        "local_only": True,
+        "authoritative": False,
+        "rule": f"Session logging does not capture or create state without {LOGICAL_SESSION_IDENTITY_ENV}.",
+    }
 
 
 @contextlib.contextmanager
@@ -701,26 +739,15 @@ def _session_registry_lock(*, target_root: Path) -> Iterator[None]:
             lock_path.rmdir()
 
 
-def read_session_pointer(*, target_root: Path) -> dict[str, str] | None:
-    pointer_path = target_root / SESSION_POINTER_PATH
-    if not pointer_path.exists():
-        return None
-    try:
-        payload = json.loads(pointer_path.read_text(encoding="utf-8-sig"))
-    except (OSError, json.JSONDecodeError):
-        return None
-    return _validated_session(payload)
-
-
 def _validated_session(payload: Any) -> dict[str, str] | None:
-    if not isinstance(payload, dict) or payload.get("kind") != SESSION_POINTER_KIND:
+    if not isinstance(payload, dict) or payload.get("kind") != SESSION_RECORD_KIND:
         return None
     session_id = str(payload.get("session_id", "")).strip()
     log_path = _valid_session_log_path(str(payload.get("log_path", "")).strip())
     if not session_id or not log_path:
         return None
     return {
-        "kind": SESSION_POINTER_KIND,
+        "kind": SESSION_RECORD_KIND,
         "session_id": session_id,
         "created_at": str(payload.get("created_at", "")),
         "log_path": log_path,
@@ -761,8 +788,8 @@ def _session_prelude(*, state: SessionLoggingState, session: dict[str, str]) -> 
             "local_diagnostic_boundary": _session_log_local_boundary(),
             "failure_behavior": "Logging failures are warning-only and must not block ordinary AW operation, proof, or closeout claims.",
             "logical_session": {
-                "resolution": "identity-registry" if _logical_session_identity() else "legacy-default-bucket",
-                "identity_source": LOGICAL_SESSION_IDENTITY_ENV if _logical_session_identity() else "",
+                "resolution": "identity-registry",
+                "identity_source": LOGICAL_SESSION_IDENTITY_ENV,
                 "raw_identity_stored": False,
             },
         },
@@ -1249,7 +1276,7 @@ def _append_index_command(
     log_path = state.target_root / session["log_path"]
     # Markdown is the append chronology and survives supported index schema
     # transitions.  Reconcile it at the writer boundary before adding the rich
-    # current entry so a partial/legacy index cannot silently replace history.
+    # current entry so a partial v1 index cannot silently replace history.
     entries = [
         indexed_by_id.get(str(entry.get("id", "")), entry)
         for entry in _entries_from_markdown(log_path)
@@ -2016,7 +2043,7 @@ def _session_for_log(*, state: SessionLoggingState, log_path: Path, session: dic
         return session
     session_id = _session_id_from_log_path(log_path)
     return {
-        "kind": SESSION_POINTER_KIND,
+        "kind": SESSION_RECORD_KIND,
         "session_id": session_id or hashlib.sha256(log_path.as_posix().encode()).hexdigest()[:12],
         "created_at": "",
         "log_path": log_path.relative_to(state.target_root).as_posix(),
@@ -2058,6 +2085,8 @@ def repair_session_log_index(*, state: SessionLoggingState, path: str = "", sess
     session = _session_for_caller(target_root=state.target_root, logical_identity=_logical_session_identity())
     log_path = _analysis_log_path(state=state, path=path, session_id=session_id, session=session)
     if log_path is None:
+        if not path and not session_id and not _logical_session_identity():
+            return _identity_required_payload(kind="agentic-workspace/session-log-index-repair/v1")
         return {"kind": "agentic-workspace/session-log-index-repair/v1", "status": "missing-log", "path": ""}
     effective_session = _session_for_log(state=state, log_path=log_path, session=session)
     index = _read_index_for_log(state=state, log_path=log_path, session=session)
@@ -2166,13 +2195,20 @@ def _export_index_payload(
 
 
 def export_session_log(
-    *, state: SessionLoggingState, path: str = "", session_id: str = "", include_artifacts: bool = True
+    *,
+    state: SessionLoggingState,
+    path: str = "",
+    session_id: str = "",
+    include_artifacts: bool = True,
 ) -> dict[str, Any]:
     session = _session_for_caller(target_root=state.target_root, logical_identity=_logical_session_identity())
     log_path = _analysis_log_path(state=state, path=path, session_id=session_id, session=session)
     if log_path is None:
+        if not path and not session_id and not _logical_session_identity():
+            return _identity_required_payload(kind="agentic-workspace/session-log-export/v1")
         return {"kind": "agentic-workspace/session-log-export/v1", "status": "missing-log", "path": ""}
     effective_session = _session_for_log(state=state, log_path=log_path, session=session)
+    session_scope = _session_scope_payload(session=effective_session, explicit_selection=bool(path or session_id))
     index = _read_index_for_log(state=state, log_path=log_path, session=session)
     markdown_entries = _entries_from_markdown(log_path)
     source_coverage = _coverage_payload(markdown_entries=markdown_entries, index=index)
@@ -2229,6 +2265,7 @@ def export_session_log(
         "source_artifact_class": "raw-local-diagnostic",
         "source_session_id": effective_session["session_id"],
         "source_log_path": effective_session["log_path"],
+        "session_scope": session_scope,
         "created_at": datetime.now(UTC).isoformat(),
         "path_normalization_mode": "known-local-paths",
         "included_files": sorted(files),
@@ -2295,6 +2332,7 @@ def export_session_log(
         "artifact_count": len(included_artifacts),
         "sha256": hashlib.sha256(absolute_export.read_bytes()).hexdigest(),
         "manifest": manifest,
+        "session_scope": session_scope,
         "local_diagnostic_boundary": _session_log_local_boundary(),
         "local_only": False,
         "authoritative": False,
@@ -2390,6 +2428,8 @@ def analyze_session_log(
     session = _session_for_caller(target_root=state.target_root, logical_identity=_logical_session_identity())
     log_path = _analysis_log_path(state=state, path=path, session_id=session_id, session=session)
     if log_path is None:
+        if not path and not session_id and not _logical_session_identity():
+            return _identity_required_payload(kind="agentic-workspace/session-log-analysis/v1")
         return {
             "kind": "agentic-workspace/session-log-analysis/v1",
             "status": "missing-log",
@@ -2399,6 +2439,8 @@ def analyze_session_log(
             "rule": "Pass --path, --id, or create a session with session-log new-session before analyzing logs.",
         }
 
+    effective_session = _session_for_log(state=state, log_path=log_path, session=session)
+    session_scope = _session_scope_payload(session=effective_session, explicit_selection=bool(path or session_id))
     index = _read_index_for_log(state=state, log_path=log_path, session=session)
     markdown_entries = _entries_from_markdown(log_path)
     coverage = _coverage_payload(markdown_entries=markdown_entries, index=index)
@@ -2533,6 +2575,7 @@ def analyze_session_log(
         "path": log_path.relative_to(state.target_root).as_posix(),
         "index_status": coverage["status"],
         "index_presence": "present" if index is not None else "markdown-fallback",
+        "session_scope": session_scope,
         "coverage": coverage,
         "index_path": str(index.get("path", "")) if isinstance(index, dict) else "",
         "summary": {

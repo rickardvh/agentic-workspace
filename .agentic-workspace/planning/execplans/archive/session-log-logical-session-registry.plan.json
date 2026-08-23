@@ -27,7 +27,7 @@
   },
   "canonical_core": {
     "requested_outcome": "Implement #2157 so opaque logical-session identities resolve stable isolated log namespaces across A/B/A interleaving.",
-    "hard_constraints": "Keep identity host-neutral and local-only; never infer it from task, branch, PID, time, or vendor-specific fields; preserve identity-less and legacy-pointer compatibility plus explicit id/path selection.",
+    "hard_constraints": "Keep identity host-neutral and local-only; never infer it from task, branch, PID, time, or vendor-specific fields; preserve explicit id/path selection.",
     "agent_may_decide": "Choose the ignored registry schema, privacy-safe fingerprinting, atomic local locking, compatibility projection, and focused test fixtures within the session-logging owner.",
     "escalate_when": "The implementation requires a new visible command, remote service, checked-in state, vendor-specific identity, or ownership outside session logging.",
     "next_action": "Implement the ignored identity registry and resolution boundary in session_logging.py, then prove same identity, A/B/A isolation, concurrency, fallback, and legacy behavior.",
@@ -93,19 +93,19 @@
     "activation trigger": "none"
   },
   "iterative_follow_through": {
-    "what this slice enabled": "Stable isolated log namespaces for opaque identity-aware callers with deterministic identity-less compatibility.",
+    "what this slice enabled": "Stable isolated log namespaces for opaque identity-aware callers.",
     "intentionally deferred": "none",
-    "discovered implications": "A missing default mapping must never adopt the last identified compatibility pointer once the registry exists.",
+    "discovered implications": "A supplied identity must resolve only through its own registry mapping.",
     "proof achieved now": "yes; planning closeout recorded explicit proof input.",
     "validation still needed": "None for this archived slice; reopen only if new evidence invalidates the proof.",
     "next likely slice": "No required continuation remains for this archived slice."
   },
   "intent_interpretation": {
     "literal request": "Scope session logs to portable logical sessions",
-    "inferred intended outcome": "Give every supplied opaque logical-session identity one stable isolated namespace without merging identity-less work.",
-    "chosen concrete what": "One local Markdown/index/artifact namespace now maps stably to one opaque logical session, including interleaved and concurrent use, while identity-less and legacy callers retain a deterministic default bucket.",
+    "inferred intended outcome": "Give every supplied opaque logical-session identity one stable isolated namespace.",
+    "chosen concrete what": "One local Markdown/index/artifact namespace maps stably to each supplied opaque logical-session identity, including interleaved and concurrent use.",
     "interpretation distance": "low",
-    "review guidance": "Reopen only if identity isolation, default-bucket separation, privacy, concurrency, or legacy migration regresses."
+    "review guidance": "Reopen only if identity isolation, privacy, or concurrency regresses."
   },
   "execution_bounds": {
     "allowed paths": "session_logging.py, its focused tests, and this plan/state closeout only.",
@@ -131,7 +131,7 @@
   },
   "delegated_judgment": {
     "requested outcome": "Implement the refined #2157 portable logical-session registry contract.",
-    "hard constraints": "Keep identity host-neutral, private, local-only, non-authoritative, concurrency-safe, and compatible with identity-less and legacy callers.",
+    "hard constraints": "Keep identity host-neutral, private, local-only, non-authoritative, and concurrency-safe.",
     "agent may decide locally": "Registry schema, salted fingerprinting, local lock mechanics, pointer projection, and focused proof.",
     "escalate when": "A fix requires vendor coupling, remote state, heuristic identity inference, or new workflow ownership."
   },
@@ -144,7 +144,7 @@
   "system_intent_alignment": {
     "relevant system intent": "Keep local dogfooding evidence trustworthy, privacy-safe, and cheap for agents to interpret.",
     "slice shaping bias": "Prefer one host-neutral ignored registry over vendor-specific or heuristic session concepts.",
-    "broader-lane validation question": "Does each physical namespace now correspond to one portable logical session without merging the default bucket?",
+    "broader-lane validation question": "Does each physical namespace correspond to one portable logical session?",
     "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
   },
   "references": [],
@@ -185,7 +185,7 @@
     "run status": "completed",
     "executor": "agentic-planning closeout",
     "handoff source": "agentic-planning new-plan",
-    "what happened": "Implemented a salted ignored-local identity registry with stable A/B/A mapping, atomic lock/pointer updates, default-bucket legacy migration, privacy-safe status metadata, and caller-scoped analyze/repair/export resolution.",
+    "what happened": "Implemented a salted ignored-local identity registry with stable A/B/A mapping, atomic lock updates, privacy-safe status metadata, and caller-scoped analyze/repair/export resolution.",
     "scope touched": "Session logging runtime, focused session tests, and bounded Planning state.",
     "changed surfaces": "src/agentic_workspace/session_logging.py; tests/test_workspace_session_logging.py; active execplan/state",
     "validations run": "See proof_report.validation proof.",
@@ -222,7 +222,7 @@
     "unsolved intent passed to": "none"
   },
   "execution_summary": {
-    "outcome delivered": "One local Markdown/index/artifact namespace now maps stably to one opaque logical session, including interleaved and concurrent use, while identity-less and legacy callers retain a deterministic default bucket.",
+    "outcome delivered": "One local Markdown/index/artifact namespace maps stably to each supplied opaque logical-session identity, including interleaved and concurrent use.",
     "validation confirmed": "See proof_report.validation proof.",
     "follow-on routed to": "none",
     "post-work posterity capture": "archive closeout distillation",
@@ -304,13 +304,13 @@
   },
   "cost_assessment": {
     "workflow_cost_found": "Agents previously had to remember manual new-session rotation or analyze many logical sessions after they were merged into one file.",
-    "architecture_cost_found": "One repository-wide compatibility pointer was serving as both last-resolved projection and canonical session owner.",
-    "needless_complexity_found": "The fix keeps one existing environment boundary and local pointer while adding only an ignored registry and lock; no new command or task concept was added.",
+    "architecture_cost_found": "A repository-wide current-session projection could not represent distinct logical-session ownership.",
+    "needless_complexity_found": "The identity registry and lock provide stable isolation without adding a command or task concept.",
     "correct_by_design_assessment": "Supplying an opaque identity now constructs the correct namespace before logging; tests and dogfooding confirm rather than teach manual repair.",
     "surfaces_added": "One optional host-neutral environment input and ignored local registry; status adds compact resolution metadata.",
-    "surfaces_removed_merged_or_demoted": "The global pointer is demoted from canonical owner to last-resolved compatibility projection.",
+    "surfaces_removed_merged_or_demoted": "The global current-session projection is removed.",
     "artifact_footprint_changed": "Separate Markdown/index/artifact namespaces are created only for distinct supplied identities; one compact archived execplan records proof.",
-    "shipped_default_footprint_changed": "Identity-less callers retain the deterministic default bucket; no new command or remote surface is shipped.",
+    "shipped_default_footprint_changed": "Session state is created only for a supplied logical identity; no new command or remote surface is shipped.",
     "signals_consumed": [
       "#2157",
       "observed 210-command mixed session file"

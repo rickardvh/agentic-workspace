@@ -15833,6 +15833,7 @@ def test_session_improvement_intake_self_admits_complete_index_for_review(tmp_pa
     capsys.readouterr()
     _write(tmp_path / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
     monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
+    monkeypatch.setenv(session_logging.LOGICAL_SESSION_IDENTITY_ENV, "session-improvement-intake-test")
     for _ in range(2):
         assert session_logging.run_with_session_logging(["status", "--target", str(tmp_path)], lambda _argv: 0) == 0
 

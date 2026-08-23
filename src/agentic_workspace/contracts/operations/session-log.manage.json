@@ -97,7 +97,7 @@
   },
   "reads": [
     {
-      "surface": ".agentic-workspace/local/session-logging/current.json",
+      "surface": ".agentic-workspace/local/session-logging/sessions.json",
       "required": false
     },
     {
@@ -107,9 +107,9 @@
   ],
   "writes": [
     {
-      "surface": ".agentic-workspace/local/session-logging/current.json",
+      "surface": ".agentic-workspace/local/session-logging/sessions.json",
       "required": false,
-      "when": "create or rotate the current local session log"
+      "when": "register or rotate a local session for a host-provided logical identity"
     },
     {
       "surface": ".agentic-workspace/local/logs/",
@@ -153,6 +153,7 @@
     "Write only under .agentic-workspace/local/session-logging/, .agentic-workspace/local/logs/, and the bounded improvement-signal cache.",
     "Captured improvement signals are candidate evidence only and never authorize repository mutation.",
     "Do not capture non-AW shell output.",
+    "Do not create session state unless the host supplies AW_SESSION_LOGICAL_IDENTITY.",
     "Do not treat local session logs as proof, Planning state, Memory, or closeout authority.",
     "Session-log analysis is local diagnostic evidence only and never Planning, Memory, proof, or closeout authority.",
     "Repair preserves existing indexed entries and artifacts; export never mutates originals.",
