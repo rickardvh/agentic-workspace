@@ -4,14 +4,14 @@
   "title": "Make future-decision context effective by construction",
   "owner_level": "slice",
   "lifecycle": "live",
-  "phase": "planning",
-  "revision": 1,
+  "phase": "proof",
+  "revision": 2,
   "canonical_core": {
     "requested_outcome": "Close #2680 and #2690 with independent signed-host correction preservation plus generic source-owned future-context effects in the canonical decision and reconciliation.",
     "hard_constraints": "Reuse trusted-authority custody, correction-event storage, context consequences, reconciliation, and Memory effectiveness; add no transcript archive, vendor adapter, second correction store, Memory workflow, or universal phase envelope.",
     "agent_may_decide": "The smallest compatible submit inputs, pending-state projection, relevance filter, typed next action, evidence fixtures, and generated-surface refresh.",
     "escalate_when": "Trusted authority would depend on caller labels, reconciliation would invent semantic truth, or closure would require a vendor-specific host API unavailable to the repository.",
-    "next_action": "Implement and prove the #2680/#2690 successor in PR #2694 after the #2678 base lands.",
+    "next_action": "Run generated/external conformance and routed changed-path proof, then publish the final stack member.",
     "proof_expectations": [
       "The host preserves a signed correction while the corrected agent performs zero correction actions.",
       "Incomplete observation, normalization, and disposition are distinct, idempotent states in existing custody/owners.",
@@ -23,7 +23,8 @@
       "src/agentic_workspace/reconciliation.py",
       "src/agentic_workspace/contracts/**",
       "generated/workspace/**",
-      "tests/**",
+      "tests/test_external_operation_clients.py",
+      "tests/test_reconciliation.py",
       "docs/reviews/**",
       ".release/changes/**",
       ".agentic-workspace/planning/**"
@@ -34,7 +35,7 @@
       "Architecture, replacement, stronger-owner, unavailable-host, behavioral, cost, and generated-consumer evidence is current."
     ],
     "continuation_owner": "open-issues-future-context lane",
-    "closeout_decision": "Publish PR #2694 on #2692; aggregate lane closure waits for the stack to land."
+    "closeout_decision": "Publish the third PR on #2692; aggregate lane closure waits for the stack to land."
   },
   "intent": {
     "outcome": "Future-decision-value context survives partial compliance and becomes effective through the current canonical operating loop.",
@@ -51,18 +52,19 @@
   },
   "relationships": {
     "selection": {"state": "selected", "owner": "open-issues-future-context"},
-    "proof_posture": {"state": "planned", "refs": ["focused tests", "generated conformance", "routed changed-path proof"]},
-    "external_posture": {"state": "current", "refs": ["GitHub #2680", "GitHub #2690", "PR #2692 stack base", "PR #2694 successor"]}
+    "proof_posture": {"state": "active", "refs": ["focused tests", "generated conformance", "routed changed-path proof"]},
+    "external_posture": {"state": "current", "refs": ["GitHub #2680", "GitHub #2690", "PR #2692 stack base"]}
   },
   "references": [
-    {"kind": "source", "target": "GitHub #2680 and #2690; PR #2694 stacked on #2692", "label": "GitHub #2680 and #2690", "role": "intake", "locator": ""}
+    {"kind": "source", "target": "GitHub #2680 and #2690; final PR stacked on #2692", "label": "GitHub #2680 and #2690", "role": "intake", "locator": ""},
+    {"kind": "evidence", "target": "docs/reviews/future-decision-context-closure-2026-08-23.md", "label": "architecture and closure review", "role": "proof", "locator": ""}
   ],
-  "next_action": "Implement and prove the successor in PR #2694.",
-  "blockers": ["PR #2692 must land before PR #2694."],
+  "next_action": "Run full routed proof and publish the final stacked PR.",
+  "blockers": ["None."],
   "proof": {
-    "claims": [],
-    "requirements": ["Run focused correction, operating-decision, reconciliation, generated Python/TypeScript, contract, lint, type, inventory, and realistic partial-compliance proof."],
-    "refs": []
+    "claims": ["Issues #2680 and #2690 are implemented without a parallel Memory/correction workflow."],
+    "requirements": ["Run focused correction, operating-decision, reconciliation, generated Python/TypeScript, contract, lint, type, and inventory proof.", "Verify no-signal quietness and authority counterexamples."],
+    "refs": ["tests/test_external_operation_clients.py", "tests/test_reconciliation.py", "docs/reviews/future-decision-context-closure-2026-08-23.md"]
   },
   "continuation": {"owner": "open-issues-future-context lane", "residual_intent": "Merge PR #2692 and PR #2694 in order."},
   "validation_commands": [
@@ -73,6 +75,6 @@
     "make lint-workspace",
     "make typecheck"
   ],
-  "completion_criteria": ["Independent host preservation and forged-authority rejection pass.", "Normalization, unrouted admission, disposition, deduplication, relevance, and unavailable-host states pass.", "Memory/non-Memory decision and correction/non-correction reconciliation fixtures pass.", "Generated and repository validation passes and PR #2694 is published."],
+  "completion_criteria": ["Independent host preservation and forged-authority rejection pass.", "Normalization, unrouted admission, disposition, deduplication, relevance, and unavailable-host states pass.", "Memory/non-Memory decision and correction/non-correction reconciliation fixtures pass.", "Generated and repository validation passes and the final PR is published."],
   "specialist_contracts": []
 }

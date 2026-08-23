@@ -1,7 +1,7 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:70bd32e73f0a9400eb26dd49d6937bbc8df4449dc5fac533d6221e4c489af913",
+  "profile_fingerprint": "sha256:dbb63febb995500f280894b0a3076b9aa526a905ef40b82148800c3655d908f3",
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",
@@ -14027,8 +14027,8 @@
     "correction-event.submit": {
       "identity": "correction-event.submit",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:8316983f1eb79983b1e5296b51854df6a8e7a10ab6bc8293d36e942e039ebda4",
-      "compatibility_fingerprint": "sha256:e82c5f282cac5cc2531ccb51d27381a24499c4bcdc6b8cd6ab060a366060ced6",
+      "fingerprint": "sha256:91584867981a4cfb0e1b6ad6c641b24b768e846bee272c4abd0417d18d438983",
+      "compatibility_fingerprint": "sha256:6fbb10c9a39efd7339a68ddebb985e84c96ee633dd27b88cd5725ee8656199cb",
       "contract": {
         "classification": "local-record-append",
         "command_surface": {
@@ -14046,6 +14046,8 @@
         "guards": [
           "Generated operation boundary resolves target subjects from workspace config by default.",
           "Caller-supplied producer labels cannot upgrade authority; trusted authority must resolve from trusted_authority_receipt_ref.",
+          "Signed trusted_host_event_json is verified against pinned producer custody, channel, workspace, lifecycle, and signature before import.",
+          "Incomplete trusted observations remain in existing trusted-authority custody until host_event_ref is normalized; downstream route decisions are separate.",
           "Agent self-observation is preserved as low-authority non-routing evidence.",
           "Correction storage is local-only and has no checked-in repo meaning."
         ],
@@ -14067,6 +14069,18 @@
             "source": "cli-option"
           },
           {
+            "name": "trusted_host_event_json",
+            "required": false,
+            "source": "cli-option",
+            "description": "Canonical JSON agentic-workspace/trusted-authority-host-event/v1 envelope. host_admission is RS256 over the v1 payload {kind, algorithm, key_id, event_ref, event_digest, verdict_digest, audience}; the pinned key issuer/channel, verdict workspace binding, expiry, nonce, event identity, and custody must agree."
+          },
+          {
+            "name": "host_event_ref",
+            "required": false,
+            "source": "cli-option",
+            "description": "Opaque trusted-authority-event:<id> returned by prior signed observation custody; it conveys no authority unless the stored signature and import custody remain valid."
+          },
+          {
             "name": "trusted_authority_receipt_ref",
             "required": false,
             "source": "cli-option"
@@ -14078,6 +14092,11 @@
           },
           {
             "name": "delivery_id",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "event_id",
             "required": false,
             "source": "cli-option"
           },
@@ -14192,7 +14211,7 @@
             "source": "cli-option"
           }
         ],
-        "intent": "Provide the public generated correction-event lifecycle boundary for local target guidance and suitability evidence intake.",
+        "intent": "Preserve signed host correction observations, then normalize and disposition them through the existing correction-event lifecycle boundary.",
         "ir_plan": {
           "status": "complete",
           "steps": [
@@ -14234,6 +14253,7 @@
         },
         "proof": [
           "correction-event generated operation tests cover trusted submit, low-authority preservation, query, and compact retention",
+          "cross-target conformance fails closed when native runtimes cannot resolve a trusted host observation",
           "operation contract validates against operation.schema.json"
         ],
         "reads": [
@@ -14241,6 +14261,11 @@
             "description": "bounded local correction-event store",
             "required": false,
             "surface": ".agentic-workspace/local/correction-events.json"
+          },
+          {
+            "description": "existing signed trusted-authority observation custody",
+            "required": false,
+            "surface": ".agentic-workspace/local/trusted-authority-events"
           }
         ],
         "schema_version": "agentic-workspace/operation/v1",
@@ -14261,13 +14286,19 @@
             "uses": "output.emit"
           }
         ],
-        "summary": "Submit a correction event through the public local operation boundary.",
+        "summary": "Preserve or normalize a correction through the public local operation boundary.",
         "writes": [
           {
             "description": "bounded local correction-event store and receipts",
             "required": true,
             "surface": ".agentic-workspace/local/correction-events.json",
             "when": "mutation operation stores or compacts admitted/low-authority events"
+          },
+          {
+            "description": "signed host observation and trusted custody index",
+            "required": false,
+            "surface": ".agentic-workspace/local/trusted-authority-events",
+            "when": "trusted_host_event_json passes producer signature and custody admission"
           }
         ]
       },
@@ -14310,7 +14341,8 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process"
+              "correction-event.submit.process",
+              "correction-event.submit-host-observation.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -14319,7 +14351,8 @@
             "scope": "local correction-event store writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process"
+              "correction-event.submit.process",
+              "correction-event.submit-host-observation.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -14328,7 +14361,8 @@
             "scope": "trusted authority receipt validation",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process"
+              "correction-event.submit.process",
+              "correction-event.submit-host-observation.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -14337,7 +14371,8 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process"
+              "correction-event.submit.process",
+              "correction-event.submit-host-observation.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -14377,6 +14412,18 @@
               "source": "cli-option"
             },
             {
+              "name": "trusted_host_event_json",
+              "required": false,
+              "source": "cli-option",
+              "description": "Canonical JSON agentic-workspace/trusted-authority-host-event/v1 envelope. host_admission is RS256 over the v1 payload {kind, algorithm, key_id, event_ref, event_digest, verdict_digest, audience}; the pinned key issuer/channel, verdict workspace binding, expiry, nonce, event identity, and custody must agree."
+            },
+            {
+              "name": "host_event_ref",
+              "required": false,
+              "source": "cli-option",
+              "description": "Opaque trusted-authority-event:<id> returned by prior signed observation custody; it conveys no authority unless the stored signature and import custody remain valid."
+            },
+            {
               "name": "trusted_authority_receipt_ref",
               "required": false,
               "source": "cli-option"
@@ -14388,6 +14435,11 @@
             },
             {
               "name": "delivery_id",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "event_id",
               "required": false,
               "source": "cli-option"
             },
@@ -14516,6 +14568,8 @@
           "guards": [
             "Generated operation boundary resolves target subjects from workspace config by default.",
             "Caller-supplied producer labels cannot upgrade authority; trusted authority must resolve from trusted_authority_receipt_ref.",
+            "Signed trusted_host_event_json is verified against pinned producer custody, channel, workspace, lifecycle, and signature before import.",
+            "Incomplete trusted observations remain in existing trusted-authority custody until host_event_ref is normalized; downstream route decisions are separate.",
             "Agent self-observation is preserved as low-authority non-routing evidence.",
             "Correction storage is local-only and has no checked-in repo meaning."
           ]

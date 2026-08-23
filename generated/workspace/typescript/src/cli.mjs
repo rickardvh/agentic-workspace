@@ -10237,6 +10237,20 @@ const commandDefinitions = [
             },
             {
               "flags": [
+                "--trusted-host-event-json"
+              ],
+              "help": "Signed producer-owned host observation envelope; caller labels do not confer authority.",
+              "name": "trusted_host_event_json"
+            },
+            {
+              "flags": [
+                "--host-event-ref"
+              ],
+              "help": "Opaque trusted-host observation reference for later normalization or disposition.",
+              "name": "host_event_ref"
+            },
+            {
+              "flags": [
                 "--trusted-authority-receipt-ref"
               ],
               "help": "Repo-relative AW/human authority receipt reference resolved by the host boundary.",
@@ -10255,6 +10269,13 @@ const commandDefinitions = [
               ],
               "help": "Stable delivery id.",
               "name": "delivery_id"
+            },
+            {
+              "flags": [
+                "--event-id"
+              ],
+              "help": "Existing normalized correction event id for a route/disposition update.",
+              "name": "event_id"
             },
             {
               "flags": [

@@ -84,6 +84,15 @@
       "type": "object",
       "description": "Compact references for admitted source-owned guidance whose registry contract declares a material decision dimension."
     },
+    "future_context_signals": {
+      "type": "array",
+      "description": "Relevant source-owned post-action signals carried to existing consequence and reconciliation owners; empty when no signal applies.",
+      "items": {"type": "object"}
+    },
+    "future_context_capture": {
+      "type": "object",
+      "description": "Optional host-owned capability posture; unsupported feedback sources are reported as unavailable rather than claimed captured."
+    },
     "repo_improvement_action": {
       "type": "object",
       "description": "Mode-constrained initiative consequence for one admitted material repo-improvement candidate; empty when no candidate exists. Mutation still requires an existing owner operation."

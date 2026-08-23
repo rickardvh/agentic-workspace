@@ -818,6 +818,12 @@
     },
     {
       "adapter_kind": "process",
+      "id": "correction-event.submit-host-observation.process",
+      "operation_id": "correction-event.submit",
+      "path": "conformance/correction-event.submit-host-observation.process.json"
+    },
+    {
+      "adapter_kind": "process",
       "id": "correction-event.query.process",
       "operation_id": "correction-event.query",
       "path": "conformance/correction-event.query.process.json"

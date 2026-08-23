@@ -12104,6 +12104,7 @@
       },
       "conformance_refs": [
         "correction-event.submit.process",
+        "correction-event.submit-host-observation.process",
         "correction-event.query.process",
         "correction-event.correct-dispute.process",
         "correction-event.withdraw-supersede.process",
@@ -12158,6 +12159,20 @@
               },
               {
                 "flags": [
+                  "--trusted-host-event-json"
+                ],
+                "help": "Signed producer-owned host observation envelope; caller labels do not confer authority.",
+                "name": "trusted_host_event_json"
+              },
+              {
+                "flags": [
+                  "--host-event-ref"
+                ],
+                "help": "Opaque trusted-host observation reference for later normalization or disposition.",
+                "name": "host_event_ref"
+              },
+              {
+                "flags": [
                   "--trusted-authority-receipt-ref"
                 ],
                 "help": "Repo-relative AW/human authority receipt reference resolved by the host boundary.",
@@ -12176,6 +12191,13 @@
                 ],
                 "help": "Stable delivery id.",
                 "name": "delivery_id"
+              },
+              {
+                "flags": [
+                  "--event-id"
+                ],
+                "help": "Existing normalized correction event id for a route/disposition update.",
+                "name": "event_id"
               },
               {
                 "flags": [
@@ -13720,6 +13742,16 @@
           "name": "event_json"
         },
         {
+          "arg": "trusted_host_event_json",
+          "default": null,
+          "name": "trusted_host_event_json"
+        },
+        {
+          "arg": "host_event_ref",
+          "default": null,
+          "name": "host_event_ref"
+        },
+        {
           "arg": "trusted_authority_receipt_ref",
           "default": null,
           "name": "trusted_authority_receipt_ref"
@@ -13728,6 +13760,11 @@
           "arg": "delivery_id",
           "default": null,
           "name": "delivery_id"
+        },
+        {
+          "arg": "event_id",
+          "default": null,
+          "name": "event_id"
         },
         {
           "arg": "target_identity_ref",

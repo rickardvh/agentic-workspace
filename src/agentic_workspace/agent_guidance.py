@@ -384,12 +384,6 @@ def admit_correction_events(
                 "Submit evidence_hash or evidence_ref so the event is auditable without raw transcript storage.",
             )
             continue
-        if not route_decisions:
-            reject(
-                "rejected-missing-route-decision",
-                "Submit explicit route_decisions for guidance, suitability, memory, config, issue, or no-retention.",
-            )
-            continue
         unknown_routes = sorted(set(route_decisions) - ADMITTED_ROUTE_DECISIONS)
         if unknown_routes:
             reject("rejected-unknown-route-decision", "Use admitted route decisions only.")
@@ -498,8 +492,13 @@ def admit_correction_events(
             "producer_ids": sorted({item["producer_id"] for item in recurrence_evidence if item["producer_id"]}),
         }
         base_admission_state = (
-            "accepted-preserved-revision" if event.get("admission_state") == "accepted-preserved-revision" else "accepted-candidate"
+            "accepted-preserved-revision"
+            if event.get("admission_state") == "accepted-preserved-revision"
+            else "accepted-candidate"
+            if route_decisions
+            else "accepted-unrouted"
         )
+        event["routing_state"] = "routed" if route_decisions else "pending-owner-route"
         event["admission_state"] = "recurrence" if recurrence_counts[normalized_key] > 1 and operation == "submit" else base_admission_state
         if operation == "submit" and recurrence_counts[normalized_key] > 1:
             prior = admitted_by_key.get(normalized_key)
@@ -588,6 +587,12 @@ def apply_correction_event_operation(
     """Apply a generated correction-event operation to bounded local storage."""
 
     operation = operation_id.removeprefix("correction-event.")
+    observation_import: dict[str, Any] = {}
+    if operation == "submit" and values.get("trusted_host_event_json"):
+        observation_import = _import_trusted_correction_observation(target_root=target_root, values=values)
+        values = {**values, "host_event_ref": observation_import["event_ref"]}
+        if not _correction_normalization_is_sufficient(values=values, observation=observation_import["event"]):
+            return _pending_correction_observation_result(target_root=target_root, observation_import=observation_import)
     config = load_workspace_config(target_root=target_root)
     store_path = target_root / config.local_override.correction_events_path
     store = _read_correction_event_store(store_path)
@@ -621,12 +626,26 @@ def apply_correction_event_operation(
         mutation_applied = True
         status = "compacted"
     else:
-        event = _operation_event(values=values, operation=operation, target_root=target_root)
-        event_id = str(event.get("event_id") or _stable_event_id(event))
-        duplicate_submit = operation == "submit" and any(
-            str(candidate.get("event_id") or _stable_event_id(candidate)) == event_id for candidate in existing_events
+        prior_event = next(
+            (candidate for candidate in existing_events if str(candidate.get("event_id") or "") == str(values.get("event_id") or "")),
+            None,
         )
-        events = existing_events if duplicate_submit else [*existing_events, event]
+        event_values = {"event_json": json.dumps(prior_event), **values} if isinstance(prior_event, dict) else values
+        event = _operation_event(values=event_values, operation=operation, target_root=target_root)
+        event_id = str(event.get("event_id") or _stable_event_id(event))
+        matching_existing = next(
+            (candidate for candidate in existing_events if str(candidate.get("event_id") or _stable_event_id(candidate)) == event_id),
+            None,
+        )
+        duplicate_submit = operation == "submit" and matching_existing is not None and not str(values.get("event_id") or "")
+        events = (
+            existing_events
+            if duplicate_submit
+            else [
+                *[candidate for candidate in existing_events if str(candidate.get("event_id") or _stable_event_id(candidate)) != event_id],
+                event,
+            ]
+        )
         admission = admit_correction_events(events=events, subjects=subjects, task_class=task_class, scope_class=scope_class)
         accepted_ids = {
             str(candidate.get("event_id"))
@@ -635,7 +654,10 @@ def apply_correction_event_operation(
             if isinstance(candidate, dict)
         }
         retained_events = [
-            candidate for candidate in events if str(candidate.get("event_id") or _stable_event_id(candidate)) in accepted_ids
+            dict(candidate)
+            for bucket in (admission.get("admitted_events", []), admission.get("low_authority_events", []))
+            for candidate in bucket
+            if isinstance(candidate, dict) and str(candidate.get("event_id") or _stable_event_id(candidate)) in accepted_ids
         ][-CORRECTION_EVENT_RETENTION_CAP:]
         if accepted_ids and not duplicate_submit:
             _write_correction_event_store(
@@ -660,7 +682,86 @@ def apply_correction_event_operation(
     )
     receipt_path = _write_correction_receipt(target_root=target_root, receipt=receipt)
     receipt["receipt_ref"] = _repo_relative(receipt_path, root=target_root)
+    if observation_import:
+        receipt["observation_import"] = {
+            "status": observation_import["status"],
+            "event_ref": observation_import["event_ref"],
+            "event_store": observation_import["event_store"],
+        }
     return json.loads(json.dumps(receipt, sort_keys=True, default=str))
+
+
+def _import_trusted_correction_observation(*, target_root: Path, values: dict[str, Any]) -> dict[str, Any]:
+    try:
+        raw = json.loads(str(values.get("trusted_host_event_json") or ""))
+    except json.JSONDecodeError as exc:
+        raise WorkspaceUsageError("trusted_host_event_json must be a signed host-event JSON object.") from exc
+    if not isinstance(raw, dict):
+        raise WorkspaceUsageError("trusted_host_event_json must be a signed host-event JSON object.")
+    ref = str(values.get("host_event_ref") or raw.get("event_ref") or "").strip()
+    custody = raw.get("custody") if isinstance(raw.get("custody"), dict) else {}
+    return record_trusted_authority_host_event(
+        target_root=target_root,
+        authority=str(raw.get("authority") or ""),
+        producer_class=str(raw.get("producer_class") or ""),
+        producer_id=str(raw.get("producer_id") or ""),
+        source_ref=str(raw.get("source_ref") or ""),
+        source=str(raw.get("source") or ""),
+        target_revision=str(raw.get("target_revision") or ""),
+        event_id=str(raw.get("event_id") or ""),
+        trusted_channel=str(custody.get("trusted_channel") or ""),
+        host_event_ref=ref,
+        signed_event=raw,
+    )
+
+
+def _correction_normalization_is_sufficient(*, values: dict[str, Any], observation: dict[str, Any]) -> bool:
+    merged = {**observation, **{key: value for key, value in values.items() if value not in (None, "", [])}}
+    return all(
+        str(merged.get(field) or "").strip()
+        for field in (
+            "target_identity_ref",
+            "desired_behavior",
+            "replaced_behavior",
+            "invariant_id",
+            "behavior_class",
+        )
+    )
+
+
+def _pending_correction_observation_result(*, target_root: Path, observation_import: dict[str, Any]) -> dict[str, Any]:
+    event = observation_import["event"]
+    ref = str(observation_import["event_ref"])
+    return {
+        "kind": "agentic-workspace/correction-event-operation-result/v1",
+        "operation_id": "correction-event.submit",
+        "status": "pending-normalization",
+        "mutation_applied": observation_import["status"] == "imported",
+        "observation": {
+            "event_ref": ref,
+            "authority": str(event.get("authority") or ""),
+            "source_ref": str(event.get("source_ref") or ""),
+            "custody": "trusted-host-event-store",
+            "normalization_state": "incomplete",
+            "routing_state": "not-decided",
+        },
+        "admission": {"status": "pending-normalization", "admitted_events": [], "low_authority_events": []},
+        "next_action": {
+            "operation_id": "correction-event.submit",
+            "host_event_ref": ref,
+            "required_fields": [
+                "target_identity_ref",
+                "desired_behavior",
+                "replaced_behavior",
+                "invariant_id",
+                "behavior_class",
+            ],
+            "route_decisions_required": False,
+        },
+        "checked_in_repo_effect": "none",
+        "store_ref": TRUSTED_AUTHORITY_EVENT_INDEX_PATH.as_posix(),
+        "rule": "Trusted observation custody precedes semantic normalization and downstream disposition.",
+    }
 
 
 def _correction_event_matches_query(*, event: dict[str, Any], values: dict[str, Any], subjects: list[dict[str, Any]]) -> bool:
@@ -690,6 +791,94 @@ def _read_correction_event_store(path: Path) -> dict[str, Any]:
     except (OSError, json.JSONDecodeError):
         return {"kind": "agentic-workspace/correction-event-store/v1", "events": [], "compacted_lineage": [], "status": "unreadable"}
     return loaded if isinstance(loaded, dict) else {"kind": "agentic-workspace/correction-event-store/v1", "events": []}
+
+
+def unresolved_correction_signals(*, target_root: Path, task: str = "") -> list[dict[str, Any]]:
+    """Project relevant unresolved correction custody without copying host evidence."""
+
+    config = load_workspace_config(target_root=target_root)
+    normalized_store = _read_correction_event_store(target_root / config.local_override.correction_events_path)
+    normalized_events = [item for item in normalized_store.get("events", []) if isinstance(item, dict)]
+    normalized_host_refs = {str(item.get("host_event_ref") or "") for item in normalized_events}
+    signals: list[dict[str, Any]] = []
+    try:
+        index = json.loads((target_root / TRUSTED_AUTHORITY_EVENT_INDEX_PATH).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        index = {}
+    task_terms = {part.lower() for part in task.replace("/", " ").replace("-", " ").split() if part}
+    for entry in index.get("events", []) if isinstance(index, dict) else []:
+        if not isinstance(entry, dict) or entry.get("status") != "current":
+            continue
+        ref = str(entry.get("event_ref") or "")
+        if not ref or ref in normalized_host_refs:
+            continue
+        try:
+            event = _trusted_authority_host_event(target_root=target_root, event_ref=ref)
+        except WorkspaceUsageError:
+            continue
+        event_terms = {
+            token
+            for field in ("task_class", "scope_class", "phase", "subsystem", "surface")
+            for token in str(event.get(field) or "").lower().replace("-", " ").split()
+            if token
+        }
+        if task_terms and (not event_terms or not any(any(term in task_term for task_term in task_terms) for term in event_terms)):
+            continue
+        signals.append(
+            {
+                "kind": "agentic-workspace/future-context-signal/v1",
+                "signal_id": ref,
+                "source_class": "trusted-human-correction",
+                "authority": str(event.get("authority") or ""),
+                "authority_state": "trusted-host-custody",
+                "status": "pending-normalization",
+                "relevant": True,
+                "owner": "correction-event",
+                "source_ref": str(event.get("source_ref") or ""),
+                "operation_invocation": {
+                    "operation_id": "correction-event.submit",
+                    "operation_path": "operations/correction-event.submit.json",
+                    "authority": "correction-event operation contract",
+                    "arguments": {"host_event_ref": ref},
+                },
+                "required_decision": "normalize-or-dismiss",
+            }
+        )
+    for event in normalized_events:
+        if (
+            event.get("routing_state") != "pending-owner-route"
+            or _correction_lifecycle_state(event) in _GUIDANCE_REJECTING_LIFECYCLE_STATES
+        ):
+            continue
+        event_terms = {
+            token
+            for field in ("task_class", "scope_class", "phase", "subsystem", "surface")
+            for token in str(event.get(field) or "").lower().replace("-", " ").split()
+            if token
+        }
+        if task_terms and (not event_terms or not any(any(term in task_term for task_term in task_terms) for term in event_terms)):
+            continue
+        signals.append(
+            {
+                "kind": "agentic-workspace/future-context-signal/v1",
+                "signal_id": str(event.get("event_id") or ""),
+                "source_class": "normalized-correction",
+                "authority": str(event.get("authority") or ""),
+                "authority_state": "admitted-owner-event",
+                "status": "pending-disposition",
+                "relevant": True,
+                "owner": "correction-event",
+                "source_ref": str(event.get("source_ref") or ""),
+                "operation_invocation": {
+                    "operation_id": "correction-event.submit",
+                    "operation_path": "operations/correction-event.submit.json",
+                    "authority": "correction-event operation contract",
+                    "arguments": {"event_id": str(event.get("event_id") or "")},
+                },
+                "required_decision": "route-or-dismiss",
+            }
+        )
+    return sorted(signals, key=lambda item: str(item.get("signal_id") or ""))
 
 
 def _write_correction_event_store(path: Path, store: dict[str, Any], *, expected_digest: str | None = None) -> None:
@@ -1159,6 +1348,7 @@ def record_trusted_authority_host_event(
     trusted_channel: str = "host-trusted-authority-event",
     host_event_ref: str = "",
     host_event_resolver: TrustedAuthorityHostEventResolver | None = None,
+    signed_event: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     ref = str(host_event_ref or "").strip()
     if not ref.startswith("trusted-authority-event:") or "/" in ref or "\\" in ref:
@@ -1167,7 +1357,11 @@ def record_trusted_authority_host_event(
         raise WorkspaceUsageError(
             "caller-provided trusted authority host event resolvers are rejected; import a signed host event envelope."
         )
-    event = _load_trusted_authority_host_event_from_inbox(target_root=target_root, host_event_ref=ref)
+    event = (
+        json.loads(json.dumps(signed_event, sort_keys=True, default=str))
+        if isinstance(signed_event, dict)
+        else _load_trusted_authority_host_event_from_inbox(target_root=target_root, host_event_ref=ref)
+    )
     if not isinstance(event, dict):
         raise WorkspaceUsageError("trusted authority host resolver returned the wrong contract.")
     if event.get("kind") != "agentic-workspace/trusted-authority-host-event/v1" or event.get("event_ref") != ref:
@@ -1204,7 +1398,7 @@ def record_trusted_authority_host_event(
         "import_custody": {
             "kind": "agentic-workspace/trusted-authority-host-event-import/v1",
             "importer": "agentic-workspace.guidance-authority-import",
-            "source": "signed-host-event-inbox",
+            "source": "signed-host-operation-input" if isinstance(signed_event, dict) else "signed-host-event-inbox",
             "event_digest": event_digest,
             "signature_key_id": str(event.get("host_admission", {}).get("key_id") or "")
             if isinstance(event.get("host_admission"), dict)
@@ -1225,6 +1419,22 @@ def record_trusted_authority_host_event(
             "source_ref": str(stored.get("source_ref") or ""),
         }
     )
+    already_imported = any(entry.get("event_ref") == ref and entry.get("revision") == event_digest for entry in events)
+    if already_imported and path.exists():
+        try:
+            current_stored = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            current_stored = {}
+        if isinstance(current_stored, dict) and current_stored.get("revision") == event_digest:
+            return {
+                "kind": "agentic-workspace/trusted-authority-host-event-import-result/v1",
+                "status": "already-imported",
+                "event_ref": ref,
+                "event": current_stored,
+                "event_store": TRUSTED_AUTHORITY_EVENT_STORE_PATH.as_posix(),
+                "event_index": TRUSTED_AUTHORITY_EVENT_INDEX_PATH.as_posix(),
+                "rule": "The public operation imports a signed producer-owned host observation into existing trusted custody; transport fields never mint authority.",
+            }
     _write_guidance_json_transaction(
         [
             (path, stored, _json_digest(json.loads(path.read_text(encoding="utf-8"))) if path.exists() else None),
@@ -1243,7 +1453,7 @@ def record_trusted_authority_host_event(
         "event": stored,
         "event_store": TRUSTED_AUTHORITY_EVENT_STORE_PATH.as_posix(),
         "event_index": TRUSTED_AUTHORITY_EVENT_INDEX_PATH.as_posix(),
-        "rule": "Repo-local guidance code imports signed producer-owned host events; local transport JSON is untrusted until a pinned host signature admits it.",
+        "rule": "The public operation imports a signed producer-owned host observation into existing trusted custody; transport fields never mint authority.",
     }
 
 
@@ -1403,7 +1613,7 @@ def _trusted_authority_host_event(*, target_root: Path, event_ref: str) -> dict[
     import_custody = event.get("import_custody") if isinstance(event.get("import_custody"), dict) else {}
     if (
         import_custody.get("kind") != "agentic-workspace/trusted-authority-host-event-import/v1"
-        or import_custody.get("source") != "signed-host-event-inbox"
+        or import_custody.get("source") not in {"signed-host-event-inbox", "signed-host-operation-input"}
         or import_custody.get("event_digest") != _trusted_authority_event_digest(event)
     ):
         raise WorkspaceUsageError("trusted authority host event was not imported through the signed host boundary.")
@@ -1564,6 +1774,8 @@ def _operation_event(*, values: dict[str, Any], operation: str, target_root: Pat
         "subjects_json",
         "trusted_authority_receipt_json",
         "trusted_authority_receipt_ref",
+        "trusted_host_event_json",
+        "host_event_ref",
         "target",
         "target_root",
         "format",
@@ -1577,13 +1789,29 @@ def _operation_event(*, values: dict[str, Any], operation: str, target_root: Pat
         "withdraw-supersede": str(values.get("lifecycle_action") or "withdraw"),
     }.get(operation, operation)
     trusted_receipt = _trusted_authority_receipt(target_root=target_root, value=values.get("trusted_authority_receipt_ref"))
-    if trusted_receipt:
-        event["authority"] = trusted_receipt["authority"]
-        event["producer_class"] = trusted_receipt["producer_class"]
-        event["producer_id"] = trusted_receipt["producer_id"]
-        event["source"] = trusted_receipt["source"]
-        event.setdefault("source_ref", trusted_receipt["source_ref"])
-        event["authority_resolution_source"] = "trusted-operation-receipt"
+    host_event_ref = str(values.get("host_event_ref") or event.get("host_event_ref") or "").strip()
+    host_event = _trusted_authority_host_event(target_root=target_root, event_ref=host_event_ref) if host_event_ref else {}
+    trusted_source = trusted_receipt or (
+        {
+            "authority": str(host_event.get("authority") or ""),
+            "producer_class": str(host_event.get("producer_class") or ""),
+            "producer_id": str(host_event.get("producer_id") or ""),
+            "source": str(host_event.get("source") or host_event.get("authority") or ""),
+            "source_ref": str(host_event.get("source_ref") or ""),
+        }
+        if host_event
+        else None
+    )
+    if trusted_source:
+        event["authority"] = trusted_source["authority"]
+        event["producer_class"] = trusted_source["producer_class"]
+        event["producer_id"] = trusted_source["producer_id"]
+        event["source"] = trusted_source["source"]
+        event.setdefault("source_ref", trusted_source["source_ref"])
+        event.setdefault("evidence_ref", str(host_event.get("evidence_ref") or host_event.get("source_ref") or ""))
+        event["authority_resolution_source"] = "signed-host-observation" if host_event else "trusted-operation-receipt"
+        if host_event_ref:
+            event["host_event_ref"] = host_event_ref
     else:
         event["authority"] = "agent-self-observation"
         event["producer_class"] = "agent"

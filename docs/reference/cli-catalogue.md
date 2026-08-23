@@ -3,7 +3,7 @@
 
 Exact current command values generated from `cli_commands.json` and `cli_option_groups.json`. The schema-shape references remain at `cli-commands.md` and `cli-option-groups.md`.
 
-- Contract digest: `sha256:b12c2e8a8479928dc09301ed9a7a68e5cc1f0c4ff3204ec335275932ff4bf251`
+- Contract digest: `sha256:e83a5066993228536c31d205581570f1c40248d111a50e32885578b5bfdc2cf0`
 - Program: `agentic-workspace`
 - Command/subcommand count: 123
 
@@ -135,7 +135,7 @@ Shared-state mutability and ignored local diagnostics are separate. A `no` below
 | `agentic-workspace assignment reject` | `core_context_router` | `advanced_host_repo` | no | 6 | Run assignment.reject. |
 | `agentic-workspace assignment repair` | `core_context_router` | `advanced_host_repo` | no | 6 | Run assignment.repair. |
 | `agentic-workspace correction-event` | `reusable_host_repo_diagnostics` | `ordinary_host_repo` | no | 0 | Submit, query, and compact local correction events through generated operations. |
-| `agentic-workspace correction-event submit` | `reusable_host_repo_diagnostics` | `ordinary_host_repo` | yes | 25 | Submit a correction event through the public local operation boundary. |
+| `agentic-workspace correction-event submit` | `reusable_host_repo_diagnostics` | `ordinary_host_repo` | yes | 28 | Submit a correction event through the public local operation boundary. |
 | `agentic-workspace correction-event query` | `reusable_host_repo_diagnostics` | `ordinary_host_repo` | no | 25 | Query admitted and low-authority correction events from bounded local storage. |
 | `agentic-workspace correction-event correct-dispute` | `reusable_host_repo_diagnostics` | `ordinary_host_repo` | yes | 25 | Record a dispute/correction transition for a prior correction event. |
 | `agentic-workspace correction-event withdraw-supersede` | `reusable_host_repo_diagnostics` | `ordinary_host_repo` | yes | 25 | Withdraw or supersede a prior correction event. |
@@ -1800,9 +1800,12 @@ correction event lifecycle subcommand
 | `--format` | no | `text` | text, json | `value` | Output format. |
 | `--target` | no | `—` | — | `value` | Target repository path. Defaults to current directory. |
 | `--event-json` | no | `—` | — | `value` | Serialized correction event JSON. |
+| `--trusted-host-event-json` | no | `—` | — | `value` | Signed producer-owned host observation envelope; caller labels do not confer authority. |
+| `--host-event-ref` | no | `—` | — | `value` | Opaque trusted-host observation reference for later normalization or disposition. |
 | `--trusted-authority-receipt-ref` | no | `—` | — | `value` | Repo-relative AW/human authority receipt reference resolved by the host boundary. |
 | `--idempotency-key` | no | `—` | — | `value` | Stable delivery idempotency key. |
 | `--delivery-id` | no | `—` | — | `value` | Stable delivery id. |
+| `--event-id` | no | `—` | — | `value` | Existing normalized correction event id for a route/disposition update. |
 | `--target-identity-ref` | no | `—` | — | `value` | Target id/name/alias to resolve. |
 | `--target-revision` | no | `—` | — | `value` | Submitted target revision. |
 | `--source-ref` | no | `—` | — | `value` | Stable source reference. |

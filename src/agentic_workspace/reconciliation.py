@@ -54,6 +54,11 @@ def compile_reconciliation(inputs: dict[str, Any] | None) -> dict[str, Any]:
     residue_input = _as_dict(inputs.get("residue"))
     continuation_input = _as_dict(inputs.get("continuation"))
     module_facts = [_as_dict(item) for item in _as_list(inputs.get("module_contributions"))]
+    future_context_signals = [
+        _as_dict(item)
+        for item in _as_list(inputs.get("future_context_signals"))
+        if isinstance(item, dict) and item.get("relevant") is not False
+    ]
 
     result_status = str(result.get("status") or "unknown")
     intent_status = str(intent.get("status") or "unknown")
@@ -114,6 +119,20 @@ def compile_reconciliation(inputs: dict[str, Any] | None) -> dict[str, Any]:
                 "repair": "route durable residue to exactly one canonical or module owner",
             }
         )
+    unresolved_future_context = [
+        signal
+        for signal in future_context_signals
+        if str(signal.get("status") or "") not in {"resolved", "routed", "dismissed", "superseded", "retired"}
+    ]
+    if unresolved_future_context:
+        signal = unresolved_future_context[0]
+        blockers.append(
+            {
+                "reason_code": "future-context-unresolved",
+                "owner": str(signal.get("owner") or "future-context source owner"),
+                "repair": str(signal.get("required_decision") or "route or explicitly dismiss the known future-context signal"),
+            }
+        )
 
     local_success = result_status in {"succeeded", "completed", "no-change"} and proof_status not in {
         "missing",
@@ -134,7 +153,16 @@ def compile_reconciliation(inputs: dict[str, Any] | None) -> dict[str, Any]:
     next_action: dict[str, Any] = {}
     if not terminal:
         supplied = _as_dict(continuation_input.get("next_action"))
-        if supplied.get("human_decision") or _registered_operation_action(supplied):
+        future_action = _as_dict(unresolved_future_context[0].get("operation_invocation")) if unresolved_future_context else {}
+        if future_action and _registered_operation_action({"operation_invocation": future_action}):
+            next_action = {
+                "kind": "agentic-workspace/reconciliation-owner-operation/v1",
+                "owner": str(unresolved_future_context[0].get("owner") or "future-context source owner"),
+                "reason_code": "future-context-unresolved",
+                "operation_invocation": future_action,
+                "required_decision": str(unresolved_future_context[0].get("required_decision") or ""),
+            }
+        elif supplied.get("human_decision") or _registered_operation_action(supplied):
             next_action = supplied
         else:
             first = blockers[0]
@@ -154,6 +182,7 @@ def compile_reconciliation(inputs: dict[str, Any] | None) -> dict[str, Any]:
         "residue": residue_input,
         "continuation": continuation_input,
         "module_contributions": module_facts,
+        "future_context_signals": future_context_signals,
     }
     return {
         "kind": "agentic-workspace/reconciliation/v1",
@@ -174,5 +203,6 @@ def compile_reconciliation(inputs: dict[str, Any] | None) -> dict[str, Any]:
         "next_action": next_action,
         "blockers": blockers,
         "module_contributions": module_facts,
+        "future_context_signals": future_context_signals,
         "rule": "Proof may support only the affected owner-level claim; semantic intent, parent completion, residue ownership, and continuation remain independently owned facts.",
     }
