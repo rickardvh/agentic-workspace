@@ -38,16 +38,16 @@
       "source": "cli-option"
     },
     {
+      "description": "Canonical JSON agentic-workspace/trusted-authority-host-event/v1 envelope. host_admission is RS256 over the v1 payload {kind, algorithm, key_id, event_ref, event_digest, verdict_digest, audience}; the pinned key issuer/channel, verdict workspace binding, expiry, nonce, event identity, and custody must agree.",
       "name": "trusted_host_event_json",
       "required": false,
-      "source": "cli-option",
-      "description": "Canonical JSON agentic-workspace/trusted-authority-host-event/v1 envelope. host_admission is RS256 over the v1 payload {kind, algorithm, key_id, event_ref, event_digest, verdict_digest, audience}; the pinned key issuer/channel, verdict workspace binding, expiry, nonce, event identity, and custody must agree."
+      "source": "cli-option"
     },
     {
+      "description": "Opaque trusted-authority-event:<id> returned by prior signed observation custody; it conveys no authority unless the stored signature and import custody remain valid.",
       "name": "host_event_ref",
       "required": false,
-      "source": "cli-option",
-      "description": "Opaque trusted-authority-event:<id> returned by prior signed observation custody; it conveys no authority unless the stored signature and import custody remain valid."
+      "source": "cli-option"
     },
     {
       "name": "trusted_authority_receipt_ref",

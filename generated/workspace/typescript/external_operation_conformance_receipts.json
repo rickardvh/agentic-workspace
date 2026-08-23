@@ -1,5 +1,5 @@
 {
-  "executed_at": "2026-08-24T06:50:42Z",
+  "executed_at": "2026-08-24T06:53:00Z",
   "freshness": {
     "client_semantics_revision": "sha256:a832c458ff7c47b635f771febd2cc753c601ad89a226f4e2810ed47e6ae346e0",
     "rule": "Publication currentness is tied to runner/client-semantics and profile/operation revisions plus explicit stale/revoked/superseded markers.",
@@ -8,7 +8,7 @@
   },
   "kind": "agentic-workspace/external-operation-conformance-receipt-store/v1",
   "mirror_publication": {
-    "generation_id": "external-conformance-publication:0e0144d2ce33077d227f54e8",
+    "generation_id": "external-conformance-publication:4a3d453a03847ed081570e62",
     "kind": "agentic-workspace/external-operation-conformance-mirror-publication/v1",
     "path_count": 3,
     "paths": [
@@ -16,9 +16,9 @@
       "generated/workspace/python/external_operation_conformance_receipts.json",
       "generated/workspace/typescript/external_operation_conformance_receipts.json"
     ],
-    "payload_digest": "sha256:0e0144d2ce33077d227f54e8c09eac4f6a399318a03e6674c005198e05b77548",
-    "previous_digest": "cbafdb1bc316c816603e63794dd09779a2ae47c05949d4acaf9ba9b3a8bdcfb5",
-    "publisher_pid": 28704,
+    "payload_digest": "sha256:4a3d453a03847ed081570e62c8afbe4ff1ef56bffb39dadf887e1e9007b65e7e",
+    "previous_digest": "7a8dc4dd557263a1a7bb17042c35688ae145fad6ea46f99cfa509ab21ada5e32",
+    "publisher_pid": 32264,
     "reader_rule": "Readers must verify payload_digest before consuming receipts and reject stores without one published generation.",
     "status": "published"
   },
@@ -405,7 +405,7 @@
         "source": "scripts/check/run_operation_conformance_tests.py",
         "trusted_channel": "packaged-conformance-receipt"
       },
-      "executed_at": "2026-08-24T06:50:42Z",
+      "executed_at": "2026-08-24T06:53:00Z",
       "executors": {
         "cli-json": {
           "evidence": [
@@ -470,11 +470,11 @@
         "operation-results:count=54@sha256:8845f2fecae3613825209d52"
       ],
       "profile_fingerprint": "sha256:dbb63febb995500f280894b0a3076b9aa526a905ef40b82148800c3655d908f3",
-      "receipt_ref": "external-conformance:config.report:a1c715a9663e690100f784fa",
+      "receipt_ref": "external-conformance:config.report:72f3233b7a0ef79d7ef6f1d3",
       "result_identity": {
         "client_semantics_revision": "sha256:a832c458ff7c47b635f771febd2cc753c601ad89a226f4e2810ed47e6ae346e0",
-        "executed_at": "2026-08-24T06:50:42Z",
-        "invocation_id": "operation-conformance:scripts/chec:71b96e79953e0d5eaffa6c72:2026-08-24T06:50:42Z",
+        "executed_at": "2026-08-24T06:53:00Z",
+        "invocation_id": "operation-conformance:scripts/chec:71b96e79953e0d5eaffa6c72:2026-08-24T06:53:00Z",
         "kind": "agentic-workspace/external-operation-conformance-result-identity/v1",
         "result_digest": "71b96e79953e0d5eaffa6c72c3cb4ad6ead585f253dbd06395d11a09330174ef",
         "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:425a5834df23b26ab25d241fdc6500185b601f93d4eaa7e56b1fa285792f7419",
@@ -754,7 +754,7 @@
         "source": "scripts/check/run_operation_conformance_tests.py",
         "trusted_channel": "packaged-conformance-receipt"
       },
-      "executed_at": "2026-08-24T06:50:42Z",
+      "executed_at": "2026-08-24T06:53:00Z",
       "executors": {
         "cli-json": {
           "executor_id": "direct-cli-json",
@@ -807,11 +807,11 @@
         "operation-results:count=3@sha256:1248707c712c0957e633b9ec"
       ],
       "profile_fingerprint": "sha256:dbb63febb995500f280894b0a3076b9aa526a905ef40b82148800c3655d908f3",
-      "receipt_ref": "external-conformance:correction-event.submit:5d68189e2cbdf10758f57bc7",
+      "receipt_ref": "external-conformance:correction-event.submit:b9c394c4ff3e678e7ac84754",
       "result_identity": {
         "client_semantics_revision": "sha256:a832c458ff7c47b635f771febd2cc753c601ad89a226f4e2810ed47e6ae346e0",
-        "executed_at": "2026-08-24T06:50:42Z",
-        "invocation_id": "operation-conformance:scripts/chec:71b96e79953e0d5eaffa6c72:2026-08-24T06:50:42Z",
+        "executed_at": "2026-08-24T06:53:00Z",
+        "invocation_id": "operation-conformance:scripts/chec:71b96e79953e0d5eaffa6c72:2026-08-24T06:53:00Z",
         "kind": "agentic-workspace/external-operation-conformance-result-identity/v1",
         "result_digest": "71b96e79953e0d5eaffa6c72c3cb4ad6ead585f253dbd06395d11a09330174ef",
         "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:425a5834df23b26ab25d241fdc6500185b601f93d4eaa7e56b1fa285792f7419",
@@ -1226,7 +1226,7 @@
         "source": "scripts/check/run_operation_conformance_tests.py",
         "trusted_channel": "packaged-conformance-receipt"
       },
-      "executed_at": "2026-08-24T06:50:42Z",
+      "executed_at": "2026-08-24T06:53:00Z",
       "executors": {
         "cli-json": {
           "evidence": [
@@ -1291,11 +1291,11 @@
         "operation-results:count=85@sha256:10f42970cbf548b8c62b2911"
       ],
       "profile_fingerprint": "sha256:dbb63febb995500f280894b0a3076b9aa526a905ef40b82148800c3655d908f3",
-      "receipt_ref": "external-conformance:delegation-outcome.append:4e63690ae78dd2064efbc0d0",
+      "receipt_ref": "external-conformance:delegation-outcome.append:c4f4a4525bd99acc1b4f600e",
       "result_identity": {
         "client_semantics_revision": "sha256:a832c458ff7c47b635f771febd2cc753c601ad89a226f4e2810ed47e6ae346e0",
-        "executed_at": "2026-08-24T06:50:42Z",
-        "invocation_id": "operation-conformance:scripts/chec:71b96e79953e0d5eaffa6c72:2026-08-24T06:50:42Z",
+        "executed_at": "2026-08-24T06:53:00Z",
+        "invocation_id": "operation-conformance:scripts/chec:71b96e79953e0d5eaffa6c72:2026-08-24T06:53:00Z",
         "kind": "agentic-workspace/external-operation-conformance-result-identity/v1",
         "result_digest": "71b96e79953e0d5eaffa6c72c3cb4ad6ead585f253dbd06395d11a09330174ef",
         "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:425a5834df23b26ab25d241fdc6500185b601f93d4eaa7e56b1fa285792f7419",
@@ -1716,7 +1716,7 @@
         "source": "scripts/check/run_operation_conformance_tests.py",
         "trusted_channel": "packaged-conformance-receipt"
       },
-      "executed_at": "2026-08-24T06:50:42Z",
+      "executed_at": "2026-08-24T06:53:00Z",
       "executors": {
         "cli-json": {
           "evidence": [
@@ -1781,11 +1781,11 @@
         "operation-results:count=48@sha256:661f343d998f1166fa80f0b5"
       ],
       "profile_fingerprint": "sha256:dbb63febb995500f280894b0a3076b9aa526a905ef40b82148800c3655d908f3",
-      "receipt_ref": "external-conformance:external-evidence.query:288961e07a14aa57082323f3",
+      "receipt_ref": "external-conformance:external-evidence.query:bbc1a49c2560fe6598fd53a2",
       "result_identity": {
         "client_semantics_revision": "sha256:a832c458ff7c47b635f771febd2cc753c601ad89a226f4e2810ed47e6ae346e0",
-        "executed_at": "2026-08-24T06:50:42Z",
-        "invocation_id": "operation-conformance:scripts/chec:71b96e79953e0d5eaffa6c72:2026-08-24T06:50:42Z",
+        "executed_at": "2026-08-24T06:53:00Z",
+        "invocation_id": "operation-conformance:scripts/chec:71b96e79953e0d5eaffa6c72:2026-08-24T06:53:00Z",
         "kind": "agentic-workspace/external-operation-conformance-result-identity/v1",
         "result_digest": "71b96e79953e0d5eaffa6c72c3cb4ad6ead585f253dbd06395d11a09330174ef",
         "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:425a5834df23b26ab25d241fdc6500185b601f93d4eaa7e56b1fa285792f7419",
@@ -2206,7 +2206,7 @@
         "source": "scripts/check/run_operation_conformance_tests.py",
         "trusted_channel": "packaged-conformance-receipt"
       },
-      "executed_at": "2026-08-24T06:50:42Z",
+      "executed_at": "2026-08-24T06:53:00Z",
       "executors": {
         "cli-json": {
           "evidence": [
@@ -2271,11 +2271,11 @@
         "operation-results:count=48@sha256:fa5905b83f178afe9b2ad2eb"
       ],
       "profile_fingerprint": "sha256:dbb63febb995500f280894b0a3076b9aa526a905ef40b82148800c3655d908f3",
-      "receipt_ref": "external-conformance:external-evidence.submit:f43c839e77a90667cf707b20",
+      "receipt_ref": "external-conformance:external-evidence.submit:a73b3f9950a0e771e5d007bf",
       "result_identity": {
         "client_semantics_revision": "sha256:a832c458ff7c47b635f771febd2cc753c601ad89a226f4e2810ed47e6ae346e0",
-        "executed_at": "2026-08-24T06:50:42Z",
-        "invocation_id": "operation-conformance:scripts/chec:71b96e79953e0d5eaffa6c72:2026-08-24T06:50:42Z",
+        "executed_at": "2026-08-24T06:53:00Z",
+        "invocation_id": "operation-conformance:scripts/chec:71b96e79953e0d5eaffa6c72:2026-08-24T06:53:00Z",
         "kind": "agentic-workspace/external-operation-conformance-result-identity/v1",
         "result_digest": "71b96e79953e0d5eaffa6c72c3cb4ad6ead585f253dbd06395d11a09330174ef",
         "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:425a5834df23b26ab25d241fdc6500185b601f93d4eaa7e56b1fa285792f7419",
@@ -2696,7 +2696,7 @@
         "source": "scripts/check/run_operation_conformance_tests.py",
         "trusted_channel": "packaged-conformance-receipt"
       },
-      "executed_at": "2026-08-24T06:50:42Z",
+      "executed_at": "2026-08-24T06:53:00Z",
       "executors": {
         "cli-json": {
           "evidence": [
@@ -2761,11 +2761,11 @@
         "operation-results:count=51@sha256:58a2f8839cbb66b66adc6e2c"
       ],
       "profile_fingerprint": "sha256:dbb63febb995500f280894b0a3076b9aa526a905ef40b82148800c3655d908f3",
-      "receipt_ref": "external-conformance:instructions.explain:7d913623e33ef5af1dd380c9",
+      "receipt_ref": "external-conformance:instructions.explain:acdebf1f06ca385b6b65d2e0",
       "result_identity": {
         "client_semantics_revision": "sha256:a832c458ff7c47b635f771febd2cc753c601ad89a226f4e2810ed47e6ae346e0",
-        "executed_at": "2026-08-24T06:50:42Z",
-        "invocation_id": "operation-conformance:scripts/chec:71b96e79953e0d5eaffa6c72:2026-08-24T06:50:42Z",
+        "executed_at": "2026-08-24T06:53:00Z",
+        "invocation_id": "operation-conformance:scripts/chec:71b96e79953e0d5eaffa6c72:2026-08-24T06:53:00Z",
         "kind": "agentic-workspace/external-operation-conformance-result-identity/v1",
         "result_digest": "71b96e79953e0d5eaffa6c72c3cb4ad6ead585f253dbd06395d11a09330174ef",
         "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:425a5834df23b26ab25d241fdc6500185b601f93d4eaa7e56b1fa285792f7419",
@@ -2809,8 +2809,8 @@
   ],
   "result_identity": {
     "client_semantics_revision": "sha256:a832c458ff7c47b635f771febd2cc753c601ad89a226f4e2810ed47e6ae346e0",
-    "executed_at": "2026-08-24T06:50:42Z",
-    "invocation_id": "operation-conformance:scripts/chec:71b96e79953e0d5eaffa6c72:2026-08-24T06:50:42Z",
+    "executed_at": "2026-08-24T06:53:00Z",
+    "invocation_id": "operation-conformance:scripts/chec:71b96e79953e0d5eaffa6c72:2026-08-24T06:53:00Z",
     "kind": "agentic-workspace/external-operation-conformance-result-identity/v1",
     "result_digest": "71b96e79953e0d5eaffa6c72c3cb4ad6ead585f253dbd06395d11a09330174ef",
     "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:425a5834df23b26ab25d241fdc6500185b601f93d4eaa7e56b1fa285792f7419",

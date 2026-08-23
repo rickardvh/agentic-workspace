@@ -4,7 +4,7 @@
   "title": "Make future-decision context effective by construction",
   "owner_level": "slice",
   "lifecycle": "live",
-  "phase": "proof",
+  "phase": "validation",
   "revision": 2,
   "canonical_core": {
     "requested_outcome": "Close #2680 and #2690 with independent signed-host correction preservation plus generic source-owned future-context effects in the canonical decision and reconciliation.",
