@@ -49623,7 +49623,7 @@ def _emit_proof(
     return 0
 
 
-def _ordinary_summary_continuation_payload(*, summary: dict[str, Any], cli_invoke: str) -> dict[str, Any]:
+def _ordinary_summary_continuation_payload(*, summary: dict[str, Any], target_root: Path, cli_invoke: str) -> dict[str, Any]:
     view = copy.deepcopy(_as_dict(summary.get("continuation_view")))
     sources = [item for item in _list_payload(view.get("source_freshness")) if isinstance(item, dict)]
     primary_source = next(
@@ -49672,36 +49672,40 @@ def _ordinary_summary_continuation_payload(*, summary: dict[str, Any], cli_invok
     }
     view["blockers"] = [str(item) for item in _list_payload(resume.get("failed")) if str(item).strip()]
     view["residue_owner"] = decision.get("residue_owner") or ("active continuation state" if active_owner else "none")
+    target_value = target_root.as_posix()
+    target_arg = json.dumps(target_value) if any(character.isspace() for character in target_value) else target_value
     view["detail_routes"] = {
         "planning_record": _command_with_cli_invoke(
-            command="agentic-workspace summary --target . --select planning_record --format json", cli_invoke=cli_invoke
+            command=f"agentic-workspace summary --target {target_arg} --select planning_record --format json", cli_invoke=cli_invoke
         ),
         "proof": _command_with_cli_invoke(
-            command="agentic-workspace summary --target . --select continuation_view.proof_state,planning_record.proof_report --format json",
+            command=f"agentic-workspace summary --target {target_arg} --select continuation_view.proof_state,planning_record.proof_report --format json",
             cli_invoke=cli_invoke,
         ),
         "claim_boundary": _command_with_cli_invoke(
-            command="agentic-workspace summary --target . --select continuation_view.claim_boundary,planning_record.completion_gate --format json",
+            command=f"agentic-workspace summary --target {target_arg} --select continuation_view.claim_boundary,planning_record.completion_gate --format json",
             cli_invoke=cli_invoke,
         ),
         "owner_sources": _command_with_cli_invoke(
-            command="agentic-workspace summary --target . --select continuation_view.source_freshness,planning_revision --format json",
+            command=f"agentic-workspace summary --target {target_arg} --select continuation_view.source_freshness,planning_revision --format json",
             cli_invoke=cli_invoke,
         ),
         "health_and_readiness": _command_with_cli_invoke(
-            command="agentic-workspace summary --target . --select planning_surface_health,execution_readiness --format json",
+            command=f"agentic-workspace summary --target {target_arg} --select planning_surface_health,execution_readiness --format json",
             cli_invoke=cli_invoke,
         ),
         "lanes_and_roadmap": _command_with_cli_invoke(
-            command="agentic-workspace summary --target . --select lanes,roadmap --format json", cli_invoke=cli_invoke
+            command=f"agentic-workspace summary --target {target_arg} --select lanes,roadmap --format json", cli_invoke=cli_invoke
         ),
         "selector_inventory": _command_with_cli_invoke(
-            command="agentic-workspace summary --target . --select selector_inventory --format json", cli_invoke=cli_invoke
+            command=f"agentic-workspace summary --target {target_arg} --select selector_inventory --format json", cli_invoke=cli_invoke
         ),
         "select": _command_with_cli_invoke(
-            command="agentic-workspace summary --target . --select <field.path> --format json", cli_invoke=cli_invoke
+            command=f"agentic-workspace summary --target {target_arg} --select <field.path> --format json", cli_invoke=cli_invoke
         ),
-        "verbose": _command_with_cli_invoke(command="agentic-workspace summary --target . --verbose --format json", cli_invoke=cli_invoke),
+        "verbose": _command_with_cli_invoke(
+            command=f"agentic-workspace summary --target {target_arg} --verbose --format json", cli_invoke=cli_invoke
+        ),
     }
     view["absence_states"] = {
         **_as_dict(view.get("absence_states")),
@@ -49712,7 +49716,7 @@ def _ordinary_summary_continuation_payload(*, summary: dict[str, Any], cli_invok
         view.pop(routed_field, None)
     return {
         "kind": "planning-summary/v1",
-        "target_root": summary.get("target_root") or summary.get("target") or ".",
+        "target_root": target_value,
         "continuation_view": view,
     }
 
@@ -49918,7 +49922,7 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
             if reused is not None:
                 for diagnostic_key in ("context", "owner_reconciliation"):
                     reused.pop(diagnostic_key, None)
-                reused = _ordinary_summary_continuation_payload(summary=reused, cli_invoke=config.cli_invoke)
+                reused = _ordinary_summary_continuation_payload(summary=reused, target_root=target_root, cli_invoke=config.cli_invoke)
                 print(format_summary_json(reused))
                 return 0
         summary_started_at = time.perf_counter()
@@ -50038,7 +50042,7 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
         if summary_profile == "tiny":
             for diagnostic_key in ("context", "owner_reconciliation"):
                 summary.pop(diagnostic_key, None)
-            summary = _ordinary_summary_continuation_payload(summary=summary, cli_invoke=config.cli_invoke)
+            summary = _ordinary_summary_continuation_payload(summary=summary, target_root=target_root, cli_invoke=config.cli_invoke)
         if args.format == "json":
             print(format_summary_json(summary))
         elif summary_profile == "tiny":

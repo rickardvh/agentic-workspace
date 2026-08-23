@@ -19,6 +19,12 @@
   },
   "external_agent_evidence": {
     "status": "verified-deterministically",
+    "exact_route_proof": {
+      "fixture": "tests/test_workspace_summary_cli.py::test_workspace_summary_json_defaults_to_tiny_profile",
+      "status": "non-current-target-preserved",
+      "target_source": "resolved summary target_root argument",
+      "assertion": "Every continuation_view detail route carries the explicit summarized workspace target; no route falls back to --target ."
+    },
     "weak_agent_restart": {
       "guidance_source": "src/agentic_workspace/contracts/operations/summary.report.json#guards",
       "guidance": "For ordinary restart and handoff, continuation_view is authoritative: resume only its owner and next action, preserve freshness, blockers, proof/claim and residue boundaries, and use selectors or verbose output only for optional detail.",

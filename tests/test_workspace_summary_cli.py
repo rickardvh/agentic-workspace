@@ -73,6 +73,9 @@ candidates = [
     assert continuation["proof_state"]
     assert continuation["residue_owner"]
     assert set(continuation["detail_routes"]) >= {"planning_record", "proof", "claim_boundary", "select", "verbose"}
+    expected_target = f"--target {tmp_path.as_posix()}"
+    assert all(expected_target in command for command in continuation["detail_routes"].values())
+    assert all("--target ." not in command for command in continuation["detail_routes"].values())
 
 
 def test_summary_default_continuation_view_is_handoff_complete(tmp_path: Path, capsys) -> None:
@@ -232,6 +235,7 @@ def _summary_compression_scenario_payloads() -> dict[str, dict[str, dict[str, ob
             )
         after = workspace_runtime_core._ordinary_summary_continuation_payload(
             summary=before,
+            target_root=Path("."),
             cli_invoke="agentic-workspace",
         )
         return {"before": before, "after": after}
