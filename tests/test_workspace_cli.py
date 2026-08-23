@@ -17,6 +17,7 @@ from repo_verification_bootstrap import runtime_primitives as verification_runti
 from tests.workspace_cli_support import *
 
 from agentic_workspace import session_logging
+from agentic_workspace.config import workspace_pointer_block
 
 
 def test_successful_completion_cost_discovers_manifest_indexed_custom_output_root(tmp_path: Path) -> None:
@@ -8389,6 +8390,73 @@ def _startup_output_measurement(payload: dict[str, object]) -> dict[str, int]:
         "human_lines": len(pretty.splitlines()),
         "field_count": _recursive_json_field_count(payload),
     }
+
+
+def test_generated_ordinary_guidance_is_executable_from_default_decision_packet_for_weak_agent(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    assert (
+        cli.main(
+            [
+                "planning",
+                "new-plan",
+                "--id",
+                "protected-owner",
+                "--title",
+                "Protected owner",
+                "--target",
+                str(tmp_path),
+                "--activate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+
+    guidance = workspace_pointer_block(cli_invoke="agentic-workspace")
+    ordinary_route = guidance.split("Ordinary route:", 1)[1].split("Boundaries:", 1)[0]
+    assert "authoritative `decision_packet`" in ordinary_route
+    assert "`communication_contract` as optional selector-backed" in ordinary_route
+    assert "Use the returned `communication_contract`" not in ordinary_route
+    assert "--select communication_contract" not in ordinary_route
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Implement an unrelated parser cache eviction",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert set(payload) == {"kind", "target", "decision_packet"}
+    assert "communication_contract" not in payload
+    decision = payload["decision_packet"]
+    action = decision["action"]
+    effects = decision["effects"]
+    assert action["id"] == "inspect-current-task"
+    assert action["id"] in effects["allowed_next_actions"]
+    assert action["id"] not in effects["forbidden_actions"]
+    assert effects["blocked_claims"] == [
+        "claim-active-plan-progress",
+        "claim-active-plan-complete",
+        "silently-abandon-active-plan",
+    ]
+    assert decision["claim_boundary"]
+    assert decision["owner"]["non_interference"]["status"] == "protected"
+    assert decision["owner"]["non_interference"]["restriction"]
+    assert set(decision["detail_routes"]) >= {"select", "verbose", "proof_detail", "owner_detail"}
+    assert all(".agentic-workspace/" not in route for route in decision["detail_routes"].values())
 
 
 def test_start_default_compresses_representative_first_contact_without_losing_decision_safety(tmp_path: Path, capsys) -> None:

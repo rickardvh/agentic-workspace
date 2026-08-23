@@ -130,7 +130,7 @@ Ordinary route:
 1. Run `<configured AW invocation> start --target . --task "<task>" --format json` before non-trivial answers, edits, read-only workflow, config, delegation, or action-safety decisions.
 2. Run `<configured AW invocation> implement --target . --changed <paths> --task "<task>" --format json` when changed paths are already known.
 3. Follow the authoritative `decision_packet` action, effects, claim boundary, and routed detail before opening raw `.agentic-workspace` files or running drill-down commands.
-4. Use the returned `communication_contract` for decision-first, evidence-backed, compact output; expand only for its safety/proof/detail triggers.
+4. Treat `communication_contract` as optional selector-backed response-shape detail; ordinary work proceeds from `decision_packet` and expands only when its safety, proof, or detail routes require it.
 5. When implementing an issue, satisfy the intended end state in the ordinary path; ask for clarification instead of closing with a partial path when the full outcome appears larger than the issue safely permits.
 
 Boundaries:
