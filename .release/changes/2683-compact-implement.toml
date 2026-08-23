@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Compress ordinary implement output into one authoritative decision packet with exact mutation, proof, claim, and drill-down boundaries."
