@@ -19089,11 +19089,11 @@ def _ordinary_output_shape_inventory() -> dict[str, Any]:
         {
             "surface": "proof",
             "status": "budget-proven",
-            "primary_decision": "selected proof command or proof blocker",
-            "primary_decision_object": "next",
-            "ordinary_default_shape": "next proof action with required_commands and manual verification only when needed",
-            "detail_route": "proof selector/detail output",
-            "retention_evidence": "Milestone D proof --changed selected required validation commands and kept semantic intent proof as agent judgment.",
+            "primary_decision": "complete proof action set, evidence sufficiency, and claim boundary",
+            "primary_decision_object": "proof_next_decision",
+            "ordinary_default_shape": "one authoritative proof decision with safety-sensitive expansion and selector-backed explanation",
+            "detail_route": "proof --select <field> or --verbose",
+            "budget_evidence": "tests/test_workspace_proof_cli.py and docs/maintainer/proof-compression-2684.json measure ordinary and safety-sensitive proof decisions.",
         },
         {
             "surface": "planning report/summary",
@@ -19197,10 +19197,10 @@ def _ordinary_output_shape_inventory() -> dict[str, Any]:
                 "surface": "proof",
                 "profile": "proof-decision-envelope/v1",
                 "status": "budget-proven",
-                "max_json_bytes": 12000,
-                "max_field_count": 320,
-                "max_estimated_tokens": 3000,
-                "max_human_lines": 80,
+                "max_json_bytes": 7000,
+                "max_field_count": 180,
+                "max_estimated_tokens": 1750,
+                "max_human_lines": 60,
                 "expansion_trigger": "--select or --verbose",
                 "proof": "test_all_declared_ordinary_profiles_obey_authoritative_output_budgets",
             },
@@ -49314,6 +49314,27 @@ def _validated_proof_receipt_inputs(*, command: str, result: str) -> tuple[str, 
     return command, result
 
 
+def _emit_proof_next_decision_text(payload: dict[str, Any]) -> None:
+    next_action = _as_dict(payload.get("next"))
+    claim = _as_dict(payload.get("claim_boundary"))
+    sufficiency = _as_dict(payload.get("sufficiency"))
+    print(f"proof: {next_action.get('action', 'select-proof-scope')}")
+    if next_action.get("command"):
+        print(f"command: {next_action['command']}")
+    commands = [str(command) for command in _list_payload(payload.get("required_commands"))]
+    print(f"required-commands: {len(commands)}")
+    for command in commands:
+        print(f"- {command}")
+    print(f"sufficiency: {sufficiency.get('status', 'not-yet-sufficient')}")
+    print(f"claim: {claim.get('status', 'blocked')} ({claim.get('effect', 'selected-proof-required')})")
+    for blocker in _list_payload(payload.get("blockers")):
+        if isinstance(blocker, dict):
+            print(f"blocker: {blocker.get('kind', 'proof-gap')}")
+    routes = _as_dict(payload.get("detail_routes"))
+    if routes.get("select"):
+        print(f"detail: {routes['select']}")
+
+
 def _emit_proof(
     *,
     format_name: str,
@@ -49542,13 +49563,19 @@ def _emit_proof(
                     reuse_result=reuse_result,
                     full_detail_command=full_detail_command,
                 )
+        if not select:
+            for peer_field in ("context", "task_context", "projection_reuse"):
+                payload.pop(peer_field, None)
         tiny_commands = [str(command) for command in _list_payload(payload.get("required_commands"))]
         if tiny_commands and all(command.startswith("git diff --") for command in tiny_commands):
             payload.pop("projection_reuse", None)
         if format_name == "json":
             print(json.dumps(serialise_value(payload), indent=2))
             return 0
-        _emit_compact_answer_text(payload)
+        if payload.get("kind") == "proof-next-decision/v1" and payload.get("claim_boundary"):
+            _emit_proof_next_decision_text(payload)
+        else:
+            _emit_compact_answer_text(payload)
         return 0
     payload = _proof_payload(target_root=target_root, descriptors=descriptors)
     payload = _select_proof_payload(payload, target_root=target_root, route=route, current_only=current_only, changed_paths=changed_paths)

@@ -446,6 +446,160 @@ def _short_tiny_text(value: str, *, limit: int) -> str:
     return f"{text[: max(0, limit - 3)].rstrip()}..."
 
 
+def _ordinary_proof_next_decision_payload(
+    *, next_decision: dict[str, Any], answer: dict[str, Any], target: Any, selector: Any, cli_invoke: str
+) -> dict[str, Any]:
+    """Promote the existing proof-next decision to the ordinary proof authority."""
+
+    route = _as_dict(answer.get("proof_route_decision"))
+    selected_command = _as_dict(route.get("selected_command"))
+    preservation = _as_dict(answer.get("proof_route_strategy_preservation"))
+    route_health = _as_dict(preservation.get("proof_route_health"))
+    reconciliation = _as_dict(answer.get("proof_receipt_reconciliation"))
+    selected_identity = _as_dict(reconciliation.get("selected_proof_identity"))
+    closeout = _as_dict(answer.get("proof_closeout_summary"))
+    bridge = _as_dict(answer.get("proof_receipt_bridge"))
+    claim_gate = _as_dict(answer.get("proof_route_strategy_claim_gate"))
+    manual = answer.get("manual_verification") or next_decision.get("manual_verification")
+    unavailable = [item for item in _list_payload(answer.get("unavailable_proof_commands")) if isinstance(item, dict)]
+    remaining_gaps = [str(item) for item in _list_payload(closeout.get("remaining_gaps")) if str(item).strip()]
+    required_commands = [str(item) for item in _list_payload(next_decision.get("required_commands")) if str(item).strip()]
+    closeout_status = str(closeout.get("status") or "not-yet-sufficient")
+    receipt_status = str(reconciliation.get("status") or "not-recorded")
+    sufficient = closeout_status == "sufficient-recorded"
+
+    blockers: list[dict[str, Any]] = []
+    if unavailable:
+        blockers.append(
+            {
+                "kind": "unavailable-runtime-or-host-policy",
+                "count": len(unavailable),
+                "commands": unavailable,
+                "detail_selector": "unavailable_proof_commands",
+            }
+        )
+    if isinstance(manual, dict) and manual:
+        blockers.append(
+            {
+                "kind": "manual-verification",
+                "status": str(manual.get("status") or "required"),
+                "summary": str(manual.get("summary") or "manual verification remains required"),
+                **({"templates": manual["templates"]} if manual.get("templates") else {}),
+                "detail_selector": "manual_verification",
+            }
+        )
+    warnings = [str(item) for item in _list_payload(next_decision.get("warnings")) if str(item).strip()]
+    if warnings:
+        blockers.append({"kind": "warning", "items": warnings, "detail_selector": "proof_next_decision"})
+
+    decision = {
+        "kind": "proof-next-decision/v1",
+        "target": target,
+        "selector": selector if isinstance(selector, dict) else {},
+        "identity": {
+            "decision_id": preservation.get("decision_id") or "not-recorded",
+            "route_health_id": preservation.get("route_health_id") or "not-recorded",
+            "proof_subject": {
+                "changed_paths": [str(path) for path in _list_payload(_as_dict(selector).get("changed"))],
+                "selected_proof_id": selected_identity.get("id") or "not-recorded",
+                "fingerprint": selected_identity.get("fingerprint") or "not-recorded",
+                "command_count": int(selected_identity.get("command_count", len(required_commands)) or 0),
+            },
+            "freshness": "current" if sufficient else "missing-stale-or-insufficient",
+        },
+        "next": next_decision.get("next", {}),
+        "required_commands": required_commands,
+        "route": {
+            "source": route.get("route_source") or _as_dict(next_decision.get("next")).get("route_source") or "not-recorded",
+            "authority": selected_command.get("route_authority") or "not-recorded",
+            "lane": selected_command.get("lane") or "not-recorded",
+            "health": {
+                "status": route_health.get("status") or "not-recorded",
+                "finding_count": int(route_health.get("finding_count", 0) or 0),
+            },
+        },
+        "receipt": {
+            "status": receipt_status,
+            "missing_count": int(bridge.get("missing_receipt_count", 0) or 0),
+            "next_recording_command": bridge.get("next_recording_command"),
+        },
+        "manual_verification": manual,
+        "blockers": blockers,
+        "sufficiency": {
+            "status": closeout_status,
+            "remaining_gap_count": len(remaining_gaps),
+            "gap_kinds": [
+                kind
+                for kind, present in (
+                    ("proof-result-missing-or-insufficient", any("proof result" in gap for gap in remaining_gaps)),
+                    ("route-maturity", any("route" in gap or "fallback" in gap for gap in remaining_gaps)),
+                    ("manual-verification", isinstance(manual, dict) and bool(manual)),
+                    ("runtime-or-host-policy", bool(unavailable)),
+                )
+                if present
+            ],
+        },
+        "claim_boundary": {
+            "status": "allowed" if sufficient else "blocked",
+            "completion_claim_allowed": sufficient,
+            "effect": claim_gate.get("claim_effect") or preservation.get("claim_effect") or "selected-proof-required",
+            "rule": (
+                "The selected proof is sufficient and recorded for this exact proof subject."
+                if sufficient
+                else "Do not claim completion until every required command, manual obligation, and receipt gap is satisfied."
+            ),
+        },
+        "expansion_reasons": [
+            reason
+            for reason, active in (
+                ("multiple-required-commands", len(required_commands) > 1),
+                ("manual-verification-required", isinstance(manual, dict) and bool(manual)),
+                ("unavailable-runtime-or-host-policy", bool(unavailable)),
+                ("failed-stale-or-missing-receipt", not sufficient and receipt_status not in {"not-recorded", ""}),
+            )
+            if active
+        ],
+        "detail_routes": {
+            "route": _command_with_cli_invoke(
+                command="agentic-workspace proof --target . --changed <paths> --select proof_route_strategy_decision,proof_route_strategy_preservation,proof_route_strategy_claim_gate --format json",
+                cli_invoke=cli_invoke,
+            ),
+            "receipts": _command_with_cli_invoke(
+                command="agentic-workspace proof --target . --changed <paths> --select proof_receipt_reconciliation,proof_receipt_bridge --format json",
+                cli_invoke=cli_invoke,
+            ),
+            "command_tiers": _command_with_cli_invoke(
+                command="agentic-workspace proof --target . --changed <paths> --select proof_command_tiers --format json",
+                cli_invoke=cli_invoke,
+            ),
+            "closeout": _command_with_cli_invoke(
+                command="agentic-workspace proof --target . --changed <paths> --select proof_closeout_summary --format json",
+                cli_invoke=cli_invoke,
+            ),
+            "selector_inventory": _command_with_cli_invoke(
+                command="agentic-workspace proof --target . --select selector_inventory --format json", cli_invoke=cli_invoke
+            ),
+            "select": _command_with_cli_invoke(
+                command="agentic-workspace proof --target . --changed <paths> --select <field[,field...]> --format json",
+                cli_invoke=cli_invoke,
+            ),
+            "verbose": _command_with_cli_invoke(
+                command="agentic-workspace proof --target . --changed <paths> --verbose --format json", cli_invoke=cli_invoke
+            ),
+        },
+        "absence_states": {
+            "route_explanation_and_tiers": "selector-routed",
+            "receipt_provenance": "selector-routed",
+            "assurance_and_diagnostics": "selector-routed",
+            "raw_workspace_files": "not-required-for-ordinary-action",
+        },
+    }
+    for optional_field in ("manual_verification", "blockers", "expansion_reasons"):
+        if decision.get(optional_field) in (None, [], {}):
+            decision.pop(optional_field, None)
+    return decision
+
+
 def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
     if payload.get("profile") == "compact-contract-answer/v1":
         answer = payload.get("answer", {})
@@ -530,7 +684,13 @@ def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CL
             next_decision = _guidance_with_cli_invoke(value=next_decision, cli_invoke=cli_invoke)
             if tiny_required_commands and all(command.startswith("git diff --") for command in tiny_required_commands):
                 next_decision.pop("projection_reuse", None)
-            return next_decision
+            return _ordinary_proof_next_decision_payload(
+                next_decision=next_decision,
+                answer=answer,
+                target=payload.get("target"),
+                selector=payload.get("selector", {}),
+                cli_invoke=cli_invoke,
+            )
         required_commands = tiny_required_commands
         validation_plan = answer.get("validation_plan", {}) if isinstance(answer, dict) else {}
         primary = validation_plan.get("primary_next_action") if isinstance(validation_plan, dict) else None

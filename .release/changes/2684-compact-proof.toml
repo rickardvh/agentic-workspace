@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Promote proof_next_decision as the authoritative ordinary proof and claim contract with explicit safety-sensitive expansion."

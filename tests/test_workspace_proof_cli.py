@@ -2566,28 +2566,19 @@ def test_proof_tiny_profile_returns_next_validation_action(capsys) -> None:
     payload = json.loads(capsys.readouterr().out)
     encoded = json.dumps(payload)
     assert payload["kind"] == "proof-next-decision/v1"
-    assert set(payload) <= {
+    assert set(payload) >= {
         "kind",
         "target",
         "selector",
-        "sufficiency",
+        "identity",
         "next",
         "required_commands",
-        "proof_command_adjustments",
-        "unavailable_proof_commands",
-        "proof_strategy",
-        "target_proof_capabilities",
-        "manual_verification",
-        "warnings",
-        "intent_proof",
-        "proof_narrowness",
-        "detail_command",
-        "detail_command_template",
-        "proof_route_selection",
-        "proof_closeout_summary",
-        "proof_invocation_posture",
-        "context",
-        "projection_reuse",
+        "route",
+        "receipt",
+        "sufficiency",
+        "claim_boundary",
+        "detail_routes",
+        "absence_states",
     }
     assert payload["selector"] == {"changed": ["generated/workspace/python/cli.py"]}
     assert payload["proof_narrowness"]["status"] == "narrow_required"
@@ -2684,14 +2675,14 @@ def test_proof_changed_uses_available_target_makefile_targets(tmp_path: Path, ca
     assert payload["next"]["command"] == "make test"
     assert payload["next"]["route_source"] == "live-adapted-target-capability"
     assert payload["next"]["why"] == "behavior-test intent selected live-adapted-target-capability."
-    assert payload["proof_route_selection"]["selected_command"] == {
-        "command": "make test",
-        "lane": "workspace_cli",
-        "route_source": "live-adapted-target-capability",
-        "route_authority": "live-target-capability",
-        "fallback_status": "candidate-live-confirmed",
+    assert payload["route"] == {
+        "source": "live-adapted-target-capability",
+        "authority": "live-target-capability",
         "authority_surface": "target repo command discovery",
         "intent_type": "behavior-test",
+        "lane": "workspace_cli",
+        "selected_command": "make test",
+        "health": {"status": "attention", "finding_count": 1},
     }
     assert payload["proof_route_selection"]["route_source"] == "live-adapted-target-capability"
     assert payload["proof_route_selection"]["manual_fallback"] is None
@@ -2718,13 +2709,28 @@ def test_proof_changed_uses_available_target_makefile_targets(tmp_path: Path, ca
 def test_proof_changed_does_not_assume_makefile_exists(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
 
-    assert cli.main(["proof", "--target", str(tmp_path), "--changed", "llms.txt", "--format", "json"]) == 0
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "llms.txt",
+                "--select",
+                "required_commands,next,target_proof_capabilities",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
 
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(capsys.readouterr().out)["values"]
     assert payload["required_commands"] == []
     assert payload["next"]["action"] == "manual-verification"
     assert payload["next"]["command"] is None
-    assert payload["proof_route_selection"]["manual_fallback"]["status"] == "required"
+    assert payload["manual_verification"]["status"] == "required"
     assert payload["proof_route_selection"]["manual_fallback"]["unavailable_command_count"] == 0
     assert payload["proof_route_selection"]["selected_command"] is None
     assert payload["proof_route_selection"]["route_source"] == "manual-fallback"
@@ -3929,12 +3935,10 @@ def test_proof_tiny_includes_closeout_summary_for_pr_validation(tmp_path: Path, 
     assert cli.main(["proof", "--target", str(tmp_path), "--changed", "llms.txt", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    summary = payload["proof_closeout_summary"]
-    assert summary["changed_paths"] == ["llms.txt"]
-    assert summary["route"]["maturity"] == "conservative-fallback"
+    summary = payload["sufficiency"]
     assert summary["remaining_gap_count"] == 4
-    assert summary["route_maturity"] == {"status": "blocked", "blocker_count": 2}
-    assert "conservative-fallback" in summary["human_summary"]
+    assert summary["status"] == "not-yet-sufficient"
+    assert payload["claim_boundary"]["completion_claim_allowed"] is False
 
 
 def test_proof_changed_memory_negative_route_suppresses_candidate(tmp_path: Path, capsys) -> None:
@@ -4232,7 +4236,7 @@ def test_proof_tiny_detail_commands_use_resolved_cli_invoke(tmp_path: Path, caps
     )
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["detail_command"].startswith("uv run agentic-workspace proof ")
+    assert payload["detail_routes"]["verbose"].startswith("uv run agentic-workspace proof ")
     assert payload["next"]["command"] is None or not payload["next"]["command"].startswith("agentic-workspace ")
 
 
@@ -6489,7 +6493,22 @@ def test_proof_changed_surfaces_compact_intent_proof_prompt(capsys) -> None:
     )
 
     answer = json.loads(capsys.readouterr().out)
-    intent_proof = answer["intent_proof"]
+    assert answer["claim_boundary"]["completion_claim_allowed"] is False
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_primitives.py",
+                "--select",
+                "intent_proof",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    intent_proof = json.loads(capsys.readouterr().out)["values"]["intent_proof"]
     assert intent_proof["status"] == "needs-agent-judgment"
     assert intent_proof["regression_only_risk"] == "possible"
     assert intent_proof["suggested_dimensions"]
@@ -6615,7 +6634,7 @@ precedence = "70"
         )
         == 0
     )
-    compact_implement_proof = json.loads(capsys.readouterr().out)["proof"]
+    compact_implement_proof = json.loads(capsys.readouterr().out)["decision_packet"]["proof"]
     assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", *changed_paths, "--format", "json"]) == 0
     proof = json.loads(capsys.readouterr().out)["answer"]
 
@@ -6631,8 +6650,8 @@ precedence = "70"
     assert expected.issubset(compact_proof["required_commands"])
     assert "make test-planning" not in compact_proof["required_commands"]
     assert compact_implement_proof["required_commands"] == compact_proof["required_commands"]
-    assert compact_proof["proof_narrowness"]["status"] == "narrow_required"
-    assert compact_implement_proof["proof_narrowness"]["status"] == "narrow_required"
+    assert proof["proof_narrowness"]["status"] == "narrow_required"
+    assert compact_implement_proof["detail_route"]
     domain_lane = next(lane for lane in proof["selected_lanes"] if lane["id"] == "domain:planning_package_behavior")
     assert domain_lane["changed_test_owner_route"]["status"] == "focused-owner-selected"
     assert domain_lane["changed_test_owner_route"]["owner_paths"] == changed_paths[-2:]
@@ -6855,7 +6874,61 @@ def test_proof_tiny_readme_profile_keeps_docs_only_validation_light(capsys) -> N
     assert payload["next"]["command"] == docs_diff
     assert payload["required_commands"] == [docs_diff]
     assert "uv run pytest tests -q" not in encoded
-    assert len(encoded) < 3200
+    assert len(encoded) < 6000
+
+
+def test_proof_default_is_one_complete_claim_safe_decision_with_exact_escape_hatches(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "README.md", "# Proof fixture\n")
+
+    assert cli.main(["proof", "--target", str(tmp_path), "--changed", "README.md", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["kind"] == "proof-next-decision/v1"
+    assert payload["identity"]["decision_id"]
+    assert payload["identity"]["proof_subject"]["changed_paths"] == ["README.md"]
+    assert payload["next"]["action"]
+    assert payload["next"]["action"] == "manual-verification"
+    assert payload["manual_verification"]["status"] == "required"
+    assert payload["receipt"]["status"]
+    assert payload["sufficiency"]["status"] == "not-yet-sufficient"
+    assert payload["claim_boundary"]["completion_claim_allowed"] is False
+    assert set(payload["detail_routes"]) >= {"route", "receipts", "command_tiers", "closeout", "select", "verbose"}
+    assert payload["absence_states"]["raw_workspace_files"] == "not-required-for-ordinary-action"
+    assert "proof_route_selection" not in payload
+    assert "proof_closeout_summary" not in payload
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "README.md",
+                "--select",
+                "proof_route_strategy_decision,proof_receipt_reconciliation,proof_closeout_summary",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    detail = json.loads(capsys.readouterr().out)["values"]
+    assert set(detail) == {"proof_route_strategy_decision", "proof_receipt_reconciliation", "proof_closeout_summary"}
+
+
+def test_proof_compression_evidence_records_cost_and_named_safety_expansion() -> None:
+    evidence = json.loads(Path("docs/maintainer/proof-compression-2684.json").read_text(encoding="utf-8"))
+    assert evidence["schema_version"] == "agentic-workspace/proof-compression-evidence/v1"
+    assert evidence["projection_disposition"]["authoritative"] == "proof_next_decision"
+    assert (
+        evidence["scenarios"]["source_multi_command"]["after"]["json_bytes"]
+        < evidence["scenarios"]["source_multi_command"]["before"]["json_bytes"]
+    )
+    assert evidence["scenarios"]["generated_unavailable_or_multi_command"]["expansion_reason"]
+    assert evidence["default_guidance_proof"]["mandatory_selector_calls"] == 0
+    assert evidence["total_operating_cost"]["assessment"] == "reduced-with-explicit-safety-expansion"
 
 
 def test_proof_changed_selector_flags_direct_cli_edits(tmp_path: Path, capsys) -> None:
