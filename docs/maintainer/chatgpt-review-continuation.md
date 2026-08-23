@@ -112,6 +112,19 @@ Polling uses `gh` only. A review is eligible only when its comment contains exac
 <!-- aw-chatgpt-review pr=<number> head=<full-sha> policy=pr-review-recheck-v1 decision=<blocked|merge-ready> -->
 ```
 
+The repository merge gate applies a separate authority check to that syntactic marker. In the configured `human` mode, GitHub `OWNER`, `MEMBER`, or `COLLABORATOR` association is not review provenance. The same comment must carry one HMAC receipt from a trusted reviewer host, bound to the same PR, head, decision, producer class, producer id, and nonce. The workflow reads the verification secret from `AW_REVIEW_AUTHORITY_KEY`; do not expose that secret to implementation-agent sessions.
+
+A trusted reviewer host can render the receipt after it has independently established the review decision:
+
+```powershell
+$env:AW_REVIEW_AUTHORITY_KEY = '<trusted-host-secret>'
+uv run python scripts/github/review_authority_receipt.py --pr 123 --head <full-sha> --decision merge-ready --producer-class human --producer human-reviewer:<opaque-id>
+```
+
+Post the returned receipt in the same top-level comment as the exact-head review marker. Editing marker text, asserting `class=human`, or posting through the repository owner's GitHub token does not manufacture a valid signature. Rotate the GitHub Actions secret and trusted-host copy together. Repositories that intentionally permit same-agent review may invoke the gate with `--required-mode same-agent`; this repository intentionally uses `human`.
+
+Implementation/remediation agents may still post ordinary `fixes applied` or `ready for re-review` comments. Those comments must omit both an authoritative `merge-ready` marker and the trusted receipt, so they cannot satisfy `Review approval`.
+
 For `blocked`, the controller records `(PR, reviewed SHA, comment ID)` as attempted before starting the non-interactive continuation `codex -C <repo> exec resume <exact-session> <verbatim-findings>`. That exact review cannot automatically resume twice, including after a resume failure. The resumed Codex process inherits a transport guard and must explicitly record its newly pushed handoff; neither termination path starts another poller. A successful cycle therefore requires a corrective push with a new head plus the prompted `handoff --existing-only` command.
 
 The all-open controller fetches and verifies the reviewed SHA before fresh execution, then runs fresh and later resume jobs from the serial checkout after switching to the PR branch. Owner-local state is created before fresh execution, and the prompted explicit handoff binds the exact session after its first corrective push. A fresh job that exits nonzero or never records that binding remains in terminal local recovery and suppresses redispatch of the same review until a human explicitly recovers or cleans it up. On startup, legacy registry entries with a `worktree` field are migrated by verifying the path against `git worktree list --porcelain` and the configured `--worktree-root`, removing only dispatcher-owned `pr-<number>` worktrees, and rewriting the entry to `checkout`. Closing a tracked PR also retires its local state.

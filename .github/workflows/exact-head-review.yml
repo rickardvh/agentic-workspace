@@ -34,7 +34,9 @@ jobs:
       - name: Publish review authority
         env:
           GH_TOKEN: ${{ github.token }}
+          AW_REVIEW_AUTHORITY_KEY: ${{ secrets.AW_REVIEW_AUTHORITY_KEY }}
         run: >-
           python scripts/github/review_merge_gate.py
           --event "${GITHUB_EVENT_PATH}"
           --repository "${GITHUB_REPOSITORY}"
+          --required-mode human

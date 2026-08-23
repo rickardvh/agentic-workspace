@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Require configured trusted reviewer provenance instead of GitHub credential association for the repository merge gate."

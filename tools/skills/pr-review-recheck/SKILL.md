@@ -42,7 +42,8 @@ Use this repo-owned skill when reviewing an Agentic Workspace PR, checking a fix
    - comment with non-blocking suggestions only when they should not delay merge;
    - merge only when the user explicitly asks or the current instruction permits it.
 10. Treat the review approval check as the merge boundary:
-   - `merge-ready` for the current head admits the review side of merge;
+   - `merge-ready` for the current head admits the review side of merge only when the marker also carries provenance accepted by the configured review-authority mode;
+   - GitHub repository association proves permission to post, not human or independent-review authority;
    - a prior `merge-ready` decision also admits a later head only when every intervening commit is a trusted-base merge and the stable PR patch is unchanged;
    - the newest trusted decision wins, so a later blocker remains blocking;
    - ordinary follow-up commits, unrelated merges, patch-changing conflict resolutions, absent/malformed/untrusted history, or unverifiable topology keep `Review approval` failing.
@@ -89,4 +90,5 @@ Report in this shape:
 - Prefer evidence from the current PR head over stale prior comments.
 - Do not infer merge readiness from passing CI alone.
 - Keep comments focused on actionable blockers or durable suggestions.
-- If GitHub disallows a formal review action on an own-account PR, post the review as a top-level PR comment instead.
+- An implementation/remediation agent may post a top-level `fixes applied` / `ready for re-review` comment, but it must not include an authoritative `merge-ready` marker or trusted-review receipt.
+- If GitHub disallows a formal review action on an own-account PR, the configured human/independent reviewer host may post the top-level review with its trusted authority receipt. Marker prose or an `OWNER` association alone is never a substitute when human/independent review is required.

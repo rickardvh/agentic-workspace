@@ -33,15 +33,44 @@ def _comment(
     association: str = "OWNER",
     identifier: int = 1,
     pr_number: int = 2501,
+    authority_receipt: str = "",
 ) -> dict[str, object]:
     return {
         "id": identifier,
         "author_association": association,
         "body": (
             f"decision: {decision}\n<!-- aw-chatgpt-review pr={pr_number} head={head} policy=pr-review-recheck-v1 decision={decision} -->"
+            f"{authority_receipt}"
         ),
         "html_url": f"https://example.test/review/{identifier}",
     }
+
+
+def _authority_receipt(
+    module,
+    *,
+    secret: str = "trusted-human-host-secret",
+    producer_class: str = "human",
+    producer: str = "review-host:human-1",
+    pr_number: int = 2501,
+    head: str = HEAD_A,
+    decision: str = "merge-ready",
+    nonce: str = "receipt-1",
+) -> str:
+    signature = module.sign_authority_receipt(
+        secret=secret,
+        key_id="primary",
+        producer_class=producer_class,
+        producer=producer,
+        pr_number=pr_number,
+        head_sha=head,
+        decision=decision,
+        nonce=nonce,
+    )
+    return (
+        f"\n<!-- aw-review-authority-v1 key=primary class={producer_class} producer={producer} "
+        f"pr={pr_number} head={head} decision={decision} nonce={nonce} signature={signature} -->"
+    )
 
 
 def _git(repo: Path, *args: str) -> str:
@@ -275,6 +304,107 @@ def test_untrusted_marker_cannot_authorize_merge() -> None:
     assert decision.conclusion == "failure"
 
 
+def test_owner_credential_self_review_cannot_authorize_human_required_gate() -> None:
+    decision = _module().review_gate_decision(
+        pr_number=2501,
+        head_sha=HEAD_A,
+        comments=[_comment(decision="merge-ready", association="OWNER")],
+        required_mode="human",
+    )
+
+    assert decision.status == "review-missing"
+    assert decision.conclusion == "failure"
+    assert "GitHub association" in decision.summary
+
+
+def test_self_asserted_human_receipt_cannot_manufacture_authority() -> None:
+    marker = (
+        "\n<!-- aw-review-authority-v1 key=primary class=human producer=review-host:human-1 "
+        f"pr=2501 head={HEAD_A} decision=merge-ready nonce=receipt-1 signature={'0' * 64} -->"
+    )
+    decision = _module().review_gate_decision(
+        pr_number=2501,
+        head_sha=HEAD_A,
+        comments=[_comment(decision="merge-ready", authority_receipt=marker)],
+        required_mode="human",
+        authority_keys={"primary": "trusted-human-host-secret"},
+    )
+
+    assert decision.status == "review-missing"
+    assert decision.conclusion == "failure"
+
+
+def test_signed_receipt_cannot_be_reused_with_a_different_review_decision() -> None:
+    module = _module()
+    receipt = _authority_receipt(module, decision="blocked")
+    decision = module.review_gate_decision(
+        pr_number=2501,
+        head_sha=HEAD_A,
+        comments=[_comment(decision="merge-ready", authority_receipt=receipt)],
+        required_mode="human",
+        authority_keys={"primary": "trusted-human-host-secret"},
+    )
+
+    assert decision.status == "review-missing"
+    assert decision.conclusion == "failure"
+
+
+def test_trusted_human_receipt_authorizes_current_head_independently_of_github_association() -> None:
+    module = _module()
+    receipt = _authority_receipt(module)
+    decision = module.review_gate_decision(
+        pr_number=2501,
+        head_sha=HEAD_A,
+        comments=[_comment(decision="merge-ready", association="NONE", authority_receipt=receipt)],
+        required_mode="human",
+        authority_keys={"primary": "trusted-human-host-secret"},
+    )
+
+    assert decision.status == "merge-ready"
+    assert decision.conclusion == "success"
+
+
+def test_human_receipt_cannot_be_relabelled_as_independent_provenance() -> None:
+    module = _module()
+    receipt = _authority_receipt(module, producer_class="independent")
+    decision = module.review_gate_decision(
+        pr_number=2501,
+        head_sha=HEAD_A,
+        comments=[_comment(decision="merge-ready", authority_receipt=receipt)],
+        required_mode="human",
+        authority_keys={"primary": "trusted-human-host-secret"},
+    )
+
+    assert decision.status == "review-missing"
+
+
+def test_explicit_same_agent_mode_retains_trusted_association_semantics() -> None:
+    decision = _module().review_gate_decision(
+        pr_number=2501,
+        head_sha=HEAD_A,
+        comments=[_comment(decision="merge-ready", association="COLLABORATOR")],
+        required_mode="same-agent",
+    )
+
+    assert decision.status == "merge-ready"
+    assert decision.conclusion == "success"
+
+
+def test_stale_trusted_human_receipt_keeps_head_freshness_boundary() -> None:
+    module = _module()
+    receipt = _authority_receipt(module, head=HEAD_A)
+    decision = module.review_gate_decision(
+        pr_number=2501,
+        head_sha=HEAD_B,
+        comments=[_comment(decision="merge-ready", head=HEAD_A, authority_receipt=receipt)],
+        required_mode="human",
+        authority_keys={"primary": "trusted-human-host-secret"},
+    )
+
+    assert decision.status == "review-ancestry-unverified"
+    assert decision.conclusion == "failure"
+
+
 def test_server_side_workflow_and_ruleset_consume_the_same_required_check() -> None:
     workflow = WORKFLOW.read_text(encoding="utf-8")
     ruleset = RULESET.read_text(encoding="utf-8")
@@ -283,6 +413,8 @@ def test_server_side_workflow_and_ruleset_consume_the_same_required_check() -> N
     assert "pull_request_target:" not in workflow
     assert "issue_comment:" in workflow
     assert "scripts/github/review_merge_gate.py" in workflow
+    assert "--required-mode human" in workflow
+    assert "secrets.AW_REVIEW_AUTHORITY_KEY" in workflow
     assert '"context": "Review approval"' in ruleset
 
 

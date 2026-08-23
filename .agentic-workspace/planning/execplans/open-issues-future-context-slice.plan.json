@@ -1,0 +1,112 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "open-issues-future-context-slice",
+  "title": "Preserve configured review authority across shared credentials",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "implementation",
+  "revision": 2,
+  "canonical_core": {
+    "requested_outcome": "Close #2677 by making the repo merge gate consume configured review-authority provenance independently of GitHub credential association, while retaining explicit non-authoritative remediation reporting and existing head-freshness semantics.",
+    "hard_constraints": "Do not rebuild shipped assurance architecture, require separate GitHub accounts, trust self-asserted human labels, or weaken the review gate.",
+    "agent_may_decide": "The smallest repo-local signed receipt shape, policy modes, failure statuses, tests, and maintainer guidance that preserve the existing separation-of-duty invariant.",
+    "escalate_when": "A trustworthy configured authority cannot be represented without a new shipped review framework or a required private credential would be exposed to the acting implementation agent.",
+    "next_action": "Implement a repo-local trusted review-authority receipt boundary and focused merge-gate regressions.",
+    "proof_expectations": [
+      "An unsigned or self-asserted OWNER marker cannot authorize human-required review; a valid trusted receipt for the current head can.",
+      "Explicitly permitted non-human policy modes and existing stale-head/trusted-base carry-forward behavior remain intact."
+    ],
+    "touched_scope": [
+      "scripts/github/review_merge_gate.py",
+      "scripts/github/review_authority_receipt.py",
+      "tests/test_review_merge_gate.py",
+      ".github/workflows/exact-head-review.yml",
+      "tools/skills/pr-review-recheck/SKILL.md",
+      "docs/maintainer/chatgpt-review-continuation.md",
+      ".release/changes/**",
+      ".agentic-workspace/planning/**"
+    ],
+    "completion_criteria": [
+      "Configured human/independent authority is derived from a trusted receipt rather than author_association or marker prose.",
+      "Acting-agent self-review remains blocked and has a separate ready-for-re-review status path.",
+      "Valid configured authority, explicit non-human mode, stale-head rejection, and trusted-base carry-forward are proven."
+    ],
+    "continuation_owner": "open-issues-future-context lane",
+    "closeout_decision": "Continue to the session-log scope slice after this PR is proven and published."
+  },
+  "intent": {
+    "outcome": "Preserve the distinction between permission to use a shared GitHub credential and authority to satisfy configured human or independent PR verification.",
+    "non_goals": [
+      "Do not change shipped general assurance semantics.",
+      "Do not require separate GitHub accounts or trust marker-authored provenance.",
+      "Do not weaken current-head or patch-preserving trusted-base carry-forward checks."
+    ]
+  },
+  "parent": {
+    "owner_id": "open-issues-future-context",
+    "contribution": "Deliver the first independent lower PR and establish trustworthy human-correction/review provenance used by the later context lane.",
+    "closure_boundary": "This slice may close #2677 only; #2678, #2680, and #2690 remain owned by later stack members."
+  },
+  "scope": {
+    "owned": [
+      "Repo-local exact-head review marker authority, workflow configuration, maintainer skill/docs, and focused tests"
+    ],
+    "effects": [
+      "Human-required review ignores unsigned/self-authored agent approval markers.",
+      "A trusted configured signer can authorize the current head without a separate GitHub account.",
+      "Agents can report fixes applied without granting merge authority."
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected",
+      "owner": "open-issues-future-context"
+    },
+    "proof_posture": {
+      "state": "active",
+      "refs": ["tests/test_review_merge_gate.py", "routed changed-path proof"]
+    },
+    "external_posture": {
+      "state": "current",
+      "refs": ["GitHub #2677"]
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "GitHub #2677; first PR in the current open-issues stack",
+      "label": "GitHub #2677; first PR in the current open-issues stack",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Implement the signed authority receipt boundary, workflow wiring, and acceptance regressions.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Preserve configured review authority across shared credentials is implemented, validated, and closed out honestly."
+    ],
+    "requirements": [
+      "Run uv run pytest tests/test_review_merge_gate.py tests/test_chatgpt_review_loop.py -q.",
+      "Run the changed-path proof selected by Agentic Workspace implement."
+    ],
+    "refs": ["tests/test_review_merge_gate.py", "tests/test_chatgpt_review_loop.py"]
+  },
+  "continuation": {
+    "owner": "open-issues-future-context lane",
+    "residual_intent": "Continue with #2678, then #2680/#2690 in stack order."
+  },
+  "validation_commands": [
+    "uv run pytest tests/test_review_merge_gate.py tests/test_chatgpt_review_loop.py -q",
+    "uv run ruff check scripts/github/review_merge_gate.py scripts/github/review_authority_receipt.py tests/test_review_merge_gate.py"
+  ],
+  "completion_criteria": [
+    "Acting-agent self-review with an owner-associated credential fails under human-required policy.",
+    "Trusted current-head human authority succeeds and self-asserted authority fails.",
+    "Explicit non-human policy, stale head, and carry-forward behavior remain covered.",
+    "Maintainer guidance exposes ready-for-re-review as non-authoritative."
+  ],
+  "specialist_contracts": []
+}

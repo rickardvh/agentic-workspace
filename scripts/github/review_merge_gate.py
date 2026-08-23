@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
+import hmac
 import json
+import os
+import re
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -15,10 +19,22 @@ TOOLS_ROOT = REPO_ROOT / "tools"
 if str(TOOLS_ROOT) not in sys.path:
     sys.path.insert(0, str(TOOLS_ROOT))
 
-from chatgpt_review_loop import REVIEW_POLICY, parse_reviews  # noqa: E402
+from chatgpt_review_loop import REVIEW_MARKER_RE, REVIEW_POLICY, parse_reviews  # noqa: E402
 
 CHECK_NAME = "Review approval"
 TRUSTED_ASSOCIATIONS = frozenset({"OWNER", "MEMBER", "COLLABORATOR"})
+REVIEW_AUTHORITY_MARKER_RE = re.compile(
+    r"<!-- aw-review-authority-v1 key=(?P<key>[A-Za-z0-9._-]+) "
+    r"class=(?P<producer_class>human|independent|separate-actor|fresh-context|distinct-provider) "
+    r"producer=(?P<producer>[A-Za-z0-9._:@/-]+) pr=(?P<pr>[1-9][0-9]*) "
+    r"head=(?P<head>[0-9a-f]{40}) decision=(?P<decision>blocked|merge-ready) "
+    r"nonce=(?P<nonce>[A-Za-z0-9._:-]+) signature=(?P<signature>[0-9a-f]{64}) -->"
+)
+REVIEW_MODES = frozenset({"human", "independent", "same-agent", "github-association"})
+_AUTHORITY_CLASSES = {
+    "human": frozenset({"human"}),
+    "independent": frozenset({"human", "independent", "separate-actor", "fresh-context", "distinct-provider"}),
+}
 
 
 @dataclass(frozen=True)
@@ -36,6 +52,88 @@ class CarryForwardVerdict:
     reason: str
 
 
+def _authority_payload(
+    *,
+    key_id: str,
+    producer_class: str,
+    producer: str,
+    pr_number: int,
+    head_sha: str,
+    decision: str,
+    nonce: str,
+) -> bytes:
+    return "\n".join(
+        ["aw-review-authority-v1", key_id, producer_class, producer, str(pr_number), head_sha, decision, nonce]
+    ).encode("utf-8")
+
+
+def sign_authority_receipt(
+    *,
+    secret: str,
+    key_id: str,
+    producer_class: str,
+    producer: str,
+    pr_number: int,
+    head_sha: str,
+    decision: str,
+    nonce: str,
+) -> str:
+    return hmac.new(
+        secret.encode("utf-8"),
+        _authority_payload(
+            key_id=key_id,
+            producer_class=producer_class,
+            producer=producer,
+            pr_number=pr_number,
+            head_sha=head_sha,
+            decision=decision,
+            nonce=nonce,
+        ),
+        hashlib.sha256,
+    ).hexdigest()
+
+
+def _has_valid_authority_receipt(
+    comment: dict[str, Any],
+    *,
+    pr_number: int,
+    required_mode: str,
+    authority_keys: dict[str, str],
+) -> bool:
+    if required_mode in {"same-agent", "github-association"}:
+        return str(comment.get("author_association", "")).upper() in TRUSTED_ASSOCIATIONS
+    allowed_classes = _AUTHORITY_CLASSES[required_mode]
+    body = str(comment.get("body", ""))
+    receipts = list(REVIEW_AUTHORITY_MARKER_RE.finditer(body))
+    review_markers = list(REVIEW_MARKER_RE.finditer(body))
+    if len(receipts) != 1 or len(review_markers) != 1:
+        return False
+    receipt = receipts[0]
+    review_marker = review_markers[0]
+    key_id = receipt.group("key")
+    secret = authority_keys.get(key_id, "")
+    if not secret or receipt.group("producer_class") not in allowed_classes:
+        return False
+    if (
+        int(receipt.group("pr")) != pr_number
+        or receipt.group("pr") != review_marker.group("pr")
+        or receipt.group("head") != review_marker.group("head")
+        or receipt.group("decision") != review_marker.group("decision")
+    ):
+        return False
+    expected = sign_authority_receipt(
+        secret=secret,
+        key_id=key_id,
+        producer_class=receipt.group("producer_class"),
+        producer=receipt.group("producer"),
+        pr_number=pr_number,
+        head_sha=receipt.group("head"),
+        decision=receipt.group("decision"),
+        nonce=receipt.group("nonce"),
+    )
+    return hmac.compare_digest(expected, receipt.group("signature"))
+
+
 def _comment_order(comment: dict[str, Any]) -> tuple[str, int]:
     timestamp = str(comment.get("updated_at") or comment.get("created_at") or "")
     identifier = int(comment.get("id") or comment.get("databaseId") or 0)
@@ -48,19 +146,32 @@ def review_gate_decision(
     head_sha: str,
     comments: Sequence[dict[str, Any]],
     carry_forward: Callable[[str, str], CarryForwardVerdict] | None = None,
+    required_mode: str = "github-association",
+    authority_keys: dict[str, str] | None = None,
 ) -> GateDecision:
+    if required_mode not in REVIEW_MODES:
+        raise ValueError(f"unsupported review authority mode: {required_mode}")
+    resolved_keys = authority_keys or {}
     candidates = [
         comment
         for comment in comments
         if "aw-chatgpt-review" in str(comment.get("body", ""))
-        and str(comment.get("author_association", "")).upper() in TRUSTED_ASSOCIATIONS
+        and _has_valid_authority_receipt(
+            comment,
+            pr_number=pr_number,
+            required_mode=required_mode,
+            authority_keys=resolved_keys,
+        )
     ]
     if not candidates:
         return GateDecision(
             status="review-missing",
             conclusion="failure",
             title="Pull request has no authoritative review",
-            summary=f"Run {REVIEW_POLICY} for head {head_sha}; green CI is not merge authority.",
+            summary=(
+                f"Run {REVIEW_POLICY} for head {head_sha} through the configured {required_mode} authority; "
+                "green CI, GitHub association, and unsigned marker text are not merge authority."
+            ),
         )
 
     latest = max(candidates, key=_comment_order)
@@ -233,6 +344,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--event", type=Path, required=True)
     parser.add_argument("--repository", required=True)
+    parser.add_argument("--required-mode", choices=sorted(REVIEW_MODES), default="github-association")
+    parser.add_argument("--authority-key-env", default="AW_REVIEW_AUTHORITY_KEY")
+    parser.add_argument("--authority-key-id", default="primary")
     args = parser.parse_args(argv)
 
     event = json.loads(args.event.read_text(encoding="utf-8"))
@@ -244,10 +358,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     head_sha = str(pull_request["head"]["sha"])
     pages = _gh_json(["api", "--paginate", "--slurp", f"repos/{args.repository}/issues/{pr_number}/comments?per_page=100"])
     comments = [comment for page in pages for comment in page]
+    authority_secret = os.environ.get(args.authority_key_env, "")
+    authority_keys = {args.authority_key_id: authority_secret} if authority_secret else {}
     decision = review_gate_decision(
         pr_number=pr_number,
         head_sha=head_sha,
         comments=comments,
+        required_mode=args.required_mode,
+        authority_keys=authority_keys,
         carry_forward=lambda reviewed, current: _trusted_base_carry_forward(
             pr_number=pr_number,
             reviewed_head=reviewed,
