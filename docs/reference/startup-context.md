@@ -16,7 +16,7 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `communication_contract` | object | no |  | Compact communication and reasoning-economy contract for decision-first, state-backed agent output. |  |  |
 | `workflow_participation` | object | no |  | Compact reminder that enabled Agentic Workspace workflow participation is mandatory; advisory fields only guide choices inside that workflow. |  |  |
 | `action_signals` | object | no |  | Compact action-first summary ordered as blockers, allowed next action, proof, changed signals, selector-backed advisory detail, and agent-owned judgment. |  |  |
-| `decision_packet` | object | no |  | Compact ordinary decision packet that names the startup phase question, next action, claim boundary, detail routes, and omitted detail states. |  |  |
+| `decision_packet` | object | no |  | Authoritative ordinary startup decision packet that merges decision identity, immediate action, allowed and forbidden effects, proof and claim boundaries, routed owner restrictions, attention signals, and exact detail routes. |  |  |
 | `current_decision` | ref `#/$defs/current_decision` | no |  | State-delta decision view derived from the shared state-delta core. |  |  |
 | `current_decision.kind` | const `"agentic-workspace/current-decision/v1"` | yes |  | Discriminator for the current decision view. |  |  |
 | `current_decision.surface` | string | yes |  | Startup surface that emitted the current decision packet. |  |  |

@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Compress ordinary startup into one authoritative decision packet while retaining exact safety and drill-down routes."

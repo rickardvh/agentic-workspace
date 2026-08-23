@@ -1,0 +1,53 @@
+{
+  "schema_version": "agentic-workspace/startup-compression-evidence/v1",
+  "issue": 2679,
+  "baseline": {
+    "ref": "origin/master@9d87e1874",
+    "measurement": "compact UTF-8 JSON bytes, indented JSON lines, recursive object-key count"
+  },
+  "scenarios": {
+    "direct": {
+      "before": {"json_bytes": 9332, "human_lines": 361, "field_count": 214},
+      "after": {"json_bytes": 1947, "human_lines": 51, "field_count": 39}
+    },
+    "module_rich": {
+      "before": {"json_bytes": 25843, "human_lines": 891, "field_count": 524},
+      "after": {"json_bytes": 2381, "human_lines": 71, "field_count": 46}
+    },
+    "proof_sensitive": {
+      "before": {"json_bytes": 4198, "human_lines": 179, "field_count": 94},
+      "after": {"json_bytes": 2071, "human_lines": 61, "field_count": 43}
+    },
+    "planning": {
+      "before": {"json_bytes": 14733, "human_lines": 547, "field_count": 318},
+      "after": {"json_bytes": 2587, "human_lines": 82, "field_count": 54}
+    },
+    "recovery": {
+      "before": {"json_bytes": 10130, "human_lines": 358, "field_count": 228},
+      "after": {"json_bytes": 3058, "human_lines": 99, "field_count": 68}
+    }
+  },
+  "projection_review": {
+    "authoritative": "decision_packet",
+    "merged": [
+      "workflow_participation",
+      "action_signals",
+      "next_safe_action",
+      "route_decision",
+      "active_state non-interference boundary"
+    ],
+    "selector_routed": [
+      "communication_contract",
+      "skills and catalog",
+      "planning and continuation detail",
+      "memory detail",
+      "diagnostics and compatibility projections",
+      "state-delta compatibility packets"
+    ],
+    "unchanged_escape_hatches": ["start --select", "start --verbose", "summary --select", "proof --changed", "skills --task"]
+  },
+  "total_operating_cost": {
+    "assessment": "reduced",
+    "reason": "The default packet carries the executable next action, effects, claim boundary, owner restriction, and exact drill-down routes. No new mandatory command was introduced; selectors are used only when the current decision needs deeper evidence."
+  }
+}

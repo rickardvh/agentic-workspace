@@ -79,6 +79,7 @@ from agentic_workspace.workspace_runtime_core import (
     _context_router_family_payload,
     _continuation_reorientation_payload,
     _deferred_start_local_footprint_advisory,
+    _dogfooding_signal_status_payload,
     _emit_payload,
     _execution_posture_payload,
     _fast_installed_modules,
@@ -114,6 +115,7 @@ from agentic_workspace.workspace_runtime_core import (
     _ordinary_decision_packet,
     _package_boundary_payload,
     _parent_intent_status_payload,
+    _pr_comment_attention_payload,
     _pre_test_evidence_guardrail_payload,
     _prep_only_handoff_payload,
     _read_only_response_posture_payload,
@@ -1680,6 +1682,8 @@ def _hydrate_selected_start_advisory_payloads(
     changed_paths: list[str],
     config: WorkspaceConfig,
 ) -> None:
+    if _selector_requests(select, "communication_contract"):
+        payload["communication_contract"] = compact_communication_contract_payload(surface="startup")
     state_delta_requested = any(
         _selector_requests(select, field)
         for field in (
@@ -1869,6 +1873,48 @@ def _hydrate_selected_start_advisory_payloads(
             cli_invoke=config.cli_invoke,
             explicit_request=True,
         )
+    if _selector_requests(select, "pre_test_evidence_guardrail"):
+        guardrail = _pre_test_evidence_guardrail_payload(
+            target_root=target_root,
+            changed_paths=changed_paths,
+            task_text=task_text,
+            config=config,
+            compact=False,
+        )
+        if guardrail.get("status") == "advisory":
+            payload["pre_test_evidence_guardrail"] = guardrail
+    if _selector_requests(select, "pr_comment_attention"):
+        attention = _pr_comment_attention_payload(target_root=target_root, task_text=task_text, cli_invoke=config.cli_invoke)
+        if attention.get("status") != "not_applicable":
+            stack_discovery = _as_dict(attention.get("stack_discovery"))
+            topology_known = bool(attention.get("stack_member_count")) and stack_discovery.get("status") in {
+                "admitted-live-topology",
+                "from-cache",
+            }
+            attention["absence_states"] = {
+                "stack_membership": "known"
+                if topology_known
+                else "unavailable"
+                if attention.get("status") == "stack_comment_status_unavailable"
+                else "detail_omitted",
+                "thread_level_comments": "hidden_behind_detail_route",
+            }
+            attention["detail_route"] = attention.get(
+                "recommended_command",
+                f"{config.cli_invoke} report --target . --section pr_comment_attention --format json",
+            )
+            payload["pr_comment_attention"] = attention
+    if _selector_requests(select, "dogfooding_signal_status"):
+        active_summary = _as_dict(payload.get("active_state_summary"))
+        dogfooding = _dogfooding_signal_status_payload(
+            target_root=target_root,
+            config=config,
+            task_text=task_text,
+            cli_invoke=config.cli_invoke,
+            active_planning_present=_active_state_has_planning(active_summary),
+        )
+        if dogfooding.get("status") != "not_applicable":
+            payload["dogfooding_signal_status"] = dogfooding
     if _selector_requests(select, "local_chat_checkpoint"):
         payload["local_chat_checkpoint"] = _local_chat_checkpoint_projection(target_root=target_root, cli_invoke=config.cli_invoke)
     if _selector_requests(select, "work_threads"):
@@ -1876,11 +1922,13 @@ def _hydrate_selected_start_advisory_payloads(
     if _selector_requests(select, "installed_state_compatibility") or _selector_requests(select, "installed_state_drift_triage"):
         installed_modules = _fast_installed_modules(target_root=target_root)
         selected_modules = list(config.enabled_modules)
-        execution_posture = _execution_posture_payload(config=config, changed_paths=[], task_text=task_text, target_root=target_root)
+        execution_posture = _execution_posture_payload(
+            config=config, changed_paths=changed_paths, task_text=task_text, target_root=target_root
+        )
         installed_state_gate = _planning_safety_gate_payload(
             target_root=target_root,
             config=config,
-            changed_paths=[],
+            changed_paths=changed_paths,
             task_text=task_text,
             execution_posture=execution_posture,
         )
@@ -2123,6 +2171,167 @@ def _apply_required_payload_target_start_gate(
         "read_first": [command] if command else [],
         "open_execplan_only_when": startup_template["open_execplan_only_when"],
         **({"payload_repair_subflow": payload_repair_subflow} if payload_repair_subflow else {}),
+    }
+
+
+def _ordinary_start_decision_payload(
+    *,
+    selected: dict[str, Any],
+    source_payload: dict[str, Any],
+    cli_invoke: str,
+) -> dict[str, Any]:
+    """Merge ordinary startup projections into one decision-sized packet.
+
+    The richer legacy projections remain available through ``--select`` and
+    ``--verbose``.  Ordinary first contact intentionally has one semantic
+    owner so adding advisory capabilities cannot grow the response with peer
+    copies of the same action.
+    """
+
+    next_action = _as_dict(selected.get("next_safe_action"))
+    signals = _as_dict(selected.get("action_signals"))
+    legacy_decision = _as_dict(selected.get("decision_packet"))
+    route = _as_dict(source_payload.get("route_decision"))
+    route_binding = _as_dict(route.get("binding"))
+    binding_identity = _as_dict(route_binding.get("identity"))
+    selected_owner_identity = _as_dict(route.get("selected_owner_identity"))
+    non_interference = _as_dict(route.get("non_interference_boundary"))
+    protected_scope = _as_dict(non_interference.get("protected_scope"))
+    raw_immediate = _as_dict(source_payload.get("immediate_next_allowed_action"))
+    immediate = _compact_start_route_action(raw_immediate)
+
+    action: dict[str, Any] = {
+        "id": str(next_action.get("next_safe_action") or legacy_decision.get("next_action") or ""),
+        "why": str(next_action.get("why") or ""),
+    }
+    for source_key, target_key in (
+        ("preferred_cli", "command"),
+        ("preferred_cli_effect", "command_effect"),
+        ("required_skill", "skill"),
+    ):
+        if next_action.get(source_key) not in (None, "", [], {}):
+            action[target_key] = copy.deepcopy(next_action[source_key])
+    operation = _as_dict(immediate.get("operation_invocation"))
+    if operation:
+        action["operation"] = operation
+    raw_operation = _as_dict(raw_immediate.get("operation_invocation"))
+    operation_identity = _as_dict(raw_operation.get("input_identity"))
+    expected_effect = _as_dict(operation_identity.get("expected_claim_effect"))
+    required_inputs = _list_payload(raw_immediate.get("required_inputs"))
+    if not required_inputs:
+        required_inputs = _list_payload(raw_operation.get("preconditions"))
+    if not required_inputs:
+        required_inputs = _list_payload(expected_effect.get("required_inputs"))
+    if required_inputs:
+        action["required_inputs"] = [str(item) for item in required_inputs if str(item).strip()]
+
+    effects = {
+        "workflow_required": True,
+        "implementation_allowed": bool(next_action.get("implementation_allowed")),
+        "read_only_allowed": bool(next_action.get("read_only_allowed")),
+        "exploration_allowed": bool(next_action.get("exploration_allowed")),
+        "proof_required": bool(next_action.get("proof_required")),
+        "completion_claim_allowed": bool(next_action.get("completion_claim_allowed")),
+        "allowed_next_actions": [str(item) for item in _list_payload(next_action.get("allowed_next_actions")) if str(item).strip()],
+        "forbidden_actions": [
+            str(item) for item in _list_payload(next_action.get("forbidden_actions") or signals.get("hard_blockers")) if str(item).strip()
+        ],
+        "allowed_claims": [str(item) for item in _list_payload(route.get("allowed_claims")) if str(item).strip()],
+        "blocked_claims": [str(item) for item in _list_payload(route.get("blocked_claims")) if str(item).strip()],
+    }
+    claim_boundary = next_action.get("claim_boundary", legacy_decision.get("claim_boundary", "not-evaluated"))
+
+    owner: dict[str, Any] = {
+        key: copy.deepcopy(route[key])
+        for key in ("task_relation", "owner_posture", "required_transition", "selected_owner", "state_update_policy")
+        if route.get(key) not in (None, "", [], {})
+    }
+    if selected_owner_identity:
+        owner["identity"] = selected_owner_identity
+    if non_interference:
+        owner["non_interference"] = {
+            key: copy.deepcopy(non_interference[key])
+            for key in ("status", "restriction")
+            if non_interference.get(key) not in (None, "", [], {})
+        }
+        if protected_scope:
+            owner["non_interference"]["protected_scope"] = {
+                key: copy.deepcopy(protected_scope[key])
+                for key in ("digest", "declared_item_count", "concrete_path_count")
+                if protected_scope.get(key) not in (None, "", [], {})
+            }
+
+    revision = str(binding_identity.get("fingerprint") or selected_owner_identity.get("revision") or "")
+    if not revision:
+        revision_material = {
+            "action": action.get("id"),
+            "claim_boundary": claim_boundary,
+            "owner": owner,
+            "signals": signals.get("changed_signals", []),
+        }
+        revision = hashlib.sha256(json.dumps(revision_material, sort_keys=True, separators=(",", ":")).encode()).hexdigest()[:24]
+
+    advisory_selectors = [
+        str(item) for item in _list_payload(_as_dict(signals.get("advisory_detail")).get("selectors")) if str(item).strip()
+    ]
+    changed_signals = [str(item) for item in _list_payload(signals.get("changed_signals")) if str(item).strip()]
+    attention = [
+        {
+            "signal": signal,
+            "detail_selector": next(
+                (selector for selector in advisory_selectors if signal.split("=", 1)[0].startswith(selector.split(".", 1)[0])),
+                "action_signals",
+            ),
+        }
+        for signal in changed_signals
+    ]
+    reasons = [str(item) for item in _list_payload(legacy_decision.get("reasons")) if str(item).strip()]
+    if not reasons:
+        reasons = changed_signals[:6]
+    if not reasons and action.get("why"):
+        reasons = [str(action["why"])]
+
+    active_planning = _active_state_has_planning(source_payload.get("active_state_summary", {}))
+    detail_routes = {
+        "decision_detail": f"{cli_invoke} start --target . --select next_safe_action,action_signals --format json",
+        "owner_detail": (
+            f"{cli_invoke} summary --target . --select continuation_view --format json"
+            if active_planning
+            else f"{cli_invoke} summary --target . --format json"
+        ),
+        "proof_detail": f"{cli_invoke} proof --target . --changed <paths> --format json",
+        "skills": f'{cli_invoke} skills --target . --task "<task>" --format json',
+        "selector_inventory": f"{cli_invoke} start --target . --select selector_inventory --format json",
+        "select": f"{cli_invoke} start --target . --select <field[,field...]> --format json",
+        "verbose": f"{cli_invoke} start --target . --verbose --format json",
+    }
+    if action.get("skill"):
+        detail_routes["skill_detail"] = f'{cli_invoke} skills --target . --task "<task>" --format json'
+
+    decision = {
+        "kind": "agentic-workspace/ordinary-start-decision/v1",
+        "surface": "start",
+        "identity": {
+            "revision": revision,
+            "source_selector": "planning_safety_gate.route_decision.binding" if binding_identity else "next_safe_action,action_signals",
+        },
+        "action": action,
+        "effects": effects,
+        "claim_boundary": claim_boundary,
+        **(
+            {"residue_owner": copy.deepcopy(legacy_decision["residue_owner"])}
+            if legacy_decision.get("residue_owner") not in (None, "", [], {})
+            else {}
+        ),
+        "reasons": reasons,
+        **({"owner": owner} if owner else {}),
+        **({"attention": attention} if attention else {}),
+        "detail_routes": detail_routes,
+    }
+    return {
+        "kind": selected.get("kind", "startup-context/v1"),
+        "target": selected.get("target", "."),
+        "decision_packet": decision,
     }
 
 
@@ -2902,7 +3111,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     maintainer_mode = payload.get("maintainer_mode", {})
     if isinstance(maintainer_mode, dict) and maintainer_mode.get("status") == "enabled":
         context["maintainer_mode"] = maintainer_mode
-    return selected
+    return _ordinary_start_decision_payload(selected=selected, source_payload=payload, cli_invoke=cli_invoke)
 
 
 def _active_state_with_orientation_delta(active_state: Any, *, cli_invoke: str) -> dict[str, Any]:
@@ -3048,6 +3257,8 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
     payload, operating_decision = finalize_projection_surface_operating_decision(
         payload=payload, admitted_input=admitted_input, consumer="start"
     )
+    if payload.get("context") == {}:
+        payload.pop("context")
     if _selector_requests(selected_fields, "source_guidance"):
         payload.setdefault("values", {})["source_guidance"] = _as_dict(operating_decision.get("source_guidance"))
         payload["missing"] = [item for item in payload.get("missing", []) if item != "source_guidance"]
@@ -3079,6 +3290,8 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
                 reuse_result=reuse_result,
                 full_detail_command=full_detail_command,
             )
+    if payload.get("context") == {}:
+        payload.pop("context")
     _emit_payload(payload=payload, format_name=args.format)
     return 0
 
