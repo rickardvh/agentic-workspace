@@ -418,6 +418,12 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
                     escalation_required=False,
                 ),
             ]
+    if profile == "tiny" and not selected_fields:
+        payload = _ordinary_implement_decision_payload(
+            selected=payload,
+            source_payload=full_payload,
+            cli_invoke=_load_workspace_config(target_root=target_root).cli_invoke,
+        )
     if (
         progress_contract["status"] == "cancel-requested"
         or progress_contract["elapsed_ms"] > progress_contract["long_command_threshold_ms"]
@@ -1840,6 +1846,254 @@ def _implement_tiny_proof_narrowness_payload(value: Any) -> dict[str, Any]:
             }
         )
     return {key: payload for key, payload in compact.items() if payload not in ("", [], {}, None)}
+
+
+def _ordinary_implement_decision_payload(*, selected: dict[str, Any], source_payload: dict[str, Any], cli_invoke: str) -> dict[str, Any]:
+    """Merge ordinary implement peers into one implementation authority.
+
+    The existing selector and verbose projections remain compatibility and
+    diagnostic surfaces.  The ordinary response carries only facts that can
+    change the bounded mutation, its proof, or its claim boundary.
+    """
+
+    legacy_decision = _as_dict(selected.get("decision_packet"))
+    next_card = _as_dict(selected.get("next"))
+    signals = _as_dict(selected.get("action_signals"))
+    proof = _as_dict(selected.get("proof"))
+    context = _as_dict(selected.get("context"))
+    operation_authority = _as_dict(context.get("operation_authority"))
+    operating_decision = _as_dict(operation_authority.get("operating_decision"))
+    typed_invocation = _as_dict(operation_authority.get("typed_invocation"))
+    review_transition = _as_dict(selected.get("review_stack_transition"))
+    calibration_admissions = [item for item in _list_payload(selected.get("calibration_admissions")) if isinstance(item, dict)]
+
+    gate = _as_dict(source_payload.get("planning_safety_gate"))
+    route = _as_dict(gate.get("route_decision"))
+    planning_revision = _as_dict(gate.get("planning_revision"))
+    active_plan_reliance = _as_dict(gate.get("active_plan_reliance"))
+    reliance_effect = _as_dict(active_plan_reliance.get("action_effect"))
+    selected_owner_identity = _as_dict(route.get("selected_owner_identity"))
+    non_interference = _as_dict(route.get("non_interference_boundary"))
+
+    envelope = _as_dict(source_payload.get("authority_envelope"))
+    resolution = _as_dict(envelope.get("authority_resolution"))
+    baseline = _as_dict(envelope.get("mutation_baseline"))
+    baseline_scope = _as_dict(baseline.get("scope"))
+    baseline_state = _as_dict(baseline.get("observed_state"))
+    baseline_owner = _as_dict(baseline.get("ownership"))
+    stale_revalidation = _as_dict(baseline.get("stale_revalidation"))
+
+    changed_paths = _normalize_changed_paths(source_payload.get("changed_paths", []))
+    allowed_paths = _normalize_changed_paths(baseline_scope.get("allowed_paths", [])) or changed_paths
+    inspect_files = _normalize_changed_paths(source_payload.get("inspect_files", [])) or changed_paths
+    required_commands = [
+        str(item) for item in proof.get("required_commands", legacy_decision.get("required_commands", [])) if str(item).strip()
+    ]
+
+    side_effects = [item for item in _list_payload(resolution.get("side_effect_decisions")) if isinstance(item, dict)]
+    allowed_effects = [
+        {
+            "effect": str(item.get("class") or ""),
+            "decision": str(item.get("decision") or ""),
+            **({"reason": str(item.get("reason_code"))} if item.get("reason_code") else {}),
+        }
+        for item in side_effects
+        if str(item.get("decision") or "") == "allow"
+    ]
+    restricted_effects = [
+        {
+            "effect": str(item.get("class") or ""),
+            "decision": str(item.get("decision") or ""),
+            **({"reason": str(item.get("reason_code"))} if item.get("reason_code") else {}),
+        }
+        for item in side_effects
+        if str(item.get("decision") or "") != "allow"
+    ]
+
+    blocked_claims = list(
+        dict.fromkeys(
+            [
+                *[str(item) for item in _list_payload(route.get("blocked_claims")) if str(item).strip()],
+                *[str(item) for item in _list_payload(reliance_effect.get("blocked_until_reconciled")) if str(item).strip()],
+                *[
+                    str(item)
+                    for item in _as_dict(source_payload.get("applicable_intent_status")).get("blocked_claims", [])
+                    if str(item).strip()
+                ],
+            ]
+        )
+    )
+    allowed_claims = [str(item) for item in _list_payload(route.get("allowed_claims")) if str(item).strip()]
+    claim_boundary = (
+        _as_dict(source_payload.get("parent_intent_status")).get("proof_boundary")
+        or reliance_effect.get("claim_boundary")
+        or legacy_decision.get("claim_boundary")
+        or "claim after changed-path proof and acceptance reconciliation"
+    )
+    if str(claim_boundary).strip().lower() in {"", "not-recorded", "not-evaluated", "unknown"}:
+        claim_boundary = "claim after changed-path proof and acceptance reconciliation"
+
+    action: dict[str, Any] = {
+        "summary": str(next_card.get("action") or legacy_decision.get("next_action") or ""),
+        "required_inputs": [
+            "working_set.changed_paths",
+            "identity.mutation_baseline",
+            "proof.required_commands",
+        ],
+    }
+    if next_card.get("command"):
+        action["command"] = str(next_card["command"])
+    if typed_invocation.get("status") == "observed":
+        action["operation"] = {
+            key: copy.deepcopy(typed_invocation[key])
+            for key in ("operation_id", "contract_version", "arguments", "expected_transition", "idempotency_key")
+            if typed_invocation.get(key) not in (None, "", [], {})
+        }
+
+    owner: dict[str, Any] = {
+        "mutation_owner": str(baseline_owner.get("owner") or "current-agent-session"),
+        **({"planning_owner": str(route.get("selected_owner"))} if route.get("selected_owner") else {}),
+        **({"identity": selected_owner_identity} if selected_owner_identity else {}),
+        **(
+            {
+                "non_interference": {
+                    key: copy.deepcopy(non_interference[key])
+                    for key in ("status", "restriction", "protected_scope")
+                    if non_interference.get(key) not in (None, "", [], {})
+                }
+            }
+            if non_interference
+            else {}
+        ),
+    }
+    residue_owner = str(
+        _as_dict(source_payload.get("operating_loop")).get("residue_owner") or legacy_decision.get("residue_owner") or "none"
+    )
+    attention: list[dict[str, Any]] = []
+    for key, signal in (("high_risk_overlay", "high-risk proof overlay"), ("local_overlay", "local proof overlay")):
+        overlay = _as_dict(_as_dict(source_payload.get("proof")).get(key))
+        if overlay.get("status") == "active":
+            attention.append(
+                {
+                    "signal": signal,
+                    "active_count": int(overlay.get("active_count", 0) or 0),
+                    "decision_effect": "required proof is included in proof.required_commands",
+                    "detail_selector": f"proof.{key}",
+                }
+            )
+    for warning in _list_payload(source_payload.get("path_boundaries")):
+        if isinstance(warning, dict) and warning.get("requires_attention"):
+            attention.append(
+                {
+                    "signal": "changed-path authority warning",
+                    "path": str(warning.get("path") or ""),
+                    "decision_effect": "inspect authority before widening mutation scope",
+                    "detail_selector": "context.scope",
+                }
+            )
+    architecture = _as_dict(source_payload.get("architecture_principles"))
+    if int(architecture.get("matched_count", 0) or 0) > 0:
+        attention.append(
+            {
+                "signal": "architecture principle applies",
+                "matched_count": int(architecture.get("matched_count", 0) or 0),
+                "decision_effect": str(
+                    _as_dict(architecture.get("closeout")).get("required_claim") or "preservation claim required before closeout"
+                ),
+                "detail_selector": "architecture_principles",
+            }
+        )
+
+    detail_routes = {
+        "decision_detail": (
+            f"{cli_invoke} implement --target . --changed <paths> "
+            "--select next,action_signals,current_decision,message_economy,evidence_bundle --format json"
+        ),
+        "scope_and_owner": (
+            f"{cli_invoke} implement --target . --changed <paths> --select context.scope,planning_safety_gate --format json"
+        ),
+        "proof_detail": f"{cli_invoke} proof --target . --changed <paths> --format json",
+        "memory_detail": f"{cli_invoke} implement --target . --changed <paths> --select memory_decision_packet --format json",
+        "selector_inventory": f"{cli_invoke} implement --target . --select selector_inventory --format json",
+        "select": f"{cli_invoke} implement --target . --changed <paths> --select <field[,field...]> --format json",
+        "verbose": f"{cli_invoke} implement --target . --changed <paths> --verbose --format json",
+    }
+
+    decision = {
+        "kind": "agentic-workspace/ordinary-implement-decision/v1",
+        "surface": "implement",
+        "identity": {
+            "decision_id": operating_decision.get("decision_id") or "not-admitted",
+            "decision_input_revision": operating_decision.get("canonical_decision_input_revision") or "not-admitted",
+            "planning_revision": planning_revision.get("revision_id") or "not-present",
+            "mutation_baseline": {
+                "status": baseline.get("status", "not-observed"),
+                "baseline_id": baseline.get("baseline_id") or "unavailable",
+                "head": baseline.get("head") or "unavailable",
+                "enforcement_fingerprint": baseline_state.get("enforcement_fingerprint") or "unavailable",
+                "stale_revalidation": stale_revalidation.get("status", "unknown"),
+            },
+        },
+        "working_set": {
+            "changed_paths": changed_paths,
+            "allowed_paths": allowed_paths,
+            "inspect_files": inspect_files,
+        },
+        "action": action,
+        "effects": {
+            "implementation_allowed": bool(signals.get("implementation_allowed")),
+            "read_only_allowed": bool(signals.get("read_only_allowed", True)),
+            "allowed": allowed_effects,
+            "restricted": restricted_effects,
+            "allowed_claims": allowed_claims,
+            "blocked_claims": blocked_claims,
+            "outside_working_set": "requires-explicit-authority",
+        },
+        "owner": owner,
+        "proof": {
+            "required": bool(required_commands),
+            "required_commands": required_commands,
+            "claim_boundary": claim_boundary,
+            "detail_route": detail_routes["proof_detail"],
+        },
+        "claim_boundary": claim_boundary,
+        "residue_owner": residue_owner,
+        "reasons": [str(item) for item in _list_payload(legacy_decision.get("reasons")) if str(item).strip()],
+        **(
+            {
+                "transition": {
+                    key: copy.deepcopy(review_transition[key])
+                    for key in ("status", "phase", "phase_after", "next_action_id", "path", "pr_number")
+                    if review_transition.get(key) not in (None, "", [], {})
+                }
+                | {
+                    "calibration_admissions": [
+                        {
+                            key: copy.deepcopy(item[key])
+                            for key in ("producer_class", "status", "source_ref")
+                            if item.get(key) not in (None, "", [], {})
+                        }
+                        for item in calibration_admissions
+                    ]
+                }
+            }
+            if review_transition
+            else {}
+        ),
+        **({"attention": attention} if attention else {}),
+        "detail_routes": detail_routes,
+        "absence_states": {
+            "peer_decision_projections": "selector-routed",
+            "authority_traces": "verbose-or-selector-routed",
+            "diagnostics_and_assurance": "selector-routed",
+            "raw_workspace_files": "not-required-for-ordinary-action",
+        },
+    }
+    return {
+        "kind": selected.get("kind", "implementer-context-tiny/v1"),
+        "target": selected.get("target", "."),
+        "decision_packet": decision,
+    }
 
 
 def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:

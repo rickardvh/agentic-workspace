@@ -1257,11 +1257,12 @@ def _assert_implement_select_next_matches_tiny_payload(
     assert cli.main([*base_args, *extra_args, "--select", "next", "--format", "json"]) == 0
     selected = json.loads(capsys.readouterr().out)["values"]["next"]
 
-    ordinary_next = ordinary["next"]
-    assert selected["action"] == ordinary_next["action"]
-    assert selected["status"] == ordinary_next["status"]
-    assert selected["command"] == ordinary_next["command"]
-    assert selected["commands"] == ordinary_next["commands"]
+    decision = ordinary["decision_packet"]
+    assert decision["action"]["summary"] == selected["action"]
+    if selected.get("command"):
+        assert decision["action"]["command"] == selected["command"]
+    assert "--select next" in decision["detail_routes"]["decision_detail"]
+    assert ordinary.keys() == {"kind", "target", "decision_packet"}
 
 
 def test_implement_select_next_matches_tiny_payload_for_normal_changed_paths(tmp_path: Path, capsys) -> None:
@@ -9426,13 +9427,15 @@ candidates = []
                 "src/agentic_workspace/workspace_runtime_core.py",
                 "--task",
                 "Implement unrelated parser cleanup",
+                "--select",
+                "context",
                 "--format",
                 "json",
             ]
         )
         == 0
     )
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(capsys.readouterr().out)["values"]
     route = payload["context"]["planning_safety_gate"]["route_decision"]
 
     assert route["task_relation"] == "bounded-independent"
@@ -15024,13 +15027,14 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
         )
         == 0
     )
-    correction = json.loads(capsys.readouterr().out)
-    assert correction["review_stack_transition"]["status"] == "written"
-    assert correction["review_stack_transition"]["phase_after"] == "review-proof"
-    assert [item["producer_class"] for item in correction["calibration_admissions"]] == ["human-review", "retry-outcome"]
-    assert [item["status"] for item in correction["calibration_admissions"]] == ["recorded", "recorded"]
-    human_review_ref = correction["calibration_admissions"][0]["source_ref"]
-    retry_ref = correction["calibration_admissions"][1]["source_ref"]
+    correction = json.loads(capsys.readouterr().out)["decision_packet"]["transition"]
+    assert correction["status"] == "written"
+    assert correction["phase_after"] == "review-proof"
+    admissions = correction["calibration_admissions"]
+    assert [item["producer_class"] for item in admissions] == ["human-review", "retry-outcome"]
+    assert [item["status"] for item in admissions] == ["recorded", "recorded"]
+    human_review_ref = admissions[0]["source_ref"]
+    retry_ref = admissions[1]["source_ref"]
     human_review_receipt_id = human_review_ref.rsplit("/", 1)[-1]
     retry_receipt_id = retry_ref.rsplit("/", 1)[-1]
     human_review_receipt = json.loads(
@@ -15110,7 +15114,7 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
     assert reusable_continuity["next_action"]["id"] == "closeout-with-reused-proof-receipt"
     assert reusable_continuity["closeout_route"]["status"] == "ready_after_recording_reuse_rationale"
     assert reusable_continuity["planning_owner"]["phase_source"] == "planning_lifecycle_transition"
-    assert reusable_continuity["planning_owner"]["transition_records"] == [correction["review_stack_transition"]["path"]]
+    assert reusable_continuity["planning_owner"]["transition_records"] == [correction["path"]]
     assert reusable_continuity["workflow_trace"]["status"] == "executed_transition_trace"
     assert reusable_continuity["workflow_trace"]["transition_source"] == "planning_lifecycle_transition"
     assert reusable_continuity["workflow_trace"]["interaction_cost"]["ordinary_rerun_count"] == 1

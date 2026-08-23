@@ -19044,11 +19044,11 @@ def _ordinary_output_shape_inventory() -> dict[str, Any]:
         {
             "surface": "implement",
             "status": "budget-proven",
-            "primary_decision": "safe implementation route for the changed paths and task",
-            "primary_decision_object": "next",
-            "ordinary_default_shape": "changed-path implementation card with action_signals and proof summary",
-            "detail_route": "implement selector/detail output",
-            "budget_evidence": "tests/test_workspace_implement_cli.py keeps docs/code default implement JSON under tiny-output ceilings.",
+            "primary_decision": "bounded mutation, proof, and claim authority for the changed paths",
+            "primary_decision_object": "decision_packet",
+            "ordinary_default_shape": "one authoritative implementation decision packet with selector-backed peer projections",
+            "detail_route": "implement --select <field> or --verbose",
+            "budget_evidence": "tests/test_workspace_implement_cli.py measures direct, docs, active-owner, gated, and module-rich defaults; docs/maintainer/implement-compression-2683.json records the accepted evidence.",
         },
         {
             "surface": "summary",
@@ -19164,10 +19164,10 @@ def _ordinary_output_shape_inventory() -> dict[str, Any]:
                 "surface": "implement",
                 "profile": "implementer-context-tiny/v1",
                 "status": "budget-proven",
-                "max_json_bytes": 15000,
-                "max_field_count": 400,
-                "max_estimated_tokens": 3750,
-                "max_human_lines": 100,
+                "max_json_bytes": 6000,
+                "max_field_count": 140,
+                "max_estimated_tokens": 1500,
+                "max_human_lines": 60,
                 "expansion_trigger": "--select or --verbose",
                 "proof": "test_all_declared_ordinary_profiles_obey_authoritative_output_budgets",
             },
@@ -19896,6 +19896,39 @@ def _operating_loop_text_lines(packet: dict[str, Any] | None) -> list[str]:
 
 
 def _emit_implement_text(payload: dict[str, Any]) -> None:
+    decision = _as_dict(payload.get("decision_packet"))
+    if decision.get("kind") == "agentic-workspace/ordinary-implement-decision/v1":
+        working_set = _as_dict(decision.get("working_set"))
+        changed_paths = [str(item) for item in _list_payload(working_set.get("changed_paths")) if str(item).strip()]
+        print(f"scope: {', '.join(changed_paths) if changed_paths else 'missing --changed paths'}")
+        action = _as_dict(decision.get("action"))
+        if action.get("summary"):
+            print(f"next: {action['summary']}")
+        effects = _as_dict(decision.get("effects"))
+        print(
+            "effects: "
+            f"implementation_allowed={str(bool(effects.get('implementation_allowed'))).lower()} · "
+            f"outside_scope={effects.get('outside_working_set', 'requires-explicit-authority')}"
+        )
+        proof = _as_dict(decision.get("proof"))
+        commands = [str(item) for item in _list_payload(proof.get("required_commands")) if str(item).strip()]
+        if commands:
+            print(f"proof: {commands[0]}")
+            if len(commands) > 1:
+                print(f"proof_more: {len(commands) - 1}")
+        else:
+            print("proof: not-required")
+        print(f"claim: {decision.get('claim_boundary', 'not-evaluated')}")
+        owner = _as_dict(decision.get("owner"))
+        non_interference = _as_dict(owner.get("non_interference"))
+        if non_interference.get("restriction"):
+            print(f"owner_boundary: {non_interference['restriction']}")
+        routes = _as_dict(decision.get("detail_routes"))
+        if routes.get("select"):
+            print(f"selectors: {routes['select']}")
+        if routes.get("verbose"):
+            print(f"detail: {routes['verbose']}")
+        return
     for line in _operating_loop_text_lines(payload.get("operating_loop") if isinstance(payload.get("operating_loop"), dict) else None):
         print(line)
     next_payload = _as_dict(payload.get("next"))
