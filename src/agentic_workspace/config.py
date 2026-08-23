@@ -240,9 +240,10 @@ def workspace_pointer_block(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> str:
         "2. Otherwise use `.agentic-workspace/config.toml` `[workspace].cli_invoke`.\n"
         "3. Otherwise use the package default `agentic-workspace`.\n"
         "4. If no CLI invocation works, read `.agentic-workspace/skills/workspace-startup/SKILL.md` before other workspace files.\n"
+        f"This generated adapter's configured invocation is `{cli_invoke}`. Use it directly for ordinary route commands; do not open raw config files to rediscover it.\n"
         "\n"
         "Ordinary route:\n"
-        '1. Run `<configured AW invocation> start --target . --task "<task>" --format json` before non-trivial answers, edits, read-only workflow, config, delegation, or action-safety decisions.\n'
+        '1. Run exactly `<configured AW invocation> start --target . --task "<task>" --format json` before non-trivial answers, edits, read-only workflow, config, delegation, or action-safety decisions; the ordinary contract is the JSON `decision_packet`, so do not omit `--format json`.\n'
         '2. Run `<configured AW invocation> implement --target . --changed <paths> --task "<task>" --format json` when changed paths are already known.\n'
         "3. Follow the authoritative `decision_packet` action, effects, claim boundary, and routed detail before opening raw `.agentic-workspace` files or running drill-down commands.\n"
         "4. Treat `communication_contract` as optional selector-backed response-shape detail; ordinary work proceeds from `decision_packet` and expands only when its safety, proof, or detail routes require it.\n"

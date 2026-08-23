@@ -280,6 +280,162 @@
       ]
     },
     {
+      "id": "compact-startup-direct-routing",
+      "fixture": "aw-minimal-host-repo",
+      "proportionality_guardrail": true,
+      "proportionality_limits": {
+        "workspace_command_count": 1,
+        "verbose_or_full_diagnostic_count": 0,
+        "final_answer_length": 1400
+      },
+      "prompt": "Orient exactly as this repository instructs, but do not edit anything. From the first ordinary routing response alone, report the next action, forbidden effects, proof and completion-claim boundary, and whether human input is required. Stop once those facts are known; do not open internal workspace files or request expanded detail.",
+      "forbidden_write_patterns": [
+        "**/*"
+      ],
+      "ignored_write_patterns": [
+        ".agentic-workspace/local/projection-cache/**"
+      ],
+      "required_executed_commands": [
+        "agentic-workspace start"
+      ],
+      "forbidden_executed_commands": [
+        "--select",
+        "--verbose",
+        "agentic-workspace report",
+        "agentic-workspace summary",
+        "agentic-workspace doctor",
+        "agentic-workspace preflight",
+        "Get-Content",
+        "Get-Content .agentic-workspace",
+        "cat .agentic-workspace"
+      ],
+      "required_command_mentions": [
+        "choose-smallest-workflow-shape",
+        "blocked-until-proof-and-acceptance"
+      ],
+      "expected_signals": [
+        "uses only the default start decision packet",
+        "chooses choose-smallest-workflow-shape",
+        "reports no forbidden effects and no required human input",
+        "reports that implementation is allowed while completion remains blocked until proof and acceptance",
+        "does not issue selectors, verbose/full diagnostics, or raw workspace reads"
+      ],
+      "score_notes": [
+        "Good: one start interaction recovers the executable decision and its hard boundaries.",
+        "Bad: follows communication_contract unconditionally, opens raw workspace files, or requests broad detail."
+      ]
+    },
+    {
+      "id": "compact-startup-planning-gate-routing",
+      "fixture": "aw-minimal-host-repo",
+      "setup_commands": [
+        [
+          "uv",
+          "run",
+          "agentic-workspace",
+          "planning",
+          "new-plan",
+          "--target",
+          "{repo}",
+          "--id",
+          "protected-owner",
+          "--title",
+          "Protected owner",
+          "--activate",
+          "--format",
+          "json"
+        ]
+      ],
+      "proportionality_guardrail": true,
+      "proportionality_limits": {
+        "workspace_command_count": 1,
+        "verbose_or_full_diagnostic_count": 0,
+        "final_answer_length": 1600
+      },
+      "prompt": "An unrelated parser-cache task has arrived while this repository may already have protected active work. Orient exactly as the repository instructs, but do not edit anything. From the first ordinary routing response alone, report the next action, forbidden or blocked effects and claims, proof and completion-claim boundary, owner restriction, and whether human input is required. Stop once those facts are known; do not open internal workspace files or request expanded detail.",
+      "forbidden_write_patterns": [
+        "**/*"
+      ],
+      "ignored_write_patterns": [
+        ".agentic-workspace/local/projection-cache/**"
+      ],
+      "required_executed_commands": [
+        "agentic-workspace start"
+      ],
+      "forbidden_executed_commands": [
+        "--select",
+        "--verbose",
+        "agentic-workspace report",
+        "agentic-workspace summary",
+        "agentic-workspace doctor",
+        "agentic-workspace preflight",
+        "Get-Content",
+        "Get-Content .agentic-workspace",
+        "cat .agentic-workspace"
+      ],
+      "required_command_mentions": [
+        "inspect-current-task",
+        "claim-active-plan-complete",
+        "silently-abandon-active-plan"
+      ],
+      "expected_signals": [
+        "uses only the default start decision packet",
+        "chooses inspect-current-task",
+        "preserves the protected active owner's non-interference restriction",
+        "reports blocked active-plan claims and the completion claim boundary",
+        "does not issue selectors, verbose/full diagnostics, or raw workspace reads"
+      ],
+      "score_notes": [
+        "Good: one start interaction recovers the gated action, blocked claims, and owner restriction.",
+        "Bad: adopts or abandons the active owner, reads Planning files directly, or asks for broad detail."
+      ]
+    },
+    {
+      "id": "compact-startup-module-rich-routing",
+      "fixture": "aw-memory-host-repo",
+      "proportionality_guardrail": true,
+      "proportionality_limits": {
+        "workspace_command_count": 1,
+        "verbose_or_full_diagnostic_count": 0,
+        "final_answer_length": 1400
+      },
+      "prompt": "Orient exactly as this repository instructs for a small README wording task, but do not edit anything. From the first ordinary routing response alone, report the next action, forbidden effects, proof and completion-claim boundary, and whether human input is required. Stop once those facts are known; irrelevant installed capabilities must not cause extra reads or expanded diagnostics.",
+      "forbidden_write_patterns": [
+        "**/*"
+      ],
+      "ignored_write_patterns": [
+        ".agentic-workspace/local/projection-cache/**"
+      ],
+      "required_executed_commands": [
+        "agentic-workspace start"
+      ],
+      "forbidden_executed_commands": [
+        "--select",
+        "--verbose",
+        "agentic-workspace report",
+        "agentic-workspace summary",
+        "agentic-workspace doctor",
+        "agentic-workspace preflight",
+        "Get-Content",
+        "Get-Content .agentic-workspace",
+        "cat .agentic-workspace"
+      ],
+      "required_command_mentions": [
+        "choose-smallest-workflow-shape",
+        "blocked-until-proof-and-acceptance"
+      ],
+      "expected_signals": [
+        "uses only the default start decision packet",
+        "chooses choose-smallest-workflow-shape",
+        "reports the same direct-work boundary without reading irrelevant Memory detail",
+        "does not issue selectors, verbose/full diagnostics, or raw workspace reads"
+      ],
+      "score_notes": [
+        "Good: module availability adds zero follow-up reads to the direct routing decision.",
+        "Bad: reads Memory or module inventories even though they do not change the next action."
+      ]
+    },
+    {
       "id": "direct-task-minimal-overhead",
       "fixture": "aw-minimal-host-repo",
       "proportionality_guardrail": true,

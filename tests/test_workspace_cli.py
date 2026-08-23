@@ -8419,6 +8419,8 @@ def test_generated_ordinary_guidance_is_executable_from_default_decision_packet_
     guidance = workspace_pointer_block(cli_invoke="agentic-workspace")
     ordinary_route = guidance.split("Ordinary route:", 1)[1].split("Boundaries:", 1)[0]
     assert "authoritative `decision_packet`" in ordinary_route
+    assert "do not omit `--format json`" in ordinary_route
+    assert "do not open raw config files to rediscover it" in guidance
     assert "`communication_contract` as optional selector-backed" in ordinary_route
     assert "Use the returned `communication_contract`" not in ordinary_route
     assert "--select communication_contract" not in ordinary_route
