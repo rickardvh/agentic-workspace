@@ -7038,11 +7038,17 @@ def _proof_compression_scenario_payloads() -> dict[str, dict[str, dict[str, obje
             receipt_status="failed",
             remaining_gaps=["proof result failed"],
         ),
-        "stale_or_missing_receipt": scenario(
+        "stale_receipt": scenario(
             name="stale-receipt",
             commands=["uv run pytest tests/test_stale.py -q"],
             receipt_status="stale",
             remaining_gaps=["proof result missing or stale"],
+        ),
+        "missing_receipt": scenario(
+            name="missing-receipt",
+            commands=["uv run pytest tests/test_missing.py -q"],
+            receipt_status="not-recorded",
+            remaining_gaps=["proof result missing"],
         ),
         "manual_verification": scenario(
             name="manual",
@@ -7096,6 +7102,7 @@ def test_proof_compression_evidence_records_cost_and_named_safety_expansion() ->
         assert not over_budget or recorded.get("expansion_reason") in evidence["named_expansion_reasons"]
     assert evidence["scenarios"]["manual_verification"]["expansion_reason"]
     assert evidence["scenarios"]["unavailable_runtime"]["expansion_reason"]
+    assert evidence["scenarios"]["missing_receipt"]["expansion_reason"] == "failed-stale-or-missing-receipt"
     assert evidence["default_guidance_proof"]["mandatory_selector_calls"] == 0
     assert evidence["default_guidance_proof"]["interaction_trace"]["claim"] == "blocked"
     assert evidence["total_operating_cost"]["assessment"] == "reduced-with-explicit-safety-expansion"

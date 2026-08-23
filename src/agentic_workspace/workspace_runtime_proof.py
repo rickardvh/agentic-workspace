@@ -505,6 +505,7 @@ def _ordinary_proof_next_decision_payload(
     required_commands = [str(item) for item in _list_payload(next_decision.get("required_commands")) if str(item).strip()]
     closeout_status = str(closeout.get("status") or "not-yet-sufficient")
     receipt_status = str(reconciliation.get("status") or "not-recorded")
+    missing_receipt_count = int(bridge.get("missing_receipt_count", 0) or 0)
     sufficient = closeout_status == "sufficient-recorded"
 
     blockers: list[dict[str, Any]] = []
@@ -560,7 +561,7 @@ def _ordinary_proof_next_decision_payload(
         },
         "receipt": {
             "status": receipt_status,
-            "missing_count": int(bridge.get("missing_receipt_count", 0) or 0),
+            "missing_count": missing_receipt_count,
             "next_recording_command": bridge.get("next_recording_command"),
         },
         "manual_verification": manual,
@@ -595,7 +596,10 @@ def _ordinary_proof_next_decision_payload(
                 ("multiple-required-commands", len(required_commands) > 1),
                 ("manual-verification-required", isinstance(manual, dict) and bool(manual)),
                 ("unavailable-runtime-or-host-policy", bool(unavailable)),
-                ("failed-stale-or-missing-receipt", not sufficient and receipt_status not in {"not-recorded", ""}),
+                (
+                    "failed-stale-or-missing-receipt",
+                    not sufficient and (receipt_status not in {"not-recorded", ""} or missing_receipt_count > 0),
+                ),
             )
             if active
         ],
