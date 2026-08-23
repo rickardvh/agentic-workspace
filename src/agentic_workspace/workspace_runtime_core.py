@@ -49658,7 +49658,7 @@ def _ordinary_summary_continuation_payload(*, summary: dict[str, Any], cli_invok
         }
     view["identity"] = {
         "continuation_revision": primary_source.get("source_hash") or "no-active-owner",
-        "source_freshness": "current-owner" if active_owner else "not-applicable",
+        "source_freshness": primary_source.get("freshness") or ("unknown" if active_owner else "not-applicable"),
     }
     view["owner"] = {
         "status": "active" if active_owner else "no-active-owner",

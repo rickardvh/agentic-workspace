@@ -15,6 +15,7 @@
     "Treat missing planning state as unavailable summary data, not as a mutation request.",
     "Task-scoped summary must omit unrelated historical/detail-heavy planning sections unless explicitly requested through full or broad compact detail commands.",
     "Fresh-session digest output must point to source artifacts instead of embedding issue bodies, proof logs, or Planning records wholesale.",
+    "For ordinary restart and handoff, continuation_view is authoritative: resume only its owner and next action, preserve freshness, blockers, proof/claim and residue boundaries, and use selectors or verbose output only for optional detail.",
     "Prefer --select for exact field drill-down and --verbose only for broad diagnostics."
   ],
   "id": "summary.report",

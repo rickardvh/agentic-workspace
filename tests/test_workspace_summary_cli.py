@@ -120,19 +120,236 @@ candidates = []
     assert not any(key.endswith("_count") for key in continuation)
 
 
+def _summary_compression_field_count(value: object) -> int:
+    if isinstance(value, dict):
+        return len(value) + sum(_summary_compression_field_count(item) for item in value.values())
+    if isinstance(value, list):
+        return sum(_summary_compression_field_count(item) for item in value)
+    return 0
+
+
+def _summary_compression_measurement(value: dict[str, object]) -> dict[str, int]:
+    compact = json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    return {
+        "json_bytes": len(compact),
+        "human_lines": len(json.dumps(value, ensure_ascii=False, indent=2).splitlines()),
+        "field_count": _summary_compression_field_count(value),
+        "aw_roundtrips": 1,
+    }
+
+
+def _summary_compression_scenario_payloads() -> dict[str, dict[str, dict[str, object]]]:
+    def scenario(
+        *,
+        name: str,
+        active: bool,
+        freshness: str = "current-owner",
+        failed: list[str] | None = None,
+        residue_owner: str = "active continuation state",
+        module_rich: bool = False,
+    ) -> dict[str, dict[str, object]]:
+        if active:
+            plan_ref = f".agentic-workspace/planning/execplans/{name}.plan.json"
+            continuation: dict[str, object] = {
+                "kind": "agentic-planning/continuation-view/v1",
+                "status": "present",
+                "view_role": "lossy-continuation-projection",
+                "summary_profile": "tiny",
+                "answers": {
+                    "preserved_intent": f"Complete the {name} continuation.",
+                    "claim_allowed": "partial-progress",
+                    "next_safe_action": f"continue-{name}",
+                    "trust_basis": "source_freshness + resume_predicate + claim_boundary",
+                },
+                "proof_state": {"status": "missing-or-pending", "freshness": "current", "known_gap": "proof pending"},
+                "claim_boundary": {
+                    "status": "continue-required",
+                    "claim_level_allowed": "partial-progress",
+                    "required_next_action": f"continue-{name}",
+                },
+                "resume_predicate": {
+                    "status": "needs-reconcile" if failed else "continue-with-boundary",
+                    "failed": failed or [],
+                    "required_next_action": "drill-down-or-reconcile" if failed else f"continue-{name}",
+                },
+                "source_freshness": [
+                    {
+                        "claim": "active intent",
+                        "owner": "Planning active execplan",
+                        "source": plan_ref,
+                        "source_hash": f"revision-{name}",
+                        "freshness": freshness,
+                    }
+                ],
+                "absence_states": {"historical_review_residue": "hidden_behind_detail_route"},
+            }
+        else:
+            continuation = {
+                "kind": "agentic-planning/continuation-view/v1",
+                "status": "quiet",
+                "absence_state": "not_applicable",
+                "reason": "no active Planning owner is present",
+            }
+        before: dict[str, object] = {
+            "kind": "planning-summary-tiny/v1",
+            "target_root": ".",
+            "profile": "tiny",
+            "continuation_view": continuation,
+            "decision_packet": {
+                "residue_owner": residue_owner,
+                "next": {"action": f"continue-{name}"},
+                "explanation": "Peer decision projection retained the same continuation semantics before compression.",
+                "diagnostics": [{"id": f"decision-check-{index}", "status": "clear"} for index in range(6)],
+            },
+            "todo": {"active_count": 1 if active else 0, "queued_count": 2},
+            "execplans": {"active_count": 1 if active else 0, "archived_count": 9},
+            "planning_surface_health": {
+                "status": "not-clean" if failed else "clean",
+                "warnings": failed or [],
+                "checks": [
+                    {"id": f"health-{index}", "status": "clear", "source": ".agentic-workspace/planning/state.toml"} for index in range(10)
+                ],
+            },
+            "execution_readiness": {"status": "blocked" if failed else "ready"},
+            "current_execution_pressure": {"status": "present", "item_count": 3},
+            "lanes": {"record_count": 4},
+            "roadmap": {
+                "candidate_count": 5,
+                "candidates": [{"id": f"candidate-{index}", "status": "queued"} for index in range(5)],
+            },
+            "history": {
+                "closeout_count": 14,
+                "recent": [{"id": f"closed-{index}", "status": "archived", "proof": "recorded"} for index in range(8)],
+            },
+        }
+        if module_rich:
+            before.update(
+                {
+                    "memory_consult": {"status": "available", "note_count": 8},
+                    "installed_capabilities": {"modules": ["planning", "memory", "verification"]},
+                    "review_topology": {"status": "available", "pull_request_count": 3},
+                }
+            )
+        after = workspace_runtime_core._ordinary_summary_continuation_payload(
+            summary=before,
+            cli_invoke="agentic-workspace",
+        )
+        return {"before": before, "after": after}
+
+    return {
+        "no_active_owner": scenario(name="no-owner", active=False, residue_owner="none"),
+        "active_owner": scenario(name="active-owner", active=True),
+        "stale_source_or_recovery": scenario(
+            name="stale-source",
+            active=True,
+            freshness="stale-projection",
+            failed=["revision matches"],
+        ),
+        "unresolved_residue": scenario(
+            name="unresolved-residue",
+            active=True,
+            failed=["residue owner is resolved"],
+            residue_owner="planning-follow-up",
+        ),
+        "external_intent_or_review_blocked": scenario(
+            name="review-blocked",
+            active=True,
+            failed=["external intent conflict is reconciled", "review topology is unblocked"],
+            residue_owner="review",
+        ),
+        "module_rich": scenario(name="module-rich", active=True, module_rich=True),
+    }
+
+
 def test_summary_compression_evidence_records_handoff_and_cross_surface_review() -> None:
     evidence = json.loads(Path("docs/maintainer/summary-compression-2685.json").read_text(encoding="utf-8"))
 
     assert evidence["schema_version"] == "agentic-workspace/summary-compression-evidence/v1"
-    active_owner = evidence["scenarios"]["active_owner"]
-    assert active_owner["after"]["json_bytes"] < active_owner["before"]["json_bytes"]
-    assert active_owner["after"]["human_lines"] < active_owner["before"]["human_lines"]
-    assert active_owner["after"]["aw_roundtrips"] == active_owner["before"]["aw_roundtrips"] == 1
-    assert evidence["scenarios"]["handoff"]["raw_planning_reads"] == 0
-    assert evidence["scenarios"]["handoff"]["selector_calls"] == 0
+    fixtures = _summary_compression_scenario_payloads()
+    assert set(evidence["scenarios"]) == set(fixtures)
+    budget = evidence["accepted_budget"]
+    for name, payloads in fixtures.items():
+        recorded = evidence["scenarios"][name]
+        assert recorded["before"] == _summary_compression_measurement(payloads["before"])
+        assert recorded["after"] == _summary_compression_measurement(payloads["after"])
+        assert recorded["after"]["json_bytes"] <= budget["max_json_bytes"]
+        assert recorded["after"]["field_count"] <= budget["max_field_count"]
+        assert recorded["after"]["human_lines"] <= budget["max_human_text_lines"]
+        assert recorded["after"]["aw_roundtrips"] == recorded["before"]["aw_roundtrips"] == 1
+    assert evidence["external_agent_evidence"]["mixed_agent_handoff"]["raw_planning_reads"] == 0
+    assert evidence["external_agent_evidence"]["weak_agent_restart"]["selector_calls"] == 0
     assert evidence["projection_disposition"]["authoritative"] == "continuation_view"
     assert evidence["total_operating_cost"]["assessment"] == "reduced"
     assert "Do not create a universal lifecycle envelope" in evidence["cross_surface_review"]["abstraction_decision"]
+
+
+def _summary_operation_guidance() -> str:
+    operation = json.loads(Path("src/agentic_workspace/contracts/operations/summary.report.json").read_text(encoding="utf-8"))
+    return next(guard for guard in operation["guards"] if "continuation_view is authoritative" in guard)
+
+
+def test_default_only_weak_agent_recognizes_no_active_owner_without_discovery() -> None:
+    guidance = _summary_operation_guidance()
+    packet = _summary_compression_scenario_payloads()["no_active_owner"]["after"]
+    continuation = packet["continuation_view"]
+    trace = {
+        "guidance_source": "src/agentic_workspace/contracts/operations/summary.report.json#guards",
+        "guidance": guidance,
+        "workspace_commands": ["agentic-workspace summary --format json"],
+        "owner_status": continuation["owner"]["status"],
+        "next_action": continuation["next"]["action"],
+        "claim_level_allowed": continuation["claim_boundary"]["claim_level_allowed"],
+        "selector_calls": 0,
+        "verbose_calls": 0,
+        "raw_planning_reads": 0,
+        "chat_reads": 0,
+        "route_reversals": 0,
+    }
+    assert trace["owner_status"] == "no-active-owner"
+    assert trace["next_action"] == "choose-smallest-workflow-shape"
+    assert trace["claim_level_allowed"] == "none"
+    evidence = json.loads(Path("docs/maintainer/summary-compression-2685.json").read_text(encoding="utf-8"))
+    assert evidence["external_agent_evidence"]["weak_agent_restart"] == trace
+
+
+def test_mixed_agent_handoff_resumes_from_continuation_only() -> None:
+    guidance = _summary_operation_guidance()
+    agent_b_input = _summary_compression_scenario_payloads()["active_owner"]["after"]
+    continuation = agent_b_input["continuation_view"]
+    trace = {
+        "guidance_source": "src/agentic_workspace/contracts/operations/summary.report.json#guards",
+        "guidance": guidance,
+        "workspace_commands": ["agentic-workspace summary --format json"],
+        "handoff_input_keys": sorted(agent_b_input),
+        "owner_ref": continuation["owner"]["ref"],
+        "owner_revision": continuation["owner"]["revision"],
+        "next_action": continuation["next"]["action"],
+        "proof_freshness": continuation["proof_state"]["freshness"],
+        "claim_level_allowed": continuation["claim_boundary"]["claim_level_allowed"],
+        "residue_owner": continuation["residue_owner"],
+        "selector_calls": 0,
+        "verbose_calls": 0,
+        "raw_planning_reads": 0,
+        "chat_reads": 0,
+        "route_reversals": 0,
+    }
+    assert trace["handoff_input_keys"] == ["continuation_view", "kind", "target_root"]
+    assert trace["owner_ref"] == ".agentic-workspace/planning/execplans/active-owner.plan.json"
+    assert trace["next_action"] == "continue-active-owner"
+    assert trace["claim_level_allowed"] == "partial-progress"
+    assert trace["residue_owner"] == "active continuation state"
+    evidence = json.loads(Path("docs/maintainer/summary-compression-2685.json").read_text(encoding="utf-8"))
+    assert evidence["external_agent_evidence"]["mixed_agent_handoff"] == trace
+
+
+def test_summary_stale_and_blocked_continuations_keep_decision_changing_blockers_first_line() -> None:
+    scenarios = _summary_compression_scenario_payloads()
+    stale = scenarios["stale_source_or_recovery"]["after"]["continuation_view"]
+    review = scenarios["external_intent_or_review_blocked"]["after"]["continuation_view"]
+    assert stale["identity"]["source_freshness"] == "stale-projection"
+    assert stale["blockers"] == ["revision matches"]
+    assert review["blockers"] == ["external intent conflict is reconciled", "review topology is unblocked"]
+    assert review["residue_owner"] == "review"
 
 
 def test_workspace_summary_text_defaults_to_tiny_profile(tmp_path: Path, capsys, monkeypatch) -> None:
