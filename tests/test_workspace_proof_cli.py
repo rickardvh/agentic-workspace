@@ -6917,17 +6917,220 @@ def test_proof_default_is_one_complete_claim_safe_decision_with_exact_escape_hat
     assert set(detail) == {"proof_route_strategy_decision", "proof_receipt_reconciliation", "proof_closeout_summary"}
 
 
+def _compression_field_count(value: object) -> int:
+    if isinstance(value, dict):
+        return len(value) + sum(_compression_field_count(item) for item in value.values())
+    if isinstance(value, list):
+        return sum(_compression_field_count(item) for item in value)
+    return 0
+
+
+def _compression_measurement(value: dict[str, object]) -> dict[str, int]:
+    compact = json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    return {
+        "json_bytes": len(compact),
+        "human_lines": len(json.dumps(value, ensure_ascii=False, indent=2).splitlines()),
+        "field_count": _compression_field_count(value),
+        "aw_roundtrips": 1,
+    }
+
+
+def _proof_compression_scenario_payloads() -> dict[str, dict[str, dict[str, object]]]:
+    from agentic_workspace.workspace_runtime_proof import _ordinary_proof_next_decision_payload
+
+    def scenario(
+        *,
+        name: str,
+        commands: list[str],
+        closeout_status: str = "not-yet-sufficient",
+        receipt_status: str = "not-recorded",
+        remaining_gaps: list[str] | None = None,
+        manual: dict[str, object] | None = None,
+        unavailable: list[dict[str, object]] | None = None,
+        narrowness: dict[str, object] | None = None,
+        module_rich: bool = False,
+    ) -> dict[str, dict[str, object]]:
+        changed = [f"fixtures/{name}.py"]
+        answer: dict[str, object] = {
+            "proof_route_decision": {
+                "route_source": "changed-paths",
+                "selected_command": {
+                    "route_authority": "live-confirmed-proof-rule",
+                    "lane": name,
+                },
+            },
+            "proof_route_strategy_preservation": {
+                "decision_id": f"decision-{name}",
+                "route_health_id": f"health-{name}",
+                "claim_effect": "selected-proof-required",
+                "proof_route_health": {"status": "current", "finding_count": 0},
+            },
+            "proof_receipt_reconciliation": {
+                "status": receipt_status,
+                "selected_proof_identity": {
+                    "id": f"proof-{name}",
+                    "fingerprint": f"fingerprint-{name}",
+                    "command_count": len(commands),
+                },
+            },
+            "proof_receipt_bridge": {
+                "missing_receipt_count": 0 if receipt_status == "recorded" else len(commands),
+                "next_recording_command": "agentic-workspace proof --record-receipt --format json",
+            },
+            "proof_closeout_summary": {
+                "status": closeout_status,
+                "remaining_gaps": remaining_gaps or [],
+            },
+            "proof_route_strategy_claim_gate": {"claim_effect": "selected-proof-required"},
+            "manual_verification": manual,
+            "unavailable_proof_commands": unavailable or [],
+        }
+        if module_rich:
+            answer.update(
+                {
+                    "architecture_principles": {"status": "applicable", "items": [{"id": "one-phase-authority"}]},
+                    "verification": {"status": "configured", "scenario_count": 12},
+                    "test_strategy_check": {"status": "present", "recommendations": ["keep proof narrow"]},
+                }
+            )
+        next_decision: dict[str, object] = {
+            "kind": "proof-next-decision/v1",
+            "next": {
+                "action": "run-validation-command" if commands else "manual-verification",
+                "command": commands[0] if commands else None,
+                "required": bool(commands or manual),
+                "route_source": "changed-paths",
+            },
+            "required_commands": commands,
+            "manual_verification": manual,
+            "warnings": [],
+        }
+        if narrowness:
+            next_decision["proof_narrowness"] = narrowness
+        before = {
+            "profile": "compact-contract-answer/v1",
+            "surface": "proof",
+            "target": ".",
+            "selector": {"changed": changed},
+            "answer": answer,
+            **answer,
+            "proof_next_decision": next_decision,
+        }
+        after = _ordinary_proof_next_decision_payload(
+            next_decision=next_decision,
+            answer=answer,
+            target=".",
+            selector={"changed": changed},
+            cli_invoke="agentic-workspace",
+        )
+        return {"before": before, "after": after}
+
+    return {
+        "passed_clean": scenario(
+            name="passed-clean",
+            commands=["uv run pytest tests/test_passed.py -q"],
+            closeout_status="sufficient-recorded",
+            receipt_status="recorded",
+        ),
+        "failed_result": scenario(
+            name="failed-result",
+            commands=["uv run pytest tests/test_failed.py -q"],
+            receipt_status="failed",
+            remaining_gaps=["proof result failed"],
+        ),
+        "stale_or_missing_receipt": scenario(
+            name="stale-receipt",
+            commands=["uv run pytest tests/test_stale.py -q"],
+            receipt_status="stale",
+            remaining_gaps=["proof result missing or stale"],
+        ),
+        "manual_verification": scenario(
+            name="manual",
+            commands=[],
+            manual={"status": "required", "summary": "Inspect the rendered result.", "templates": ["record outcome"]},
+            remaining_gaps=["manual verification remains"],
+        ),
+        "multi_command_broad_required": scenario(
+            name="multi-command",
+            commands=[
+                "uv run pytest tests/test_workspace_cli.py -q",
+                "make lint-workspace",
+                "make typecheck",
+            ],
+            narrowness={"status": "broad_required", "broad_suite_boundary_status": "required"},
+            remaining_gaps=["multiple proof commands remain"],
+        ),
+        "unavailable_runtime": scenario(
+            name="unavailable-runtime",
+            commands=["docker compose run proof"],
+            unavailable=[{"command": "docker compose run proof", "reason": "docker unavailable"}],
+            remaining_gaps=["runtime unavailable"],
+        ),
+        "module_rich": scenario(
+            name="module-rich",
+            commands=["uv run pytest tests/test_module.py -q"],
+            module_rich=True,
+            remaining_gaps=["proof result missing"],
+        ),
+    }
+
+
 def test_proof_compression_evidence_records_cost_and_named_safety_expansion() -> None:
     evidence = json.loads(Path("docs/maintainer/proof-compression-2684.json").read_text(encoding="utf-8"))
     assert evidence["schema_version"] == "agentic-workspace/proof-compression-evidence/v1"
     assert evidence["projection_disposition"]["authoritative"] == "proof_next_decision"
-    assert (
-        evidence["scenarios"]["source_multi_command"]["after"]["json_bytes"]
-        < evidence["scenarios"]["source_multi_command"]["before"]["json_bytes"]
-    )
-    assert evidence["scenarios"]["generated_unavailable_or_multi_command"]["expansion_reason"]
+    fixtures = _proof_compression_scenario_payloads()
+    assert set(evidence["scenarios"]) == set(fixtures)
+    budget = evidence["accepted_ordinary_budget"]
+    for name, payloads in fixtures.items():
+        recorded = evidence["scenarios"][name]
+        assert recorded["before"] == _compression_measurement(payloads["before"])
+        assert recorded["after"] == _compression_measurement(payloads["after"])
+        assert recorded["after"]["aw_roundtrips"] == recorded["before"]["aw_roundtrips"] == 1
+        over_budget = (
+            recorded["after"]["json_bytes"] > budget["max_json_bytes"]
+            or recorded["after"]["field_count"] > budget["max_field_count"]
+            or recorded["after"]["human_lines"] > budget["max_human_text_lines"]
+            or (recorded["after"]["json_bytes"] + 3) // 4 > budget["max_estimated_tokens"]
+        )
+        assert not over_budget or recorded.get("expansion_reason") in evidence["named_expansion_reasons"]
+    assert evidence["scenarios"]["manual_verification"]["expansion_reason"]
+    assert evidence["scenarios"]["unavailable_runtime"]["expansion_reason"]
     assert evidence["default_guidance_proof"]["mandatory_selector_calls"] == 0
+    assert evidence["default_guidance_proof"]["interaction_trace"]["claim"] == "blocked"
     assert evidence["total_operating_cost"]["assessment"] == "reduced-with-explicit-safety-expansion"
+
+
+def test_default_only_weak_agent_consumes_actual_proof_guidance_without_follow_up_reads() -> None:
+    operation = json.loads(Path("src/agentic_workspace/contracts/operations/proof.report.json").read_text(encoding="utf-8"))
+    guidance = next(guard for guard in operation["guards"] if "proof_next_decision is authoritative" in guard)
+    packet = _proof_compression_scenario_payloads()["multi_command_broad_required"]["after"]
+
+    trace = {
+        "guidance_source": "src/agentic_workspace/contracts/operations/proof.report.json#guards",
+        "guidance": guidance,
+        "workspace_commands": ["agentic-workspace proof --changed fixtures/multi-command.py --format json"],
+        "required_commands_enumerated": list(packet["required_commands"]),
+        "manual_blocker": packet.get("manual_verification"),
+        "runtime_blockers": packet.get("blockers", []),
+        "receipt_freshness": packet["identity"]["freshness"],
+        "claim": packet["claim_boundary"]["status"],
+        "selector_calls": 0,
+        "verbose_calls": 0,
+        "raw_workspace_reads": 0,
+        "route_reversals": 0,
+    }
+
+    assert trace["required_commands_enumerated"] == [
+        "uv run pytest tests/test_workspace_cli.py -q",
+        "make lint-workspace",
+        "make typecheck",
+    ]
+    assert trace["claim"] == "blocked"
+    assert packet["claim_boundary"]["completion_claim_allowed"] is False
+    assert trace["selector_calls"] == trace["verbose_calls"] == trace["raw_workspace_reads"] == 0
+    evidence = json.loads(Path("docs/maintainer/proof-compression-2684.json").read_text(encoding="utf-8"))
+    assert evidence["default_guidance_proof"]["interaction_trace"] == trace
 
 
 def test_proof_changed_selector_flags_direct_cli_edits(tmp_path: Path, capsys) -> None:
