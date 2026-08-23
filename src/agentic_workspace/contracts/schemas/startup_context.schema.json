@@ -34,7 +34,7 @@
     },
     "decision_packet": {
       "type": "object",
-      "description": "Compact ordinary decision packet that names the startup phase question, next action, claim boundary, detail routes, and omitted detail states.",
+      "description": "Authoritative ordinary startup decision packet that merges decision identity, immediate action, allowed and forbidden effects, proof and claim boundaries, routed owner restrictions, attention signals, and exact detail routes.",
       "additionalProperties": true
     },
     "current_decision": {

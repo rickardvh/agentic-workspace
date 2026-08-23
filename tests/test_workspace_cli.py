@@ -17,6 +17,7 @@ from repo_verification_bootstrap import runtime_primitives as verification_runti
 from tests.workspace_cli_support import *
 
 from agentic_workspace import session_logging
+from agentic_workspace.config import workspace_pointer_block
 
 
 def test_successful_completion_cost_discovers_manifest_indexed_custom_output_root(tmp_path: Path) -> None:
@@ -371,9 +372,9 @@ def test_completed_child_reconciliation_is_cross_consumer_idempotent_and_fails_c
 
     assert cli.main(["start", "--target", str(served), "--task", "Review unrelated repository docs", "--format", "json"]) == 0
     started = json.loads(capsys.readouterr().out)
-    assert started["next_safe_action"]["next_safe_action"] == "choose-smallest-workflow-shape"
-    assert started["next_safe_action"]["implementation_allowed"] is True
-    assert "module_slot" not in started["next_safe_action"]
+    assert started["decision_packet"]["action"]["id"] == "choose-smallest-workflow-shape"
+    assert started["decision_packet"]["effects"]["implementation_allowed"] is True
+    assert "module_slot" not in started["decision_packet"]["action"]
     assert "merged-child" not in json.dumps(started.get("context", {}).get("route_decision", {}))
 
     assert (
@@ -400,7 +401,7 @@ def test_completed_child_reconciliation_is_cross_consumer_idempotent_and_fails_c
 
     assert cli.main(["start", "--target", str(served), "--task", "Review unrelated repository docs", "--format", "json"]) == 0
     next_start = json.loads(capsys.readouterr().out)
-    assert next_start["next_safe_action"]["next_safe_action"] == "choose-smallest-workflow-shape"
+    assert next_start["decision_packet"]["action"]["id"] == "choose-smallest-workflow-shape"
 
     insufficient = tmp_path / "insufficient"
     _write_completed_child_reconciliation_fixture(insufficient)
@@ -726,10 +727,9 @@ def test_default_start_defers_action_neutral_advisory_builders_without_changing_
     assert cli.main(args) == 0
     payload = json.loads(capsys.readouterr().out)
 
-    assert payload["next_safe_action"] == baseline["next_safe_action"]
-    assert payload["action_signals"]["hard_blockers"] == baseline["action_signals"]["hard_blockers"]
-    assert "work_threads" not in payload["context"]
-    assert "task_posture_packet" not in payload["context"]
+    assert payload["decision_packet"] == baseline["decision_packet"]
+    assert "work_threads" not in payload
+    assert "task_posture_packet" not in payload
 
 
 def test_implement_unknown_selector_fails_before_payload_construction(tmp_path: Path, monkeypatch, capsys) -> None:
@@ -1533,6 +1533,10 @@ def test_state_delta_packet_views_derive_from_shared_core() -> None:
 
 
 def _assert_selector_inventory_omitted_from_compact_start(payload: dict[str, Any]) -> dict[str, Any]:
+    decision = payload.get("decision_packet", {})
+    if isinstance(decision, dict) and decision.get("kind") == "agentic-workspace/ordinary-start-decision/v1":
+        assert "selector_inventory" in decision["detail_routes"]
+        return {"status": "selector-routed", "available_count": 0, "sample": []}
     drill_down = payload["drill_down"]
     assert "available_selectors" not in drill_down
     inventory = drill_down["selector_inventory"]
@@ -5988,10 +5992,27 @@ def test_start_default_routes_memory_and_installed_state_detail_behind_selectors
 
     assert "memory_decision_packet" not in payload
     assert "installed_state_compatibility" not in payload
-    assert "memory_decision_packet" in payload["action_signals"]["advisory_detail"]["selectors"]
-    inventory = _assert_selector_inventory_omitted_from_compact_start(payload)
-    assert "memory_decision_packet" in inventory["sample"]
-    assert payload["context"]["memory"]["status"] in {"recommended", "not_checked"}
+    assert set(payload) == {"kind", "target", "decision_packet"}
+    assert "--select <field[,field...]>" in payload["decision_packet"]["detail_routes"]["select"]
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Shape a workflow issue",
+                "--select",
+                "memory_decision_packet",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    selected = json.loads(capsys.readouterr().out)
+    assert "memory_decision_packet" in selected["values"]
 
 
 def test_start_defers_local_footprint_scan_until_selector_requests_it(tmp_path: Path, capsys, monkeypatch) -> None:
@@ -6025,14 +6046,29 @@ def test_start_defers_local_footprint_scan_until_selector_requests_it(tmp_path: 
     assert "--section local_footprint --format json" in selected["detail_command"]
 
 
-def test_start_exposes_communication_contract_in_ordinary_path(tmp_path: Path, capsys) -> None:
+def test_start_exposes_communication_contract_through_selector(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
     capsys.readouterr()
 
-    assert cli.main(["start", "--target", str(tmp_path), "--task", "Fix one docs typo", "--format", "json"]) == 0
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Fix one docs typo",
+                "--select",
+                "communication_contract,message_economy,current_decision,evidence_bundle",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
 
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(capsys.readouterr().out)["values"]
     contract = payload["communication_contract"]
     assert contract["kind"] == "agentic-workspace/communication-contract/v1"
     assert contract["default_posture"] == "decision_first_state_backed"
@@ -6073,10 +6109,6 @@ def test_start_exposes_communication_contract_in_ordinary_path(tmp_path: Path, c
     assert bundle["supports_decision"] == "Startup posture?"
     assert bundle["minimal_evidence_surfaces"][0]["id"] == "why_blocked"
     assert "residue owner is unresolved" in bundle["escalate_when"]
-    operating_loop_skill = next(entry for entry in payload["skills"]["recommended"] if entry["id"] == "workspace-operating-loop")
-    assert operating_loop_skill["reason"] == "state-delta packets are visible in startup output"
-    assert operating_loop_skill["source"] == "startup_state_delta_packets"
-    assert operating_loop_skill["packets"] == ["current_decision", "message_economy", "evidence_bundle"]
 
 
 def test_start_select_surfaces_state_delta_packets(tmp_path: Path, capsys) -> None:
@@ -6206,25 +6238,32 @@ def test_start_exposes_continuation_capsule_when_active_planning_exists(tmp_path
     )
     capsys.readouterr()
 
-    assert cli.main(["start", "--target", str(tmp_path), "--task", "Capsule plan", "--format", "json"]) == 0
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Capsule plan",
+                "--select",
+                "continuation_capsule,current_decision",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
     payload = json.loads(capsys.readouterr().out)
+    values = payload["values"]
 
-    capsule = payload["continuation_capsule"]
+    capsule = values["continuation_capsule"]
     assert capsule["kind"] == "agentic-workspace/continuation-capsule/v1"
     assert capsule["surface"] == "startup"
     assert capsule["current_decision"]["question"] == "Startup posture?"
-    assert capsule["proof_boundary"] == payload["current_decision"]["proof_boundary"]
-    assert capsule["known_evidence"][0] == payload["current_decision"]["known_evidence"][0]
-    assert capsule["do_not_repeat"] == payload["current_decision"]["avoid_repeat"]
-    operating_loop_skill = next(entry for entry in payload["skills"]["recommended"] if entry["id"] == "workspace-operating-loop")
-    assert operating_loop_skill["reason"] == "state-delta packets are visible in startup output"
-    assert operating_loop_skill["source"] == "startup_state_delta_packets"
-    assert operating_loop_skill["packets"] == [
-        "current_decision",
-        "message_economy",
-        "continuation_capsule",
-        "evidence_bundle",
-    ]
+    assert capsule["proof_boundary"] == values["current_decision"]["proof_boundary"]
+    assert capsule["known_evidence"][0] == values["current_decision"]["known_evidence"][0]
+    assert capsule["do_not_repeat"] == values["current_decision"]["avoid_repeat"]
 
 
 def test_start_embeds_active_planning_orientation_without_immediate_summary_rerun(tmp_path: Path, capsys) -> None:
@@ -6254,22 +6293,7 @@ def test_start_embeds_active_planning_orientation_without_immediate_summary_reru
     assert cli.main(["start", "--target", str(tmp_path), "--task", "Orientation plan", "--format", "json"]) == 0
     payload = json.loads(capsys.readouterr().out)
 
-    active_state = payload["context"]["active_state"]
-    orientation = active_state["orientation_delta"]
-    assert orientation["status"] == "embedded"
-    assert orientation["summary_equivalent_for_first_contact"] is True
-    assert "summary --target . --format json" in orientation["full_detail_command"]
-    assert not any("summary --target . --format json" in item for item in payload["context"]["primary_action"]["read_first"])
-    workflow = payload["context"]["planning"]["workflow_sufficiency"]
-    if workflow["sufficiency_result"] != "startup-orientation-embedded":
-        assert workflow["sufficiency_result"] in {
-            "active-planning-summary-needed",
-            "delegation-decision-required",
-            "planning-backed",
-            "current-task-scope-inspection-required",
-        }
-    assert "summary --target . --format json" not in payload["decision_packet"]["detail_routes"]["active_plan"]
-    active_plan_route = payload["decision_packet"]["detail_routes"]["active_plan"]
+    active_plan_route = payload["decision_packet"]["detail_routes"]["owner_detail"]
     assert "summary --target . --select continuation_view" in active_plan_route
     assert "start --target . --select active_state_summary,continuation_view" not in active_plan_route
     from agentic_workspace.workspace_runtime_startup import _startup_detail_routes
@@ -6344,6 +6368,8 @@ force = "required-before-closeout"
                 str(tmp_path),
                 "--task",
                 "Fix the runtime issue by adding a regression test",
+                "--select",
+                "pre_test_evidence_guardrail,action_signals",
                 "--format",
                 "json",
             ]
@@ -6352,7 +6378,8 @@ force = "required-before-closeout"
     )
     payload = json.loads(capsys.readouterr().out)
 
-    guardrail = payload["context"]["pre_test_evidence_guardrail"]
+    payload = payload["values"]
+    guardrail = payload["pre_test_evidence_guardrail"]
     assert guardrail["status"] == "advisory"
     assert guardrail["blocking"] is False
     assert guardrail["source_boundary"]["no_universal_task_keyword_policy"] is True
@@ -6360,7 +6387,6 @@ force = "required-before-closeout"
     assert "package-local-behavior" in guardrail["evidence_owner_options"]
     assert "convert-to-conformance" in guardrail["proof_decision_options"]
     assert any("trust question" in question for question in guardrail["pre_test_decision_questions"])
-    assert "pre_test_evidence_guardrail" in payload["action_signals"]["advisory_detail"]["selectors"]
 
     assert (
         cli.main(
@@ -6370,15 +6396,16 @@ force = "required-before-closeout"
                 str(tmp_path),
                 "--task",
                 "Fix a bug in the README",
+                "--select",
+                "pre_test_evidence_guardrail,action_signals",
                 "--format",
                 "json",
             ]
         )
         == 0
     )
-    quiet_payload = json.loads(capsys.readouterr().out)
-    assert "pre_test_evidence_guardrail" not in quiet_payload["context"]
-    assert "pre_test_evidence_guardrail" not in quiet_payload["action_signals"]["advisory_detail"]["selectors"]
+    quiet_payload = json.loads(capsys.readouterr().out)["values"]
+    assert "pre_test_evidence_guardrail" not in quiet_payload
 
 
 def test_start_default_compacts_noncompatible_installed_state_signal(tmp_path: Path, capsys) -> None:
@@ -6407,10 +6434,8 @@ def test_start_default_compacts_noncompatible_installed_state_signal(tmp_path: P
     payload = json.loads(capsys.readouterr().out)
 
     assert "installed_state_compatibility" not in payload
-    assert "installed_state_compatibility=payload-upgrade-required" in payload["action_signals"]["changed_signals"]
-    assert "installed_state_compatibility" in payload["action_signals"]["advisory_detail"]["selectors"]
-    inventory = _assert_selector_inventory_omitted_from_compact_start(payload)
-    assert "installed_state_compatibility" in inventory["sample"]
+    assert "installed_state_compatibility=payload-upgrade-required" in {item["signal"] for item in payload["decision_packet"]["attention"]}
+    assert any(item["detail_selector"] == "installed_state_compatibility" for item in payload["decision_packet"]["attention"])
 
     assert (
         cli.main(
@@ -6519,10 +6544,11 @@ def test_payload_target_required_before_work_blocks_start_until_target_sync(tmp_
     assert cli.main(["start", "--target", str(tmp_path), "--task", "Do ordinary work", "--format", "json"]) == 0
     payload = json.loads(capsys.readouterr().out)
 
-    assert payload["next_safe_action"]["next_safe_action"] == "run-installed-payload-target-upgrade"
-    assert payload["next_safe_action"]["implementation_allowed"] is False
-    assert "--to-payload-target --dry-run" in payload["next_safe_action"]["preferred_cli"]
-    assert "installed_state_compatibility=payload-upgrade-required" in payload["action_signals"]["changed_signals"]
+    decision = payload["decision_packet"]
+    assert decision["action"]["id"] == "run-installed-payload-target-upgrade"
+    assert decision["effects"]["implementation_allowed"] is False
+    assert "--to-payload-target --dry-run" in decision["action"]["command"]
+    assert "installed_state_compatibility=payload-upgrade-required" in {item["signal"] for item in decision["attention"]}
 
     assert (
         cli.main(
@@ -6620,15 +6646,31 @@ def test_payload_target_drift_keeps_unrelated_read_only_start_actionable(tmp_pat
     assert cli.main(["start", "--target", str(tmp_path), "--task", task, "--format", "json"]) == 0
     payload = json.loads(capsys.readouterr().out)
 
-    assert payload["next_safe_action"]["next_safe_action"] == "continue-read-only-source-evidence-review"
-    assert payload["next_safe_action"]["implementation_allowed"] is False
-    assert payload["next_safe_action"]["read_only_allowed"] is True
-    scope = payload["installed_state_read_only_scope"]
+    decision = payload["decision_packet"]
+    assert decision["action"]["id"] == "continue-read-only-source-evidence-review"
+    assert decision["effects"]["implementation_allowed"] is False
+    assert decision["effects"]["read_only_allowed"] is True
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                task,
+                "--select",
+                "installed_state_read_only_scope",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    scope = json.loads(capsys.readouterr().out)["values"]["installed_state_read_only_scope"]
     assert scope["repair_deferred"] is True
     assert "--to-payload-target --dry-run" in scope["repair_command"]
     assert "installed runtime behavior" in scope["blocked_conclusions"]
-    assert "installed_state_compatibility=payload-upgrade-required" in payload["action_signals"]["changed_signals"]
-    assert "installed_state_compatibility" in payload["action_signals"]["advisory_detail"]["selectors"]
+    assert "installed_state_compatibility=payload-upgrade-required" in {item["signal"] for item in decision["attention"]}
     assert len(json.dumps(payload, separators=(",", ":")).encode()) <= 10_000
 
 
@@ -6984,12 +7026,27 @@ def test_payload_target_read_only_gate_consumes_compiled_drift_triage(tmp_path: 
         "Summarize the current source-owned issue records without changing files",
         "Give me a status report from checked-in documentation",
     ):
-        assert cli.main(["start", "--target", str(tmp_path), "--task", unrelated, "--format", "json"]) == 0
-        allowed = json.loads(capsys.readouterr().out)
+        assert (
+            cli.main(
+                [
+                    "start",
+                    "--target",
+                    str(tmp_path),
+                    "--task",
+                    unrelated,
+                    "--select",
+                    "installed_state_read_only_scope,installed_state_drift_triage,next_safe_action",
+                    "--format",
+                    "json",
+                ]
+            )
+            == 0
+        )
+        allowed = json.loads(capsys.readouterr().out)["values"]
         assert allowed["installed_state_read_only_scope"]["decision_authority"] == (
             "installed_state_drift_triage.claim_effect_authority.installed_payload_dependency"
         )
-        authority = allowed["context"]["installed_state_drift_triage"]["claim_effect_authority"]
+        authority = allowed["installed_state_drift_triage"]["claim_effect_authority"]
         assert authority["installed_payload_dependency"] == "independent"
         assert authority["authority"] == "planning_safety_gate.route_decision"
         assert authority["decision_id"].startswith("planning-route:")
@@ -7001,10 +7058,25 @@ def test_payload_target_read_only_gate_consumes_compiled_drift_triage(tmp_path: 
         "Audit payload drift and upgrade readiness",
         "Verify the packaged CLI behavior as proof for closeout",
     ):
-        assert cli.main(["start", "--target", str(tmp_path), "--task", dependent, "--format", "json"]) == 0
-        blocked = json.loads(capsys.readouterr().out)
+        assert (
+            cli.main(
+                [
+                    "start",
+                    "--target",
+                    str(tmp_path),
+                    "--task",
+                    dependent,
+                    "--select",
+                    "installed_state_read_only_scope,installed_state_drift_triage,next_safe_action",
+                    "--format",
+                    "json",
+                ]
+            )
+            == 0
+        )
+        blocked = json.loads(capsys.readouterr().out)["values"]
         assert "installed_state_read_only_scope" not in blocked
-        assert blocked["context"]["installed_state_drift_triage"]["claim_effect_authority"]["installed_payload_dependency"] == "dependent"
+        assert blocked["installed_state_drift_triage"]["claim_effect_authority"]["installed_payload_dependency"] == "dependent"
         assert blocked["next_safe_action"]["next_safe_action"] == "run-installed-payload-target-upgrade"
 
     assert (
@@ -7017,14 +7089,16 @@ def test_payload_target_read_only_gate_consumes_compiled_drift_triage(tmp_path: 
                 "docs/change.md",
                 "--task",
                 "Implement the requested documentation change",
+                "--select",
+                "installed_state_drift_triage,next_safe_action",
                 "--format",
                 "json",
             ]
         )
         == 0
     )
-    mutation = json.loads(capsys.readouterr().out)
-    assert mutation["context"]["installed_state_drift_triage"]["claim_effect_authority"]["effect_class"] == "repo-mutation"
+    mutation = json.loads(capsys.readouterr().out)["values"]
+    assert mutation["installed_state_drift_triage"]["claim_effect_authority"]["effect_class"] == "repo-mutation"
     assert mutation["next_safe_action"]["next_safe_action"] == "run-installed-payload-target-upgrade"
 
 
@@ -8285,14 +8359,12 @@ def test_start_default_stays_under_tiny_output_budget_for_docs_task(tmp_path: Pa
     payload = json.loads(capsys.readouterr().out)
 
     _assert_json_payload_under(payload, 10_000, label="start tiny docs-task payload", sort_keys=False)
-    assert payload["next_safe_action"]["next_safe_action"] == "choose-smallest-workflow-shape"
+    assert payload["decision_packet"]["action"]["id"] == "choose-smallest-workflow-shape"
     assert "memory_decision_packet" not in payload
     assert "installed_state_compatibility" not in payload
     assert "planning_safety_gate" not in payload
-    inventory = _assert_selector_inventory_omitted_from_compact_start(payload)
-    assert inventory["available_count"] >= 3
-    assert payload["workflow_participation"]["status"] == "mandatory"
-    assert "implementation_allowed cannot bypass workflow" in payload["workflow_participation"]["rule"]
+    assert "selector_inventory" in payload["decision_packet"]["detail_routes"]
+    assert payload["decision_packet"]["effects"]["workflow_required"] is True
 
 
 def _recursive_json_field_count(value: object) -> int:
@@ -8308,6 +8380,164 @@ def _assert_versioned_output_budget(payload: dict[str, object], budget: dict[str
     assert len(encoded) <= int(budget["max_json_bytes"])
     assert _recursive_json_field_count(payload) <= int(budget["max_field_count"])
     assert (len(encoded) + 3) // 4 <= int(budget["max_estimated_tokens"])
+
+
+def _startup_output_measurement(payload: dict[str, object]) -> dict[str, int]:
+    compact = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    pretty = json.dumps(payload, ensure_ascii=False, indent=2)
+    return {
+        "json_bytes": len(compact),
+        "human_lines": len(pretty.splitlines()),
+        "field_count": _recursive_json_field_count(payload),
+    }
+
+
+def test_generated_ordinary_guidance_is_executable_from_default_decision_packet_for_weak_agent(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    assert (
+        cli.main(
+            [
+                "planning",
+                "new-plan",
+                "--id",
+                "protected-owner",
+                "--title",
+                "Protected owner",
+                "--target",
+                str(tmp_path),
+                "--activate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+
+    guidance = workspace_pointer_block(cli_invoke="agentic-workspace")
+    ordinary_route = guidance.split("Ordinary route:", 1)[1].split("Boundaries:", 1)[0]
+    assert "authoritative `decision_packet`" in ordinary_route
+    assert "do not omit `--format json`" in ordinary_route
+    assert "do not open raw config files to rediscover it" in guidance
+    assert "`communication_contract` as optional selector-backed" in ordinary_route
+    assert "Use the returned `communication_contract`" not in ordinary_route
+    assert "--select communication_contract" not in ordinary_route
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Implement an unrelated parser cache eviction",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert set(payload) == {"kind", "target", "decision_packet"}
+    assert "communication_contract" not in payload
+    decision = payload["decision_packet"]
+    action = decision["action"]
+    effects = decision["effects"]
+    assert action["id"] == "inspect-current-task"
+    assert action["id"] in effects["allowed_next_actions"]
+    assert action["id"] not in effects["forbidden_actions"]
+    assert effects["blocked_claims"] == [
+        "claim-active-plan-progress",
+        "claim-active-plan-complete",
+        "silently-abandon-active-plan",
+    ]
+    assert decision["claim_boundary"]
+    assert decision["owner"]["non_interference"]["status"] == "protected"
+    assert decision["owner"]["non_interference"]["restriction"]
+    assert set(decision["detail_routes"]) >= {"select", "verbose", "proof_detail", "owner_detail"}
+    assert all(".agentic-workspace/" not in route for route in decision["detail_routes"].values())
+
+
+def test_start_default_compresses_representative_first_contact_without_losing_decision_safety(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    def start(*extra: str) -> dict[str, object]:
+        assert cli.main(["start", "--target", str(tmp_path), *extra, "--format", "json"]) == 0
+        return json.loads(capsys.readouterr().out)
+
+    payloads = {
+        "direct": start("--task", "Fix one docs typo"),
+        "module_rich": start("--task", "Shape a workflow issue"),
+        "proof_sensitive": start("--changed", "AGENTS.md", "--task", "Review AGENTS.md"),
+    }
+    assert (
+        cli.main(
+            [
+                "planning",
+                "new-plan",
+                "--id",
+                "compression-plan",
+                "--title",
+                "Compression plan",
+                "--target",
+                str(tmp_path),
+                "--activate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    payloads["planning"] = start("--task", "Compression plan")
+    payloads["recovery"] = start("--task", "Implement unrelated parser cache eviction")
+
+    master_baselines = {
+        "direct": {"json_bytes": 9332, "human_lines": 361, "field_count": 214},
+        "module_rich": {"json_bytes": 25843, "human_lines": 891, "field_count": 524},
+        "proof_sensitive": {"json_bytes": 4198, "human_lines": 179, "field_count": 94},
+        "planning": {"json_bytes": 14733, "human_lines": 547, "field_count": 318},
+        "recovery": {"json_bytes": 10130, "human_lines": 358, "field_count": 228},
+    }
+    measurements = {name: _startup_output_measurement(payload) for name, payload in payloads.items()}
+    for name, measurement in measurements.items():
+        baseline = master_baselines[name]
+        assert measurement["json_bytes"] <= baseline["json_bytes"] * 0.5
+        assert measurement["human_lines"] <= baseline["human_lines"] * 0.5
+        assert measurement["field_count"] <= baseline["field_count"] * 0.5
+        assert set(payloads[name]) == {"kind", "target", "decision_packet"}
+        decision = payloads[name]["decision_packet"]
+        assert isinstance(decision, dict)
+        assert decision["identity"]["revision"]
+        assert decision["action"]["id"]
+        assert set(decision["effects"]) >= {
+            "workflow_required",
+            "implementation_allowed",
+            "read_only_allowed",
+            "proof_required",
+            "completion_claim_allowed",
+            "allowed_next_actions",
+            "forbidden_actions",
+        }
+        assert decision["claim_boundary"]
+        assert decision["residue_owner"]
+        assert decision["reasons"]
+        assert set(decision["detail_routes"]) >= {"selector_inventory", "select", "verbose", "skills", "proof_detail"}
+
+    assert measurements["module_rich"]["json_bytes"] <= measurements["direct"]["json_bytes"] + 700
+    assert payloads["proof_sensitive"]["decision_packet"]["effects"]["proof_required"] is True
+    recovery_owner = payloads["recovery"]["decision_packet"]["owner"]
+    assert recovery_owner["non_interference"]["restriction"]
+    assert payloads["recovery"]["decision_packet"]["action"]["required_inputs"] == [
+        "current task",
+        "selected owner identity",
+        "non-interference boundary",
+    ]
 
 
 def test_lifecycle_defaults_obey_versioned_output_budgets(tmp_path: Path, capsys) -> None:
@@ -8653,15 +8883,11 @@ def test_start_routes_high_assurance_milestone_to_planning_before_implementation
     )
     payload = json.loads(capsys.readouterr().out)
 
-    assert payload["workflow_participation"]["status"] == "mandatory"
-    assert payload["next_safe_action"]["next_safe_action"] == "create-or-promote-active-execplan"
-    assert payload["next_safe_action"]["implementation_allowed"] is False
-    assert "continue implementation without active planning ownership" in payload["next_safe_action"]["forbidden_actions"]
-    assert payload["action_signals"]["allowed_next_action"] == "create-or-promote-active-execplan"
-    sufficiency = payload["context"]["planning"]["workflow_sufficiency"]
-    assert sufficiency["sufficiency_result"] == "planning-escalation-required"
-    assert sufficiency["decision_maturity"]["level"] == "hard_gate"
-    assert payload["context"]["planning"]["planning_safety_gate"]["decision_maturity"]["level"] == "hard_gate"
+    decision = payload["decision_packet"]
+    assert decision["effects"]["workflow_required"] is True
+    assert decision["action"]["id"] == "create-or-promote-active-execplan"
+    assert decision["effects"]["implementation_allowed"] is False
+    assert "continue implementation without active planning ownership" in decision["effects"]["forbidden_actions"]
 
 
 def test_start_reconciles_unrelated_active_plan_with_bounded_reflection_task(tmp_path: Path, capsys) -> None:
@@ -8711,26 +8937,15 @@ candidates = []
     )
     payload = json.loads(capsys.readouterr().out)
 
-    assert payload["next_safe_action"]["next_safe_action"] == "produce-bounded-reflection-report"
-    assert payload["next_safe_action"]["implementation_allowed"] is True
-    assert payload["action_signals"]["implementation_allowed"] is True
-    assert payload["action_signals"]["proof_required"] is False
+    assert payload["decision_packet"]["action"]["id"] == "produce-bounded-reflection-report"
+    assert payload["decision_packet"]["effects"]["implementation_allowed"] is True
+    assert payload["decision_packet"]["effects"]["proof_required"] is False
     _assert_json_payload_under(payload, 9_000, label="active-plan reflection start payload", sort_keys=False)
     decision = payload["decision_packet"]
-    assert decision["phase_question"] == "Startup posture?"
-    assert decision["next_action"] == "produce-bounded-reflection-report"
-    assert decision["absence_states"]["verbose_planning_detail"] == "detail_omitted"
-    assert "planning_safety_gate" not in payload["context"]["planning"]
-    route = payload["context"]["route_decision"]
-    assert route["task_relation"] == "bounded-independent"
-    assert route["owner_posture"] == "current"
-    assert route["required_transition"] == "none"
-    assert route["next_safe_action"]["action"] == "produce-bounded-reflection-report"
-    assert "claim-active-plan-complete" in route["blocked_claims"]
-    assert "work_threads" not in payload["context"]
-    assert "architecture_principles_forecast" not in payload["context"]
-    assert payload["context"]["read_only_response"]["compact_default"] is True
-    assert "work_threads" in payload["drill_down"]["omitted_detail"]["selectors"]
+    assert decision["owner"]["task_relation"] == "bounded-independent"
+    assert decision["owner"]["owner_posture"] == "current"
+    assert decision["owner"]["required_transition"] == "none"
+    assert "claim-active-plan-complete" in decision["effects"]["blocked_claims"]
 
 
 def test_start_reconciles_unrelated_active_plan_for_dogfooding_issue_shaping(tmp_path: Path, capsys) -> None:
@@ -8779,14 +8994,12 @@ candidates = []
         == 0
     )
     payload = json.loads(capsys.readouterr().out)
-    route = payload["context"]["route_decision"]
+    decision = payload["decision_packet"]
 
     _assert_json_payload_under(payload, 9_000, label="dogfooding issue-shaping start payload", sort_keys=False)
-    assert payload["next_safe_action"]["next_safe_action"] == "produce-bounded-reflection-report"
-    assert route["task_relation"] == "bounded-independent"
-    assert route["next_safe_action"]["action"] == "produce-bounded-reflection-report"
-    assert "claim-active-plan-progress" in route["blocked_claims"]
-    assert "work_threads" not in payload["context"]
+    assert decision["action"]["id"] == "produce-bounded-reflection-report"
+    assert decision["owner"]["task_relation"] == "bounded-independent"
+    assert "claim-active-plan-progress" in decision["effects"]["blocked_claims"]
 
 
 def test_start_routes_established_mixed_issue_work_as_bounded_independent(tmp_path: Path, capsys) -> None:
@@ -8835,13 +9048,13 @@ candidates = []
         == 0
     )
     payload = json.loads(capsys.readouterr().out)
-    route = payload["context"]["route_decision"]
+    decision = payload["decision_packet"]
 
-    assert payload["next_safe_action"]["next_safe_action"] == "inspect-current-task"
-    assert route["task_relation"] == "bounded-independent"
-    assert route["required_transition"] == "none"
-    assert route["implementation_allowed"] is True
-    assert "claim-active-plan-progress" in route["blocked_claims"]
+    assert decision["action"]["id"] == "inspect-current-task"
+    assert decision["owner"]["task_relation"] == "bounded-independent"
+    assert decision["owner"]["required_transition"] == "none"
+    assert decision["effects"]["implementation_allowed"] is True
+    assert "claim-active-plan-progress" in decision["effects"]["blocked_claims"]
 
 
 def test_start_reconciles_unrelated_active_plan_with_new_issue_implementation_task(tmp_path: Path, capsys) -> None:
@@ -8887,10 +9100,8 @@ candidates = []
     payload = json.loads(capsys.readouterr().out)
 
     _assert_json_payload_under(payload, 12_000, label="active-plan issue start payload", sort_keys=False)
-    assert payload["decision_packet"]["next_action"] == "inspect-current-task"
-    assert payload["decision_packet"]["absence_states"]["full_selector_inventory"] == "hidden_behind_detail_route"
-    assert "active_owner_intent_outcome" not in payload["context"]["active_state"]
-    assert payload["context"]["active_state"]["status"] == "protected-non-interference"
+    assert payload["decision_packet"]["action"]["id"] == "inspect-current-task"
+    assert payload["decision_packet"]["owner"]["non_interference"]["status"] == "protected"
     assert (
         cli.main(
             [
@@ -8912,7 +9123,7 @@ candidates = []
     assert route["task_relation"] == "bounded-independent"
     assert route["required_transition"] == "none"
     assert route["implementation_allowed"] is True
-    assert payload["action_signals"]["implementation_allowed"] is True
+    assert payload["decision_packet"]["effects"]["implementation_allowed"] is True
     assert route["next_safe_action"]["action"] == "inspect-current-task"
     assert route["non_interference_boundary"]["restriction"]
 
@@ -9085,8 +9296,7 @@ def test_start_routes_completed_active_plan_to_archive_before_new_reflection(tmp
     )
     after = json.loads(capsys.readouterr().out)
 
-    assert after["next_safe_action"]["next_safe_action"] != "archive-or-retire-completed-plan"
-    assert "planning_safety_gate" not in after["context"]["planning"]
+    assert after["decision_packet"]["action"]["id"] != "archive-or-retire-completed-plan"
 
 
 def test_implement_routes_post_closeout_archive_residue_as_verification(tmp_path: Path, capsys) -> None:
@@ -9170,13 +9380,13 @@ def test_start_does_not_force_unrelated_active_plan_closeout_for_independent_tas
         == 0
     )
     payload = json.loads(capsys.readouterr().out)
-    route = payload["context"]["route_decision"]
+    decision = payload["decision_packet"]
 
-    assert payload["next_safe_action"]["next_safe_action"] == "inspect-current-task"
-    assert route["task_relation"] == "bounded-independent"
-    assert route["required_transition"] == "none"
-    assert route["implementation_allowed"] is True
-    assert "claim-active-plan-progress" in route["blocked_claims"]
+    assert decision["action"]["id"] == "inspect-current-task"
+    assert decision["owner"]["task_relation"] == "bounded-independent"
+    assert decision["owner"]["required_transition"] == "none"
+    assert decision["effects"]["implementation_allowed"] is True
+    assert "claim-active-plan-progress" in decision["effects"]["blocked_claims"]
 
 
 def test_implement_acknowledges_current_task_switch_with_return_and_cleanup_routes(tmp_path: Path, capsys) -> None:
@@ -9469,9 +9679,8 @@ active_items = [{ id = "issue-2290", status = "active", surface = ".agentic-work
         == 0
     )
     default_payload = json.loads(capsys.readouterr().out)
-    default_admission = default_payload["context"]["route_decision"]["owner_admission"]
-    assert default_admission["status"] == route["owner_admission"]["status"]
-    assert default_admission["rejected_candidate_count"] == 0
+    assert default_payload["decision_packet"]["owner"]["identity"]["ref"] == shared_ref
+    assert "owner_admission" not in default_payload["decision_packet"]["owner"]
 
     assert (
         cli.main(
@@ -11117,7 +11326,14 @@ candidates = []
         elif invocation[-1] == "planning_safety_gate":
             route = payload["values"]["planning_safety_gate"]["route_decision"]
         else:
-            route = payload.get("route_decision") or payload.get("context", {}).get("route_decision")
+            route = payload.get("route_decision")
+            if not route:
+                owner = payload.get("decision_packet", {}).get("owner", {})
+                route = {
+                    "task_relation": owner.get("task_relation"),
+                    "owner_posture": owner.get("owner_posture"),
+                    "required_transition": owner.get("required_transition"),
+                }
             assert route
         routes.append(route)
 
@@ -11265,14 +11481,28 @@ def test_start_low_risk_docs_task_keeps_checkpoint_detail_selector_only(tmp_path
     payload = json.loads(capsys.readouterr().out)
 
     _assert_json_payload_under(payload, 10_000, label="start tiny docs-task payload with checkpoint", sort_keys=False)
-    assert "local_chat_checkpoint" not in payload["context"]
-    assert "local_chat_checkpoint=present" not in payload["action_signals"]["changed_signals"]
-    assert "local_chat_checkpoint" not in payload["action_signals"]["advisory_detail"]["selectors"]
+    assert "local_chat_checkpoint" not in payload
+    assert "local_chat_checkpoint=present" not in {item["signal"] for item in payload["decision_packet"].get("attention", [])}
     _assert_selector_inventory_omitted_from_compact_start(payload)
 
-    assert cli.main(["start", "--target", str(tmp_path), "--task", "Resume checkpoint slice", "--format", "json"]) == 0
-    resume_payload = json.loads(capsys.readouterr().out)
-    assert resume_payload["context"]["local_chat_checkpoint"]["status"] == "present"
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Resume checkpoint slice",
+                "--select",
+                "local_chat_checkpoint",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    resume_payload = json.loads(capsys.readouterr().out)["values"]
+    assert resume_payload["local_chat_checkpoint"]["status"] == "present"
 
 
 def test_selector_first_output_policy_note_documents_visibility_tiers() -> None:
@@ -11298,16 +11528,17 @@ def test_start_keeps_planned_and_release_closeout_signals_visible(tmp_path: Path
                 str(tmp_path),
                 "--task",
                 "Continue planned lane in stacked PR sequence",
+                "--select",
+                "dogfooding_signal_status,closeout_obligations,action_signals",
                 "--format",
                 "json",
             ]
         )
         == 0
     )
-    planned = json.loads(capsys.readouterr().out)
-    assert planned["context"]["dogfooding_signal_status"]["status"] == "not_checked"
-    assert "dogfooding_signal_status=not_checked" in planned["action_signals"]["changed_signals"]
-    ordinary_route = planned["context"]["closeout_obligations"]["ordinary_closeout_route"]
+    planned = json.loads(capsys.readouterr().out)["values"]
+    assert planned["dogfooding_signal_status"]["status"] == "not_checked"
+    ordinary_route = planned["closeout_obligations"]["ordinary_closeout_route"]
     assert ordinary_route["status"] == "mandatory-before-completion-claim"
     assert "--section closeout_trust" in ordinary_route["first_inspection"]
     assert "--section closeout_report" in ordinary_route["substitute_command"]
@@ -11321,16 +11552,17 @@ def test_start_keeps_planned_and_release_closeout_signals_visible(tmp_path: Path
                 str(tmp_path),
                 "--task",
                 "Diagnose release recovery after failed semver release",
+                "--select",
+                "dogfooding_signal_status,closeout_obligations,action_signals",
                 "--format",
                 "json",
             ]
         )
         == 0
     )
-    release = json.loads(capsys.readouterr().out)
-    assert release["context"]["dogfooding_signal_status"]["status"] == "not_checked"
-    assert "dogfooding_signal_status" in release["action_signals"]["advisory_detail"]["selectors"]
-    release_route = release["context"]["closeout_obligations"]["ordinary_closeout_route"]
+    release = json.loads(capsys.readouterr().out)["values"]
+    assert release["dogfooding_signal_status"]["status"] == "not_checked"
+    release_route = release["closeout_obligations"]["ordinary_closeout_route"]
     assert release_route["status"] == "mandatory-before-completion-claim"
     assert release_route["top_level_closeout_command"] == "not-available"
 
@@ -11353,15 +11585,17 @@ def test_start_surfaces_unresolved_dogfooding_signal_outcome(tmp_path: Path, cap
                 str(tmp_path),
                 "--task",
                 "Continue planned lane in stacked PR sequence",
+                "--select",
+                "dogfooding_signal_status",
                 "--format",
                 "json",
             ]
         )
         == 0
     )
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(capsys.readouterr().out)["values"]
 
-    status = payload["context"]["dogfooding_signal_status"]
+    status = payload["dogfooding_signal_status"]
     assert status["status"] == "unresolved"
     assert status["closeout_blocked"] is True
     assert status["durable_residue"] is True
@@ -11491,12 +11725,10 @@ def test_start_report_meta_task_keeps_routine_context_selector_only_with_backgro
     payload = json.loads(capsys.readouterr().out)
 
     _assert_json_payload_under(payload, 10_000, label="start report/meta compact payload", sort_keys=False)
-    assert "routine_work_context" not in payload["context"]
+    assert "routine_work_context" not in payload
     _assert_selector_inventory_omitted_from_compact_start(payload)
     assert "installed_state_compatibility" not in payload
-    assert "installed_state_drift_triage" not in payload["context"]
-    assert "installed_state_drift_triage=background_advisory" in payload["action_signals"]["changed_signals"]
-    assert "installed_state_drift_triage" in payload["action_signals"]["advisory_detail"]["selectors"]
+    assert "installed_state_drift_triage=background_advisory" in {item["signal"] for item in payload["decision_packet"]["attention"]}
 
 
 def test_start_broad_question_words_do_not_trigger_meta_report_compaction(tmp_path: Path, capsys) -> None:
@@ -11516,17 +11748,18 @@ def test_start_broad_question_words_do_not_trigger_meta_report_compaction(tmp_pa
                 str(tmp_path),
                 "--task",
                 "How should we implement the runtime proof selector?",
+                "--select",
+                "routine_work_context,installed_state_drift_triage,action_signals",
                 "--format",
                 "json",
             ]
         )
         == 0
     )
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(capsys.readouterr().out)["values"]
 
-    assert "routine_work_context" in payload["context"]
-    assert "installed_state_drift_triage=actionable_now" in payload["action_signals"]["changed_signals"]
-    authority = payload["context"]["installed_state_drift_triage"]["claim_effect_authority"]
+    assert "routine_work_context" in payload
+    authority = payload["installed_state_drift_triage"]["claim_effect_authority"]
     assert authority["effect_class"] == "planned-repo-mutation"
     assert authority["installed_payload_dependency"] == "dependent"
 
@@ -11543,9 +11776,7 @@ def test_start_narrow_source_work_qualifies_unrelated_installed_state_drift(tmp_
     assert cli.main(["start", "--target", str(tmp_path), "--task", "Fix one docs typo", "--format", "json"]) == 0
     payload = json.loads(capsys.readouterr().out)
 
-    assert "installed_state_drift_triage=waived_for_narrow_work" in payload["action_signals"]["changed_signals"]
-    assert "installed_state_drift_triage" in payload["action_signals"]["advisory_detail"]["selectors"]
-    assert "installed_state_drift_triage" not in payload["context"]
+    assert "installed_state_drift_triage=waived_for_narrow_work" in {item["signal"] for item in payload["decision_packet"]["attention"]}
 
 
 def test_start_unrelated_changed_path_does_not_make_payload_drift_actionable(tmp_path: Path, capsys) -> None:
@@ -11575,8 +11806,7 @@ def test_start_unrelated_changed_path_does_not_make_payload_drift_actionable(tmp
     )
     payload = json.loads(capsys.readouterr().out)
 
-    assert "installed_state_drift_triage=waived_for_narrow_work" in payload["action_signals"]["changed_signals"]
-    assert "installed_state_drift_triage" not in payload["context"]
+    assert "installed_state_drift_triage=waived_for_narrow_work" in {item["signal"] for item in payload["decision_packet"]["attention"]}
 
 
 def test_start_installed_state_drift_triage_is_actionable_for_payload_claims(tmp_path: Path, capsys) -> None:
@@ -11596,22 +11826,23 @@ def test_start_installed_state_drift_triage_is_actionable_for_payload_claims(tmp
                 str(tmp_path),
                 "--task",
                 "Verify payload freshness before release",
+                "--select",
+                "installed_state_drift_triage,action_signals",
                 "--format",
                 "json",
             ]
         )
         == 0
     )
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(capsys.readouterr().out)["values"]
 
-    triage = payload["context"]["installed_state_drift_triage"]
+    triage = payload["installed_state_drift_triage"]
     assert triage["status"] == "actionable_now"
     assert triage["action_state"]["state"] == "safe_payload_sync_available"
     assert triage["action_state"]["repair_mechanism"] == "upgrade"
     assert triage["action_state"]["mutates_on_start"] is False
     assert triage["claim_relevant"] is True
     assert "agentic-workspace upgrade" in triage["repair_command"]
-    assert "installed_state_drift_triage=actionable_now" in payload["action_signals"]["changed_signals"]
 
 
 def test_start_treats_named_path_question_as_conceptual_reference(tmp_path: Path, capsys) -> None:
@@ -11627,17 +11858,18 @@ def test_start_treats_named_path_question_as_conceptual_reference(tmp_path: Path
                 str(tmp_path),
                 "--task",
                 "Are you actively applying the dogfooding instructions in AGENTS.md?",
+                "--select",
+                "task_path_references,next_safe_action",
                 "--format",
                 "json",
             ]
         )
         == 0
     )
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(capsys.readouterr().out)["values"]
 
     assert payload["next_safe_action"]["next_safe_action"] == "choose-smallest-workflow-shape"
-    assert payload["context"]["primary_action"]["command"] is None
-    path_refs = payload["context"]["task_path_references"]
+    path_refs = payload["task_path_references"]
     assert path_refs["path_reference_kind"] == "conceptual-reference"
     assert path_refs["detected_paths"] == ["AGENTS.md"]
     assert path_refs["path_scoped_paths"] == []
@@ -11658,18 +11890,19 @@ def test_start_path_scoped_task_text_uses_known_path_inspection(tmp_path: Path, 
                 str(tmp_path),
                 "--task",
                 "Review AGENTS.md",
+                "--select",
+                "task_path_references,next_safe_action",
                 "--format",
                 "json",
             ]
         )
         == 0
     )
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(capsys.readouterr().out)["values"]
 
     assert payload["next_safe_action"]["next_safe_action"] == "inspect-known-task-paths"
-    assert payload["context"]["primary_action"]["command"].endswith('implement --changed AGENTS.md --task "Review AGENTS.md" --format json')
-    assert payload["context"]["primary_action"]["read_first"] == [payload["context"]["primary_action"]["command"]]
-    path_refs = payload["context"]["task_path_references"]
+    assert payload["next_safe_action"]["preferred_cli"].endswith('implement --changed AGENTS.md --task "Review AGENTS.md" --format json')
+    path_refs = payload["task_path_references"]
     assert path_refs["path_reference_kind"] == "path-scoped-work"
     assert path_refs["path_scoped_paths"] == ["AGENTS.md"]
     assert path_refs["matched_action_terms"] == ["review"]
@@ -11691,15 +11924,17 @@ def test_start_forecasts_architecture_principle_for_path_scoped_task_before_edit
                 str(tmp_path),
                 "--task",
                 "Update src/agentic_workspace/workspace_runtime_startup.py",
+                "--select",
+                "architecture_principles_forecast",
                 "--format",
                 "json",
             ]
         )
         == 0
     )
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(capsys.readouterr().out)["values"]
 
-    forecast = payload["context"]["architecture_principles_forecast"]
+    forecast = payload["architecture_principles_forecast"]
     assert forecast["status"] == "provisional-match"
     assert forecast["forecast_state"] == "provisional"
     assert forecast["planned_scope"] == {
@@ -11737,15 +11972,17 @@ def test_start_surfaces_distinct_configuration_subsystem_intent(tmp_path: Path, 
                 str(tmp_path),
                 "--task",
                 "Update src/agentic_workspace/config.py",
+                "--select",
+                "architecture_principles_forecast",
                 "--format",
                 "json",
             ]
         )
         == 0
     )
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(capsys.readouterr().out)["values"]
 
-    forecast = payload["context"]["architecture_principles_forecast"]
+    forecast = payload["architecture_principles_forecast"]
     assert forecast["status"] == "provisional-match"
     intent = forecast["relevant_intent"]
     assert intent["subsystem_intents"][0]["id"] == "configuration"
@@ -11766,15 +12003,17 @@ def test_start_surfaces_architecture_principle_scope_probe_when_planned_scope_mi
                 str(tmp_path),
                 "--task",
                 "Implement the architecture principle forecast update",
+                "--select",
+                "architecture_principles_forecast",
                 "--format",
                 "json",
             ]
         )
         == 0
     )
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(capsys.readouterr().out)["values"]
 
-    forecast = payload["context"]["architecture_principles_forecast"]
+    forecast = payload["architecture_principles_forecast"]
     assert forecast["status"] == "needs-planned-scope"
     assert forecast["planned_scope"] == {"source": "missing_planned_scope", "paths": []}
     assert forecast["decision_maturity"]["level"] == "evidence_seeking"
@@ -11797,6 +12036,8 @@ def test_start_keeps_architecture_principle_scope_probe_quiet_when_not_configure
                 str(tmp_path),
                 "--task",
                 "Implement the architecture principle forecast update",
+                "--select",
+                "architecture_principles_forecast",
                 "--format",
                 "json",
             ]
@@ -11805,7 +12046,7 @@ def test_start_keeps_architecture_principle_scope_probe_quiet_when_not_configure
     )
     payload = json.loads(capsys.readouterr().out)
 
-    assert "architecture_principles_forecast" not in payload["context"]
+    assert "architecture_principles_forecast" in payload["missing"]
 
 
 def test_start_forecasts_architecture_principle_from_active_plan_scope_before_edits(tmp_path: Path, capsys) -> None:
@@ -11847,15 +12088,17 @@ def test_start_forecasts_architecture_principle_from_active_plan_scope_before_ed
                 str(tmp_path),
                 "--task",
                 "Continue the active plan",
+                "--select",
+                "architecture_principles_forecast",
                 "--format",
                 "json",
             ]
         )
         == 0
     )
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(capsys.readouterr().out)["values"]
 
-    forecast = payload["context"]["architecture_principles_forecast"]
+    forecast = payload["architecture_principles_forecast"]
     assert forecast["status"] == "provisional-match"
     assert forecast["planned_scope"] == {
         "source": "active_planning_record.touched_scope",
@@ -11879,6 +12122,8 @@ def test_start_keeps_architecture_principle_forecast_quiet_for_unmatched_path(tm
                 str(tmp_path),
                 "--task",
                 "Review README.md",
+                "--select",
+                "task_path_references,architecture_principles_forecast",
                 "--format",
                 "json",
             ]
@@ -11887,9 +12132,8 @@ def test_start_keeps_architecture_principle_forecast_quiet_for_unmatched_path(tm
     )
     payload = json.loads(capsys.readouterr().out)
 
-    assert payload["context"]["task_path_references"]["path_reference_kind"] == "path-scoped-work"
-    assert "architecture_principles_forecast" not in payload["context"]
-    assert "architecture_principles_forecast" not in payload
+    assert payload["values"]["task_path_references"]["path_reference_kind"] == "path-scoped-work"
+    assert "architecture_principles_forecast" in payload["missing"]
 
 
 def test_start_explicit_changed_path_still_uses_changed_path_startup(tmp_path: Path, capsys) -> None:
@@ -11915,9 +12159,9 @@ def test_start_explicit_changed_path_still_uses_changed_path_startup(tmp_path: P
     )
     payload = json.loads(capsys.readouterr().out)
 
-    assert payload["decision_packet"]["next_action"] == "select-changed-path-proof"
-    assert payload["decision_packet"]["required_commands"] == ["agentic-workspace proof --changed AGENTS.md --format json"]
-    assert payload["serialization_budget"]["status"] == "detail-withheld"
+    assert payload["decision_packet"]["action"]["id"] == "select-changed-path-proof"
+    assert payload["decision_packet"]["action"]["command"] == "agentic-workspace proof --changed AGENTS.md --format json"
+    assert payload["decision_packet"]["effects"]["proof_required"] is True
 
 
 def test_start_context_authority_projection_fails_closed_for_missing_scoped_instruction_source(tmp_path: Path, capsys) -> None:
@@ -11936,14 +12180,16 @@ def test_start_context_authority_projection_fails_closed_for_missing_scoped_inst
                 "src/example.py",
                 "--task",
                 "Use the scoped instructions and skills before editing",
+                "--select",
+                "context_authority_projection",
                 "--format",
                 "json",
             ]
         )
         == 0
     )
-    payload = json.loads(capsys.readouterr().out)
-    projection = payload["context"]["context_authority_projection"]
+    payload = json.loads(capsys.readouterr().out)["values"]
+    projection = payload["context_authority_projection"]
 
     assert projection["status"] == "repair-required"
     assert "scoped-instructions" in projection["missing_required_surfaces"]
@@ -12033,14 +12279,16 @@ def test_local_chat_checkpoint_write_creates_valid_local_record_and_startup_pack
                 str(tmp_path),
                 "--task",
                 "Resume checkpoint slice",
+                "--select",
+                "local_chat_checkpoint,action_signals",
                 "--format",
                 "json",
             ]
         )
         == 0
     )
-    startup = json.loads(capsys.readouterr().out)
-    packet = startup["context"]["local_chat_checkpoint"]
+    startup = json.loads(capsys.readouterr().out)["values"]
+    packet = startup["local_chat_checkpoint"]
     assert packet["status"] == "present"
     assert packet["durable_source_count"] == 1
     assert packet["durable_sources"] == ["docs/reference/local-chat-checkpoints.md"]
@@ -12048,8 +12296,6 @@ def test_local_chat_checkpoint_write_creates_valid_local_record_and_startup_pack
     assert packet["volatile_observations"]["current_pr"]["observed_at"] == checkpoint["updated_at"]
     assert packet["proof_state"]["status"] == "historical-local-summary"
     assert any(item["action"].startswith("re-run or re-evaluate proof") for item in packet["resume_checklist"])
-    _assert_selector_inventory_omitted_from_compact_start(startup)
-    assert "local_chat_checkpoint=present" in startup["action_signals"]["changed_signals"]
 
 
 def test_local_chat_checkpoint_surfaces_matching_planning_candidate_routes(tmp_path: Path, capsys) -> None:
@@ -12119,11 +12365,7 @@ candidates = [
     assert routes["authority"] == "advisory-from-local-checkpoint-and-checked-in-planning"
     assert "Verify checkpoint refs against durable sources" in routes["claim_boundary"]
 
-    assert cli.main(["start", "--target", str(tmp_path), "--task", "Resume checkpoint slice", "--format", "json"]) == 0
-    startup = json.loads(capsys.readouterr().out)
-    context_routes = startup["context"]["local_chat_checkpoint"]["planning_candidate_routes"]
-    assert context_routes["candidate_ids"] == routes["candidate_ids"]
-    assert context_routes["route_options"][1]["id"] == "github-1704-checkpoint-dogfood"
+    assert routes["route_options"][1]["id"] == "github-1704-checkpoint-dogfood"
 
 
 def test_local_chat_checkpoint_omits_route_suggestions_when_no_candidate_matches(tmp_path: Path, capsys) -> None:
@@ -12171,9 +12413,7 @@ candidates = [
     assert selected["status"] == "present"
     assert "planning_candidate_routes" not in selected
 
-    assert cli.main(["start", "--target", str(tmp_path), "--task", "Resume unrelated checkpoint", "--format", "json"]) == 0
-    startup = json.loads(capsys.readouterr().out)
-    assert "planning_candidate_routes" not in startup["context"]["local_chat_checkpoint"]
+    assert "planning_candidate_routes" not in selected
 
 
 def test_local_chat_checkpoint_write_preserves_and_replaces_values(tmp_path: Path, capsys) -> None:
@@ -12374,8 +12614,8 @@ def test_local_work_thread_schema_and_startup_clear_match(tmp_path: Path, capsys
 
     assert cli.main(["start", "--target", str(tmp_path), "--task", "Resume #1987 lane", "--format", "json"]) == 0
     startup = json.loads(capsys.readouterr().out)
-    assert startup["context"]["work_threads"]["selected_thread"]["id"] == "issue-1987-main"
-    assert "work_threads=clear-match" in startup["action_signals"]["changed_signals"]
+    assert "work_threads" not in startup
+    assert "work_threads=clear-match" in {item["signal"] for item in startup["decision_packet"]["attention"]}
 
 
 def test_local_work_threads_warn_when_planning_owner_changed(tmp_path: Path, capsys) -> None:
@@ -13294,20 +13534,22 @@ def test_start_issue_reference_wording_keeps_issue_scope_warning(tmp_path: Path,
                 str(tmp_path),
                 "--task",
                 "Implement issue #103",
+                "--select",
+                "planning_safety_gate,issue_reference_intent,next_safe_action",
                 "--format",
                 "json",
             ]
         )
         == 0
     )
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(capsys.readouterr().out)["values"]
     assert payload["next_safe_action"]["next_safe_action"] == "refresh-external-issue-intent"
-    gate = payload["context"]["planning"]["planning_safety_gate"]
+    gate = payload["planning_safety_gate"]
     assert gate["decision_maturity"]["level"] == "evidence_seeking"
     assert gate["decision_maturity"]["missing_evidence"] == ["external issue intent evidence"]
     assert gate["decision_maturity"]["safe_probe"] == "refresh-external-intent-or-state-bounded-slice"
-    assert payload["context"]["issue_reference_intent"]["issue_refs"] == ["#103"]
-    effect = payload["context"]["issue_reference_intent"]["action_effect"]
+    assert payload["issue_reference_intent"]["issue_refs"] == ["#103"]
+    effect = payload["issue_reference_intent"]["action_effect"]
     assert effect["force"] == "required_before_claim"
     assert effect["allowed_now"] == "read-review-and-state-bounded-slice"
     assert effect["blocked_until_reconciled"] == ["claim-external-issue-scope-confirmed", "claim-task-complete"]
@@ -13573,19 +13815,7 @@ candidates = [
     )
     payload = json.loads(capsys.readouterr().out)
 
-    assert payload["next_safe_action"]["next_safe_action"] == "refresh-open-issue-intake"
-    intake = payload["context"]["open_issue_intake"]
-    assert "external-intent refresh-github" in intake["command_owned_intake"]
-    assert "--apply-planning-candidates" in intake["command_owned_intake"]
-    assert intake["freshness"]["status"] == "fresh-enough"
-    assert intake["counts"]["open_issue_count"] == 4
-    assert intake["counts"]["planning_candidate_count"] == 2
-    grouping = intake["grouping_hints"]
-    assert grouping["parent_lanes"][0]["id"] == "#1739"
-    assert grouping["child_issue_clusters"][0]["parent_id"] == "#1739"
-    assert grouping["child_issue_clusters"][0]["child_count"] == 2
-    assert grouping["standalone_candidates"][0]["id"] == "#1802"
-    assert intake["detailed_issue_list_rule"]
+    assert payload["decision_packet"]["action"]["id"] == "refresh-open-issue-intake"
 
     assert cli.main(["start", "--target", str(tmp_path), "--select", "open_issue_intake", "--format", "json"]) == 0
     selected = json.loads(capsys.readouterr().out)
@@ -13670,17 +13900,19 @@ def test_start_ambiguous_numeric_ref_stays_advisory_without_blocking_read_work(t
                 str(tmp_path),
                 "--task",
                 "Look at #103",
+                "--select",
+                "issue_reference_intent,planning_safety_gate,next_safe_action",
                 "--format",
                 "json",
             ]
         )
         == 0
     )
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(capsys.readouterr().out)["values"]
     assert payload["next_safe_action"]["read_only_allowed"] is True
-    assert payload["context"]["issue_reference_intent"]["status"] == "details-needed"
-    assert payload["context"]["issue_reference_intent"]["action_effect"]["force"] == "required_before_claim"
-    assert payload["context"]["planning"]["planning_safety_gate"]["workflow_sufficient"] is True
+    assert payload["issue_reference_intent"]["status"] == "details-needed"
+    assert payload["issue_reference_intent"]["action_effect"]["force"] == "required_before_claim"
+    assert payload["planning_safety_gate"]["workflow_sufficient"] is True
 
 
 def test_start_default_keeps_skill_catalog_breakdown_behind_command(tmp_path: Path, capsys) -> None:
@@ -13703,19 +13935,8 @@ def test_start_default_keeps_skill_catalog_breakdown_behind_command(tmp_path: Pa
         == 0
     )
     payload = json.loads(capsys.readouterr().out)
-    skills = payload["skills"]
-    catalog = skills["catalog"]
-
-    assert skills["kind"] == "agentic-workspace/startup-skills-projection/v1"
-    assert catalog["available"] is True
-    assert catalog["catalog_command_available"] is True
-    assert isinstance(catalog["total_count"], int)
-    assert isinstance(catalog["warning_count"], int)
-    assert "agentic-workspace skills" in catalog["command"]
-    assert catalog["detail_visibility"] == "source and owner breakdowns stay behind catalog.command"
-    assert "counts_by_source_kind" not in catalog
-    assert "counts_by_owner" not in catalog
-    assert "sources" not in catalog
+    assert "skills" not in payload
+    assert "agentic-workspace skills" in payload["decision_packet"]["detail_routes"]["skills"]
 
 
 def test_compact_skill_catalog_marks_malformed_payload_unavailable() -> None:
@@ -13747,13 +13968,8 @@ def test_start_required_skill_projection_survives_compact_catalog(tmp_path: Path
         == 0
     )
     payload = json.loads(capsys.readouterr().out)
-    skills = payload["skills"]
-
-    assert skills["status"] == "recommended"
-    assert skills["required"][0]["id"] == "planning-reporting"
-    assert skills["required"][0]["reason"] == "required by next_safe_action.required_skill"
-    assert "catalog" in skills
-    assert "counts_by_owner" not in skills["catalog"]
+    assert payload["decision_packet"]["action"]["skill"] == "planning-reporting"
+    assert "skill_detail" in payload["decision_packet"]["detail_routes"]
 
 
 def test_start_select_surfaces_memory_decision_packet(tmp_path: Path, capsys) -> None:
@@ -13965,8 +14181,7 @@ def test_start_surfaces_pr_comment_attention_only_for_pr_context(tmp_path: Path,
 
     assert cli.main(["start", "--target", str(tmp_path), "--task", "Fix one docs typo", "--format", "json"]) == 0
     quiet_payload = json.loads(capsys.readouterr().out)
-    assert "pr_comment_attention" not in quiet_payload["context"]
-    assert "pr_comment_attention" not in quiet_payload["action_signals"]["advisory_detail"]["selectors"]
+    assert "pr_comment_attention" not in {item["detail_selector"] for item in quiet_payload["decision_packet"].get("attention", [])}
 
     assert (
         cli.main(
@@ -13976,15 +14191,17 @@ def test_start_surfaces_pr_comment_attention_only_for_pr_context(tmp_path: Path,
                 str(tmp_path),
                 "--task",
                 "Continue PR #1831 review fixes",
+                "--select",
+                "pr_comment_attention,action_signals",
                 "--format",
                 "json",
             ]
         )
         == 0
     )
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(capsys.readouterr().out)["values"]
 
-    attention = payload["context"]["pr_comment_attention"]
+    attention = payload["pr_comment_attention"]
     assert attention["status"] == "pr_comment_status_unavailable"
     assert attention["comment_state"] == "cache_miss"
     assert attention["pr_number"] == "1831"
@@ -13996,8 +14213,6 @@ def test_start_surfaces_pr_comment_attention_only_for_pr_context(tmp_path: Path,
     assert attention["write_safety"]["github_writes_performed"] is False
     assert attention["absence_states"]["thread_level_comments"] == "hidden_behind_detail_route"
     assert "pr_comment_delta.py" in attention["detail_route"]
-    assert "pr_comment_attention=pr_comment_status_unavailable" in payload["action_signals"]["changed_signals"]
-    assert "pr_comment_attention" in payload["action_signals"]["advisory_detail"]["selectors"]
 
 
 def test_report_pr_comment_attention_cache_miss_routes_to_live_inspection_for_branch_pr(monkeypatch, tmp_path: Path, capsys) -> None:
@@ -14039,13 +14254,15 @@ def test_report_pr_comment_attention_cache_miss_routes_to_live_inspection_for_br
                 str(tmp_path),
                 "--task",
                 "Address review comments on this PR",
+                "--select",
+                "pr_comment_attention",
                 "--format",
                 "json",
             ]
         )
         == 0
     )
-    start_attention = json.loads(capsys.readouterr().out)["context"]["pr_comment_attention"]
+    start_attention = json.loads(capsys.readouterr().out)["values"]["pr_comment_attention"]
     assert start_attention["comment_state"] == "cache_miss"
     assert start_attention["recommended_command"] == attention["recommended_command"]
     assert start_attention["live_inspection"]["status"] == "pr_resolution_required"
@@ -14241,13 +14458,15 @@ def test_live_pr_topology_admission_populates_continuity_without_claiming_thread
                 str(tmp_path),
                 "--task",
                 "Continue the current stacked PR",
+                "--select",
+                "pr_comment_attention",
                 "--format",
                 "json",
             ]
         )
         == 0
     )
-    unavailable = json.loads(capsys.readouterr().out)["context"]["pr_comment_attention"]
+    unavailable = json.loads(capsys.readouterr().out)["values"]["pr_comment_attention"]
     assert unavailable["absence_states"]["stack_membership"] == "unavailable"
     assert "scripts/github/pr_topology.py" in unavailable["pr_resolution"]["command"]
 
@@ -14313,13 +14532,15 @@ def test_live_pr_topology_admission_populates_continuity_without_claiming_thread
                 str(tmp_path),
                 "--task",
                 "Continue the current stacked PR",
+                "--select",
+                "pr_comment_attention",
                 "--format",
                 "json",
             ]
         )
         == 0
     )
-    attention = json.loads(capsys.readouterr().out)["context"]["pr_comment_attention"]
+    attention = json.loads(capsys.readouterr().out)["values"]["pr_comment_attention"]
     assert attention["status"] == "stack_comment_status_unavailable"
     assert attention["stack_discovery"]["status"] == "admitted-live-topology"
     assert attention["absence_states"] == {
@@ -14549,13 +14770,15 @@ def test_admitted_pr_topology_is_rejected_after_head_changes(tmp_path: Path, cap
                 str(tmp_path),
                 "--task",
                 "Continue the current stacked PR",
+                "--select",
+                "pr_comment_attention",
                 "--format",
                 "json",
             ]
         )
         == 0
     )
-    attention = json.loads(capsys.readouterr().out)["context"]["pr_comment_attention"]
+    attention = json.loads(capsys.readouterr().out)["values"]["pr_comment_attention"]
     assert attention["stack_member_count"] == 0
     assert attention["stack_discovery"]["status"] == "rejected"
     assert attention["stack_discovery"]["reason"] == "topology-head-stale"
@@ -14577,7 +14800,7 @@ def test_unrelated_startup_does_not_execute_live_pr_provider(tmp_path: Path, cap
     monkeypatch.setattr(workspace_runtime_core.subprocess, "run", guarded_run)
     assert cli.main(["start", "--target", str(tmp_path), "--task", "Fix one local typo", "--format", "json"]) == 0
     payload = json.loads(capsys.readouterr().out)
-    assert "pr_comment_attention" not in payload["context"]
+    assert "pr_comment_attention" not in {item["detail_selector"] for item in payload["decision_packet"].get("attention", [])}
     assert not any(command and command[0] == "gh" for command in observed_commands)
 
 
@@ -14666,14 +14889,16 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
                 str(tmp_path),
                 "--task",
                 "Continue stacked PR review fixes",
+                "--select",
+                "pr_comment_attention,action_signals",
                 "--format",
                 "json",
             ]
         )
         == 0
     )
-    unavailable = json.loads(capsys.readouterr().out)
-    unavailable_attention = unavailable["context"]["pr_comment_attention"]
+    unavailable = json.loads(capsys.readouterr().out)["values"]
+    unavailable_attention = unavailable["pr_comment_attention"]
     assert unavailable_attention["status"] == "stack_comment_status_unavailable"
     assert unavailable_attention["comment_state"] == "stack_discovery_unavailable"
     assert unavailable_attention["absence_states"]["stack_membership"] == "unavailable"
@@ -14746,19 +14971,21 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
                 str(tmp_path),
                 "--task",
                 "Continue stacked PR review fixes",
+                "--select",
+                "pr_comment_attention,action_signals",
                 "--format",
                 "json",
             ]
         )
         == 0
     )
-    current = json.loads(capsys.readouterr().out)
-    assert current["context"]["pr_comment_attention"]["status"] == "stack_comments_current"
-    assert current["context"]["pr_comment_attention"]["comment_state"] == "stack_current_no_actionable_comments"
-    assert current["context"]["pr_comment_attention"]["pr_number"] == "1841"
-    assert current["context"]["pr_comment_attention"]["stack_member_count"] == 2
-    assert current["context"]["pr_comment_attention"]["absence_states"]["thread_level_comments"] == "hidden_behind_detail_route"
-    current_continuity = current["context"]["pr_comment_attention"]["review_stack_continuity"]
+    current = json.loads(capsys.readouterr().out)["values"]
+    assert current["pr_comment_attention"]["status"] == "stack_comments_current"
+    assert current["pr_comment_attention"]["comment_state"] == "stack_current_no_actionable_comments"
+    assert current["pr_comment_attention"]["pr_number"] == "1841"
+    assert current["pr_comment_attention"]["stack_member_count"] == 2
+    assert current["pr_comment_attention"]["absence_states"]["thread_level_comments"] == "hidden_behind_detail_route"
+    current_continuity = current["pr_comment_attention"]["review_stack_continuity"]
     assert current_continuity["phase"] == "review-proof"
     assert current_continuity["current_pr_number"] == "1841"
     assert [member["pr_number"] for member in current_continuity["dependency_order"]] == ["1840", "1841"]
@@ -14867,14 +15094,16 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
                 str(tmp_path),
                 "--task",
                 "Continue stacked PR review fixes",
+                "--select",
+                "pr_comment_attention,action_signals",
                 "--format",
                 "json",
             ]
         )
         == 0
     )
-    reusable = json.loads(capsys.readouterr().out)
-    reusable_continuity = reusable["context"]["pr_comment_attention"]["review_stack_continuity"]
+    reusable = json.loads(capsys.readouterr().out)["values"]
+    reusable_continuity = reusable["pr_comment_attention"]["review_stack_continuity"]
     assert reusable_continuity["phase"] == "review-closeout-ready"
     assert reusable_continuity["incremental_proof_manifest"]["proof_reuse_status"] == "reuse_safe_with_evidence"
     assert reusable_continuity["incremental_proof_manifest"]["reusable_groups"][0]["command"] == "uv run pytest tests/test_app.py -q"
@@ -14994,15 +15223,17 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
                 str(tmp_path),
                 "--task",
                 "Continue stacked PR review fixes",
+                "--select",
+                "pr_comment_attention,action_signals",
                 "--format",
                 "json",
             ]
         )
         == 0
     )
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(capsys.readouterr().out)["values"]
 
-    attention = payload["context"]["pr_comment_attention"]
+    attention = payload["pr_comment_attention"]
     assert attention["status"] == "actionable_stack_comments_present"
     assert attention["comment_state"] == "stack_comments_requiring_action"
     assert attention["stack_member_count"] == 2
@@ -15043,8 +15274,6 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
         "review-closed",
     ]
     assert "review_stack_continuity.next_action.command" in continuity["workflow_trace"]["interaction_cost"]["resume_inputs_after_packet"]
-    assert "pr_comment_attention=actionable_stack_comments_present" in payload["action_signals"]["changed_signals"]
-    assert "review_stack_phase=review-correction" in payload["action_signals"]["changed_signals"]
 
     stale_stack = copy.deepcopy(fresh_stack)
     stale_stack["stack_members"][0]["delta"].pop("freshness")
@@ -15057,18 +15286,20 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
                 str(tmp_path),
                 "--task",
                 "Continue stacked PR review fixes",
+                "--select",
+                "pr_comment_attention,action_signals",
                 "--format",
                 "json",
             ]
         )
         == 0
     )
-    stale = json.loads(capsys.readouterr().out)
-    assert stale["context"]["pr_comment_attention"]["status"] == "stack_comment_status_unavailable"
-    assert stale["context"]["pr_comment_attention"]["comment_state"] == "stack_stale_or_unknown"
-    assert stale["context"]["pr_comment_attention"]["absence_states"]["thread_level_comments"] == "hidden_behind_detail_route"
-    assert "--section pr_comment_attention --format json" in stale["context"]["pr_comment_attention"]["detail_route"]
-    stale_continuity = stale["context"]["pr_comment_attention"]["review_stack_continuity"]
+    stale = json.loads(capsys.readouterr().out)["values"]
+    assert stale["pr_comment_attention"]["status"] == "stack_comment_status_unavailable"
+    assert stale["pr_comment_attention"]["comment_state"] == "stack_stale_or_unknown"
+    assert stale["pr_comment_attention"]["absence_states"]["thread_level_comments"] == "hidden_behind_detail_route"
+    assert "--section pr_comment_attention --format json" in stale["pr_comment_attention"]["detail_route"]
+    stale_continuity = stale["pr_comment_attention"]["review_stack_continuity"]
     assert stale_continuity["phase"] == "review-state-refresh"
     assert stale_continuity["review_findings"]["stale_or_unverified_pr_numbers"] == ["1840"]
     assert stale_continuity["next_action"]["id"] == "refresh-stack-review-state"
@@ -15626,13 +15857,15 @@ def test_session_log_download_intent_routes_to_export_without_transfer_approval(
                 str(tmp_path),
                 "--task",
                 "Package the current AW session logs for download",
+                "--select",
+                "session_log_export_route,next_safe_action",
                 "--format",
                 "json",
             ]
         )
         == 0
     )
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(capsys.readouterr().out)["values"]
     route = payload["session_log_export_route"]
     assert route["operation"] == "session-log.export"
     assert route["command"].endswith("session-log export --target . --format json")

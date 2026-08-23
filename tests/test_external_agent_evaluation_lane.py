@@ -790,6 +790,82 @@ def test_model_cli_harness_includes_setup_jumpstart_discovery_scenario(tmp_path:
     assert result["mutation_summary"]["status"] == "not-run"
 
 
+def test_model_cli_harness_defines_compact_startup_weak_agent_probes(tmp_path: Path) -> None:
+    module = _load_harness_module()
+    suite_path = REPO_ROOT / "tools" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json"
+    suite = module._load_json(suite_path)
+    scenarios = {scenario["id"]: scenario for scenario in suite["scenarios"]}
+    scenario_ids = (
+        "compact-startup-direct-routing",
+        "compact-startup-planning-gate-routing",
+        "compact-startup-module-rich-routing",
+    )
+
+    for scenario_id in scenario_ids:
+        scenario = scenarios[scenario_id]
+        assert scenario["proportionality_guardrail"] is True
+        assert scenario["proportionality_limits"]["workspace_command_count"] == 1
+        assert scenario["proportionality_limits"]["verbose_or_full_diagnostic_count"] == 0
+        assert scenario["required_executed_commands"] == ["agentic-workspace start"]
+        assert scenario["ignored_write_patterns"] == [".agentic-workspace/local/projection-cache/**"]
+        assert {"--select", "--verbose", "agentic-workspace report", "agentic-workspace summary"} <= set(
+            scenario["forbidden_executed_commands"]
+        )
+        assert any("only the default start decision packet" in signal for signal in scenario["expected_signals"])
+
+        payload = module.run_suite(
+            suite_path=suite_path,
+            adapter_id="codex",
+            model="gpt-5.4-mini",
+            scenario_filter=scenario_id,
+            execute=False,
+            output_root=tmp_path / "runs" / scenario_id,
+            timeout_seconds=None,
+        )
+        result = payload["results"][0]
+        assert result["scenario_id"] == scenario_id
+        assert result["proportionality_metrics"]["status"] == "not-run"
+
+    planning_setup = scenarios["compact-startup-planning-gate-routing"]["setup_commands"]
+    assert planning_setup[0][:5] == ["uv", "run", "agentic-workspace", "planning", "new-plan"]
+    assert "--activate" in planning_setup[0]
+    assert scenarios["compact-startup-module-rich-routing"]["fixture"] == "aw-memory-host-repo"
+
+    for fixture in ("aw-minimal-host-repo", "aw-memory-host-repo"):
+        guidance = (REPO_ROOT / "tools" / "model-cli-harness" / "fixtures" / fixture / "AGENTS.md").read_text(encoding="utf-8")
+        assert "authoritative `decision_packet`" in guidance
+        assert "do not omit `--format json`" in guidance
+        assert "do not open raw config files to rediscover it" in guidance
+        assert "`communication_contract` as optional selector-backed" in guidance
+        assert "Use the returned `communication_contract`" not in guidance
+
+    evidence = json.loads((REPO_ROOT / "docs" / "maintainer" / "startup-compression-2679.json").read_text(encoding="utf-8"))
+    external = evidence["external_agent_evidence"]
+    assert external["status"] == "verified"
+    assert external["fixture_runtime_provenance"] == "verified"
+    assert external["interaction_summary"] == {
+        "scenario_count": 3,
+        "requests_to_completion": 3,
+        "workspace_command_count": 3,
+        "follow_up_workspace_reads": 0,
+        "selector_calls": 0,
+        "verbose_or_full_diagnostic_calls": 0,
+        "raw_workspace_reads": 0,
+        "finding_count": 0,
+    }
+    recorded = external["scenarios"]
+    assert {entry["scenario_id"] for entry in recorded.values()} == set(scenario_ids)
+    assert all(entry["workspace_command_count"] == 1 for entry in recorded.values())
+    assert all(entry["raw_workspace_reads"] == 0 for entry in recorded.values())
+    assert all(entry["selector_calls"] == 0 for entry in recorded.values())
+    assert recorded["planning_gate"]["blocked_claims"] == [
+        "claim-active-plan-progress",
+        "claim-active-plan-complete",
+        "silently-abandon-active-plan",
+    ]
+    assert recorded["module_rich"]["irrelevant_module_follow_up_reads"] == 0
+
+
 def test_model_cli_harness_default_output_root_is_manifest_backed_scratch(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     module = _load_harness_module()
     monkeypatch.setattr(module, "REPO_ROOT", tmp_path)
@@ -1318,6 +1394,54 @@ def test_model_cli_harness_local_wheelhouse_environment_is_fixture_bound(tmp_pat
     assert "VIRTUAL_ENV" not in result
     assert Path(result["UV_PROJECT_ENVIRONMENT"]) == tmp_path / "fixture" / ".venv"
     assert result["PATH"] == "bin"
+
+
+def test_model_cli_harness_provenance_distinguishes_fixture_wheel_from_source_retarget(tmp_path: Path) -> None:
+    module = _load_harness_module()
+    repo = tmp_path / "source" / ".agentic-workspace" / "local" / "scratch" / "runs" / "fixture" / "repo"
+    wheel = repo / ".agentic-workspace" / "local" / "model-cli-harness" / "wheelhouse" / "agentic_workspace.whl"
+    wheel_pyproject = f'[project]\nname = "fixture"\nversion = "0"\ndependencies = ["agentic-workspace @ {wheel.as_uri()}"]\n'
+    source_pyproject = (
+        "[project]\n"
+        'name = "fixture"\n'
+        'version = "0"\n'
+        'dependencies = ["agentic-workspace"]\n\n'
+        "[tool.uv.sources]\n"
+        f'agentic-workspace = {{ path = "{module.REPO_ROOT.as_posix()}", editable = true }}\n'
+    )
+
+    assert module._pyproject_retargets_source_checkout(pyproject_text=wheel_pyproject, repo_path=repo) is False
+    assert module._pyproject_retargets_source_checkout(pyproject_text=source_pyproject, repo_path=repo) is True
+
+
+def test_model_cli_harness_does_not_misclassify_reported_read_only_owner_as_raw_read() -> None:
+    module = _load_harness_module()
+    scenario = {"id": "compact-startup-planning-gate-routing", "proportionality_guardrail": True}
+    result = {
+        "final_message": (
+            "Owner is `.agentic-workspace/planning/execplans/protected-owner.plan.json`; its state update policy is read-only."
+        ),
+        "stdout": "",
+        "stderr": "",
+    }
+
+    metrics = module._proportionality_metrics(
+        scenario=scenario,
+        result=result,
+        mutation_summary={"created": [], "modified": [], "deleted": []},
+        package_read_surface_summary={"command_count": 1, "output_bytes": 100, "output_lines": 4},
+    )
+    assert metrics["raw_workspace_file_mentions"] == 1
+    assert metrics["raw_workspace_read_count"] == 0
+
+    result["final_message"] = "I ran Get-Content .agentic-workspace/planning/state.toml."
+    raw_metrics = module._proportionality_metrics(
+        scenario=scenario,
+        result=result,
+        mutation_summary={"created": [], "modified": [], "deleted": []},
+        package_read_surface_summary={"command_count": 1, "output_bytes": 100, "output_lines": 4},
+    )
+    assert raw_metrics["raw_workspace_read_count"] == 1
 
 
 @pytest.mark.skipif(os.name != "nt", reason="Windows-specific local-wheelhouse black-box")

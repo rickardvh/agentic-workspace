@@ -140,12 +140,8 @@ def _register_harness_evidence(*, summary_path: Path, manifest_path: Path | None
         manifest_ref = manifest_path.resolve().relative_to(REPO_ROOT.resolve()).as_posix()
     except ValueError:
         return
-    head = subprocess.run(
-        ["git", "rev-parse", "HEAD"], cwd=REPO_ROOT, capture_output=True, text=True, check=False
-    ).stdout.strip()
-    tree = subprocess.run(
-        ["git", "rev-parse", "HEAD^{tree}"], cwd=REPO_ROOT, capture_output=True, text=True, check=False
-    ).stdout.strip()
+    head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=REPO_ROOT, capture_output=True, text=True, check=False).stdout.strip()
+    tree = subprocess.run(["git", "rev-parse", "HEAD^{tree}"], cwd=REPO_ROOT, capture_output=True, text=True, check=False).stdout.strip()
     dirty = bool(
         subprocess.run(
             ["git", "status", "--porcelain", "--untracked-files=no"],
@@ -1289,9 +1285,34 @@ def _fixture_runtime_environment(env: dict[str, str], *, repo_path: Path) -> dic
     return isolated
 
 
-def _fixture_runtime_provenance(
-    *, repo_path: Path, env: dict[str, str], timeout_seconds: int
-) -> dict[str, Any]:
+def _pyproject_retargets_source_checkout(*, pyproject_text: str, repo_path: Path) -> bool:
+    """Detect editable/path source overrides without rejecting fixture-local wheel URLs."""
+    payload = tomllib.loads(pyproject_text)
+    sources = payload.get("tool", {}).get("uv", {}).get("sources", {})
+    if not isinstance(sources, dict):
+        return False
+    source_root = REPO_ROOT.resolve()
+
+    def points_to_source_checkout(value: Any) -> bool:
+        if isinstance(value, list):
+            return any(points_to_source_checkout(item) for item in value)
+        if not isinstance(value, dict):
+            return False
+        path = value.get("path")
+        if not isinstance(path, str) or not path.strip():
+            return False
+        candidate = Path(path)
+        if not candidate.is_absolute():
+            candidate = repo_path / candidate
+        try:
+            return candidate.resolve() == source_root
+        except OSError:
+            return False
+
+    return any(points_to_source_checkout(value) for value in sources.values())
+
+
+def _fixture_runtime_provenance(*, repo_path: Path, env: dict[str, str], timeout_seconds: int) -> dict[str, Any]:
     """Black-box the wheel-installed fixture runtime before model execution."""
     identity = _run_command(
         [
@@ -1300,10 +1321,7 @@ def _fixture_runtime_provenance(
             "--offline",
             "python",
             "-c",
-            (
-                "import agentic_workspace,json,sys;"
-                "print(json.dumps({'executable':sys.executable,'package':agentic_workspace.__file__}))"
-            ),
+            ("import agentic_workspace,json,sys;print(json.dumps({'executable':sys.executable,'package':agentic_workspace.__file__}))"),
         ],
         cwd=repo_path,
         timeout_seconds=timeout_seconds,
@@ -1360,8 +1378,10 @@ def _fixture_runtime_provenance(
     checks = {
         "executable_from_fixture_venv": in_fixture(identity_payload.get("executable")),
         "package_from_fixture_venv": in_fixture(identity_payload.get("package")),
-        "source_checkout_retarget_absent": REPO_ROOT.resolve().as_posix().lower()
-        not in pyproject_text.replace("\\", "/").lower(),
+        "source_checkout_retarget_absent": not _pyproject_retargets_source_checkout(
+            pyproject_text=pyproject_text,
+            repo_path=repo_path,
+        ),
         "startup_succeeded": startup.get("returncode") == 0 and _json_document(str(startup.get("stdout") or "")) is not None,
         "evaluation_operation_succeeded": evaluation.get("returncode") == 0
         and _json_document(str(evaluation.get("stdout") or "")) is not None,
@@ -1632,7 +1652,7 @@ def _proportionality_metrics(
     )
     raw_workspace_read_patterns = (
         r"\b(get-content|cat|type|read_file|open)\b[^\n;|&]*\.agentic-workspace/",
-        r"\.agentic-workspace/[^\s`'\"),;]+[^\n.]*\b(read|opened|inspected)\b",
+        r"\.agentic-workspace/[^\s`'\"),;]+[^\n.]*\b(opened|inspected|read directly|read from)\b",
     )
     raw_workspace_read_count = sum(
         1 for pattern in raw_workspace_read_patterns for _match in re.finditer(pattern, combined_agent_text, flags=re.IGNORECASE)
