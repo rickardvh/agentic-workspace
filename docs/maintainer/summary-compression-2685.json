@@ -1,7 +1,7 @@
 {
   "schema_version": "agentic-workspace/summary-compression-evidence/v1",
   "issue": 2685,
-  "baseline": {"ref": "stack-parent@c30ccaed7", "measurement": "compact UTF-8 JSON bytes, indented JSON lines, recursive object-key count, and AW command roundtrips", "fixture_owner": "tests/test_workspace_summary_cli.py::_summary_compression_scenario_payloads"},
+  "baseline": {"ref": "stack-parent@5f3193193", "measurement": "compact UTF-8 JSON bytes, indented JSON lines, recursive object-key count, and AW command roundtrips", "fixture_owner": "tests/test_workspace_summary_cli.py::_summary_compression_scenario_payloads"},
   "scenarios": {
     "no_active_owner": {"before": {"json_bytes": 2580, "human_lines": 188, "field_count": 113, "aw_roundtrips": 1}, "after": {"json_bytes": 2048, "human_lines": 57, "field_count": 46, "aw_roundtrips": 1}, "finding": "Absence is explicit and still carries a safe next action and claim boundary."},
     "active_owner": {"before": {"json_bytes": 3458, "human_lines": 221, "field_count": 138, "aw_roundtrips": 1}, "after": {"json_bytes": 2339, "human_lines": 63, "field_count": 51, "aw_roundtrips": 1}},
