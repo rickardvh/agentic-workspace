@@ -13,6 +13,18 @@
       "storage_class": "diagnostic-fixture"
     },
     {
+      "checked_in_justification": "Maintainer-reviewed ordinary-output compression measurements record accepted budgets, projection disposition, and default-only agent proof without becoming runtime authority.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "notes": "Lifecycle compression evidence is validated by focused contract tests and remains diagnostic proof rather than a second output-policy owner.",
+      "owner": "workspace-maintainer-checks",
+      "pattern": "docs/maintainer/*-compression-*.json",
+      "schema_or_validator": "validator: uv run pytest tests/test_workspace_cli.py tests/test_workspace_implement_cli.py -k compression_evidence",
+      "status": "typed-validator-backed",
+      "storage_class": "diagnostic-fixture"
+    },
+    {
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy.",
       "editable_by_agents": true,
       "format": "json",

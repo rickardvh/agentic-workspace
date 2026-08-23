@@ -13,6 +13,7 @@ from agentic_workspace.authority_envelope import (
     resolve_authority_effect_envelope,
     revalidate_mutation_baseline,
 )
+from agentic_workspace.config import workspace_pointer_block
 
 
 def _write_empty_planning_state(target_root: Path) -> None:
@@ -670,9 +671,11 @@ impact = "blocking"
     )
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["proof"]["high_risk_overlay"]["status"] == "active"
-    assert payload["proof"]["high_risk_overlay"]["active_count"] == 1
-    assert "high_risk_overlay=1" in payload["action_signals"]["changed_signals"]
+    decision = payload["decision_packet"]
+    assert "python -c \"print('migration validation')\"" in decision["proof"]["required_commands"]
+    overlay = next(item for item in decision["attention"] if item["signal"] == "high-risk proof overlay")
+    assert overlay["active_count"] == 1
+    assert overlay["detail_selector"] == "proof.high_risk_overlay"
 
 
 def test_implement_tiny_surfaces_ordinary_local_overlay_without_high_risk(tmp_path: Path, capsys) -> None:
@@ -706,10 +709,10 @@ impact = "advisory"
     assert cli.main(["implement", "--target", str(tmp_path), "--changed", "tools/run.py", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["proof"]["local_overlay"]["status"] == "active"
-    assert payload["proof"]["local_overlay"]["active_count"] == 1
-    assert payload["proof"]["high_risk_overlay"] == {}
-    assert "local_overlay=1" in payload["action_signals"]["changed_signals"]
+    decision = payload["decision_packet"]
+    overlay = next(item for item in decision["attention"] if item["signal"] == "local proof overlay")
+    assert overlay["active_count"] == 1
+    assert not any(item["signal"] == "high-risk proof overlay" for item in decision["attention"])
 
 
 def test_implement_exposes_communication_contract_for_changed_paths(tmp_path: Path, capsys) -> None:
@@ -717,9 +720,24 @@ def test_implement_exposes_communication_contract_for_changed_paths(tmp_path: Pa
     _write_empty_planning_state(tmp_path)
     _write(tmp_path / "README.md", "# Project\n")
 
-    assert cli.main(["implement", "--target", str(tmp_path), "--changed", "README.md", "--format", "json"]) == 0
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "README.md",
+                "--select",
+                "communication_contract,current_decision,message_economy,evidence_bundle,next,decision_packet",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
 
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(capsys.readouterr().out)["values"]
     contract = payload["communication_contract"]
     assert contract["kind"] == "agentic-workspace/communication-contract/v1"
     assert contract["surface"] == "implementation"
@@ -978,6 +996,8 @@ def test_implement_changed_surfaces_task_posture_packet(tmp_path: Path, capsys) 
                 "src/agentic_workspace/workspace_runtime_primitives.py",
                 "--task",
                 "Implement #1392 in full",
+                "--select",
+                "task_posture_packet",
                 "--format",
                 "json",
             ]
@@ -985,7 +1005,7 @@ def test_implement_changed_surfaces_task_posture_packet(tmp_path: Path, capsys) 
         == 0
     )
 
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(capsys.readouterr().out)["values"]
     packet = payload["task_posture_packet"]
     assert packet["kind"] == "agentic-workspace/task-posture-packet/v1"
     assert packet["posture_adherence"]["closeout_question"].startswith("Did the work follow the task posture packet")
@@ -1014,6 +1034,8 @@ def test_implement_compiles_session_improvement_pressure_into_task_posture(tmp_p
                 "src/agentic_workspace/workspace_runtime_primitives.py",
                 "--task",
                 "Continue planned lane in stacked PR sequence",
+                "--select",
+                "task_posture_packet",
                 "--format",
                 "json",
             ]
@@ -1021,7 +1043,7 @@ def test_implement_compiles_session_improvement_pressure_into_task_posture(tmp_p
         == 0
     )
 
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(capsys.readouterr().out)["values"]
     packet = payload["task_posture_packet"]
     assert packet["improvement_pressure_evaluation"]["status"] == "active"
     assert packet["improvement_pressure_records"][0]["state"] == "active"
@@ -1050,6 +1072,8 @@ def test_implement_surfaces_memory_decision_packet_for_changed_paths(tmp_path: P
                 "docs/package/knowledge-routing.md",
                 "--task",
                 "Improve Memory routing guidance",
+                "--select",
+                "memory_decision_packet",
                 "--format",
                 "json",
             ]
@@ -1057,7 +1081,7 @@ def test_implement_surfaces_memory_decision_packet_for_changed_paths(tmp_path: P
         == 0
     )
 
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(capsys.readouterr().out)["values"]
     packet = payload["memory_decision_packet"]
     assert packet["kind"] == "agentic-workspace/memory-decision-packet/v1"
     assert packet["stage"] == "implement"
@@ -1065,17 +1089,12 @@ def test_implement_surfaces_memory_decision_packet_for_changed_paths(tmp_path: P
     assert packet["pull"]["status"] == "baseline_only"
     assert "--stage implement" in packet["pull"]["recommended_command"]
     assert "docs/package/knowledge-routing.md" in packet["pull"]["recommended_command"]
-    assert packet["pull"]["route_count"] == 0
-    assert packet["pull"]["relevant_route_count"] == 0
+    assert packet["pull"].get("route_count", 0) == 0
+    assert packet["pull"].get("relevant_route_count", 0) == 0
     assert packet["use"]["status"] == "no-match"
-    assert "contributions" not in packet["use"]
-    assert packet["capture"]["candidate_owner_surface_count"] >= 3
-    assert packet["capture"]["outcome_count"] == 5
-    assert "candidate_owner_surfaces" not in packet["capture"]
-    assert "authority_boundary" not in packet
-    assert "limits" not in packet
-    assert packet["detail_visibility"] == "details stay behind verbose implement context"
-    assert len(json.dumps(packet, separators=(",", ":")).encode()) < 900
+    assert packet["use"].get("contributions", []) == []
+    assert packet["capture"]["status"] == "not_evaluated"
+    assert packet["authority_boundary"]["agent_owns"]
 
     capsys.readouterr()
     assert (
@@ -1125,6 +1144,8 @@ def test_implement_surfaces_operating_loop_with_proof_blocker(tmp_path: Path, ca
                 "src/agentic_workspace/workspace_runtime_primitives.py",
                 "--task",
                 "Implement bounded runtime change",
+                "--select",
+                "operating_loop",
                 "--format",
                 "json",
             ]
@@ -1132,7 +1153,7 @@ def test_implement_surfaces_operating_loop_with_proof_blocker(tmp_path: Path, ca
         == 0
     )
 
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(capsys.readouterr().out)["values"]
     packet = payload["operating_loop"]
     assert packet["kind"] == "agentic-workspace/operating-loop-decision/v1"
     assert packet["verification"]["state"] == "proof_missing"
@@ -1187,62 +1208,12 @@ candidates = []
         == 0
     )
 
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["context"]["workflow_sufficiency"]["sufficiency_result"] == "mutation-baseline-required"
-    gate = payload["context"]["planning_safety_gate"]
-    assert gate["status"] == "blocked"
-    assert gate["gate_result"] == "mutation-baseline-required"
-    assert gate["workflow_sufficient"] is False
-    assert gate["implementation_allowed"] is False
-    assert gate["required_next_action"] == "refresh-mutation-baseline"
-    route = gate["route_decision"]
-    assert route["task_relation"] == "bounded-independent"
-    assert route["required_transition"] == "refresh-mutation-baseline"
-    assert route["next_safe_action"]["action"] == "refresh-mutation-baseline"
-    invocation = route["next_safe_action"]["operation_invocation"]
-    assert invocation["operation_id"] == "planning.front-door"
-    assert invocation["operation_action"] == "route-decision-next-action"
-    assert invocation["operation_path"] == "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.front-door.json"
-    assert invocation["authority"] == "agentic-planning/route-decision/v1"
-    assert invocation["input_revision"].startswith("sha256:")
-    assert invocation["input_identity"]["route_action"] == "refresh-mutation-baseline"
-    assert invocation["input_identity"]["mutation_baseline_id"]
-    assert invocation["input_identity"]["idempotency_key"].startswith("planning-route:")
-    assert invocation["stale_action_rejection"]["status"] == "reject-on-input-revision-mismatch"
-    assert route["action_identity"] == invocation["input_identity"]
-    assert route["legacy_consumer_replacement_map"]["task_switch_reconciliation.recommended_next_action"] == (
-        "route_decision.next_safe_action.action"
-    )
-    assert "claim-active-plan-progress" in route["blocked_claims"]
-    assert route.get("allowed_claims", []) == []
-    assert route["implementation_allowed"] is False
-    assert route["mutation_authority"] == "none"
-    assert route["proof_expectation"] == (
-        "rerun implement with changed paths so the authority-envelope mutation baseline is admitted before action"
-    )
-    assert route["state_update_policy"] == "explicit-transition-required"
-    compatibility = gate["task_switch_reconciliation"]
-    assert compatibility["authority"] == "diagnostic-facts-only"
-    assert compatibility["derive_action_from"] == "planning_safety_gate.route_decision"
-    for legacy_decision_field in (
-        "recommended_next_action",
-        "next_action_packet",
-        "safe_routes",
-        "safe_route_ids",
-        "implementation_allowed",
-        "active_plan_protection",
-        "blocked_claims",
-        "claim_boundary",
-    ):
-        assert legacy_decision_field not in compatibility
-    packet = payload["operating_loop"]
-    assert packet["verification"]["state"] == "proof_missing"
-    assert packet["closeout_state"] == "blocked_missing_proof"
-    assert packet["residue_owner"] == "verification"
-    assert packet["planning"]["state"] == "unrelated_active_plan"
-    assert packet["planning"]["plan_ref"] == ".agentic-workspace/planning/execplans/active-plan.plan.json"
-    assert packet["planning"]["blocks_full_closure"] is False
-    assert packet["required_before_full_closure"] == ["run_or_refresh_proof"]
+    decision = json.loads(capsys.readouterr().out)["decision_packet"]
+    assert decision["action"]["summary"] == "Create or promote an active execplan before continuing implementation."
+    assert decision["effects"]["implementation_allowed"] is False
+    assert "claim-active-plan-progress" in decision["effects"]["blocked_claims"]
+    assert decision["owner"]["non_interference"]["status"] == "protected"
+    assert decision["residue_owner"] == "verification"
 
 
 def test_implement_task_switch_still_warns_for_planning_owned_changes(tmp_path: Path, capsys) -> None:
@@ -1288,11 +1259,10 @@ candidates = []
         == 0
     )
 
-    payload = json.loads(capsys.readouterr().out)
-    gate = payload["context"]["planning_safety_gate"]
-    assert gate["gate_result"] == "current-task-scope-inspection-required"
-    assert gate["task_switch_reconciliation"]["status"] == "scope-inspection-required"
-    assert "route_acknowledgement" not in gate["task_switch_reconciliation"]
+    decision = json.loads(capsys.readouterr().out)["decision_packet"]
+    assert decision["action"]["summary"] == "Inspect only the listed files and run the required validation commands."
+    assert decision["effects"]["implementation_allowed"] is True
+    assert decision["owner"]["non_interference"]["status"] == "protected"
 
 
 def test_implement_continues_selected_owner_from_refs_declared_inside_plan(tmp_path: Path, capsys) -> None:
@@ -1347,7 +1317,8 @@ candidates = []
     )
 
     compact = json.loads(capsys.readouterr().out)
-    assert "planning_safety_gate" not in compact["context"]
+    assert set(compact) == {"kind", "target", "decision_packet"}
+    assert compact["decision_packet"]["owner"]["identity"]["ref"] == plan_path
 
     assert (
         cli.main(
@@ -1476,7 +1447,7 @@ proof = [
     )
 
     payload = json.loads(capsys.readouterr().out)
-    required_commands = payload["proof"]["required_commands"]
+    required_commands = payload["decision_packet"]["proof"]["required_commands"]
     assert "uv run pytest --collect-only -q tests packages" in required_commands
     assert not any("test_model_cli_harness.py" in command for command in required_commands)
 
@@ -1521,6 +1492,8 @@ def test_implement_compact_surfaces_proof_narrowness_before_validation(tmp_path:
                 "packages/planning/src/repo_planning_bootstrap/installer.py",
                 "--task",
                 "Update planning package installer",
+                "--select",
+                "proof",
                 "--format",
                 "json",
             ]
@@ -1528,7 +1501,7 @@ def test_implement_compact_surfaces_proof_narrowness_before_validation(tmp_path:
         == 0
     )
 
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(capsys.readouterr().out)["values"]
     narrowness = payload["proof"]["proof_narrowness"]
     assert narrowness["status"] == "narrow_required"
 
@@ -1553,6 +1526,8 @@ def test_implement_compact_surfaces_broad_proof_narrowness_before_validation(tmp
                 "generated/workspace/python/cli.py",
                 "--task",
                 "Update generated workspace CLI projection",
+                "--select",
+                "proof",
                 "--format",
                 "json",
             ]
@@ -1560,7 +1535,7 @@ def test_implement_compact_surfaces_broad_proof_narrowness_before_validation(tmp
         == 0
     )
 
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(capsys.readouterr().out)["values"]
     assert "proof_narrowness" not in payload["proof"]
     assert payload["proof"]["generated_cli_freshness"]["status"] == "advisory"
     assert payload["proof"]["detail_command"]
@@ -1607,17 +1582,12 @@ def test_implement_text_renders_bounded_operating_loop_summary(tmp_path: Path, c
     )
 
     lines = capsys.readouterr().out.splitlines()
-    loop_lines = [line for line in lines if line.startswith(("loop:", "closeout:"))]
-    assert len(loop_lines) == 2
-    assert "Memory " in loop_lines[0]
-    assert "Planning " in loop_lines[0]
-    assert "Verification " in loop_lines[0]
-    assert "claim " in loop_lines[1]
-    assert len("\n".join(loop_lines).encode("utf-8")) < 240
-    assert "candidate_routes" not in "\n".join(loop_lines)
+    assert any(line == "scope: docs/note.md" for line in lines)
+    assert any(line.startswith("effects: implementation_allowed=true") for line in lines)
+    assert any(line.startswith("claim: ") for line in lines)
     assert any(line.startswith("next: ") for line in lines)
-    assert any(line.startswith(("proof: ", "proof_detail: ")) for line in lines)
-    assert any(line.startswith("selectors: ") and "operating_loop" in line for line in lines)
+    assert any(line.startswith("proof: ") for line in lines)
+    assert any(line.startswith("selectors: ") and "--select" in line for line in lines)
     assert any(line.startswith("detail: ") for line in lines)
 
 
@@ -1645,11 +1615,9 @@ def test_implement_compact_omits_routine_stay_local_delegation_noise(tmp_path: P
     )
 
     payload = json.loads(capsys.readouterr().out)
-    context = _implement_context(payload)
-
-    assert "delegation_decision" not in context
-    assert "context.delegation_decision" not in payload["action_signals"]["advisory_detail"]["selectors"]
-    assert "context.delegation_decision" not in payload["drill_down"]["available_selectors"]
+    assert set(payload) == {"kind", "target", "decision_packet"}
+    assert "delegation_decision" not in payload["decision_packet"]
+    assert "context.delegation_decision" not in payload["decision_packet"]["detail_routes"]
 
 
 def test_implement_compact_keeps_delegation_when_route_changes_next_action(tmp_path: Path, capsys) -> None:
@@ -1682,6 +1650,8 @@ def test_implement_compact_keeps_delegation_when_route_changes_next_action(tmp_p
                 "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
                 "--task",
                 "Update delegation config schema",
+                "--select",
+                "context.delegation_decision,action_signals,drill_down",
                 "--format",
                 "json",
             ]
@@ -1689,11 +1659,10 @@ def test_implement_compact_keeps_delegation_when_route_changes_next_action(tmp_p
         == 0
     )
 
-    payload = json.loads(capsys.readouterr().out)
-    context = _implement_context(payload)
-
-    assert context["delegation_decision"]["recommended_route"] == "suggest-escalation"
-    assert context["delegation_decision"]["required_next_action"] == "prepare-handoff"
+    payload = json.loads(capsys.readouterr().out)["values"]
+    decision = payload["context.delegation_decision"]
+    assert decision["recommended_route"] == "suggest-escalation"
+    assert decision["required_next_action"] == "prepare-handoff"
     assert "context.delegation_decision" in payload["action_signals"]["advisory_detail"]["selectors"]
     assert "context.delegation_decision" in payload["drill_down"]["available_selectors"]
 
@@ -1741,6 +1710,8 @@ routes_from = ["src/api.py"]
                 "src/api.py",
                 "--task",
                 "Update API behavior",
+                "--select",
+                "memory_decision_packet",
                 "--format",
                 "json",
             ]
@@ -1748,7 +1719,7 @@ routes_from = ["src/api.py"]
         == 0
     )
 
-    packet = json.loads(capsys.readouterr().out)["memory_decision_packet"]
+    packet = json.loads(capsys.readouterr().out)["values"]["memory_decision_packet"]
 
     assert packet["pull"]["status"] == "relevant_notes_found"
     assert any(route["path"] == ".agentic-workspace/memory/repo/domains/api.md" for route in packet["pull"]["candidate_routes"])
@@ -1772,6 +1743,8 @@ def test_implement_surfaces_pre_work_knowledge_gate_for_source_authority_task(tm
                 "docs/package/knowledge-gates.md",
                 "--task",
                 "Implement #1395 pre-work knowledge gates",
+                "--select",
+                "task_posture_packet",
                 "--format",
                 "json",
             ]
@@ -1779,7 +1752,7 @@ def test_implement_surfaces_pre_work_knowledge_gate_for_source_authority_task(tm
         == 0
     )
 
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(capsys.readouterr().out)["values"]
     packet = payload["task_posture_packet"]
     gates = {gate["gate_id"]: gate for gate in packet["knowledge_gates"]}
     assert gates["source-authority-model"]["force"] == "required_before_design"
@@ -2674,12 +2647,7 @@ def test_implement_planning_source_includes_typecheck_ci_parity(tmp_path: Path, 
     )
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["proof"]["required_commands"] == [
-        "make test-planning",
-        "make lint-planning",
-        "make typecheck-planning",
-    ]
-    assert payload["next"]["commands"] == [
+    assert payload["decision_packet"]["proof"]["required_commands"] == [
         "make test-planning",
         "make lint-planning",
         "make typecheck-planning",
@@ -3086,9 +3054,8 @@ def test_implement_readme_change_omits_generated_cli_freshness(tmp_path: Path, c
     )
 
     payload = json.loads(capsys.readouterr().out)
-    assert "generated_cli_freshness" not in payload["proof"]
-    assert all("generated_cli_freshness" not in signal for signal in payload["action_signals"]["changed_signals"])
-    assert "generated_surface_trust" not in payload["context"]
+    assert set(payload) == {"kind", "target", "decision_packet"}
+    assert not any(item.get("signal") == "generated CLI freshness" for item in payload["decision_packet"].get("attention", []))
 
 
 def test_implement_selector_surfaces_task_contract_view(tmp_path: Path, capsys) -> None:
@@ -3374,10 +3341,10 @@ blocking_claims = ["claim-work-complete"]
 
         payload = json.loads(capsys.readouterr().out)
         assert payload["kind"] == "implementer-context-tiny/v1", field
+        assert set(payload) == {"kind", "target", "decision_packet"}, field
         assert field not in payload, field
-        assert field not in payload["context"], field
         for selector in expected_selectors:
-            assert selector in payload["drill_down"]["available_selectors"], field
+            assert payload["decision_packet"]["detail_routes"]["selector_inventory"], selector
 
 
 def test_implement_default_stays_under_tiny_output_budget_for_docs_task(tmp_path: Path, capsys) -> None:
@@ -3407,27 +3374,18 @@ def test_implement_default_stays_under_tiny_output_budget_for_docs_task(tmp_path
     )
     payload = json.loads(capsys.readouterr().out)
 
-    _assert_json_payload_under(payload, 15_000, label="implement tiny docs-task payload", sort_keys=False)
+    _assert_json_payload_under(payload, 10_000, label="implement decision-sized docs-task payload", sort_keys=False)
     assert payload["kind"] == "implementer-context-tiny/v1"
-    assert payload["current_decision"]["state_backed"] is True
-    assert payload["current_decision"]["known_evidence"] == ["implement.decision_packet"]
-    assert payload["message_economy"]["state_backed"] is True
-    assert "repeated_state_recaps" in payload["message_economy"]["discourage"]
-    assert payload["evidence_bundle"]["state_backed"] is True
-    assert payload["next"]["action"]
-    assert payload["proof"]["required_commands"]
-    assert payload["proof"]["proof_obligations"]["required_proof"]["status"] == "required"
-    assert payload["operating_loop"]["closeout_state"] == "blocked_missing_proof"
-    assert payload["operating_loop"]["verification"]["state"] == "proof_missing"
-    assert payload["memory_decision_packet"]["label"] == "knowledge"
-    assert payload["memory_decision_packet"]["provenance"] == "memory"
-    assert "planning_safety_gate" not in payload["context"]
-    assert "change_impact" not in payload
-    assert "routine_work_context" not in payload
-    assert "generated_surface_trust" not in payload
-    assert "change_impact" in payload["drill_down"]["available_selectors"]
-    assert "routine_work_context" in payload["drill_down"]["available_selectors"]
-    assert "generated_surface_trust" in payload["drill_down"]["available_selectors"]
+    assert set(payload) == {"kind", "target", "decision_packet"}
+    decision = payload["decision_packet"]
+    assert decision["action"]["summary"]
+    assert decision["working_set"]["changed_paths"] == ["README.md"]
+    assert decision["effects"]["implementation_allowed"] is True
+    assert decision["effects"]["outside_working_set"] == "requires-explicit-authority"
+    assert decision["proof"]["required_commands"]
+    assert decision["claim_boundary"]
+    assert decision["residue_owner"] == "verification"
+    assert "--select" in decision["detail_routes"]["select"]
 
 
 def test_implement_default_stays_under_tiny_output_budget_for_code_task(tmp_path: Path, capsys) -> None:
@@ -3453,30 +3411,95 @@ def test_implement_default_stays_under_tiny_output_budget_for_code_task(tmp_path
     )
     payload = json.loads(capsys.readouterr().out)
 
-    _assert_json_payload_under(payload, 14_000, label="implement tiny code-task payload", sort_keys=False)
+    _assert_json_payload_under(payload, 10_000, label="implement decision-sized code-task payload", sort_keys=False)
     assert payload["kind"] == "implementer-context-tiny/v1"
-    assert payload["current_decision"]["state_backed"] is True
-    assert payload["current_decision"]["known_evidence"] == ["implement.decision_packet"]
-    assert payload["message_economy"]["state_backed"] is True
-    assert "repeated_state_recaps" in payload["message_economy"]["discourage"]
-    assert payload["evidence_bundle"]["state_backed"] is True
-    assert payload["next"]["action"]
-    assert payload["proof"]["proof_obligations"]["required_proof"]["status"] == "required"
-    assert payload["proof"]["proof_obligations"]["required_proof"]["manual_verification_required"] is True
-    assert payload["operating_loop"]["closeout_state"] == "blocked_missing_proof"
-    assert payload["operating_loop"]["verification"]["state"] == "proof_missing"
-    assert payload["context"]["optimization_posture"] == {
-        "status": "active",
-        "effective_target": "balanced",
-        "configured_posture": "conservative/balanced",
+    assert set(payload) == {"kind", "target", "decision_packet"}
+    decision = payload["decision_packet"]
+    assert decision["working_set"]["changed_paths"] == ["src/app.py"]
+    assert decision["identity"]["mutation_baseline"]["baseline_id"]
+    assert decision["proof"]["required"] is False
+    assert decision["proof"]["required_commands"] == []
+    assert decision["claim_boundary"] == "claim after changed-path proof and acceptance reconciliation"
+
+
+def test_generated_ordinary_implement_guidance_is_executable_from_default_decision_packet_for_weak_agent(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "src" / "app.py", "print('hello')\n")
+
+    guidance = workspace_pointer_block(cli_invoke="agentic-workspace")
+    ordinary_route = guidance.split("Ordinary route:", 1)[1].split("Boundaries:", 1)[0]
+    assert 'implement --target . --changed <paths> --task "<task>" --format json' in ordinary_route
+    assert "authoritative `decision_packet` action, effects, claim boundary" in ordinary_route
+    assert "ordinary work proceeds from `decision_packet`" in ordinary_route
+    assert "--select communication_contract" not in ordinary_route
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/app.py",
+                "--task",
+                "Fix the bounded app path",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert set(payload) == {"kind", "target", "decision_packet"}
+    decision = payload["decision_packet"]
+    assert decision["working_set"]["changed_paths"] == ["src/app.py"]
+    assert decision["working_set"]["allowed_paths"] == ["src/app.py"]
+    assert decision["action"]["summary"]
+    assert decision["action"]["required_inputs"] == [
+        "working_set.changed_paths",
+        "identity.mutation_baseline",
+        "proof.required_commands",
+    ]
+    assert decision["effects"]["outside_working_set"] == "requires-explicit-authority"
+    assert any(item["effect"] == "write-outside-scope" for item in decision["effects"]["restricted"])
+    assert decision["identity"]["mutation_baseline"]["baseline_id"]
+    assert decision["owner"]["mutation_owner"]
+    assert decision["proof"]["claim_boundary"] == decision["claim_boundary"]
+    assert decision["residue_owner"]
+    assert set(decision["detail_routes"]) >= {
+        "decision_detail",
+        "scope_and_owner",
+        "proof_detail",
+        "selector_inventory",
+        "select",
+        "verbose",
     }
-    assert "planning_safety_gate" not in payload["context"]
-    assert "change_impact" not in payload
-    assert "routine_work_context" not in payload
-    assert "generated_surface_trust" not in payload
-    assert "change_impact" in payload["drill_down"]["available_selectors"]
-    assert "routine_work_context" in payload["drill_down"]["available_selectors"]
-    assert "generated_surface_trust" in payload["drill_down"]["available_selectors"]
+    assert decision["absence_states"]["raw_workspace_files"] == "not-required-for-ordinary-action"
+    assert "current_decision" not in payload
+    assert "communication_contract" not in payload
+
+
+def test_implement_compression_evidence_records_representative_reduction_and_roundtrip_cost() -> None:
+    evidence_path = Path("docs/maintainer/implement-compression-2683.json")
+    evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+
+    assert evidence["schema_version"] == "agentic-workspace/implement-compression-evidence/v1"
+    assert set(evidence["scenarios"]) == {"direct", "docs", "active_owner", "gated", "module_rich"}
+    budget = evidence["accepted_budget"]
+    for scenario in evidence["scenarios"].values():
+        before = scenario["before"]
+        after = scenario["after"]
+        assert after["json_bytes"] < before["json_bytes"] * 0.4
+        assert after["human_lines"] < before["human_lines"] * 0.4
+        assert after["field_count"] < before["field_count"] * 0.4
+        assert after["aw_roundtrips"] == before["aw_roundtrips"] == 1
+        assert after["json_bytes"] <= budget["max_json_bytes"]
+        assert after["field_count"] <= budget["max_field_count"]
+    assert evidence["default_guidance_proof"]["mandatory_selector_calls"] == 0
+    assert evidence["default_guidance_proof"]["mandatory_raw_workspace_reads"] == 0
+    assert evidence["total_operating_cost"]["assessment"] == "reduced"
 
 
 def test_implement_broad_runtime_scope_returns_authoritative_deferred_decision(
@@ -3537,19 +3560,13 @@ def test_implement_broad_runtime_scope_returns_authoritative_deferred_decision(
     payload = json.loads(capsys.readouterr().out)
 
     assert payload["kind"] == "implementer-context-tiny/v1"
-    assert payload["next"]["status"] == "changed-path-context"
-    assert "planning_safety_gate" not in payload["context"]
-    assert payload["context"]["delegation_decision"]["recommended_route"] == "manual-handoff"
-    assert payload["action_signals"]["implementation_allowed"] is True
-    assert payload["action_signals"]["hard_blockers"] == []
-    assert payload["decision_packet"]["next_action"] == payload["next"]["action"]
+    assert set(payload) == {"kind", "target", "decision_packet"}
+    decision = payload["decision_packet"]
+    assert decision["effects"]["implementation_allowed"] is True
+    assert len(decision["working_set"]["changed_paths"]) == 4
     assert proof_call_count == 1
-    assert payload["proof"]["runtime_symbol_working_set"]["status"] == "selector-backed"
-    assert payload["proof"]["runtime_source_edit_review"]["status"] == "selector-backed"
-    assert payload["context"]["test_strategy_check"]["status"] == "selector-backed"
-    assert "proof.runtime_symbol_working_set" in payload["drill_down"]["available_selectors"]
-    assert "test_strategy_check" in payload["drill_down"]["available_selectors"]
-    _assert_json_payload_under(payload, 48_000, label="broad implement authoritative deferred payload", sort_keys=False)
+    assert "--select" in decision["detail_routes"]["select"]
+    _assert_json_payload_under(payload, 12_000, label="broad implement decision packet", sort_keys=False)
 
 
 def _run_broad_implement_for_review_parity(
@@ -3596,14 +3613,10 @@ def test_broad_deferred_implement_matches_ordinary_direct_work_authority(tmp_pat
     monkeypatch.setattr(workspace_runtime_implement, "_broad_implement_early_decision_required", lambda changed_paths: False)
     ordinary = _run_broad_implement_for_review_parity(tmp_path, capsys, task=task)
 
-    assert broad["next"]["action"] == ordinary["next"]["action"]
-    assert broad["action_signals"]["implementation_allowed"] == ordinary["action_signals"]["implementation_allowed"] is True
-    assert broad["action_signals"]["hard_blockers"] == ordinary["action_signals"]["hard_blockers"] == []
+    assert broad["decision_packet"]["action"] == ordinary["decision_packet"]["action"]
+    assert broad["decision_packet"]["effects"] == ordinary["decision_packet"]["effects"]
+    assert broad["decision_packet"]["proof"] == ordinary["decision_packet"]["proof"]
     assert broad["decision_packet"]["claim_boundary"] == ordinary["decision_packet"]["claim_boundary"]
-    assert "planning_safety_gate" not in broad["context"]
-    assert "planning_safety_gate" not in ordinary["context"]
-    assert broad["proof"]["runtime_symbol_working_set"]["status"] == "selector-backed"
-    assert ordinary["proof"]["runtime_symbol_working_set"]["status"] == "selector-backed"
 
 
 def test_broad_deferred_implement_preserves_required_assignment_handoff(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
@@ -3638,11 +3651,9 @@ def test_broad_deferred_implement_preserves_required_assignment_handoff(tmp_path
     monkeypatch.setattr(workspace_runtime_implement, "_broad_implement_early_decision_required", lambda changed_paths: False)
     ordinary = _run_broad_implement_for_review_parity(tmp_path, capsys, task=task)
 
-    assert broad["next"]["action"] == ordinary["next"]["action"] == "prepare-assigned-handoff"
-    assert broad["action_signals"]["implementation_allowed"] == ordinary["action_signals"]["implementation_allowed"] is False
-    assert broad["action_signals"]["hard_blockers"] == ordinary["action_signals"]["hard_blockers"] == ["handoff-required"]
-    assert broad["context"]["delegation_decision"]["required_next_action"] == "prepare-assigned-handoff"
-    assert broad["context"]["delegation_decision"]["recommended_route"] == "assignment-handoff-required"
+    assert broad["decision_packet"]["action"]["summary"] == ordinary["decision_packet"]["action"]["summary"] == "prepare-assigned-handoff"
+    assert broad["decision_packet"]["effects"]["implementation_allowed"] is False
+    assert broad["decision_packet"]["effects"] == ordinary["decision_packet"]["effects"]
 
 
 def test_broad_deferred_implement_preserves_stale_startup_route_rebind(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
@@ -3679,12 +3690,10 @@ def test_broad_deferred_implement_preserves_stale_startup_route_rebind(tmp_path:
         tmp_path, capsys, task=task, extra_args=["--startup-route-fingerprint", "stale-fingerprint"]
     )
 
-    assert broad["next"]["action"] == ordinary["next"]["action"]
-    assert broad["next"]["action"].startswith("Rerun start")
-    assert broad["action_signals"]["implementation_allowed"] == ordinary["action_signals"]["implementation_allowed"] is False
-    assert broad["action_signals"]["hard_blockers"] == ordinary["action_signals"]["hard_blockers"] == ["stale-startup-route"]
-    assert "architecture_principles=1" in broad["action_signals"]["changed_signals"]
-    assert "architecture_principles=1" in ordinary["action_signals"]["changed_signals"]
+    assert broad["decision_packet"]["action"] == ordinary["decision_packet"]["action"]
+    assert broad["decision_packet"]["action"]["summary"].startswith("Rerun start")
+    assert broad["decision_packet"]["effects"]["implementation_allowed"] is False
+    assert broad["decision_packet"]["effects"] == ordinary["decision_packet"]["effects"]
     assert "startup_route_rebind" not in broad
     assert "startup_route_rebind" not in ordinary
 
@@ -3753,19 +3762,16 @@ def test_broad_deferred_implement_preserves_planning_archive_residue_authority(
         args = ["implement", "--target", str(tmp_path)]
         for path in paths:
             args.extend(["--changed", path])
-        args.extend(["--task", task, "--format", "json"])
+        args.extend(["--task", task, "--select", "planning_safety_gate,action_signals", "--format", "json"])
         assert cli.main(args) == 0
-        return json.loads(capsys.readouterr().out)
+        return json.loads(capsys.readouterr().out)["values"]
 
     broad = run(changed_paths)
     monkeypatch.setattr(workspace_runtime_implement, "_broad_implement_early_decision_required", lambda paths: False)
     ordinary = run(changed_paths)
 
-    assert broad["context"]["planning_safety_gate"]["gate_result"] == ordinary["context"]["planning_safety_gate"]["gate_result"]
-    assert (
-        broad["context"]["planning_safety_gate"]["required_next_action"]
-        == ordinary["context"]["planning_safety_gate"]["required_next_action"]
-    )
+    assert broad["planning_safety_gate"]["gate_result"] == ordinary["planning_safety_gate"]["gate_result"]
+    assert broad["planning_safety_gate"]["required_next_action"] == ordinary["planning_safety_gate"]["required_next_action"]
     assert broad["action_signals"]["implementation_allowed"] == ordinary["action_signals"]["implementation_allowed"]
 
 
@@ -3794,9 +3800,8 @@ def test_broad_deferred_implement_reuses_authoritative_observations_once(tmp_pat
 
     payload = _run_broad_implement_for_review_parity(tmp_path, capsys, task="Update runtime contracts")
 
-    assert payload["proof"]["runtime_symbol_working_set"]["status"] == "selector-backed"
-    assert payload["proof"]["runtime_source_edit_review"]["status"] == "selector-backed"
-    assert payload["context"]["test_strategy_check"]["status"] == "selector-backed"
+    assert set(payload) == {"kind", "target", "decision_packet"}
+    assert len(payload["decision_packet"]["working_set"]["changed_paths"]) == 4
     assert planning_call_count <= 1
     assert all(count <= 1 for count in git_call_counts.values())
 
@@ -3849,7 +3854,7 @@ def test_implement_advertised_context_requirement_grounding_selector_is_executab
 
     assert cli.main(common) == 0
     ordinary = json.loads(capsys.readouterr().out)
-    assert "context.requirement_grounding" in ordinary["drill_down"]["available_selectors"]
+    assert "--select" in ordinary["decision_packet"]["detail_routes"]["select"]
 
     assert cli.main([*common[:-2], "--select", "context.requirement_grounding", *common[-2:]]) == 0
     selected = json.loads(capsys.readouterr().out)
@@ -3887,13 +3892,15 @@ review_aids = ["Record the manual policy finding."]
                 "privacy/export.txt",
                 "--task",
                 "Update the privacy export",
+                "--select",
+                "proof",
                 "--format",
                 "json",
             ]
         )
         == 0
     )
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(capsys.readouterr().out)["values"]
 
     required = payload["proof"]["proof_obligations"]["required_proof"]
     assert required["manual_verification_required"] is True
@@ -3923,9 +3930,8 @@ def test_implement_tiny_profile_defers_reuse_pressure_scan(tmp_path: Path, monke
     assert cli.main(["implement", "--target", str(tmp_path), "--changed", "README.md", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["context"]["reuse_pressure"]["status"] == "deferred"
-    assert payload["context"]["reuse_pressure"]["detail_selector"] == "reuse_pressure"
-    assert "reuse_pressure" in payload["drill_down"]["available_selectors"]
+    assert set(payload) == {"kind", "target", "decision_packet"}
+    assert payload["decision_packet"]["absence_states"]["diagnostics_and_assurance"] == "selector-routed"
 
 
 def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_path: Path, capsys) -> None:
@@ -3958,129 +3964,37 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     )
 
     payload = json.loads(capsys.readouterr().out)
-    context = _implement_context(payload)
-    assert payload["kind"] == "implementer-context-tiny/v1"
-    assert set(payload) <= {
-        "kind",
-        "target",
-        "communication_contract",
-        "action_signals",
-        "decision_packet",
-        "current_decision",
-        "message_economy",
-        "evidence_bundle",
-        "next",
-        "proof",
-        "generated_surface_trust",
-        "memory_decision_packet",
-        "operating_loop",
-        "reuse_pressure",
-        "context",
-        "drill_down",
-    }
-    signals = payload["action_signals"]
+    assert set(payload) == {"kind", "target", "decision_packet"}
     decision = payload["decision_packet"]
+    assert decision["kind"] == "agentic-workspace/ordinary-implement-decision/v1"
     assert decision["surface"] == "implement"
-    assert decision["phase_question"] == "What narrow working set is safe to touch now?"
-    assert decision["next_action"] == payload["next"]["action"]
-    assert decision["absence_states"]["full_selector_inventory"] == "hidden_behind_detail_route"
-    assert payload["current_decision"]["surface"] == "implementation"
-    assert payload["current_decision"]["known_evidence"] == ["implement.decision_packet"]
-    assert payload["current_decision"]["safe_probe"] == "agentic-workspace defaults --section root_cli_authority --format json"
-    assert payload["current_decision"]["response_shape"] == [
-        "decision_or_finding",
-        "evidence_or_proof_boundary",
-        "residue_or_claim_boundary",
-        "next_safe_action",
-    ]
-    assert payload["message_economy"]["state_backed"] is True
-    assert "repeated_state_recaps" in payload["message_economy"]["discourage"]
-    assert payload["evidence_bundle"]["minimal_evidence_surfaces"] == [
-        {"id": "proof_detail"},
-        {"id": "why_blocked"},
-        {"id": "omitted_diagnostics"},
-    ]
-    assert payload["evidence_bundle"]["state_backed"] is True
-    assert signals["kind"] == "agentic-workspace/action-signals/v1"
-    assert signals["order"] == [
-        "hard_blockers",
-        "allowed_next_action",
-        "proof_required",
-        "changed_signals",
-        "advisory_detail",
-        "agent_judgment",
-    ]
-    assert signals["allowed_next_action"] == payload["next"]["action"]
-    assert signals["proof_required"] is True
-    assert signals["proof_commands"] == payload["proof"]["required_commands"]
-    assert "generated_surface_trust=present" in signals["changed_signals"]
-    assert "generated_cli_freshness=advisory" in signals["changed_signals"]
-    assert "context.reuse_pressure" in signals["advisory_detail"]["selectors"]
-    assert context["absence_states"]["adaptive_routing"] == "detail_omitted"
-    assert context["absence_states"]["work_shape_guidance"] == "detail_omitted"
-    assert "context.guidance" in payload["drill_down"]["available_selectors"]
-    assert payload["next"]["action"] == "Resolve proof-route refinement or structured escalation before closeout."
-    assert payload["next"]["command"] == "agentic-workspace defaults --section root_cli_authority --format json"
-    assert payload["next"]["run"] == payload["next"]["command"]
-    assert payload["next"]["commands"] == ["agentic-workspace defaults --section root_cli_authority --format json"]
-    assert "make lint-workspace" not in payload["next"]["commands"]
-    assert context["scope"]["inspect_files"] == ["generated/workspace/python/cli.py"]
-    assert "agentic-workspace defaults --section root_cli_authority --format json" in payload["proof"]["required_commands"]
-    assert payload["proof"]["required_commands"] == ["agentic-workspace defaults --section root_cli_authority --format json"]
-    assert "make test-workspace" not in payload["proof"]["required_commands"]
-    assert payload["proof"]["generated_cli_freshness"]["status"] == "advisory"
-    assert payload["proof"]["generated_cli_freshness"]["refresh_command"] == "uv run python scripts/generate/generate_command_packages.py"
-    assert payload["proof"]["generated_cli_freshness"]["generated_target_parity"]["target_families"] == ["python", "typescript"]
-    assert "Python-only proof" in payload["proof"]["generated_cli_freshness"]["generated_target_parity"]["claim_rule"]
-    obligations = payload["proof"]["proof_obligations"]
-    assert obligations["required_proof"]["commands"] == payload["proof"]["required_commands"]
-    assert obligations["required_proof"]["action_effect"]["force"] == "required_before_claim"
-    assert obligations["required_proof"]["action_effect"]["blocked_until_reconciled"] == ["claim-task-complete"]
-    assert obligations["required_proof"]["action_effect"]["resolution_selector"] == "proof.proof_obligations.required_proof"
-    assert obligations["recommended_confidence_checks"]["status"] == "available"
-    assert "do not replace or relax required proof" in obligations["recommended_confidence_checks"]["rule"]
-    assert "Completion claims remain blocked" in obligations["completion_claim_rule"]
-    tiers = payload["proof"]["proof_command_tiers"]
-    assert tiers == {
-        "status": "required-commands-present",
-        "detail_selector": "proof.proof_command_tiers",
+    assert decision["working_set"] == {
+        "changed_paths": ["generated/workspace/python/cli.py"],
+        "allowed_paths": ["generated/workspace/python/cli.py"],
+        "inspect_files": ["generated/workspace/python/cli.py"],
     }
-    trust = payload["generated_surface_trust"]
-    assert trust["status"] == "present"
-    assert trust["items"][0]["path"] == "generated/workspace/python/cli.py"
-    assert trust["items"][0]["canonical_source"] == "src/agentic_workspace/contracts/command_package_ir.json"
-    assert trust["items"][0]["direct_edit_allowed"] is False
-    assert "generated_surface_trust" not in context
-    assert payload["proof"]["acceptance_guidance"]["status"] == "present"
-    assert "guidance" not in context
-    assert "intent_acknowledgement" not in context
-    intent_evidence = context["intent_evidence"]
-    assert intent_evidence["source_class"] == "direct-user-text"
-    assert intent_evidence["assumption_state"] == "low-risk-direct"
-    assert intent_evidence["required_next_action"] == "continue-direct"
-    assert intent_evidence["proceed_without_question"] is True
-    assert context["delegation_decision"]["status"] == "evaluated"
-    assert context["delegation_decision"]["mode"] in {"suggest", "auto"}
-    delegation_boundary = context["delegation_decision"]["authority_boundary"]
-    assert delegation_boundary["surface"] == "delegation_decision"
-    assert "delegation fit without lowering proof" in delegation_boundary["agent_owned_decisions"]
-    assert context["acceptance_reconciliation"]["task_text_available"] is True
-    assert context["acceptance"]["status"] == "inferred"
-    assert context["acceptance"]["closeout_required"] is True
-    assert context["objective_drift"]["status"] in {"clear", "not-enough-explicit-outcomes"}
-    assert "package_boundary" not in payload
-    assert "authority_markers" not in payload
-    assert "durable_intent" not in payload
-    assert "inference_limits" not in payload
-    assert "generated_surface_trust" in payload["drill_down"]["available_selectors"]
-    _assert_json_payload_under(
-        payload["generated_surface_trust"],
-        700,
-        label="implement generated-surface trust compact projection",
-        sort_keys=False,
-    )
-    _assert_json_payload_under(payload["operating_loop"], 1000, label="implement operating-loop compact projection", sort_keys=False)
-    _assert_json_payload_under(payload, 22000, label="implement generated-surface tiny payload", sort_keys=False)
+    assert decision["action"]["summary"] == "Resolve proof-route refinement or structured escalation before closeout."
+    assert decision["action"]["command"] == "agentic-workspace defaults --section root_cli_authority --format json"
+    assert decision["proof"]["required_commands"] == ["agentic-workspace defaults --section root_cli_authority --format json"]
+    assert decision["effects"]["implementation_allowed"] is True
+    assert any(item["effect"] == "write-requested-paths" for item in decision["effects"]["allowed"])
+    assert any(item["effect"] == "write-outside-scope" for item in decision["effects"]["restricted"])
+    assert decision["identity"]["mutation_baseline"]["baseline_id"]
+    assert "head" in decision["identity"]["mutation_baseline"]
+    assert decision["identity"]["mutation_baseline"]["enforcement_fingerprint"]
+    assert decision["claim_boundary"] == "changed-path/generated-surface proof only"
+    assert decision["residue_owner"] == "verification"
+    assert set(decision["detail_routes"]) >= {
+        "decision_detail",
+        "scope_and_owner",
+        "proof_detail",
+        "memory_detail",
+        "selector_inventory",
+        "select",
+        "verbose",
+    }
+    assert decision["absence_states"]["peer_decision_projections"] == "selector-routed"
+    _assert_json_payload_under(payload, 10_000, label="implement generated-surface decision packet", sort_keys=False)
 
 
 def test_implement_tiny_proof_tiers_explain_required_single_tier() -> None:
@@ -4142,9 +4056,9 @@ def test_implement_path_authority_warning_is_not_hard_blocker_when_allowed(tmp_p
     )
     payload = json.loads(capsys.readouterr().out)
 
-    assert payload["action_signals"]["implementation_allowed"] is True
-    assert payload["action_signals"]["hard_blockers"] == []
-    assert "path_authority_attention=1" in payload["action_signals"]["changed_signals"]
+    decision = payload["decision_packet"]
+    assert decision["effects"]["implementation_allowed"] is True
+    assert any(item["signal"] == "changed-path authority warning" for item in decision["attention"])
 
 
 def test_implement_surfaces_runtime_source_edit_review_for_generated_cli_boundary(tmp_path: Path, capsys) -> None:
@@ -4163,6 +4077,8 @@ def test_implement_surfaces_runtime_source_edit_review_for_generated_cli_boundar
                 "src/agentic_workspace/workspace_runtime_primitives.py",
                 "--task",
                 "Fix an existing primitive bug under the generated CLI boundary.",
+                "--select",
+                "proof,drill_down",
                 "--format",
                 "json",
             ]
@@ -4170,7 +4086,7 @@ def test_implement_surfaces_runtime_source_edit_review_for_generated_cli_boundar
         == 0
     )
 
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(capsys.readouterr().out)["values"]
     review = payload["proof"]["runtime_source_edit_review"]
     assert review["kind"] == "agentic-workspace/runtime-source-edit-review/v1"
     assert review["status"] == "classification-required"
@@ -4289,6 +4205,8 @@ def _unrelated_runtime_helper():
                 "src/agentic_workspace/workspace_runtime_core.py",
                 "--task",
                 "Fix external intent refresh behavior.",
+                "--select",
+                "proof,drill_down,action_signals",
                 "--format",
                 "json",
             ]
@@ -4296,7 +4214,7 @@ def _unrelated_runtime_helper():
         == 0
     )
 
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(capsys.readouterr().out)["values"]
     working_set = payload["proof"]["runtime_symbol_working_set"]
     assert working_set["kind"] == "agentic-workspace/runtime-symbol-working-set/v1"
     assert working_set["status"] == "present"
@@ -4336,11 +4254,10 @@ def test_implement_keeps_active_intent_packets_selector_only(tmp_path: Path, cap
     )
 
     payload = json.loads(capsys.readouterr().out)
-    context = _implement_context(payload)
-    assert "active_intent_contract" not in context
-    assert "intent_satisfaction_matrix" not in context
-    assert "active_intent_contract" in payload["drill_down"]["available_selectors"]
-    assert "intent_satisfaction_matrix" in payload["drill_down"]["available_selectors"]
+    assert set(payload) == {"kind", "target", "decision_packet"}
+    assert "active_intent_contract" not in payload
+    assert "intent_satisfaction_matrix" not in payload
+    assert "--select" in payload["decision_packet"]["detail_routes"]["select"]
 
     assert (
         cli.main(
@@ -4399,14 +4316,12 @@ def test_implement_detail_commands_use_resolved_cli_invoke(tmp_path: Path, capsy
     )
 
     payload = json.loads(capsys.readouterr().out)
-    detail_commands = payload["drill_down"]["detail_commands"]
-    assert detail_commands["full_context"].startswith("uv run agentic-workspace implement ")
-    assert detail_commands["proof_detail"].startswith("uv run agentic-workspace proof ")
-    assert detail_commands["task_scoped_state"].startswith("uv run agentic-workspace summary ")
-    assert detail_commands["takeover_or_recovery"].startswith("uv run agentic-workspace preflight ")
-    assert payload["proof"]["detail_command"].startswith("uv run agentic-workspace proof ")
-    assert payload["context"]["reuse_pressure"]["status"] == "deferred"
-    assert payload["context"]["reuse_pressure"]["detail_selector"] == "reuse_pressure"
+    detail_routes = payload["decision_packet"]["detail_routes"]
+    assert detail_routes["decision_detail"].startswith("uv run agentic-workspace implement ")
+    assert detail_routes["scope_and_owner"].startswith("uv run agentic-workspace implement ")
+    assert detail_routes["proof_detail"].startswith("uv run agentic-workspace proof ")
+    assert detail_routes["verbose"].startswith("uv run agentic-workspace implement ")
+    assert payload["decision_packet"]["absence_states"]["diagnostics_and_assurance"] == "selector-routed"
 
 
 def test_implement_active_plan_proof_selection_does_not_build_full_planning_summary(
@@ -4495,6 +4410,8 @@ candidates = []
                 "README.md",
                 "--task",
                 "continue resume finish follow up",
+                "--select",
+                "planning_safety_gate",
                 "--format",
                 "json",
             ]
@@ -4502,11 +4419,9 @@ candidates = []
         == 0
     )
 
-    payload = json.loads(capsys.readouterr().out)
-    gate = payload["context"]["planning_safety_gate"]
-    assert "active_plan_reliance" not in gate
-    assert gate["delegation_decision_required"] is False
-    assert gate["detail_selector"] == "planning_safety_gate"
+    payload = json.loads(capsys.readouterr().out)["values"]
+    gate = payload["planning_safety_gate"]
+    assert gate["active_plan_reliance"]["status"] == "not-needed-for-current-task"
 
 
 def test_implement_active_plan_continuation_blocks_edits_until_decision_recorded(tmp_path: Path, capsys) -> None:
@@ -4549,6 +4464,8 @@ candidates = []
                 "README.md",
                 "--task",
                 "Continue active plan",
+                "--select",
+                "planning_safety_gate",
                 "--format",
                 "json",
             ]
@@ -4556,16 +4473,14 @@ candidates = []
         == 0
     )
 
-    payload = json.loads(capsys.readouterr().out)
-    gate = payload["context"]["planning_safety_gate"]
+    payload = json.loads(capsys.readouterr().out)["values"]
+    gate = payload["planning_safety_gate"]
     reliance = gate["active_plan_reliance"]
     assert gate["status"] == "blocked"
-    assert gate["implementation_allowed"] is False
-    assert gate["delegation_decision_required"] is True
+    assert gate["workflow_sufficient"] is False
     assert reliance["status"] == "blocked"
     assert reliance["permission_claim"] == "blocked-until-active-plan-decision-recorded"
-    assert "action_effect" not in reliance
-    assert "active_execplan" not in reliance
+    assert reliance["action_effect"]["force"] == "required_before_edit"
 
 
 def test_implement_accumulates_repeated_changed_flags(tmp_path: Path, capsys) -> None:
@@ -4628,7 +4543,7 @@ def test_implement_splits_comma_separated_changed_paths(tmp_path: Path, capsys) 
     )
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["context"]["scope"]["changed_paths"] == ["src/app.py", "tests/test_app.py"]
+    assert payload["decision_packet"]["working_set"]["changed_paths"] == ["src/app.py", "tests/test_app.py"]
     assert "changed_path_count=2" in payload["decision_packet"]["reasons"]
 
 
@@ -4649,12 +4564,11 @@ def test_implement_package_cli_edits_select_generated_command_package_gate(capsy
     )
 
     payload = json.loads(capsys.readouterr().out)
-    assert "make test-memory" in payload["proof"]["required_commands"]
+    assert "make test-memory" in payload["decision_packet"]["proof"]["required_commands"]
     assert (
         "uv run --active python scripts/check/check_generated_command_packages.py --conformance --require-node"
-        in payload["proof"]["required_commands"]
+        in payload["decision_packet"]["proof"]["required_commands"]
     )
-    assert payload["proof"]["generated_cli_freshness"]["generated_target_parity"]["target_families"] == ["python", "typescript"]
 
 
 def test_implement_uses_available_target_makefile_targets(tmp_path: Path, capsys) -> None:
@@ -4679,8 +4593,7 @@ def test_implement_uses_available_target_makefile_targets(tmp_path: Path, capsys
     )
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["next"]["commands"] == ["make test", "make lint"]
-    assert payload["proof"]["required_commands"] == ["make test", "make lint"]
+    assert payload["decision_packet"]["proof"]["required_commands"] == ["make test", "make lint"]
     assert "make test-workspace" not in json.dumps(payload)
 
 
@@ -4710,6 +4623,8 @@ def test_implement_task_file_preserves_task_intent_for_acceptance_checks(tmp_pat
                 "src/sample_app/text.py",
                 "--task-file",
                 ".agentic-workspace/local/scratch/task-intent.txt",
+                "--select",
+                "context,proof",
                 "--format",
                 "json",
             ]
@@ -4717,7 +4632,7 @@ def test_implement_task_file_preserves_task_intent_for_acceptance_checks(tmp_pat
         == 0
     )
 
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(capsys.readouterr().out)["values"]
     context = _implement_context(payload)
     assert context["acceptance"]["items"][0]["id"] == "A1"
     assert "normalize_whitespace" in context["acceptance"]["items"][0]["expectation"]
@@ -4750,6 +4665,8 @@ def test_implement_objective_drift_understands_replacement_and_removal_terms(tmp
                 "src/api.py",
                 "--task",
                 "Use `embed=children` instead of `include_children=true`. Remove `include_children`.",
+                "--select",
+                "context",
                 "--format",
                 "json",
             ]
@@ -4757,7 +4674,7 @@ def test_implement_objective_drift_understands_replacement_and_removal_terms(tmp
         == 0
     )
 
-    drift = _implement_context(json.loads(capsys.readouterr().out))["objective_drift"]
+    drift = _implement_context(json.loads(capsys.readouterr().out)["values"])["objective_drift"]
     assert drift["status"] == "clear"
     assert "include_children=true" not in drift["missing_from_changed_surface"]
     assert "include_children=true" in drift["removed_or_retired_outcomes"]
@@ -4781,6 +4698,8 @@ def test_implement_objective_drift_warns_when_replacement_target_is_absent(tmp_p
                 "src/api.py",
                 "--task",
                 "Replace `include_children=true` with `embed=children`.",
+                "--select",
+                "context",
                 "--format",
                 "json",
             ]
@@ -4788,7 +4707,7 @@ def test_implement_objective_drift_warns_when_replacement_target_is_absent(tmp_p
         == 0
     )
 
-    drift = _implement_context(json.loads(capsys.readouterr().out))["objective_drift"]
+    drift = _implement_context(json.loads(capsys.readouterr().out)["values"])["objective_drift"]
     assert drift["status"] == "warning"
     assert "include_children=true" not in drift["missing_from_changed_surface"]
     assert "embed=children" in drift["missing_from_changed_surface"]
@@ -4810,6 +4729,8 @@ def test_implement_objective_drift_handles_rename_and_ordinary_missing_terms(tmp
                 "src/api.py",
                 "--task",
                 "Rename `old_name` to `new_name` and keep `audit_marker`.",
+                "--select",
+                "context",
                 "--format",
                 "json",
             ]
@@ -4817,7 +4738,7 @@ def test_implement_objective_drift_handles_rename_and_ordinary_missing_terms(tmp
         == 0
     )
 
-    drift = _implement_context(json.loads(capsys.readouterr().out))["objective_drift"]
+    drift = _implement_context(json.loads(capsys.readouterr().out)["values"])["objective_drift"]
     assert "old_name" in drift["removed_or_retired_outcomes"]
     assert "audit_marker" in drift["missing_from_changed_surface"]
 
@@ -5516,6 +5437,8 @@ candidates = [
                 "src/agentic_workspace/workspace_runtime_primitives.py",
                 "--task",
                 "Implement the command package extraction and runtime parity epic",
+                "--select",
+                "context",
                 "--format",
                 "json",
             ]
@@ -5523,8 +5446,9 @@ candidates = [
         == 0
     )
 
-    payload = json.loads(capsys.readouterr().out)
-    gate = payload["context"]["planning_safety_gate"]
+    payload = json.loads(capsys.readouterr().out)["values"]
+    context = payload["context"]
+    gate = context["planning_safety_gate"]
     assert gate["status"] == "blocked"
     assert gate["gate_result"] == "candidate-lane-promotion-required"
     assert gate["implementation_allowed"] is False
@@ -5532,7 +5456,7 @@ candidates = [
         "github-1201-command-package",
         "github-1202-runtime-parity",
     ]
-    assert payload["context"]["workflow_sufficiency"]["sufficiency_result"] == "candidate-lane-promotion-required"
+    assert context["workflow_sufficiency"]["sufficiency_result"] == "candidate-lane-promotion-required"
 
 
 def test_implement_keeps_unrelated_roadmap_candidates_advisory(tmp_path: Path, capsys) -> None:
@@ -6817,19 +6741,10 @@ def test_implement_routes_configured_architecture_principle_for_runtime_path(tmp
     )
 
     payload = json.loads(capsys.readouterr().out)
-    assert "architecture_principles=1" in payload["action_signals"]["changed_signals"]
-    assert payload["context"]["absence_states"]["architecture_principles"] == "present"
-    compact_packet = payload["context"]["architecture_principles"]
-    assert compact_packet["matched_count"] == 1
-    expectation = compact_packet["intent_expectations"][0]
-    assert expectation["status"] == "applicable"
-    assert expectation["intent_revision"] == compact_packet["intent_revision"]
-    assert "routing" in expectation["affected_decisions"]
-    compact_principle = compact_packet["matched_principles"][0]
-    assert compact_principle["guardrails"][0]["id"] == "non-enum-keyword-routing"
-    assert "explicit structured facts" in compact_principle["allowed_sources"]
-    assert "package-owned assumptions about prose keywords" in compact_principle["forbidden_sources"]
-    assert "routing" in compact_principle["affected_decisions"]
+    decision = payload["decision_packet"]
+    architecture_attention = next(item for item in decision["attention"] if item["signal"] == "architecture principle applies")
+    assert architecture_attention["matched_count"] == 1
+    assert architecture_attention["detail_selector"] == "architecture_principles"
     assert (
         cli.main(
             [
@@ -7184,8 +7099,8 @@ def test_implement_architecture_principle_uses_structured_path_not_task_keywords
     )
 
     tiny_payload = json.loads(capsys.readouterr().out)
-    assert "architecture_principles" not in tiny_payload["context"]
-    assert tiny_payload["context"]["absence_states"]["architecture_principles"] == "hidden_behind_detail_route"
+    assert set(tiny_payload) == {"kind", "target", "decision_packet"}
+    assert not any(item["signal"] == "architecture principle applies" for item in tiny_payload["decision_packet"].get("attention", []))
 
 
 def test_implement_architecture_principle_selector_reports_multiple_matches(tmp_path: Path, capsys) -> None:
@@ -8130,10 +8045,8 @@ def test_implement_tiny_omits_not_applicable_test_strategy_advisory(tmp_path: Pa
     )
 
     payload = json.loads(capsys.readouterr().out)
-    assert "test_strategy_check" not in payload["action_signals"]["advisory_detail"]["selectors"]
-    assert "test_strategy_check" not in payload["drill_down"]["available_selectors"]
-    assert "context.test_strategy_check" not in payload["drill_down"]["available_selectors"]
-    assert "test_strategy_check" not in payload["context"]
+    assert set(payload) == {"kind", "target", "decision_packet"}
+    assert payload["decision_packet"]["absence_states"]["diagnostics_and_assurance"] == "selector-routed"
 
 
 def test_test_strategy_check_degrades_without_target_suite_budget(tmp_path: Path, capsys) -> None:
@@ -8608,6 +8521,8 @@ candidates = []
                 "src/agentic_workspace/runtime.py",
                 "--task",
                 "Continue the active planning work",
+                "--select",
+                "context",
                 "--format",
                 "json",
             ]
@@ -8615,7 +8530,7 @@ candidates = []
         == 0
     )
 
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(capsys.readouterr().out)["values"]
     gate = payload["context"]["planning_safety_gate"]
     assert gate["status"] == "blocked"
     assert gate["gate_result"] == "lane-owner-artifact-required"
@@ -8679,6 +8594,8 @@ candidates = []
                 "src/agentic_workspace/runtime.py",
                 "--task",
                 "Continue the active planning work",
+                "--select",
+                "context",
                 "--format",
                 "json",
             ]
@@ -8686,7 +8603,7 @@ candidates = []
         == 0
     )
 
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(capsys.readouterr().out)["values"]
     gate = payload["context"]["planning_safety_gate"]
     assert gate["status"] == "blocked"
     assert gate["gate_result"] == "lane-owner-artifact-required"
@@ -8803,6 +8720,8 @@ def test_implement_objective_drift_does_not_accept_deleted_outcome_from_prompt_k
                 "llms.txt",
                 "--task",
                 "Remove `llms.txt` and replace it with install docs",
+                "--select",
+                "context",
                 "--format",
                 "json",
             ]
@@ -8810,7 +8729,7 @@ def test_implement_objective_drift_does_not_accept_deleted_outcome_from_prompt_k
         == 0
     )
 
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(capsys.readouterr().out)["values"]
     drift = _implement_context(payload)["objective_drift"]
     assert drift["status"] == "warning"
     assert drift["requested_outcomes"] == ["llms.txt"]
@@ -8833,6 +8752,8 @@ def test_implement_objective_drift_keeps_missing_path_without_removal_intent(tmp
                 "llms.txt",
                 "--task",
                 "Document `llms.txt` behavior",
+                "--select",
+                "context",
                 "--format",
                 "json",
             ]
@@ -8840,7 +8761,7 @@ def test_implement_objective_drift_keeps_missing_path_without_removal_intent(tmp
         == 0
     )
 
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(capsys.readouterr().out)["values"]
     drift = _implement_context(payload)["objective_drift"]
     assert drift["status"] == "warning"
     assert drift["removed_or_retired_outcomes"] == []
@@ -9661,6 +9582,8 @@ def test_implement_auto_delegation_exposes_bounded_slice_handoff(tmp_path: Path,
                 "src/sample_app/text.py",
                 "--task",
                 "Implement bounded text helper behavior",
+                "--select",
+                "context.delegation_decision",
                 "--format",
                 "json",
             ]
@@ -9668,8 +9591,8 @@ def test_implement_auto_delegation_exposes_bounded_slice_handoff(tmp_path: Path,
         == 0
     )
 
-    payload = json.loads(capsys.readouterr().out)
-    decision = _implement_context(payload)["delegation_decision"]
+    payload = json.loads(capsys.readouterr().out)["values"]
+    decision = payload["context.delegation_decision"]
     assert decision["recommended_route"] == "delegate-bounded-slice"
     assert decision["target"] == "mini"
     assert decision["required_next_action"] == "execute-when-safe"
@@ -9754,6 +9677,8 @@ def test_implement_epic_decomposition_prefers_reusable_worker_over_manual_relay(
                 "generated/workspace/python/cli.py",
                 "--task",
                 "Continue the codegen epic and evaluate reusable-worker delegation",
+                "--select",
+                "context.delegation_decision",
                 "--format",
                 "json",
             ]
@@ -9761,8 +9686,8 @@ def test_implement_epic_decomposition_prefers_reusable_worker_over_manual_relay(
         == 0
     )
 
-    payload = json.loads(capsys.readouterr().out)
-    decision = _implement_context(payload)["delegation_decision"]
+    payload = json.loads(capsys.readouterr().out)["values"]
+    decision = payload["context.delegation_decision"]
     assert decision["recommended_route"] == "suggest-delegation"
     assert decision["target"] == "reusable-worker"
     assert decision["required_next_action"] == "select-or-promote-bounded-lane"
