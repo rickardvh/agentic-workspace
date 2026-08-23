@@ -63,35 +63,76 @@ candidates = [
     payload = json.loads(capsys.readouterr().out)
 
     assert exit_code == 0
-    assert payload["profile"] == "tiny"
-    assert payload["schema"]["schema_version"] == "planning-summary-tiny-schema/v1"
-    assert payload["schema"]["select_command"] == "agentic-workspace summary --select <field.path> --format json"
-    assert payload["schema"]["verbose_command"] == "agentic-workspace summary --verbose --format json"
-    assert set(payload) <= {
-        "kind",
-        "profile",
-        "schema",
-        "target_root",
-        "todo",
-        "execplans",
-        "planning_surface_health",
-        "execution_readiness",
-        "current_execution_pressure",
-        "decision_packet",
-        "continuation_view",
-        "decomposition",
-        "lanes",
-        "residue_governance",
-        "roadmap",
-        "detail_commands",
-        "selector_inventory",
-        "warning_count",
-        "memory_consult",
-    }
-    assert payload["selector_inventory"]["status"] == "omitted-from-compact-default"
-    assert payload["selector_inventory"]["available_count"] == 9
-    assert payload["selector_inventory"]["exact_select_command"] == "agentic-workspace summary --select <field.path> --format json"
-    assert "candidate_lanes" not in payload["roadmap"]
+    assert set(payload) == {"kind", "target_root", "continuation_view"}
+    continuation = payload["continuation_view"]
+    assert continuation["owner"]["status"] == "no-active-owner"
+    assert continuation["owner"]["ref"] is None
+    assert continuation["identity"]["continuation_revision"]
+    assert continuation["next"]["action"]
+    assert continuation["claim_boundary"]
+    assert continuation["proof_state"]
+    assert continuation["residue_owner"]
+    assert set(continuation["detail_routes"]) >= {"planning_record", "proof", "claim_boundary", "select", "verbose"}
+
+
+def test_summary_default_continuation_view_is_handoff_complete(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    record_path = tmp_path / ".agentic-workspace/planning/execplans/plan-alpha.plan.json"
+    record = planning_installer._build_legacy_execplan_record_from_todo_item(
+        title="Plan Alpha",
+        item_id="plan-alpha",
+        status="in-progress",
+        why_now="preserve the lane intent across an agent handoff.",
+        next_action="run focused proof.",
+        done_when="the continuation packet is sufficient for handoff.",
+    )
+    _write(record_path, json.dumps(record, indent=2) + "\n")
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = [
+  { id = "plan-alpha", status = "active", surface = ".agentic-workspace/planning/execplans/plan-alpha.plan.json" },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+
+    assert cli.main(["summary", "--target", str(tmp_path), "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    assert set(payload) == {"kind", "target_root", "continuation_view"}
+    continuation = payload["continuation_view"]
+    assert continuation["owner"]["status"] == "active"
+    assert continuation["owner"]["ref"].endswith("plan-alpha.plan.json")
+    assert continuation["owner"]["revision"] == continuation["identity"]["continuation_revision"]
+    assert continuation["answers"]["preserved_intent"]
+    assert continuation["next"]["action"]
+    assert continuation["proof_state"]
+    assert continuation["claim_boundary"]
+    assert continuation["residue_owner"]
+    assert continuation["absence_states"]["raw_planning_files"] == "not-required-for-ordinary-continuation"
+    assert "decision_packet" not in payload
+    assert not any(key.endswith("_count") for key in continuation)
+
+
+def test_summary_compression_evidence_records_handoff_and_cross_surface_review() -> None:
+    evidence = json.loads(Path("docs/maintainer/summary-compression-2685.json").read_text(encoding="utf-8"))
+
+    assert evidence["schema_version"] == "agentic-workspace/summary-compression-evidence/v1"
+    active_owner = evidence["scenarios"]["active_owner"]
+    assert active_owner["after"]["json_bytes"] < active_owner["before"]["json_bytes"]
+    assert active_owner["after"]["human_lines"] < active_owner["before"]["human_lines"]
+    assert active_owner["after"]["aw_roundtrips"] == active_owner["before"]["aw_roundtrips"] == 1
+    assert evidence["scenarios"]["handoff"]["raw_planning_reads"] == 0
+    assert evidence["scenarios"]["handoff"]["selector_calls"] == 0
+    assert evidence["projection_disposition"]["authoritative"] == "continuation_view"
+    assert evidence["total_operating_cost"]["assessment"] == "reduced"
+    assert "Do not create a universal lifecycle envelope" in evidence["cross_surface_review"]["abstraction_decision"]
 
 
 def test_workspace_summary_text_defaults_to_tiny_profile(tmp_path: Path, capsys, monkeypatch) -> None:
@@ -1199,8 +1240,18 @@ candidates = [
 """,
     )
 
-    exit_code = cli.main(["summary", "--target", str(tmp_path), "--format", "json"])
-    payload = json.loads(capsys.readouterr().out)
+    exit_code = cli.main(
+        [
+            "summary",
+            "--target",
+            str(tmp_path),
+            "--select",
+            "roadmap,planning_surface_health,execution_readiness",
+            "--format",
+            "json",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)["values"]
 
     assert exit_code == 0
     assert payload["roadmap"]["lane_count"] == 0
@@ -1210,7 +1261,6 @@ candidates = [
         warning["warning_class"] == "historical_work_in_live_planning_state" for warning in payload["planning_surface_health"]["warnings"]
     )
     assert payload["execution_readiness"]["status"] == "narrow-direct-ready"
-    assert payload["schema"]["select_command"] == "agentic-workspace summary --select <field.path> --format json"
 
 
 def test_workspace_summary_planning_revision_selector_stays_tiny(tmp_path: Path, capsys) -> None:

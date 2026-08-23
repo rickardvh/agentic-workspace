@@ -5661,8 +5661,8 @@ def test_planning_front_door_lane_activation_recovery_does_not_fabricate_plan(tm
     assert replay["status"] == "already-applied"
     assert replay["reason_code"] == "idempotent-replay"
 
-    assert cli.main(["summary", "--target", str(tmp_path), "--format", "json"]) == 0
-    summary = json.loads(capsys.readouterr().out)
+    assert cli.main(["summary", "--target", str(tmp_path), "--select", "lanes", "--format", "json"]) == 0
+    summary = json.loads(capsys.readouterr().out)["values"]
     assert summary["lanes"]["record_count"] == 1
 
     assert cli.main(["doctor", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -5734,8 +5734,8 @@ def test_missing_current_slice_repair_commands_replay_unchanged(tmp_path: Path, 
     ]
     lane_path.write_text(json.dumps(lane, indent=2) + "\n", encoding="utf-8")
 
-    assert cli.main(["summary", "--target", str(tmp_path), "--format", "json"]) == 0
-    summary = json.loads(capsys.readouterr().out)
+    assert cli.main(["summary", "--target", str(tmp_path), "--select", "planning_surface_health", "--format", "json"]) == 0
+    summary = json.loads(capsys.readouterr().out)["values"]
     warning = next(
         item
         for item in summary["planning_surface_health"]["warnings"]
@@ -5764,8 +5764,8 @@ def test_missing_current_slice_repair_commands_replay_unchanged(tmp_path: Path, 
     assert replay["status"] == "already-applied"
     assert replay["reason_code"] == "idempotent-replay"
 
-    assert cli.main(["summary", "--target", str(tmp_path), "--format", "json"]) == 0
-    post_summary = json.loads(capsys.readouterr().out)
+    assert cli.main(["summary", "--target", str(tmp_path), "--select", "planning_surface_health", "--format", "json"]) == 0
+    post_summary = json.loads(capsys.readouterr().out)["values"]
     assert not [
         item
         for item in post_summary["planning_surface_health"]["warnings"]
@@ -16792,9 +16792,11 @@ def test_summary_task_scoped_profile_omits_historical_audit_detail(tmp_path: Pat
     )
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["profile"] == "tiny"
-    assert "detail_commands" in payload
-    assert payload["detail_commands"]["task_scoped"] == "agentic-workspace summary --verbose --task <task> --format json"
+    assert set(payload) == {"kind", "target_root", "continuation_view"}
+    assert payload["kind"] == "planning-summary/v1"
+    assert "select" in payload["continuation_view"]["detail_routes"]
+    assert "verbose" in payload["continuation_view"]["detail_routes"]
+    assert "detail_commands" not in payload
     assert "task_scope" not in payload
     assert "historical_audit_pressure" not in json.dumps(payload)
 

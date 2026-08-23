@@ -1,0 +1,26 @@
+{
+  "schema_version": "agentic-workspace/summary-compression-evidence/v1",
+  "issue": 2685,
+  "baseline": {"ref": "stack-parent@6bebddb35", "measurement": "compact UTF-8 JSON bytes and indented JSON lines"},
+  "scenarios": {
+    "active_owner": {"before": {"json_bytes": 7067, "human_lines": 209, "aw_roundtrips": 1}, "after": {"json_bytes": 3475, "human_lines": 74, "aw_roundtrips": 1}},
+    "no_active_owner": {"status": "contract-proven", "test": "test_workspace_summary_json_defaults_to_tiny_profile", "owner_state": "no-active-owner", "aw_roundtrips": 1},
+    "stale_or_recovery": {"status": "contract-proven", "first_line_reason": "Only blockers that change safe continuation remain in continuation_view."},
+    "handoff": {"status": "contract-proven", "test": "test_summary_default_continuation_view_is_handoff_complete", "raw_planning_reads": 0, "selector_calls": 0},
+    "module_rich": {"status": "bounded", "finding": "Installed capabilities and Memory detail do not become peer continuation authorities."}
+  },
+  "accepted_budget": {"max_json_bytes": 8000, "max_field_count": 180, "max_estimated_tokens": 2000, "max_human_text_lines": 80},
+  "projection_disposition": {
+    "authoritative": "continuation_view",
+    "merged": ["preserved intent or explicit absence", "owner identity and freshness", "phase and next action", "proof and claim boundary", "decision-changing blockers", "residue owner", "exact routes"],
+    "selector_routed": ["TODO and execplan counts", "health and readiness", "pressure", "lanes and roadmap", "source provenance", "topology and history", "Memory detail", "peer decision_packet"],
+    "canonical_owner_rule": "Summary remains a lossy projection; Planning/current-work sources remain durable owners."
+  },
+  "handoff_cost": {"assessment": "reduced", "reason": "A second agent receives owner, revision, intent, next action, proof freshness, claim boundary, and residue from one continuation_view without chat or raw Planning reconstruction."},
+  "cross_surface_review": {
+    "shared_invariants": ["one phase authority", "fresh identity", "one executable next action", "explicit effects or claim boundary", "owner or residue", "exact optional routes", "default guidance needs no unconditional follow-up"],
+    "phase_specific": {"start": "workflow entry", "implement": "working set and mutation effects", "proof": "complete evidence set and receipt sufficiency", "summary": "lossy continuation and handoff"},
+    "abstraction_decision": "Do not create a universal lifecycle envelope; the proven invariants are vocabulary-level and each phase retains its existing authority and compiler."
+  },
+  "total_operating_cost": {"assessment": "reduced", "mandatory_selector_calls": 0, "mandatory_raw_workspace_reads": 0, "mandatory_summary_reruns": 0}
+}
