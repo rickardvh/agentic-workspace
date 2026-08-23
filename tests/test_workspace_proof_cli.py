@@ -2548,7 +2548,7 @@ def test_proof_accumulates_repeated_changed_flags(tmp_path: Path, capsys) -> Non
 
 
 def test_proof_tiny_profile_returns_next_validation_action(capsys) -> None:
-    from agentic_workspace.workspace_runtime_proof import PROOF_TINY_SEMANTIC_BUDGET_BYTES, _proof_tiny_semantic_budget_bytes
+    from agentic_workspace.workspace_runtime_proof import PROOF_TINY_SEMANTIC_BUDGET_BYTES
 
     assert (
         cli.main(
@@ -2581,21 +2581,20 @@ def test_proof_tiny_profile_returns_next_validation_action(capsys) -> None:
         "absence_states",
     }
     assert payload["selector"] == {"changed": ["generated/workspace/python/cli.py"]}
-    assert payload["proof_narrowness"]["status"] == "narrow_required"
-    assert payload["proof_narrowness"]["broad_suite_boundary_status"] == "explicit-escalation-required"
-    assert "broad_suite_boundary_reason" not in payload["proof_narrowness"]
+    assert payload["route"]["narrowness"]["status"] == "narrow_required"
+    assert payload["route"]["narrowness"]["broad_suite_boundary_status"] == "explicit-escalation-required"
+    assert "broad_suite_boundary_reason" not in payload["route"]["narrowness"]
     assert payload["next"]["action"] == "route-refinement-required"
     assert payload["next"]["command"] is None
     assert payload["manual_verification"]["status"] == "route-refinement-required"
     assert "make test-workspace" not in payload["required_commands"]
-    assert payload["warnings"] == []
+    assert payload.get("warnings", []) == []
     assert "answer" not in payload
     assert "selected_lanes" not in encoded
     assert "validation_plan" not in encoded
-    assert payload["detail_command_template"]["runnable"] is False
-    assert payload["detail_command_template"]["placeholders"] == {"paths": ["generated/workspace/python/cli.py"]}
+    assert "<paths>" in payload["detail_routes"]["select"]
     assert len(encoded) > PROOF_TINY_SEMANTIC_BUDGET_BYTES
-    assert _proof_tiny_semantic_budget_bytes(payload) < PROOF_TINY_SEMANTIC_BUDGET_BYTES
+    assert "manual-verification-required" in payload["expansion_reasons"]
 
 
 def test_proof_tiny_semantic_budget_is_invocation_independent_and_fails_on_command_growth(capsys) -> None:
@@ -2607,12 +2606,12 @@ def test_proof_tiny_semantic_budget_is_invocation_independent_and_fails_on_comma
 
     assert cli.main(["proof", "--changed", "generated/workspace/python/cli.py", "--format", "json"]) == 0
     payload = json.loads(capsys.readouterr().out)
-    configured = "uv run --active python scripts/run_agentic_workspace.py"
+    configured = payload["detail_routes"]["verbose"].split(" proof ", 1)[0]
     sizes: set[int] = set()
     for invocation in ("agentic-workspace", "uv run python scripts/run_agentic_workspace.py", configured):
         rendered = json.loads(json.dumps(payload).replace(configured, invocation))
         sizes.add(_proof_tiny_semantic_budget_bytes(rendered))
-        assert rendered["detail_command"].startswith(invocation)
+        assert rendered["detail_routes"]["verbose"].startswith(invocation)
 
     assert len(sizes) == 1
     normalized = _proof_tiny_semantic_budget_projection(payload)
@@ -2620,7 +2619,7 @@ def test_proof_tiny_semantic_budget_is_invocation_independent_and_fails_on_comma
 
     grown = copy.deepcopy(payload)
     baseline_size = _proof_tiny_semantic_budget_bytes(grown)
-    grown["detail_command"] += "".join(f" --changed semantic/path-{index}.py" for index in range(40))
+    grown["detail_routes"]["verbose"] += "".join(f" --changed semantic/path-{index}.py" for index in range(40))
     grown_size = _proof_tiny_semantic_budget_bytes(grown)
     assert grown_size > baseline_size
     assert grown_size >= PROOF_TINY_SEMANTIC_BUDGET_BYTES

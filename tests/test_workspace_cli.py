@@ -16262,7 +16262,7 @@ def test_proof_compact_surfaces_narrowness_for_bounded_package_change(tmp_path: 
     )
 
     payload = json.loads(capsys.readouterr().out)
-    narrowness = payload["proof_narrowness"]
+    narrowness = payload["route"]["narrowness"]
     assert narrowness["status"] == "narrow_required"
     assert narrowness["required_reason_sample"]["acceptance_boundary"] is True
     assert "package-local planning source" in narrowness["required_reason_sample"]["why_required"]
@@ -16460,9 +16460,20 @@ impact = "claim-limiting"
         == 0
     )
     payload = json.loads(capsys.readouterr().out)
-    assert payload["task_context"] == {"status": "applied", "task": "Validate the local tool"}
-    assert payload["local_overlay"]["status"] == "active"
-    assert payload["local_overlay"]["ordinary_guidance_count"] == 1
+    assert payload["identity"]["proof_subject"]["changed_paths"] == ["tools/run.py"]
+    local_guidance = payload["guidance"]["local_overlay"]
+    assert local_guidance["status"] == "active"
+    assert local_guidance["ordinary_guidance_count"] == 1
+    assert local_guidance["guidance"] == [
+        {
+            "id": "local_cli",
+            "signal": "local-tool-availability",
+            "category": "tooling",
+            "guidance": "Use the checkout-local CLI.",
+            "required_commands": ["python -c \"print('tool ok')\""],
+            "impact": "advisory",
+        }
+    ]
     assert payload.get("high_risk_overlay") is None
 
 

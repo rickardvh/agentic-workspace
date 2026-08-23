@@ -165,7 +165,22 @@ INDEPENDENT_REVIEW_RECEIPT_INDEX_PATH = Path(".agentic-workspace/local/independe
 INDEPENDENT_REVIEW_HOST_ADMISSION_CAPABILITY_KIND = "agentic-workspace/independent-review-host-admission-capability/v1"
 IndependentReviewHostResultResolver = Callable[[str], dict[str, Any]]
 PROOF_TINY_SEMANTIC_BUDGET_BYTES = 4500
-_PROOF_COMMAND_VALUE_KEYS = frozenset({"command", "run", "template", "detail_command"})
+_PROOF_COMMAND_VALUE_KEYS = frozenset(
+    {
+        "command",
+        "run",
+        "template",
+        "detail_command",
+        "next_recording_command",
+        "route",
+        "receipts",
+        "command_tiers",
+        "closeout",
+        "selector_inventory",
+        "select",
+        "verbose",
+    }
+)
 
 
 def _proof_command_with_invocation_posture(*, command: str, cli_invoke: str) -> tuple[str, dict[str, str]]:
@@ -271,6 +286,9 @@ def _canonical_proof_command_semantics(command: str) -> str:
             tokens = tokens[1:]
         if tokens and tokens[0].startswith("scripts/") and tokens[0].endswith(".py"):
             tokens[0] = Path(tokens[0]).stem
+    if "--receipt-command" in tokens and tokens.index("--receipt-command") + 1 < len(tokens):
+        receipt_command_index = tokens.index("--receipt-command") + 1
+        tokens[receipt_command_index] = _canonical_proof_command_semantics(tokens[receipt_command_index])
     if "--target" in tokens and tokens.index("--target") + 1 < len(tokens):
         tokens[tokens.index("--target") + 1] = "<target>"
     if not tokens:
@@ -362,10 +380,31 @@ def _compact_tiny_local_overlay(value: Any) -> dict[str, Any]:
     if not isinstance(value, dict) or value.get("status") != "active":
         return {}
     active = _as_dict(value.get("active"))
+    guidance = [
+        {
+            key: item.get(key)
+            for key in (
+                "id",
+                "signal",
+                "category",
+                "guidance",
+                "required_commands",
+                "optional_commands",
+                "unavailable_routes",
+                "review_owner",
+                "claim_boundary",
+                "impact",
+            )
+            if item.get(key) not in (None, "", [], {})
+        }
+        for item in _list_payload(active.get("guidance"))
+        if isinstance(item, dict)
+    ]
     return {
         "status": value.get("status"),
         "active_count": value.get("active_count", 0),
-        "ordinary_guidance_count": len(_list_payload(active.get("guidance"))),
+        "ordinary_guidance_count": len(guidance),
+        "guidance": guidance,
         "authority_boundary": _as_dict(value.get("authority_boundary")).get("rule", ""),
         "detail_selector": "local_overlay",
     }
@@ -513,6 +552,7 @@ def _ordinary_proof_next_decision_payload(
             "source": route.get("route_source") or _as_dict(next_decision.get("next")).get("route_source") or "not-recorded",
             "authority": selected_command.get("route_authority") or "not-recorded",
             "lane": selected_command.get("lane") or "not-recorded",
+            **({"narrowness": next_decision["proof_narrowness"]} if next_decision.get("proof_narrowness") else {}),
             "health": {
                 "status": route_health.get("status") or "not-recorded",
                 "finding_count": int(route_health.get("finding_count", 0) or 0),
@@ -594,6 +634,8 @@ def _ordinary_proof_next_decision_payload(
             "raw_workspace_files": "not-required-for-ordinary-action",
         },
     }
+    if next_decision.get("local_overlay"):
+        decision["guidance"] = {"local_overlay": next_decision["local_overlay"]}
     for optional_field in ("manual_verification", "blockers", "expansion_reasons"):
         if decision.get(optional_field) in (None, [], {}):
             decision.pop(optional_field, None)
