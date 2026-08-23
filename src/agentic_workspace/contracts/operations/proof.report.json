@@ -107,6 +107,7 @@
     "Additive-only durable surfaces should be flagged unless repeated cost, ownership, discovery, and validation answers are explicit.",
     "Subsystem proof hints must not replace selected package proof lanes; they add host-repo validation context for matching paths.",
     "Tiny output must preserve the first validation action, all required commands, and blocking warnings.",
+    "For ordinary changed-path proof, proof_next_decision is authoritative: run or enumerate every required_commands entry, preserve manual/runtime/receipt blockers and claim_boundary, and use selectors or verbose output only for optional explanation.",
     "Proof recommendations must not record receipts; --record-receipt requires caller-supplied execution command and result.",
     "Proof receipts use caller-supplied structured duration, timeout, environment, route identity, and claim-sufficiency fields; route-health must not infer authoritative timeout or sufficiency from result/log strings.",
     "Route repair receipts must name the stable finding id, authority revision, and disposition before route-health retirement is allowed.",

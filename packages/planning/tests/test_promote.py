@@ -1535,6 +1535,8 @@ candidates = []
     assert any(
         item["claim"] == "planning state projection" and item["freshness"] == "stale-projection" for item in view["source_freshness"]
     )
+    assert view["source_freshness"][0]["claim"] == "active intent"
+    assert view["source_freshness"][0]["freshness"] == "current-owner"
     assert "raw transcript material" in view["omitted_detail"]
     assert view["write_responsibility"]["summary_start"].startswith("summary/start render")
 

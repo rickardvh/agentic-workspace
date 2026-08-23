@@ -19053,11 +19053,11 @@ def _ordinary_output_shape_inventory() -> dict[str, Any]:
         {
             "surface": "summary",
             "status": "budget-proven",
-            "primary_decision": "current planning state and recommended next action",
+            "primary_decision": "safe continuation owner, action, proof, and claim boundary",
             "primary_decision_object": "continuation_view",
-            "ordinary_default_shape": "active-state router with lossy continuation projection and selectors for raw planning detail",
-            "detail_route": "summary views and verbose output",
-            "retention_evidence": "Summary already exposes active items and continuation_view while raw Planning files stay behind selectors.",
+            "ordinary_default_shape": "one authoritative lossy continuation view with explicit no-active-owner state",
+            "detail_route": "summary --select <field.path> or --verbose",
+            "retention_evidence": "docs/maintainer/summary-compression-2685.json records active, no-owner, and handoff evidence while raw Planning state remains selector-routed.",
         },
         {
             "surface": "preflight",
@@ -19089,11 +19089,11 @@ def _ordinary_output_shape_inventory() -> dict[str, Any]:
         {
             "surface": "proof",
             "status": "budget-proven",
-            "primary_decision": "selected proof command or proof blocker",
-            "primary_decision_object": "next",
-            "ordinary_default_shape": "next proof action with required_commands and manual verification only when needed",
-            "detail_route": "proof selector/detail output",
-            "retention_evidence": "Milestone D proof --changed selected required validation commands and kept semantic intent proof as agent judgment.",
+            "primary_decision": "complete proof action set, evidence sufficiency, and claim boundary",
+            "primary_decision_object": "proof_next_decision",
+            "ordinary_default_shape": "one authoritative proof decision with safety-sensitive expansion and selector-backed explanation",
+            "detail_route": "proof --select <field> or --verbose",
+            "budget_evidence": "tests/test_workspace_proof_cli.py and docs/maintainer/proof-compression-2684.json measure ordinary and safety-sensitive proof decisions.",
         },
         {
             "surface": "planning report/summary",
@@ -19175,10 +19175,10 @@ def _ordinary_output_shape_inventory() -> dict[str, Any]:
                 "surface": "summary",
                 "profile": "planning-summary-tiny/v1",
                 "status": "budget-proven",
-                "max_json_bytes": 20000,
-                "max_field_count": 500,
-                "max_estimated_tokens": 5000,
-                "max_human_lines": 100,
+                "max_json_bytes": 8000,
+                "max_field_count": 180,
+                "max_estimated_tokens": 2000,
+                "max_human_lines": 80,
                 "expansion_trigger": "--select or --verbose",
                 "proof": "test_all_declared_ordinary_profiles_obey_authoritative_output_budgets",
             },
@@ -19197,10 +19197,10 @@ def _ordinary_output_shape_inventory() -> dict[str, Any]:
                 "surface": "proof",
                 "profile": "proof-decision-envelope/v1",
                 "status": "budget-proven",
-                "max_json_bytes": 12000,
-                "max_field_count": 320,
-                "max_estimated_tokens": 3000,
-                "max_human_lines": 80,
+                "max_json_bytes": 7000,
+                "max_field_count": 180,
+                "max_estimated_tokens": 1750,
+                "max_human_lines": 60,
                 "expansion_trigger": "--select or --verbose",
                 "proof": "test_all_declared_ordinary_profiles_obey_authoritative_output_budgets",
             },
@@ -49314,6 +49314,27 @@ def _validated_proof_receipt_inputs(*, command: str, result: str) -> tuple[str, 
     return command, result
 
 
+def _emit_proof_next_decision_text(payload: dict[str, Any]) -> None:
+    next_action = _as_dict(payload.get("next"))
+    claim = _as_dict(payload.get("claim_boundary"))
+    sufficiency = _as_dict(payload.get("sufficiency"))
+    print(f"proof: {next_action.get('action', 'select-proof-scope')}")
+    if next_action.get("command"):
+        print(f"command: {next_action['command']}")
+    commands = [str(command) for command in _list_payload(payload.get("required_commands"))]
+    print(f"required-commands: {len(commands)}")
+    for command in commands:
+        print(f"- {command}")
+    print(f"sufficiency: {sufficiency.get('status', 'not-yet-sufficient')}")
+    print(f"claim: {claim.get('status', 'blocked')} ({claim.get('effect', 'selected-proof-required')})")
+    for blocker in _list_payload(payload.get("blockers")):
+        if isinstance(blocker, dict):
+            print(f"blocker: {blocker.get('kind', 'proof-gap')}")
+    routes = _as_dict(payload.get("detail_routes"))
+    if routes.get("select"):
+        print(f"detail: {routes['select']}")
+
+
 def _emit_proof(
     *,
     format_name: str,
@@ -49542,13 +49563,19 @@ def _emit_proof(
                     reuse_result=reuse_result,
                     full_detail_command=full_detail_command,
                 )
+        if not select:
+            for peer_field in ("context", "task_context", "projection_reuse"):
+                payload.pop(peer_field, None)
         tiny_commands = [str(command) for command in _list_payload(payload.get("required_commands"))]
         if tiny_commands and all(command.startswith("git diff --") for command in tiny_commands):
             payload.pop("projection_reuse", None)
         if format_name == "json":
             print(json.dumps(serialise_value(payload), indent=2))
             return 0
-        _emit_compact_answer_text(payload)
+        if payload.get("kind") == "proof-next-decision/v1" and payload.get("claim_boundary"):
+            _emit_proof_next_decision_text(payload)
+        else:
+            _emit_compact_answer_text(payload)
         return 0
     payload = _proof_payload(target_root=target_root, descriptors=descriptors)
     payload = _select_proof_payload(payload, target_root=target_root, route=route, current_only=current_only, changed_paths=changed_paths)
@@ -49594,6 +49621,120 @@ def _emit_proof(
         for item in payload["current"]["stale_generated_surfaces"]:
             print(f"- {item}")
     return 0
+
+
+def _ordinary_summary_continuation_payload(*, summary: dict[str, Any], target_root: Path, cli_invoke: str) -> dict[str, Any]:
+    view = copy.deepcopy(_as_dict(summary.get("continuation_view")))
+    sources = [item for item in _list_payload(view.get("source_freshness")) if isinstance(item, dict)]
+    primary_source = next(
+        (item for item in sources if item.get("claim") == "active intent" or item.get("owner") == "Planning active execplan"),
+        sources[0] if sources else {},
+    )
+    answers = _as_dict(view.get("answers"))
+    resume = _as_dict(view.get("resume_predicate"))
+    decision = _as_dict(summary.get("decision_packet"))
+    active_owner = bool(primary_source.get("source")) and str(view.get("status")) == "present"
+    owner_ref = str(primary_source.get("source") or "").split("#", 1)[0] if active_owner else None
+    owner_authority = "Planning active execplan" if active_owner else "none"
+    if not answers:
+        answers = {
+            "preserved_intent": "no-active-intent",
+            "claim_allowed": "none",
+            "next_safe_action": "choose-smallest-workflow-shape",
+            "trust_basis": "explicit no-active-owner state",
+        }
+        view["answers"] = answers
+    if not _as_dict(view.get("proof_state")):
+        view["proof_state"] = {
+            "status": "not-required",
+            "summary": "no active owner requires continuation proof",
+            "freshness": "not-applicable",
+        }
+    if not _as_dict(view.get("claim_boundary")):
+        view["claim_boundary"] = {
+            "status": "no-active-owner",
+            "claim_level_allowed": "none",
+            "required_next_action": answers.get("next_safe_action") or "choose-smallest-workflow-shape",
+        }
+    view["identity"] = {
+        "continuation_revision": primary_source.get("source_hash") or "no-active-owner",
+        "source_freshness": primary_source.get("freshness") or ("unknown" if active_owner else "not-applicable"),
+    }
+    view["owner"] = {
+        "status": "active" if active_owner else "no-active-owner",
+        "ref": owner_ref,
+        "revision": primary_source.get("source_hash") if active_owner else None,
+        "authority": owner_authority,
+    }
+    view["next"] = {
+        "action": answers.get("next_safe_action") or resume.get("required_next_action") or "choose-smallest-workflow-shape",
+        "required": True,
+    }
+    view["blockers"] = [str(item) for item in _list_payload(resume.get("failed")) if str(item).strip()]
+    view["residue_owner"] = decision.get("residue_owner") or ("active continuation state" if active_owner else "none")
+    target_value = target_root.as_posix()
+    target_arg = json.dumps(target_value) if any(character.isspace() for character in target_value) else target_value
+    view["detail_routes"] = {
+        "planning_record": _command_with_cli_invoke(
+            command=f"agentic-workspace summary --target {target_arg} --select planning_record --format json", cli_invoke=cli_invoke
+        ),
+        "proof": _command_with_cli_invoke(
+            command=f"agentic-workspace summary --target {target_arg} --select continuation_view.proof_state,planning_record.proof_report --format json",
+            cli_invoke=cli_invoke,
+        ),
+        "claim_boundary": _command_with_cli_invoke(
+            command=f"agentic-workspace summary --target {target_arg} --select continuation_view.claim_boundary,planning_record.completion_gate --format json",
+            cli_invoke=cli_invoke,
+        ),
+        "owner_sources": _command_with_cli_invoke(
+            command=f"agentic-workspace summary --target {target_arg} --select continuation_view.source_freshness,planning_revision --format json",
+            cli_invoke=cli_invoke,
+        ),
+        "health_and_readiness": _command_with_cli_invoke(
+            command=f"agentic-workspace summary --target {target_arg} --select planning_surface_health,execution_readiness --format json",
+            cli_invoke=cli_invoke,
+        ),
+        "lanes_and_roadmap": _command_with_cli_invoke(
+            command=f"agentic-workspace summary --target {target_arg} --select lanes,roadmap --format json", cli_invoke=cli_invoke
+        ),
+        "selector_inventory": _command_with_cli_invoke(
+            command=f"agentic-workspace summary --target {target_arg} --select selector_inventory --format json", cli_invoke=cli_invoke
+        ),
+        "select": _command_with_cli_invoke(
+            command=f"agentic-workspace summary --target {target_arg} --select <field.path> --format json", cli_invoke=cli_invoke
+        ),
+        "verbose": _command_with_cli_invoke(
+            command=f"agentic-workspace summary --target {target_arg} --verbose --format json", cli_invoke=cli_invoke
+        ),
+    }
+    view["absence_states"] = {
+        **_as_dict(view.get("absence_states")),
+        "peer_summary_projections": "selector-routed",
+        "raw_planning_files": "not-required-for-ordinary-continuation",
+    }
+    for routed_field in ("source_freshness", "omitted_detail", "write_responsibility"):
+        view.pop(routed_field, None)
+    return {
+        "kind": "planning-summary/v1",
+        "target_root": target_value,
+        "continuation_view": view,
+    }
+
+
+def _print_ordinary_continuation_view(summary: dict[str, Any]) -> None:
+    view = _as_dict(summary.get("continuation_view"))
+    owner = _as_dict(view.get("owner"))
+    next_action = _as_dict(view.get("next"))
+    claim = _as_dict(view.get("claim_boundary"))
+    proof = _as_dict(view.get("proof_state"))
+    print(f"owner: {owner.get('status', 'no-active-owner')}")
+    if owner.get("ref"):
+        print(f"owner-ref: {owner['ref']}")
+    print(f"next: {next_action.get('action', 'choose-smallest-workflow-shape')}")
+    print(f"proof: {proof.get('status', 'not-present')} ({proof.get('freshness', 'unknown')})")
+    print(f"claim: {claim.get('status', 'continue-required')} ({claim.get('claim_level_allowed', 'none')})")
+    print(f"residue-owner: {view.get('residue_owner', 'none')}")
+    print(f"detail: {_as_dict(view.get('detail_routes')).get('select', '')}")
 
 
 def _run_summary_report_adapter(args: argparse.Namespace) -> int:
@@ -49781,6 +49922,7 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
             if reused is not None:
                 for diagnostic_key in ("context", "owner_reconciliation"):
                     reused.pop(diagnostic_key, None)
+                reused = _ordinary_summary_continuation_payload(summary=reused, target_root=target_root, cli_invoke=config.cli_invoke)
                 print(format_summary_json(reused))
                 return 0
         summary_started_at = time.perf_counter()
@@ -49900,10 +50042,11 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
         if summary_profile == "tiny":
             for diagnostic_key in ("context", "owner_reconciliation"):
                 summary.pop(diagnostic_key, None)
+            summary = _ordinary_summary_continuation_payload(summary=summary, target_root=target_root, cli_invoke=config.cli_invoke)
         if args.format == "json":
             print(format_summary_json(summary))
         elif summary_profile == "tiny":
-            _print_tiny_summary(summary)
+            _print_ordinary_continuation_view(summary)
         else:
             _print_summary(summary)
     return 0

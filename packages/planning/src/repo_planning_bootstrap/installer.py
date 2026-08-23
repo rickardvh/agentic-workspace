@@ -13300,10 +13300,19 @@ def _tiny_continuation_view_payload(view: dict[str, Any]) -> dict[str, Any]:
     resume_predicate = view.get("resume_predicate", {}) if isinstance(view.get("resume_predicate"), dict) else {}
     drill_down = view.get("drill_down", {}) if isinstance(view.get("drill_down"), dict) else {}
     stale_projections = view.get("stale_projections", []) if isinstance(view.get("stale_projections"), list) else []
-    source_freshness = view.get("source_freshness", []) if isinstance(view.get("source_freshness"), list) else []
-    source_freshness = [
-        item for item in source_freshness if isinstance(item, dict) and item.get("freshness") not in (None, "", "current", "current-owner")
-    ] or source_freshness[:1]
+    all_source_freshness = view.get("source_freshness", []) if isinstance(view.get("source_freshness"), list) else []
+    owner_source = next(
+        (item for item in all_source_freshness if isinstance(item, dict) and item.get("claim") == "active intent"),
+        None,
+    )
+    non_current_sources = [
+        item
+        for item in all_source_freshness
+        if isinstance(item, dict) and item is not owner_source and item.get("freshness") not in (None, "", "current", "current-owner")
+    ]
+    source_freshness = ([owner_source] if owner_source is not None else []) + non_current_sources
+    if not source_freshness:
+        source_freshness = [item for item in all_source_freshness[:1] if isinstance(item, dict)]
     omitted_detail = view.get("omitted_detail", []) if isinstance(view.get("omitted_detail"), list) else []
     write_responsibility = view.get("write_responsibility", {}) if isinstance(view.get("write_responsibility"), dict) else {}
     return _drop_empty_compact_fields(

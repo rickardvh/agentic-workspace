@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Make continuation_view the sole ordinary summary restart and handoff authority, including an explicit no-active-owner state."

@@ -596,6 +596,7 @@ const WORKSPACE_SELECTOR_DESCRIPTORS = {
     'proof_receipt_reconciliation',
     'proof_receipt_bridge',
     'proof_closeout_summary',
+    'intent_proof',
     'proof_narrowness',
     'proof_decision',
     'proof_route_maintenance',
