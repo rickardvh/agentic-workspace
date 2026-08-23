@@ -11,6 +11,12 @@ from pathlib import Path
 from typing import Any, Callable
 
 from agentic_workspace.actionability import invocation_decision_input_revision, operation_invocation
+from agentic_workspace.adaptation import (
+    bounded_adaptation_projection,
+    coverage_candidate_findings,
+    coverage_signal_from_observation,
+    machine_observed_coverage_signals,
+)
 from agentic_workspace.assurance_authority import admit_repository_assurance_decision
 from agentic_workspace.context_authority_owner_operations import (
     registered_context_owner_operation_runner,
@@ -79,6 +85,7 @@ def _load_context_authority_registry_contract() -> dict[str, Any]:
 
 
 _CONTEXT_AUTHORITY_REGISTRY_CONTRACT = _load_context_authority_registry_contract()
+CONTEXT_CURRENTNESS_CONTRACT = _as_dict(_CONTEXT_AUTHORITY_REGISTRY_CONTRACT.get("currentness_contract"))
 ORDINARY_DECISION_CONSUMERS = [str(item) for item in _as_list(_CONTEXT_AUTHORITY_REGISTRY_CONTRACT.get("ordinary_decision_consumers"))]
 ORDINARY_DECISION_CONSUMER_REQUIREMENTS = {
     str(consumer): [str(surface) for surface in _as_list(surfaces)]
@@ -212,6 +219,176 @@ def context_authority_declarations() -> list[dict[str, Any]]:
         {key: value for key, value in {**item, "consumer": ", ".join(item["consumers"])}.items() if key in schema_keys}
         for item in CONTEXT_AUTHORITY_REGISTRY
     ]
+
+
+def context_authority_obligations() -> dict[str, Any]:
+    """Project owner-bound currentness and coverage duties from the registry."""
+    declared_read_only = {
+        str(operation_id)
+        for operation_id in _as_list(CONTEXT_CURRENTNESS_CONTRACT.get("read_only_refresh_operations"))
+        if str(operation_id)
+    }
+    declared_mutations = {
+        str(operation_id)
+        for operation_id in _as_list(CONTEXT_CURRENTNESS_CONTRACT.get("revision_guarded_repair_operations"))
+        if str(operation_id)
+    }
+    consumer_effects = {
+        str(consumer): [str(effect) for effect in _as_list(effects) if str(effect)]
+        for consumer, effects in _as_dict(CONTEXT_CURRENTNESS_CONTRACT.get("consumer_effects")).items()
+    }
+    obligations: list[dict[str, Any]] = []
+    invalid: list[str] = []
+    for item in CONTEXT_AUTHORITY_REGISTRY:
+        surface = str(item.get("surface") or "")
+        owner_contract = _as_dict(item.get("source_owner_contract"))
+        operation_id = str(owner_contract.get("repair_operation_id") or "")
+        reconciliation_operation_id = str(owner_contract.get("reconciliation_operation_id") or "")
+        reconciliation_mode = str(owner_contract.get("reconciliation_mode") or "unavailable")
+        consumers = _registry_consumers(item)
+        effects = sorted({effect for consumer in consumers for effect in consumer_effects.get(consumer, [])})
+        if not operation_id:
+            invalid.append(f"{surface}:missing-currentness-operation")
+        if not effects:
+            invalid.append(f"{surface}:missing-coverage-effects")
+        reconciliation_contract = _context_reconciliation_contract(reconciliation_operation_id)
+        if reconciliation_mode == "read-only-refresh":
+            if reconciliation_operation_id not in declared_read_only:
+                invalid.append(f"{surface}:unregistered-read-only-refresh")
+            if not reconciliation_contract or reconciliation_contract.get("writes_repo_state") is not False:
+                invalid.append(f"{surface}:refresh-contract-is-not-read-only")
+        elif reconciliation_mode == "state-mutation":
+            if reconciliation_operation_id in declared_mutations and not reconciliation_contract.get("revision_guarded"):
+                invalid.append(f"{surface}:repair-contract-missing-revision-guards")
+        elif reconciliation_operation_id:
+            invalid.append(f"{surface}:unavailable-reconciliation-has-operation")
+        obligations.append(
+            {
+                "kind": "agentic-workspace/context-authority-obligation/v1",
+                "surface": surface,
+                "owner": str(item.get("owner") or ""),
+                "source_owner": str(owner_contract.get("owner_module") or ""),
+                "source_posture": str(item.get("authority_class") or ""),
+                "currentness_basis": {
+                    "stale_when": str(item.get("stale_when") or ""),
+                    "revision_fields": [str(field) for field in _as_list(item.get("revision_fields"))],
+                },
+                "coverage_responsibility": {"consumers": consumers, "effects": effects},
+                "currentness_operation_id": operation_id,
+                "reconciliation_operation_id": reconciliation_operation_id,
+                "repair_mode": reconciliation_mode,
+                "proof_route": str(item.get("proof_route") or ""),
+            }
+        )
+    obligation_by_surface = {str(item["surface"]): item for item in obligations}
+    projected_read_only = {
+        str(item["reconciliation_operation_id"])
+        for item in obligations
+        if item["repair_mode"] == "read-only-refresh" and item["reconciliation_operation_id"]
+    }
+    projected_mutations = {
+        str(item["reconciliation_operation_id"])
+        for item in obligations
+        if item["repair_mode"] == "state-mutation"
+        and item["reconciliation_operation_id"]
+        and _context_reconciliation_contract(str(item["reconciliation_operation_id"])).get("revision_guarded")
+    }
+    invalid.extend(f"currentness-contract:orphan-read-only-refresh:{item}" for item in sorted(declared_read_only - projected_read_only))
+    invalid.extend(f"currentness-contract:orphan-repair:{item}" for item in sorted(declared_mutations - projected_mutations))
+    representative_classes: dict[str, Any] = {}
+    for owner_class, raw in _as_dict(CONTEXT_CURRENTNESS_CONTRACT.get("representative_owner_classes")).items():
+        declaration = _as_dict(raw)
+        surface_ids = [str(surface) for surface in _as_list(declaration.get("surfaces")) if str(surface)]
+        unknown = [surface for surface in surface_ids if surface not in obligation_by_surface]
+        invalid.extend(f"{owner_class}:unknown-surface:{surface}" for surface in unknown)
+        representative_classes[str(owner_class)] = {
+            "surfaces": [obligation_by_surface[surface] for surface in surface_ids if surface in obligation_by_surface],
+            "disposition": str(declaration.get("disposition") or ""),
+        }
+    return {
+        "kind": "agentic-workspace/context-authority-obligations/v1",
+        "status": "declared" if not invalid else "contract-gap",
+        "registry_revision": CONTEXT_AUTHORITY_REGISTRY_REVISION,
+        "obligations": obligations,
+        "representative_owner_classes": representative_classes,
+        "invalid_obligations": invalid,
+        "rule": str(CONTEXT_CURRENTNESS_CONTRACT.get("rule") or ""),
+    }
+
+
+def classify_context_currentness(
+    *,
+    item: dict[str, Any],
+    record: dict[str, Any],
+    owner_identity_valid: bool,
+    owner_operation_reason: str = "",
+) -> dict[str, Any]:
+    """Classify selected drift without inventing semantic repair authority."""
+
+    surface = str(item.get("surface") or "")
+    owner_contract = _as_dict(item.get("source_owner_contract"))
+    reconciliation_operation_id = str(owner_contract.get("reconciliation_operation_id") or "")
+    reconciliation_mode = str(owner_contract.get("reconciliation_mode") or "unavailable")
+    record_status = str(record.get("status") or "missing")
+    reason = str(record.get("reason") or owner_operation_reason or record_status)
+    selected = record.get("applicable") is not False and record.get("selected_required") is not False
+    current = record_status == "current" and owner_identity_valid
+    ambiguous_reasons = {
+        "ambiguous-owner",
+        "conflicting-input",
+        "contradictory-source",
+        "memory-curation-stale-review-required",
+        "owner-conflict",
+        "owner-module-symbol-missing",
+        "owner-module-syntax-invalid",
+        "owner-source-contract-marker-missing",
+        "owner-source-required-key-missing",
+        "owner-source-schema-invalid",
+        "semantic-ambiguity",
+    }
+    missing_coverage_reasons = {
+        "canonical-source-missing",
+        "configured-source-empty",
+        "missing-target-root",
+    }
+    if not selected:
+        state = disposition = "outside-responsibility"
+    elif current:
+        state = disposition = "current"
+    elif reason in ambiguous_reasons:
+        state = "derivably-stale"
+        disposition = "decision-required"
+    elif reason in missing_coverage_reasons and str(item.get("authority_class") or "") != "generated":
+        state = "missing-relevant-coverage"
+        disposition = "missing-relevant-coverage"
+    elif reconciliation_mode == "read-only-refresh" and reconciliation_operation_id:
+        state = "derivably-stale"
+        disposition = "refreshable-derived"
+    elif (
+        reconciliation_mode == "state-mutation"
+        and reconciliation_operation_id
+        and _context_reconciliation_contract(reconciliation_operation_id).get("revision_guarded")
+    ):
+        state = "derivably-stale"
+        disposition = "safely-repairable"
+    else:
+        state = "derivably-stale"
+        disposition = "decision-required"
+    source = _as_dict(record.get("admission"))
+    return {
+        "kind": "agentic-workspace/context-currentness-disposition/v1",
+        "surface": surface,
+        "state": state,
+        "disposition": disposition,
+        "reason_code": reason,
+        "owner": str(item.get("owner") or ""),
+        "source_owner": str(owner_contract.get("owner_module") or ""),
+        "operation_id": reconciliation_operation_id if disposition in {"refreshable-derived", "safely-repairable"} else "",
+        "transition_mode": reconciliation_mode,
+        "expected_registry_revision": CONTEXT_AUTHORITY_REGISTRY_REVISION,
+        "expected_source_revision": str(source.get("source_revision") or record.get("revision") or ""),
+        "task_effect": "quiet" if disposition in {"current", "outside-responsibility"} else "material",
+    }
 
 
 def _context_authority_registry_items(declarations: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
@@ -598,6 +775,7 @@ def context_authority_coverage(
     consumer_requirements: dict[str, list[str]] | None = None,
 ) -> dict[str, Any]:
     registry = _context_authority_registry_items(declarations)
+    obligations = context_authority_obligations() if declarations is None else {}
     expected_consumers = sorted({str(item).strip() for item in (observed_consumers or ORDINARY_DECISION_CONSUMERS) if str(item).strip()})
     requirements = {
         str(consumer): [str(surface) for surface in surfaces]
@@ -649,7 +827,14 @@ def context_authority_coverage(
         > 4
     )
     status = "measured"
-    if uncovered_consumers or missing_required_sources or missing_owner_surfaces or duplicate_surfaces or duplicate_canonical_owners:
+    if (
+        uncovered_consumers
+        or missing_required_sources
+        or missing_owner_surfaces
+        or duplicate_surfaces
+        or duplicate_canonical_owners
+        or obligations.get("status") == "contract-gap"
+    ):
         status = "coverage-gap"
     return {
         "kind": "agentic-workspace/context-authority-coverage/v1",
@@ -669,6 +854,7 @@ def context_authority_coverage(
         "duplicate_surfaces": sorted(set(duplicate_surfaces)),
         "duplicate_canonical_owners": duplicate_canonical_owners,
         "duplicate_consumer_authorities": duplicate_consumer_authorities,
+        "owner_obligations": obligations,
         "rule": "Operating decisions measure the versioned context-authority registry against ordinary consumers and fail closed on missing owners, duplicate surfaces, missing required sources, or uncovered consumers.",
     }
 
@@ -719,6 +905,65 @@ def context_authority_changed_path_guardrail(
     }
 
 
+def _context_reconciliation_contract(operation_id: str) -> dict[str, Any]:
+    """Resolve executable currentness effects from the dispatch contract."""
+
+    if not operation_id:
+        return {}
+    from agentic_workspace.client import operation_contract
+
+    contract = operation_contract(operation_id)
+    if not contract:
+        return {}
+    inputs = {
+        str(item.get("name") or "") for item in _as_list(contract.get("inputs")) if isinstance(item, dict) and str(item.get("name") or "")
+    }
+    effects = _as_dict(contract.get("effects"))
+    writes_repo_state = effects.get("writes_repo_state") is True
+    required_guards = {"expected_registry_revision", "expected_source_revision"}
+    return {
+        "operation_id": operation_id,
+        "inputs": inputs,
+        "effects": effects,
+        "writes_repo_state": writes_repo_state,
+        "revision_guarded": not writes_repo_state or required_guards.issubset(inputs),
+    }
+
+
+def _context_reconciliation_invocation(*, currentness: dict[str, Any], consumer: str, task: str, paths: list[str]) -> dict[str, Any]:
+    operation_id = str(currentness.get("operation_id") or "")
+    contract = _context_reconciliation_contract(operation_id)
+    if not contract:
+        return {}
+    candidates: dict[str, Any] = {
+        "target": ".",
+        "task": task,
+        "changed": paths,
+        "changed_paths": paths,
+        "files": paths,
+        "task_text": task,
+        "format": "json",
+        "expected_registry_revision": CONTEXT_AUTHORITY_REGISTRY_REVISION,
+        "expected_source_revision": str(currentness.get("expected_source_revision") or ""),
+    }
+    arguments = {name: candidates[name] for name in contract["inputs"] if name in candidates and candidates[name] not in ("", None)}
+    return {
+        "operation_id": operation_id,
+        "arguments": arguments,
+        "effect_class": "workspace-state-mutation" if contract["writes_repo_state"] else "read-only-report",
+        "mutation_boundary": {
+            "writes_repo_state": contract["writes_repo_state"],
+            "read_only": contract["effects"].get("read_only") is True,
+        },
+        "contract_conformance": {
+            "status": "accepted",
+            "declared_inputs": sorted(contract["inputs"]),
+            "undeclared_arguments": sorted(set(arguments) - contract["inputs"]),
+            "consumer": consumer,
+        },
+    }
+
+
 def resolve_context_authority_projection(
     *,
     consumer: str,
@@ -738,6 +983,7 @@ def resolve_context_authority_projection(
     required = set(ORDINARY_DECISION_CONSUMER_REQUIREMENTS.get(consumer, []))
     selected: list[dict[str, Any]] = []
     excluded: list[dict[str, Any]] = []
+    currentness_dispositions: list[dict[str, Any]] = []
     for item in CONTEXT_AUTHORITY_REGISTRY:
         surface = str(item.get("surface") or "")
         if surface not in required:
@@ -787,6 +1033,13 @@ def resolve_context_authority_projection(
             and owner_identity_valid
             and _as_dict(record.get("freshness_enforcement")).get("status") == "active"
         )
+        currentness = classify_context_currentness(
+            item=item,
+            record=record,
+            owner_identity_valid=owner_identity_valid,
+            owner_operation_reason=owner_operation_reason,
+        )
+        currentness_dispositions.append(currentness)
         authority = {
             "surface": surface,
             "owner": str(item.get("owner") or ""),
@@ -798,6 +1051,7 @@ def resolve_context_authority_projection(
             "repair_operation_id": expected_operation_id,
             "revision_fields": [str(field) for field in _as_list(item.get("revision_fields"))],
             "disposition": str(item.get("disposition") or ""),
+            "currentness": currentness,
             "source": {
                 "id": str(record.get("source_id") or record.get("source") or ""),
                 "revision": str(record.get("revision") or ""),
@@ -828,7 +1082,12 @@ def resolve_context_authority_projection(
     }
     missing = sorted(selected_required_missing)
     status = "admitted" if not missing and coverage["status"] == "measured" else "repair-required"
-    repairs = [
+    actionable = {
+        str(item.get("surface") or ""): item
+        for item in currentness_dispositions
+        if item.get("disposition") in {"refreshable-derived", "safely-repairable"}
+    }
+    actions = [
         {
             "surface": item["surface"],
             "owner": item["owner"],
@@ -840,10 +1099,10 @@ def resolve_context_authority_projection(
                 ),
                 "missing",
             ),
-            "action": f"context-authority.{item['surface']}.refresh-source",
-            "operation_id": str(
-                _surface_owner_contract(str(item["surface"])).get("repair_operation_id")
-                or f"context-authority.{item['surface']}.refresh-source"
+            "action": (
+                "refresh-derived-authority"
+                if actionable[item["surface"]]["disposition"] == "refreshable-derived"
+                else "reconcile-owner-state"
             ),
             "repair_owner": str(item.get("owner") or "context-authority-source-adapter"),
             "required_record": [
@@ -853,13 +1112,16 @@ def resolve_context_authority_projection(
                 "producer-owned admission receipt",
                 "freshness=current",
             ],
-            "arguments": {"target": ".", "surface": item["surface"], "consumer": consumer, "changed_path_count": len(paths)},
+            **_context_reconciliation_invocation(currentness=actionable[item["surface"]], consumer=consumer, task=task, paths=paths),
         }
         for item in sorted(
-            (item for item in CONTEXT_AUTHORITY_REGISTRY if str(item.get("surface") or "") in missing),
+            (item for item in CONTEXT_AUTHORITY_REGISTRY if str(item.get("surface") or "") in actionable),
             key=lambda item: str(item.get("surface") or ""),
         )
     ]
+    repairs = [item for item in actions if _as_dict(item.get("mutation_boundary")).get("writes_repo_state") is True]
+    refreshes = [item for item in actions if _as_dict(item.get("mutation_boundary")).get("writes_repo_state") is False]
+    decisions = [item for item in currentness_dispositions if item.get("disposition") in {"decision-required", "missing-relevant-coverage"}]
     changed_path_guardrail = context_authority_changed_path_guardrail(
         consumer=consumer,
         changed_paths=paths,
@@ -879,15 +1141,338 @@ def resolve_context_authority_projection(
         "authorities": selected,
         "excluded_authorities": excluded,
         "missing_required_surfaces": missing,
+        "currentness": {
+            "kind": "agentic-workspace/context-currentness-projection/v1",
+            "status": "current" if not missing else "attention-required",
+            "dispositions": currentness_dispositions,
+            "decision_requirements": decisions,
+            "quiet_surface_count": sum(1 for item in currentness_dispositions if item.get("task_effect") == "quiet"),
+        },
         "repair_operation": {
             "kind": "agentic-workspace/context-authority-repair/v1",
             "status": "required" if repairs else "not-required",
             "consumer": consumer,
             "repairs": repairs,
-            "blocked_claims": ["mutation", "proof-claim", "completion-claim"] if repairs else [],
+            "blocked_claims": ["mutation", "proof-claim", "completion-claim"] if missing else [],
+        },
+        "refresh_operation": {
+            "kind": "agentic-workspace/context-authority-refresh/v1",
+            "status": "required" if refreshes else "not-required",
+            "consumer": consumer,
+            "refreshes": refreshes,
         },
         "changed_path_guardrail": changed_path_guardrail,
-        "repair": ("repair the registry declaration or consumer requirement before mutation" if status == "repair-required" else ""),
+        "repair": (
+            "resolve the material currentness disposition through the named source owner before mutation"
+            if status == "repair-required"
+            else ""
+        ),
+    }
+
+
+def context_authority_repair_action(projection: dict[str, Any]) -> dict[str, Any]:
+    """Compile the first contract-backed refresh or repair into the typed-action path."""
+
+    repairs = [_as_dict(item) for item in _as_list(_as_dict(projection.get("repair_operation")).get("repairs")) if isinstance(item, dict)]
+    refreshes = [
+        _as_dict(item) for item in _as_list(_as_dict(projection.get("refresh_operation")).get("refreshes")) if isinstance(item, dict)
+    ]
+    actions = repairs or refreshes
+    if not actions:
+        return {}
+    repair = actions[0]
+    arguments = _as_dict(repair.get("arguments"))
+    operation_id = str(repair.get("operation_id") or "")
+    surface = str(repair.get("surface") or "")
+    contract = _context_reconciliation_contract(operation_id)
+    declared_boundary = _as_dict(repair.get("mutation_boundary"))
+    writes_repo_state = contract.get("writes_repo_state") is True
+    expected_registry_revision = str(arguments.get("expected_registry_revision") or "")
+    expected_source_revision = str(arguments.get("expected_source_revision") or "")
+    if not operation_id or not surface or not contract:
+        return {}
+    if declared_boundary.get("writes_repo_state") is not writes_repo_state:
+        return {}
+    if set(arguments) - set(contract["inputs"]):
+        return {}
+    if writes_repo_state and (not contract.get("revision_guarded") or not expected_registry_revision or not expected_source_revision):
+        return {}
+    invocation = operation_invocation(
+        operation_id=operation_id,
+        arguments=arguments,
+        effect_class=str(repair.get("effect_class") or ("owner-reconciliation" if writes_repo_state else "read-only-report")),
+        authority_class="source-owner-operation",
+        expected_transition=(
+            f"{surface} canonical state becomes current or the guarded owner operation rejects stale input"
+            if writes_repo_state
+            else f"{surface} derived currentness is recomputed without canonical state mutation"
+        ),
+        preconditions={
+            "surface": surface,
+            **({"registry_revision": expected_registry_revision, "source_revision": expected_source_revision} if writes_repo_state else {}),
+        },
+        owner_context_revision={
+            "surface": surface,
+            "owner": str(repair.get("owner") or ""),
+            **({"registry_revision": expected_registry_revision, "source_revision": expected_source_revision} if writes_repo_state else {}),
+        },
+        mutation_boundary={
+            **declared_boundary,
+            "owner_operation_only": True,
+        },
+        proof_requirements=[
+            {
+                "owner": str(repair.get("owner") or ""),
+                "claim": f"{surface} resolves current and the same repair is not reissued",
+            }
+        ],
+    )
+    return {
+        "action": "reconcile-context-authority" if writes_repo_state else "refresh-context-authority",
+        "surface": surface,
+        "owner": str(repair.get("owner") or ""),
+        "reason_code": str(repair.get("reason_code") or ""),
+        "operation_invocation": invocation,
+        "quiet_after": "the next equivalent resolve admits the surface as current and emits no repeated action",
+    }
+
+
+def _maintenance_choice_invocation(
+    *,
+    operation_id: str,
+    case_id: str,
+    owner: str,
+    surface: str,
+    choice: str,
+    decision_revision: str,
+    expected_registry_revision: str,
+    expected_source_revision: str,
+    semantic_delta: dict[str, Any],
+    defer_until: str = "",
+) -> dict[str, Any]:
+    if operation_id != "instructions.create":
+        return {}
+    if semantic_delta.get("action") != "append_guidance" or any(
+        not semantic_delta.get(field) for field in ("heading", "guidance", "positive_paths")
+    ):
+        return {}
+    disposition = {
+        "candidate_id": case_id,
+        "choice": choice,
+        "decision_revision": decision_revision,
+        "defer_until": defer_until if choice == "defer" else "",
+        "admitted_by": owner,
+    }
+    arguments = {
+        "target": ".",
+        "name": Path(surface).stem,
+        "adaptation_mode": "disposition" if choice in {"retain", "defer", "dismiss"} else "apply",
+        "adaptation_authority_path": surface,
+        "adaptation_expected_revision": expected_source_revision,
+        "adaptation_delta_json": json.dumps(semantic_delta, sort_keys=True),
+        "adaptation_disposition_json": json.dumps(disposition, sort_keys=True),
+        "owner_admission": "admitted",
+        "owner_admission_by": owner,
+    }
+    contract = _context_reconciliation_contract(operation_id)
+    if not contract or set(arguments) - set(contract["inputs"]):
+        return {}
+    return operation_invocation(
+        operation_id=operation_id,
+        arguments=arguments,
+        effect_class="owner-maintenance-decision",
+        authority_class="explicit-human-or-domain-decision",
+        expected_transition=f"{surface} records the {choice} disposition through {owner}",
+        preconditions={
+            "decision_revision": decision_revision,
+            "registry_revision": expected_registry_revision,
+            "source_revision": expected_source_revision,
+        },
+        owner_context_revision={
+            "surface": surface,
+            "owner": owner,
+            "registry_revision": expected_registry_revision,
+            "source_revision": expected_source_revision,
+        },
+        mutation_boundary={
+            "writes_repo_state": True,
+            "allowed_surfaces": [surface],
+            "owner_operation_only": True,
+        },
+        proof_requirements=[
+            {
+                "claim": "the selected disposition is current, source-bound, and does not recur for equivalent facts",
+                "owner": owner,
+            }
+        ],
+    )
+
+
+def compile_context_maintenance_decision(*, context_projection: dict[str, Any], bounded_adaptations: dict[str, Any]) -> dict[str, Any]:
+    """Compile at most one genuinely semantic maintenance case for ordinary agent presentation."""
+
+    cases: list[dict[str, Any]] = []
+    for raw in _as_list(_as_dict(context_projection.get("currentness")).get("decision_requirements")):
+        requirement = _as_dict(raw)
+        if requirement.get("disposition") != "decision-required":
+            continue
+        surface = str(requirement.get("surface") or "")
+        contract = _surface_owner_contract(surface)
+        cases.append(
+            {
+                "case_kind": "negative-drift",
+                "case_id": f"currentness:{surface}:{requirement.get('reason_code', '')}",
+                "surface": surface,
+                "owner": str(requirement.get("owner") or "context-authority-owner"),
+                "operation_id": str(requirement.get("operation_id") or contract.get("repair_operation_id") or ""),
+                "why_semantic": str(
+                    requirement.get("why_semantic") or "the current source state admits more than one owner-valid interpretation"
+                ),
+                "observed_change": str(requirement.get("observed_change") or requirement.get("reason_code") or "context changed"),
+                "evidence_refs": _as_list(requirement.get("evidence_refs")) or [f"context-authority:{surface}"],
+                "confidence": str(requirement.get("confidence") or "high"),
+                "affected_effects": _as_list(requirement.get("affected_effects")) or ["authority", "action", "claim"],
+                "expected_registry_revision": str(requirement.get("expected_registry_revision") or CONTEXT_AUTHORITY_REGISTRY_REVISION),
+                "expected_source_revision": str(requirement.get("expected_source_revision") or ""),
+                "semantic_delta": _as_dict(requirement.get("proposed_delta")),
+                "defer_until": str(requirement.get("defer_until") or ""),
+            }
+        )
+    for raw in _as_list(bounded_adaptations.get("candidates")):
+        candidate = _as_dict(raw)
+        coverage = _as_dict(candidate.get("coverage"))
+        authority = _as_dict(candidate.get("authority_requirement"))
+        if not coverage or candidate.get("status") != "owner-review-required":
+            continue
+        cases.append(
+            {
+                "case_kind": "positive-coverage",
+                "case_id": str(candidate.get("id") or ""),
+                "surface": str(candidate.get("source_owner") or ""),
+                "owner": str(candidate.get("owner_class") or "workspace-owner"),
+                "operation_id": str(authority.get("operation_id") or ""),
+                "why_semantic": "the observation is evidence, not authority, or changes consequential operating policy",
+                "observed_change": str(coverage.get("observed_addition") or candidate.get("symptom") or ""),
+                "evidence_refs": _as_list(coverage.get("evidence_refs")),
+                "confidence": str(coverage.get("confidence") or "advisory"),
+                "affected_effects": _as_list(coverage.get("affected_effects")),
+                "expected_registry_revision": CONTEXT_AUTHORITY_REGISTRY_REVISION,
+                "expected_source_revision": str(authority.get("expected_owner_revision") or ""),
+                "semantic_delta": _as_dict(candidate.get("proposed_delta")),
+                "defer_until": str(coverage.get("defer_until") or ""),
+            }
+        )
+    if not cases:
+        return {
+            "kind": "agentic-workspace/context-maintenance-decision/v1",
+            "status": "not-required",
+            "first_line_cost": "none",
+        }
+    case = sorted(cases, key=lambda item: (bool(item.get("defer_until")), str(item.get("case_id"))))[0]
+    required = ["case_id", "surface", "owner", "operation_id", "expected_source_revision"]
+    if any(not case.get(field) for field in required):
+        return {
+            "kind": "agentic-workspace/context-maintenance-decision/v1",
+            "status": "blocked-missing-owner-operation",
+            "case_kind": case.get("case_kind"),
+            "owner": case.get("owner"),
+            "surface": case.get("surface"),
+            "missing_fields": [field for field in required if not case.get(field)],
+            "rule": "A semantic maintenance question is not surfaced until its owner can provide source identity and a typed apply operation.",
+        }
+    decision_revision = "sha256:" + _digest(case)
+    if case["case_kind"] == "positive-coverage" and case["operation_id"] == "instructions.create" and case["owner"] != "scoped-instruction":
+        return {
+            "kind": "agentic-workspace/context-maintenance-decision/v1",
+            "status": "blocked-missing-owner-operation",
+            "case_kind": case["case_kind"],
+            "owner": case["owner"],
+            "surface": case["surface"],
+            "operation_id": case["operation_id"],
+            "rule": "The referenced operation does not own this candidate's semantic class, so no choice is advertised.",
+        }
+    option_specs = [
+        ("admit", "Admit smallest owner update", "Apply the proposed bounded delta to the canonical owner."),
+        ("update", "Update the owner representation", "Apply the revised bounded delta to the canonical owner."),
+        ("retain", "Retain current behavior", "Record that current owner behavior remains intentional for this source revision."),
+        ("defer", "Defer with trigger", "Leave current work unblocked and surface again only at the named trigger."),
+        ("dismiss", "Dismiss this condition", "Retire this exact source/evidence identity without hiding materially changed facts."),
+    ]
+    alternatives = []
+    for choice, label, consequence in option_specs:
+        if choice == "defer" and not str(case.get("defer_until") or ""):
+            continue
+        alternatives.append(
+            {
+                "id": choice,
+                "label": label,
+                "consequence": consequence,
+                "apply_operation": _maintenance_choice_invocation(
+                    operation_id=str(case["operation_id"]),
+                    case_id=str(case["case_id"]),
+                    owner=str(case["owner"]),
+                    surface=str(case["surface"]),
+                    choice=choice,
+                    decision_revision=decision_revision,
+                    expected_registry_revision=str(case["expected_registry_revision"]),
+                    expected_source_revision=str(case["expected_source_revision"]),
+                    semantic_delta=_as_dict(case.get("semantic_delta")),
+                    defer_until=str(case.get("defer_until") or ""),
+                ),
+            }
+        )
+    alternatives = [item for item in alternatives if item["apply_operation"]]
+    if not alternatives:
+        return {
+            "kind": "agentic-workspace/context-maintenance-decision/v1",
+            "status": "blocked-missing-owner-operation",
+            "case_kind": case.get("case_kind"),
+            "owner": case.get("owner"),
+            "surface": case.get("surface"),
+            "operation_id": case.get("operation_id"),
+            "rule": "Only choices implemented by a canonical persisted owner operation are advertised.",
+        }
+    deferred = bool(case.get("defer_until"))
+    return {
+        "kind": "agentic-workspace/context-maintenance-decision/v1",
+        "status": "deferred" if deferred else "decision-required",
+        "decision_id": "maintenance:" + _digest({"case": case["case_id"], "revision": decision_revision})[:20],
+        "decision_revision": decision_revision,
+        "case_kind": case["case_kind"],
+        "summary": f"Choose how {case['owner']} should represent: {case['observed_change']}",
+        "owner": case["owner"],
+        "surface": case["surface"],
+        "requires_response_now": not deferred,
+        "defer_until": case.get("defer_until", ""),
+        "alternatives": alternatives,
+        "detail": {
+            "observed_change": case["observed_change"],
+            "why_not_automatic": case["why_semantic"],
+            "affected_effects": case["affected_effects"],
+            "evidence_refs": case["evidence_refs"],
+            "confidence": case["confidence"],
+            "expected_registry_revision": case["expected_registry_revision"],
+            "expected_source_revision": case["expected_source_revision"],
+        },
+        "first_line": {
+            "summary": f"A repository change needs one {case['owner']} decision.",
+            "choice_ids": [item["id"] for item in alternatives],
+            "detail_selector": "maintenance_decision.detail",
+        },
+        "rule": "Deterministic cases bypass this boundary; one semantic case is surfaced through ordinary agent work with owner-bound choices.",
+    }
+
+
+def maintenance_decision_action(decision: dict[str, Any]) -> dict[str, Any]:
+    if decision.get("status") != "decision-required":
+        return {}
+    return {
+        "action": "request-context-maintenance-decision",
+        "human_decision": decision.get("first_line"),
+        "decision_id": decision.get("decision_id"),
+        "owner": decision.get("owner"),
+        "surface": decision.get("surface"),
+        "detail_selector": "maintenance_decision",
     }
 
 
@@ -1713,6 +2298,7 @@ def compile_projection_surface_operating_decision(
         or _as_dict(task_posture_packet.get("instruction_program"))
     )
     initiative_posture = _as_dict(_as_dict(task_posture_packet.get("operating_posture")).get("initiative_posture"))
+    improvement_intake = _as_dict(payload.get("improvement_intake")) or _as_dict(payload_context.get("improvement_intake"))
     improvement_candidate = next(
         (
             item
@@ -1754,6 +2340,29 @@ def compile_projection_surface_operating_decision(
             "instruction_program": instruction_program,
             "improvement_candidate": improvement_candidate,
             "improvement_latitude": str(initiative_posture.get("mode") or "conservative"),
+            "adaptation_signals": [
+                item for item in _as_list(improvement_intake.get("improvement_signal_candidates")) if isinstance(item, dict)
+            ],
+            "coverage_observations": [
+                item
+                for source in (
+                    payload.get("coverage_observations"),
+                    payload_context.get("coverage_observations"),
+                    task_posture_packet.get("coverage_observations"),
+                )
+                for item in _as_list(source)
+                if isinstance(item, dict)
+            ],
+            "structured_coverage_records": [
+                item
+                for source in (
+                    payload.get("structured_coverage_records"),
+                    payload_context.get("structured_coverage_records"),
+                    task_posture_packet.get("structured_coverage_records"),
+                )
+                for item in _as_list(source)
+                if isinstance(item, dict)
+            ],
         }
     )
     surface_input_revision = str(decision.get("admitted_input_revision") or "")
@@ -2541,6 +3150,14 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         contributions=[item for item in _as_list(inputs.get("memory_contributions")) if isinstance(item, dict)],
         outcomes=[item for item in _as_list(inputs.get("memory_outcomes")) if isinstance(item, dict)],
     )
+    adaptation_signals = [item for item in _as_list(inputs.get("adaptation_signals")) if isinstance(item, dict)]
+    adaptation_signals.extend(
+        machine_observed_coverage_signals([item for item in _as_list(inputs.get("structured_coverage_records")) if isinstance(item, dict)])
+    )
+    adaptation_signals.extend(
+        coverage_signal_from_observation(item) for item in _as_list(inputs.get("coverage_observations")) if isinstance(item, dict)
+    )
+    bounded_adaptations = bounded_adaptation_projection(adaptation_signals)
     reconciliation = compile_reconciliation(_as_dict(inputs.get("reconciliation")))
     control_inputs = compile_control_inputs([item for item in _as_list(inputs.get("control_inputs")) if isinstance(item, dict)])
     assurance_requested = "assurance_decision" in inputs
@@ -2589,6 +3206,10 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         target_root=Path(str(inputs["target_root"])) if inputs.get("target_root") else None,
         source_records=_as_dict(inputs.get("authority_sources")) or _as_dict(inputs.get("authorities")),
     )
+    maintenance_decision = compile_context_maintenance_decision(
+        context_projection=context_authority_projection,
+        bounded_adaptations=bounded_adaptations,
+    )
     if instruction_clause_projection["status"] == "not-requested" and requested_consumer in {"start", "implement"}:
         scoped_mechanisms: list[dict[str, Any]] = []
         for authority in [_as_dict(item) for item in _as_list(context_authority_projection.get("authorities"))]:
@@ -2629,6 +3250,8 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         revisions = {**revisions, "intent_feedback_revision": intent_feedback["input_revision"]}
     if memory_effectiveness["projected_contributions"]:
         revisions = {**revisions, "memory_effectiveness_revision": memory_effectiveness["input_revision"]}
+    if bounded_adaptations["candidate_count"]:
+        revisions = {**revisions, "coverage_candidate_revision": "sha256:" + _digest(bounded_adaptations)}
     if source_guidance["contributions"]:
         revisions = {**revisions, "source_guidance_revision": source_guidance["revision"]}
     if instruction_clause_projection["status"] != "not-requested":
@@ -2651,7 +3274,18 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         }
     authorities = _as_dict(inputs.get("authorities"))
     actionability = _as_dict(inputs.get("actionability"))
-    action = _as_dict(actionability.get("next_action") or inputs.get("primary_action"))
+    owner_repair_action = context_authority_repair_action(context_authority_projection)
+    human_maintenance_action = maintenance_decision_action(maintenance_decision)
+    action = owner_repair_action or human_maintenance_action or _as_dict(actionability.get("next_action") or inputs.get("primary_action"))
+    if owner_repair_action and authorities:
+        action = {
+            **owner_repair_action,
+            "operation_invocation": bind_operation_invocation_to_authorities(
+                invocation=_as_dict(owner_repair_action.get("operation_invocation")),
+                authorities=authorities,
+            ),
+        }
+        owner_repair_action = action
     progress_check = _as_dict(actionability.get("progress_check"))
     invocation = _as_dict(action.get("operation_invocation"))
     invocation_expected_revision = str(invocation.get("expected_input_revision") or "").strip()
@@ -2690,6 +3324,8 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
             }
         )
     authority_blockers = derive_operating_blockers_from_authorities(authorities=authorities)
+    if invocation and not _invocation_requires_mutation_baseline(invocation):
+        authority_blockers = [item for item in authority_blockers if item.get("reason_code") != "stale-mutation-baseline"]
     blockers.extend(authority_blockers)
     if (
         invocation
@@ -2711,6 +3347,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
             *_as_list(inputs.get("context_findings")),
             *_as_list(intent_feedback.get("findings")),
             *_as_list(memory_effectiveness.get("findings")),
+            *coverage_candidate_findings(bounded_adaptations),
         ]
         if isinstance(item, dict)
     ]
@@ -2739,6 +3376,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
     if (
         not invocation
         and action
+        and not action.get("human_decision")
         and str(action.get("action") or "") not in {"no-immediate-action", ""}
         and progress_check.get("result") != "rejected-stale-action"
     ):
@@ -2799,8 +3437,8 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
             "repair": str(blocker.get("repair") or "refresh or resolve the owning authority"),
         }
     else:
-        status = "actionable" if invocation else "terminal"
-        primary_action = action if invocation else {}
+        status = "decision-required" if human_maintenance_action else "actionable" if invocation else "terminal"
+        primary_action = action if invocation or human_maintenance_action else {}
         external_blocker = {}
     if primary_action and context_effects["action_narrowing"]["status"] == "narrowed":
         primary_action = {
@@ -2812,14 +3450,36 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
     # A typed action cannot remain actionable when one of its registered
     # required inputs is absent, stale, ambiguous, or otherwise unadmitted.
     if context_authority_projection["status"] == "repair-required":
-        status = "blocked"
-        primary_action = {}
-        external_blocker = {
-            "kind": "agentic-workspace/operating-decision-blocker/v1",
-            "reason_code": "context-authority-unavailable",
-            "owner": "context-authority-registry",
-            "repair": "run the typed context-authority repair operation before retrying the decision",
-        }
+        repair_operations = _as_list(_as_dict(context_authority_projection.get("repair_operation")).get("repairs"))
+        refresh_operations = _as_list(_as_dict(context_authority_projection.get("refresh_operation")).get("refreshes"))
+        reconciliation_operations = [*repair_operations, *refresh_operations]
+        decision_requirements = _as_list(_as_dict(context_authority_projection.get("currentness")).get("decision_requirements"))
+        if reconciliation_operations and owner_repair_action and not blocker:
+            status = "actionable"
+            primary_action = owner_repair_action
+            external_blocker = {}
+        elif reconciliation_operations:
+            status = "blocked"
+            primary_action = {}
+            if not blocker:
+                external_blocker = {
+                    "kind": "agentic-workspace/operating-decision-blocker/v1",
+                    "reason_code": "context-authority-unavailable",
+                    "owner": "context-authority-registry",
+                    "repair": "run the contract-backed owner refresh, or satisfy mutation guards for a state-changing repair",
+                }
+        else:
+            status = "blocked"
+            primary_action = human_maintenance_action
+            decision_requirement = _as_dict(decision_requirements[0]) if decision_requirements else {}
+            external_blocker = {
+                "kind": "agentic-workspace/operating-decision-blocker/v1",
+                "reason_code": (
+                    "conflicting-input" if decision_requirement.get("disposition") == "decision-required" else "context-coverage-gap"
+                ),
+                "owner": str(decision_requirement.get("owner") or "context-authority-registry"),
+                "repair": "obtain the named source owner's semantic or coverage decision before retrying the decision",
+            }
     terminal_state = str(inputs.get("terminal_state") or ("COMPLETE" if reconciliation.get("status") == "terminal" else "CONTINUE"))
     blocked_claim_classes = list(
         dict.fromkeys(
@@ -2860,6 +3520,8 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         "context_effects": context_effects,
         "intent_feedback": intent_feedback,
         "memory_effectiveness": memory_effectiveness,
+        "bounded_adaptations": bounded_adaptations,
+        "maintenance_decision": maintenance_decision,
         "source_guidance": source_guidance,
         "repo_improvement_action": repo_improvement_action,
         "repo_improvement_execution": repo_improvement_execution,

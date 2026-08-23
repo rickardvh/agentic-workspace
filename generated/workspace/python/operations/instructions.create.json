@@ -15,7 +15,8 @@
   "guards": [
     "Reject invalid names and repository-relative path patterns.",
     "Never overwrite an existing instruction file during scaffold creation.",
-    "Adaptation never auto-promotes: it requires an explicit admitted owner identity, an exact current revision, one existing Markdown authority inside .agentic-workspace/instructions, and a bounded append_guidance delta.",
+    "Adaptation never auto-promotes: it requires an explicit admitted owner identity, an exact current revision, one existing Markdown authority inside .agentic-workspace/instructions, and either a bounded append_guidance delta or source-owned semantic disposition.",
+    "Retain, defer, and dismiss persist a candidate- and source-semantic-revision-bound disposition in the canonical instruction; a source semantic or re-entry-trigger change reactivates the candidate.",
     "Validate instruction syntax plus declared positive and negative applicability after mutation; restore pre-apply bytes on any failure."
   ],
   "id": "instructions.create",
@@ -61,6 +62,12 @@
     {
       "command_visibility": "runtime-only",
       "name": "adaptation_delta_json",
+      "required": false,
+      "source": "derived"
+    },
+    {
+      "command_visibility": "runtime-only",
+      "name": "adaptation_disposition_json",
       "required": false,
       "source": "derived"
     },

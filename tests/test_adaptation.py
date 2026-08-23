@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from copy import deepcopy
 from pathlib import Path
@@ -10,9 +11,13 @@ from agentic_workspace.adaptation import (
     adaptation_signal_from_proof_route_finding,
     admit_bounded_adaptation,
     bounded_adaptation_projection,
+    coverage_candidate_findings,
+    coverage_signal_from_observation,
     execute_bounded_adaptation,
+    machine_observed_coverage_signals,
     simulate_adaptation,
 )
+from agentic_workspace.operating_decision import compile_context_maintenance_decision
 from agentic_workspace.scoped_instructions import read_instruction
 from agentic_workspace.workspace_runtime_core import _improvement_intake_payload
 
@@ -240,6 +245,294 @@ def test_unregistered_operation_cannot_be_labeled_promotion_ready() -> None:
     assert candidate["promotion"]["status"] == "owner-admission-required"
     assert candidate["promotion"]["operation_registered"] is False
     assert candidate["promotion"]["operation_runtime_consumed"] is False
+
+
+def test_machine_observed_proof_and_generated_additions_become_owner_bound_candidates() -> None:
+    signals = machine_observed_coverage_signals(
+        [
+            {
+                "declaration_kind": "proof-route-declaration",
+                "observed_addition": "A declared focused proof route now covers src/api/**.",
+                "source_refs": [".agentic-workspace/config.toml#verification"],
+                "evidence_refs": ["tests/test_api.py"],
+                "owner_revision": "owner-r1",
+                "proposed_delta": {"action": "upsert_domain_lane", "lane_id": "api"},
+                "validation_route": ["pytest tests/test_api.py -q"],
+            },
+            {
+                "declaration_kind": "generated-surface-declaration",
+                "observed_addition": "A declared generator now owns generated/api/**.",
+                "source_refs": ["src/generator/api.json"],
+                "evidence_refs": ["generated/api/manifest.json"],
+                "owner_revision": "owner-r2",
+                "proposed_delta": {"action": "refresh_generated_projection"},
+                "validation_route": ["python scripts/generate.py --check"],
+            },
+        ]
+    )
+
+    projection = bounded_adaptation_projection(signals)
+
+    assert projection["candidate_count"] == 2
+    by_owner = {candidate["owner_class"]: candidate for candidate in projection["candidates"]}
+    assert by_owner["proof-route"]["coverage"]["source_class"] == "machine"
+    assert by_owner["proof-route"]["coverage"]["affected_effects"] == ["claim", "proof"]
+    assert by_owner["proof-route"]["promotion"]["operation_id"] == "proof.report"
+    assert by_owner["generated-projection"]["promotion"]["operation_id"] == "generated-command-packages.refresh"
+    assert by_owner["generated-projection"]["promotion"]["canonical_source_only"] is True
+
+
+def test_agent_observation_is_evidence_not_automatic_authority_and_deduplicates() -> None:
+    observation = {
+        "source_class": "agent",
+        "owner_class": "scoped-instruction",
+        "source_owner": ".agentic-workspace/instructions/api.md",
+        "observed_addition": "API changes repeatedly require a focused compatibility check.",
+        "source_refs": ["src/api/router.py"],
+        "evidence_refs": ["tests/test_api_compat.py"],
+        "affected_effects": ["procedure", "proof"],
+        "confidence": "advisory",
+        "recurrence_identity": "api-compatibility-procedure",
+        "admission": "deterministic",
+        "operation_id": "instructions.create",
+        "owner_revision": "owner-r1",
+        "proposed_delta": {"action": "append_guidance"},
+        "validation_route": ["pytest tests/test_api_compat.py -q"],
+    }
+    repeated = {**observation, "observed_addition": "The same API compatibility procedure was encountered again."}
+
+    candidate = bounded_adaptation_projection([coverage_signal_from_observation(observation), coverage_signal_from_observation(repeated)])[
+        "candidates"
+    ][0]
+
+    assert candidate["equivalent_signal_count"] == 2
+    assert candidate["status"] == "owner-review-required"
+    assert candidate["coverage"]["authority"] == "evidence"
+    assert candidate["coverage"]["admission"] == "decision-required"
+
+
+def test_non_operating_repository_fact_is_quiet_and_creates_no_finding() -> None:
+    signal = coverage_signal_from_observation(
+        {
+            "source_class": "agent",
+            "observed_addition": "A helper variable was renamed.",
+            "affected_effects": [],
+            "material": False,
+        }
+    )
+
+    projection = bounded_adaptation_projection([signal])
+
+    assert projection["status"] == "quiet"
+    assert projection["first_line_cost"] == "none"
+    assert coverage_candidate_findings(projection) == []
+
+
+def test_material_coverage_candidate_becomes_existing_closeout_finding() -> None:
+    signal = coverage_signal_from_observation(
+        {
+            "source_class": "review",
+            "owner_class": "memory",
+            "source_owner": ".agentic-workspace/memory/repo/manifest.toml",
+            "observed_addition": "A recurring runtime trap is not represented in routed Memory.",
+            "source_refs": ["src/runtime.py"],
+            "evidence_refs": ["review:runtime-trap"],
+            "affected_effects": ["procedure"],
+            "operation_id": "workspace.memory-create-note.apply",
+            "owner_revision": "owner-r1",
+            "proposed_delta": {"action": "create_memory_note", "slug": "runtime-trap"},
+            "validation_route": ["agentic-workspace memory route --target . --format json"],
+        }
+    )
+
+    projection = bounded_adaptation_projection([signal])
+    findings = coverage_candidate_findings(projection)
+
+    assert len(findings) == 1
+    assert findings[0]["finding_class"] == "coverage-gap"
+    assert findings[0]["current_task_effect"] == "requires disposition before broad clean closeout"
+
+
+def test_memory_coverage_admission_uses_canonical_writer_and_revision_guard(tmp_path: Path) -> None:
+    from repo_memory_bootstrap import installer as memory_installer
+
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    memory_installer.install_bootstrap(target=target)
+    manifest = target / ".agentic-workspace/memory/repo/manifest.toml"
+    revision = "sha256:" + hashlib.sha256(manifest.read_bytes()).hexdigest()
+    signal = coverage_signal_from_observation(
+        {
+            "source_class": "agent",
+            "owner_class": "memory",
+            "source_owner": ".agentic-workspace/memory/repo/manifest.toml",
+            "observed_addition": "The API routing trap recurs across ordinary work.",
+            "source_refs": ["src/api/router.py"],
+            "evidence_refs": ["tests/test_api.py"],
+            "affected_effects": ["procedure", "continuation"],
+            "operation_id": "workspace.memory-create-note.apply",
+            "owner_revision": revision,
+            "proposed_delta": {
+                "action": "create_memory_note",
+                "slug": "api-routing-trap",
+                "summary": "Remember the recurring API routing trap.",
+                "applies_to": ["src/api/**"],
+                "evidence": ["tests/test_api.py"],
+            },
+            "validation_route": ["agentic-workspace memory route --target . --format json"],
+        }
+    )
+    candidate = bounded_adaptation_projection([signal])["candidates"][0]
+    admitted = admit_bounded_adaptation(candidate, admitted_by="memory-owner")
+
+    execution = execute_bounded_adaptation(admitted, target_root=target)
+
+    assert execution["status"] == "quiet"
+    assert execution["mutation_applied"] is True
+    assert execution["post_owner_revision"] != revision
+    assert (target / ".agentic-workspace/memory/repo/domains/api-routing-trap.md").exists()
+
+    stale_target = tmp_path / "stale-repo"
+    (stale_target / ".git").mkdir(parents=True)
+    memory_installer.install_bootstrap(target=stale_target)
+    stale_manifest = stale_target / ".agentic-workspace/memory/repo/manifest.toml"
+    stale_manifest.write_text(stale_manifest.read_text(encoding="utf-8") + "\n# concurrent\n", encoding="utf-8")
+    stale_execution = execute_bounded_adaptation(admitted, target_root=stale_target)
+    assert stale_execution["status"] == "superseded"
+    assert stale_execution["mutation_applied"] is False
+
+
+@pytest.mark.parametrize("choice", ["admit", "update", "retain", "dismiss"])
+def test_every_advertised_semantic_choice_persists_and_reactivates_on_source_change(tmp_path: Path, choice: str) -> None:
+    case_root = tmp_path / choice
+    instruction = case_root / ".agentic-workspace/instructions/api.md"
+    instruction.parent.mkdir(parents=True)
+    instruction.write_text("---\npaths:\n  - src/api/**\n---\n\n# API\n\nKeep current guidance.\n", encoding="utf-8")
+
+    def observation(*, owner_revision: str) -> dict[str, object]:
+        return {
+            "source_class": "agent",
+            "owner_class": "scoped-instruction",
+            "source_owner": ".agentic-workspace/instructions/api.md",
+            "observed_addition": "The moved API boundary needs an explicit compatibility procedure.",
+            "source_refs": ["src/api/v2/router.py"],
+            "evidence_refs": ["review:api-boundary"],
+            "affected_effects": ["authority", "procedure", "proof"],
+            "operation_id": "instructions.create",
+            "owner_revision": owner_revision,
+            "recurrence_identity": "api-v2-boundary",
+            "proposed_delta": {
+                "action": "append_guidance",
+                "heading": "API v2 compatibility",
+                "guidance": "Run the compatibility proof for API v2 boundary changes.",
+                "positive_paths": ["src/api/v2/router.py"],
+                "negative_paths": ["docs/api.md"],
+            },
+            "validation_route": ["pytest tests/test_api.py -q"],
+        }
+
+    revision = read_instruction(instruction, root=case_root).revision
+    signal = coverage_signal_from_observation(observation(owner_revision=revision))
+    projection = bounded_adaptation_projection([signal], target_root=case_root)
+    candidate = projection["candidates"][0]
+    decision = compile_context_maintenance_decision(
+        context_projection={"currentness": {"decision_requirements": []}}, bounded_adaptations=projection
+    )
+    alternatives = {item["id"]: item for item in decision["alternatives"]}
+    assert set(alternatives) == {"admit", "update", "retain", "dismiss"}
+    assert alternatives[choice]["apply_operation"]["operation_id"] == "instructions.create"
+    assert set(alternatives[choice]["apply_operation"]["arguments"]) <= {
+        item["name"]
+        for item in json.loads(Path("src/agentic_workspace/contracts/operations/instructions.create.json").read_text(encoding="utf-8"))[
+            "inputs"
+        ]
+    }
+
+    execution = execute_bounded_adaptation(
+        admit_bounded_adaptation(
+            candidate,
+            admitted_by="instruction-owner",
+            choice=choice,
+            decision_revision=decision["decision_revision"],
+        ),
+        target_root=case_root,
+    )
+    assert execution["status"] == "quiet"
+    assert execution["mutation_applied"] is True
+
+    fresh_signal = coverage_signal_from_observation(observation(owner_revision=execution["post_owner_revision"]))
+    fresh = bounded_adaptation_projection([fresh_signal], target_root=case_root)
+    assert fresh["status"] == "quiet"
+    assert fresh["candidates"][0]["persisted_disposition"]["status"] == "current"
+    assert (
+        compile_context_maintenance_decision(context_projection={"currentness": {"decision_requirements": []}}, bounded_adaptations=fresh)[
+            "status"
+        ]
+        == "not-required"
+    )
+
+    instruction.write_text(instruction.read_text(encoding="utf-8") + "\nSource semantics changed.\n", encoding="utf-8")
+    changed_revision = read_instruction(instruction, root=case_root).revision
+    stale = bounded_adaptation_projection(
+        [coverage_signal_from_observation(observation(owner_revision=changed_revision))], target_root=case_root
+    )
+    assert stale["candidates"][0]["status"] == "owner-review-required"
+    assert stale["candidates"][0]["persisted_disposition"]["status"] == "stale"
+
+
+def test_defer_choice_persists_until_reentry_trigger_changes(tmp_path: Path) -> None:
+    instruction = tmp_path / ".agentic-workspace/instructions/api.md"
+    instruction.parent.mkdir(parents=True)
+    instruction.write_text("---\npaths:\n  - src/api/**\n---\n\n# API\n\nKeep current guidance.\n", encoding="utf-8")
+    revision = read_instruction(instruction, root=tmp_path).revision
+
+    def signal(trigger: str, owner_revision: str):
+        return coverage_signal_from_observation(
+            {
+                "source_class": "agent",
+                "owner_class": "scoped-instruction",
+                "source_owner": ".agentic-workspace/instructions/api.md",
+                "observed_addition": "API v2 compatibility may need guidance.",
+                "source_refs": ["src/api/v2/router.py"],
+                "evidence_refs": ["review:api-boundary"],
+                "affected_effects": ["procedure"],
+                "operation_id": "instructions.create",
+                "owner_revision": owner_revision,
+                "recurrence_identity": "api-v2-defer",
+                "defer_until": trigger,
+                "proposed_delta": {
+                    "action": "append_guidance",
+                    "heading": "API v2 compatibility",
+                    "guidance": "Run compatibility proof.",
+                    "positive_paths": ["src/api/v2/router.py"],
+                    "negative_paths": ["docs/api.md"],
+                },
+                "validation_route": ["pytest tests/test_api.py -q"],
+            }
+        )
+
+    projection = bounded_adaptation_projection([signal("next API v2 change", revision)], target_root=tmp_path)
+    candidate = projection["candidates"][0]
+    decision = compile_context_maintenance_decision(
+        context_projection={"currentness": {"decision_requirements": []}}, bounded_adaptations=projection
+    )
+    assert "defer" in {item["id"] for item in decision["alternatives"]}
+    execution = execute_bounded_adaptation(
+        admit_bounded_adaptation(
+            candidate,
+            admitted_by="instruction-owner",
+            choice="defer",
+            decision_revision=decision["decision_revision"],
+            defer_until="next API v2 change",
+        ),
+        target_root=tmp_path,
+    )
+    assert execution["status"] == "deferred"
+    fresh = bounded_adaptation_projection([signal("next API v2 change", execution["post_owner_revision"])], target_root=tmp_path)
+    assert fresh["status"] == "quiet"
+    changed_trigger = bounded_adaptation_projection([signal("next API v3 change", execution["post_owner_revision"])], target_root=tmp_path)
+    assert changed_trigger["candidates"][0]["status"] == "owner-review-required"
+    assert changed_trigger["candidates"][0]["persisted_disposition"]["status"] == "stale-trigger-changed"
 
 
 def test_draft_operation_cannot_be_labeled_or_executed_as_automatic_authority(tmp_path: Path, monkeypatch) -> None:

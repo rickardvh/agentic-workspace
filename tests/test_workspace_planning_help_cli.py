@@ -128,6 +128,47 @@ def test_planning_front_door_runs_package_operation(tmp_path, capsys) -> None:
     assert payload["lifecycle_plan"]["next_safe_command"].startswith("agentic-workspace planning new-plan")
 
 
+def test_planning_front_door_forwards_issue_shape_semantics(tmp_path, capsys) -> None:
+    assert (
+        cli.main(
+            [
+                "planning",
+                "issue-shape",
+                "--issue",
+                "42",
+                "--external-ref",
+                "github:example/repo#42",
+                "--lane",
+                "currentness",
+                "--priority",
+                "p1",
+                "--depends-on",
+                "github:example/repo#40,github:example/repo#41",
+                "--rationale",
+                "owner-bound currentness",
+                "--maturity",
+                "shaped",
+                "--target",
+                str(tmp_path),
+                "--dry-run",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["operation_receipt"]["semantic_delta"] == {
+        "depends_on": ["github:example/repo#40", "github:example/repo#41"],
+        "external_ref": "github:example/repo#42",
+        "lane_id": "currentness",
+        "maturity": "shaped",
+        "priority": "p1",
+        "rationale": "owner-bound currentness",
+    }
+
+
 def test_planning_front_door_invoke_enforces_live_route_action_admission(tmp_path) -> None:
     from agentic_workspace import config as config_lib
     from agentic_workspace.workspace_runtime_planning import _planning_safety_gate_payload

@@ -14,6 +14,22 @@ Versioned source of truth for ordinary operating-decision authority surfaces and
 | `kind` | const `"agentic-workspace/context-authority-registry/v1"` | yes |  | Schema discriminator for the operating-decision authority registry. |  |  |
 | `schema_version` | integer | yes |  | Monotonic registry schema version. |  |  |
 | `rule` | string | yes |  | Contract rule explaining how runtime must consume the registry. |  |  |
+| `currentness_contract` | object | yes |  | Shared taxonomy and derivation rules for owner-bound currentness, coverage, repair, and decision dispositions. |  |  |
+| `currentness_contract.kind` | const `"agentic-workspace/context-currentness-contract/v1"` | yes |  | Schema discriminator for the currentness contract. |  |  |
+| `currentness_contract.rule` | string | yes |  | Owner responsibility rule applied when obligations are projected. |  |  |
+| `currentness_contract.dispositions` | array | yes |  | Closed ordered vocabulary for state and action dispositions. |  |  |
+| `currentness_contract.coverage_effects` | array of enum `"action"`, `"authority"`, `"proof"`, `"claim"`, `"procedure"`, `"continuation"` | yes |  | Bounded operating-decision effects that make missing coverage material to AW. |  |  |
+| `currentness_contract.consumer_effects` | object | yes |  | Operating effects owned by each ordinary decision consumer. |  |  |
+| `currentness_contract.consumer_effects.<name>` | array of enum `"action"`, `"authority"`, `"proof"`, `"claim"`, `"procedure"`, `"continuation"` | no |  | Material operating effects for this consumer. |  |  |
+| `currentness_contract.representative_owner_classes` | object | yes |  | Audit map showing how major AW owner classes derive their obligations from registered surfaces. |  |  |
+| `currentness_contract.representative_owner_classes.<name>` | object | no |  | One representative owner class and its registry-backed disposition. |  |  |
+| `currentness_contract.representative_owner_classes.<name>.surfaces` | array of string | yes |  | Registered surfaces that supply this owner class's currentness and coverage semantics. |  |  |
+| `currentness_contract.representative_owner_classes.<name>.disposition` | string | yes |  | Owner-specific authority and lifecycle posture. |  |  |
+| `currentness_contract.read_only_refresh_operations` | array of string | yes |  | Dispatch-contract-backed operations that recompute derived authority without repository mutation. |  |  |
+| `currentness_contract.revision_guarded_repair_operations` | array of string | yes |  | Dispatch-contract-backed mutations that accept both registry and source revision guards. |  |  |
+| `currentness_contract.safe_repair_rule` | string | yes |  | Admission rule for executable repair dispositions. |  |  |
+| `currentness_contract.decision_rule` | string | yes |  | Conservative boundary for semantic or consequential ambiguity. |  |  |
+| `currentness_contract.quiet_rule` | string | yes |  | Proportionality rule preventing irrelevant surfaces from creating maintenance pressure. |  |  |
 | `ordinary_decision_consumers` | array of string | yes |  | Ordinary AW consumers that must have measured authority coverage. |  |  |
 | `consumer_requirements` | object | yes |  | Required authority surfaces for each ordinary decision consumer. |  |  |
 | `consumer_requirements.<name>` | array of string | no |  | Authority surfaces required by this consumer. |  |  |

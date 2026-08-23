@@ -1,19 +1,19 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:ade11d723f463a0515b023ad9b30b154f9950dabe9ed22dff9aae1e677a0bac8",
+  "profile_fingerprint": "sha256:6464a3213d75a8a1bc6feabfd51b28195f398f8ad68a56815c0d118c8441330e",
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",
-    "client_package": "0.42.0",
+    "client_package": "0.42.1",
     "runtime_protocol": "1.0.0",
     "python_package": {
       "name": "agentic-workspace",
-      "version": "0.42.0"
+      "version": "0.42.1"
     },
     "typescript_package": {
       "name": "@agentic-workspace/workspace-cli",
-      "version": "0.42.0"
+      "version": "0.42.1"
     }
   },
   "operations": {
@@ -20420,8 +20420,8 @@
     "instructions.create": {
       "identity": "instructions.create",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:bf30cd69e48feef447f44667951dbf01eb8f18779983c417ccf80484124dcbc6",
-      "compatibility_fingerprint": "sha256:bd2e0e56591b3d792614c548d6ccd8810c1b74f490f1d18824b1c0bf52530e8a",
+      "fingerprint": "sha256:27c6bf55939a37d31e98a1f312439bf6d0da9142fb606c4b78b93111be950ee0",
+      "compatibility_fingerprint": "sha256:0f747f14859f8a478b0bdd9b441270f8de6fcfc859ecc26579067fe85097d7c5",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
         "id": "instructions.create",
@@ -20473,6 +20473,12 @@
           },
           {
             "name": "adaptation_delta_json",
+            "source": "derived",
+            "command_visibility": "runtime-only",
+            "required": false
+          },
+          {
+            "name": "adaptation_disposition_json",
             "source": "derived",
             "command_visibility": "runtime-only",
             "required": false
@@ -20587,7 +20593,8 @@
         "guards": [
           "Reject invalid names and repository-relative path patterns.",
           "Never overwrite an existing instruction file during scaffold creation.",
-          "Adaptation never auto-promotes: it requires an explicit admitted owner identity, an exact current revision, one existing Markdown authority inside .agentic-workspace/instructions, and a bounded append_guidance delta.",
+          "Adaptation never auto-promotes: it requires an explicit admitted owner identity, an exact current revision, one existing Markdown authority inside .agentic-workspace/instructions, and either a bounded append_guidance delta or source-owned semantic disposition.",
+          "Retain, defer, and dismiss persist a candidate- and source-semantic-revision-bound disposition in the canonical instruction; a source semantic or re-entry-trigger change reactivates the candidate.",
           "Validate instruction syntax plus declared positive and negative applicability after mutation; restore pre-apply bytes on any failure."
         ],
         "proof": [
@@ -20723,6 +20730,12 @@
               "required": false
             },
             {
+              "name": "adaptation_disposition_json",
+              "source": "derived",
+              "command_visibility": "runtime-only",
+              "required": false
+            },
+            {
               "name": "owner_admission",
               "source": "derived",
               "command_visibility": "runtime-only",
@@ -20756,7 +20769,8 @@
           "guards": [
             "Reject invalid names and repository-relative path patterns.",
             "Never overwrite an existing instruction file during scaffold creation.",
-            "Adaptation never auto-promotes: it requires an explicit admitted owner identity, an exact current revision, one existing Markdown authority inside .agentic-workspace/instructions, and a bounded append_guidance delta.",
+            "Adaptation never auto-promotes: it requires an explicit admitted owner identity, an exact current revision, one existing Markdown authority inside .agentic-workspace/instructions, and either a bounded append_guidance delta or source-owned semantic disposition.",
+            "Retain, defer, and dismiss persist a candidate- and source-semantic-revision-bound disposition in the canonical instruction; a source semantic or re-entry-trigger change reactivates the candidate.",
             "Validate instruction syntax plus declared positive and negative applicability after mutation; restore pre-apply bytes on any failure."
           ]
         },
