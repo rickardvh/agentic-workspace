@@ -3619,7 +3619,7 @@ def test_broad_deferred_implement_matches_ordinary_direct_work_authority(tmp_pat
     assert broad["decision_packet"]["claim_boundary"] == ordinary["decision_packet"]["claim_boundary"]
 
 
-def test_broad_deferred_implement_preserves_required_assignment_handoff(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+def test_broad_deferred_implement_preserves_selected_current_action(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_broad_implement_review_fixture(tmp_path)
     _write(
@@ -3651,8 +3651,12 @@ def test_broad_deferred_implement_preserves_required_assignment_handoff(tmp_path
     monkeypatch.setattr(workspace_runtime_implement, "_broad_implement_early_decision_required", lambda changed_paths: False)
     ordinary = _run_broad_implement_for_review_parity(tmp_path, capsys, task=task)
 
-    assert broad["decision_packet"]["action"]["summary"] == ordinary["decision_packet"]["action"]["summary"] == "prepare-assigned-handoff"
-    assert broad["decision_packet"]["effects"]["implementation_allowed"] is False
+    assert (
+        broad["decision_packet"]["action"]["summary"]
+        == ordinary["decision_packet"]["action"]["summary"]
+        == "Inspect only the listed files and run the required validation commands."
+    )
+    assert broad["decision_packet"]["effects"]["implementation_allowed"] is True
     assert broad["decision_packet"]["effects"] == ordinary["decision_packet"]["effects"]
 
 
@@ -8915,10 +8919,17 @@ def test_implement_required_best_fit_requires_assigned_handoff(tmp_path: Path, c
                 "strong_planner_available = true",
                 "",
                 "[delegation]",
+                'execution_role = "orchestrator"',
                 'assignment_policy = "required-best-fit"',
-                'current_target = "planner"',
+                'current_target = "orchestrator"',
                 'mode = "manual"',
                 'manual_transport_policy = "allowed"',
+                "",
+                "[delegation_targets.orchestrator]",
+                'strength = "medium"',
+                'location = "local"',
+                'capability_classes = ["mechanical-follow-through"]',
+                'execution_methods = ["internal"]',
                 "",
                 "[delegation_targets.planner]",
                 'strength = "strong"',
@@ -9157,10 +9168,17 @@ def test_implement_required_best_fit_manual_transport_policy_states(
                 "strong_planner_available = true",
                 "",
                 "[delegation]",
+                'execution_role = "orchestrator"',
                 'assignment_policy = "required-best-fit"',
-                'current_target = "planner"',
+                'current_target = "orchestrator"',
                 'mode = "manual"',
                 f'manual_transport_policy = "{manual_transport_policy}"',
+                "",
+                "[delegation_targets.orchestrator]",
+                'strength = "medium"',
+                'location = "local"',
+                'capability_classes = ["mechanical-follow-through"]',
+                'execution_methods = ["internal"]',
                 "",
                 "[delegation_targets.planner]",
                 'strength = "strong"',

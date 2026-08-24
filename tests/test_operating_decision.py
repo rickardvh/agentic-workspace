@@ -293,6 +293,57 @@ def test_repo_improvement_action_is_one_canonical_operating_decision_dimension_a
     assert all(item["producer_function"] == "compile_operating_decision" for item in decisions)
 
 
+def test_selected_current_assignment_preserves_existing_implement_action() -> None:
+    admitted = admit_projection_surface_decision_input(
+        input_revisions={"current_work": "rev-a", "assignment": "assignment-rev-a"},
+        consumer="implement",
+    )
+    assignment_action = {
+        "status": "direct-current-target",
+        "action": "continue-local",
+        "assignment_decision_revision": "assignment-rev-a",
+        "target_identity_ref": "target:current",
+    }
+
+    decision = compile_projection_surface_operating_decision(
+        payload={
+            "assignment_action": assignment_action,
+            "next": {"action": "Resolve boundary warnings before editing."},
+        },
+        admitted_input=admitted,
+        consumer="implement",
+    )
+
+    assert decision["projection_posture"]["primary_action"] == {"action": "Resolve boundary warnings before editing."}
+    assert assignment_action["assignment_decision_revision"] == "assignment-rev-a"
+    assert assignment_action["target_identity_ref"] == "target:current"
+
+
+def test_nonlocal_assignment_action_preempts_local_implement_action() -> None:
+    admitted = admit_projection_surface_decision_input(
+        input_revisions={"current_work": "rev-a", "assignment": "assignment-rev-b"},
+        consumer="implement",
+    )
+    assignment_action = {
+        "status": "ready",
+        "action": "dispatch-assigned-target",
+        "assignment_decision_revision": "assignment-rev-b",
+        "target_identity_ref": "target:worker",
+        "implementation_allowed": False,
+    }
+
+    decision = compile_projection_surface_operating_decision(
+        payload={
+            "assignment_action": assignment_action,
+            "next": {"action": "Inspect only the listed files and run the required validation commands."},
+        },
+        admitted_input=admitted,
+        consumer="implement",
+    )
+
+    assert decision["projection_posture"]["primary_action"] == assignment_action
+
+
 def test_no_improvement_candidate_keeps_direct_work_quiet() -> None:
     decision = compile_operating_decision(inputs={"revisions": {"current_work": "rev-a"}})
 

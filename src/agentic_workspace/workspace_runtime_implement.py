@@ -2160,7 +2160,13 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
     assignment_action_status = str(assignment_action.get("status") or "")
     startup_route_rebind = _as_dict(payload.get("startup_route_rebind"))
     stale_startup_route = str(startup_route_rebind.get("status") or "") == "stale-projection-rejected"
-    assignment_blocks_implementation = assignment_gate.get("implementation_allowed") is False
+    assignment_policy_value = str(assignment_action.get("assignment_policy") or "")
+    assignment_changes_action = assignment_action_status not in {"", "not-applicable", "direct-current-target"} or (
+        assignment_action_status == "not-applicable"
+        and assignment_policy_value == "required-best-fit"
+        and assignment_gate.get("implementation_allowed") is False
+    )
+    assignment_blocks_implementation = assignment_changes_action and assignment_gate.get("implementation_allowed") is False
     planning_implementation_allowed = (
         bool(planning_safety_gate.get("implementation_allowed"))
         if isinstance(planning_safety_gate, dict) and "implementation_allowed" in planning_safety_gate
