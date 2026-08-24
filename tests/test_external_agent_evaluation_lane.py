@@ -703,6 +703,11 @@ def test_future_context_live_evaluation_is_head_bound_and_cost_complete() -> Non
     evidence = json.loads((REPO_ROOT / "docs" / "reviews" / "future-context-live-evaluation-2026-08-24.json").read_text(encoding="utf-8"))
 
     assert evidence["evaluated_implementation_head"] == "543e45c4f766809bfd4971e425073aadc98d3c3b"
+    assert evidence["current_restacked_implementation_head"] == "070c15c3e01f313a2e9bd6c2c619cb0c38b7978b"
+    assert evidence["restack_equivalence"]["product_diff_paths"] == []
+    assert evidence["restack_equivalence"]["planning_diff_paths"] == [
+        ".agentic-workspace/planning/lanes/open-issues-future-context.lane.json"
+    ]
     assert evidence["execution"] == "real-provider-executed"
     assert evidence["prompt_policy"]["memory_or_capture_commands_named"] is False
     assert len(evidence["current_replay"]["runs"]) == 2

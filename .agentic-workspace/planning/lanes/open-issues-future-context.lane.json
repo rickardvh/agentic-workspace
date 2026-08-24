@@ -32,7 +32,7 @@
   "proof_strategy": "Prove each independent lower slice with focused regression tests and routed changed-path validation; prove the final correction/context slice against #2690 aggregate architecture, partial-compliance, quiet-path, and operating-cost acceptance.",
   "proof_aggregation": {
     "status": "partial",
-    "evidence": ["PR #2692 closeout proposal", "PR #2694 implementation head 543e45c4f", "688 focused tests", "docs/reviews/future-context-live-evaluation-2026-08-24.json", "cross-target operation conformance"],
+    "evidence": ["PR #2692 closeout proposal", "PR #2694 restacked implementation head 070c15c3e", "live runs on tree-equivalent implementation head 543e45c4f", "688 focused tests", "docs/reviews/future-context-live-evaluation-2026-08-24.json", "cross-target operation conformance"],
     "known_gaps": ["Merge PR #2692 and PR #2694 in order, apply both archive-owner proposals, then close the aggregate lane on the integration target."]
   },
   "residual_lane_work": "Integration-only: merge the stack in order and apply the two checked-in archive-owner proposals.",

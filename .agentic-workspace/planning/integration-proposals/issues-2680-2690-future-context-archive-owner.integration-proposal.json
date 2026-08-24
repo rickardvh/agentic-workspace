@@ -8,11 +8,11 @@
     "id": "issues-2680-2690-future-context",
     "ref": ".agentic-workspace/planning/execplans/issues-2680-2690-future-context.plan.json"
   },
-  "external_ref": "PR #2694@543e45c4f",
+  "external_ref": "PR#2694@070c15c3e",
   "proof_refs": [
-    "tests/test_external_agent_evaluation_lane.py:207-passed",
-    "live-evaluation:two-current-replays-no-context-control-non-correction-counterexample",
-    "implementation-head:543e45c4f766809bfd4971e425073aadc98d3c3b",
+    "tests/test_external_agent_evaluation_lane.py:688-passed",
+    "live-evaluation:executed-head-543e45c4f-restack-equivalent-070c15c3e",
+    "implementation-head:070c15c3e01f313a2e9bd6c2c619cb0c38b7978b",
     "generated-conformance:passed"
   ],
   "parent_boundary": "Archive the final slice after PR #2694 lands; close the aggregate lane only after both stack PRs and proposals are integrated.",
@@ -23,10 +23,10 @@
     "no-context-quiet",
     "ordered-stack-integration"
   ],
-  "expected_subject_revision": "de7b4aa1c4dda248",
-  "expected_planning_revision": "4a343a06f11f26dc",
-  "created_at": "2026-08-24T07:47:00.289934Z",
-  "updated_at": "2026-08-24T07:47:00.289934Z",
+  "expected_subject_revision": "8e94d2ca706259a8",
+  "expected_planning_revision": "a2911b20422fdcaa",
+  "created_at": "2026-08-24T08:14:11.061872Z",
+  "updated_at": "2026-08-24T08:14:11.061872Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -42,5 +42,5 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "f8ce8dc68e4828ca"
+  "proposal_revision": "1046cece6cb9fb2b"
 }

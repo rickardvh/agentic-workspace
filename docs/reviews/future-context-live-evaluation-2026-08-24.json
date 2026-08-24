@@ -1,6 +1,15 @@
 {
   "kind": "agentic-workspace/future-context-live-evaluation/v1",
   "evaluated_implementation_head": "543e45c4f766809bfd4971e425073aadc98d3c3b",
+  "current_restacked_implementation_head": "070c15c3e01f313a2e9bd6c2c619cb0c38b7978b",
+  "restack_equivalence": {
+    "old_base": "1bbd1d27dd71a17bca054817bc0eeedd6859150c",
+    "new_base": "c302b198a47601db5f2120c9b54189ec9fc5e48b",
+    "product_diff_command": "git diff --name-only 543e45c4f766809bfd4971e425073aadc98d3c3b..070c15c3e01f313a2e9bd6c2c619cb0c38b7978b -- . ':(exclude).agentic-workspace/planning/**'",
+    "product_diff_paths": [],
+    "planning_diff_paths": [".agentic-workspace/planning/lanes/open-issues-future-context.lane.json"],
+    "admission": "The recorded provider runs remain bound to their executed head; the current restacked implementation admits them because every non-Planning path is byte-identical."
+  },
   "evaluated_at": "2026-08-24",
   "evaluation_owner": "scripts/model_cli_harness/run_model_cli_harness.py",
   "adapter": "codex",

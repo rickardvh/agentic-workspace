@@ -135,7 +135,7 @@
   "proof_report": {
     "validation proof": "688 focused tests; two current live replays; no-context control; non-correction counterexample; generated/conformance, lint, type, inventory, and routed proof.",
     "proof achieved now": "yes; current behavior, known miss, cost tradeoff, and failure-visible boundary are recorded.",
-    "evidence for \"proof achieved\" state": "docs/reviews/future-context-live-evaluation-2026-08-24.json bound to implementation head 543e45c4f766809bfd4971e425073aadc98d3c3b."
+    "evidence for \"proof achieved\" state": "docs/reviews/future-context-live-evaluation-2026-08-24.json binds the executed runs to 543e45c4f766809bfd4971e425073aadc98d3c3b and admits them to restacked implementation head 070c15c3e01f313a2e9bd6c2c619cb0c38b7978b through an empty non-Planning diff."
   },
   "intent_continuity": {
     "this slice completes the larger intended outcome": "yes, pending integration",
