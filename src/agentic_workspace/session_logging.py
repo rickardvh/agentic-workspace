@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import gzip
 import hashlib
 import io
 import json
@@ -12,7 +13,6 @@ import sys
 import time
 import tomllib
 import uuid
-import zipfile
 from collections import Counter
 from collections.abc import Callable, Iterable, Iterator, Sequence
 from dataclasses import dataclass
@@ -29,11 +29,18 @@ SESSION_LOG_ROOT = Path(".agentic-workspace") / "local" / "logs"
 SESSION_RECORD_KIND = "agentic-workspace/session-logging-record/v1"
 SESSION_REGISTRY_PATH = Path(".agentic-workspace") / "local" / "session-logging" / "sessions.json"
 SESSION_REGISTRY_LOCK_PATH = Path(".agentic-workspace") / "local" / "session-logging" / ".sessions.lock"
+SESSION_LOGICAL_STREAM_ROOT = Path(".agentic-workspace") / "local" / "session-logging" / "logical-sessions"
 SESSION_REGISTRY_KIND = "agentic-workspace/session-logging-registry/v1"
 LOGICAL_SESSION_IDENTITY_ENV = "AW_SESSION_LOGICAL_IDENTITY"
+PARENT_LOGICAL_SESSION_IDENTITY_ENV = "AW_SESSION_LOG_PARENT_LOGICAL_IDENTITY"
+SESSION_CORRELATION_ID_ENV = "AW_SESSION_LOG_CORRELATION_ID"
+SESSION_GAP_REASON_ENV = "AW_SESSION_LOG_GAP_REASON"
 PYTEST_DETAIL_CAPTURE_ENV = "AW_SESSION_LOG_CAPTURE_DETAIL"
 PYTEST_CAPTURE_MODE_ENV = "AW_SESSION_LOG_PYTEST_CAPTURE"
 SESSION_LOG_KIND = "agentic-workspace/session-log/v1"
+SESSION_LOG_EVENT_KIND = "agentic-workspace/session-log-event/v1"
+SESSION_LOG_EVENT_SCHEMA_VERSION = 1
+SESSION_LOG_EVENT_STREAM_NAME = "events.jsonl"
 SESSION_LOG_INDEX_KIND = "agentic-workspace/session-log-index/v2"
 SESSION_LOG_INDEX_KINDS = {SESSION_LOG_INDEX_KIND, "agentic-workspace/session-log-index/v1"}
 SESSION_IMPROVEMENT_SIGNAL_CACHE_PATH = Path(".agentic-workspace") / "local" / "cache" / "dogfooding-signal-status.json"
@@ -129,7 +136,42 @@ def run_with_session_logging(
 ) -> int:
     argv_list = list(argv)
     state = load_state_for_argv(argv_list, cwd=cwd)
-    if not state.enabled or not _logical_session_identity():
+    identity = _logical_session_identity()
+    continuity_session, continuity_source = _session_for_continuity(target_root=state.target_root) if not identity else (None, "")
+    if not state.enabled:
+        disabled_session = _session_for_caller(target_root=state.target_root, logical_identity=identity) if identity else continuity_session
+        if disabled_session:
+            with contextlib.suppress(Exception):
+                _append_event(
+                    state=state,
+                    session=disabled_session,
+                    event_type="logging.gap",
+                    payload={
+                        "reason": "capture-disabled",
+                        "continuity_source": continuity_source,
+                        "command_sha256": hashlib.sha256(("agentic-workspace " + shlex.join(argv_list)).encode()).hexdigest(),
+                        "recoverable": False,
+                    },
+                )
+        return runner(argv_list)
+    if not identity:
+        if continuity_session:
+            with contextlib.suppress(Exception):
+                declared_reason = os.environ.get(SESSION_GAP_REASON_ENV, "").strip()
+                _append_event(
+                    state=state,
+                    session=continuity_session,
+                    event_type="logging.gap",
+                    payload={
+                        "reason": declared_reason or "logical-identity-missing",
+                        "continuity_source": continuity_source,
+                        "declared_gap_source": SESSION_GAP_REASON_ENV if declared_reason else "",
+                        "command_sha256": hashlib.sha256(("agentic-workspace " + shlex.join(argv_list)).encode()).hexdigest(),
+                        "recoverable": False,
+                    },
+                )
+                if declared_reason and os.environ.get(SESSION_GAP_REASON_ENV, "").strip() == declared_reason:
+                    os.environ.pop(SESSION_GAP_REASON_ENV, None)
         return runner(argv_list)
     if _suppress_pytest_origin_capture():
         return runner(argv_list)
@@ -143,6 +185,29 @@ def run_with_session_logging(
     started_at = datetime.now(UTC).isoformat()
     started = time.monotonic()
     parent_context = _entry_parent_context(argv_list)
+    command_session: dict[str, str] | None = None
+    command_entry_id = ""
+    start_warning = ""
+    if record_command:
+        try:
+            command_session = ensure_session(state=state)
+            _append_declared_gap(state=state, session=command_session)
+            command_entry_id = f"cmd-{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8]}"
+            command_text = _normalize_for_log(state, "agentic-workspace " + shlex.join(argv_list))
+            _append_event(
+                state=state,
+                session=command_session,
+                event_type="command.started",
+                timestamp=started_at,
+                payload={
+                    "entry_id": command_entry_id,
+                    "command": command_text,
+                    "argv": [_normalize_for_log(state, token) for token in argv_list],
+                    "parent": parent_context,
+                },
+            )
+        except Exception as exc:  # pragma: no cover - intentionally best effort
+            start_warning = str(exc)
     try:
         try:
             with (
@@ -189,8 +254,18 @@ def run_with_session_logging(
         if capture.stderr:
             print(capture.stderr, end="", file=output_stderr)
         warning = (
-            append_command_entry(state=state, argv=argv_list, capture=capture, parent_context=parent_context) if record_command else None
+            append_command_entry(
+                state=state,
+                argv=argv_list,
+                capture=capture,
+                parent_context=parent_context,
+                session=command_session,
+                entry_id=command_entry_id,
+            )
+            if record_command
+            else None
         )
+        warning = "; ".join(item for item in (start_warning, warning or "") if item)
         if warning:
             print(f"AW session logging warning: {warning}", file=output_stderr)
 
@@ -316,12 +391,15 @@ def append_command_entry(
     argv: Sequence[str],
     capture: CommandCapture,
     parent_context: dict[str, str] | None = None,
+    session: dict[str, str] | None = None,
+    entry_id: str = "",
 ) -> str | None:
     if not state.enabled or not _logical_session_identity():
         return None
     try:
-        session = ensure_session(state=state)
-        entry_id = f"cmd-{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8]}"
+        session = session or ensure_session(state=state)
+        _append_declared_gap(state=state, session=session)
+        entry_id = entry_id or f"cmd-{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8]}"
         command_text = "agentic-workspace " + shlex.join(list(argv))
         timestamp = datetime.now(UTC).isoformat()
         index = _read_index(state=state, session=session) or {}
@@ -367,6 +445,45 @@ def append_command_entry(
             segment=segment,
             parent_context=parent_context,
         )
+        current_index = _read_index(state=state, session=session) or {}
+        indexed_entry = next(
+            (item for item in _entries_from_index(current_index) if str(item.get("id", "")) == entry_id),
+            None,
+        )
+        if indexed_entry is None:
+            _append_event(
+                state=state,
+                session=session,
+                event_type="logging.gap",
+                timestamp=timestamp,
+                payload={
+                    "reason": "command-view-missing-after-write",
+                    "entry_id": entry_id,
+                    "recoverable": True,
+                },
+            )
+        else:
+            _append_event(
+                state=state,
+                session=session,
+                event_type="command.completed",
+                timestamp=capture.finished_at or timestamp,
+                payload={"entry": indexed_entry},
+            )
+            surface = str(argv[0]) if argv else ""
+            if surface in {"start", "implement", "proof", "closeout"}:
+                _append_event(
+                    state=state,
+                    session=session,
+                    event_type="workflow.transition",
+                    timestamp=capture.finished_at or timestamp,
+                    payload={
+                        "entry_id": entry_id,
+                        "surface": surface,
+                        "exit_status": capture.exit_code,
+                        "result": "completed" if capture.exit_code == 0 else "failed",
+                    },
+                )
     except Exception as exc:  # pragma: no cover - intentionally best effort
         return str(exc)
     return None
@@ -384,8 +501,20 @@ def append_note(*, state: SessionLoggingState, text: str) -> dict[str, Any]:
     if not _logical_session_identity():
         return _identity_required_payload(kind="agentic-workspace/session-log-note/v1")
     session = ensure_session(state=state)
+    _append_declared_gap(state=state, session=session)
     timestamp = datetime.now(UTC).isoformat()
     note = _normalize_for_log(state, text.strip())
+    note_event = _append_event(
+        state=state,
+        session=session,
+        event_type="note.appended",
+        timestamp=timestamp,
+        payload={
+            "text": note,
+            "bytes": len(note.encode("utf-8")),
+            "sha256": hashlib.sha256(note.encode("utf-8")).hexdigest(),
+        },
+    )
     _append_text(
         state.target_root / session["log_path"],
         f"\n## Agent Note - {timestamp}\n\n{note}\n",
@@ -398,6 +527,7 @@ def append_note(*, state: SessionLoggingState, text: str) -> dict[str, Any]:
         "path": session["log_path"],
         "session_id": session["session_id"],
         "timestamp": timestamp,
+        "event_id": note_event["event_id"],
     }
 
 
@@ -539,7 +669,9 @@ def reset_session(*, state: SessionLoggingState) -> dict[str, Any]:
         "status": "created",
         "enabled": True,
         "path": session["log_path"],
+        "event_stream_path": _event_path_for_session(session).as_posix(),
         "session_id": session["session_id"],
+        "logical_session_id": session.get("logical_session_id", ""),
     }
 
 
@@ -554,8 +686,10 @@ def status_payload(*, state: SessionLoggingState) -> dict[str, Any]:
         "target": state.target_root.as_posix(),
         "config_source": _logging_config_source(state),
         "path": session.get("log_path", "") if session else "",
+        "event_stream_path": _event_path_for_session(session).as_posix() if session else "",
         "index_path": _index_path_for_session(session).as_posix() if session else "",
         "session_id": session.get("session_id", "") if session else "",
+        "logical_session_id": session.get("logical_session_id", "") if session else "",
         "logical_session_resolution": "identity-registry" if logical_identity else "identity-required",
         "session_scope": session_scope,
         "logical_session_identity_source": LOGICAL_SESSION_IDENTITY_ENV if logical_identity else "",
@@ -575,25 +709,114 @@ def ensure_session(*, state: SessionLoggingState, force_new: bool = False, logic
     with _session_registry_lock(target_root=state.target_root):
         registry = _read_session_registry(target_root=state.target_root)
         sessions = registry.setdefault("sessions", {})
+        logical_sessions = registry.setdefault("logical_sessions", {})
         registry_key = _logical_identity_fingerprint(identity=identity, registry=registry)
-        current = None
-        if not force_new:
-            current = _registered_session(registry=registry, registry_key=registry_key, target_root=state.target_root)
+        logical_session_id = _logical_session_id(registry_key)
+        parent_identity = os.environ.get(PARENT_LOGICAL_SESSION_IDENTITY_ENV, "").strip()
+        parent_key = _logical_identity_fingerprint(identity=parent_identity, registry=registry) if parent_identity else ""
+        parent_logical_session_id = _logical_session_id(parent_key) if parent_key else ""
+        raw_correlation_id = os.environ.get(SESSION_CORRELATION_ID_ENV, "").strip()
+        correlation_id = _private_correlation_id(value=raw_correlation_id, registry=registry) if raw_correlation_id else ""
+        group = logical_sessions.get(registry_key) if isinstance(logical_sessions, dict) else None
+        if not isinstance(group, dict):
+            group = {
+                "kind": "agentic-workspace/logical-session-record/v1",
+                "logical_session_id": logical_session_id,
+                "parent_logical_session_id": parent_logical_session_id,
+                "correlation_id": correlation_id,
+                "event_stream_path": _logical_event_path(logical_session_id).as_posix(),
+                "sessions": [],
+                "created_at": datetime.now(UTC).isoformat(),
+            }
+        else:
+            group = dict(group)
+            group.setdefault("logical_session_id", logical_session_id)
+            if parent_logical_session_id:
+                group["parent_logical_session_id"] = parent_logical_session_id
+            if correlation_id:
+                group["correlation_id"] = correlation_id
+        event_stream_path = (
+            _valid_event_stream_path(str(group.get("event_stream_path", ""))) or _logical_event_path(logical_session_id).as_posix()
+        )
+        group["event_stream_path"] = event_stream_path
+        registered_current = _registered_session(registry=registry, registry_key=registry_key, target_root=state.target_root)
+        group_sessions = group.setdefault("sessions", [])
+        if isinstance(group_sessions, list):
+            if registered_current and not any(
+                isinstance(item, dict) and item.get("session_id") == registered_current["session_id"] for item in group_sessions
+            ):
+                group_sessions.append(registered_current)
+            group["sessions"] = [
+                {**item, "event_stream_path": event_stream_path} if isinstance(item, dict) else item for item in group_sessions
+            ]
+        _migrate_logical_event_stream(state=state, group=group, event_stream_path=event_stream_path)
+        current = None if force_new else registered_current
         if current:
+            current = {
+                **current,
+                "logical_session_id": logical_session_id,
+                "parent_logical_session_id": str(group.get("parent_logical_session_id", "")),
+                "correlation_id": str(group.get("correlation_id", "")),
+                "event_stream_path": event_stream_path,
+            }
+            group_sessions = group.setdefault("sessions", [])
+            if isinstance(group_sessions, list) and not any(
+                isinstance(item, dict) and item.get("session_id") == current["session_id"] for item in group_sessions
+            ):
+                group_sessions.append(current)
             if isinstance(sessions, dict) and sessions.get(registry_key) != current:
                 sessions[registry_key] = current
-                registry["updated_at"] = datetime.now(UTC).isoformat()
-                _write_json_atomic(state.target_root / SESSION_REGISTRY_PATH, registry)
+            if isinstance(logical_sessions, dict):
+                logical_sessions[registry_key] = group
+            registry["updated_at"] = datetime.now(UTC).isoformat()
+            _write_json_atomic(state.target_root / SESSION_REGISTRY_PATH, registry)
             return current
-        session = _create_session(state=state)
+        prior = registered_current if force_new else None
+        session = _create_session(
+            state=state,
+            logical_session_id=logical_session_id,
+            parent_logical_session_id=str(group.get("parent_logical_session_id", "")),
+            correlation_id=str(group.get("correlation_id", "")),
+            prior_session_id=str(prior.get("session_id", "")) if prior else "",
+            event_stream_path=event_stream_path,
+        )
+        if prior:
+            _append_event(
+                state=state,
+                session={
+                    **prior,
+                    "logical_session_id": logical_session_id,
+                    "parent_logical_session_id": str(group.get("parent_logical_session_id", "")),
+                    "correlation_id": str(group.get("correlation_id", "")),
+                    "event_stream_path": event_stream_path,
+                },
+                event_type="session.rotated",
+                payload={"next_physical_session_id": session["session_id"], "reason": "explicit-new-session"},
+            )
+        group_sessions = group.setdefault("sessions", [])
+        if isinstance(group_sessions, list):
+            if prior and not any(isinstance(item, dict) and item.get("session_id") == prior["session_id"] for item in group_sessions):
+                group_sessions.append(prior)
+            group_sessions.append(session)
+        group["updated_at"] = datetime.now(UTC).isoformat()
         if isinstance(sessions, dict):
             sessions[registry_key] = session
+        if isinstance(logical_sessions, dict):
+            logical_sessions[registry_key] = group
         registry["updated_at"] = datetime.now(UTC).isoformat()
         _write_json_atomic(state.target_root / SESSION_REGISTRY_PATH, registry)
         return session
 
 
-def _create_session(*, state: SessionLoggingState) -> dict[str, str]:
+def _create_session(
+    *,
+    state: SessionLoggingState,
+    logical_session_id: str,
+    parent_logical_session_id: str = "",
+    correlation_id: str = "",
+    prior_session_id: str = "",
+    event_stream_path: str = "",
+) -> dict[str, str]:
     created_at = datetime.now(UTC)
     session_id = f"{created_at.strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8]}"
     log_path = SESSION_LOG_ROOT / f"aw-session-{session_id}" / "session.md"
@@ -602,9 +825,29 @@ def _create_session(*, state: SessionLoggingState) -> dict[str, str]:
         "session_id": session_id,
         "created_at": created_at.isoformat(),
         "log_path": log_path.as_posix(),
+        "logical_session_id": logical_session_id,
+        "parent_logical_session_id": parent_logical_session_id,
+        "correlation_id": correlation_id,
+        "prior_session_id": prior_session_id,
+        "event_stream_path": event_stream_path or _logical_event_path(logical_session_id).as_posix(),
     }
     absolute_log_path = state.target_root / log_path
     absolute_log_path.parent.mkdir(parents=True, exist_ok=True)
+    _append_event(
+        state=state,
+        session=session,
+        event_type="session.started",
+        timestamp=created_at.isoformat(),
+        payload={
+            "created_at": created_at.isoformat(),
+            "prior_physical_session_id": prior_session_id,
+            "package": {"name": "agentic-workspace", "version": __version__},
+            "logging_policy": {
+                "path_normalization": _path_normalization_payload(state),
+                "failure_behavior": "warning-only",
+            },
+        },
+    )
     absolute_log_path.write_text(_session_prelude(state=state, session=session), encoding="utf-8")
     _write_index(state=state, session=session, entries=(), notes=())
     return session
@@ -619,6 +862,7 @@ def _new_session_registry() -> dict[str, Any]:
         "kind": SESSION_REGISTRY_KIND,
         "salt": uuid.uuid4().hex,
         "sessions": {},
+        "logical_sessions": {},
         "updated_at": datetime.now(UTC).isoformat(),
         "local_only": True,
         "authoritative": False,
@@ -646,6 +890,15 @@ def _logical_identity_fingerprint(*, identity: str, registry: dict[str, Any]) ->
     return hashlib.sha256(f"{salt}\0{identity}".encode()).hexdigest()
 
 
+def _logical_session_id(registry_key: str) -> str:
+    return f"logical-{registry_key[:24]}" if registry_key else ""
+
+
+def _private_correlation_id(*, value: str, registry: dict[str, Any]) -> str:
+    salt = str(registry.get("salt", ""))
+    return "correlation-" + hashlib.sha256(f"{salt}\0{value}".encode()).hexdigest()[:24]
+
+
 def _registered_session(*, registry: dict[str, Any], registry_key: str, target_root: Path) -> dict[str, str] | None:
     sessions = registry.get("sessions", {})
     candidate = sessions.get(registry_key) if isinstance(sessions, dict) else None
@@ -660,7 +913,54 @@ def _session_for_caller(*, target_root: Path, logical_identity: str) -> dict[str
         return None
     registry = _read_session_registry(target_root=target_root)
     registry_key = _logical_identity_fingerprint(identity=logical_identity, registry=registry)
-    return _registered_session(registry=registry, registry_key=registry_key, target_root=target_root)
+    session = _registered_session(registry=registry, registry_key=registry_key, target_root=target_root)
+    groups = registry.get("logical_sessions", {})
+    group = groups.get(registry_key) if isinstance(groups, dict) else None
+    if session and isinstance(group, dict):
+        event_stream_path = _valid_event_stream_path(str(group.get("event_stream_path", "")))
+        return {**session, "event_stream_path": event_stream_path or session.get("event_stream_path", "")}
+    return session
+
+
+def _session_for_continuity(*, target_root: Path) -> tuple[dict[str, str] | None, str]:
+    parent_identity = os.environ.get(PARENT_LOGICAL_SESSION_IDENTITY_ENV, "").strip()
+    raw_correlation_id = os.environ.get(SESSION_CORRELATION_ID_ENV, "").strip()
+    if not parent_identity and not raw_correlation_id:
+        return None, ""
+    registry = _read_session_registry(target_root=target_root)
+    groups = registry.get("logical_sessions", {})
+    if not isinstance(groups, dict):
+        return None, ""
+    candidates: list[tuple[dict[str, Any], str]] = []
+    parent_resolved = False
+    if parent_identity:
+        parent_key = _logical_identity_fingerprint(identity=parent_identity, registry=registry)
+        parent_group = groups.get(parent_key)
+        if isinstance(parent_group, dict):
+            candidates.append((parent_group, PARENT_LOGICAL_SESSION_IDENTITY_ENV))
+            parent_resolved = True
+    if raw_correlation_id:
+        private_correlation_id = _private_correlation_id(value=raw_correlation_id, registry=registry)
+        candidates.extend(
+            (group, SESSION_CORRELATION_ID_ENV)
+            for group in groups.values()
+            if isinstance(group, dict) and str(group.get("correlation_id", "")) == private_correlation_id
+        )
+    if parent_resolved:
+        candidates = candidates[:1]
+    else:
+        unique_candidates = {str(group.get("logical_session_id", "")): (group, source) for group, source in candidates}
+        if len(unique_candidates) != 1:
+            return None, ""
+        candidates = list(unique_candidates.values())
+    for group, source in candidates:
+        event_stream_path = _valid_event_stream_path(str(group.get("event_stream_path", "")))
+        sessions = [_validated_session(item) for item in group.get("sessions", [])]
+        valid_sessions = [item for item in sessions if item and (target_root / item["log_path"]).is_file()]
+        if valid_sessions:
+            current = max(valid_sessions, key=lambda item: (item.get("created_at", ""), item["session_id"]))
+            return {**current, "event_stream_path": event_stream_path or current.get("event_stream_path", "")}, source
+    return None, ""
 
 
 def _session_scope_payload(
@@ -712,7 +1012,7 @@ def _identity_required_payload(*, kind: str) -> dict[str, Any]:
 def _session_registry_lock(*, target_root: Path) -> Iterator[None]:
     lock_path = target_root / SESSION_REGISTRY_LOCK_PATH
     lock_path.parent.mkdir(parents=True, exist_ok=True)
-    deadline = time.monotonic() + 5
+    deadline = time.perf_counter() + 5
     while True:
         try:
             lock_path.mkdir()
@@ -729,7 +1029,7 @@ def _session_registry_lock(*, target_root: Path) -> Iterator[None]:
                 with contextlib.suppress(OSError):
                     lock_path.rmdir()
                 continue
-            if time.monotonic() >= deadline:
+            if time.perf_counter() >= deadline:
                 raise TimeoutError(f"timed out waiting for session registry lock: {lock_path}")
             time.sleep(0.01)
     try:
@@ -751,6 +1051,11 @@ def _validated_session(payload: Any) -> dict[str, str] | None:
         "session_id": session_id,
         "created_at": str(payload.get("created_at", "")),
         "log_path": log_path,
+        "logical_session_id": str(payload.get("logical_session_id", "")),
+        "parent_logical_session_id": str(payload.get("parent_logical_session_id", "")),
+        "correlation_id": str(payload.get("correlation_id", "")),
+        "prior_session_id": str(payload.get("prior_session_id", "")),
+        "event_stream_path": _valid_event_stream_path(str(payload.get("event_stream_path", ""))),
     }
 
 
@@ -770,10 +1075,248 @@ def _valid_session_log_path(value: str) -> str:
     return normalized
 
 
+def _logical_event_path(logical_session_id: str) -> Path:
+    return SESSION_LOGICAL_STREAM_ROOT / logical_session_id / SESSION_LOG_EVENT_STREAM_NAME
+
+
+def _valid_event_stream_path(value: str) -> str:
+    if not value:
+        return ""
+    path = Path(value)
+    if path.is_absolute() or path.drive or any(part == ".." for part in path.parts):
+        return ""
+    normalized = Path(*path.parts).as_posix()
+    root = SESSION_LOGICAL_STREAM_ROOT.as_posix()
+    if not normalized.startswith(f"{root}/"):
+        return ""
+    relative = Path(normalized).relative_to(SESSION_LOGICAL_STREAM_ROOT)
+    if len(relative.parts) != 2 or relative.name != SESSION_LOG_EVENT_STREAM_NAME or not relative.parent.name.startswith("logical-"):
+        return ""
+    return normalized
+
+
+def _migrate_logical_event_stream(*, state: SessionLoggingState, group: dict[str, Any], event_stream_path: str) -> None:
+    canonical_path = state.target_root / event_stream_path
+    if canonical_path.is_file():
+        return
+    migrated: list[dict[str, Any]] = []
+    for candidate in group.get("sessions", []):
+        session = _validated_session(candidate)
+        if not session:
+            continue
+        legacy_path = state.target_root / Path(session["log_path"]).parent / SESSION_LOG_EVENT_STREAM_NAME
+        events, _ = _read_event_stream(legacy_path)
+        migrated.extend(events)
+    if not migrated:
+        return
+    migrated.sort(
+        key=lambda event: (
+            str(event.get("timestamp", "")),
+            str(event.get("physical_session_id", "")),
+            int(event.get("sequence", 0) or 0),
+            str(event.get("event_id", "")),
+        )
+    )
+    canonical_path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = canonical_path.with_suffix(canonical_path.suffix + f".{uuid.uuid4().hex}.tmp")
+    with temporary.open("wb") as handle:
+        for sequence, event in enumerate(migrated, start=1):
+            normalized = {**event, "source_sequence": int(event.get("sequence", 0) or 0), "sequence": sequence}
+            handle.write((json.dumps(serialise_value(normalized), sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8"))
+        handle.flush()
+        os.fsync(handle.fileno())
+    temporary.replace(canonical_path)
+
+
+def _event_path_for_session(session: dict[str, str]) -> Path:
+    configured = _valid_event_stream_path(str(session.get("event_stream_path", "")))
+    return Path(configured) if configured else Path(session["log_path"]).parent / SESSION_LOG_EVENT_STREAM_NAME
+
+
+def _event_lock_path_for_session(session: dict[str, str]) -> Path:
+    return _event_path_for_session(session).parent / ".events.lock"
+
+
+@contextlib.contextmanager
+def _event_stream_lock(*, state: SessionLoggingState, session: dict[str, str]) -> Iterator[None]:
+    lock_path = state.target_root / _event_lock_path_for_session(session)
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    deadline = time.perf_counter() + 5
+    while True:
+        try:
+            lock_path.mkdir()
+            break
+        except (FileExistsError, PermissionError):
+            try:
+                stale = time.time() - lock_path.stat().st_mtime > 30
+            except OSError:
+                stale = False
+            if stale:
+                with contextlib.suppress(OSError):
+                    lock_path.rmdir()
+                continue
+            if time.perf_counter() >= deadline:
+                raise TimeoutError(f"timed out waiting for session event-stream lock: {lock_path}")
+            time.sleep(0.01)
+    try:
+        yield
+    finally:
+        with contextlib.suppress(OSError):
+            lock_path.rmdir()
+
+
+def _read_event_stream(path: Path) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    if not path.is_file():
+        return [], []
+    try:
+        raw = path.read_bytes()
+    except OSError as exc:
+        return [], [{"reason": "event-stream-unreadable", "detail": exc.__class__.__name__}]
+    events: list[dict[str, Any]] = []
+    issues: list[dict[str, Any]] = []
+    lines = raw.splitlines(keepends=True)
+    for line_number, raw_line in enumerate(lines, start=1):
+        complete = raw_line.endswith((b"\n", b"\r"))
+        try:
+            payload = json.loads(raw_line.decode("utf-8-sig"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            issues.append(
+                {
+                    "reason": "partial-event" if not complete and line_number == len(lines) else "invalid-event",
+                    "line": line_number,
+                    "sha256": hashlib.sha256(raw_line).hexdigest(),
+                }
+            )
+            continue
+        if not isinstance(payload, dict) or payload.get("kind") != SESSION_LOG_EVENT_KIND:
+            issues.append({"reason": "unsupported-event", "line": line_number})
+            continue
+        events.append(payload)
+    return events, issues
+
+
+def _new_event(
+    *,
+    session: dict[str, str],
+    event_type: str,
+    sequence: int,
+    timestamp: str,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "kind": SESSION_LOG_EVENT_KIND,
+        "schema_version": SESSION_LOG_EVENT_SCHEMA_VERSION,
+        "event_id": f"event-{session['session_id']}-{sequence:08d}-{uuid.uuid4().hex[:8]}",
+        "event_type": event_type,
+        "timestamp": timestamp,
+        "sequence": sequence,
+        "logical_session_id": str(session.get("logical_session_id", "")),
+        "physical_session_id": session["session_id"],
+        "parent_logical_session_id": str(session.get("parent_logical_session_id", "")),
+        "correlation_id": str(session.get("correlation_id", "")),
+        "payload": payload,
+        "local_only": True,
+        "authoritative": False,
+    }
+
+
+def _append_event(
+    *,
+    state: SessionLoggingState,
+    session: dict[str, str],
+    event_type: str,
+    payload: dict[str, Any],
+    timestamp: str = "",
+) -> dict[str, Any]:
+    event_path = state.target_root / _event_path_for_session(session)
+    event_path.parent.mkdir(parents=True, exist_ok=True)
+    with _event_stream_lock(state=state, session=session):
+        events, issues = _read_event_stream(event_path)
+        sequence = max((int(event.get("sequence", 0) or 0) for event in events), default=0) + 1
+        append_payloads: list[dict[str, Any]] = []
+        if issues:
+            issue_digest = hashlib.sha256(json.dumps(issues, sort_keys=True).encode()).hexdigest()
+            already_reported = any(
+                event.get("event_type") == "logging.gap"
+                and isinstance(event.get("payload"), dict)
+                and event["payload"].get("issue_digest") == issue_digest
+                for event in events
+            )
+            if not already_reported:
+                append_payloads.append(
+                    _new_event(
+                        session=session,
+                        event_type="logging.gap",
+                        sequence=sequence,
+                        timestamp=datetime.now(UTC).isoformat(),
+                        payload={
+                            "reason": "event-stream-recovery",
+                            "issue_digest": issue_digest,
+                            "issues": issues,
+                            "recoverable": True,
+                        },
+                    )
+                )
+                sequence += 1
+        event = _new_event(
+            session=session,
+            event_type=event_type,
+            sequence=sequence,
+            timestamp=timestamp or datetime.now(UTC).isoformat(),
+            payload=payload,
+        )
+        append_payloads.append(event)
+        needs_separator = event_path.exists() and event_path.stat().st_size > 0 and not event_path.read_bytes().endswith(b"\n")
+        with event_path.open("ab") as handle:
+            if needs_separator:
+                handle.write(b"\n")
+            for item in append_payloads:
+                handle.write((json.dumps(serialise_value(item), sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8"))
+            handle.flush()
+            os.fsync(handle.fileno())
+        return event
+
+
+def _append_declared_gap(*, state: SessionLoggingState, session: dict[str, str]) -> None:
+    reason = os.environ.get(SESSION_GAP_REASON_ENV, "").strip()
+    if not reason:
+        return
+    events, _ = _read_event_stream(state.target_root / _event_path_for_session(session))
+    if any(
+        event.get("event_type") == "logging.gap" and isinstance(event.get("payload"), dict) and event["payload"].get("reason") == reason
+        for event in events
+    ):
+        return
+    _append_event(
+        state=state,
+        session=session,
+        event_type="logging.gap",
+        payload={"reason": reason, "source": SESSION_GAP_REASON_ENV, "recoverable": False},
+    )
+    if os.environ.get(SESSION_GAP_REASON_ENV, "").strip() == reason:
+        os.environ.pop(SESSION_GAP_REASON_ENV, None)
+
+
+def _command_entries_from_events(events: Iterable[dict[str, Any]], *, physical_session_id: str = "") -> list[dict[str, Any]]:
+    entries = []
+    for event in events:
+        if event.get("event_type") != "command.completed" or not isinstance(event.get("payload"), dict):
+            continue
+        if physical_session_id and str(event.get("physical_session_id", "")) != physical_session_id:
+            continue
+        entry = event["payload"].get("entry")
+        if isinstance(entry, dict):
+            entries.append(entry)
+    return entries
+
+
 def _session_prelude(*, state: SessionLoggingState, session: dict[str, str]) -> str:
     snapshot = {
         "kind": SESSION_LOG_KIND,
         "session_id": session["session_id"],
+        "logical_session_id": session.get("logical_session_id", ""),
+        "event_stream": _event_path_for_session(session).as_posix(),
+        "canonical_chronology": "events.jsonl",
         "created_at": session["created_at"],
         "target": _normalize_for_log(state, state.target_root.as_posix()),
         "package": {"name": "agentic-workspace", "version": __version__},
@@ -2041,6 +2584,17 @@ def _is_session_log_analyzer_entry(entry: dict[str, Any]) -> bool:
 def _session_for_log(*, state: SessionLoggingState, log_path: Path, session: dict[str, str] | None) -> dict[str, str]:
     if session and (state.target_root / session.get("log_path", "")) == log_path:
         return session
+    registry = _read_session_registry(target_root=state.target_root)
+    groups = registry.get("logical_sessions", {})
+    if isinstance(groups, dict):
+        for group in groups.values():
+            if not isinstance(group, dict):
+                continue
+            event_stream_path = _valid_event_stream_path(str(group.get("event_stream_path", "")))
+            for candidate in group.get("sessions", []):
+                registered = _validated_session(candidate)
+                if registered and (state.target_root / registered["log_path"]) == log_path:
+                    return {**registered, "event_stream_path": event_stream_path or registered.get("event_stream_path", "")}
     session_id = _session_id_from_log_path(log_path)
     return {
         "kind": SESSION_RECORD_KIND,
@@ -2092,12 +2646,15 @@ def repair_session_log_index(*, state: SessionLoggingState, path: str = "", sess
     index = _read_index_for_log(state=state, log_path=log_path, session=session)
     existing = _entries_from_index(index or {})
     markdown_entries = _entries_from_markdown(log_path)
+    canonical_events, event_issues = _read_event_stream(state.target_root / _event_path_for_session(effective_session))
+    canonical_entries = _command_entries_from_events(canonical_events, physical_session_id=effective_session["session_id"])
+    source_entries = canonical_entries or markdown_entries
     existing_by_id = {str(entry.get("id", "")): entry for entry in existing}
-    markdown_ids = {str(entry.get("id", "")) for entry in markdown_entries}
-    missing = [entry for entry in markdown_entries if str(entry.get("id", "")) not in existing_by_id]
-    quarantined = [entry for entry in existing if str(entry.get("id", "")) not in markdown_ids]
+    source_ids = {str(entry.get("id", "")) for entry in source_entries}
+    missing = [entry for entry in source_entries if str(entry.get("id", "")) not in existing_by_id]
+    quarantined = [entry for entry in existing if str(entry.get("id", "")) not in source_ids]
     notes = index.get("notes", []) if isinstance(index, dict) and isinstance(index.get("notes"), list) else []
-    merged = [existing_by_id.get(str(entry.get("id", "")), entry) for entry in markdown_entries]
+    merged = [existing_by_id.get(str(entry.get("id", "")), entry) for entry in source_entries]
     _write_index(state=state, session=effective_session, entries=merged, notes=notes)
     index_path = state.target_root / _index_path_for_session(effective_session)
     repaired_index = json.loads(index_path.read_text(encoding="utf-8"))
@@ -2109,10 +2666,11 @@ def repair_session_log_index(*, state: SessionLoggingState, path: str = "", sess
         "quarantined_entry_count": len(quarantined),
         "quarantined_entry_ids": [str(entry.get("id", "")) for entry in quarantined],
         "quarantined_entries": quarantined,
-        "source": effective_session["log_path"],
+        "source": _event_path_for_session(effective_session).as_posix() if canonical_entries else effective_session["log_path"],
+        "source_event_issues": event_issues,
     }
     _write_json_atomic(index_path, repaired_index)
-    coverage = _coverage_payload(markdown_entries=markdown_entries, index=repaired_index)
+    coverage = _coverage_payload(markdown_entries=source_entries, index=repaired_index)
     return {
         "kind": "agentic-workspace/session-log-index-repair/v1",
         "status": "repaired" if missing or quarantined else "already-covered",
@@ -2121,6 +2679,8 @@ def repair_session_log_index(*, state: SessionLoggingState, path: str = "", sess
         "added_entry_count": len(missing),
         "quarantined_entry_count": len(quarantined),
         "coverage": coverage,
+        "repair_source": "canonical-event-stream" if canonical_entries else "markdown-fallback",
+        "event_stream_issues": event_issues,
         "local_only": True,
         "authoritative": False,
     }
@@ -2194,6 +2754,187 @@ def _export_index_payload(
     return payload, entries
 
 
+def _logical_export_sessions(*, state: SessionLoggingState, current: dict[str, str], explicit_selection: bool) -> list[dict[str, str]]:
+    if explicit_selection:
+        return [current]
+    registry = _read_session_registry(target_root=state.target_root)
+    groups = registry.get("logical_sessions", {})
+    if not isinstance(groups, dict):
+        return [current]
+    root_id = str(current.get("logical_session_id", ""))
+    if not root_id:
+        identity = _logical_session_identity()
+        key = _logical_identity_fingerprint(identity=identity, registry=registry) if identity else ""
+        root_id = _logical_session_id(key)
+    included_ids = {root_id}
+    changed = True
+    while changed:
+        changed = False
+        for group in groups.values():
+            if not isinstance(group, dict):
+                continue
+            logical_id = str(group.get("logical_session_id", ""))
+            parent_id = str(group.get("parent_logical_session_id", ""))
+            if parent_id in included_ids and logical_id and logical_id not in included_ids:
+                included_ids.add(logical_id)
+                changed = True
+    sessions: dict[str, dict[str, str]] = {current["session_id"]: current}
+    for group in groups.values():
+        if not isinstance(group, dict) or str(group.get("logical_session_id", "")) not in included_ids:
+            continue
+        for candidate in group.get("sessions", []):
+            session = _validated_session(candidate)
+            if session and (state.target_root / session["log_path"]).is_file():
+                sessions[session["session_id"]] = session
+    return sorted(sessions.values(), key=lambda item: (item.get("created_at", ""), item["session_id"]))
+
+
+def _synthetic_export_event(
+    *, session: dict[str, str], event_type: str, sequence: int, timestamp: str, payload: dict[str, Any]
+) -> dict[str, Any]:
+    identity = hashlib.sha256(
+        json.dumps(
+            {"session": session["session_id"], "type": event_type, "sequence": sequence, "payload": payload},
+            sort_keys=True,
+            default=str,
+        ).encode()
+    ).hexdigest()[:16]
+    return {
+        "kind": SESSION_LOG_EVENT_KIND,
+        "schema_version": SESSION_LOG_EVENT_SCHEMA_VERSION,
+        "event_id": f"recovered-{identity}",
+        "event_type": event_type,
+        "timestamp": timestamp,
+        "sequence": sequence,
+        "logical_session_id": str(session.get("logical_session_id", "")),
+        "physical_session_id": session["session_id"],
+        "parent_logical_session_id": str(session.get("parent_logical_session_id", "")),
+        "correlation_id": str(session.get("correlation_id", "")),
+        "payload": payload,
+        "local_only": False,
+        "authoritative": False,
+        "recovered_from": "legacy-derived-view",
+    }
+
+
+def _events_for_export(
+    *, state: SessionLoggingState, session: dict[str, str], physical_only: bool = False
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+    event_path = state.target_root / _event_path_for_session(session)
+    events, issues = _read_event_stream(event_path)
+    if physical_only:
+        events = [event for event in events if str(event.get("physical_session_id", "")) == session["session_id"]]
+    log_path = state.target_root / session["log_path"]
+    index = _read_index_for_log(state=state, log_path=log_path, session=session)
+    markdown_entries = _entries_from_markdown(log_path)
+    indexed_entries = _entries_from_index(index or {})
+    indexed_by_id = {str(entry.get("id", "")): entry for entry in indexed_entries}
+    legacy_entries = [indexed_by_id.get(str(entry.get("id", "")), entry) for entry in markdown_entries]
+    command_ids = {str(entry.get("id", "")) for entry in _command_entries_from_events(events)}
+    started_command_ids = {
+        str(event.get("payload", {}).get("entry_id", ""))
+        for event in events
+        if event.get("event_type") == "command.started" and isinstance(event.get("payload"), dict)
+    }
+    incomplete_command_ids = sorted(started_command_ids - command_ids)
+    sequence = max((int(event.get("sequence", 0) or 0) for event in events), default=0)
+    recovered: list[dict[str, Any]] = []
+    if not any(event.get("event_type") == "session.started" for event in events):
+        sequence += 1
+        recovered.append(
+            _synthetic_export_event(
+                session=session,
+                event_type="session.started",
+                sequence=sequence,
+                timestamp=session.get("created_at", ""),
+                payload={"created_at": session.get("created_at", ""), "migration": "legacy-session"},
+            )
+        )
+    missing_entries = [entry for entry in legacy_entries if str(entry.get("id", "")) not in command_ids]
+    if issues or missing_entries or incomplete_command_ids:
+        sequence += 1
+        recovered.append(
+            _synthetic_export_event(
+                session=session,
+                event_type="logging.gap",
+                sequence=sequence,
+                timestamp=datetime.now(UTC).isoformat(),
+                payload={
+                    "reason": "legacy-migration" if not events else "canonical-stream-incomplete",
+                    "issues": issues,
+                    "recovered_command_count": len(missing_entries),
+                    "incomplete_command_ids": incomplete_command_ids,
+                    "recoverable": True,
+                },
+            )
+        )
+    for entry in missing_entries:
+        sequence += 1
+        recovered.append(
+            _synthetic_export_event(
+                session=session,
+                event_type="command.completed",
+                sequence=sequence,
+                timestamp=str(entry.get("finished_at") or entry.get("timestamp") or session.get("created_at", "")),
+                payload={"entry": entry, "migration": "legacy-session"},
+            )
+        )
+    return events + recovered, legacy_entries, issues
+
+
+def _artifact_chunk_events(
+    *, state: SessionLoggingState, session: dict[str, str], entries: list[dict[str, Any]], include_artifacts: bool
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    result: list[dict[str, Any]] = []
+    coverage: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    artifact_root = (state.target_root / _artifact_root_for_session(session)).resolve()
+    for entry in entries:
+        artifact = entry.get("artifact") if isinstance(entry.get("artifact"), dict) else None
+        artifact_path = str((artifact or {}).get("path", ""))
+        if not artifact_path or artifact_path in seen:
+            continue
+        seen.add(artifact_path)
+        record = {
+            "source_path": artifact_path,
+            "sha256": str((artifact or {}).get("sha256", "")),
+            "bytes": int((artifact or {}).get("bytes", 0) or 0),
+            "physical_session_id": session["session_id"],
+        }
+        if not include_artifacts:
+            coverage.append({**record, "status": "digest-only" if record["sha256"] else "omitted"})
+            continue
+        candidate = (state.target_root / artifact_path).resolve()
+        try:
+            candidate.relative_to(artifact_root)
+            payload = json.loads(candidate.read_text(encoding="utf-8-sig"))
+        except (OSError, ValueError, json.JSONDecodeError):
+            coverage.append({**record, "status": "missing"})
+            continue
+        coverage.append({**record, "status": "included-as-output-chunks"})
+        for stream in ("stdout", "stderr"):
+            text = _normalized_export_text(state=state, text=str(payload.get(stream, "")))
+            chunks = [text[index : index + 32768] for index in range(0, len(text), 32768)] or [""]
+            for chunk_index, chunk in enumerate(chunks):
+                result.append(
+                    _synthetic_export_event(
+                        session=session,
+                        event_type="output.chunk",
+                        sequence=chunk_index + 1,
+                        timestamp=str(entry.get("finished_at") or entry.get("timestamp") or session.get("created_at", "")),
+                        payload={
+                            "entry_id": str(entry.get("id", "")),
+                            "artifact_sha256": record["sha256"],
+                            "stream": stream,
+                            "chunk_index": chunk_index,
+                            "chunk_count": len(chunks),
+                            "text": chunk,
+                        },
+                    )
+                )
+    return result, coverage
+
+
 def export_session_log(
     *,
     state: SessionLoggingState,
@@ -2201,135 +2942,187 @@ def export_session_log(
     session_id: str = "",
     include_artifacts: bool = True,
 ) -> dict[str, Any]:
-    session = _session_for_caller(target_root=state.target_root, logical_identity=_logical_session_identity())
+    logical_identity = _logical_session_identity()
+    session = _session_for_caller(target_root=state.target_root, logical_identity=logical_identity)
+    if state.enabled and session:
+        session = ensure_session(state=state)
     log_path = _analysis_log_path(state=state, path=path, session_id=session_id, session=session)
     if log_path is None:
         if not path and not session_id and not _logical_session_identity():
             return _identity_required_payload(kind="agentic-workspace/session-log-export/v1")
         return {"kind": "agentic-workspace/session-log-export/v1", "status": "missing-log", "path": ""}
     effective_session = _session_for_log(state=state, log_path=log_path, session=session)
-    session_scope = _session_scope_payload(session=effective_session, explicit_selection=bool(path or session_id))
-    index = _read_index_for_log(state=state, log_path=log_path, session=session)
-    markdown_entries = _entries_from_markdown(log_path)
-    source_coverage = _coverage_payload(markdown_entries=markdown_entries, index=index)
-    export_index, entries = _export_index_payload(state=state, session=effective_session, markdown_entries=markdown_entries, index=index)
-    files: dict[str, bytes] = {
-        "session.md": _normalized_export_text(state=state, text=log_path.read_text(encoding="utf-8-sig")).encode("utf-8"),
-        "index.json": (json.dumps(_normalized_export_value(state=state, value=export_index), indent=2, sort_keys=True) + "\n").encode(
-            "utf-8"
-        ),
-    }
-    included_artifacts: list[str] = []
-    artifact_coverage: list[dict[str, Any]] = []
-    artifacts_by_path = {
-        str(entry.get("artifact", {}).get("path", "")): entry.get("artifact", {})
-        for entry in entries
-        if isinstance(entry.get("artifact"), dict) and entry.get("artifact", {}).get("path")
-    }
-    artifact_root = (state.target_root / _artifact_root_for_session(effective_session)).resolve()
-    for artifact_path, artifact in sorted(artifacts_by_path.items()):
-        coverage_record = {
-            "source_path": artifact_path,
-            "sha256": str(artifact.get("sha256", "")),
-            "bytes": int(artifact.get("bytes", 0) or 0),
+    explicit_selection = bool(path or session_id)
+    physical_sessions = _logical_export_sessions(state=state, current=effective_session, explicit_selection=explicit_selection)
+    session_scope = _session_scope_payload(session=effective_session, explicit_selection=explicit_selection)
+    if not explicit_selection:
+        session_scope = {
+            **session_scope,
+            "breadth": "logical-session-tree",
+            "physical_session_count": len(physical_sessions),
+            "includes_rotations": len(physical_sessions) > 1,
+            "includes_delegated_children": any(item.get("parent_logical_session_id") for item in physical_sessions),
         }
-        if include_artifacts:
-            candidate = (state.target_root / artifact_path).resolve()
-            try:
-                candidate.relative_to(artifact_root)
-                raw = candidate.read_text(encoding="utf-8-sig")
-            except (OSError, ValueError):
-                artifact_coverage.append({**coverage_record, "status": "missing"})
-                continue
-            archive_name = f"artifacts/{candidate.name}"
-            try:
-                artifact_payload = json.loads(raw)
-                safe_raw = json.dumps(_normalized_export_value(state=state, value=artifact_payload), indent=2, sort_keys=True) + "\n"
-            except json.JSONDecodeError:
-                safe_raw = _normalized_export_text(state=state, text=raw)
-            files[archive_name] = safe_raw.encode("utf-8")
-            included_artifacts.append(archive_name)
-            artifact_coverage.append({**coverage_record, "status": "included", "export_path": archive_name})
+    all_events: list[dict[str, Any]] = []
+    artifact_coverage: list[dict[str, Any]] = []
+    source_hashes: dict[str, str] = {}
+    source_command_count = 0
+    source_issues: list[dict[str, Any]] = []
+    read_event_streams: set[str] = set()
+    for physical in physical_sessions:
+        event_stream_path = _event_path_for_session(physical).as_posix()
+        events, entries, issues = _events_for_export(
+            state=state,
+            session=physical,
+            physical_only=explicit_selection,
+        )
+        if event_stream_path not in read_event_streams:
+            all_events.extend(events)
+            source_issues.extend({"event_stream_path": event_stream_path, **issue} for issue in issues)
+            read_event_streams.add(event_stream_path)
         else:
-            status = "digest-only" if coverage_record["sha256"] else "omitted"
-            artifact_coverage.append({**coverage_record, "status": status, "reason": "summary profile omits raw artifact bytes"})
-    source_hashes = {"session.md": hashlib.sha256(log_path.read_bytes()).hexdigest()}
-    if index is not None:
-        source_index_path = state.target_root / _index_path_for_session(effective_session)
-        if source_index_path.exists():
-            source_hashes["index.json"] = hashlib.sha256(source_index_path.read_bytes()).hexdigest()
-    exported_hashes = {name: hashlib.sha256(raw).hexdigest() for name, raw in files.items()}
+            all_events.extend(event for event in events if event.get("recovered_from"))
+        source_command_count += len(entries)
+        for source_path in (
+            physical["log_path"],
+            _event_path_for_session(physical).as_posix(),
+            _index_path_for_session(physical).as_posix(),
+        ):
+            absolute_source = state.target_root / source_path
+            if absolute_source.is_file():
+                source_hashes[source_path] = hashlib.sha256(absolute_source.read_bytes()).hexdigest()
+        chunks, coverage = _artifact_chunk_events(
+            state=state,
+            session=physical,
+            entries=entries,
+            include_artifacts=include_artifacts,
+        )
+        all_events.extend(chunks)
+        artifact_coverage.extend(coverage)
+    all_events.sort(
+        key=lambda event: (
+            str(event.get("timestamp", "")),
+            str(event.get("physical_session_id", "")),
+            int(event.get("sequence", 0) or 0),
+            str(event.get("event_type", "")),
+            str(event.get("event_id", "")),
+        )
+    )
+    normalized_events = []
+    for index, event in enumerate(all_events):
+        source_sequence = int(event.get("sequence", 0) or 0)
+        normalized_events.append(
+            _normalized_export_value(
+                state=state,
+                value={
+                    **event,
+                    "source_sequence": source_sequence,
+                    "sequence": index + 1,
+                    "export_sequence": index + 1,
+                    "local_only": False,
+                },
+            )
+        )
+    timestamps = [str(event.get("timestamp", "")) for event in normalized_events if event.get("timestamp")]
+    gap_events = [event for event in normalized_events if event.get("event_type") == "logging.gap"]
+    delegated_child_session_ids = [item["session_id"] for item in physical_sessions if item.get("parent_logical_session_id")]
+    rotated_session_ids = [item["session_id"] for item in physical_sessions if item.get("prior_session_id")]
+    excluded_artifacts = [item for item in artifact_coverage if item.get("status") != "included-as-output-chunks"]
     manifest = {
-        "kind": "agentic-workspace/session-log-export-manifest/v1",
-        "artifact_class": "normalized-share-safe",
+        "kind": "agentic-workspace/session-log-export-manifest/v2",
+        "artifact_class": "normalized-share-safe-jsonl",
         "source_artifact_class": "raw-local-diagnostic",
+        "canonical_format": "jsonl",
+        "compression": "gzip",
         "source_session_id": effective_session["session_id"],
+        "source_session_ids": [item["session_id"] for item in physical_sessions],
         "source_log_path": effective_session["log_path"],
+        "source_log_paths": [item["log_path"] for item in physical_sessions],
+        "source_event_stream_paths": sorted(read_event_streams),
+        "source_logical_stream_count": len(read_event_streams),
+        "delegated_child_session_ids": delegated_child_session_ids,
+        "rotated_session_ids": rotated_session_ids,
+        "logical_session_id": effective_session.get("logical_session_id", ""),
         "session_scope": session_scope,
         "created_at": datetime.now(UTC).isoformat(),
         "path_normalization_mode": "known-local-paths",
-        "included_files": sorted(files),
-        "included_artifacts": included_artifacts,
+        "event_count": len(normalized_events),
+        "event_type_counts": dict(sorted(Counter(str(event.get("event_type", "")) for event in normalized_events).items())),
+        "gap_count": len(gap_events),
+        "gaps": [event.get("payload", {}) for event in gap_events],
+        "source_stream_issues": source_issues,
+        "time_coverage": {"started_at": min(timestamps) if timestamps else "", "finished_at": max(timestamps) if timestamps else ""},
         "evidence_profile": {
-            "id": "all-command-summary-with-available-artifacts" if include_artifacts else "all-command-summary",
-            "command_selection": "all-source-session-commands",
-            "detail_policy": "include-available-artifacts" if include_artifacts else "omit-artifact-bytes-retain-digests",
-            "source_command_count": len(markdown_entries),
-            "exported_command_count": len(entries),
-            "structured_index_complete": len(markdown_entries) == len(entries),
-            "source_index_status": source_coverage["status"],
-            "source_indexed_command_count": source_coverage["indexed_command_count"],
-            "source_index_missing_entry_ids": source_coverage["missing_entry_ids"],
-            "source_index_extra_entry_ids": source_coverage["extra_entry_ids"],
-            "suitable_for": [
-                "summary-analysis",
-                "human-chronology",
-                *(
-                    ["detailed-artifact-review"]
-                    if artifact_coverage and all(item["status"] == "included" for item in artifact_coverage)
-                    else []
-                ),
-            ],
+            "id": "complete-logical-session-with-output-chunks" if include_artifacts else "complete-logical-session-summary",
+            "command_selection": "all-logical-session-tree-commands" if not explicit_selection else "one-physical-session",
+            "detail_policy": "include-available-artifact-output-chunks" if include_artifacts else "omit-artifact-bytes-retain-digests",
+            "source_command_count": source_command_count,
+            "exported_command_count": sum(1 for event in normalized_events if event.get("event_type") == "command.completed"),
+            "canonical_event_stream_complete": not source_issues and not gap_events,
+            "suitable_for": ["summary-analysis", "human-chronology", "stream-processing"],
         },
         "artifact_coverage": artifact_coverage,
+        "excluded_artifact_count": len(excluded_artifacts),
+        "excluded_artifacts": excluded_artifacts,
         "source_hashes": source_hashes,
-        "exported_hashes": exported_hashes,
         "originals_mutated": False,
         "local_only": False,
-        "artifact_route": "Use this path-normalized archive as the review candidate; keep the raw local session directory local.",
+        "artifact_route": "Use this normalized JSONL stream as the review candidate; keep raw local diagnostics local.",
         "transfer_review": {
             "status": "required",
             "approval": "not-granted",
-            "rule": "Path normalization does not approve external transfer; review the archive for secrets and policy before sharing.",
+            "rule": "Path normalization does not approve external transfer; review the stream for secrets and policy before sharing.",
         },
         "authoritative": False,
         "local_diagnostic_boundary": _session_log_local_boundary(),
-        "limitations": "Known target, home, Python executable, and configured local paths are normalized; export is not a secret scan or transfer approval.",
+        "limitations": "Known local paths are normalized; export is not a secret scan or transfer approval.",
     }
-    files["manifest.json"] = (json.dumps(manifest, indent=2, sort_keys=True) + "\n").encode("utf-8")
+    manifest_event = {
+        "kind": SESSION_LOG_EVENT_KIND,
+        "schema_version": SESSION_LOG_EVENT_SCHEMA_VERSION,
+        "event_id": "export-manifest-" + uuid.uuid4().hex[:16],
+        "event_type": "export.manifest",
+        "timestamp": manifest["created_at"],
+        "sequence": 0,
+        "export_sequence": 0,
+        "logical_session_id": effective_session.get("logical_session_id", ""),
+        "physical_session_id": "export",
+        "parent_logical_session_id": "",
+        "correlation_id": effective_session.get("correlation_id", ""),
+        "payload": manifest,
+        "local_only": False,
+        "authoritative": False,
+    }
+    export_identity = effective_session.get("logical_session_id", "") or effective_session["session_id"]
     export_path = (
         SESSION_LOG_ROOT
         / "exports"
-        / (
-            f"aw-session-{effective_session['session_id']}-share-safe-{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8]}.zip"
-        )
+        / f"aw-session-{export_identity}-share-safe-{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8]}.jsonl.gz"
     )
     absolute_export = state.target_root / export_path
     absolute_export.parent.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(absolute_export, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-        for name, raw in sorted(files.items()):
-            archive.writestr(name, raw)
+    temporary_export = absolute_export.with_suffix(absolute_export.suffix + f".{uuid.uuid4().hex}.tmp")
+    with temporary_export.open("wb") as raw_handle:
+        with gzip.GzipFile(filename="", mode="wb", fileobj=raw_handle, mtime=0) as compressed:
+            for event in [manifest_event, *normalized_events]:
+                compressed.write((json.dumps(serialise_value(event), sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8"))
+    temporary_export.replace(absolute_export)
     return {
-        "kind": "agentic-workspace/session-log-export/v1",
+        "kind": "agentic-workspace/session-log-export/v2",
         "status": "exported",
-        "artifact_class": "normalized-share-safe",
+        "artifact_class": "normalized-share-safe-jsonl",
         "source_artifact_class": "raw-local-diagnostic",
-        "artifact_route": "The path identifies the normalized export candidate; keep source_log_path and its raw artifact directory local.",
+        "artifact_route": "The path identifies one normalized JSONL chronology for the selected logical session scope.",
         "transfer_approval": "not-granted",
         "path": export_path.as_posix(),
         "source_log_path": effective_session["log_path"],
+        "source_log_paths": manifest["source_log_paths"],
         "session_id": effective_session["session_id"],
-        "artifact_count": len(included_artifacts),
+        "session_ids": manifest["source_session_ids"],
+        "logical_session_id": effective_session.get("logical_session_id", ""),
+        "artifact_count": sum(1 for item in artifact_coverage if item["status"] == "included-as-output-chunks"),
+        "event_count": len(normalized_events) + 1,
+        "gap_count": len(gap_events),
         "sha256": hashlib.sha256(absolute_export.read_bytes()).hexdigest(),
         "manifest": manifest,
         "session_scope": session_scope,
@@ -2444,7 +3237,12 @@ def analyze_session_log(
     index = _read_index_for_log(state=state, log_path=log_path, session=session)
     markdown_entries = _entries_from_markdown(log_path)
     coverage = _coverage_payload(markdown_entries=markdown_entries, index=index)
-    all_entries = _entries_from_index(index) if index is not None else markdown_entries
+    canonical_events, event_issues = _read_event_stream(state.target_root / _event_path_for_session(effective_session))
+    canonical_entries = _command_entries_from_events(
+        canonical_events,
+        physical_session_id=effective_session["session_id"] if path or session_id else "",
+    )
+    all_entries = canonical_entries or (_entries_from_index(index) if index is not None else markdown_entries)
     segment_summaries = _segment_summaries(all_entries)
     episode_summaries = _episode_summaries(all_entries)
     selected_entries = [
@@ -2575,6 +3373,9 @@ def analyze_session_log(
         "path": log_path.relative_to(state.target_root).as_posix(),
         "index_status": coverage["status"],
         "index_presence": "present" if index is not None else "markdown-fallback",
+        "chronology_source": "canonical-event-stream" if canonical_entries else "legacy-derived-view",
+        "event_stream_path": _event_path_for_session(effective_session).as_posix(),
+        "event_stream_issues": event_issues,
         "session_scope": session_scope,
         "coverage": coverage,
         "index_path": str(index.get("path", "")) if isinstance(index, dict) else "",
