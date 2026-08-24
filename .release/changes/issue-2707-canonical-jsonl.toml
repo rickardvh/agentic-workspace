@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Add canonical logical-session JSONL logging and single-stream export across rotations and delegated work."
