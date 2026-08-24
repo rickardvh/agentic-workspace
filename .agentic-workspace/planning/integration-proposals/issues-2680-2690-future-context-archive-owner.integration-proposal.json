@@ -1,0 +1,46 @@
+{
+  "kind": "planning-integration-proposal/v1",
+  "id": "issues-2680-2690-future-context-archive-owner",
+  "status": "pending",
+  "phase": "integration-pending",
+  "requested_transition": "archive-owner",
+  "owner": {
+    "id": "issues-2680-2690-future-context",
+    "ref": ".agentic-workspace/planning/execplans/issues-2680-2690-future-context.plan.json"
+  },
+  "external_ref": "PR #2694@543e45c4f",
+  "proof_refs": [
+    "tests/test_external_agent_evaluation_lane.py:207-passed",
+    "live-evaluation:two-current-replays-no-context-control-non-correction-counterexample",
+    "implementation-head:543e45c4f766809bfd4971e425073aadc98d3c3b",
+    "generated-conformance:passed"
+  ],
+  "parent_boundary": "Archive the final slice after PR #2694 lands; close the aggregate lane only after both stack PRs and proposals are integrated.",
+  "preserved_invariants": [
+    "independent-host-authority",
+    "no-parallel-context-workflow",
+    "partial-compliance-fail-visible",
+    "no-context-quiet",
+    "ordered-stack-integration"
+  ],
+  "expected_subject_revision": "de7b4aa1c4dda248",
+  "expected_planning_revision": "4a343a06f11f26dc",
+  "created_at": "2026-08-24T07:47:00.289934Z",
+  "updated_at": "2026-08-24T07:47:00.289934Z",
+  "authority_boundary": {
+    "proposal": "feature-branch declaration",
+    "integrated_truth": "integration receipt after apply",
+    "non_authority": [
+      "current selection",
+      "aggregate indexes",
+      "unrelated owners",
+      "terminal parent truth"
+    ],
+    "branch_admission": {
+      "status": "inside-git",
+      "branch": "codex/issues-2680-2690-future-context",
+      "phase": "feature"
+    }
+  },
+  "proposal_revision": "f8ce8dc68e4828ca"
+}

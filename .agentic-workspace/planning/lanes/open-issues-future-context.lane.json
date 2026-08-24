@@ -32,17 +32,17 @@
   "proof_strategy": "Prove each independent lower slice with focused regression tests and routed changed-path validation; prove the final correction/context slice against #2690 aggregate architecture, partial-compliance, quiet-path, and operating-cost acceptance.",
   "proof_aggregation": {
     "status": "partial",
-    "evidence": ["PR #2692", "focused #2680/#2690 tests", "cross-target operation conformance"],
-    "known_gaps": []
+    "evidence": ["PR #2692 closeout proposal", "PR #2694 implementation head 543e45c4f", "688 focused tests", "docs/reviews/future-context-live-evaluation-2026-08-24.json", "cross-target operation conformance"],
+    "known_gaps": ["Merge PR #2692 and PR #2694 in order, apply both archive-owner proposals, then close the aggregate lane on the integration target."]
   },
-  "residual_lane_work": "Merge PR #2692, then complete the active #2680/#2690 successor in PR #2694.",
-  "lane_to_epic_contribution": "The identified-session foundation is complete; correction ingress and future-context effectiveness remain in the upper stack member.",
-  "parent_close_permission": "do-not-close-parent",
+  "residual_lane_work": "Integration-only: merge the stack in order and apply the two checked-in archive-owner proposals.",
+  "lane_to_epic_contribution": "All three issue outcomes are implemented and proven; aggregate terminal truth remains integration-owned.",
+  "parent_close_permission": "may-close-parent-after-human-confirmation",
   "closeout_state": {
     "status": "open",
-    "summary": "The #2678 lower slice is complete and no longer selected as active; the parent lane remains open with the upper slice as its current owner.",
-    "residual_work": "Complete #2680 and #2690 through PR #2694 after the lower PR lands.",
-    "next_owner": "issues-2680-2690-future-context"
+    "summary": "Implementation and slice proof are complete; lane closure waits for ordered stack integration.",
+    "residual_work": "Merge PR #2692, merge PR #2694, apply both archive-owner proposals, and close the lane.",
+    "next_owner": "integration target"
   },
   "references": [],
   "notes": ""

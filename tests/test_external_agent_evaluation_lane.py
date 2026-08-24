@@ -699,6 +699,24 @@ def test_current_adapter_guidance_live_evidence_is_head_bound_and_honest() -> No
     assert {route["status"] for route in availability["routes"] if route["family"] != "openai-codex"} == {"unavailable"}
 
 
+def test_future_context_live_evaluation_is_head_bound_and_cost_complete() -> None:
+    evidence = json.loads((REPO_ROOT / "docs" / "reviews" / "future-context-live-evaluation-2026-08-24.json").read_text(encoding="utf-8"))
+
+    assert evidence["evaluated_implementation_head"] == "543e45c4f766809bfd4971e425073aadc98d3c3b"
+    assert evidence["execution"] == "real-provider-executed"
+    assert evidence["prompt_policy"]["memory_or_capture_commands_named"] is False
+    assert len(evidence["current_replay"]["runs"]) == 2
+    assert all(run["selector_calls"] == 0 for run in evidence["current_replay"]["runs"])
+    assert evidence["current_replay"]["median_against_historical"]["raw_repository_reads_delta_percent"] < 0
+    assert evidence["current_replay"]["median_against_historical"]["package_context_bytes_delta"] > 0
+    assert evidence["no_context_control"]["decision_has_read_first"] is False
+    assert evidence["no_context_control"]["decision_has_memory_attention"] is False
+    assert evidence["non_correction_post_action"]["product_outcome"] == "pass-visible-unresolved-with-owner-route"
+    assert evidence["non_correction_post_action"]["model_outcome"] == "missed-visible-signal"
+    for section in (evidence["historical_underuse"]["run"], *evidence["current_replay"]["runs"]):
+        assert {"commands", "package_context_bytes", "selector_calls", "reconciliation_actions", "retained_residue"} <= section.keys()
+
+
 def test_model_cli_harness_prepares_fixture_git_repo_for_diff_commands(tmp_path: Path) -> None:
     if shutil.which("git") is None:
         pytest.skip("git is required for fixture git preparation")

@@ -666,7 +666,7 @@
     {
       "id": "future-context-post-action-residue",
       "fixture": "aw-minimal-host-repo",
-      "prompt": "Review README.md and tell me whether another small clarification is warranted. Do not edit files.",
+      "prompt": "Review README.md and tell me whether another small clarification is warranted. Use the repository's normal startup guidance before answering. Do not edit files.",
       "setup_commands": [
         [
           "uv",

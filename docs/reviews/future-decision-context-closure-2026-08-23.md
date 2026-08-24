@@ -36,14 +36,15 @@ Start, implement, proof, summary, and reconciliation retain their phase-owned co
 
 ## Cost and counterexamples
 
-- No applicable context: zero additional agent commands, zero local artifacts, no `future_context_signals` field, and quiet context effects. The only runtime check is the existing local-custody lookup when a target root is available.
-- Relevant Memory: zero Memory-specific agent commands; the already-selected compact contribution reaches the canonical decision. Candidate-only contributions remain distinguishable and cannot claim projected use.
+- No applicable context: the identical live prompt produced no routed-note read, selector call, reconciliation action, `read_first`, or Memory attention. Ordinary startup/proof projection caches remained local and ignored; no checked-in residue was created.
+- Relevant Memory: the changed-path route now places the narrow note in `decision_packet.action.read_first`. Two live current-head runs both consulted it without the prompt naming Memory or a capture command. Candidate-only contributions remain distinguishable and cannot claim projected use.
 - Host correction: one idempotent host operation preserves evidence while the corrected agent performs zero correction actions. Normalization and disposition occur only when needed.
+- Non-correction post-action residue: a live partial-compliance run ignored the staged session-improvement signal, while ordinary startup still exposed `dogfooding_signal_status=unresolved` and its existing owner selector. The failure is visible without the prompt reminding the model about the signal.
 - Agent-proposed learning: remains an `agent-proposed` candidate. It may be routed for owner review but creates no human, policy, proof, or stronger-owner authority and blocks no claim by itself.
 - Stronger-owner counterexample: existing Memory effectiveness tests retain genuinely advisory facts while recommending shrink/stub/delete only when a deterministic owner absorbs the lesson.
 
-This reduces the historical failure cost—rediscovery and repeated human steering—without adding commands or artifacts to the no-context path.
+The full measurements are in `future-context-live-evaluation-2026-08-24.json`. Against the historical Memory-underuse replay, the two-run current median reduced total commands 16.7%, raw repository reads 42.9%, uncached input 10.7%, output 13.4%, and billable proxy tokens 10.8%. The tradeoff is explicit: routing added about 13.2 KB of package output and two workspace commands. Selector and reconciliation-action counts stayed at zero, and no run created checked-in residue.
 
 ## Proof boundary
 
-Focused tests cover signed-host import, forged-authority rejection, replay deduplication, incomplete normalization, admitted-but-unrouted state, separate disposition, relevant/unrelated selection, generated Python invocation, generic non-correction evaluation residue, low-authority agent candidates, unavailable host capture, and quiet no-context behavior. Generated Python and TypeScript packages carry the new public inputs; external-consumer and operation contracts remain the shared interface authority.
+Focused tests cover signed-host import, forged-authority rejection, replay deduplication, incomplete normalization, admitted-but-unrouted state, separate disposition, relevant/unrelated selection, generated Python invocation, generic non-correction evaluation residue, low-authority agent candidates, unavailable host capture, and quiet no-context behavior. The checked live evidence binds the historical miss, two current-head replays, the identical no-context control, and the non-correction partial-compliance counterexample by transcript and summary digests. Generated Python and TypeScript packages carry the new public inputs; external-consumer and operation contracts remain the shared interface authority.
