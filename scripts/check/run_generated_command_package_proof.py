@@ -90,6 +90,12 @@ def _pack_packages(destination: Path) -> None:
     if npm is None:
         raise RuntimeError("npm is required to pack generated TypeScript artifacts")
     for package in _typescript_packages():
+        prefix = package["name"].split("/")[-1].replace("_", "-")
+        matches = sorted(destination.glob(f"*{prefix}-*.tgz"))
+        if len(matches) == 1:
+            continue
+        if len(matches) > 1:
+            raise RuntimeError(f"expected at most one packed artifact for {package['name']}, found {len(matches)} in {destination}")
         subprocess.run(
             [npm, "pack", "--pack-destination", str(destination.resolve())],
             cwd=REPO_ROOT / package["generated_root"],
@@ -132,8 +138,7 @@ def _extract_tarball(tarball: Path, destination: Path) -> None:
 
 def _run_packed_conformance(*, artifact_dir: Path, receipt_out: Path | None) -> int:
     packages = _typescript_packages()
-    if not artifact_dir.exists() or not any(artifact_dir.glob("*.tgz")):
-        _pack_packages(artifact_dir)
+    _pack_packages(artifact_dir)
     with tempfile.TemporaryDirectory(prefix="aw-packed-typescript-conformance-") as tmp:
         extracted = Path(tmp)
         artifact_records = []

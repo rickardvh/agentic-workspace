@@ -141,6 +141,13 @@
       "source_ref": "proof://receipts/5b005e43839fb1da",
       "status": "current"
     },
+    "5d8b2873043e2f09": {
+      "path": "5d8b2873043e2f09.json",
+      "producer_class": "aw-proof",
+      "revision": "2026-08-24T13:19:49+00:00",
+      "source_ref": "proof://receipts/5d8b2873043e2f09",
+      "status": "current"
+    },
     "5f25b6018ed1b196": {
       "path": "5f25b6018ed1b196.json",
       "producer_class": "aw-proof",
@@ -316,6 +323,13 @@
       "source_ref": "proof://receipts/d2566a365773347e",
       "status": "current"
     },
+    "d84ed6068ffaf66d": {
+      "path": "d84ed6068ffaf66d.json",
+      "producer_class": "aw-proof",
+      "revision": "2026-08-24T13:19:52+00:00",
+      "source_ref": "proof://receipts/d84ed6068ffaf66d",
+      "status": "current"
+    },
     "df7ad9941dc82508": {
       "path": "df7ad9941dc82508.json",
       "producer_class": "aw-proof",
@@ -328,6 +342,13 @@
       "producer_class": "aw-proof",
       "revision": "2026-08-24T10:36:55+00:00",
       "source_ref": "proof://receipts/e06dce6c19a3744b",
+      "status": "current"
+    },
+    "e36c2f6dc23b8ebd": {
+      "path": "e36c2f6dc23b8ebd.json",
+      "producer_class": "aw-proof",
+      "revision": "2026-08-24T13:19:55+00:00",
+      "source_ref": "proof://receipts/e36c2f6dc23b8ebd",
       "status": "current"
     },
     "e3977da0b6653e31": {
