@@ -165,7 +165,16 @@ def test_ci_builds_and_uploads_root_package_artifacts() -> None:
     assert "uv build --wheel --sdist --out-dir dist packages/verification" in ci_text
     assert "test_installed_workspace_stack_runs_fresh_repo_cli_sequence" in ci_text
     assert "test_release_root_wheel_installs_workspace_stack_from_same_release_assets" in ci_text
+    assert "run_generated_command_package_proof.py --packed-conformance --artifact-dir dist" in ci_text
     assert "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1" in ci_text
+
+
+def test_typescript_instruction_runtime_has_no_source_checkout_python_dependency() -> None:
+    support = (WORKSPACE_ROOT / "src/agentic_workspace/contracts/typescript_primitive_support.mjs").read_text(encoding="utf-8")
+    instruction_runtime = support[support.index("function instructionsExecute") : support.index("function reportMemory")]
+
+    assert "scripts/run_agentic_workspace.py" not in instruction_runtime
+    assert "authoritative-python-boundary-unavailable" not in instruction_runtime
 
 
 def test_ci_runs_release_proof_typecheck_before_generated_verification() -> None:

@@ -2231,10 +2231,6 @@ function guidanceLifecycleApply(values, operationId) {
 
 function instructionsExecute(values, operationId) {
   const targetRoot = resolve(String(values.target_root ?? values.target ?? '.'));
-  const localScriptPath = resolve(process.cwd(), 'scripts/run_agentic_workspace.py');
-  const packageScriptPath = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../scripts/run_agentic_workspace.py');
-  const scriptPath = existsSync(localScriptPath) ? localScriptPath : packageScriptPath;
-  const operation = String(operationId).replace(/^instructions\./, '').replace(/^create$/, 'new');
   const blocked = (reason, recovery) => ({
     kind: 'agentic-workspace/scoped-instruction-error/v1',
     operation_id: operationId,
@@ -2243,27 +2239,129 @@ function instructionsExecute(values, operationId) {
     exit_status: 2,
     reason,
   });
-  if (!existsSync(scriptPath)) return blocked('authoritative-python-boundary-unavailable', 'Install the Python AW runtime to execute scoped instruction semantics.');
-  const args = ['run', 'python', scriptPath, 'instructions', operation, '--target', targetRoot, '--format', 'json'];
-  for (const [key, value] of Object.entries(values)) {
-    if (key.startsWith('_') || ['target', 'target_root', 'format', 'operation_id', 'instructions_command'].includes(key) || value === undefined || value === null || value === '' || value === false) continue;
-    const flag = key === 'source' ? '--from' : `--${key.replaceAll('_', '-')}`;
-    if (Array.isArray(value)) {
-      for (const item of value) args.push(flag, String(item));
-    } else if (value === true) {
-      args.push(flag);
-    } else {
-      args.push(flag, String(value));
-    }
-  }
-  const completed = spawnSync('uv', args, { cwd: targetRoot, encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
-  const text = completed.stdout || completed.stderr || '';
   try {
-    const payload = JSON.parse(text);
+    if (operationId === 'instructions.create') return createInstructionNative(targetRoot, values, operationId);
+    if (operationId === 'instructions.migrate') return migrateInstructionNative(targetRoot, values, operationId);
+    const payload = inspectInstructionsNative(targetRoot, values, operationId);
+    if (operationId === 'instructions.check' && payload.status === 'invalid') payload.exit_status = 2;
     return payload;
-  } catch {
-    return blocked('authoritative-python-boundary-non-json', text.slice(0, 500) || 'Install uv/python and retry through AW.');
+  } catch (error) {
+    return blocked('instruction-operation-rejected', error instanceof Error ? error.message : String(error));
   }
+}
+
+function validInstructionPattern(value) {
+  const text = String(value ?? '').trim();
+  return Boolean(text) && !text.includes('\\') && !text.startsWith('/') && !text.startsWith('~')
+    && !/^[A-Za-z]:/.test(text) && !text.split('/').includes('..');
+}
+
+function instructionPatternMatches(path, pattern) {
+  const sentinel = '\u0000';
+  const escaped = String(pattern).replace(/[.+^${}()|[\]\\]/g, '\\$&').replaceAll('**', sentinel)
+    .replaceAll('*', '[^/]*').replaceAll('?', '[^/]').replaceAll(sentinel, '.*');
+  return new RegExp(`^${escaped}$`).test(path);
+}
+
+function parseInstructionNative(path, targetRoot, loadBody) {
+  const fields = new Set(['paths', 'read', 'use', 'checks', 'protect']);
+  const metadata = { paths: [], read: [], use: [], checks: [], protect: [] };
+  const diagnostics = [];
+  const text = readText(path);
+  const lines = text.split(/\r?\n/);
+  let bodyStart = 0;
+  if (lines[0] === '---') {
+    let current = '';
+    let closed = false;
+    for (let index = 1; index < lines.length; index += 1) {
+      const line = lines[index];
+      if (line === '---') { bodyStart = index + 1; closed = true; break; }
+      if (!line.trim() || line.trimStart().startsWith('#')) continue;
+      if (!line.startsWith(' ') && line.includes(':')) {
+        const separator = line.indexOf(':');
+        current = line.slice(0, separator).trim();
+        const inline = line.slice(separator + 1).trim();
+        if (!fields.has(current)) diagnostics.push({ field: current, code: 'unknown-field', message: 'use only paths, read, use, checks, protect' });
+        else if (inline.startsWith('[') && inline.endsWith(']')) metadata[current].push(...inline.slice(1, -1).split(',').map((item) => item.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean));
+        else if (inline) diagnostics.push({ field: current, code: 'invalid-shape', message: 'use a YAML list or a short inline list' });
+        continue;
+      }
+      const item = line.trim();
+      if (item.startsWith('-') && fields.has(current)) {
+        const value = item.slice(1).trim();
+        metadata[current].push(current === 'checks' && value.startsWith('run:') ? { run: value.slice(4).trim() } : value.replace(/^['"]|['"]$/g, ''));
+      } else diagnostics.push({ field: current || 'frontmatter', code: 'invalid-syntax', message: `cannot parse \`${item}\`` });
+    }
+    if (!closed) diagnostics.push({ field: 'frontmatter', code: 'unterminated', message: 'add the closing --- line' });
+  }
+  for (const field of ['paths', 'read', 'protect']) metadata[field].forEach((value, index) => {
+    if (typeof value !== 'string' || !validInstructionPattern(value)) diagnostics.push({ field: `${field}[${index}]`, code: 'invalid-repo-pattern', message: 'use a non-empty repo-relative path or glob without `..`, a drive, or a leading slash' });
+  });
+  const body = lines.slice(bodyStart).join('\n').trim();
+  return {
+    id: path.split(/[\\/]/).at(-1).replace(/\.md$/, ''), source_ref: relative(targetRoot, path).replaceAll('\\', '/'),
+    revision: `sha256:${createHash('sha256').update(text).digest('hex')}`, metadata, diagnostics,
+    guidance: loadBody ? body : '', has_guidance: Boolean(body), body_loaded: loadBody,
+  };
+}
+
+function inspectInstructionsNative(targetRoot, values, operationId) {
+  const directory = resolveInside(targetRoot, '.agentic-workspace/instructions');
+  const paths = existsSync(directory) ? readdirSync(directory).filter((name) => name.endsWith('.md')).sort().map((name) => join(directory, name)) : [];
+  const changed = Array.isArray(values.changed) ? values.changed.map((item) => String(item).replaceAll('\\', '/')) : [];
+  const instructions = [];
+  const diagnostics = [];
+  for (const path of paths) {
+    const shallow = parseInstructionNative(path, targetRoot, false);
+    const patterns = shallow.metadata.paths.map(String);
+    const matched = [...new Set(changed.filter((item) => patterns.some((pattern) => instructionPatternMatches(item, pattern))))].sort();
+    const applies = patterns.length === 0 || matched.length > 0;
+    const document = parseInstructionNative(path, targetRoot, applies);
+    const itemDiagnostics = [...document.diagnostics];
+    document.metadata.read.forEach((resource, index) => {
+      if (!/[*?[\]]/.test(String(resource)) && !existsSync(resolveInside(targetRoot, String(resource)))) itemDiagnostics.push({ field: `read[${index}]`, code: 'missing-resource', message: `\`${resource}\` is not a readable repo-owned file` });
+    });
+    diagnostics.push(...itemDiagnostics.map((item) => ({ source_ref: document.source_ref, ...item })));
+    instructions.push({
+      id: document.id, source_ref: document.source_ref, revision: document.revision,
+      scope: patterns.length ? patterns : ['global'], valid: itemDiagnostics.length === 0, applies,
+      reason: patterns.length === 0 ? 'global instruction' : applies ? `${matched[0]} matches ${patterns.find((pattern) => instructionPatternMatches(matched[0], pattern))}` : `no changed or target path matches ${patterns.join(', ')}`,
+      matched_paths: matched, body_loaded: document.body_loaded,
+      features: [['guidance', document.has_guidance], ['read', document.metadata.read.length], ['use', document.metadata.use.length], ['checks', document.metadata.checks.length], ['protect', document.metadata.protect.length]].filter(([, present]) => present).map(([name]) => name),
+      guidance: document.guidance, read: applies ? document.metadata.read : [], use: applies ? document.metadata.use : [],
+      checks: applies ? document.metadata.checks : [], protect: applies ? document.metadata.protect : [], diagnostics: itemDiagnostics,
+    });
+  }
+  const payload = {
+    kind: 'agentic-workspace/scoped-instruction-inspection/v1', operation_id: operationId,
+    status: diagnostics.length ? 'invalid' : 'valid', instruction_count: instructions.length,
+    applicable_count: instructions.filter((item) => item.applies).length, instructions, diagnostics,
+    progressive_disclosure: { irrelevant_bodies_loaded: instructions.filter((item) => !item.applies && item.body_loaded).length, rule: 'Only matching or global instruction bodies enter the current operating contract.' },
+    message: instructions.length ? instructions.map((item) => `${item.id} ${item.valid ? 'valid' : 'invalid'}`).join('\n') : 'No scoped repository instructions found.',
+  };
+  if (values.verbose) payload.instruction_program = { kind: 'agentic-workspace/instruction-program/v1', facts: [], clauses: [], capabilities: [], source_diagnostics: [] };
+  return payload;
+}
+
+function createInstructionNative(targetRoot, values, operationId) {
+  const name = String(values.name ?? '');
+  const paths = Array.isArray(values.paths) ? values.paths.map(String) : [];
+  if (!/^[a-z0-9][a-z0-9-]*$/.test(name)) throw new RuntimeError('instruction name must use lowercase letters, digits, and hyphens');
+  for (const pattern of paths) if (!validInstructionPattern(pattern)) throw new RuntimeError(`invalid repo-relative path pattern: ${pattern}`);
+  const sourceRef = `.agentic-workspace/instructions/${name}.md`;
+  const destination = resolveInside(targetRoot, sourceRef);
+  if (existsSync(destination)) throw new RuntimeError(`instruction already exists: ${sourceRef}`);
+  mkdirSync(dirname(destination), { recursive: true });
+  const title = name.split('-').map((part) => part[0].toUpperCase() + part.slice(1)).join(' ');
+  const frontmatter = paths.length ? `---\npaths:\n${paths.map((pattern) => `  - ${pattern}\n`).join('')}---\n\n` : '';
+  writeFileSync(destination, `${frontmatter}# ${title}\n\n<!-- Write the guidance an agent needs in this scope. -->\n`, 'utf8');
+  return { kind: 'agentic-workspace/scoped-instruction-create-result/v1', operation_id: operationId, status: 'created', source_ref: sourceRef, scope: paths.length ? paths : ['global'], message: '', outcome: 'applied', mutation_applied: true, reason_code: 'instruction-created', conflict_owner: '', recovery_command: '' };
+}
+
+function migrateInstructionNative(targetRoot, values, operationId) {
+  const sourcePath = resolveInside(targetRoot, String(values.source ?? ''));
+  const candidateHeadings = readText(sourcePath).split(/\r?\n/).filter((line) => line.startsWith('## ')).map((line) => line.slice(3).trim());
+  return { kind: 'agentic-workspace/scoped-instruction-migration-advice/v1', operation_id: operationId, status: 'review-required', source_ref: relative(targetRoot, sourcePath).replaceAll('\\', '/'), candidate_headings: candidateHeadings, writes_applied: false, message: '', steps: ['Choose one coherent guidance block and its intended scope.', 'Scaffold a scoped instruction and move the guidance with human or agent judgment.', 'Run instructions check and positive/negative instructions explain scenarios.', 'Remove the static block only after behavior is verified; retain a thin bootstrap.'] };
 }
 
 function reportMemory(values) {

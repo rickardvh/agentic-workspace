@@ -374,6 +374,30 @@ def _load_checker():
     return module
 
 
+def test_pack_packages_fills_a_partial_artifact_set(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    runner = _load_runner()
+    packages = [
+        {
+            "id": "workspace",
+            "generated_root": "generated/workspace/typescript",
+            "name": "@agentic-workspace/workspace-cli",
+            "runnable": True,
+        },
+        {"id": "planning", "generated_root": "generated/planning/typescript", "name": "@agentic-workspace/planning-cli", "runnable": True},
+    ]
+    (tmp_path / "agentic-workspace-workspace-cli-1.0.0.tgz").write_bytes(b"existing")
+    calls: list[list[str]] = []
+
+    monkeypatch.setattr(runner, "_typescript_packages", lambda: packages)
+    monkeypatch.setattr(runner.shutil, "which", lambda _name: "npm")
+    monkeypatch.setattr(runner.subprocess, "run", lambda command, **_kwargs: calls.append(command))
+
+    runner._pack_packages(tmp_path)
+
+    assert len(calls) == 1
+    assert calls[0][:2] == ["npm", "pack"]
+
+
 @pytest.mark.parametrize(
     ("failure_class", "rejected_token"),
     [

@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Make scoped-instruction commands self-contained in packed Node artifacts and prove exact npm tarballs during CI."
