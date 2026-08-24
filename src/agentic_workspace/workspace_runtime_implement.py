@@ -1866,6 +1866,14 @@ def _ordinary_implement_decision_payload(*, selected: dict[str, Any], source_pay
     typed_invocation = _as_dict(operation_authority.get("typed_invocation"))
     review_transition = _as_dict(selected.get("review_stack_transition"))
     calibration_admissions = [item for item in _list_payload(selected.get("calibration_admissions")) if isinstance(item, dict)]
+    memory_packet = _as_dict(source_payload.get("memory_decision_packet"))
+    memory_pull = _as_dict(memory_packet.get("pull"))
+    memory_routes = [
+        str(_as_dict(item).get("path") or _as_dict(item).get("source") or "")
+        for item in _list_payload(memory_pull.get("candidate_routes"))
+        if str(_as_dict(item).get("path") or _as_dict(item).get("source") or "").strip()
+        and _as_dict(item).get("match_source") != "routing-baseline"
+    ]
 
     gate = _as_dict(source_payload.get("planning_safety_gate"))
     route = _as_dict(gate.get("route_decision"))
@@ -1949,6 +1957,8 @@ def _ordinary_implement_decision_payload(*, selected: dict[str, Any], source_pay
             for key in ("operation_id", "contract_version", "arguments", "expected_transition", "idempotency_key")
             if typed_invocation.get(key) not in (None, "", [], {})
         }
+    if memory_pull.get("status") == "relevant_notes_found" and memory_routes:
+        action["read_first"] = list(dict.fromkeys(memory_routes))[:3]
 
     owner: dict[str, Any] = {
         "mutation_owner": str(baseline_owner.get("owner") or "current-agent-session"),
@@ -2001,6 +2011,15 @@ def _ordinary_implement_decision_payload(*, selected: dict[str, Any], source_pay
                     _as_dict(architecture.get("closeout")).get("required_claim") or "preservation claim required before closeout"
                 ),
                 "detail_selector": "architecture_principles",
+            }
+        )
+    if action.get("read_first"):
+        attention.append(
+            {
+                "signal": "relevant durable context matched the working set",
+                "decision_effect": "consult the routed note before deciding or editing",
+                "read_first": copy.deepcopy(action["read_first"]),
+                "detail_selector": "memory_decision_packet",
             }
         )
 

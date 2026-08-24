@@ -1127,6 +1127,20 @@ def _start_payload(
     elif active_planning_present:
         forecast_paths = _active_plan_touched_scope_paths(active_parent_record)
         forecast_scope_source = "active_planning_record.touched_scope"
+    if forecast_paths and not changed_paths:
+        payload["memory_consult"] = _memory_consult_payload(
+            target_root=target_root,
+            changed_paths=[str(path) for path in forecast_paths],
+            compact=True,
+            cli_invoke=config.cli_invoke,
+        )
+        payload["memory_decision_packet"] = _memory_decision_packet_payload(
+            stage="startup",
+            cli_invoke=config.cli_invoke,
+            memory_consult=_memory_consult_from_payload(payload),
+            changed_paths=[str(path) for path in forecast_paths],
+            task_text=task_text,
+        )
     forecast_missing_scope = (
         bool(task_intent.get("status") == "present")
         and not forecast_paths
@@ -2199,6 +2213,14 @@ def _ordinary_start_decision_payload(
     protected_scope = _as_dict(non_interference.get("protected_scope"))
     raw_immediate = _as_dict(source_payload.get("immediate_next_allowed_action"))
     immediate = _compact_start_route_action(raw_immediate)
+    memory_packet = _as_dict(source_payload.get("memory_decision_packet"))
+    memory_pull = _as_dict(memory_packet.get("pull"))
+    memory_routes = [
+        str(_as_dict(item).get("path") or _as_dict(item).get("source") or "")
+        for item in _list_payload(memory_pull.get("candidate_routes"))
+        if str(_as_dict(item).get("path") or _as_dict(item).get("source") or "").strip()
+        and _as_dict(item).get("match_source") != "routing-baseline"
+    ]
 
     action: dict[str, Any] = {
         "id": str(next_action.get("next_safe_action") or legacy_decision.get("next_action") or ""),
@@ -2224,6 +2246,8 @@ def _ordinary_start_decision_payload(
         required_inputs = _list_payload(expected_effect.get("required_inputs"))
     if required_inputs:
         action["required_inputs"] = [str(item) for item in required_inputs if str(item).strip()]
+    if memory_pull.get("status") == "relevant_notes_found" and memory_routes:
+        action["read_first"] = list(dict.fromkeys(memory_routes))[:3]
 
     effects = {
         "workflow_required": True,
@@ -2265,6 +2289,7 @@ def _ordinary_start_decision_payload(
     if not revision:
         revision_material = {
             "action": action.get("id"),
+            "read_first": action.get("read_first", []),
             "claim_boundary": claim_boundary,
             "owner": owner,
             "signals": signals.get("changed_signals", []),
@@ -2290,6 +2315,8 @@ def _ordinary_start_decision_payload(
         reasons = changed_signals[:6]
     if not reasons and action.get("why"):
         reasons = [str(action["why"])]
+    if action.get("read_first"):
+        reasons.insert(0, "relevant durable context matched the known task path")
 
     active_planning = _active_state_has_planning(source_payload.get("active_state_summary", {}))
     detail_routes = {

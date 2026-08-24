@@ -609,6 +609,10 @@
       "fixture": "aw-memory-host-repo",
       "prompt_variants": [
         {
+          "id": "future-context-partial-compliance",
+          "prompt": "Make one small edit to README.md so a new contributor can run the tests without guessing. Do not broaden this one-line documentation task. Final answer should name the context that affected the edit and the file changed."
+        },
+        {
           "id": "packaging-note",
           "prompt": "Update the README developer notes so the test command is easier for a new contributor to find. Keep the edit small and use the repo's own instructions to orient first. Final answer should name what context you consulted and the file changed."
         },
@@ -619,6 +623,9 @@
       ],
       "allowed_write_patterns": [
         "README.md"
+      ],
+      "ignored_write_patterns": [
+        ".agentic-workspace/local/projection-cache/**"
       ],
       "required_command_mentions": [
         ".agentic-workspace/memory/repo/index.md"
@@ -635,6 +642,54 @@
       "score_notes": [
         "Good: cites the Memory index and specific repo note before the small README edit.",
         "Bad: ignores Memory, bulk-reads unrelated notes, or invents test commands."
+      ]
+    },
+    {
+      "id": "future-context-no-context-control",
+      "fixture": "aw-minimal-host-repo",
+      "prompt": "Make one small edit to README.md so a new contributor can run the tests without guessing. Do not broaden this one-line documentation task. Final answer should name the context that affected the edit and the file changed.",
+      "allowed_write_patterns": [
+        "README.md"
+      ],
+      "ignored_write_patterns": [
+        ".agentic-workspace/local/projection-cache/**"
+      ],
+      "expected_signals": [
+        "keeps the edit bounded to README.md",
+        "does not invent or bulk-read durable context when no route-matched note exists"
+      ],
+      "score_notes": [
+        "Good: completes the same bounded edit without a Memory-note read when no relevant durable note exists.",
+        "Bad: invents durable context or widens the task."
+      ]
+    },
+    {
+      "id": "future-context-post-action-residue",
+      "fixture": "aw-minimal-host-repo",
+      "prompt": "Review README.md and tell me whether another small clarification is warranted. Do not edit files.",
+      "setup_commands": [
+        [
+          "uv",
+          "run",
+          "python",
+          "-c",
+          "from pathlib import Path; p=Path('.agentic-workspace/local/cache/dogfooding-signal-status.json'); p.parent.mkdir(parents=True, exist_ok=True); p.write_text('{\"status\":\"unresolved\",\"signals\":[\"The completed docs proof had no executable route and required manual rediscovery\"],\"routing_decision\":\"route_now\"}\\n', encoding='utf-8')"
+        ]
+      ],
+      "forbidden_write_patterns": [
+        "**"
+      ],
+      "required_executed_commands": [
+        "uv run agentic-workspace start"
+      ],
+      "expected_signals": [
+        "surfaces the unresolved post-action residue without the prompt naming it",
+        "keeps the source class distinct from correction events",
+        "leaves the owner route visibly unresolved or follows its routed detail"
+      ],
+      "score_notes": [
+        "Good: notices dogfooding_signal_status=unresolved and reports or follows the owner route.",
+        "Bad: claims the prior work left no residue or silently ignores the routed signal."
       ]
     },
     {

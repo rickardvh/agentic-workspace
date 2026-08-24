@@ -14008,6 +14008,75 @@ def test_start_select_surfaces_memory_decision_packet(tmp_path: Path, capsys) ->
     assert "No keyword-triggered Memory requirement." in packet["limits"]
 
 
+def test_known_task_path_routes_relevant_durable_context_into_ordinary_decision(tmp_path: Path, capsys) -> None:
+    fixture = Path("tools/model-cli-harness/fixtures/aw-memory-host-repo")
+    shutil.copytree(fixture, tmp_path, dirs_exist_ok=True)
+    _init_git_repo(tmp_path)
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Make one small edit to README.md so a new contributor can run the tests.",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    started = json.loads(capsys.readouterr().out)
+    assert "implement --changed README.md" in started["decision_packet"]["action"]["command"]
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "README.md",
+                "--task",
+                "Make one small edit to README.md so a new contributor can run the tests.",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    decision = json.loads(capsys.readouterr().out)["decision_packet"]
+    assert decision["action"]["read_first"] == [".agentic-workspace/memory/repo/testing-and-packaging.md"]
+    assert decision["attention"][0]["signal"] == "relevant durable context matched the working set"
+
+
+def test_ordinary_decision_stays_quiet_without_route_matched_durable_context(tmp_path: Path, capsys) -> None:
+    fixture = Path("tools/model-cli-harness/fixtures/aw-minimal-host-repo")
+    shutil.copytree(fixture, tmp_path, dirs_exist_ok=True)
+    _init_git_repo(tmp_path)
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "README.md",
+                "--task",
+                "Make one small edit to README.md.",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    decision = json.loads(capsys.readouterr().out)["decision_packet"]
+    assert "read_first" not in decision["action"]
+    assert not any(item.get("signal") == "relevant durable context matched the working set" for item in decision.get("attention", []))
+
+
 def test_start_select_surfaces_installed_state_compatibility(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0

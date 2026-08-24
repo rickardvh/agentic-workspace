@@ -839,6 +839,30 @@ def test_model_cli_harness_defines_compact_startup_weak_agent_probes(tmp_path: P
         assert "`communication_contract` as optional selector-backed" in guidance
         assert "Use the returned `communication_contract`" not in guidance
 
+    memory_scenario = scenarios["memory-consult-before-edit"]
+    variants = {item["id"]: item["prompt"] for item in memory_scenario["prompt_variants"]}
+    partial_prompt = variants["future-context-partial-compliance"]
+    assert "README.md" in partial_prompt
+    assert "memory" not in partial_prompt.lower()
+    assert "capture" not in partial_prompt.lower()
+    assert scenarios["future-context-no-context-control"]["prompt"] == partial_prompt
+    post_action = scenarios["future-context-post-action-residue"]
+    assert "correction" not in post_action["prompt"].lower()
+    assert post_action["required_executed_commands"] == ["uv run agentic-workspace start"]
+    manifest = (
+        REPO_ROOT
+        / "tools"
+        / "model-cli-harness"
+        / "fixtures"
+        / "aw-memory-host-repo"
+        / ".agentic-workspace"
+        / "memory"
+        / "repo"
+        / "manifest.toml"
+    ).read_text(encoding="utf-8")
+    assert '[notes.".agentic-workspace/memory/repo/testing-and-packaging.md"]' in manifest
+    assert 'routes_from = ["README.md", "pyproject.toml", "tests/**/*.py"]' in manifest
+
     evidence = json.loads((REPO_ROOT / "docs" / "maintainer" / "startup-compression-2679.json").read_text(encoding="utf-8"))
     external = evidence["external_agent_evidence"]
     assert external["status"] == "verified"
