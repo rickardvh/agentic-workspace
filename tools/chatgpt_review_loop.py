@@ -20,7 +20,6 @@ REVIEW_POLICY = "pr-review-recheck-v1"
 HEAD_SYNC_ATTEMPTS = 3
 STATE_KIND = "agentic-workspace/chatgpt-review-loop-state/v1"
 STATE_RELATIVE = Path(".agentic-workspace/local/chatgpt-review-loop")
-RECHECK_RECEIPT_KIND = "agentic-workspace/exact-head-review-request/v1"
 OWNER_ROOT_ENV = "AW_CHATGPT_REVIEW_OWNER_ROOT"
 OWNER_BRANCH_ENV = "AW_CHATGPT_REVIEW_OWNER_BRANCH"
 DISPATCH_STATE = "dispatch.json"
@@ -848,173 +847,6 @@ def parse_reviews(comments: list[dict[str, Any]], *, expected_pr: int, expected_
             )
         )
     return matches, rejected
-
-
-def _recheck_receipt_path(root: Path, *, pr: int, head: str) -> Path:
-    return root / STATE_RELATIVE / "rechecks" / f"pr-{pr}-{head}.json"
-
-
-def _save_recheck_receipt(path: Path, receipt: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    receipt["updated_at"] = datetime.now(timezone.utc).isoformat()
-    temporary = path.with_suffix(".tmp")
-    temporary.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    temporary.replace(path)
-
-
-def _claim_recheck_receipt(path: Path, receipt: dict[str, Any]) -> bool:
-    """Create the request receipt exactly once so concurrent callers cannot both launch."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    receipt["updated_at"] = datetime.now(timezone.utc).isoformat()
-    try:
-        with path.open("x", encoding="utf-8") as stream:
-            stream.write(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
-    except FileExistsError:
-        return False
-    return True
-
-
-def _exact_recheck_command(*, pr: int, head: str) -> str:
-    return f"uv run python tools/chatgpt_review_loop.py recheck --pr {pr} --head {head}"
-
-
-def _one_shot_review_prompt(*, pr: int, head: str) -> str:
-    marker = f"<!-- aw-chatgpt-review pr={pr} head={head} policy={REVIEW_POLICY} decision=<blocked|merge-ready> -->"
-    return (
-        f"Review GitHub PR #{pr} at exact head {head}. This is one bounded review job, not a code-change or merge task. "
-        "Read tools/skills/pr-review-recheck/SKILL.md and follow it. Verify the PR still has this exact head before and "
-        "after reviewing. Post exactly one top-level PR comment with concise findings and exactly one final marker in this shape: "
-        f"{marker}. Use decision=blocked for actionable blockers and decision=merge-ready only when the current exact head satisfies "
-        "intent, proof, CI, label, and closure requirements. Never carry a verdict to a changed head, edit the branch, restart a "
-        "watcher, mark ready, or merge. If the head changes, do not post an authoritative marker; report the new head instead."
-    )
-
-
-def request_exact_head_review(
-    root: Path,
-    *,
-    pr: int,
-    head: str,
-    runner: CommandRunner,
-    codex_command: str,
-    bypass_hook_trust: bool = False,
-) -> dict[str, Any]:
-    """Launch at most one reviewer for an explicit PR/head, independent of watcher state."""
-    if pr < 1 or not re.fullmatch(r"[0-9a-f]{40}", head):
-        raise LoopError("invalid-review-request", "recheck requires a positive PR number and a full lowercase 40-character SHA")
-    payload = _pr_view(root, runner, pr=pr)
-    if payload.get("state") != "OPEN":
-        raise LoopError("pr-not-open", f"PR #{pr} is not open")
-    current_head = str(payload.get("headRefOid", ""))
-    if current_head != head:
-        return {
-            "kind": RECHECK_RECEIPT_KIND,
-            "status": "stale-request",
-            "pr_number": pr,
-            "requested_head": head,
-            "current_head": current_head,
-            "next_action": _exact_recheck_command(pr=pr, head=current_head),
-        }
-
-    matches, rejected = parse_reviews(_comments_from_pr(payload), expected_pr=pr, expected_head=head)
-    if len(matches) > 1:
-        raise LoopError("ambiguous-reviews", f"PR #{pr} has multiple authoritative reviews for {head}")
-    receipt_path = _recheck_receipt_path(root, pr=pr, head=head)
-    relative_receipt = receipt_path.relative_to(root).as_posix()
-    if matches:
-        review = matches[0]
-        receipt = {
-            "kind": RECHECK_RECEIPT_KIND,
-            "status": "existing-result",
-            "pr_number": pr,
-            "requested_head": head,
-            "review": {
-                "comment_id": review.comment_id,
-                "decision": review.decision,
-                "url": review.url,
-            },
-            "receipt_path": relative_receipt,
-            "watcher_required": False,
-        }
-        _save_recheck_receipt(receipt_path, receipt)
-        return receipt
-    if receipt_path.is_file():
-        try:
-            existing = json.loads(receipt_path.read_text(encoding="utf-8-sig"))
-        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
-            existing = {}
-        if isinstance(existing, dict) and existing.get("status") in {"running", "awaiting-result", "launch-failed", "result-recorded"}:
-            return {**existing, "status": "existing-request", "existing_status": existing.get("status"), "receipt_path": relative_receipt}
-
-    stale_heads = sorted({str(item.get("reviewed_head")) for item in rejected if item.get("reason") == "stale-head"})
-    receipt = {
-        "kind": RECHECK_RECEIPT_KIND,
-        "status": "running",
-        "pr_number": pr,
-        "requested_head": head,
-        "repository": _repo_slug(root, runner),
-        "stale_review_heads": stale_heads,
-        "watcher_required": False,
-        "review_boundary": "review-only; addressing feedback, publishing, and merging remain separate operations",
-        "receipt_path": relative_receipt,
-        "started_at": datetime.now(timezone.utc).isoformat(),
-    }
-    if not _claim_recheck_receipt(receipt_path, receipt):
-        try:
-            existing = json.loads(receipt_path.read_text(encoding="utf-8-sig"))
-        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
-            existing = {}
-        return {
-            **(existing if isinstance(existing, dict) else {}),
-            "kind": RECHECK_RECEIPT_KIND,
-            "status": "existing-request",
-            "existing_status": existing.get("status", "claim-in-progress") if isinstance(existing, dict) else "claim-in-progress",
-            "pr_number": pr,
-            "requested_head": head,
-            "receipt_path": relative_receipt,
-        }
-    command = [
-        *shlex.split(codex_command),
-        "-C",
-        root.as_posix(),
-        "exec",
-        *(["--dangerously-bypass-hook-trust"] if bypass_hook_trust else []),
-        "-",
-    ]
-    completed = runner.run_interactive(command, cwd=root, input_text=_one_shot_review_prompt(pr=pr, head=head))
-    receipt["launch_exit_code"] = completed.returncode
-    if completed.returncode:
-        receipt.update(status="launch-failed", diagnostic=(completed.stderr or completed.stdout).strip()[-2000:])
-        _save_recheck_receipt(receipt_path, receipt)
-        return receipt
-
-    refreshed = _pr_view(root, runner, pr=pr)
-    refreshed_head = str(refreshed.get("headRefOid", ""))
-    if refreshed_head != head:
-        receipt.update(
-            status="stale-result",
-            current_head=refreshed_head,
-            next_action=_exact_recheck_command(pr=pr, head=refreshed_head),
-        )
-        _save_recheck_receipt(receipt_path, receipt)
-        return receipt
-    matches, rejected = parse_reviews(_comments_from_pr(refreshed), expected_pr=pr, expected_head=head)
-    if len(matches) == 1:
-        review = matches[0]
-        receipt.update(
-            status="result-recorded",
-            review={"comment_id": review.comment_id, "decision": review.decision, "url": review.url},
-        )
-    else:
-        receipt.update(
-            status="awaiting-result",
-            stale_review_heads=sorted(
-                {str(item.get("reviewed_head")) for item in rejected if item.get("reason") == "stale-head"}
-            ),
-            next_action=_exact_recheck_command(pr=pr, head=head),
-        )
-    _save_recheck_receipt(receipt_path, receipt)
-    return receipt
 
 
 def _is_semver_label_check(check: dict[str, Any]) -> bool:
@@ -2232,16 +2064,6 @@ def _parser() -> argparse.ArgumentParser:
         help="Correct this exact launch's recorded final head after a later successful push.",
     )
 
-    recheck_parser = sub.add_parser(
-        "recheck",
-        help="Request exactly one review for an explicit PR/full SHA without starting the persistent watcher.",
-    )
-    recheck_parser.add_argument("--target", type=Path, default=Path.cwd())
-    recheck_parser.add_argument("--pr", type=int, required=True)
-    recheck_parser.add_argument("--head", required=True)
-    recheck_parser.add_argument("--codex-command", default=os.environ.get("AW_CHATGPT_REVIEW_CODEX", DEFAULT_CODEX_COMMAND))
-    recheck_parser.add_argument("--bypass-hook-trust", action="store_true")
-
     poll_parser = sub.add_parser("poll", help="Poll with gh and resume only exact blocked handoffs.")
     poll_parser.add_argument("--target", type=Path, default=Path.cwd())
     poll_parser.add_argument("--pr", type=int)
@@ -2342,23 +2164,6 @@ def main(argv: Sequence[str] | None = None, *, runner: CommandRunner | None = No
             )
             _emit(result)
             return 0
-
-        if args.command == "recheck":
-            root = _repo_root(args.target.resolve(), runner)
-            try:
-                _validate_codex_launch_command(shlex.split(args.codex_command))
-            except ValueError as exc:
-                raise LoopError("codex-command-invalid", f"--codex-command is not valid shell syntax: {exc}") from exc
-            result = request_exact_head_review(
-                root,
-                pr=args.pr,
-                head=args.head,
-                runner=runner,
-                codex_command=args.codex_command,
-                bypass_hook_trust=args.bypass_hook_trust,
-            )
-            _emit(result)
-            return 2 if result.get("status") == "launch-failed" else 0
 
         root = _repo_root(args.target.resolve(), runner)
         if args.command == "reset-cycles":
@@ -2468,7 +2273,7 @@ def main(argv: Sequence[str] | None = None, *, runner: CommandRunner | None = No
                 {
                     "kind": STATE_KIND,
                     "status": "poll-complete",
-                    "mode": "persistent-watch" if args.watch else "one-shot-exact-head-recheck",
+                    "mode": "persistent-watch" if args.watch else "single-poll",
                     "poll": index + 1,
                     "requested_pr": args.pr,
                     "requested_heads": exact_heads,
