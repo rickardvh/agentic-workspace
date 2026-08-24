@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Preserve signed host corrections independently of the acting agent and carry owner-bound future-context signals through the canonical decision and reconciliation."
