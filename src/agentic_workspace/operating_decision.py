@@ -2109,6 +2109,8 @@ def _projection_surface_posture(payload: dict[str, Any]) -> dict[str, Any]:
     answer = _as_dict(payload.get("answer"))
     action_signals = _as_dict(payload.get("action_signals")) or _as_dict(context.get("action_signals"))
     candidates = [
+        payload.get("assignment_action"),
+        context.get("assignment_action"),
         payload.get("primary_action"),
         payload.get("next_action"),
         payload.get("next"),

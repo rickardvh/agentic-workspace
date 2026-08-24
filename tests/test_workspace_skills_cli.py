@@ -1338,7 +1338,7 @@ def test_skills_command_recommends_high_risk_workflow_decision_skills(tmp_path: 
         ("clarify human intent with candidate interpretations before planning", "workspace-intent-discovery"),
         ("decompose an epic into lanes before execplans", "planning-decompose"),
         ("tighten a new execplan before coding", "planning-new-plan-tighten"),
-        ("assurance classification and delegation posture before implementation", "planning-assurance-delegation"),
+        ("pre-assignment assurance classification for unresolved capability evidence", "planning-assurance-delegation"),
         ("high assurance planning lifecycle preserve intent satisfaction across a whole epic", "planning-high-assurance-lifecycle"),
         ("verify parent intent and negative invariants before completion claim", "planning-intent-verification"),
         ("select proof before completion claim allowed after passed with warning validation", "workspace-proof-selection"),

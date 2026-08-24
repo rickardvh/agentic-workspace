@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from collections.abc import Iterable
 from datetime import date
 from pathlib import Path
@@ -627,6 +629,7 @@ def assignment_decision_from_policy(
                 "target": target,
                 "target_identity_ref": target_identity_ref or None,
                 "target_revision": target_revision or None,
+                "aliases": sorted(target_aliases),
                 "revision_policy": revision_policy or None,
                 "eligible": eligible,
                 "hard_rejection_reasons": hard_rejection_reasons,
@@ -680,7 +683,21 @@ def assignment_decision_from_policy(
     eligible_candidates = [item for item in candidate_scores if item["eligible"]]
     eligible_candidates.sort(key=lambda item: (-int(item["score"]), str(item["target"])))
     selected_target = eligible_candidates[0]["target"] if eligible_candidates else None
-    current_candidate = next((item for item in candidate_scores if item["target"] == current_target), None)
+    current_candidate = next(
+        (
+            item
+            for item in candidate_scores
+            if current_target
+            in (
+                {
+                    str(item.get("target") or ""),
+                    str(item.get("target_identity_ref") or ""),
+                }
+                | {str(alias) for alias in item.get("aliases", [])}
+            )
+        ),
+        None,
+    )
     current_is_eligible = bool(current_candidate and current_candidate["eligible"])
     tied_candidates: list[dict[str, Any]] = []
     if eligible_candidates:
@@ -752,6 +769,35 @@ def assignment_decision_from_policy(
         decision = "assign-current-target" if current_target in selected_target_refs else "assign-best-fit"
         canonical_outcome = selected.get("continuation") or "delegated-implementation"
         next_action = f"execute with {selected_target}" if selected_target else "hold execution until assignment is resolved"
+    selected_candidate = next(
+        (
+            item
+            for item in candidate_scores
+            if selected_target
+            in {
+                str(item.get("target") or ""),
+                str(item.get("target_identity_ref") or ""),
+            }
+        ),
+        {},
+    )
+    decision_revision_input = {
+        "assignment_policy": policy_value,
+        "current_target": current_target or None,
+        "requested_context_key": requested_context_key or None,
+        "decision": decision,
+        "canonical_outcome": canonical_outcome,
+        "selected_target": selected_target,
+        "selected_target_identity_ref": selected_candidate.get("target_identity_ref"),
+        "selected_target_revision": selected_candidate.get("target_revision"),
+        "candidate_scores": candidate_scores,
+    }
+    assignment_decision_revision = (
+        "sha256:"
+        + hashlib.sha256(
+            json.dumps(decision_revision_input, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
+        ).hexdigest()
+    )
     return {
         "kind": "agentic-workspace/assignment-decision/v1",
         "decision": decision,
@@ -759,6 +805,12 @@ def assignment_decision_from_policy(
         "outcome_matrix": ASSIGNMENT_OUTCOME_MATRIX,
         "assignment_policy": policy_value,
         "selected_target": selected_target,
+        "selected_target_identity_ref": selected_candidate.get("target_identity_ref"),
+        "selected_target_revision": selected_candidate.get("target_revision"),
+        "assignment_decision_revision": assignment_decision_revision,
+        "task_class": requested_task_class or None,
+        "scope_class": requested_scope_class or None,
+        "context_key": requested_context_key or None,
         "current_target": current_target or None,
         "candidate_scores": candidate_scores,
         "selection_basis": {

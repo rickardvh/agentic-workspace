@@ -8966,6 +8966,137 @@ def test_implement_required_best_fit_requires_assigned_handoff(tmp_path: Path, c
     assert lifecycle["manual_transport"]["import_requires_review"] is True
 
 
+def test_configured_orchestrator_compiles_current_nonlocal_and_returned_assignment_actions(tmp_path: Path) -> None:
+    policy = {
+        "execution_role": {"value": "orchestrator"},
+        "assignment_policy": {"value": "required-best-fit"},
+    }
+    decision = {
+        "decision": "assign-best-fit",
+        "assignment_decision_revision": "decision-rev-1",
+        "task_class": "mechanical-follow-through",
+        "scope_class": "narrow-code-change",
+    }
+    current = workspace_runtime_core._assignment_primary_action_payload(
+        target_root=tmp_path,
+        assignment_policy=policy,
+        assignment_decision={**decision, "decision": "assign-current-target"},
+        assignment_gate={
+            "status": "assigned-current-target",
+            "implementation_allowed": True,
+            "selected_target": "orchestrator",
+            "target_identity_ref": "target:orchestrator",
+        },
+        selected_target={"name": "orchestrator", "execution_methods": ["internal"]},
+        delegation_control={"execution_permitted": True},
+        cli_invoke="agentic-workspace",
+    )
+    assert current["status"] == "direct-current-target"
+    assert current["action"] == "continue-with-selected-target"
+    assert "operation_invocation" not in current
+
+    assignment_dir = tmp_path / ".agentic-workspace" / "planning" / "assignments"
+    assignment_dir.mkdir(parents=True)
+    _write_json(
+        assignment_dir / "assign-1.assignment.json",
+        {
+            "kind": "agentic-workspace/planning-assignment/v1",
+            "assignment_id": "assign-1",
+            "current_revision": "assignment-rev-1",
+            "status": "current",
+            "target_name": "worker",
+            "assignment_gate": {"assignment_decision_revision": "decision-rev-1", "selected_target": "worker"},
+            "current_attempt": {"run_id": "run-1", "owner": "worker", "status": "selected"},
+        },
+    )
+    gate = {
+        "status": "handoff-required",
+        "implementation_allowed": False,
+        "selected_target": "worker",
+        "target_identity_ref": "target:worker",
+        "target_revision": "target-rev-1",
+    }
+    automatic = workspace_runtime_core._assignment_primary_action_payload(
+        target_root=tmp_path,
+        assignment_policy=policy,
+        assignment_decision=decision,
+        assignment_gate=gate,
+        selected_target={"name": "worker", "execution_methods": ["cli"]},
+        delegation_control={"execution_permitted": True},
+        cli_invoke="agentic-workspace",
+    )
+    invocation = automatic["operation_invocation"]
+    assert automatic["action"] == "dispatch-assigned-target"
+    assert automatic["transport"] == "cli"
+    assert invocation["operation_id"] == "assignment.export"
+    assert invocation["arguments"] == {
+        "target": ".",
+        "assignment_id": "assign-1",
+        "assignment_revision": "assignment-rev-1",
+        "run_id": "run-1",
+        "target_name": "worker",
+        "transport": "cli",
+        "format": "json",
+    }
+    assert invocation["owner_context_revision"] == {
+        "assignment_id": "assign-1",
+        "assignment_revision": "assignment-rev-1",
+    }
+
+    state_path = tmp_path / ".agentic-workspace" / "local" / "assignment-runs" / "run-1" / "state.json"
+    _write_json(state_path, {"current_state": "awaiting-admission", "run_id": "run-1"})
+    returned = workspace_runtime_core._assignment_primary_action_payload(
+        target_root=tmp_path,
+        assignment_policy=policy,
+        assignment_decision=decision,
+        assignment_gate=gate,
+        selected_target={"name": "worker", "execution_methods": ["cli"]},
+        delegation_control={"execution_permitted": True},
+        cli_invoke="agentic-workspace",
+    )
+    assert returned["action"] == "admit-returned-assignment"
+    assert returned["operation_invocation"]["operation_id"] == "assignment.admit"
+    assert returned["operation_invocation"]["preconditions"]["run_state"] == "awaiting-admission"
+
+
+def test_configured_orchestrator_uses_manual_export_when_automatic_transport_is_unavailable(tmp_path: Path) -> None:
+    assignment_dir = tmp_path / ".agentic-workspace" / "planning" / "assignments"
+    assignment_dir.mkdir(parents=True)
+    _write_json(
+        assignment_dir / "assign-1.assignment.json",
+        {
+            "assignment_id": "assign-1",
+            "current_revision": "assignment-rev-1",
+            "status": "current",
+            "target_name": "external-reviewer",
+            "assignment_gate": {"assignment_decision_revision": "decision-rev-1"},
+            "current_attempt": {"run_id": "run-1", "status": "selected"},
+        },
+    )
+    action = workspace_runtime_core._assignment_primary_action_payload(
+        target_root=tmp_path,
+        assignment_policy={
+            "execution_role": {"value": "orchestrator"},
+            "assignment_policy": {"value": "required-best-fit"},
+        },
+        assignment_decision={"decision": "manual-handoff", "assignment_decision_revision": "decision-rev-1"},
+        assignment_gate={
+            "status": "handoff-required",
+            "implementation_allowed": False,
+            "selected_target": "external-reviewer",
+            "target_identity_ref": "target:external-reviewer",
+        },
+        selected_target={"name": "external-reviewer", "execution_methods": ["cli", "manual"]},
+        delegation_control={"execution_permitted": False},
+        cli_invoke="agentic-workspace",
+    )
+    assert action["action"] == "export-assigned-handoff"
+    assert action["transport"] == "manual"
+    assert action["operation_invocation"]["operation_id"] == "assignment.export"
+    assert action["operation_invocation"]["arguments"]["transport"] == "manual"
+    assert action["implementation_allowed"] is False
+
+
 @pytest.mark.parametrize(
     ("manual_transport_policy", "expected_allowed", "expected_state", "handoff_status"),
     [

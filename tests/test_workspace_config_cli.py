@@ -4328,6 +4328,11 @@ def test_assignment_decision_derives_best_fit_from_candidates_and_contextual_evi
     assert decision["decision"] == "assign-best-fit"
     assert decision["canonical_outcome"] == "delegated-implementation"
     assert decision["selected_target"] == "fast_worker"
+    assert decision["selected_target_identity_ref"] == "user-local:fast-worker"
+    assert decision["selected_target_revision"] == "rev-b"
+    assert decision["assignment_decision_revision"].startswith("sha256:")
+    assert decision["task_class"] == "mechanical-follow-through"
+    assert decision["scope_class"] == "mechanical-follow-through"
     assert decision["selection_basis"]["requested_context_key"] == "mechanical-follow-through::mechanical-follow-through"
     selected = next(item for item in decision["candidate_scores"] if item["target"] == "fast_worker")
     assert selected["target_identity_ref"] == "user-local:fast-worker"

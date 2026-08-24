@@ -21,7 +21,7 @@ For maintainers of this repository, `skills/` is the canonical source of truth. 
 - `planning-autopilot`
   - execute bounded planning slices from checked-in planning surfaces until the active objective reaches an authorized terminal outcome
 - `planning-orchestrator-workflow`
-  - run planner-to-worker delegated execution from checked-in planning using the local mixed-agent posture and a derived handoff contract
+  - execute the sole post-assignment orchestrator procedure from a binding canonical assignment and action gate without reselecting the target
 - `planning-intake-upstream-task`
   - turn an externally tracked issue or task into checked-in planning while keeping the upstream tracker as an intake source only
 - `planning-decompose`
@@ -29,9 +29,9 @@ For maintainers of this repository, `skills/` is the canonical source of truth. 
 - `planning-new-plan-tighten`
   - create or tighten a schema-backed execplan scaffold before coding
 - `planning-assurance-delegation`
-  - apply assurance and delegation posture before handing off or implementing planned work
+  - supply unresolved assurance and capability evidence before the canonical assignment decision exists
 - `planning-high-assurance-lifecycle`
-  - preserve intent, decomposition, assurance, delegation, proof, and closeout for broad or high-assurance planning work
+  - route broad or high-assurance work across canonical planning, assignment, proof, intent, and closeout owners without duplicating their procedures
 - `planning-intent-verification`
   - verify original, interpreted, parent, and negative intent before decomposition, validation, or completion claims
 - `planning-closeout-trust`

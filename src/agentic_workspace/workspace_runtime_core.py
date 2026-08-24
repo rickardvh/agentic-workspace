@@ -28808,7 +28808,27 @@ def _preferred_cli_effect(preferred_cli: str) -> str:
         semantic_tokens.append(token)
     if any(token in {"proof", "pytest", "test", "lint", "ruff"} for token in semantic_tokens):
         return "validating"
-    if any(token in {"promote-to-plan", "new-plan", "archive-plan", "close-item", "delegation-decision"} for token in semantic_tokens):
+    if any(
+        token
+        in {
+            "promote-to-plan",
+            "new-plan",
+            "archive-plan",
+            "close-item",
+            "delegation-decision",
+            "export",
+            "import",
+            "admit",
+            "reject",
+            "repair",
+            "reassign",
+            "integrate",
+            "close",
+            "cleanup",
+            "override",
+        }
+        for token in semantic_tokens
+    ):
         return "mutating"
     if any(token in {"report", "summary", "status", "doctor", "start", "preflight", "skills"} for token in semantic_tokens):
         return "reporting"
@@ -28864,6 +28884,15 @@ def _next_safe_action_packet(
         skill = "workspace-intent-discovery"
     elif action == "present-lane-shaping-prompt":
         skill = "planning-decompose"
+    elif action in {
+        "export-assigned-handoff",
+        "dispatch-assigned-target",
+        "admit-returned-assignment",
+        "integrate-admitted-assignment",
+        "repair-rejected-assignment",
+        "reassign-blocked-assignment",
+    }:
+        skill = "planning-orchestrator-workflow"
     elif action in {"produce-bounded-reflection-report", "archive-or-retire-completed-plan", "inspect-current-task"}:
         skill = ""
     elif action != "choose-smallest-workflow-shape" and isinstance(preferred_routes, list):
@@ -28899,6 +28928,21 @@ def _next_safe_action_packet(
                 "claim installed payload target satisfied before recheck passes",
             ]
         )
+    if action in {"export-assigned-handoff", "dispatch-assigned-target"}:
+        forbidden_actions.extend(
+            [
+                "implement the selected worker slice locally",
+                "rerank or replace the binding assignment without a typed reconciliation action",
+                "claim completion from transport or worker output",
+            ]
+        )
+    if action in {
+        "admit-returned-assignment",
+        "integrate-admitted-assignment",
+        "repair-rejected-assignment",
+        "reassign-blocked-assignment",
+    }:
+        forbidden_actions.append("claim returned work proven or integrated before the typed lifecycle transition succeeds")
     if "closeout" in action:
         forbidden_actions.append("claim completion before closeout trust is reconciled")
     if action == "archive-or-retire-completed-plan":
@@ -33853,6 +33897,42 @@ def _start_tiny_payload_fast(
             startup_template=startup_template,
             task_text=task_text,
         )
+    assignment_action = _as_dict(execution_posture.get("assignment_action"))
+    assignment_action_status = str(assignment_action.get("status") or "")
+    if assignment_action_status not in {"", "not-applicable"}:
+        payload["assignment_action"] = assignment_action
+    if (
+        assignment_action_status in {"ready", "reconciliation-required"}
+        and not normalized_paths
+        and not _is_config_posture_task(task_text)
+        and closeout_inspection.get("status") != "required"
+        and intent_discovery.get("status") != "ask-human"
+        and assignment_action.get("action")
+    ):
+        assignment_command = str(assignment_action.get("command") or "")
+        payload["workflow_sufficiency"] = _workflow_sufficiency_payload(
+            surface="start",
+            decision="canonical-assignment-action-required",
+            reason="Configured orchestrator best-fit routing selected the canonical assignment action.",
+            required_next_action=str(assignment_action.get("action") or ""),
+            evidence_required=["revision-bound assignment operation receipt"],
+            hard_gate=assignment_action.get("implementation_allowed") is False,
+        )
+        payload["immediate_next_allowed_action"] = {
+            "action": str(assignment_action.get("action") or ""),
+            "summary": "Follow the canonical assignment action; do not rerank the selected target or fall back to local implementation.",
+            "command": assignment_command or None,
+            "run": assignment_command or None,
+            "risk": "binding-assignment",
+            "required_inputs": ["canonical assignment identity", "assignment decision revision"],
+            "next_proof": "Re-resolve the ordinary route from the resulting assignment operation receipt.",
+            "read_first": [assignment_command] if assignment_command else [],
+            "operation_invocation": copy.deepcopy(_as_dict(assignment_action.get("operation_invocation"))),
+            "assignment_decision_revision": assignment_action.get("assignment_decision_revision"),
+            "selected_target": assignment_action.get("selected_target"),
+            "target_identity_ref": assignment_action.get("target_identity_ref"),
+            "implementation_allowed": assignment_action.get("implementation_allowed"),
+        }
     payload["routine_work_context"] = _routine_work_context_payload(
         source_payload=payload,
         surface="start",
@@ -43028,11 +43108,10 @@ def _assignment_implementation_gate_payload(
         if isinstance(selected_target, dict) and isinstance(selected_target.get("aliases"), list)
         else set()
     )
-    target_mismatch = bool(
-        current_target
-        and selected_profile
-        and current_target not in ({selected_profile, selected_profile_id} | {str(alias) for alias in selected_aliases})
-    )
+    selected_decision_target = str(assignment_decision.get("selected_target") or "")
+    selected_profile_refs = {selected_profile, selected_profile_id} | {str(alias) for alias in selected_aliases}
+    target_mismatch = bool(selected_decision_target and selected_profile and selected_decision_target not in selected_profile_refs)
+    selected_route_target = selected_profile or str(assignment_decision.get("selected_target") or "") or current_target
     if decision == "blocked" or assignment_policy.get("status") == "blocked-unknown-current-target":
         status = "blocked"
         implementation_allowed = False
@@ -43043,7 +43122,7 @@ def _assignment_implementation_gate_payload(
         implementation_allowed = False
         required_next_action = "select-configured-current-target"
         enforcement = "hard-block"
-    elif decision == "assign-or-escalate":
+    elif decision in {"assign-or-escalate", "assign-best-fit", "manual-handoff"}:
         status = "handoff-required"
         implementation_allowed = False
         required_next_action = "prepare-assigned-handoff"
@@ -43053,11 +43132,16 @@ def _assignment_implementation_gate_payload(
         implementation_allowed = False
         required_next_action = "resolve-assignment-route"
         enforcement = "hard-block"
-    elif decision == "assign-best-fit":
-        status = "handoff-required"
+    elif decision == "shape-before-assignment":
+        status = "blocked-shaping-required"
         implementation_allowed = False
-        required_next_action = "prepare-assigned-handoff"
-        enforcement = "must-route-before-implementation"
+        required_next_action = "shape-current-task-before-assignment"
+        enforcement = "must-shape-before-implementation"
+    elif decision in {"tie", "policy-conflict"}:
+        status = "blocked-human-decision"
+        implementation_allowed = False
+        required_next_action = "resolve-assignment-decision"
+        enforcement = "must-resolve-before-implementation"
     elif decision == "assign-current-target":
         status = "assigned-current-target"
         implementation_allowed = True
@@ -43075,8 +43159,15 @@ def _assignment_implementation_gate_payload(
         "required_next_action": required_next_action,
         "assignment_policy": policy_value,
         "assignment_decision": decision,
-        "selected_target": current_target or selected_profile or None,
+        "selected_target": selected_route_target or None,
         "runtime_selected_target": selected_profile or None,
+        "target_identity_ref": assignment_decision.get("selected_target_identity_ref") or selected_profile_id or None,
+        "target_revision": assignment_decision.get("selected_target_revision")
+        or (selected_target.get("target_revision") if isinstance(selected_target, dict) else None),
+        "task_class": assignment_decision.get("task_class"),
+        "scope_class": assignment_decision.get("scope_class"),
+        "context_key": assignment_decision.get("context_key"),
+        "assignment_decision_revision": assignment_decision.get("assignment_decision_revision"),
         "current_target_status": assignment_policy.get("current_target_status"),
         "enforceable": binding.get("enforceable"),
         "enforcement": enforcement,
@@ -43295,6 +43386,199 @@ def _delegated_run_lifecycle_payload(
     }
 
 
+def _assignment_primary_action_payload(
+    *,
+    target_root: Path | None,
+    assignment_policy: dict[str, Any],
+    assignment_decision: dict[str, Any],
+    assignment_gate: dict[str, Any],
+    selected_target: dict[str, Any] | None,
+    delegation_control: dict[str, Any],
+    cli_invoke: str,
+) -> dict[str, Any]:
+    """Compile canonical assignment state into one revision-bound ordinary action."""
+
+    execution_role = str(_as_dict(assignment_policy.get("execution_role")).get("value") or "ordinary-executor")
+    policy_value = str(_as_dict(assignment_policy.get("assignment_policy")).get("value") or "local-preferred")
+    decision = str(assignment_decision.get("decision") or "")
+    gate_status = str(assignment_gate.get("status") or "")
+    decision_revision = str(assignment_decision.get("assignment_decision_revision") or "")
+    base = {
+        "kind": "agentic-workspace/assignment-primary-action/v1",
+        "status": "not-applicable",
+        "execution_role": execution_role,
+        "assignment_policy": policy_value,
+        "assignment_decision": decision,
+        "assignment_decision_revision": decision_revision,
+        "selected_target": assignment_gate.get("selected_target"),
+        "target_identity_ref": assignment_gate.get("target_identity_ref"),
+        "target_revision": assignment_gate.get("target_revision"),
+        "implementation_allowed": assignment_gate.get("implementation_allowed"),
+        "rule": "Canonical assignment is consumed once; post-assignment actors execute this action without reranking the target.",
+    }
+    if execution_role != "orchestrator" or policy_value != "required-best-fit":
+        return base
+    if gate_status == "assigned-current-target":
+        return {
+            **base,
+            "status": "direct-current-target",
+            "action": "continue-with-selected-target",
+            "expected_transition": "run-local-implementation-under-assignment-boundary",
+        }
+    if gate_status == "blocked-shaping-required":
+        invocation = operation_invocation(
+            operation_id="planning.front-door",
+            arguments={
+                "operation_action": "shape-current-task-before-assignment",
+                "task_class": assignment_decision.get("task_class"),
+                "scope_class": assignment_decision.get("scope_class"),
+                "assignment_decision_revision": decision_revision,
+            },
+            effect_class="read-only-planning",
+            expected_transition="canonical-assignment-resolved",
+            owner_context_revision={"assignment_decision_revision": decision_revision},
+            mutation_boundary={"writes_repo_state": False, "implementation_allowed": False},
+        )
+        return {**base, "status": "shaping-required", "action": "shape-current-task-before-assignment", "operation_invocation": invocation}
+    if gate_status in {"blocked-human-decision", "blocked", "blocked-target-mismatch", "blocked-no-safe-route"}:
+        action = "resolve-assignment-decision" if gate_status == "blocked-human-decision" else "resolve-assignment-route"
+        return {
+            **base,
+            "status": gate_status,
+            "action": action,
+            "expected_transition": "canonical-assignment-resolved",
+            "blocker": {
+                "reason_code": decision or gate_status,
+                "owner": "canonical assignment",
+                "repair": assignment_gate.get("required_next_action"),
+            },
+        }
+    if gate_status != "handoff-required" or target_root is None:
+        return base
+
+    assignment = _current_assignment_lifecycle_record(target_root=target_root)
+    assignment_target = str(assignment.get("target_name") or _as_dict(assignment.get("assignment_gate")).get("selected_target") or "")
+    selected_name = str(assignment_gate.get("selected_target") or "")
+    assignment_revision = str(assignment.get("current_revision") or "")
+    assignment_id = str(assignment.get("assignment_id") or "")
+    attempt = _as_dict(assignment.get("current_attempt"))
+    run_id = str(attempt.get("run_id") or "")
+    assignment_decision_ref = str(_as_dict(assignment.get("assignment_gate")).get("assignment_decision_revision") or "")
+    assignment_current = (
+        str(assignment.get("status") or "") == "current"
+        and bool(assignment_id and assignment_revision and run_id)
+        and assignment_target in {selected_name, str(assignment_gate.get("target_identity_ref") or "")}
+        and (not assignment_decision_ref or assignment_decision_ref == decision_revision)
+    )
+    if not assignment_current:
+        invocation = operation_invocation(
+            operation_id="planning.front-door",
+            arguments={
+                "operation_action": "materialize-canonical-assignment",
+                "selected_target": selected_name,
+                "target_identity_ref": assignment_gate.get("target_identity_ref"),
+                "target_revision": assignment_gate.get("target_revision"),
+                "assignment_decision_revision": decision_revision,
+                "task_class": assignment_gate.get("task_class"),
+                "scope_class": assignment_gate.get("scope_class"),
+            },
+            effect_class="planning-state-mutation",
+            expected_transition="assignment-selected",
+            owner_context_revision={"assignment_decision_revision": decision_revision},
+            mutation_boundary={"writes_repo_state": True, "implementation_allowed": False},
+        )
+        return {
+            **base,
+            "status": "assignment-authority-required",
+            "action": "materialize-canonical-assignment",
+            "expected_transition": "assignment-selected",
+            "operation_invocation": invocation,
+            "missing_authority": ["current checked-in Planning assignment bound to the canonical decision revision"],
+        }
+
+    local_state_path = target_root / ".agentic-workspace" / "local" / "assignment-runs" / run_id / "state.json"
+    local_state: dict[str, Any] = {}
+    try:
+        parsed_state = json.loads(local_state_path.read_text(encoding="utf-8-sig"))
+        local_state = parsed_state if isinstance(parsed_state, dict) else {}
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        pass
+    local_state_name = str(local_state.get("current_state") or "")
+    lifecycle_action = {
+        "awaiting-admission": ("assignment.admit", "admit-returned-assignment", "admitted-or-repair-requested"),
+        "admitted": ("assignment.integrate", "integrate-admitted-assignment", "integrated"),
+        "rejected": ("assignment.repair", "repair-rejected-assignment", "repair-requested"),
+        "repair-requested": ("assignment.reassign", "reassign-blocked-assignment", "superseded-and-reassigned"),
+    }.get(local_state_name)
+    if lifecycle_action:
+        operation_id, action, transition = lifecycle_action
+        arguments = {"target": ".", "run_id": run_id, "format": "json"}
+        command = _command_with_cli_invoke(
+            command=f"agentic-workspace assignment {operation_id.rsplit('.', 1)[-1]} --target . --run-id {_shell_quote(run_id)} --format json",
+            cli_invoke=cli_invoke,
+        )
+        invocation = operation_invocation(
+            operation_id=operation_id,
+            arguments=arguments,
+            effect_class="assignment-lifecycle-mutation",
+            expected_transition=transition,
+            command_rendering=command,
+            preconditions={"assignment_id": assignment_id, "assignment_revision": assignment_revision, "run_state": local_state_name},
+            owner_context_revision={"assignment_decision_revision": decision_revision, "assignment_revision": assignment_revision},
+            mutation_boundary={"writes_repo_state": operation_id == "assignment.integrate", "local_run_state": local_state_name},
+            proof_requirements=[{"claim": "worker return remains untrusted until AW admission and proof"}],
+        )
+        return {
+            **base,
+            "status": "reconciliation-required",
+            "action": action,
+            "expected_transition": transition,
+            "operation_invocation": invocation,
+            "command": command,
+        }
+
+    methods = [str(method) for method in _list_payload((selected_target or {}).get("execution_methods")) if str(method)]
+    automatic = [method for method in methods if method in {"internal", "cli", "api"}]
+    transport = automatic[0] if automatic and delegation_control.get("execution_permitted") is True else "manual"
+    command = _command_with_cli_invoke(
+        command=(
+            "agentic-workspace assignment export --target . "
+            f"--assignment-id {_shell_quote(assignment_id)} --assignment-revision {_shell_quote(assignment_revision)} "
+            f"--run-id {_shell_quote(run_id)} --target-name {_shell_quote(assignment_target)} "
+            f"--transport {_shell_quote(transport)} --format json"
+        ),
+        cli_invoke=cli_invoke,
+    )
+    invocation = operation_invocation(
+        operation_id="assignment.export",
+        arguments={
+            "target": ".",
+            "assignment_id": assignment_id,
+            "assignment_revision": assignment_revision,
+            "run_id": run_id,
+            "target_name": assignment_target,
+            "transport": transport,
+            "format": "json",
+        },
+        effect_class="assignment-lifecycle-mutation",
+        expected_transition="handoff-prepared",
+        command_rendering=command,
+        preconditions={"assignment_status": "current", "assignment_decision_revision": decision_revision},
+        owner_context_revision={"assignment_id": assignment_id, "assignment_revision": assignment_revision},
+        mutation_boundary={"writes_repo_state": False, "writes_local_run_state": True, "transport": transport},
+        proof_requirements=[{"claim": "transport and worker output do not satisfy AW proof or completion authority"}],
+    )
+    return {
+        **base,
+        "status": "ready",
+        "action": "export-assigned-handoff" if transport == "manual" else "dispatch-assigned-target",
+        "expected_transition": "handoff-prepared",
+        "transport": transport,
+        "operation_invocation": invocation,
+        "command": command,
+    }
+
+
 def _execution_posture_payload(
     *, config: WorkspaceConfig, changed_paths: list[str], task_text: str | None, target_root: Path | None = None
 ) -> dict[str, Any]:
@@ -43334,9 +43618,27 @@ def _execution_posture_payload(
         None,
     )
     assignment_target_name = str(assignment_decision.get("selected_target") or "")
-    if assignment_decision.get("decision") in {"assign-current-target", "assign-or-escalate"} and assignment_target_name:
+    if (
+        assignment_decision.get("decision")
+        in {
+            "assign-current-target",
+            "assign-best-fit",
+            "assign-or-escalate",
+            "manual-handoff",
+        }
+        and assignment_target_name
+    ):
         target = next(
-            (profile for profile in runtime_resolution["profile_recommendations"] if profile.get("name") == assignment_target_name),
+            (
+                profile
+                for profile in runtime_resolution["profile_recommendations"]
+                if assignment_target_name
+                in {
+                    str(profile.get("name") or ""),
+                    str(profile.get("target_id") or ""),
+                    *(str(alias) for alias in profile.get("aliases", []) if isinstance(profile.get("aliases"), list)),
+                }
+            ),
             target,
         )
     assignment_gate = _assignment_implementation_gate_payload(
@@ -43395,6 +43697,15 @@ def _execution_posture_payload(
         task_text=task_text,
         changed_paths=changed_paths,
     )
+    assignment_action = _assignment_primary_action_payload(
+        target_root=target_root,
+        assignment_policy=assignment_policy,
+        assignment_decision=assignment_decision,
+        assignment_gate=assignment_gate,
+        selected_target=target,
+        delegation_control=delegation_control,
+        cli_invoke=config.cli_invoke,
+    )
     return {
         "kind": "agentic-workspace/execution-posture/v1",
         "capability_posture": posture,
@@ -43404,6 +43715,7 @@ def _execution_posture_payload(
         "target_evidence": target_evidence,
         "assignment_decision": assignment_decision,
         "assignment_gate": assignment_gate,
+        "assignment_action": assignment_action,
         "implementation_allowed": assignment_gate["implementation_allowed"],
         "selected_target": target,
         "decomposition_delegation": decomposition_delegation,
@@ -57966,11 +58278,39 @@ def _skills_recommendation_first_payload(payload: dict[str, Any], *, target_root
         full_id_phrase = " ".join(_skill_match_tokens(str(item.get("id") or "")))
         return any(reason.startswith("phrase match:") for reason in reasons) or f"id match: {full_id_phrase}" in reasons
 
-    startup_default = next(
-        (item for item in recommendations if item.get("id") == "workspace-startup" and has_intent_level_evidence(item)),
-        None,
+    startup_default = next((item for item in recommendations if item.get("id") == "workspace-startup"), None)
+    task_lower = str(task_text or "").lower()
+    specialist_takeover_markers = {
+        "workspace-intent-discovery": ("vague", "ambiguous", "classify shape", "clarify intent"),
+        "workspace-proof-selection": ("select proof", "proof before completion", "passed with warning"),
+        "workspace-setup-jumpstart": ("newly installed", "populate surfaces", "setup jumpstart"),
+        "workspace-transition-gates": ("transition gate", "forbidden actions"),
+        "workspace-operating-loop": ("state-delta-first", "continuation capsule", "message economy"),
+    }
+    top_id = str(recommendations[0].get("id") or "") if recommendations else ""
+    specialist_takeover = top_id in specialist_takeover_markers and any(
+        marker in task_lower for marker in specialist_takeover_markers[top_id]
     )
-    if startup_default is not None and recommendations and not has_intent_level_evidence(recommendations[0]):
+    ordinary_startup_intent = any(
+        marker in task_lower
+        for marker in (
+            "start work",
+            "orient",
+            "implement",
+            "open issue",
+            "open github issue",
+            "resume work",
+            "route this task",
+        )
+    )
+    if startup_default is not None and recommendations and ordinary_startup_intent and not specialist_takeover:
+        recommendations = [startup_default, *(item for item in recommendations if item is not startup_default)]
+    elif (
+        startup_default is not None
+        and recommendations
+        and has_intent_level_evidence(startup_default)
+        and not has_intent_level_evidence(recommendations[0])
+    ):
         recommendations = [startup_default, *(item for item in recommendations if item is not startup_default)]
     top = recommendations[0] if recommendations else {}
     top_blocked = blocked_recommendations[0] if blocked_recommendations else {}

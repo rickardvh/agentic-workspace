@@ -105,3 +105,67 @@ def test_bundled_skill_resource_dependencies_are_declared_and_resolvable() -> No
             package_path = resource.get("package_path")
             assert package_path, f"{resource_id} lacks a package-owned resource path"
             assert (skills_root / package_path).is_file(), f"{resource_id} is missing from the package"
+
+
+def test_delegation_skills_have_one_post_assignment_owner_and_current_target_exclusion() -> None:
+    root = Path(__file__).resolve().parents[3]
+    skills_root = root / "packages" / "planning" / "skills"
+    orchestrator = (skills_root / "planning-orchestrator-workflow" / "SKILL.md").read_text(encoding="utf-8")
+    assurance = (skills_root / "planning-assurance-delegation" / "SKILL.md").read_text(encoding="utf-8")
+    lifecycle = (skills_root / "planning-high-assurance-lifecycle" / "SKILL.md").read_text(encoding="utf-8")
+    contract = (root / ".agentic-workspace" / "docs" / "orchestrator-workflow-contract.md").read_text(encoding="utf-8")
+    registry = json.loads((skills_root / "REGISTRY.json").read_text(encoding="utf-8"))
+    entries = {entry["id"]: entry for entry in registry["skills"]}
+
+    assert "sole primary post-assignment orchestrator procedure" in orchestrator
+    assert "binding non-local assignment forbids local implementation" in orchestrator
+    assert "do not load this skill" in orchestrator
+    assert "only before a canonical assignment exists" in assurance
+    assert "A binding assignment ends this skill's authority" in assurance
+    assert "routing wrapper and owns lifecycle sequencing only" in lifecycle
+    assert "without loading `planning-orchestrator-workflow`" in lifecycle
+    assert "free-form task wording does not" in contract
+    assert "never implement the worker slice locally as fallback" in contract
+
+    obsolete_branches = (
+        "not worthwhile",
+        "delegation is worthwhile",
+        "stay direct",
+        "direct single-agent fallback",
+        "cost more than it saves",
+        "weaker or cheaper implementer",
+    )
+    for text in (orchestrator, assurance, lifecycle, contract):
+        lowered = text.lower()
+        assert all(branch not in lowered for branch in obsolete_branches)
+
+    orchestrator_activation = entries["planning-orchestrator-workflow"]["activation_contract"]
+    assert orchestrator_activation["authority"] == "canonical current decision"
+    assert "selected current target" in orchestrator_activation["excludes"]
+    assert "absent or unresolved assignment" in orchestrator_activation["excludes"]
+    assurance_activation = entries["planning-assurance-delegation"]["activation_contract"]
+    assert assurance_activation["authority"] == "canonical assignment owner"
+    assert "binding assignment" in assurance_activation["excludes"]
+    assert entries["planning-high-assurance-lifecycle"]["activation_contract"]["role"] == "umbrella-router"
+
+
+def test_delegation_skill_package_installed_and_generated_mirrors_match() -> None:
+    root = Path(__file__).resolve().parents[3]
+    source_root = root / "packages" / "planning" / "skills"
+    mirror_roots = (
+        root / ".agentic-workspace" / "planning" / "skills",
+        root / "generated" / "planning" / "python" / "_skills",
+        root / "generated" / "planning" / "typescript" / "resources" / "_skills",
+    )
+    relative_paths = (
+        Path("README.md"),
+        Path("REGISTRY.json"),
+        Path("planning-orchestrator-workflow/SKILL.md"),
+        Path("planning-assurance-delegation/SKILL.md"),
+        Path("planning-high-assurance-lifecycle/SKILL.md"),
+    )
+
+    for relative in relative_paths:
+        expected = (source_root / relative).read_bytes()
+        for mirror_root in mirror_roots:
+            assert (mirror_root / relative).read_bytes() == expected

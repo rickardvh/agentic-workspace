@@ -2237,22 +2237,63 @@ def _operation_receipt_warnings(
         for record in records
         if record.get("exit_code") in (0, None)
         for document in record["documents"]
-        if document.get("kind") == "agentic-workspace/correction-event-operation-result/v1"
+        if isinstance(document.get("operation_id"), str)
     ]
     for requirement in requirements:
         operation_id = str(requirement.get("operation_id") or "")
         if not operation_id:
             raise ValueError("required_operation_receipts entries need operation_id")
-        matches = [document for document in documents if document.get("operation_id") == operation_id]
+        result_kinds = requirement.get("result_kinds", [])
+        if result_kinds and (not isinstance(result_kinds, list) or not all(isinstance(item, str) for item in result_kinds)):
+            raise ValueError("required_operation_receipts result_kinds must be a string list")
+        matches = [
+            document
+            for document in documents
+            if document.get("operation_id") == operation_id
+            and (not result_kinds or document.get("kind") in result_kinds)
+        ]
         minimum = int(requirement.get("minimum_result_count", 1))
         required_statuses = requirement.get("required_statuses", [])
-        qualified_matches = [document for document in matches if not required_statuses or document.get("status") in required_statuses]
+        required_outcomes = requirement.get("required_outcomes", [])
+        expected_fields = requirement.get("expected_fields", {})
+        if expected_fields and not isinstance(expected_fields, dict):
+            raise ValueError("required_operation_receipts expected_fields must be an object")
+        qualified_matches = [
+            document
+            for document in matches
+            if (not required_statuses or document.get("status") in required_statuses)
+            and (not required_outcomes or document.get("outcome") in required_outcomes)
+            and all(_nested_value(document, str(path)) == value for path, value in expected_fields.items())
+            and (
+                "mutation_applied" not in requirement
+                or document.get("mutation_applied") is requirement.get("mutation_applied")
+            )
+        ]
         if len(qualified_matches) < minimum:
             add(
                 "The agent did not produce enough successful structured operation receipts.",
                 evidence=f"{operation_id}: expected {minimum}, observed {len(qualified_matches)}",
             )
             continue
+        required_artifact_kinds = requirement.get("required_artifact_kinds", [])
+        if required_artifact_kinds:
+            if not isinstance(required_artifact_kinds, list) or not all(isinstance(item, str) for item in required_artifact_kinds):
+                raise ValueError("required_operation_receipts required_artifact_kinds must be a string list")
+            observed_artifact_kinds: set[str] = set()
+            for document in qualified_matches:
+                for artifact_ref in document.get("artifact_refs", []):
+                    try:
+                        artifact = json.loads((repo_path / str(artifact_ref)).read_text(encoding="utf-8"))
+                    except (OSError, json.JSONDecodeError):
+                        continue
+                    if isinstance(artifact, dict) and isinstance(artifact.get("kind"), str):
+                        observed_artifact_kinds.add(artifact["kind"])
+            missing_kinds = sorted(set(required_artifact_kinds) - observed_artifact_kinds)
+            if missing_kinds:
+                add(
+                    "The structured operation receipt did not resolve the required owned artifacts.",
+                    evidence=f"{operation_id}: missing {', '.join(missing_kinds)}",
+                )
         expected_event = requirement.get("expected_event")
         bucket_path = str(requirement.get("admission_bucket") or "")
         if expected_event is not None:
