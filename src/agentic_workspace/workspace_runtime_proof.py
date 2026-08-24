@@ -25,6 +25,7 @@ from typing import Any, Callable, Mapping
 
 from repo_verification_bootstrap.runtime_primitives import (
     VerificationUsageError,
+    verification_report_compact_projection,
 )
 from repo_verification_bootstrap.runtime_primitives import (
     verification_report_payload as verification_module_report_payload,
@@ -256,6 +257,10 @@ def _verification_report_payload(
         )
     except VerificationUsageError as exc:
         raise WorkspaceUsageError(str(exc)) from exc
+
+
+def _verification_report_compact_projection(payload: dict[str, Any]) -> dict[str, Any]:
+    return verification_report_compact_projection(payload)
 
 
 def _compact_tiny_intent_proof(intent_proof: Any) -> dict[str, Any]:
@@ -8253,6 +8258,35 @@ def _proof_decision_packet(
                 **({"validation_profile": lane["validation_profile"]} if lane.get("validation_profile") else {}),
             }
         )
+    unavailable_lane_ids = {
+        str(item.get("lane") or "") for item in unavailable_commands if isinstance(item, dict) and str(item.get("lane") or "").strip()
+    }
+    affected_owner_coverage: list[dict[str, Any]] = []
+    for lane, compact_lane in zip(selected_lanes, compact_lanes, strict=False):
+        lane_id = str(compact_lane.get("id") or "")
+        matched_paths = [str(path) for path in _list_payload(lane.get("matched_paths")) if str(path).strip()]
+        if (
+            not matched_paths
+            and not lane.get("subsystem")
+            and not lane.get("domain_lane")
+            and not lane.get("proof_profile")
+            and not lane.get("requirement_id")
+        ):
+            continue
+        executable = bool(compact_lane.get("commands"))
+        manual = bool(compact_lane.get("manual_evidence") or compact_lane.get("review_aids"))
+        current = lane_id not in unavailable_lane_ids
+        covered = current and (executable or manual)
+        affected_owner_coverage.append(
+            {
+                "owner": lane_id,
+                "matched_path_count": len(matched_paths),
+                "coverage": "covered" if covered else "gap",
+                "currentness": "current" if current else "unavailable",
+                "evidence_mode": "executable" if executable else "manual" if manual else "missing",
+            }
+        )
+    uncovered_owners = [item["owner"] for item in affected_owner_coverage if item["coverage"] != "covered"]
     manual_required = bool(manual_verification) or any(item.get("required") for item in manual_proof_obligations)
     architecture_count = int(architecture_principles.get("matched_count", 0) or 0) if isinstance(architecture_principles, dict) else 0
     assurance_active = (
@@ -8305,6 +8339,8 @@ def _proof_decision_packet(
         blockers.append("manual evidence or review is required")
     if unavailable_commands:
         blockers.append("one or more selected proof commands are unavailable")
+    if uncovered_owners:
+        blockers.append("one or more affected semantic owners lack current proof coverage")
     if host_policy_blocked_commands:
         blockers.append("host proof policy blocked one or more commands")
     if architecture_count:
@@ -8341,12 +8377,39 @@ def _proof_decision_packet(
         safe_claim_state = "proof-missing"
     else:
         safe_claim_state = "slice-only-completion"
+    execution_accepted = str(proof_execution_evidence.get("status") or "") == "recorded-and-accepted"
+    sufficiency_status = (
+        "insufficient-owner-coverage"
+        if uncovered_owners
+        else "insufficient-route-currentness"
+        if unavailable_commands
+        else "sufficient"
+        if execution_accepted and not manual_required and not host_policy_blocked_commands
+        else "evidence-pending"
+    )
     return {
         "kind": "agentic-workspace/proof-decision-packet/v1",
         "status": "attention" if blockers else "clear",
         "changed_paths": changed_paths,
         "selected_lane_count": len(compact_lanes),
         "selected_lanes": compact_lanes,
+        "owner_coverage": {
+            "kind": "agentic-workspace/proof-owner-coverage/v1",
+            "status": "complete" if not uncovered_owners else "incomplete",
+            "affected_owner_count": len(affected_owner_coverage),
+            "covered_owner_count": len(affected_owner_coverage) - len(uncovered_owners),
+            "covered_owners": [item["owner"] for item in affected_owner_coverage if item["coverage"] == "covered"],
+            "uncovered_owners": uncovered_owners,
+            "rule": "Feature routes complement affected-owner baselines; every owner needs current evidence.",
+        },
+        "sufficiency": {
+            "status": sufficiency_status,
+            "owner_coverage_complete": not uncovered_owners,
+            "route_currentness_complete": not unavailable_commands,
+            "selected_commands_passed": execution_accepted,
+            "claim_allowed": sufficiency_status == "sufficient",
+            "rule": "Command success is not sufficient without complete current owner coverage.",
+        },
         "required_commands": required_commands,
         "manual_checks": manual_proof_obligations,
         "route_authority": {
@@ -8640,6 +8703,25 @@ def _proof_selection_for_changed_paths(
                     )
                 _select(selected_lane, matched_path=changed_path)
                 matched_rule = True
+                for composition in _list_payload(_PROOF_SELECTION_RULES.get("owner_baseline_composition")):
+                    if not isinstance(composition, dict) or str(composition.get("when_selected") or "") != selected_lane:
+                        continue
+                    complementary_lanes: list[str] = []
+                    for baseline_lane in _list_payload(composition.get("lanes")):
+                        baseline_lane = str(baseline_lane).strip()
+                        if not baseline_lane or baseline_lane == selected_lane:
+                            continue
+                        _select(baseline_lane, matched_path=changed_path)
+                        complementary_lanes.append(baseline_lane)
+                    if complementary_lanes:
+                        routing_compositions.append(
+                            {
+                                "paths": [changed_path],
+                                "primary_lane": selected_lane,
+                                "complementary_lanes": complementary_lanes,
+                                "reason": str(composition.get("reason") or "Affected-owner baseline complements the feature route."),
+                            }
+                        )
                 break
         if not matched_rule:
             _select(str(_PROOF_SELECTION_RULES["fallback_lane"]), matched_path=changed_path)

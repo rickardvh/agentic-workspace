@@ -1582,6 +1582,11 @@
           "$ref": "#/$defs/delegation_control",
           "description": "Local human-control mode and whether automatic delegation is permitted."
         },
+        "effective_orchestration": {
+          "type": "object",
+          "description": "Derived current orchestration posture separating assignment policy from transport availability and human override.",
+          "additionalProperties": true
+        },
         "delegation_decision": {
           "additionalProperties": true,
           "description": "Compact local delegation, escalation, clarification, or stay-local decision derived from local posture and changed-path signals.",
@@ -2482,6 +2487,11 @@
           "$ref": "#/$defs/delegation_control",
           "description": "Local human-control mode and whether automatic delegation is permitted."
         },
+        "effective_orchestration": {
+          "type": "object",
+          "description": "Derived current orchestration posture separating assignment policy from transport availability and human override.",
+          "additionalProperties": true
+        },
         "selected_target": {
           "type": [
             "object",
@@ -2601,6 +2611,11 @@
       },
       "additionalProperties": false,
       "description": "Actionable local execution posture for orchestration before implementation."
+    },
+    "effective_orchestration": {
+      "type": "object",
+      "description": "Derived current orchestration posture separating assignment policy from transport availability and human override.",
+      "additionalProperties": true
     },
     "target_evidence": {
       "type": "object",

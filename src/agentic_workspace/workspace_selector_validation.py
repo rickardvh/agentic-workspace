@@ -57,6 +57,7 @@ _SELECTOR_DESCRIPTORS_BY_COMMAND: dict[str, tuple[str, ...]] = {
         "immediate_next_allowed_action",
         "planning_safety_gate",
         "planning_route_decision",
+        "effective_orchestration",
         "task_posture_packet",
         "memory_decision_packet",
         "open_issue_intake",
@@ -166,6 +167,7 @@ _SELECTOR_DESCRIPTORS_BY_COMMAND: dict[str, tuple[str, ...]] = {
         "proof_narrowness",
         "proof_decision",
         "proof_route_maintenance",
+        "learned_proof_route_model",
         "proof_next_decision",
         "proof_obligations",
         "proof_command_tiers",
@@ -215,6 +217,8 @@ _SELECTOR_DESCRIPTORS_BY_COMMAND: dict[str, tuple[str, ...]] = {
         "modules",
         "mixed_agent",
         "mixed_agent.runtime_resolution",
+        "mixed_agent.effective_orchestration",
+        "mixed_agent.assignment_policy",
         "assurance",
         "config_enforcement",
         "config_effect_audit",
@@ -287,6 +291,9 @@ _KNOWN_OPTIONAL_SELECTORS_BY_COMMAND: dict[str, set[str]] = {
 _DEPRECATED_SELECTOR_REPLACEMENTS_BY_COMMAND: dict[str, dict[str, str]] = {
     "config": {
         "workspace.feature_tier": "workspace.enabled_modules",
+    },
+    "proof": {
+        "target_proof_capabilities": "proof_next_decision",
     },
 }
 
@@ -492,6 +499,12 @@ def _selector_replacements_payload(*, source_command: str, selectors: list[str])
     return replacements
 
 
+def _selector_replacement_command(*, source_command: str, selectors: list[str], replacements: dict[str, str]) -> str:
+    corrected = [replacements.get(selector, selector) for selector in selectors]
+    corrected = list(dict.fromkeys(corrected))
+    return f"agentic-workspace {source_command} --target . --select {','.join(corrected)} --format json"
+
+
 def _selector_validation_error_from_available(
     *, available: list[str], selectors: list[str], missing: list[str], source_command: str
 ) -> dict[str, Any]:
@@ -533,9 +546,18 @@ def _selector_validation_error_from_available(
         "corrected_action": inventory_command,
     }
     if replacement_selectors:
+        replacement_command = _selector_replacement_command(
+            source_command=source_command,
+            selectors=selectors,
+            replacements=replacement_selectors,
+        )
         payload["deprecated_selectors"] = list(replacement_selectors)
         payload["replacement_selectors"] = replacement_selectors
-        payload["replacement_rule"] = "Deprecated selectors are rejected atomically with a bounded replacement hint."
+        payload["replacement_command"] = replacement_command
+        payload["corrected_action"] = replacement_command
+        payload["replacement_rule"] = (
+            "Deprecated selectors are rejected atomically with their exact current selector and copyable replacement command."
+        )
     return _fit_selector_error_envelope(payload)
 
 

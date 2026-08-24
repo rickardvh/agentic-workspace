@@ -367,6 +367,12 @@ def _verification_report_payload(*args: Any, **kwargs: Any) -> Any:
     return owner(*args, **kwargs)
 
 
+def _verification_report_compact_projection(*args: Any, **kwargs: Any) -> Any:
+    from agentic_workspace.workspace_runtime_proof import _verification_report_compact_projection as owner
+
+    return owner(*args, **kwargs)
+
+
 def _hydrate_selected_start_advisory_payloads(*args: Any, **kwargs: Any) -> Any:
     from agentic_workspace.workspace_runtime_startup import _hydrate_selected_start_advisory_payloads as owner
 
@@ -17475,6 +17481,8 @@ def _run_lazy_report_section_command(
         )
         payload["verification"] = verification
         payload["assurance_requirements"] = _assurance_requirements_with_verification(assurance_requirements, verification)
+        if normalized == "verification":
+            payload["verification"] = _verification_report_compact_projection(verification)
         if normalized == "requirement_grounding":
             payload["requirement_grounding"] = _requirement_grounding_payload(
                 target_root=target_root,
@@ -17521,7 +17529,10 @@ def _run_lazy_report_section_command(
                 memory_consult=payload["memory_consult"],
                 cli_invoke=config.cli_invoke,
             )
-        return _select_report_payload(payload, profile="router", section=normalized)
+        selected_payload = _select_report_payload(payload, profile="router", section=normalized)
+        if normalized == "verification":
+            selected_payload.setdefault("target", str(target_root))
+        return selected_payload
 
     if normalized == "successful_completion_cost":
         payload["successful_completion_cost"] = _successful_completion_cost_payload(target_root=target_root, cli_invoke=config.cli_invoke)
@@ -19180,6 +19191,39 @@ def _ordinary_output_shape_inventory() -> dict[str, Any]:
                 "max_estimated_tokens": 2000,
                 "max_human_lines": 80,
                 "expansion_trigger": "--select or --verbose",
+                "proof": "test_all_declared_ordinary_profiles_obey_authoritative_output_budgets",
+            },
+            {
+                "surface": "planning handoff",
+                "profile": "decision-envelope/v1",
+                "status": "budget-proven",
+                "max_json_bytes": 12000,
+                "max_field_count": 240,
+                "max_estimated_tokens": 3000,
+                "max_human_lines": 80,
+                "expansion_trigger": "planning handoff --verbose or planning summary --select handoff_contract",
+                "proof": "test_all_declared_ordinary_profiles_obey_authoritative_output_budgets",
+            },
+            {
+                "surface": "skills",
+                "profile": "recommendation-first/v1",
+                "status": "budget-proven",
+                "max_json_bytes": 10000,
+                "max_field_count": 220,
+                "max_estimated_tokens": 2500,
+                "max_human_lines": 80,
+                "expansion_trigger": "--select registry or --select recommendations",
+                "proof": "test_all_declared_ordinary_profiles_obey_authoritative_output_budgets",
+            },
+            {
+                "surface": "verification report",
+                "profile": "decision-envelope/v1",
+                "status": "budget-proven",
+                "max_json_bytes": 10000,
+                "max_field_count": 220,
+                "max_estimated_tokens": 2500,
+                "max_human_lines": 80,
+                "expansion_trigger": "agentic-verification report --verbose or report --select verification",
                 "proof": "test_all_declared_ordinary_profiles_obey_authoritative_output_budgets",
             },
             {
@@ -30705,6 +30749,8 @@ def _startup_skills_projection(
             {
                 "id": required_id,
                 **({"path": skill.get("path")} if skill.get("path") else {}),
+                **({"owner": skill.get("owner")} if skill.get("owner") else {}),
+                **({"source_kind": skill.get("source_kind")} if skill.get("source_kind") else {}),
                 **({"summary": skill.get("summary")} if skill.get("summary") else {}),
                 "reason": "required by next_safe_action.required_skill",
             }
@@ -33515,6 +33561,9 @@ def _start_tiny_payload_fast(
         config=config, changed_paths=_normalize_changed_paths(changed_paths), task_text=task_text, target_root=target_root
     )
     payload["delegation_decision"] = _compact_start_delegation_decision(execution_posture["delegation_decision"])
+    effective_orchestration = _as_dict(execution_posture.get("effective_orchestration"))
+    if effective_orchestration.get("surface_in_startup") is True:
+        payload["effective_orchestration"] = effective_orchestration
     planning_safety_gate = _planning_safety_gate_payload(
         target_root=target_root,
         config=config,
@@ -42103,6 +42152,116 @@ def _assignment_policy_payload(local_override: MixedAgentLocalOverride, profile_
     }
 
 
+def _effective_orchestration_posture_payload(
+    *,
+    assignment_policy: dict[str, Any],
+    delegation_control: dict[str, Any],
+    profile_payloads: list[dict[str, Any]],
+    cli_invoke: str,
+) -> dict[str, Any]:
+    role = str(_as_dict(assignment_policy.get("execution_role")).get("value") or "ordinary-executor")
+    policy = str(_as_dict(assignment_policy.get("assignment_policy")).get("value") or "local-preferred")
+    current_target = str(_as_dict(assignment_policy.get("current_target")).get("value") or "")
+    target_status = str(assignment_policy.get("current_target_status") or "not-configured")
+    configured_mode = str(delegation_control.get("configured_mode") or "suggest")
+    effective_mode = str(delegation_control.get("effective_mode") or configured_mode)
+    transport_permitted = delegation_control.get("execution_permitted") is True
+    matching_profile = next(
+        (
+            profile
+            for profile in profile_payloads
+            if current_target
+            and current_target
+            in {
+                str(profile.get("name") or ""),
+                str(profile.get("target_id") or ""),
+                *(str(alias) for alias in _list_payload(profile.get("aliases"))),
+            }
+        ),
+        {},
+    )
+    execution_methods = [str(item) for item in _list_payload(matching_profile.get("execution_methods")) if str(item)]
+    automatic_methods = [item for item in execution_methods if item in {"internal", "cli", "api"}]
+    current_target_ready = target_status == "known-profile"
+    binding_requested = policy == "required-best-fit"
+    orchestrator_role = role == "orchestrator"
+
+    if binding_requested and not current_target_ready:
+        status = "binding-blocked-unresolved-target"
+        summary = "Binding best-fit assignment is requested, but current target identity is unresolved."
+        decisive_reasons = [f"current_target_status={target_status}"]
+    elif binding_requested and not orchestrator_role:
+        status = "binding-blocked-execution-role"
+        summary = "Required best-fit policy is configured, but the ordinary execution role does not hold orchestrator assignment authority."
+        decisive_reasons = [f"execution_role={role}"]
+    elif binding_requested:
+        status = "binding-active" if transport_permitted and automatic_methods else "binding-active-transport-unavailable"
+        summary = (
+            f"Binding best-fit orchestration is active for current target {current_target}."
+            if status == "binding-active"
+            else f"Binding best-fit assignment is active for current target {current_target}, but automatic transport is unavailable."
+        )
+        decisive_reasons = [] if status == "binding-active" else [f"delegation_mode={effective_mode}", "no permitted automatic transport"]
+    elif policy == "best-fit-advisory":
+        status = "advisory-best-fit"
+        summary = "Best-fit assignment is advisory; the current executor retains authority unless a handoff is explicitly selected."
+        decisive_reasons = ["assignment_policy=best-fit-advisory"]
+    elif configured_mode == "auto":
+        status = "transport-auto-local-assignment" if transport_permitted else "transport-auto-not-permitted"
+        summary = (
+            "Automatic delegation transport is available, but binding best-fit orchestration is not enabled because assignment remains local-preferred."
+            if transport_permitted
+            else "Automatic delegation transport is configured but not permitted; assignment remains local-preferred and non-binding."
+        )
+        decisive_reasons = [f"execution_role={role}", f"assignment_policy={policy}"]
+        if not transport_permitted:
+            decisive_reasons.append(str(delegation_control.get("disabled_reason") or "automatic transport is not permitted"))
+    else:
+        status = "direct-local"
+        summary = "Ordinary direct execution is active; best-fit assignment and automatic delegation transport are not binding."
+        decisive_reasons = [f"assignment_policy={policy}", f"delegation_mode={effective_mode}"]
+
+    return {
+        "kind": "agentic-workspace/effective-orchestration-posture/v1",
+        "status": status,
+        "summary": summary,
+        "surface_in_startup": status != "direct-local",
+        "assignment": {
+            "execution_role": role,
+            "policy": policy,
+            "authority": "binding" if status.startswith("binding-active") else "advisory" if status == "advisory-best-fit" else "local",
+        },
+        "current_target": {
+            "identity": current_target or None,
+            "status": target_status,
+            "automatic_methods": automatic_methods,
+        },
+        "transport": {
+            "configured_mode": configured_mode,
+            "effective_mode": effective_mode,
+            "execution_permitted": transport_permitted,
+        },
+        "human_override": {
+            "policy": str(_as_dict(assignment_policy.get("human_override_policy")).get("value") or "explicit-only"),
+            "authority": "explicit human instruction remains highest priority",
+        },
+        "decisive_reasons": decisive_reasons,
+        "change_route": {
+            "owner": ".agentic-workspace/config.local.toml",
+            "detail_command": (
+                f"{cli_invoke} config --target . --select mixed_agent.effective_orchestration,mixed_agent.assignment_policy --format json"
+            ),
+        },
+        "provenance": {
+            "execution_role": _as_dict(assignment_policy.get("execution_role")).get("source"),
+            "assignment_policy": _as_dict(assignment_policy.get("assignment_policy")).get("source"),
+            "current_target": _as_dict(assignment_policy.get("current_target")).get("source"),
+            "delegation_mode": delegation_control.get("source"),
+        },
+        "separation_rule": "Assignment policy chooses ownership; delegation mode only governs execution transport after a route is selected.",
+    }
+
+
 def _clarification_control_payload(local_override: MixedAgentLocalOverride) -> dict[str, Any]:
     configured_mode = local_override.clarification_mode or "suggest"
     mode_actions = {
@@ -43607,6 +43766,12 @@ def _execution_posture_payload(
     runtime_resolution = _runtime_resolution_payload(config=config, capability_posture=posture["posture"])
     delegation_control = _delegation_control_payload(config.local_override)
     assignment_policy = _assignment_policy_payload(config.local_override, list(runtime_resolution.get("profile_recommendations", [])))
+    effective_orchestration = _effective_orchestration_posture_payload(
+        assignment_policy=assignment_policy,
+        delegation_control=delegation_control,
+        profile_payloads=list(runtime_resolution.get("profile_recommendations", [])),
+        cli_invoke=config.cli_invoke,
+    )
     outcome_records: tuple[DelegationOutcomeRecord, ...] = ()
     if config.target_root is not None:
         _, _, outcome_records = config_lib.load_delegation_outcomes(target_root=config.target_root)
@@ -43733,6 +43898,7 @@ def _execution_posture_payload(
         "runtime_resolution": runtime_resolution,
         "delegation_control": delegation_control,
         "assignment_policy": assignment_policy,
+        "effective_orchestration": effective_orchestration,
         "target_evidence": target_evidence,
         "assignment_decision": assignment_decision,
         "assignment_gate": assignment_gate,
@@ -57340,6 +57506,12 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
         },
         "delegation_control": _delegation_control_payload(local_override),
         "assignment_policy": assignment_policy,
+        "effective_orchestration": _effective_orchestration_posture_payload(
+            assignment_policy=assignment_policy,
+            delegation_control=_delegation_control_payload(local_override),
+            profile_payloads=profile_payloads,
+            cli_invoke=config.cli_invoke,
+        ),
         "target_identity": identity_posture,
         "correction_feedback": correction_feedback_contract(identity_posture=identity_posture),
         "target_evidence": target_evidence,
@@ -57632,6 +57804,7 @@ def _compact_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
     effective_posture = mixed_agent["effective_posture"]
     runtime_resolution = mixed_agent["runtime_resolution"]
     assignment_policy = mixed_agent["assignment_policy"]
+    effective_orchestration = mixed_agent["effective_orchestration"]
     target_identity = mixed_agent["target_identity"]
     correction_feedback = mixed_agent["correction_feedback"]
     target_evidence = mixed_agent["target_evidence"]
@@ -57728,6 +57901,21 @@ def _compact_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "binding": assignment_policy["binding"],
                 "separation_rule": assignment_policy["separation_rule"],
             },
+            "effective_orchestration": {
+                key: effective_orchestration[key]
+                for key in (
+                    "kind",
+                    "status",
+                    "summary",
+                    "assignment",
+                    "current_target",
+                    "transport",
+                    "human_override",
+                    "decisive_reasons",
+                    "change_route",
+                    "separation_rule",
+                )
+            },
             "target_evidence": {
                 "status": target_evidence["status"],
                 "record_count": target_evidence["record_count"],
@@ -57812,6 +58000,13 @@ def _tiny_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "local_runtime": {
             "delegation_mode": local_runtime["delegation_mode"],
             "assignment_policy": local_runtime["assignment_policy"],
+            "effective_orchestration": {
+                "status": local_runtime["effective_orchestration"]["status"],
+                "assignment_policy": local_runtime["effective_orchestration"]["assignment"]["policy"],
+                "delegation_mode": local_runtime["effective_orchestration"]["transport"]["effective_mode"],
+                "transport_permitted": local_runtime["effective_orchestration"]["transport"]["execution_permitted"],
+                "detail_selector": "mixed_agent.effective_orchestration",
+            },
             "clarification_mode": local_runtime["clarification_mode"],
             "safe_to_auto_run_commands": local_runtime["safe_to_auto_run_commands"],
             "requires_human_verification_on_pr": local_runtime["requires_human_verification_on_pr"],
@@ -57830,6 +58025,7 @@ def _tiny_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "local_runtime.assignment_policy",
             "mixed_agent.runtime_resolution",
             "mixed_agent.assignment_policy",
+            "mixed_agent.effective_orchestration",
             "mixed_agent.target_identity",
             "mixed_agent.correction_feedback",
             "mixed_agent.target_evidence",
@@ -59428,6 +59624,19 @@ def _emit_payload(*, payload: dict[str, Any], format_name: str) -> None:
             detail_routes = decision_packet.get("detail_routes", {})
             if isinstance(detail_routes, dict) and detail_routes.get("why_blocked"):
                 print(f"Detail: {detail_routes['why_blocked']}")
+        return
+    if payload.get("profile") == "compact-contract-answer/v1" and payload.get("surface") == "report":
+        print(f"Target: {payload.get('target', '.')}")
+        selector = payload.get("selector", {})
+        section = selector.get("section", "") if isinstance(selector, dict) else ""
+        print(f"Command: report{f' --section {section}' if section else ''}")
+        answer = payload.get("answer", {})
+        if isinstance(answer, dict):
+            print(f"Status: {answer.get('status', 'unknown')}")
+            detail_routes = answer.get("detail_routes", {})
+            if isinstance(detail_routes, dict):
+                for name, command in detail_routes.items():
+                    print(f"Detail ({name}): {command}")
         return
     if payload.get("command") == "prompt":
         _emit_prompt_text(payload)

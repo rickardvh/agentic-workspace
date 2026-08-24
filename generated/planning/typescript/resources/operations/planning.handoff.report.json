@@ -23,6 +23,11 @@
       "source": "cli-option"
     },
     {
+      "name": "verbose",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
       "name": "format",
       "required": false,
       "source": "cli-option"
@@ -35,6 +40,9 @@
         "arguments": {
           "target": {
             "value": "target"
+          },
+          "verbose": {
+            "value": "verbose"
           }
         },
         "description": "Load the active planning handoff payload for the requested target.",

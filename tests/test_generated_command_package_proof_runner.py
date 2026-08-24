@@ -629,7 +629,7 @@ def test_operation_conformance_runner_executes_python_cases(capsys) -> None:
     assert payload["artifact_registry"] == "operation_artifact_registry.json"
     assert payload["summary"]["state"] == "pass"
     assert payload["summary"]["fail_count"] == 0
-    assert payload["summary"]["pass_count"] == 10
+    assert payload["summary"]["pass_count"] == 12
     cases = {(case["case_id"], case["target"]): case for case in payload["cases"]}
     assert cases[("defaults.selected-output.success", "python")]["state"] == "pass"
     assert cases[("defaults.selected-output.success", "python")]["adapter_id"] == "python.function"
@@ -656,9 +656,9 @@ def test_operation_conformance_runner_reports_typescript_unavailable(monkeypatch
     strict = runner.run_ir_cases(target_selection="typescript", case_filter=set(), require_node=True)
 
     assert soft["summary"]["state"] == "pass"
-    assert soft["summary"]["unavailable_count"] == 8
+    assert soft["summary"]["unavailable_count"] == 10
     assert strict["summary"]["state"] == "fail"
-    assert strict["summary"]["fail_count"] == 8
+    assert strict["summary"]["fail_count"] == 10
 
 
 def test_vendor_neutral_non_operation_cases_are_unavailable_not_skipped(monkeypatch, tmp_path: Path) -> None:
@@ -841,7 +841,7 @@ def test_operation_conformance_runner_compares_parity(monkeypatch) -> None:
     assert parity_result["state"] == "pass"
 
 
-def test_operation_conformance_runner_reports_missing_python_function_symbol() -> None:
+def test_operation_conformance_runner_reports_missing_python_function_symbol(tmp_path: Path) -> None:
     runner = _load_test_ir_runner()
     case = {
         "id": "todo.list.operation",
@@ -852,7 +852,7 @@ def test_operation_conformance_runner_reports_missing_python_function_symbol() -
     }
     artifact = {"artifact_id": "todo.list.python", "adapter_id": "python.function"}
 
-    result = runner._run_python_function_case(case=case, artifact=artifact)
+    result = runner._run_python_function_case(case=case, artifact=artifact, temp_root=tmp_path)
 
     assert result["state"] == "unavailable"
     assert result["message"] == "python.function artifact has no importable symbol"

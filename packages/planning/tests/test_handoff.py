@@ -1339,4 +1339,7 @@ def test_planning_handoff_command_emits_json(tmp_path: Path, capsys) -> None:
     assert exit_code == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["kind"] == "planning-handoff/v1"
+    assert payload["profile"] == "decision-envelope"
     assert payload["handoff_contract"]["status"] == "present"
+    assert payload["construction"]["historical_sources_loaded"] is False
+    assert payload["detail_routes"]["exact_contract"].endswith("--select handoff_contract --format json")

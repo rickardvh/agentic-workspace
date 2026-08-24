@@ -2591,6 +2591,7 @@ def verification_report_payload(
     task_text: str | None = None,
     active_planning_record: dict[str, Any] | None = None,
     assurance_requirements: dict[str, Any] | None = None,
+    verbose: bool | None = None,
 ) -> dict[str, Any]:
     if target_root is None:
         return {"kind": "agentic-workspace/verification/v1", "status": "unavailable", "configured": False}
@@ -2784,7 +2785,7 @@ def verification_report_payload(
     concept_attention = any(item.get("state") == "undeclared-host-concept" for item in degraded_concepts) or bool(
         _list_payload(evidence_concepts.get("invalid_declarations"))
     )
-    return {
+    payload = {
         "kind": "agentic-workspace/verification/v1",
         "status": "attention"
         if any(item.get("state") in {"missing-evidence", "stale-evidence"} for item in evidence_status) or concept_attention
@@ -2885,5 +2886,68 @@ def verification_report_payload(
             "hidden_oracle_rule": "Keep hidden/reference oracle material out of primary evaluator prompts; expose it only as post-score review metadata.",
             "memory_rule": "Promote only durable lessons or anti-rediscovery findings to Memory; do not store raw transcripts in Memory.",
         },
-        "detail_command": "agentic-workspace report --target ./repo --section verification --format json",
+        "detail_command": "agentic-verification report --target . --verbose --format json",
+    }
+    return verification_report_compact_projection(payload) if verbose is False else payload
+
+
+def verification_report_compact_projection(payload: dict[str, Any]) -> dict[str, Any]:
+    """Return the bounded ordinary Verification decision envelope.
+
+    The full report remains the semantic source and is available explicitly;
+    the ordinary command avoids serializing inventories that do not change the
+    immediate proof decision.
+    """
+    active_protocols = [
+        {key: protocol[key] for key in ("id", "summary", "applies_because", "expected_evidence", "evidence_bundle_ids") if key in protocol}
+        for protocol in _list_payload(payload.get("active_protocols"))
+        if isinstance(protocol, dict)
+    ]
+    evidence_status = [
+        {
+            key: item[key]
+            for key in ("protocol_id", "state", "missing_evidence", "stale_expected_evidence", "claim_boundaries")
+            if key in item
+        }
+        for item in _list_payload(payload.get("evidence_status"))
+        if isinstance(item, dict)
+    ]
+    active_routes = [
+        {key: route[key] for key in ("id", "summary", "commands", "protocol_refs", "scenario_refs") if key in route}
+        for route in _list_payload(payload.get("active_proof_routes"))
+        if isinstance(route, dict)
+    ]
+    return {
+        "kind": payload.get("kind", "agentic-workspace/verification/v1"),
+        "profile": "decision-envelope",
+        "status": payload.get("status", "unavailable"),
+        "configured": bool(payload.get("configured", False)),
+        "path": payload.get("path", ""),
+        "rule": payload.get("rule", ""),
+        "counts": {
+            "protocols": payload.get("protocol_count", 0),
+            "scenarios": payload.get("scenario_count", 0),
+            "active_protocols": payload.get("active_count", 0),
+            "evidence_bundles": payload.get("evidence_bundle_count", 0),
+            "proof_routes": payload.get("proof_route_count", 0),
+            "known_gaps": payload.get("known_gap_count", 0),
+        },
+        "active_protocols": active_protocols,
+        "evidence_status": evidence_status,
+        "active_proof_routes": active_routes,
+        "validation_evidence_admission_summary": payload.get("validation_evidence_admission_summary", {}),
+        "claim_boundary": {
+            "status": "attention" if payload.get("status") == "attention" else "advisory",
+            "rule": "Command success reports Verification state; proof sufficiency remains an Assurance and agent judgment.",
+        },
+        "omitted_detail": [
+            "configured protocol and scenario inventories",
+            "inactive proof routes and evidence bundles",
+            "evidence modeling guidance and transcript policy",
+            "protocol match diagnostics",
+        ],
+        "detail_routes": {
+            "full_report": "agentic-verification report --target . --verbose --format json",
+            "workspace_context": "agentic-workspace report --target . --select verification --format json",
+        },
     }

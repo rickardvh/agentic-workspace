@@ -4,6 +4,46 @@ from __future__ import annotations
 from tests.workspace_cli_support import *
 
 
+@pytest.mark.parametrize(
+    ("role", "policy", "target_status", "mode", "permitted", "expected"),
+    [
+        ("ordinary-executor", "local-preferred", "known-profile", "auto", True, "transport-auto-local-assignment"),
+        ("orchestrator", "required-best-fit", "known-profile", "auto", True, "binding-active"),
+        ("orchestrator", "best-fit-advisory", "known-profile", "suggest", False, "advisory-best-fit"),
+        ("orchestrator", "required-best-fit", "unknown", "auto", True, "binding-blocked-unresolved-target"),
+        ("orchestrator", "required-best-fit", "known-profile", "suggest", False, "binding-active-transport-unavailable"),
+    ],
+)
+def test_effective_orchestration_posture_separates_assignment_from_transport(
+    role: str, policy: str, target_status: str, mode: str, permitted: bool, expected: str
+) -> None:
+    assignment_policy = {
+        "execution_role": {"value": role, "source": "local-override"},
+        "assignment_policy": {"value": policy, "source": "local-override"},
+        "current_target": {"value": "worker", "source": "local-override"},
+        "current_target_status": target_status,
+        "human_override_policy": {"value": "explicit-only", "source": "default"},
+    }
+    delegation_control = {
+        "configured_mode": mode,
+        "effective_mode": mode,
+        "execution_permitted": permitted,
+        "source": "local-override",
+    }
+    posture = workspace_runtime_core._effective_orchestration_posture_payload(
+        assignment_policy=assignment_policy,
+        delegation_control=delegation_control,
+        profile_payloads=[{"name": "worker", "target_id": "worker", "execution_methods": ["internal"]}],
+        cli_invoke="uv run agentic-workspace",
+    )
+
+    assert posture["status"] == expected
+    assert posture["assignment"]["policy"] == policy
+    assert posture["transport"]["configured_mode"] == mode
+    assert posture["change_route"]["owner"] == ".agentic-workspace/config.local.toml"
+    assert "mixed_agent.effective_orchestration" in posture["change_route"]["detail_command"]
+
+
 def _guidance_host_signature(payload: dict[str, object]) -> dict[str, object]:
     import sys
 
@@ -649,7 +689,14 @@ requires_human_verification_on_pr = true
     assert payload["next_detail"]["verbose"].endswith("agentic-workspace config --target . --verbose --format json")
     assert "config_effect_audit" not in payload
     assert "configuration_projection" not in payload
-    assert len(output) < 3000
+    assert payload["local_runtime"]["effective_orchestration"] == {
+        "status": "direct-local",
+        "assignment_policy": "local-preferred",
+        "delegation_mode": "suggest",
+        "transport_permitted": False,
+        "detail_selector": "mixed_agent.effective_orchestration",
+    }
+    assert len(output) < 3400
 
 
 def test_config_command_compact_reports_projection_summary_without_fact_detail(tmp_path: Path, capsys) -> None:

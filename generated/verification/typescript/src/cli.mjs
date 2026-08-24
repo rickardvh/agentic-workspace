@@ -41,6 +41,14 @@ const commandDefinitions = [
           "name": "task_text"
         },
         {
+          "action": "store_true",
+          "flags": [
+            "--verbose"
+          ],
+          "help": "Emit full protocol, scenario, route, and evidence inventories.",
+          "name": "verbose"
+        },
+        {
           "choices": [
             "text",
             "json"

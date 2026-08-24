@@ -173,6 +173,20 @@ from agentic_workspace.workspace_runtime_proof import (
 from agentic_workspace.workspace_selector_validation import _selector_inventory_selected_payload, _validated_detail_route_command
 
 
+def _compact_start_effective_orchestration(posture: Any) -> dict[str, Any]:
+    if not isinstance(posture, dict):
+        return {}
+    compact = {
+        key: posture[key]
+        for key in ("status", "summary", "surface_in_startup", "assignment", "transport", "decisive_reasons", "change_route")
+        if key in posture
+    }
+    current_target = posture.get("current_target", {})
+    if isinstance(current_target, dict) and current_target.get("identity"):
+        compact["current_target"] = current_target
+    return compact
+
+
 def _startup_command_target_arg(target_root: Path | None) -> str:
     if target_root is None:
         return "."
@@ -470,6 +484,11 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         },
         "repo_posture": _compact_repo_posture_projection(payload.get("repo_posture", {})),
         "delegation_decision": _compact_start_delegation_decision(payload.get("delegation_decision", {})),
+        **(
+            {"effective_orchestration": payload["effective_orchestration"]}
+            if isinstance(payload.get("effective_orchestration"), dict)
+            else {}
+        ),
         **({"task_path_references": payload["task_path_references"]} if isinstance(payload.get("task_path_references"), dict) else {}),
         **(
             {"architecture_principles_forecast": payload["architecture_principles_forecast"]}
@@ -1233,6 +1252,9 @@ def _start_payload(
             "rule": "Startup projects current assignment authority; lifecycle mutations remain owned by assignment operations.",
         }
     payload["delegation_decision"] = _compact_start_delegation_decision(execution_posture["delegation_decision"])
+    effective_orchestration = _as_dict(execution_posture.get("effective_orchestration"))
+    if effective_orchestration.get("surface_in_startup") is True:
+        payload["effective_orchestration"] = _compact_start_effective_orchestration(effective_orchestration)
     planning_safety_gate = _planning_safety_gate_payload(
         target_root=target_root,
         config=config,
@@ -2281,6 +2303,29 @@ def _ordinary_start_decision_payload(
     ):
         if next_action.get(source_key) not in (None, "", [], {}):
             action[target_key] = copy.deepcopy(next_action[source_key])
+    required_skill_id = str(action.get("skill") or "")
+    required_skill_routes = _list_payload(_as_dict(selected.get("skills")).get("required"))
+    required_skill_route = next(
+        (_as_dict(item) for item in required_skill_routes if str(_as_dict(item).get("id") or "") == required_skill_id),
+        {},
+    )
+    if required_skill_route:
+        skill_path = str(required_skill_route.get("path") or "")
+        owning_module = ""
+        for module_name in ("planning", "memory", "verification"):
+            if skill_path.startswith(f".agentic-workspace/{module_name}/"):
+                owning_module = module_name
+                break
+        action["skill_route"] = {
+            key: copy.deepcopy(value)
+            for key, value in {
+                "id": required_skill_id,
+                "path": skill_path,
+                "owner": required_skill_route.get("owner"),
+                "module": owning_module,
+            }.items()
+            if value not in (None, "", [], {})
+        }
     operation = _as_dict(immediate.get("operation_invocation"))
     if operation:
         action["operation"] = operation
@@ -2363,6 +2408,8 @@ def _ordinary_start_decision_payload(
         reasons = changed_signals[:6]
     if not reasons and action.get("why"):
         reasons = [str(action["why"])]
+    if reasons == [str(action.get("why") or "")]:
+        reasons = ["See action.why."]
     if action.get("read_first"):
         reasons.insert(0, "relevant durable context matched the known task path")
 
@@ -2380,9 +2427,6 @@ def _ordinary_start_decision_payload(
         "select": f"{cli_invoke} start --target . --select <field[,field...]> --format json",
         "verbose": f"{cli_invoke} start --target . --verbose --format json",
     }
-    if action.get("skill"):
-        detail_routes["skill_detail"] = f'{cli_invoke} skills --target . --task "<task>" --format json'
-
     decision = {
         "kind": "agentic-workspace/ordinary-start-decision/v1",
         "surface": "start",
@@ -2407,6 +2451,11 @@ def _ordinary_start_decision_payload(
         "kind": selected.get("kind", "startup-context/v1"),
         "target": selected.get("target", "."),
         "decision_packet": decision,
+        **(
+            {"effective_orchestration": copy.deepcopy(selected["effective_orchestration"])}
+            if isinstance(selected.get("effective_orchestration"), dict)
+            else {}
+        ),
     }
 
 
@@ -2968,6 +3017,11 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             },
         ),
         "communication_contract": compact_communication_contract_payload(surface="startup"),
+        **(
+            {"effective_orchestration": payload["effective_orchestration"]}
+            if isinstance(payload.get("effective_orchestration"), dict)
+            else {}
+        ),
         **(
             {"installed_state_read_only_scope": payload["installed_state_read_only_scope"]}
             if isinstance(payload.get("installed_state_read_only_scope"), dict)

@@ -16,6 +16,15 @@
     "generated_command_packages",
     "workspace_cli"
   ],
+  "owner_baseline_composition": [
+    {
+      "when_selected": "contract_tooling",
+      "lanes": [
+        "workspace_cli"
+      ],
+      "reason": "Workspace contract changes can regress ordinary CLI invariants; contract checks complement rather than replace the Workspace owner baseline."
+    }
+  ],
   "docs_only_reducer": {
     "lane": "repo_docs_review",
     "eligibility": "whole-source-lane",
