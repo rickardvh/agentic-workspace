@@ -15,6 +15,8 @@
   "guards": [
     "Generated operation boundary resolves target subjects from workspace config by default.",
     "Caller-supplied producer labels cannot upgrade authority; trusted authority must resolve from trusted_authority_receipt_ref.",
+    "Signed trusted_host_event_json is verified against pinned producer custody, channel, workspace, lifecycle, and signature before import.",
+    "Incomplete trusted observations remain in existing trusted-authority custody until host_event_ref is normalized; downstream route decisions are separate.",
     "Agent self-observation is preserved as low-authority non-routing evidence.",
     "Correction storage is local-only and has no checked-in repo meaning."
   ],
@@ -36,6 +38,18 @@
       "source": "cli-option"
     },
     {
+      "name": "trusted_host_event_json",
+      "required": false,
+      "source": "cli-option",
+      "description": "Canonical JSON agentic-workspace/trusted-authority-host-event/v1 envelope. host_admission is RS256 over the v1 payload {kind, algorithm, key_id, event_ref, event_digest, verdict_digest, audience}; the pinned key issuer/channel, verdict workspace binding, expiry, nonce, event identity, and custody must agree."
+    },
+    {
+      "name": "host_event_ref",
+      "required": false,
+      "source": "cli-option",
+      "description": "Opaque trusted-authority-event:<id> returned by prior signed observation custody; it conveys no authority unless the stored signature and import custody remain valid."
+    },
+    {
       "name": "trusted_authority_receipt_ref",
       "required": false,
       "source": "cli-option"
@@ -47,6 +61,11 @@
     },
     {
       "name": "delivery_id",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "event_id",
       "required": false,
       "source": "cli-option"
     },
@@ -161,7 +180,7 @@
       "source": "cli-option"
     }
   ],
-  "intent": "Provide the public generated correction-event lifecycle boundary for local target guidance and suitability evidence intake.",
+  "intent": "Preserve signed host correction observations, then normalize and disposition them through the existing correction-event lifecycle boundary.",
   "ir_plan": {
     "status": "complete",
     "steps": [
@@ -203,6 +222,7 @@
   },
   "proof": [
     "correction-event generated operation tests cover trusted submit, low-authority preservation, query, and compact retention",
+    "cross-target conformance fails closed when native runtimes cannot resolve a trusted host observation",
     "operation contract validates against operation.schema.json"
   ],
   "reads": [
@@ -210,6 +230,11 @@
       "description": "bounded local correction-event store",
       "required": false,
       "surface": ".agentic-workspace/local/correction-events.json"
+    },
+    {
+      "description": "existing signed trusted-authority observation custody",
+      "required": false,
+      "surface": ".agentic-workspace/local/trusted-authority-events"
     }
   ],
   "schema_version": "agentic-workspace/operation/v1",
@@ -230,13 +255,19 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Submit a correction event through the public local operation boundary.",
+  "summary": "Preserve or normalize a correction through the public local operation boundary.",
   "writes": [
     {
       "description": "bounded local correction-event store and receipts",
       "required": true,
       "surface": ".agentic-workspace/local/correction-events.json",
       "when": "mutation operation stores or compacts admitted/low-authority events"
+    },
+    {
+      "description": "signed host observation and trusted custody index",
+      "required": false,
+      "surface": ".agentic-workspace/local/trusted-authority-events",
+      "when": "trusted_host_event_json passes producer signature and custody admission"
     }
   ]
 }

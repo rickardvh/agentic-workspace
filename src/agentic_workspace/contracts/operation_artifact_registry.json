@@ -439,6 +439,45 @@
         "session-log Python wrapper output or no-write boundary changes",
         "session-log.manage.process conformance expectations change"
       ]
+    },
+    {
+      "artifact_id": "root-workspace.correction-event.python",
+      "operation_id": "correction-event.submit",
+      "package_id": "root-workspace",
+      "target": "python",
+      "adapter_id": "python.function",
+      "proof_role": "operation-conformance",
+      "symbol": "generated.workspace.python.commands.correction_event_submit:invoke",
+      "source_ref": "command_package_ir:root-workspace/correction-event.lifecycle.cli",
+      "wrapper_refs": ["correction-event.lifecycle.cli"],
+      "case_ids": ["correction-event.submit-host-observation.boundary"],
+      "path_refs": [
+        "generated/workspace/python/commands/correction_event_submit.py",
+        "generated/workspace/python/primitives/operation_executor.py",
+        "src/agentic_workspace/contracts/operations/correction-event.submit.json",
+        "src/agentic_workspace/contracts/conformance/correction-event.submit-host-observation.process.json"
+      ],
+      "stale_when": ["correction-event.submit host inputs or Python authority boundary changes"]
+    },
+    {
+      "artifact_id": "root-workspace.correction-event.typescript",
+      "operation_id": "correction-event.submit",
+      "package_id": "root-workspace",
+      "target": "typescript",
+      "adapter_id": "typescript.function",
+      "proof_role": "operation-conformance",
+      "symbol": "generated/workspace/typescript/src/runtime.mjs:invokeGeneratedOperation",
+      "source_ref": "command_package_ir:root-workspace/correction-event.lifecycle.cli",
+      "wrapper_refs": ["correction-event.lifecycle.cli"],
+      "case_ids": ["correction-event.submit-host-observation.boundary"],
+      "path_refs": [
+        "generated/workspace/typescript/src/runtime.mjs",
+        "generated/workspace/typescript/src/hostPrimitiveSupport.mjs",
+        "generated/workspace/typescript/resources/operations/correction-event.submit.json",
+        "src/agentic_workspace/contracts/operations/correction-event.submit.json",
+        "src/agentic_workspace/contracts/conformance/correction-event.submit-host-observation.process.json"
+      ],
+      "stale_when": ["correction-event.submit host inputs or TypeScript authority fallback changes"]
     }
   ],
   "proof_routing": {

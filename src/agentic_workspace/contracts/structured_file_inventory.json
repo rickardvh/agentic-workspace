@@ -1003,6 +1003,18 @@
       "storage_class": "source-of-truth"
     },
     {
+      "checked_in_justification": "Maintainer-reviewed exact-head model-harness evidence proves future-context behavior and cost without becoming runtime decision authority.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "notes": "The artifact retains compact run metrics and transcript digests; the focused test validates head binding, scenario coverage, quiet-path behavior, cost accounting, and residue boundaries.",
+      "owner": "workspace-evaluation",
+      "pattern": "docs/reviews/future-context-live-evaluation-2026-08-24.json",
+      "schema_or_validator": "validator: uv run pytest tests/test_external_agent_evaluation_lane.py::test_future_context_live_evaluation_is_head_bound_and_cost_complete",
+      "status": "typed-validator-backed",
+      "storage_class": "diagnostic-fixture"
+    },
+    {
       "checked_in_justification": "Maintainer-reviewed longitudinal dogfood evidence demonstrates the Evaluation admission route without becoming runtime result authority.",
       "editable_by_agents": true,
       "format": "json",

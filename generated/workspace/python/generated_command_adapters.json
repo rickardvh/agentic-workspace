@@ -248,6 +248,7 @@
       },
       "conformance_refs": [
         "correction-event.submit.process",
+        "correction-event.submit-host-observation.process",
         "correction-event.query.process",
         "correction-event.correct-dispute.process",
         "correction-event.withdraw-supersede.process",

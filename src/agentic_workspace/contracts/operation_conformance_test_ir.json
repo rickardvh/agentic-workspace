@@ -1490,6 +1490,90 @@
         ],
         "rationale": "This Python wrapper-smoke case proves the generated session-log command surface and disabled no-write boundary for the target that delegates to the AW session logging runtime; focused runtime tests cover local append behavior."
       }
+    },
+    {
+      "id": "correction-event.submit-host-observation.boundary",
+      "title": "Trusted host observation input fails closed when custody cannot be resolved",
+      "behavioral_class": "boundary",
+      "operation_ref": {
+        "package_id": "root-workspace",
+        "operation_id": "correction-event.submit",
+        "operation_path": "operations/correction-event.submit.json",
+        "conformance_ref": "correction-event.submit-host-observation.process"
+      },
+      "artifacts": [
+        {
+          "artifact_id": "root-workspace.correction-event.python",
+          "target": "python",
+          "adapter_id": "python.function",
+          "proof_role": "operation-conformance",
+          "source_ref": "command_package_ir:root-workspace/correction-event.lifecycle.cli",
+          "wrapper_refs": ["correction-event.lifecycle.cli"]
+        },
+        {
+          "artifact_id": "root-workspace.correction-event.typescript",
+          "target": "typescript",
+          "adapter_id": "typescript.function",
+          "proof_role": "operation-conformance",
+          "source_ref": "command_package_ir:root-workspace/correction-event.lifecycle.cli",
+          "wrapper_refs": ["correction-event.lifecycle.cli"]
+        }
+      ],
+      "schema_refs": {
+        "operation_contract": "operations/correction-event.submit.json",
+        "input": [],
+        "output": ["correction_event_result.schema.json"]
+      },
+      "composition": {
+        "case_focus": "Cross-target trusted-host input recognition and fail-closed authority behavior without local correction storage.",
+        "assumes_primitives": ["workspace.target-root.resolve", "correction.event.apply", "output.emit"],
+        "reuses_case_ids": []
+      },
+      "targets": [
+        {"kind": "python", "mode": "run"},
+        {"kind": "typescript", "mode": "run"}
+      ],
+      "input": {
+        "json": {"target": ".", "host_event_ref": "invalid-host-ref", "format": "json"},
+        "argv": ["correction-event", "submit", "--target", ".", "--host-event-ref", "invalid-host-ref", "--format", "json"],
+        "fixture_id": "minimal-repo",
+        "fixture_files": {".git/.keep": "", "README.md": "# Fixture\n"}
+      },
+      "expected": {
+        "exit_code": 0,
+        "result": {
+          "format": "json",
+          "selected_fields": {
+            "kind": "agentic-workspace/correction-event-operation-result/v1",
+            "status": "blocked",
+            "mutation_applied": false
+          }
+        },
+        "stdout": {"format": "none", "allow_non_empty": false},
+        "stderr": {"format": "none", "allow_non_empty": false},
+        "filesystem": {
+          "allowed_write_paths": [],
+          "required_paths": [".git/.keep", "README.md"],
+          "forbidden_paths": [".agentic-workspace/local/correction-events.json"]
+        }
+      },
+      "freshness": {
+        "source_refs": [
+          "src/agentic_workspace/contracts/command_package_ir.json",
+          "src/agentic_workspace/contracts/conformance/correction-event.submit-host-observation.process.json",
+          "src/agentic_workspace/contracts/typescript_primitive_support.mjs"
+        ],
+        "stale_when": [
+          "correction-event.submit trusted host inputs change",
+          "trusted host observation conformance changes",
+          "Python or TypeScript authority fallback behavior changes"
+        ]
+      },
+      "migration": {
+        "replaces_handwritten_tests": ["generated Python/TypeScript host-observation option and fail-closed parity"],
+        "retain_handwritten_tests": ["signed-host positive authority, custody, normalization, and deduplication tests"],
+        "rationale": "Cross-target operation conformance proves that declared host inputs reach both generated callables and cannot silently create correction storage when custody is unavailable; signed positive proof remains in the trusted-host runtime fixture."
+      }
     }
   ]
 }

@@ -164,6 +164,8 @@ def _trusted_guidance_host_event(
     source: str = "",
     target_revision: str = "",
     event_id: str = "",
+    import_event: bool = True,
+    event_fields: dict[str, object] | None = None,
 ) -> dict[str, object]:
     from agentic_workspace.agent_guidance import (
         TRUSTED_AUTHORITY_EVENT_AUDIENCE,
@@ -198,6 +200,7 @@ def _trusted_guidance_host_event(
             "rule": "Fixture for an adapter-owned host event; repo-local guidance code only imports it.",
         },
     }
+    event.update(event_fields or {})
     event_ref = "trusted-authority-event:" + _json_digest(event)[:24]
     event["event_ref"] = event_ref
     event["host_admission_verdict"] = {
@@ -250,19 +253,21 @@ def _trusted_guidance_host_event(
     inbox_path = target_root / TRUSTED_AUTHORITY_EVENT_INBOX_PATH / f"{event_ref.removeprefix('trusted-authority-event:')}.json"
     inbox_path.parent.mkdir(parents=True, exist_ok=True)
     inbox_path.write_text(json.dumps(event, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    imported = record_trusted_authority_host_event(
-        target_root=target_root,
-        authority=authority,
-        producer_class=producer_class,
-        producer_id=producer_id,
-        source_ref=source_ref,
-        source=source or authority,
-        target_revision=target_revision,
-        event_id=event_id,
-        trusted_channel="github-review-webhook",
-        host_event_ref=event_ref,
-    )
-    return {"event_ref": event_ref, "event": imported["event"]}
+    if import_event:
+        imported = record_trusted_authority_host_event(
+            target_root=target_root,
+            authority=authority,
+            producer_class=producer_class,
+            producer_id=producer_id,
+            source_ref=source_ref,
+            source=source or authority,
+            target_revision=target_revision,
+            event_id=event_id,
+            trusted_channel="github-review-webhook",
+            host_event_ref=event_ref,
+        )
+        return {"event_ref": event_ref, "event": imported["event"]}
+    return {"event_ref": event_ref, "event": event}
 
 
 def _independent_review_host_result_fixture(tmp_path: Path, *, changed_paths: list[str] | None = None, **overrides: object):
@@ -1330,6 +1335,176 @@ def test_correction_event_query_filters_full_low_authority_context(tmp_path: Pat
     assert unrelated["low_authority_event_count"] == 0
 
 
+def test_signed_host_observation_survives_without_agent_normalization_and_routes_later(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / ".agentic-workspace").mkdir()
+    (tmp_path / ".agentic-workspace/config.toml").write_text("schema_version = 1\n", encoding="utf-8")
+    (tmp_path / ".agentic-workspace/config.local.toml").write_text(
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[delegation_targets.fast_worker]",
+                'target_id = "user-local:fast-worker"',
+                'target_revision = "rev-1"',
+                'aliases = ["fast"]',
+                'strength = "strong"',
+                'execution_methods = ["internal"]',
+            ]
+        ),
+        encoding="utf-8",
+    )
+    from agentic_workspace.agent_guidance import apply_correction_event_operation, unresolved_correction_signals
+
+    host = _trusted_guidance_host_event(
+        tmp_path,
+        authority="explicit-user-correction",
+        producer_class="human",
+        producer_id="user-1",
+        source_ref="host-conversation:event-42",
+        source="explicit-user-correction",
+        host_admission_monkeypatch=monkeypatch,
+        import_event=False,
+        event_fields={"evidence_ref": "host-conversation:event-42#correction", "task_class": "code-change"},
+    )
+    observed = apply_correction_event_operation(
+        target_root=tmp_path,
+        operation_id="correction-event.submit",
+        values={"trusted_host_event_json": json.dumps(host["event"])},
+    )
+    replayed = apply_correction_event_operation(
+        target_root=tmp_path,
+        operation_id="correction-event.submit",
+        values={"trusted_host_event_json": json.dumps(host["event"])},
+    )
+
+    assert observed["status"] == "pending-normalization"
+    assert observed["observation"]["authority"] == "explicit-user-correction"
+    assert observed["next_action"]["route_decisions_required"] is False
+    assert replayed["mutation_applied"] is False
+    assert unresolved_correction_signals(target_root=tmp_path, task="implement code change")[0]["status"] == "pending-normalization"
+    assert unresolved_correction_signals(target_root=tmp_path, task="write release notes") == []
+    assert not (tmp_path / ".agentic-workspace/local/correction-events.json").exists()
+
+    self_capture = apply_correction_event_operation(
+        target_root=tmp_path,
+        operation_id="correction-event.submit",
+        values={
+            "delivery_id": "agent-self-capture-42",
+            "target_identity_ref": "fast",
+            "source_ref": "agent-note:event-42",
+            "desired_behavior": "Use the routed narrow proof.",
+            "replaced_behavior": "Use broad proof and overclaim completion.",
+            "invariant_id": "routed-narrow-proof",
+            "behavior_class": "proof-claim",
+            "task_class": "code-change",
+            "scope_class": "narrow",
+        },
+    )
+    assert self_capture["low_authority_event_count"] == 1
+
+    normalized = apply_correction_event_operation(
+        target_root=tmp_path,
+        operation_id="correction-event.submit",
+        values={
+            "host_event_ref": host["event_ref"],
+            "target_identity_ref": "fast",
+            "desired_behavior": "Use the routed narrow proof.",
+            "replaced_behavior": "Use broad proof and overclaim completion.",
+            "invariant_id": "routed-narrow-proof",
+            "behavior_class": "proof-claim",
+            "task_class": "code-change",
+            "scope_class": "narrow",
+        },
+    )
+
+    assert normalized["status"] == "stored"
+    admitted = normalized["admission"]["admitted_events"][0]
+    assert admitted["authority_resolution_source"] == "signed-host-observation"
+    assert admitted["admission_state"] == "accepted-unrouted"
+    assert admitted["routing_state"] == "pending-owner-route"
+    assert admitted["recurrence_count"] == 1
+    assert normalized["low_authority_event_count"] == 1
+    assert unresolved_correction_signals(target_root=tmp_path, task="implement code change")[0]["status"] == "pending-disposition"
+
+    from agentic_workspace.operating_decision import compile_operating_decision
+
+    decision = compile_operating_decision(
+        inputs={
+            "target_root": str(tmp_path),
+            "task": "implement code change",
+            "reconciliation": {
+                "result": {"status": "succeeded"},
+                "intent": {"status": "satisfied"},
+                "proof": {"status": "passed"},
+            },
+        }
+    )
+    assert decision["future_context_signals"][0]["status"] == "pending-disposition"
+    assert decision["reconciliation"]["claim"]["permission"] == "bounded"
+    assert decision["reconciliation"]["next_action"]["operation_invocation"]["operation_id"] == "correction-event.submit"
+
+    routed = apply_correction_event_operation(
+        target_root=tmp_path,
+        operation_id="correction-event.submit",
+        values={"event_id": admitted["event_id"], "route_decisions": ["no-retention"]},
+    )
+    assert routed["admission"]["admitted_events"][0]["routing_state"] == "routed"
+    assert unresolved_correction_signals(target_root=tmp_path, task="implement code change") == []
+
+
+def test_generated_python_operation_carries_signed_host_observation_without_private_imports(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / ".agentic-workspace").mkdir()
+    (tmp_path / ".agentic-workspace/config.toml").write_text("schema_version = 1\n", encoding="utf-8")
+    host = _trusted_guidance_host_event(
+        tmp_path,
+        authority="explicit-user-correction",
+        producer_class="human",
+        producer_id="user-2",
+        source_ref="host-conversation:event-99",
+        host_admission_monkeypatch=monkeypatch,
+        import_event=False,
+    )
+    import agentic_workspace.generated_operations as generated
+    from agentic_workspace.agent_guidance import apply_correction_event_operation
+
+    def invoke(operation_id: str, values: dict[str, object], **_kwargs: object) -> dict[str, object]:
+        return apply_correction_event_operation(target_root=tmp_path, operation_id=operation_id, values=dict(values))
+
+    monkeypatch.setattr(generated, "invoke_operation", invoke)
+    result = generated.correction_event_submit(
+        {"trusted_host_event_json": json.dumps(host["event"])},
+        target=tmp_path,
+    )
+
+    assert result["status"] == "pending-normalization"
+    assert result["observation"]["event_ref"] == host["event_ref"]
+
+
+def test_caller_labels_cannot_mint_trusted_host_observation(tmp_path: Path) -> None:
+    (tmp_path / ".agentic-workspace").mkdir()
+    (tmp_path / ".agentic-workspace/config.toml").write_text("schema_version = 1\n", encoding="utf-8")
+    from agentic_workspace.agent_guidance import apply_correction_event_operation
+
+    forged = {
+        "kind": "agentic-workspace/trusted-authority-host-event/v1",
+        "status": "current",
+        "event_ref": "trusted-authority-event:forged",
+        "authority": "explicit-user-correction",
+        "producer_class": "human",
+        "source_ref": "caller-label",
+    }
+    with pytest.raises(WorkspaceUsageError, match="inputs do not match|not admitted"):
+        apply_correction_event_operation(
+            target_root=tmp_path,
+            operation_id="correction-event.submit",
+            values={"trusted_host_event_json": json.dumps(forged)},
+        )
+
+
 def test_correction_event_public_contract_omits_caller_authority_inputs() -> None:
     caller_authority_inputs = {"subjects_json", "trusted_authority_receipt_json"}
     correction_operations = {
@@ -1347,6 +1522,8 @@ def test_correction_event_public_contract_omits_caller_authority_inputs() -> Non
         assert "trusted_authority_receipt_ref" in input_names
         if operation["identity"] in {"correction-event.submit", "correction-event.query"}:
             assert {"phase", "subsystem", "surface"} <= input_names
+        if operation["identity"] == "correction-event.submit":
+            assert {"trusted_host_event_json", "host_event_ref"} <= input_names
 
 
 def test_external_contract_bundle_exposes_ir_owned_conformance_profile() -> None:
@@ -1361,10 +1538,10 @@ def test_external_contract_bundle_exposes_ir_owned_conformance_profile() -> None
         "typescript": "generated-typescript-client",
         "vendor-neutral": "packed-typescript-client",
     }
-    assert {entry["operation_id"] for entry in conformance["operations"]} == {
+    assert {
         "config.report",
         "delegation-outcome.append",
-    }
+    }.issubset({entry["operation_id"] for entry in conformance["operations"]})
     delegation = next(entry for entry in conformance["operations"] if entry["operation_id"] == "delegation-outcome.append")
     assert delegation["case_exceptions"] == {}
     selected = external_conformance_profile(["config.report"])

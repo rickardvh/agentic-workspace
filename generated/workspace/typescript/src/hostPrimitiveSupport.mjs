@@ -2129,6 +2129,12 @@ function correctionEventApply(values, operationId) {
     rule: 'TypeScript correction-event operations delegate to the Python AW authority boundary; reduced TypeScript admission is fail-closed.',
   });
   const operation = String(operationId).replace(/^correction-event\./, '');
+  if (!existsSync(scriptPath) && (values.trusted_host_event_json || values.host_event_ref)) {
+    return blocked(
+      'trusted-host-custody-unavailable',
+      'Invoke the AW Python/CLI authority boundary; native TypeScript fallback cannot verify or preserve signed host observations.',
+    );
+  }
   if (!existsSync(scriptPath)) {
     const status = operation === 'query' ? 'queried' : operation === 'prune-compact' ? 'compacted' : 'stored';
     const storeRef = '.agentic-workspace/local/correction-events.json';

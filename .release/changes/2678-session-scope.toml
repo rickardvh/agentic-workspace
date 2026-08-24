@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Remove identityless session-log capture and require a host-provided logical identity."

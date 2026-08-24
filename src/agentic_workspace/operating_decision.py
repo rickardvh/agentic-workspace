@@ -17,6 +17,7 @@ from agentic_workspace.adaptation import (
     coverage_signal_from_observation,
     machine_observed_coverage_signals,
 )
+from agentic_workspace.agent_guidance import unresolved_correction_signals
 from agentic_workspace.assurance_authority import admit_repository_assurance_decision
 from agentic_workspace.context_authority_owner_operations import (
     registered_context_owner_operation_runner,
@@ -1789,6 +1790,33 @@ def context_consequence_effects(consequences: list[dict[str, Any]]) -> dict[str,
     }
 
 
+def future_context_findings(signals: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Adapt source-owned post-action signals to the existing consequence compiler."""
+
+    findings: list[dict[str, Any]] = []
+    terminal = {"resolved", "routed", "dismissed", "superseded", "retired"}
+    for signal in signals:
+        if signal.get("relevant") is False or str(signal.get("status") or "") in terminal:
+            continue
+        authority_state = str(signal.get("authority_state") or "candidate")
+        findings.append(
+            {
+                "kind": "agentic-workspace/future-context-finding/v1",
+                "finding_id": str(signal.get("signal_id") or f"future-context:{_digest(signal)[:16]}"),
+                "finding_class": "future-context-residue",
+                "severity": "material" if authority_state not in {"candidate", "agent-proposed"} else "advisory",
+                "lifecycle": str(signal.get("status") or "unresolved"),
+                "task_relevant": True,
+                "owner": str(signal.get("owner") or ""),
+                "safe_repair": _as_dict(signal.get("operation_invocation")),
+                "next_route": str(signal.get("required_decision") or ""),
+                "source_authority_state": authority_state,
+                "rule": "The source owner supplies evidence and semantics; the operating decision only carries disposition pressure.",
+            }
+        )
+    return findings
+
+
 def _specialist_blocker(authority: dict[str, Any], *, default_owner: str, default_repair: str = "") -> dict[str, str] | None:
     blocker = _as_dict(authority.get("operating_blocker") or authority.get("blocker"))
     reason_code = str(blocker.get("reason_code") or authority.get("reason_code") or "").strip()
@@ -2363,6 +2391,19 @@ def compile_projection_surface_operating_decision(
                 for item in _as_list(source)
                 if isinstance(item, dict)
             ],
+            "future_context_signals": [
+                item
+                for source in (
+                    payload.get("future_context_signals"),
+                    payload_context.get("future_context_signals"),
+                    task_posture_packet.get("future_context_signals"),
+                )
+                for item in _as_list(source)
+                if isinstance(item, dict)
+            ],
+            "future_context_capture": _as_dict(payload.get("future_context_capture"))
+            or _as_dict(payload_context.get("future_context_capture")),
+            "reconciliation": _as_dict(payload.get("reconciliation")) or _as_dict(payload_context.get("reconciliation")),
         }
     )
     surface_input_revision = str(decision.get("admitted_input_revision") or "")
@@ -3158,7 +3199,19 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         coverage_signal_from_observation(item) for item in _as_list(inputs.get("coverage_observations")) if isinstance(item, dict)
     )
     bounded_adaptations = bounded_adaptation_projection(adaptation_signals)
-    reconciliation = compile_reconciliation(_as_dict(inputs.get("reconciliation")))
+    future_context_signals = [_as_dict(item) for item in _as_list(inputs.get("future_context_signals")) if isinstance(item, dict)]
+    future_context_capture = _as_dict(inputs.get("future_context_capture"))
+    if inputs.get("target_root"):
+        future_context_signals.extend(
+            unresolved_correction_signals(
+                target_root=Path(str(inputs["target_root"])),
+                task=str(inputs.get("task") or ""),
+            )
+        )
+    reconciliation_inputs = _as_dict(inputs.get("reconciliation"))
+    if reconciliation_inputs:
+        reconciliation_inputs = {**reconciliation_inputs, "future_context_signals": future_context_signals}
+    reconciliation = compile_reconciliation(reconciliation_inputs)
     control_inputs = compile_control_inputs([item for item in _as_list(inputs.get("control_inputs")) if isinstance(item, dict)])
     assurance_requested = "assurance_decision" in inputs
     assurance = (
@@ -3254,6 +3307,8 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         revisions = {**revisions, "coverage_candidate_revision": "sha256:" + _digest(bounded_adaptations)}
     if source_guidance["contributions"]:
         revisions = {**revisions, "source_guidance_revision": source_guidance["revision"]}
+    if future_context_signals:
+        revisions = {**revisions, "future_context_revision": "sha256:" + _digest(future_context_signals)}
     if instruction_clause_projection["status"] != "not-requested":
         revisions = {**revisions, "instruction_clause_revision": instruction_clause_projection["snapshot_revision"]}
     if repo_improvement_action:
@@ -3348,6 +3403,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
             *_as_list(intent_feedback.get("findings")),
             *_as_list(memory_effectiveness.get("findings")),
             *coverage_candidate_findings(bounded_adaptations),
+            *future_context_findings(future_context_signals),
         ]
         if isinstance(item, dict)
     ]
@@ -3523,6 +3579,8 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         "bounded_adaptations": bounded_adaptations,
         "maintenance_decision": maintenance_decision,
         "source_guidance": source_guidance,
+        **({"future_context_signals": future_context_signals} if future_context_signals else {}),
+        **({"future_context_capture": future_context_capture} if future_context_capture else {}),
         "repo_improvement_action": repo_improvement_action,
         "repo_improvement_execution": repo_improvement_execution,
         "repo_improvement_effectiveness": repo_improvement_effectiveness,

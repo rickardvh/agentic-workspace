@@ -19400,7 +19400,8 @@ def _memory_consult_payload(
         }
     normalized_paths = _normalize_changed_paths(changed_paths or [])
     if compact:
-        read_first = [".agentic-workspace/memory/repo/index.md"]
+        memory_index = ".agentic-workspace/memory/repo/index.md"
+        read_first = [memory_index] if (target_root / memory_index).is_file() else []
         route_actions: list[dict[str, Any]] = []
         route_inspection_state = "not_checked"
         route_signal_count = 0

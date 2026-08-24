@@ -18,6 +18,7 @@ from agentic_workspace import current_work_context, session_logging
 @pytest.fixture(autouse=True)
 def _capture_pytest_session_log_detail(monkeypatch) -> None:
     monkeypatch.setenv("AW_SESSION_LOG_CAPTURE_DETAIL", "1")
+    monkeypatch.setenv(session_logging.LOGICAL_SESSION_IDENTITY_ENV, "pytest-logical-session")
 
 
 def _write(path: Path, content: str) -> None:
@@ -32,13 +33,13 @@ def _target(tmp_path: Path) -> Path:
 
 
 def _current_log(target: Path) -> Path:
-    pointer = json.loads((target / ".agentic-workspace/local/session-logging/current.json").read_text(encoding="utf-8"))
-    return target / pointer["log_path"]
+    status = session_logging.status_payload(state=session_logging.load_state_for_argv(["--target", str(target)]))
+    return target / status["path"]
 
 
 def _current_index(target: Path) -> Path:
-    pointer = json.loads((target / ".agentic-workspace/local/session-logging/current.json").read_text(encoding="utf-8"))
-    return target / Path(pointer["log_path"]).parent / "index.json"
+    status = session_logging.status_payload(state=session_logging.load_state_for_argv(["--target", str(target)]))
+    return target / status["index_path"]
 
 
 def test_session_logging_disabled_does_not_create_log(tmp_path: Path, capsys) -> None:
@@ -84,7 +85,7 @@ def test_session_logging_mutes_pytest_origin_capture_by_default(tmp_path: Path, 
     output = capsys.readouterr()
     assert output.out == "visible stdout\n"
     assert output.err == "visible stderr\n"
-    assert not (target / session_logging.SESSION_POINTER_PATH).exists()
+    assert not (target / session_logging.SESSION_REGISTRY_PATH).exists()
     assert not (target / session_logging.SESSION_LOG_ROOT).exists()
 
 
@@ -99,7 +100,7 @@ def test_session_logging_default_pytest_capture_stays_bounded_across_many_comman
         assert session_logging.run_with_session_logging(["summary", "--target", str(target)], lambda _argv: print(index) or 0) == 0
 
     assert capsys.readouterr().out == "0\n1\n2\n3\n4\n"
-    assert not (target / session_logging.SESSION_POINTER_PATH).exists()
+    assert not (target / session_logging.SESSION_REGISTRY_PATH).exists()
     assert not (target / session_logging.SESSION_LOG_ROOT).exists()
 
 
@@ -151,7 +152,7 @@ def test_session_logging_mutes_nested_pytest_origin_capture_by_default(tmp_path:
 
     assert session_logging.run_with_session_logging(["start", "--target", str(target)], outer) == 0
 
-    assert not (target / session_logging.SESSION_POINTER_PATH).exists()
+    assert not (target / session_logging.SESSION_REGISTRY_PATH).exists()
     assert not (target / session_logging.SESSION_LOG_ROOT).exists()
 
 
@@ -220,8 +221,8 @@ def test_session_logging_reuses_identity_across_interleaved_sessions(tmp_path: P
             return 0
 
         assert session_logging.run_with_session_logging(["config", "--target", str(target)], runner) == 0
-        pointer = json.loads((target / session_logging.SESSION_POINTER_PATH).read_text(encoding="utf-8"))
-        return {"session_id": pointer["session_id"], "log_path": pointer["log_path"]}
+        status = session_logging.status_payload(state=session_logging.load_state_for_argv(["--target", str(target)]))
+        return {"session_id": status["session_id"], "log_path": status["path"]}
 
     session_a = run("host-session-a")
     session_b = run("host-session-b")
@@ -254,37 +255,22 @@ def test_session_logging_concurrent_identity_resolution_converges(tmp_path: Path
     assert not (target / session_logging.SESSION_REGISTRY_LOCK_PATH).exists()
 
 
-def test_session_logging_preserves_legacy_default_bucket_when_identity_registry_starts(tmp_path: Path) -> None:
+def test_session_logging_without_host_identity_creates_no_session_state(tmp_path: Path, monkeypatch) -> None:
     target = _target(tmp_path)
     _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    monkeypatch.delenv(session_logging.LOGICAL_SESSION_IDENTITY_ENV)
     state = session_logging.load_state_for_argv(["--target", str(target)])
-    legacy = session_logging.ensure_session(state=state)
-    (target / session_logging.SESSION_REGISTRY_PATH).unlink()
-
-    identified = session_logging.ensure_session(state=state, logical_identity="new-host-session")
-    default_again = session_logging.ensure_session(state=state, logical_identity="")
-
-    assert identified["session_id"] != legacy["session_id"]
-    assert default_again == legacy
-    registry = json.loads((target / session_logging.SESSION_REGISTRY_PATH).read_text(encoding="utf-8"))
-    assert registry["sessions"]["default"] == legacy
-
-
-def test_session_logging_identityless_default_never_adopts_identified_pointer(tmp_path: Path) -> None:
-    target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
-    state = session_logging.load_state_for_argv(["--target", str(target)])
-    session_a = session_logging.ensure_session(state=state, logical_identity="a")
-    session_b = session_logging.ensure_session(state=state, logical_identity="b")
-
-    assert session_logging.status_payload(state=state)["session_id"] == ""
-    default_session = session_logging.ensure_session(state=state, logical_identity="")
-    default_again = session_logging.ensure_session(state=state, logical_identity="")
-
-    assert default_again == default_session
-    assert default_session["session_id"] not in {session_a["session_id"], session_b["session_id"]}
-    registry = json.loads((target / session_logging.SESSION_REGISTRY_PATH).read_text(encoding="utf-8"))
-    assert registry["sessions"]["default"] == default_session
+    assert session_logging.run_with_session_logging(["config", "--target", str(target)], lambda _argv: 0) == 0
+    assert session_logging.status_payload(state=state)["status"] == "logical-session-identity-required"
+    assert session_logging.analyze_session_log(state=state)["status"] == "logical-session-identity-required"
+    assert session_logging.repair_session_log_index(state=state)["status"] == "logical-session-identity-required"
+    assert session_logging.export_session_log(state=state)["status"] == "logical-session-identity-required"
+    assert session_logging.append_note(state=state, text="not captured")["status"] == "logical-session-identity-required"
+    assert session_logging.reset_session(state=state)["status"] == "logical-session-identity-required"
+    with pytest.raises(ValueError, match=session_logging.LOGICAL_SESSION_IDENTITY_ENV):
+        session_logging.ensure_session(state=state)
+    assert not (target / session_logging.SESSION_REGISTRY_PATH).exists()
+    assert not (target / session_logging.SESSION_LOG_ROOT).exists()
 
 
 def test_session_logging_identity_is_private_and_caller_drilldowns_resolve_it(tmp_path: Path, monkeypatch) -> None:
@@ -308,6 +294,9 @@ def test_session_logging_identity_is_private_and_caller_drilldowns_resolve_it(tm
     assert exported["manifest"]["local_diagnostic_boundary"]["scope"] == "package-owned local diagnostic state"
 
     assert status["logical_session_resolution"] == "identity-registry"
+    assert status["session_scope"]["kind"] == "distinct-logical-session"
+    assert analysis["session_scope"]["kind"] == "distinct-logical-session"
+    assert exported["session_scope"]["kind"] == "distinct-logical-session"
     assert analysis["path"] == status["path"]
     assert exported["session_id"] == status["session_id"]
     for path in (target / ".agentic-workspace/local").rglob("*"):
@@ -350,23 +339,24 @@ def test_session_logging_note_command_appends_optional_note(tmp_path: Path, caps
     assert "This output changed the next action." in text
 
 
-def test_session_logging_invalid_pointer_path_is_ignored(tmp_path: Path, capsys) -> None:
+def test_session_logging_invalid_registry_path_is_replaced(tmp_path: Path, capsys) -> None:
     target = _target(tmp_path)
     _write(target / ".agentic-workspace" / "config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
 
     assert source_cli.main(["config", "--target", str(target), "--select", "workspace.enabled", "--format", "json"]) == 0
     capsys.readouterr()
     first_log = _current_log(target)
-    pointer_path = target / ".agentic-workspace/local/session-logging/current.json"
-    pointer = json.loads(pointer_path.read_text(encoding="utf-8"))
-    pointer["log_path"] = "../../outside-session-log.md"
-    pointer_path.write_text(json.dumps(pointer), encoding="utf-8")
+    registry_path = target / session_logging.SESSION_REGISTRY_PATH
+    registry = json.loads(registry_path.read_text(encoding="utf-8"))
+    session_key = next(iter(registry["sessions"]))
+    registry["sessions"][session_key]["log_path"] = "../../outside-session-log.md"
+    registry_path.write_text(json.dumps(registry), encoding="utf-8")
 
     assert source_cli.main(["config", "--target", str(target), "--select", "workspace.enabled_source", "--format", "json"]) == 0
     capsys.readouterr()
 
     second_log = _current_log(target)
-    assert second_log == first_log
+    assert second_log != first_log
     assert not (target.parent / "outside-session-log.md").exists()
     assert ".agentic-workspace/local/logs/" in second_log.as_posix()
 
@@ -436,12 +426,13 @@ def test_session_log_analyze_reports_counts_repeats_failures_artifacts_and_packe
     assert repeated_signal["suspected_owner"] == "operating-loop"
     assert repeated_signal["mutation_authorized"] is False
 
-    pointer = json.loads((target / ".agentic-workspace/local/session-logging/current.json").read_text(encoding="utf-8"))
-    assert source_cli.main(["session-log", "--target", str(target), "analyze", "--id", pointer["session_id"], "--format", "json"]) == 0
+    state = session_logging.load_state_for_argv(["--target", str(target)])
+    status = session_logging.status_payload(state=state)
+    assert source_cli.main(["session-log", "--target", str(target), "analyze", "--id", status["session_id"], "--format", "json"]) == 0
     by_id = json.loads(capsys.readouterr().out)
     assert by_id["path"] == payload["path"]
 
-    directory_id = f"aw-session-{pointer['session_id']}"
+    directory_id = f"aw-session-{status['session_id']}"
     assert source_cli.main(["session-log", "--target", str(target), "analyze", "--id", directory_id, "--format", "json"]) == 0
     by_directory_id = json.loads(capsys.readouterr().out)
     assert by_directory_id["path"] == payload["path"]
@@ -932,14 +923,15 @@ def test_pytest_subprocess_helper_declares_invocation_intent_without_inference(t
     }
 
     assert _run_logged_subprocess(target, env=base_env, return_code=0).returncode == 0
-    assert not (target / session_logging.SESSION_POINTER_PATH).exists()
+    assert not (target / session_logging.SESSION_REGISTRY_PATH).exists()
+    identified_env = {**base_env, session_logging.LOGICAL_SESSION_IDENTITY_ENV: "pytest-logical-session"}
 
     negative_env = aw_subprocess_env(
         purpose_id="proof-negative-path",
         scenario_id="invalid-selector",
         invocation_class="negative-fixture",
         expected_exit="failure",
-        base_env=base_env,
+        base_env=identified_env,
         **parent,
     )
     assert negative_env["AW_SESSION_LOG_CAPTURE_DETAIL"] == "1"
@@ -950,7 +942,7 @@ def test_pytest_subprocess_helper_declares_invocation_intent_without_inference(t
         scenario_id="status-success",
         invocation_class="product-operation",
         expected_exit="success",
-        base_env=base_env,
+        base_env=identified_env,
         **parent,
     )
     assert product_env["AW_SESSION_LOG_CAPTURE_DETAIL"] == "1"
@@ -961,7 +953,7 @@ def test_pytest_subprocess_helper_declares_invocation_intent_without_inference(t
         scenario_id="probe-failed",
         invocation_class="probe",
         expected_exit="success",
-        base_env=base_env,
+        base_env=identified_env,
         **parent,
     )
     assert _run_logged_subprocess(target, env=failing_probe_env, return_code=2).returncode == 2
@@ -971,12 +963,12 @@ def test_pytest_subprocess_helper_declares_invocation_intent_without_inference(t
         scenario_id="synthetic-succeeded",
         invocation_class="synthetic-check",
         expected_exit="failure",
-        base_env=base_env,
+        base_env=identified_env,
         **parent,
     )
     assert _run_logged_subprocess(target, env=unexpected_success_env, return_code=0).returncode == 0
 
-    undeclared_env = aw_subprocess_env(base_env=base_env, **parent)
+    undeclared_env = aw_subprocess_env(base_env=identified_env, **parent)
     assert _run_logged_subprocess(target, env=undeclared_env, return_code=0).returncode == 0
 
     state = session_logging.load_state_for_argv(["--target", str(target)])
@@ -1064,7 +1056,7 @@ def test_session_log_reports_and_repairs_partial_index_without_losing_entries(tm
     assert session_logging.repair_session_log_index(state=state)["status"] == "already-covered"
 
 
-def test_current_writer_reconciles_supported_legacy_partial_index_before_append(tmp_path: Path, capsys, monkeypatch) -> None:
+def test_current_writer_reconciles_supported_partial_v1_index_before_append(tmp_path: Path, capsys, monkeypatch) -> None:
     target = _target(tmp_path)
     _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
     monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
@@ -1219,10 +1211,39 @@ def test_session_index_cannot_satisfy_current_owner_proof_or_closeout_authority(
     monkeypatch.setenv("AW_PROJECTION_FORCE_REFRESH", "1")
 
     def authority_projection() -> dict[str, object]:
-        assert source_cli.main(["start", "--target", str(target), "--task", "Continue #2555", "--format", "json"]) == 0
+        assert (
+            source_cli.main(
+                [
+                    "start",
+                    "--target",
+                    str(target),
+                    "--task",
+                    "Continue #2555",
+                    "--select",
+                    "context,next_safe_action",
+                    "--format",
+                    "json",
+                ]
+            )
+            == 0
+        )
         start = json.loads(capsys.readouterr().out)
         assert (
-            source_cli.main(["proof", "--target", str(target), "--changed", "README.md", "--task", "Continue #2555", "--format", "json"])
+            source_cli.main(
+                [
+                    "proof",
+                    "--target",
+                    str(target),
+                    "--changed",
+                    "README.md",
+                    "--task",
+                    "Continue #2555",
+                    "--select",
+                    "proof_closeout_summary,required_commands",
+                    "--format",
+                    "json",
+                ]
+            )
             == 0
         )
         proof = json.loads(capsys.readouterr().out)
@@ -1244,10 +1265,10 @@ def test_session_index_cannot_satisfy_current_owner_proof_or_closeout_authority(
         )
         closeout = json.loads(capsys.readouterr().out)["answer"]
         return {
-            "active_state": start["context"]["active_state"],
-            "implementation_claim_boundary": start["next_safe_action"]["claim_boundary"],
-            "proof_closeout_summary": proof["proof_closeout_summary"],
-            "proof_required_commands": proof["required_commands"],
+            "active_state": start["values"]["context"],
+            "implementation_claim_boundary": start["values"]["next_safe_action"]["claim_boundary"],
+            "proof_closeout_summary": proof["values"]["proof_closeout_summary"],
+            "proof_required_commands": proof["values"]["required_commands"],
             "closeout_completion_gate": closeout["completion_gate"],
             "closeout_terminal_state": closeout["terminal_outcome_contract"]["state"],
         }
@@ -1271,21 +1292,9 @@ def test_session_index_cannot_satisfy_current_owner_proof_or_closeout_authority(
             }
         ),
     )
-    _write(
-        target / session_logging.SESSION_POINTER_PATH,
-        json.dumps(
-            {
-                "kind": session_logging.SESSION_POINTER_KIND,
-                "session_id": "forged-authority",
-                "log_path": ".agentic-workspace/local/logs/aw-session-forged-authority/session.md",
-                "created_at": "2026-08-15T00:00:00+00:00",
-            }
-        ),
-    )
-
     after = authority_projection()
     assert after == before
-    assert after["active_state"] == {"todo_active_count": 0, "active_execplan": None, "planning_status": "unavailable"}
+    assert "forged-owner" not in json.dumps(after["active_state"])
     assert after["proof_closeout_summary"]["status"] == "not-yet-sufficient"
     assert after["closeout_completion_gate"]["claim_level_allowed"] == "partial-progress"
     assert after["closeout_terminal_state"] == "CONTINUE"
@@ -2008,9 +2017,17 @@ def test_session_log_export_normalizes_local_paths_and_preserves_originals(tmp_p
     index_path = _current_index(target)
     original_log = log_path.read_bytes()
     original_index = index_path.read_bytes()
+    state = session_logging.load_state_for_argv(["--target", str(target)])
+    status = session_logging.status_payload(state=state)
+    analysis = session_logging.analyze_session_log(state=state)
+    assert status["session_scope"]["kind"] == "distinct-logical-session"
+    assert status["session_scope"]["current_logical_session"] is True
+    assert analysis["status"] == "analyzed"
+    assert analysis["session_scope"]["kind"] == "distinct-logical-session"
     assert source_cli.main(["session-log", "--target", str(target), "export", "--format", "json"]) == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["status"] == "exported"
+    assert payload["session_scope"]["kind"] == "distinct-logical-session"
     export_path = target / payload["path"]
     with zipfile.ZipFile(export_path) as archive:
         names = set(archive.namelist())
@@ -2047,20 +2064,22 @@ def test_session_log_export_normalizes_local_paths_and_preserves_originals(tmp_p
     assert log_path.read_bytes() == original_log
     assert index_path.read_bytes() == original_index
 
-    pointer = json.loads((target / ".agentic-workspace/local/session-logging/current.json").read_text(encoding="utf-8"))
     assert (
         source_cli.main(
-            ["session-log", "--target", str(target), "export", "--id", pointer["session_id"], "--no-artifacts", "--format", "json"]
+            ["session-log", "--target", str(target), "export", "--id", status["session_id"], "--no-artifacts", "--format", "json"]
         )
         == 0
     )
     by_id = json.loads(capsys.readouterr().out)
     assert by_id["artifact_count"] == 0
+    assert by_id["session_scope"]["kind"] == "explicit-artifact"
+    assert by_id["session_scope"]["current_logical_session"] is False
     assert by_id["manifest"]["evidence_profile"]["id"] == "all-command-summary"
     assert by_id["manifest"]["artifact_coverage"][0]["status"] == "digest-only"
-    assert source_cli.main(["session-log", "--target", str(target), "export", "--path", pointer["log_path"], "--format", "json"]) == 0
+    assert source_cli.main(["session-log", "--target", str(target), "export", "--path", status["path"], "--format", "json"]) == 0
     by_path = json.loads(capsys.readouterr().out)
-    assert by_path["source_log_path"] == pointer["log_path"]
+    assert by_path["source_log_path"] == status["path"]
+    assert by_path["session_scope"]["kind"] == "explicit-artifact"
     assert log_path.read_bytes() == original_log
     assert index_path.read_bytes() == original_index
 

@@ -544,7 +544,7 @@ def test_local_improvement_dispatches_registered_implement_context_without_paral
     )
     payload = json.loads(capsys.readouterr().out)
 
-    assert payload["context"]["scope"]["changed_paths"] == ["src/router.py"]
+    assert payload["decision_packet"]["working_set"]["changed_paths"] == ["src/router.py"]
     assert execution["operation_invocation"]["owner_context_revision"] == {
         "owner_id": "routing-owner",
         "owner_revision": "routing-owner:rev-7",
