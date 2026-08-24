@@ -443,6 +443,57 @@ def test_session_logging_without_host_identity_creates_no_session_state(tmp_path
     assert not (target / session_logging.SESSION_LOG_ROOT).exists()
 
 
+def test_enabled_missing_identity_emits_one_structured_gap_then_recovers(tmp_path: Path, monkeypatch, capsys) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    monkeypatch.delenv(session_logging.LOGICAL_SESSION_IDENTITY_ENV)
+
+    assert session_logging.run_with_session_logging(["start", "--target", str(target)], lambda _argv: 0) == 0
+    first = capsys.readouterr()
+    assert first.out == ""
+    prefix = "AW session logging capture gap: "
+    assert first.err.startswith(prefix)
+    signal = json.loads(first.err.removeprefix(prefix))
+    assert signal["status"] == "identity-required"
+    assert signal["required_environment"] == session_logging.LOGICAL_SESSION_IDENTITY_ENV
+    assert signal["local_only"] is True
+    assert signal["authoritative"] is False
+
+    assert session_logging.run_with_session_logging(["implement", "--target", str(target)], lambda _argv: 0) == 0
+    assert capsys.readouterr().err == ""
+    capture_path = target / session_logging.SESSION_CAPTURE_STATUS_PATH
+    unresolved = json.loads(capture_path.read_text(encoding="utf-8"))
+    assert unresolved["status"] == "identity-required"
+    assert unresolved["missing_identity_invocation_count"] == 2
+    assert unresolved["capture_effect"] == "command-not-captured"
+
+    monkeypatch.setenv(session_logging.LOGICAL_SESSION_IDENTITY_ENV, "late-host-identity")
+    assert session_logging.run_with_session_logging(["proof", "--target", str(target)], lambda _argv: 0) == 0
+    assert capsys.readouterr().err == ""
+    recovered = json.loads(capture_path.read_text(encoding="utf-8"))
+    assert recovered["status"] == "recovered"
+    assert recovered["missing_identity_invocation_count"] == 2
+    assert recovered["recovery_rule"].startswith("Earlier commands remain classified as uncaptured")
+    events = [json.loads(line) for line in _current_events(target).read_text(encoding="utf-8").splitlines()]
+    completed = [event for event in events if event["event_type"] == "command.completed"]
+    assert len(completed) == 1
+    assert " proof " in f" {completed[0]['payload']['entry']['command']} "
+
+
+def test_missing_identity_warning_respects_pytest_capture_suppression(tmp_path: Path, monkeypatch, capsys) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    monkeypatch.delenv(session_logging.LOGICAL_SESSION_IDENTITY_ENV)
+    monkeypatch.delenv("AW_SESSION_LOG_CAPTURE_DETAIL", raising=False)
+    monkeypatch.delenv("AW_SESSION_LOG_PYTEST_CAPTURE", raising=False)
+    monkeypatch.setenv("PYTEST_CURRENT_TEST", "tests/test_workspace_session_logging.py::test_suppressed (call)")
+
+    assert session_logging.run_with_session_logging(["status", "--target", str(target)], lambda _argv: 0) == 0
+
+    assert capsys.readouterr().err == ""
+    assert not (target / session_logging.SESSION_CAPTURE_STATUS_PATH).exists()
+
+
 @pytest.mark.parametrize(
     "continuity_env",
     [session_logging.PARENT_LOGICAL_SESSION_IDENTITY_ENV, session_logging.SESSION_CORRELATION_ID_ENV],

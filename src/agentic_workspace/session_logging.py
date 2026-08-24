@@ -29,6 +29,8 @@ SESSION_LOG_ROOT = Path(".agentic-workspace") / "local" / "logs"
 SESSION_RECORD_KIND = "agentic-workspace/session-logging-record/v1"
 SESSION_REGISTRY_PATH = Path(".agentic-workspace") / "local" / "session-logging" / "sessions.json"
 SESSION_REGISTRY_LOCK_PATH = Path(".agentic-workspace") / "local" / "session-logging" / ".sessions.lock"
+SESSION_CAPTURE_STATUS_PATH = Path(".agentic-workspace") / "local" / "session-logging" / "capture-status.json"
+SESSION_CAPTURE_STATUS_KIND = "agentic-workspace/session-logging-capture-status/v1"
 SESSION_LOGICAL_STREAM_ROOT = Path(".agentic-workspace") / "local" / "session-logging" / "logical-sessions"
 SESSION_REGISTRY_KIND = "agentic-workspace/session-logging-registry/v1"
 LOGICAL_SESSION_IDENTITY_ENV = "AW_SESSION_LOGICAL_IDENTITY"
@@ -155,6 +157,8 @@ def run_with_session_logging(
                 )
         return runner(argv_list)
     if not identity:
+        if _suppress_pytest_origin_capture():
+            return runner(argv_list)
         if continuity_session:
             with contextlib.suppress(Exception):
                 declared_reason = os.environ.get(SESSION_GAP_REASON_ENV, "").strip()
@@ -172,7 +176,20 @@ def run_with_session_logging(
                 )
                 if declared_reason and os.environ.get(SESSION_GAP_REASON_ENV, "").strip() == declared_reason:
                     os.environ.pop(SESSION_GAP_REASON_ENV, None)
+        capture_status, emit_warning = _record_missing_identity_capture_status(state=state, argv=argv_list)
+        if emit_warning:
+            signal = {
+                "kind": capture_status["kind"],
+                "status": capture_status["status"],
+                "required_environment": capture_status["required_environment"],
+                "recovery": capture_status["recovery"],
+                "recurrence_rule": capture_status["recurrence_rule"],
+                "local_only": True,
+                "authoritative": False,
+            }
+            print(f"AW session logging capture gap: {json.dumps(signal, sort_keys=True)}", file=stderr or sys.stderr)
         return runner(argv_list)
+    _resolve_missing_identity_capture_status(state=state)
     if _suppress_pytest_origin_capture():
         return runner(argv_list)
     record_command = not (argv_list and argv_list[0] == "session-log" and any(token in {"repair", "export"} for token in argv_list[1:]))
@@ -693,6 +710,7 @@ def status_payload(*, state: SessionLoggingState) -> dict[str, Any]:
         "logical_session_resolution": "identity-registry" if logical_identity else "identity-required",
         "session_scope": session_scope,
         "logical_session_identity_source": LOGICAL_SESSION_IDENTITY_ENV if logical_identity else "",
+        "capture_posture": _capture_status_payload(state=state, logical_identity=logical_identity),
         "raw_logical_session_identity_stored": False,
         "path_normalization": _path_normalization_payload(state),
         "local_diagnostic_boundary": _session_log_local_boundary(),
@@ -1005,6 +1023,85 @@ def _identity_required_payload(*, kind: str) -> dict[str, Any]:
         "local_only": True,
         "authoritative": False,
         "rule": f"Session logging does not capture or create state without {LOGICAL_SESSION_IDENTITY_ENV}.",
+    }
+
+
+def _capture_status_path(*, state: SessionLoggingState) -> Path:
+    return state.target_root / SESSION_CAPTURE_STATUS_PATH
+
+
+def _read_capture_status(*, state: SessionLoggingState) -> dict[str, Any]:
+    path = _capture_status_path(state=state)
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(payload, dict) or payload.get("kind") != SESSION_CAPTURE_STATUS_KIND:
+        return {}
+    return payload
+
+
+def _record_missing_identity_capture_status(*, state: SessionLoggingState, argv: Sequence[str]) -> tuple[dict[str, Any], bool]:
+    path = _capture_status_path(state=state)
+    previous = _read_capture_status(state=state)
+    same_episode = previous.get("status") == "identity-required"
+    now = datetime.now(UTC).isoformat()
+    command_sha256 = hashlib.sha256(("agentic-workspace " + shlex.join(list(argv))).encode()).hexdigest()
+    payload: dict[str, Any] = {
+        "kind": SESSION_CAPTURE_STATUS_KIND,
+        "status": "identity-required",
+        "episode_id": str(previous.get("episode_id") or f"capture-gap-{uuid.uuid4().hex[:12]}")
+        if same_episode
+        else f"capture-gap-{uuid.uuid4().hex[:12]}",
+        "started_at": str(previous.get("started_at") or now) if same_episode else now,
+        "last_observed_at": now,
+        "missing_identity_invocation_count": int(previous.get("missing_identity_invocation_count") or 0) + 1 if same_episode else 1,
+        "last_command_sha256": command_sha256,
+        "required_environment": LOGICAL_SESSION_IDENTITY_ENV,
+        "recovery": f"Set {LOGICAL_SESSION_IDENTITY_ENV} through the host or repo-local adapter, then run the next AW command normally.",
+        "recurrence_rule": "Emit once per unresolved target-local episode; identity recovery resets the warning for a later episode.",
+        "capture_effect": "command-not-captured",
+        "recoverable": True,
+        "local_only": True,
+        "authoritative": False,
+        "non_authoritative_for": list(SESSION_LOG_NON_AUTHORITATIVE_FOR),
+        "parent_lane": "#2707",
+    }
+    _write_json_atomic(path, payload)
+    return payload, not same_episode
+
+
+def _resolve_missing_identity_capture_status(*, state: SessionLoggingState) -> None:
+    previous = _read_capture_status(state=state)
+    if previous.get("status") != "identity-required":
+        return
+    payload = dict(previous)
+    payload.update(
+        {
+            "status": "recovered",
+            "resolved_at": datetime.now(UTC).isoformat(),
+            "capture_effect": "future-commands-captured",
+            "recovery_rule": "Earlier commands remain classified as uncaptured; no missing history is fabricated.",
+        }
+    )
+    _write_json_atomic(_capture_status_path(state=state), payload)
+
+
+def _capture_status_payload(*, state: SessionLoggingState, logical_identity: str) -> dict[str, Any]:
+    payload = _read_capture_status(state=state)
+    if payload:
+        return payload
+    if not state.enabled:
+        return {"kind": SESSION_CAPTURE_STATUS_KIND, "status": "disabled"}
+    if logical_identity:
+        return {"kind": SESSION_CAPTURE_STATUS_KIND, "status": "ready"}
+    return {
+        "kind": SESSION_CAPTURE_STATUS_KIND,
+        "status": "identity-required",
+        "required_environment": LOGICAL_SESSION_IDENTITY_ENV,
+        "capture_effect": "command-not-captured",
+        "local_only": True,
+        "authoritative": False,
     }
 
 
