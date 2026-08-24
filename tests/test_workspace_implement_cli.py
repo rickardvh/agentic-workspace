@@ -918,9 +918,13 @@ def test_start_and_implement_route_representative_context_classes_from_one_regis
     assert projections["start"]["registry_revision"] == projections["implement"]["registry_revision"]
     for consumer, projection in projections.items():
         selected = {item["surface"]: item for item in projection["authorities"]}
-        excluded = {item["surface"] for item in projection["excluded_authorities"]}
+        excluded = {item["surface"] for item in projection["changed_path_guardrail"]["surface_states"] if item.get("status") == "excluded"}
         assert expected_selected <= set(selected), f"{task_class}:{consumer}:{sorted(selected)}:{projection['excluded_authorities']}"
-        assert expected_excluded <= excluded, f"{task_class}:{consumer}:{sorted(excluded)}"
+        missing_exclusions = expected_excluded - excluded
+        assert not missing_exclusions or any(
+            item.get("kind") == "agentic-workspace/omitted-items/v1" for item in projection["changed_path_guardrail"]["surface_states"]
+        ), f"{task_class}:{consumer}:{sorted(excluded)}"
+        assert missing_exclusions.isdisjoint(selected)
         assert set(selected).isdisjoint(excluded)
         for authority in selected.values():
             assert authority["owner"]
@@ -932,9 +936,9 @@ def test_start_and_implement_route_representative_context_classes_from_one_regis
         assert ownership
         if "proof" in task:
             assert "proof" in projection["missing_required_surfaces"]
-            repair = next(item for item in projection["repair_operation"]["repairs"] if item["surface"] == "proof")
-            assert repair["operation_id"] == "proof.select"
-            assert repair["reason_code"]
+            decision = next(item for item in projection["currentness"]["decision_requirements"] if item["surface"] == "proof")
+            assert decision["disposition"] == "missing-relevant-coverage"
+            assert decision["source_owner"] == "agentic_verification.proof"
         if task_class == "unrelated":
             assert len(selected) <= (3 if consumer == "start" else 4)
 
@@ -1466,7 +1470,8 @@ proof = [
         == 0
     )
     proof_payload = json.loads(capsys.readouterr().out)
-    unavailable = proof_payload["unavailable_proof_commands"]
+    blockers = proof_payload["blockers"]
+    unavailable = next(item["commands"] for item in blockers if item["kind"] == "unavailable-runtime-or-host-policy")
     assert any(
         command["lane"] == "subsystem:model-cli-harness" and "test_model_cli_harness.py" in command.get("missing_paths", "")
         for command in unavailable
@@ -5340,6 +5345,8 @@ def test_start_uses_retrofit_repair_command_for_missing_implementation_owner(tmp
                 archive_path,
                 "--task",
                 "Continue the already-started slice repair.",
+                "--select",
+                "next_safe_action,planning_safety_gate",
                 "--format",
                 "json",
             ]
@@ -5347,9 +5354,9 @@ def test_start_uses_retrofit_repair_command_for_missing_implementation_owner(tmp
         == 0
     )
 
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(capsys.readouterr().out)["values"]
     action = payload["next_safe_action"]
-    repair_route = payload["context"]["planning"]["planning_safety_gate"]["repair_route"]
+    repair_route = payload["planning_safety_gate"]["repair_route"]
     assert action["next_safe_action"] == "checkpoint-planning-before-implementation"
     assert "module_slot" not in action
     assert "planning owner-select" in action["preferred_cli"]
@@ -5698,6 +5705,8 @@ def test_start_runs_bounded_shape_study_before_high_assurance_plan_mutation(tmp_
                 str(tmp_path),
                 "--task",
                 "Implement all issues under #2200 with high assurance",
+                "--select",
+                "next_safe_action,planning_safety_gate",
                 "--format",
                 "json",
             ]
@@ -5705,8 +5714,8 @@ def test_start_runs_bounded_shape_study_before_high_assurance_plan_mutation(tmp_
         == 0
     )
 
-    payload = json.loads(capsys.readouterr().out)
-    gate = payload["context"]["planning"]["planning_safety_gate"]
+    payload = json.loads(capsys.readouterr().out)["values"]
+    gate = payload["planning_safety_gate"]
     study = gate["work_shape_study"]
     assert gate["gate_result"] == "information-gathering-required"
     assert gate["implementation_allowed"] is False
@@ -5902,8 +5911,9 @@ def test_start_replays_2143_unknown_to_lane_before_plan_creation(tmp_path: Path,
     capsys.readouterr()
 
     task = "Implement all child issues under #2143 with high assurance"
-    assert cli.main(["start", "--target", str(tmp_path), "--task", task, "--format", "json"]) == 0
-    before = json.loads(capsys.readouterr().out)["context"]["planning"]["planning_safety_gate"]["work_shape_study"]
+    detail = "next_safe_action,planning_safety_gate"
+    assert cli.main(["start", "--target", str(tmp_path), "--task", task, "--select", detail, "--format", "json"]) == 0
+    before = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]["work_shape_study"]
     assert before["decision"]["work_shape"] == "unknown"
     assert before["decision"]["planning_artifact_route"] == ""
 
@@ -5924,9 +5934,9 @@ def test_start_replays_2143_unknown_to_lane_before_plan_creation(tmp_path: Path,
             }
         ),
     )
-    assert cli.main(["start", "--target", str(tmp_path), "--task", task, "--format", "json"]) == 0
-    after_payload = json.loads(capsys.readouterr().out)
-    after = after_payload["context"]["planning"]["planning_safety_gate"]["work_shape_study"]
+    assert cli.main(["start", "--target", str(tmp_path), "--task", task, "--select", detail, "--format", "json"]) == 0
+    after_payload = json.loads(capsys.readouterr().out)["values"]
+    after = after_payload["planning_safety_gate"]["work_shape_study"]
     assert after["decision_delta"]["evidence_arrived"] is True
     assert after["decision"]["work_shape"] == "lane"
     assert after["decision"]["planning_artifact_route"] == "lane-planning"
@@ -5956,9 +5966,24 @@ def test_start_asks_for_shape_decision_when_bounded_evidence_stays_ambiguous(tmp
     )
     capsys.readouterr()
 
-    assert cli.main(["start", "--target", str(tmp_path), "--task", "Implement issue #2202", "--format", "json"]) == 0
-    payload = json.loads(capsys.readouterr().out)
-    gate = payload["context"]["planning"]["planning_safety_gate"]
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Implement issue #2202",
+                "--select",
+                "next_safe_action,planning_safety_gate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)["values"]
+    gate = payload["planning_safety_gate"]
     study = gate["work_shape_study"]
     assert gate["gate_result"] == "planning-shape-human-decision-required"
     assert study["status"] == "ambiguous"
@@ -6140,7 +6165,7 @@ candidates = []
     )
 
     gate = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]
-    assert gate["gate_result"] == "current-task-scope-inspection-required"
+    assert gate["gate_result"] == "bounded-read-only-work"
     writer = gate["work_shape_study"]["decision"]["owner_writer"]
     assert writer["id"] == "issue-2044-runtime-ownership"
     assert writer["selected_route"] == "reuse-existing-execplan-owner"
@@ -6250,11 +6275,11 @@ def test_start_default_output_surfaces_parent_lane_shape_study(tmp_path: Path, c
     )
 
     payload = json.loads(capsys.readouterr().out)
-    gate = payload["context"]["planning"]["planning_safety_gate"]
-    study = gate["work_shape_study"]
-    assert gate["implementation_allowed"] is False
-    assert study["decision"]["planning_artifact_route"] == "lane-planning"
-    assert payload["next_safe_action"]["next_safe_action"] == "create-or-promote-lane-owner"
+    decision = payload["decision_packet"]
+    assert decision["action"]["id"] == "create-or-promote-lane-owner"
+    assert decision["effects"]["implementation_allowed"] is False
+    assert decision["claim_boundary"]["gate_result"] == "planning-shape-owner-required"
+    assert decision["attention"][0]["detail_selector"] == "action_signals"
 
 
 def test_implement_custody_only_planning_blocks_parent_closure_claims_not_edits(tmp_path: Path, capsys) -> None:
@@ -6339,6 +6364,8 @@ def test_start_keeps_narrow_direct_issue_quiet_without_custody_noise(tmp_path: P
                 str(tmp_path),
                 "--task",
                 "Implement issue #2201",
+                "--select",
+                "next_safe_action,planning_safety_gate",
                 "--format",
                 "json",
             ]
@@ -6346,9 +6373,10 @@ def test_start_keeps_narrow_direct_issue_quiet_without_custody_noise(tmp_path: P
         == 0
     )
 
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(capsys.readouterr().out)["values"]
     assert payload["next_safe_action"]["implementation_allowed"] is True
-    assert "planning_safety_gate" not in payload["context"]["planning"]
+    assert payload["planning_safety_gate"]["status"] == "clear"
+    assert "custody_planning" not in payload["planning_safety_gate"]
 
 
 def test_start_surfaces_lane_shaping_prompt_for_broad_unshaped_work(tmp_path: Path, capsys) -> None:
@@ -6401,6 +6429,7 @@ candidates = [
                 str(tmp_path),
                 "--task",
                 "Shape the first broad lane and second broad lane before implementation",
+                "--verbose",
                 "--format",
                 "json",
             ]
@@ -6409,12 +6438,10 @@ candidates = [
     )
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["next_safe_action"]["next_safe_action"] == "present-lane-shaping-prompt"
-    assert payload["next_safe_action"]["implementation_allowed"] is False
-    assert "begin implementation" in payload["next_safe_action"]["forbidden_actions"]
-    assert payload["action_signals"]["allowed_next_action"] == "present-lane-shaping-prompt"
-    assert payload["context"]["planning"]["workflow_sufficiency"]["sufficiency_result"] == "lane-shaping-required"
-    gate = payload["context"]["lane_shaping_gate"]
+    assert payload["immediate_next_allowed_action"]["action"] == "present-lane-shaping-prompt"
+    assert payload["planning_safety_gate"]["implementation_allowed"] is False
+    assert payload["workflow_sufficiency"]["sufficiency_result"] == "lane-shaping-required"
+    gate = payload["lane_shaping_gate"]
     assert gate["status"] == "required"
     assert gate["target"]["target_kind"] == "manual-external"
     assert gate["target"]["name"] == "chatgpt"
@@ -6454,6 +6481,7 @@ candidates = [
                 str(tmp_path),
                 "--task",
                 "Shape the first broad lane and second broad lane before implementation",
+                "--verbose",
                 "--format",
                 "json",
             ]
@@ -6462,10 +6490,9 @@ candidates = [
     )
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["next_safe_action"]["next_safe_action"] == "select-or-promote-candidate-lane"
-    assert payload["action_signals"]["allowed_next_action"] == "select-or-promote-candidate-lane"
-    assert payload["context"]["planning"]["workflow_sufficiency"]["sufficiency_result"] == "candidate-lane-promotion-required"
-    assert "lane_shaping_gate" not in payload["context"]
+    assert payload["immediate_next_allowed_action"]["action"] == "select-or-promote-candidate-lane"
+    assert payload["workflow_sufficiency"]["sufficiency_result"] == "candidate-lane-promotion-required"
+    assert "lane_shaping_gate" not in payload
 
 
 def test_start_does_not_promote_roadmap_candidates_from_generic_jumpstart_terms(tmp_path: Path, capsys) -> None:
@@ -6497,6 +6524,7 @@ candidates = [
                 str(tmp_path),
                 "--task",
                 "Run workspace setup jumpstart on this repo for dogfooding",
+                "--verbose",
                 "--format",
                 "json",
             ]
@@ -6505,13 +6533,10 @@ candidates = [
     )
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["next_safe_action"]["implementation_allowed"] is True
-    assert payload["action_signals"]["allowed_next_action"] != "select-or-promote-candidate-lane"
-    planning = payload["context"]["planning"]
-    assert planning["status"] != "candidate-lane-promotion-required"
-    assert planning["detail_selector"] == "planning_safety_gate"
-    assert "planning_safety_gate" not in planning
-    assert "lane_shaping_gate" not in payload["context"]
+    assert payload["immediate_next_allowed_action"]["action"] != "select-or-promote-candidate-lane"
+    assert payload["workflow_sufficiency"]["sufficiency_result"] != "candidate-lane-promotion-required"
+    assert "planning_safety_gate" not in payload
+    assert "lane_shaping_gate" not in payload
 
 
 def test_implement_surfaces_requirement_grounding_chain(tmp_path: Path, capsys) -> None:
