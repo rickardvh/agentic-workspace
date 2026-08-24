@@ -1,0 +1,78 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issues-2680-2690-future-context",
+  "title": "Make future-decision context effective by construction",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "planning",
+  "revision": 1,
+  "canonical_core": {
+    "requested_outcome": "Close #2680 and #2690 with independent signed-host correction preservation plus generic source-owned future-context effects in the canonical decision and reconciliation.",
+    "hard_constraints": "Reuse trusted-authority custody, correction-event storage, context consequences, reconciliation, and Memory effectiveness; add no transcript archive, vendor adapter, second correction store, Memory workflow, or universal phase envelope.",
+    "agent_may_decide": "The smallest compatible submit inputs, pending-state projection, relevance filter, typed next action, evidence fixtures, and generated-surface refresh.",
+    "escalate_when": "Trusted authority would depend on caller labels, reconciliation would invent semantic truth, or closure would require a vendor-specific host API unavailable to the repository.",
+    "next_action": "Implement and prove the #2680/#2690 successor in PR #2694 after the #2678 base lands.",
+    "proof_expectations": [
+      "The host preserves a signed correction while the corrected agent performs zero correction actions.",
+      "Incomplete observation, normalization, and disposition are distinct, idempotent states in existing custody/owners.",
+      "Relevant Memory and non-Memory signals affect the canonical decision/reconciliation while no-context work stays quiet."
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/agent_guidance.py",
+      "src/agentic_workspace/operating_decision.py",
+      "src/agentic_workspace/reconciliation.py",
+      "src/agentic_workspace/contracts/**",
+      "generated/workspace/**",
+      "tests/**",
+      "docs/reviews/**",
+      ".release/changes/**",
+      ".agentic-workspace/planning/**"
+    ],
+    "completion_criteria": [
+      "Signed host observations enter trusted local custody through the generated submit operation without private imports or raw writes.",
+      "Forged human labels fail, replay deduplicates, unresolved relevant signals expose one owner action, and unrelated/no-signal work is quiet.",
+      "Architecture, replacement, stronger-owner, unavailable-host, behavioral, cost, and generated-consumer evidence is current."
+    ],
+    "continuation_owner": "open-issues-future-context lane",
+    "closeout_decision": "Publish PR #2694 on #2692; aggregate lane closure waits for the stack to land."
+  },
+  "intent": {
+    "outcome": "Future-decision-value context survives partial compliance and becomes effective through the current canonical operating loop.",
+    "non_goals": ["Do not add a mandatory Memory or correction phase.", "Do not parse vendor conversations or store transcripts.", "Do not let reconciliation mutate arbitrary durable destinations."]
+  },
+  "parent": {
+    "owner_id": "open-issues-future-context",
+    "contribution": "Deliver the final stacked PR and aggregate acceptance for correction ingress and future-context effectiveness.",
+    "closure_boundary": "This slice closes #2680/#2690 only after proof; stack landing remains the lane boundary."
+  },
+  "scope": {
+    "owned": ["Trusted host observation input, pending correction projection, generic future-context reconciliation, generated contracts, tests, and closure review"],
+    "effects": ["Host-observed corrections survive zero acting-agent follow-through.", "Known unresolved residue narrows terminal claims through one typed owner action.", "No-signal work gains no command, artifact, or first-line field."]
+  },
+  "relationships": {
+    "selection": {"state": "selected", "owner": "open-issues-future-context"},
+    "proof_posture": {"state": "planned", "refs": ["focused tests", "generated conformance", "routed changed-path proof"]},
+    "external_posture": {"state": "current", "refs": ["GitHub #2680", "GitHub #2690", "PR #2692 stack base", "PR #2694 successor"]}
+  },
+  "references": [
+    {"kind": "source", "target": "GitHub #2680 and #2690; PR #2694 stacked on #2692", "label": "GitHub #2680 and #2690", "role": "intake", "locator": ""}
+  ],
+  "next_action": "Implement and prove the successor in PR #2694.",
+  "blockers": ["PR #2692 must land before PR #2694."],
+  "proof": {
+    "claims": [],
+    "requirements": ["Run focused correction, operating-decision, reconciliation, generated Python/TypeScript, contract, lint, type, inventory, and realistic partial-compliance proof."],
+    "refs": []
+  },
+  "continuation": {"owner": "open-issues-future-context lane", "residual_intent": "Merge PR #2692 and PR #2694 in order."},
+  "validation_commands": [
+    "uv run --active pytest -q tests/test_external_operation_clients.py tests/test_reconciliation.py tests/test_operating_decision.py tests/test_memory_effectiveness.py",
+    "uv run --active python scripts/check/check_generated_command_packages.py --conformance --require-node",
+    "uv run --active python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run --active python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "make lint-workspace",
+    "make typecheck"
+  ],
+  "completion_criteria": ["Independent host preservation and forged-authority rejection pass.", "Normalization, unrouted admission, disposition, deduplication, relevance, and unavailable-host states pass.", "Memory/non-Memory decision and correction/non-correction reconciliation fixtures pass.", "Generated and repository validation passes and PR #2694 is published."],
+  "specialist_contracts": []
+}

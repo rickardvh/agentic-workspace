@@ -13,28 +13,36 @@
     {
       "id": "issue-2678-session-scope",
       "title": "Remove identityless session-log capture",
-      "status": "active",
+      "status": "completed",
       "execplan_ref": ".agentic-workspace/planning/execplans/issue-2678-session-scope.plan.json",
       "depends_on": [],
       "purpose_for_lane": "Provide the master-based identified-session foundation for the remaining stack."
+    },
+    {
+      "id": "issues-2680-2690-future-context",
+      "title": "Make future-decision context effective by construction",
+      "status": "active",
+      "execplan_ref": ".agentic-workspace/planning/execplans/issues-2680-2690-future-context.plan.json",
+      "depends_on": ["issue-2678-session-scope"],
+      "purpose_for_lane": "Deliver correction ingress and future-context effectiveness above the identified-session foundation."
     }
   ],
-  "current_slice": "issue-2678-session-scope",
+  "current_slice": "issues-2680-2690-future-context",
   "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
   "proof_strategy": "Prove each independent lower slice with focused regression tests and routed changed-path validation; prove the final correction/context slice against #2690 aggregate architecture, partial-compliance, quiet-path, and operating-cost acceptance.",
   "proof_aggregation": {
-    "status": "not-started",
-    "evidence": [],
-    "known_gaps": []
+    "status": "partial",
+    "evidence": ["PR #2692 implementation and closeout proof"],
+    "known_gaps": ["The active #2680/#2690 successor remains to be implemented and proven in PR #2694."]
   },
-  "residual_lane_work": "not evaluated",
-  "lane_to_epic_contribution": "not evaluated",
-  "parent_close_permission": "not-evaluated",
+  "residual_lane_work": "Merge PR #2692, then complete the active #2680/#2690 successor in PR #2694.",
+  "lane_to_epic_contribution": "The identified-session foundation is complete; correction ingress and future-context effectiveness remain in the upper stack member.",
+  "parent_close_permission": "do-not-close-parent",
   "closeout_state": {
     "status": "open",
-    "summary": "",
-    "residual_work": "",
-    "next_owner": ""
+    "summary": "The #2678 lower slice is complete and no longer selected as active; the parent lane remains open with the upper slice as its current owner.",
+    "residual_work": "Complete #2680 and #2690 through PR #2694 after the lower PR lands.",
+    "next_owner": "issues-2680-2690-future-context"
   },
   "references": [],
   "notes": ""
