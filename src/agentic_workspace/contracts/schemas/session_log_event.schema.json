@@ -40,7 +40,7 @@
       "description": "Typed event class used by readers and stream processors."
     },
     "timestamp": {"type": "string", "format": "date-time", "description": "UTC event timestamp."},
-    "sequence": {"type": "integer", "minimum": 0, "description": "Monotonic position in the physical stream or merged export."},
+    "sequence": {"type": "integer", "minimum": 0, "description": "Monotonic position in the logical-session stream or merged export."},
     "source_sequence": {"type": "integer", "minimum": 0, "description": "Original physical-stream position retained in a merged export."},
     "export_sequence": {"type": "integer", "minimum": 0, "description": "Monotonic position in a normalized export."},
     "logical_session_id": {"type": "string", "minLength": 1, "description": "Private stable identifier joining physical rotations."},

@@ -16,7 +16,7 @@ One append-only canonical event in a local Agentic Workspace session chronology 
 | `event_id` | string | yes |  | Unique identifier for this event. |  |  |
 | `event_type` | enum `"command.completed"`, `"command.started"`, `"export.manifest"`, `"logging.gap"`, `"note.appended"`, `"output.chunk"`, `"session.rotated"`, `"session.started"`, `"workflow.transition"` | yes |  | Typed event class used by readers and stream processors. |  |  |
 | `timestamp` | string | yes |  | UTC event timestamp. |  |  |
-| `sequence` | integer | yes |  | Monotonic position in the physical stream or merged export. |  |  |
+| `sequence` | integer | yes |  | Monotonic position in the logical-session stream or merged export. |  |  |
 | `source_sequence` | integer | no |  | Original physical-stream position retained in a merged export. |  |  |
 | `export_sequence` | integer | no |  | Monotonic position in a normalized export. |  |  |
 | `logical_session_id` | string | yes |  | Private stable identifier joining physical rotations. |  |  |

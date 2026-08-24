@@ -328,6 +328,23 @@ def test_session_log_rotation_and_delegated_child_export_as_one_stream(tmp_path:
     first = session_logging.ensure_session(state=state)
     assert session_logging.run_with_session_logging(["start", "--target", str(target), "--task", "#2703 intake"], lambda _argv: 0) == 0
     second = session_logging.ensure_session(state=state, force_new=True)
+    assert session_logging._event_path_for_session(first) == session_logging._event_path_for_session(second)
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        list(
+            executor.map(
+                lambda item: session_logging._append_event(
+                    state=state,
+                    session=item[1],
+                    event_type="note.appended",
+                    payload={"concurrent_rotation_index": item[0]},
+                ),
+                enumerate([first, second] * 8),
+            )
+        )
+    root_events, root_issues = session_logging._read_event_stream(target / session_logging._event_path_for_session(first))
+    assert root_issues == []
+    assert [event["sequence"] for event in root_events] == list(range(1, len(root_events) + 1))
+    assert {first["session_id"], second["session_id"]}.issubset({event["physical_session_id"] for event in root_events})
     assert (
         session_logging.run_with_session_logging(["implement", "--target", str(target), "--task", "#2703 implementation"], lambda _argv: 0)
         == 0
@@ -360,6 +377,8 @@ def test_session_log_rotation_and_delegated_child_export_as_one_stream(tmp_path:
     assert exported["session_scope"]["physical_session_count"] == 3
     assert exported["session_scope"]["includes_rotations"] is True
     assert exported["session_scope"]["includes_delegated_children"] is True
+    assert exported["manifest"]["source_logical_stream_count"] == 2
+    assert len(exported["manifest"]["source_event_stream_paths"]) == 2
     rotation = next(event for event in events if event["event_type"] == "session.rotated")
     assert rotation["payload"]["next_physical_session_id"] == second["session_id"]
     commands = [event["payload"]["entry"]["command"] for event in events if event["event_type"] == "command.completed"]
@@ -369,6 +388,8 @@ def test_session_log_rotation_and_delegated_child_export_as_one_stream(tmp_path:
     )
     transitions = [event["payload"]["surface"] for event in events if event["event_type"] == "workflow.transition"]
     assert transitions == ["start", "implement", "proof", "closeout", "start"]
+    exported_event_ids = [event["event_id"] for event in events[1:]]
+    assert len(exported_event_ids) == len(set(exported_event_ids))
     assert events[1:] == repeated_events[1:]
 
 
@@ -420,6 +441,100 @@ def test_session_logging_without_host_identity_creates_no_session_state(tmp_path
         session_logging.ensure_session(state=state)
     assert not (target / session_logging.SESSION_REGISTRY_PATH).exists()
     assert not (target / session_logging.SESSION_LOG_ROOT).exists()
+
+
+@pytest.mark.parametrize(
+    "continuity_env",
+    [session_logging.PARENT_LOGICAL_SESSION_IDENTITY_ENV, session_logging.SESSION_CORRELATION_ID_ENV],
+)
+def test_missing_identity_records_gap_through_explicit_continuity(tmp_path: Path, monkeypatch, continuity_env: str) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    state = session_logging.load_state_for_argv(["--target", str(target)])
+    if continuity_env == session_logging.SESSION_CORRELATION_ID_ENV:
+        monkeypatch.setenv(continuity_env, "shared-correlation")
+    session = session_logging.ensure_session(state=state)
+    registry_path = target / session_logging.SESSION_REGISTRY_PATH
+    registry_before = registry_path.read_bytes()
+    monkeypatch.delenv(session_logging.LOGICAL_SESSION_IDENTITY_ENV)
+    if continuity_env == session_logging.PARENT_LOGICAL_SESSION_IDENTITY_ENV:
+        monkeypatch.setenv(continuity_env, "pytest-logical-session")
+
+    assert session_logging.run_with_session_logging(["status", "--target", str(target)], lambda _argv: 0) == 0
+
+    events, issues = session_logging._read_event_stream(target / session_logging._event_path_for_session(session))
+    assert issues == []
+    assert events[-1]["event_type"] == "logging.gap"
+    assert events[-1]["payload"]["reason"] == "logical-identity-missing"
+    assert events[-1]["payload"]["continuity_source"] == continuity_env
+    assert registry_path.read_bytes() == registry_before
+
+
+def test_unresolved_missing_identity_consumes_explicit_gap_on_next_identified_write(tmp_path: Path, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    monkeypatch.delenv(session_logging.LOGICAL_SESSION_IDENTITY_ENV)
+    monkeypatch.setenv(session_logging.SESSION_GAP_REASON_ENV, "lost-correlation-window")
+
+    assert session_logging.run_with_session_logging(["status", "--target", str(target)], lambda _argv: 0) == 0
+    assert not (target / session_logging.SESSION_REGISTRY_PATH).exists()
+    assert not (target / session_logging.SESSION_LOG_ROOT).exists()
+
+    monkeypatch.setenv(session_logging.LOGICAL_SESSION_IDENTITY_ENV, "restored-owner")
+    assert session_logging.run_with_session_logging(["status", "--target", str(target)], lambda _argv: 0) == 0
+    events = [json.loads(line) for line in _current_events(target).read_text(encoding="utf-8").splitlines()]
+    gaps = [event for event in events if event["event_type"] == "logging.gap"]
+    assert len(gaps) == 1
+    assert gaps[0]["payload"]["reason"] == "lost-correlation-window"
+    assert session_logging.SESSION_GAP_REASON_ENV not in os.environ
+
+
+def test_ambiguous_correlation_does_not_choose_an_arbitrary_logical_owner(tmp_path: Path, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    state = session_logging.load_state_for_argv(["--target", str(target)])
+    monkeypatch.setenv(session_logging.SESSION_CORRELATION_ID_ENV, "shared-across-tree")
+    first = session_logging.ensure_session(state=state)
+    monkeypatch.setenv(session_logging.LOGICAL_SESSION_IDENTITY_ENV, "second-logical-owner")
+    second = session_logging.ensure_session(state=state)
+    paths = [target / session_logging._event_path_for_session(item) for item in (first, second)]
+    before = [path.read_bytes() for path in paths]
+    monkeypatch.delenv(session_logging.LOGICAL_SESSION_IDENTITY_ENV)
+
+    assert session_logging.run_with_session_logging(["status", "--target", str(target)], lambda _argv: 0) == 0
+
+    assert [path.read_bytes() for path in paths] == before
+
+
+def test_physical_event_streams_migrate_to_one_logical_stream(tmp_path: Path) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    state = session_logging.load_state_for_argv(["--target", str(target)])
+    session = session_logging.ensure_session(state=state)
+    canonical_path = target / session_logging._event_path_for_session(session)
+    legacy_path = (target / session["log_path"]).parent / session_logging.SESSION_LOG_EVENT_STREAM_NAME
+    legacy_path.write_bytes(canonical_path.read_bytes())
+    canonical_path.unlink()
+    registry_path = target / session_logging.SESSION_REGISTRY_PATH
+    registry = json.loads(registry_path.read_text(encoding="utf-8"))
+    for current in registry["sessions"].values():
+        current.pop("event_stream_path", None)
+    for group in registry["logical_sessions"].values():
+        group.pop("event_stream_path", None)
+        for physical in group["sessions"]:
+            physical.pop("event_stream_path", None)
+    registry_path.write_text(json.dumps(registry, indent=2), encoding="utf-8")
+
+    migrated = session_logging.ensure_session(state=state)
+    migrated_path = target / session_logging._event_path_for_session(migrated)
+    events, issues = session_logging._read_event_stream(migrated_path)
+
+    assert migrated_path != legacy_path
+    assert migrated_path.is_file()
+    assert issues == []
+    assert [event["sequence"] for event in events] == list(range(1, len(events) + 1))
+    refreshed = json.loads(registry_path.read_text(encoding="utf-8"))
+    assert next(iter(refreshed["logical_sessions"].values()))["event_stream_path"] == migrated_path.relative_to(target).as_posix()
 
 
 def test_session_logging_disabled_capture_is_an_explicit_gap_for_existing_session(tmp_path: Path, monkeypatch) -> None:
