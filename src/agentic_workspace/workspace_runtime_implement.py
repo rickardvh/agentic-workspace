@@ -2248,6 +2248,35 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
     )
     if assignment_action_status not in {"", "not-applicable", "direct-current-target"}:
         decision_packet["assignment_action"] = copy.deepcopy(assignment_action)
+    if assignment_blocks_implementation:
+        effects = _as_dict(decision_packet.get("effects"))
+        allowed_effects = [
+            item
+            for item in effects.get("allowed", [])
+            if isinstance(item, dict) and str(item.get("effect") or "") != "write-requested-paths"
+        ]
+        restricted_effects = [item for item in effects.get("restricted", []) if isinstance(item, dict)]
+        restricted_effects = [item for item in restricted_effects if str(item.get("effect") or "") != "write-requested-paths"]
+        restricted_effects.append(
+            {
+                "effect": "write-requested-paths",
+                "decision": "deny",
+                "reason": "binding-non-current-assignment",
+            }
+        )
+        effects.update(
+            {
+                "implementation_allowed": False,
+                "allowed": allowed_effects,
+                "restricted": restricted_effects,
+            }
+        )
+        blocked_claims = [str(item) for item in effects.get("blocked_claims", [])]
+        for claim in ("local-implementation", "local-product-mutation", "completion-from-transport"):
+            if claim not in blocked_claims:
+                blocked_claims.append(claim)
+        effects["blocked_claims"] = blocked_claims
+        decision_packet["effects"] = effects
     state_delta_missing_evidence = [str(item) for item in proof_commands if str(item).strip()] or [
         "proof execution evidence before hard completion claim"
     ]

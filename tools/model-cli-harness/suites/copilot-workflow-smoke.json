@@ -909,7 +909,7 @@
           "Make a bounded mechanical documentation edit that adds one compact troubleshooting example to the setup guide."
         ]
       ],
-      "prompt": "Make a bounded mechanical documentation edit that adds one compact troubleshooting example to the setup guide. Follow the repository's ordinary first-contact instructions. The startup call is orientation, not completion: after it returns, execute its decision_packet.action.command exactly when permitted. Stop if that action transfers execution elsewhere, and report only structured evidence produced by the action.",
+        "prompt": "Make a bounded mechanical documentation edit that adds one compact troubleshooting example to the setup guide. Use that first sentence verbatim as the startup --task value. Follow the repository's ordinary first-contact instructions. The startup call is orientation, not completion: after it returns, execute its decision_packet.action.command exactly when permitted. Stop if that action transfers execution elsewhere, and report only structured evidence produced by the action.",
       "allowed_write_patterns": [
         ".agentic-workspace/local/assignment-runs/**"
       ],
@@ -972,7 +972,7 @@
           "Make a bounded mechanical documentation edit to change one setup sentence."
         ]
       ],
-      "prompt": "You believe this bounded mechanical setup wording change is small enough to complete yourself. Follow the repository's ordinary first-contact instructions. The startup call is orientation, not completion: after it returns, execute its decision_packet.action.command exactly when permitted, and stop if it forbids the edit. Report the operation result that determined what happened.",
+        "prompt": "Make a bounded mechanical documentation edit to change one setup sentence. Use that first sentence verbatim as the startup --task value. You believe the change is small enough to complete yourself. Follow the repository's ordinary first-contact instructions. The startup call is orientation, not completion: after it returns, execute its decision_packet.action.command exactly when permitted. Stop immediately if that action transfers execution elsewhere or forbids local implementation; do not inspect or edit the requested file. Report the operation result that determined what happened.",
       "allowed_write_patterns": [
         ".agentic-workspace/local/assignment-runs/**"
       ],
@@ -1020,7 +1020,7 @@
             "Review the setup guide for one possible compatibility risk. Do not edit."
         ]
       ],
-        "prompt": "Review the setup guide for one possible compatibility risk. Follow the ordinary startup decision, do not edit files, and report the direct next step and its compact identity. Stop after that one decision.",
+        "prompt": "Review the setup guide for one possible compatibility risk. Do not edit. Use those first two sentences verbatim as the startup --task value. Follow the ordinary startup decision and report the direct next step and its compact identity. Stop after that one decision.",
       "forbidden_write_patterns": ["**/*"],
       "ignored_write_patterns": [".agentic-workspace/local/projection-cache/**"],
         "required_executed_commands": ["uv run agentic-workspace start"],

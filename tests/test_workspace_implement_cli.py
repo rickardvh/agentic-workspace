@@ -9044,6 +9044,21 @@ def test_configured_orchestrator_compiles_current_nonlocal_and_returned_assignme
     }
 
     state_path = tmp_path / ".agentic-workspace" / "local" / "assignment-runs" / "run-1" / "state.json"
+    _write_json(state_path, {"current_state": "handoff-prepared", "run_id": "run-1"})
+    pending = workspace_runtime_core._assignment_primary_action_payload(
+        target_root=tmp_path,
+        assignment_policy=policy,
+        assignment_decision=decision,
+        assignment_gate=gate,
+        selected_target={"name": "worker", "execution_methods": ["cli"]},
+        delegation_control={"execution_permitted": True},
+        cli_invoke="agentic-workspace",
+    )
+    assert pending["status"] == "delegated-run-pending"
+    assert pending["action"] == "await-assigned-target-return"
+    assert pending["implementation_allowed"] is False
+    assert "operation_invocation" not in pending
+
     _write_json(state_path, {"current_state": "awaiting-admission", "run_id": "run-1"})
     returned = workspace_runtime_core._assignment_primary_action_payload(
         target_root=tmp_path,

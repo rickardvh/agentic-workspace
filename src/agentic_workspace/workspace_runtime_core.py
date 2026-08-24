@@ -43504,6 +43504,18 @@ def _assignment_primary_action_payload(
     except (OSError, json.JSONDecodeError, UnicodeDecodeError):
         pass
     local_state_name = str(local_state.get("current_state") or "")
+    if local_state_name == "handoff-prepared":
+        return {
+            **base,
+            "status": "delegated-run-pending",
+            "action": "await-assigned-target-return",
+            "expected_transition": "awaiting-admission",
+            "blocker": {
+                "reason_code": "binding-non-current-assignment-in-flight",
+                "owner": selected_name or assignment_target,
+                "repair": "Import the revision-matched worker return when it arrives; do not implement the assigned slice locally.",
+            },
+        }
     lifecycle_action = {
         "awaiting-admission": ("assignment.admit", "admit-returned-assignment", "admitted-or-repair-requested"),
         "admitted": ("assignment.integrate", "integrate-admitted-assignment", "integrated"),
