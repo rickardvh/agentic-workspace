@@ -8977,6 +8977,24 @@ def test_configured_orchestrator_compiles_current_nonlocal_and_returned_assignme
         "task_class": "mechanical-follow-through",
         "scope_class": "narrow-code-change",
     }
+    current_gate = workspace_runtime_core._assignment_implementation_gate_payload(
+        assignment_policy={
+            **policy,
+            "current_target": {"value": "orchestrator"},
+            "current_target_status": "known-profile",
+            "binding": {"enforceable": True},
+        },
+        assignment_decision={**decision, "selected_target": "target:orchestrator"},
+        selected_target={
+            "name": "orchestrator",
+            "target_id": "target:orchestrator",
+            "aliases": ["current"],
+        },
+    )
+    assert current_gate["status"] == "assigned-current-target"
+    assert current_gate["implementation_allowed"] is True
+    assert current_gate["required_next_action"] == "continue-with-selected-target"
+
     current = workspace_runtime_core._assignment_primary_action_payload(
         target_root=tmp_path,
         assignment_policy=policy,

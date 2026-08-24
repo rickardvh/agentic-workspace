@@ -43111,6 +43111,10 @@ def _assignment_implementation_gate_payload(
     selected_decision_target = str(assignment_decision.get("selected_target") or "")
     selected_profile_refs = {selected_profile, selected_profile_id} | {str(alias) for alias in selected_aliases}
     target_mismatch = bool(selected_decision_target and selected_profile and selected_decision_target not in selected_profile_refs)
+    selected_is_current = bool(
+        current_target
+        and (current_target in selected_profile_refs or (selected_decision_target == current_target and not selected_profile))
+    )
     selected_route_target = selected_profile or str(assignment_decision.get("selected_target") or "") or current_target
     if decision == "blocked" or assignment_policy.get("status") == "blocked-unknown-current-target":
         status = "blocked"
@@ -43122,6 +43126,11 @@ def _assignment_implementation_gate_payload(
         implementation_allowed = False
         required_next_action = "select-configured-current-target"
         enforcement = "hard-block"
+    elif decision in {"assign-current-target", "assign-or-escalate", "assign-best-fit", "manual-handoff"} and selected_is_current:
+        status = "assigned-current-target"
+        implementation_allowed = True
+        required_next_action = "continue-with-selected-target"
+        enforcement = "selected-target-boundary"
     elif decision in {"assign-or-escalate", "assign-best-fit", "manual-handoff"}:
         status = "handoff-required"
         implementation_allowed = False
