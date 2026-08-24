@@ -1,0 +1,15 @@
+# Session logging
+
+Agentic Workspace records each physical session in an append-only `events.jsonl` file. This event stream is the canonical chronology. The adjacent `session.md` and `index.json` files remain human-readable and query-friendly compatibility projections; analysis and index repair prefer the event stream when it is available.
+
+Every event follows `session_log_event.schema.json` and carries a stable event id, timestamp, monotonic sequence, event type, logical and physical session ids, optional parent/correlation ids, and a typed payload. `command.started` and `command.completed` share an entry id, making interrupted commands visible. Routed `start`, `implement`, `proof`, and `closeout` commands also emit compact `workflow.transition` events. Identifiers derived from host-provided correlation values are salted hashes, so raw host identities are not written to disk.
+
+Physical rotations stay in one logical-session group. A host can link delegated or resumed work by passing the parent raw logical identity in `AW_SESSION_LOG_PARENT_LOGICAL_IDENTITY` and an optional correlation value in `AW_SESSION_LOG_CORRELATION_ID`. AW stores only private derived ids. Hosts that know capture was interrupted or correlation was lost can set `AW_SESSION_LOG_GAP_REASON` for the next write; AW then records an explicit `logging.gap` event. Temporarily disabling capture for an existing identified session also adds a metadata-only gap without retaining the skipped command.
+
+`session-log export` produces one share-review candidate ending in `.jsonl.gz`. Without an explicit `--id` or `--path`, it includes the current logical session, its physical rotations, and linked delegated descendants. The first record is an `export.manifest`; later records are one normalized event per line in global sequence order. Large text output remains in per-command blob files referenced by path, byte count, and SHA-256 from completion events; export converts available stdout and stderr into bounded `output.chunk` events so no line grows without limit. Binary or unavailable blobs remain digest references. `--no-artifacts` retains hashes and coverage metadata without output bytes.
+
+Exports preserve the raw local logs, normalize known machine-local paths, and disclose time, gap, child-session, and artifact coverage. Event ordering is deterministic for unchanged source streams; deliberately variable manifest creation metadata gives each export its own hash. Normalization is not secret scanning or transfer approval: review the generated stream before sharing it.
+
+Raw sessions, derived views, blobs, and exports are ignored local diagnostics. AW does not automatically promote, upload, or delete them; they remain under `.agentic-workspace/local/` until the workspace's local retention or cleanup process removes them.
+
+Older Markdown/index-only sessions remain readable. Export synthesizes migration events and explicit gap records when it must recover chronology from those derived views. A malformed or partial JSONL tail does not hide later valid events; readers report the damaged record and continue from subsequent complete lines.

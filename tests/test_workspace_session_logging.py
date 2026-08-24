@@ -1,14 +1,15 @@
 from __future__ import annotations
 
+import gzip
 import json
 import os
 import subprocess
 import sys
-import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
+from jsonschema import Draft202012Validator
 from tests.workspace_cli_support import aw_subprocess_env
 
 from agentic_workspace import cli as source_cli
@@ -40,6 +41,16 @@ def _current_log(target: Path) -> Path:
 def _current_index(target: Path) -> Path:
     status = session_logging.status_payload(state=session_logging.load_state_for_argv(["--target", str(target)]))
     return target / status["index_path"]
+
+
+def _current_events(target: Path) -> Path:
+    status = session_logging.status_payload(state=session_logging.load_state_for_argv(["--target", str(target)]))
+    return target / status["event_stream_path"]
+
+
+def _read_export(path: Path) -> list[dict[str, object]]:
+    with gzip.open(path, mode="rt", encoding="utf-8") as handle:
+        return [json.loads(line) for line in handle if line.strip()]
 
 
 def test_session_logging_disabled_does_not_create_log(tmp_path: Path, capsys) -> None:
@@ -208,6 +219,35 @@ def test_session_logging_enabled_reuses_one_session_log_and_records_config_prelu
     assert "share_safe" not in text
 
 
+def test_session_logging_writes_canonical_monotonic_jsonl(tmp_path: Path) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+
+    assert session_logging.run_with_session_logging(["config", "--target", str(target)], lambda _argv: 0) == 0
+    assert session_logging.run_with_session_logging(["status", "--target", str(target)], lambda _argv: 0) == 0
+
+    events = [json.loads(line) for line in _current_events(target).read_text(encoding="utf-8").splitlines()]
+    schema = json.loads(
+        (Path(__file__).parents[1] / "src/agentic_workspace/contracts/schemas/session_log_event.schema.json").read_text(encoding="utf-8")
+    )
+    validator = Draft202012Validator(schema)
+    for event in events:
+        validator.validate(event)
+    assert [event["sequence"] for event in events] == list(range(1, len(events) + 1))
+    assert [event["event_type"] for event in events] == [
+        "session.started",
+        "command.started",
+        "command.completed",
+        "command.started",
+        "command.completed",
+    ]
+    started = [event for event in events if event["event_type"] == "command.started"]
+    completed = [event for event in events if event["event_type"] == "command.completed"]
+    assert [event["payload"]["entry_id"] for event in started] == [event["payload"]["entry"]["id"] for event in completed]
+    assert len({event["event_id"] for event in events}) == len(events)
+    assert all(event["logical_session_id"] and event["physical_session_id"] for event in events)
+
+
 def test_session_logging_reuses_identity_across_interleaved_sessions(tmp_path: Path, monkeypatch) -> None:
     target = _target(tmp_path)
     _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
@@ -255,6 +295,115 @@ def test_session_logging_concurrent_identity_resolution_converges(tmp_path: Path
     assert not (target / session_logging.SESSION_REGISTRY_LOCK_PATH).exists()
 
 
+def test_session_logging_concurrent_event_appends_remain_valid_and_monotonic(tmp_path: Path) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    state = session_logging.load_state_for_argv(["--target", str(target)])
+    session = session_logging.ensure_session(state=state, logical_identity="shared")
+
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        list(
+            executor.map(
+                lambda index: session_logging._append_event(
+                    state=state,
+                    session=session,
+                    event_type="note.appended",
+                    payload={"index": index},
+                ),
+                range(24),
+            )
+        )
+
+    events, issues = session_logging._read_event_stream(target / session_logging._event_path_for_session(session))
+    assert issues == []
+    assert len(events) == 25
+    assert [event["sequence"] for event in events] == list(range(1, 26))
+
+
+def test_session_log_rotation_and_delegated_child_export_as_one_stream(tmp_path: Path, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    state = session_logging.load_state_for_argv(["--target", str(target)])
+    monkeypatch.setenv(session_logging.LOGICAL_SESSION_IDENTITY_ENV, "root-session")
+    first = session_logging.ensure_session(state=state)
+    assert session_logging.run_with_session_logging(["start", "--target", str(target), "--task", "#2703 intake"], lambda _argv: 0) == 0
+    second = session_logging.ensure_session(state=state, force_new=True)
+    assert (
+        session_logging.run_with_session_logging(["implement", "--target", str(target), "--task", "#2703 implementation"], lambda _argv: 0)
+        == 0
+    )
+    monkeypatch.setenv(session_logging.LOGICAL_SESSION_IDENTITY_ENV, "child-session")
+    monkeypatch.setenv(session_logging.PARENT_LOGICAL_SESSION_IDENTITY_ENV, "root-session")
+    child = session_logging.ensure_session(state=state)
+    assert (
+        session_logging.run_with_session_logging(["proof", "--target", str(target), "--task", "#2703 delegated proof"], lambda _argv: 0)
+        == 0
+    )
+    monkeypatch.setenv(session_logging.LOGICAL_SESSION_IDENTITY_ENV, "root-session")
+    monkeypatch.delenv(session_logging.PARENT_LOGICAL_SESSION_IDENTITY_ENV)
+    assert (
+        session_logging.run_with_session_logging(
+            ["closeout", "--target", str(target), "--task", "#2703 blocked review repair"], lambda _argv: 0
+        )
+        == 0
+    )
+    assert (
+        session_logging.run_with_session_logging(["start", "--target", str(target), "--task", "#2703 final recheck"], lambda _argv: 0) == 0
+    )
+
+    exported = session_logging.export_session_log(state=state, include_artifacts=False)
+    events = _read_export(target / exported["path"])
+    repeated_export = session_logging.export_session_log(state=state, include_artifacts=False)
+    repeated_events = _read_export(target / repeated_export["path"])
+
+    assert set(exported["session_ids"]) == {first["session_id"], second["session_id"], child["session_id"]}
+    assert exported["session_scope"]["physical_session_count"] == 3
+    assert exported["session_scope"]["includes_rotations"] is True
+    assert exported["session_scope"]["includes_delegated_children"] is True
+    rotation = next(event for event in events if event["event_type"] == "session.rotated")
+    assert rotation["payload"]["next_physical_session_id"] == second["session_id"]
+    commands = [event["payload"]["entry"]["command"] for event in events if event["event_type"] == "command.completed"]
+    assert all(
+        marker in "\n".join(commands)
+        for marker in ("intake", "implementation", "delegated proof", "blocked review repair", "final recheck")
+    )
+    transitions = [event["payload"]["surface"] for event in events if event["event_type"] == "workflow.transition"]
+    assert transitions == ["start", "implement", "proof", "closeout", "start"]
+    assert events[1:] == repeated_events[1:]
+
+
+def test_session_log_recovers_after_partial_tail_and_discloses_gap(tmp_path: Path, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    state = session_logging.load_state_for_argv(["--target", str(target)])
+    session = session_logging.ensure_session(state=state)
+    with (target / session_logging._event_path_for_session(session)).open("ab") as handle:
+        handle.write(b'{"partial":')
+
+    session_logging._append_event(state=state, session=session, event_type="note.appended", payload={"text": "after"})
+    events, issues = session_logging._read_event_stream(target / session_logging._event_path_for_session(session))
+
+    assert issues and issues[0]["reason"] == "invalid-event"
+    assert [event["event_type"] for event in events][-2:] == ["logging.gap", "note.appended"]
+    exported = session_logging.export_session_log(state=state, include_artifacts=False)
+    assert exported["gap_count"] >= 1
+
+
+def test_session_log_exports_legacy_views_with_migration_gap(tmp_path: Path) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    assert session_logging.run_with_session_logging(["config", "--target", str(target)], lambda _argv: 0) == 0
+    _current_events(target).unlink()
+
+    exported = session_logging.export_session_log(
+        state=session_logging.load_state_for_argv(["--target", str(target)]), include_artifacts=False
+    )
+    events = _read_export(target / exported["path"])
+
+    assert any(event["event_type"] == "command.completed" and event.get("recovered_from") for event in events)
+    assert any(event["event_type"] == "logging.gap" and event["payload"]["reason"] == "legacy-migration" for event in events)
+
+
 def test_session_logging_without_host_identity_creates_no_session_state(tmp_path: Path, monkeypatch) -> None:
     target = _target(tmp_path)
     _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
@@ -271,6 +420,23 @@ def test_session_logging_without_host_identity_creates_no_session_state(tmp_path
         session_logging.ensure_session(state=state)
     assert not (target / session_logging.SESSION_REGISTRY_PATH).exists()
     assert not (target / session_logging.SESSION_LOG_ROOT).exists()
+
+
+def test_session_logging_disabled_capture_is_an_explicit_gap_for_existing_session(tmp_path: Path, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    state = session_logging.load_state_for_argv(["--target", str(target)])
+    session = session_logging.ensure_session(state=state)
+    monkeypatch.setenv("AW_SESSION_LOGGING_DISABLE", "1")
+
+    assert session_logging.run_with_session_logging(["status", "--target", str(target)], lambda _argv: 0) == 0
+
+    events, issues = session_logging._read_event_stream(target / session_logging._event_path_for_session(session))
+    assert issues == []
+    gap = events[-1]
+    assert gap["event_type"] == "logging.gap"
+    assert gap["payload"]["reason"] == "capture-disabled"
+    assert "status" not in json.dumps(gap)
 
 
 def test_session_logging_identity_is_private_and_caller_drilldowns_resolve_it(tmp_path: Path, monkeypatch) -> None:
@@ -770,6 +936,7 @@ def test_session_log_analysis_is_live_agent_first_for_mixed_pr_2166_bundle(tmp_p
         )
     index["entries"] = entries
     index_path.write_text(json.dumps(index, indent=2), encoding="utf-8")
+    _current_events(target).unlink()
     state = session_logging.load_state_for_argv(["--target", str(target)])
 
     default = session_logging.analyze_session_log(state=state)
@@ -2015,8 +2182,10 @@ def test_session_log_export_normalizes_local_paths_and_preserves_originals(tmp_p
     capsys.readouterr()
     log_path = _current_log(target)
     index_path = _current_index(target)
+    event_path = _current_events(target)
     original_log = log_path.read_bytes()
     original_index = index_path.read_bytes()
+    original_events = event_path.read_bytes()
     state = session_logging.load_state_for_argv(["--target", str(target)])
     status = session_logging.status_payload(state=state)
     analysis = session_logging.analyze_session_log(state=state)
@@ -2029,40 +2198,41 @@ def test_session_log_export_normalizes_local_paths_and_preserves_originals(tmp_p
     assert payload["status"] == "exported"
     assert payload["session_scope"]["kind"] == "distinct-logical-session"
     export_path = target / payload["path"]
-    with zipfile.ZipFile(export_path) as archive:
-        names = set(archive.namelist())
-        assert {"session.md", "index.json", "manifest.json"}.issubset(names)
-        assert any(name.startswith("artifacts/") for name in names)
-        combined = b"\n".join(archive.read(name) for name in names).decode("utf-8")
-        assert str(target) not in combined
-        assert target.as_posix() not in combined
-        assert str(Path.home()) not in combined
-        assert sys.executable not in combined
-        assert "<target>" in combined
-        assert "normalized-share-safe" in combined
-        assert "promotion_boundary" not in combined
-        assert "share_safe" not in combined
-        manifest = json.loads(archive.read("manifest.json"))
-        assert manifest["artifact_class"] == "normalized-share-safe"
-        assert manifest["source_artifact_class"] == "raw-local-diagnostic"
-        assert manifest["local_only"] is False
-        assert manifest["originals_mutated"] is False
-        assert manifest["path_normalization_mode"] == "known-local-paths"
-        assert "transfer approval" in manifest["limitations"]
-        assert manifest["transfer_review"]["status"] == "required"
-        assert manifest["transfer_review"]["approval"] == "not-granted"
-        assert manifest["evidence_profile"]["id"] == "all-command-summary-with-available-artifacts"
-        assert manifest["evidence_profile"]["source_command_count"] == 1
-        assert manifest["evidence_profile"]["exported_command_count"] == 1
-        assert manifest["evidence_profile"]["structured_index_complete"] is True
-        assert manifest["evidence_profile"]["command_selection"] == "all-source-session-commands"
-        assert manifest["artifact_coverage"][0]["status"] == "included"
-        assert "Share this generated archive" not in combined
-        assert manifest["local_diagnostic_boundary"]["manual_handoff"] == "outside-aw-logger-responsibility"
+    assert export_path.name.endswith(".jsonl.gz")
+    events = _read_export(export_path)
+    combined = "\n".join(json.dumps(event, sort_keys=True) for event in events)
+    assert str(target) not in combined
+    assert target.as_posix() not in combined
+    assert str(Path.home()) not in combined
+    assert sys.executable not in combined
+    assert "<target>" in combined
+    assert "normalized-share-safe" in combined
+    assert "promotion_boundary" not in combined
+    assert "share_safe" not in combined
+    assert events[0]["event_type"] == "export.manifest"
+    manifest = events[0]["payload"]
+    assert manifest["artifact_class"] == "normalized-share-safe-jsonl"
+    assert manifest["source_artifact_class"] == "raw-local-diagnostic"
+    assert manifest["originals_mutated"] is False
+    assert manifest["path_normalization_mode"] == "known-local-paths"
+    assert "transfer approval" in manifest["limitations"]
+    assert manifest["transfer_review"]["status"] == "required"
+    assert manifest["transfer_review"]["approval"] == "not-granted"
+    assert manifest["evidence_profile"]["id"] == "complete-logical-session-with-output-chunks"
+    assert manifest["evidence_profile"]["source_command_count"] == 1
+    assert manifest["evidence_profile"]["exported_command_count"] == 1
+    assert manifest["evidence_profile"]["canonical_event_stream_complete"] is True
+    assert manifest["evidence_profile"]["command_selection"] == "all-logical-session-tree-commands"
+    assert manifest["artifact_coverage"][0]["status"] == "included-as-output-chunks"
+    assert any(event["event_type"] == "output.chunk" for event in events)
+    assert [event["sequence"] for event in events] == list(range(len(events)))
+    assert "Share this generated archive" not in combined
+    assert manifest["local_diagnostic_boundary"]["manual_handoff"] == "outside-aw-logger-responsibility"
     assert payload["transfer_approval"] == "not-granted"
     assert "Share path" not in json.dumps(payload)
     assert log_path.read_bytes() == original_log
     assert index_path.read_bytes() == original_index
+    assert event_path.read_bytes() == original_events
 
     assert (
         source_cli.main(
@@ -2074,7 +2244,7 @@ def test_session_log_export_normalizes_local_paths_and_preserves_originals(tmp_p
     assert by_id["artifact_count"] == 0
     assert by_id["session_scope"]["kind"] == "explicit-artifact"
     assert by_id["session_scope"]["current_logical_session"] is False
-    assert by_id["manifest"]["evidence_profile"]["id"] == "all-command-summary"
+    assert by_id["manifest"]["evidence_profile"]["id"] == "complete-logical-session-summary"
     assert by_id["manifest"]["artifact_coverage"][0]["status"] == "digest-only"
     assert source_cli.main(["session-log", "--target", str(target), "export", "--path", status["path"], "--format", "json"]) == 0
     by_path = json.loads(capsys.readouterr().out)
@@ -2099,12 +2269,9 @@ def test_session_log_export_repairs_partial_source_index_in_export_only(tmp_path
     state = session_logging.load_state_for_argv(["--target", str(target)])
     exported = session_logging.export_session_log(state=state, include_artifacts=False)
 
-    assert exported["manifest"]["evidence_profile"]["source_index_status"] == "partial"
     assert exported["manifest"]["evidence_profile"]["source_command_count"] == 2
     assert exported["manifest"]["evidence_profile"]["exported_command_count"] == 2
-    assert exported["manifest"]["evidence_profile"]["structured_index_complete"] is True
-    with zipfile.ZipFile(target / exported["path"]) as archive:
-        export_index = json.loads(archive.read("index.json"))
-        assert len(export_index["entries"]) == 2
-        assert export_index["export_projection"]["complete_for_profile"] is True
+    assert exported["manifest"]["evidence_profile"]["canonical_event_stream_complete"] is True
+    events = _read_export(target / exported["path"])
+    assert sum(event["event_type"] == "command.completed" for event in events) == 2
     assert json.loads(index_path.read_text(encoding="utf-8")) == partial
