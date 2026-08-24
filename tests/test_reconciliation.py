@@ -72,6 +72,72 @@ def test_residue_requires_exactly_one_owner() -> None:
     assert "residue-owner-missing" in result["claim"]["reasons"]
 
 
+def test_source_owned_future_context_blocks_terminal_claim_with_one_typed_owner_action() -> None:
+    signal = {
+        "kind": "agentic-workspace/future-context-signal/v1",
+        "signal_id": "evaluation:finding-7",
+        "source_class": "evaluation-finding",
+        "authority_state": "owner-admitted",
+        "status": "unresolved",
+        "relevant": True,
+        "owner": "evaluation",
+        "required_decision": "admit-or-dismiss",
+        "operation_invocation": {
+            "operation_id": "evaluation.admit",
+            "operation_path": "operations/evaluation.admit.json",
+            "authority": "evaluation operation contract",
+        },
+    }
+    result = compile_reconciliation(
+        {
+            "result": {"status": "succeeded"},
+            "intent": {"status": "satisfied"},
+            "proof": {"status": "passed"},
+            "future_context_signals": [signal],
+        }
+    )
+
+    assert result["status"] == "continue"
+    assert result["claim"]["reasons"] == ["future-context-unresolved"]
+    assert result["next_action"]["operation_invocation"]["operation_id"] == "evaluation.admit"
+    assert result["next_action"]["required_decision"] == "admit-or-dismiss"
+
+
+def test_no_future_context_signal_keeps_reconciliation_quiet_and_agent_candidate_stays_advisory() -> None:
+    quiet = compile_operating_decision(inputs={"revisions": {"planning": "r1"}})
+    candidate = compile_operating_decision(
+        inputs={
+            "revisions": {"planning": "r1"},
+            "future_context_signals": [
+                {
+                    "signal_id": "agent:proposal-1",
+                    "source_class": "agent-proposed-learning",
+                    "authority_state": "agent-proposed",
+                    "status": "unresolved",
+                    "relevant": True,
+                    "owner": "memory",
+                    "required_decision": "owner-review",
+                }
+            ],
+        }
+    )
+
+    assert "future_context_signals" not in quiet
+    assert quiet["context_effects"]["status"] == "quiet"
+    assert candidate["future_context_signals"][0]["authority_state"] == "agent-proposed"
+    assert candidate["context_effects"]["blocked_claim_classes"] == []
+    assert candidate["context_effects"]["durable_dispositions"][0]["owner"] == "memory"
+
+    unavailable = compile_operating_decision(
+        inputs={
+            "revisions": {"planning": "r1"},
+            "future_context_capture": {"status": "unavailable", "owner": "host", "reason": "feedback API unsupported"},
+        }
+    )
+    assert unavailable["future_context_capture"]["status"] == "unavailable"
+    assert unavailable["context_effects"]["status"] == "quiet"
+
+
 def test_explicit_human_decision_is_constructible_continuation() -> None:
     result = compile_reconciliation(
         {

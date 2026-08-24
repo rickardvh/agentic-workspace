@@ -3,7 +3,7 @@
   "authority": "command_package_ir.json",
   "compatibility": {
     "protocol": "1.0.0",
-    "fingerprint": "sha256:20eb427e18dce5da21caf07382f57d29beb8ce506e340a785eedb19038179f19",
+    "fingerprint": "sha256:dbb63febb995500f280894b0a3076b9aa526a905ef40b82148800c3655d908f3",
     "additive_fields": "allowed"
   },
   "support_rule": "Operations fail closed unless generated status, effects, conformance, and Python/TypeScript target accounting are present.",
@@ -2994,7 +2994,7 @@
       "operation_contract": "src/agentic_workspace/contracts/operations/correction-event.submit.json",
       "operation_compatibility": {
         "schema_version": "agentic-workspace/operation/v1",
-        "fingerprint": "sha256:8f69a184189b737145ac76b7420fac7f1a4ffdc2476c8b4ead7b7b8f753452e8"
+        "fingerprint": "sha256:a8b04692f9388cb16260398680a15ad6165d107b8076a14945c5c4a113a09c2f"
       },
       "operation_resources": {
         "python": {
@@ -3050,7 +3050,8 @@
         }
       },
       "conformance": [
-        "correction-event.submit.process"
+        "correction-event.submit.process",
+        "correction-event.submit-host-observation.process"
       ],
       "external_consumption": {
         "status": "runtime-backed",
@@ -3060,7 +3061,8 @@
             "scope": "target root resolution",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process"
+              "correction-event.submit.process",
+              "correction-event.submit-host-observation.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -3069,7 +3071,8 @@
             "scope": "local correction-event store writes",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process"
+              "correction-event.submit.process",
+              "correction-event.submit-host-observation.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -3078,7 +3081,8 @@
             "scope": "trusted authority receipt validation",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process"
+              "correction-event.submit.process",
+              "correction-event.submit-host-observation.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -3087,7 +3091,8 @@
             "scope": "output emission",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
-              "correction-event.submit.process"
+              "correction-event.submit.process",
+              "correction-event.submit-host-observation.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -11904,7 +11909,7 @@
       "operation_contract": "src/agentic_workspace/contracts/operations/session-log.manage.json",
       "operation_compatibility": {
         "schema_version": "agentic-workspace/operation/v1",
-        "fingerprint": "sha256:237c15186786b486fa9f2ada94ec400b5238d02f100a811b8ae8c5662e322ea9"
+        "fingerprint": "sha256:3435d696f80eed04fbb8c5e19311fd5797fb0e0bd2d202a1a0d8ff573571fdad"
       },
       "operation_resources": {
         "python": {
