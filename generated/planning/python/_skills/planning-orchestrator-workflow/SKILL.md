@@ -1,79 +1,71 @@
 ---
 name: planning-orchestrator-workflow
-description: Run planner-to-worker delegated execution from checked-in planning using the local mixed-agent posture and a derived handoff contract.
+description: Execute the assigned-orchestrator procedure from a binding canonical assignment and action gate without reselecting the target.
 ---
 
 # Planning Orchestrator Workflow
 
-Use this skill when work is broad enough to benefit from stronger planning first and a bounded worker later.
+Use this skill only when the current decision identifies this runtime as the
+assigned orchestrator and carries a binding non-local assignment plus its
+allowed action. Assignment role, target relation, identity, and revision are
+structured inputs; task wording does not activate this procedure.
 
-This skill is agent-agnostic.
-The worker may be:
+When the canonical assignment selects the current target, continue through the
+ordinary direct-work owner and do not load this skill. When assignment is absent
+or unresolved, return to the canonical assignment owner; use
+`planning-assurance-delegation` only if that owner requests unresolved
+assurance input.
 
-- an internal delegated agent
-- a read-only explorer for one bounded inspection question
-- a local model run through CLI or API
-- another vendor executor reached through CLI or API
-- the same agent continuing directly when delegation is not worth it
+## Primary Ownership
 
-## Read First
+This is the sole primary post-assignment orchestrator procedure. It preserves
+orchestrator custody of intent, decomposition, assignment bounds, admission,
+integration, proof interpretation, and closeout. Canonical assignment and
+action-gate operations own target choice and implementation permission; this
+skill consumes their result and never recomputes it.
 
-1. `AGENTS.md`
-2. `.agentic-workspace/planning/state.toml`
-3. the active execplan
-4. `agentic-workspace config --target . --format json`
-5. `agentic-workspace defaults --section relay --format json`
-6. `agentic-workspace planning handoff --format json`
+## Procedure
 
-## Workflow
+1. Read the compact current decision and verify that the assignment and allowed
+   action identities and revisions are current. Re-resolve stale or missing
+   identity instead of reconstructing it from Planning prose.
+2. Preserve the assigned slice, target, proof requirements, stop conditions,
+   and return contract exactly. Do not rerank targets, repeat capability or cost
+   comparison, or reinterpret a binding non-local assignment as local work.
+3. Execute only the transport or dispatch route admitted by the current action:
+   - use the host's typed internal/automatic dispatch action when present;
+   - route admitted manual transport to `planning-manual-delegation` and the
+     canonical `assignment.export` / `assignment.import` operations;
+   - use an admitted external adapter only with the same assignment identity,
+     revision, work bounds, and return contract.
+4. Track returned, failed, blocked, cancelled, stale, or stopped work through
+   the canonical delegated-run lifecycle. Transport success is not worker
+   success, admission, integration, proof, or closeout.
+5. Route every return to `planning-returned-result`. Use the exact current
+   `assignment.admit`, `assignment.reject`, `assignment.repair`,
+   `assignment.reassign`, `assignment.override`, or `assignment.integrate`
+   action rather than hand-editing lifecycle state.
+6. After admitted integration, run AW-owned proof, route semantic satisfaction
+   to `planning-intent-verification`, and route closeout mechanics to
+   `planning-closeout-trust`. Worker claims cannot authorize those transitions.
+7. Reconcile durable residue and the assignment outcome into the checked-in
+   owner before review, handoff, or session end.
 
-1. Confirm the task is planning-backed and bounded enough for delegation.
-2. Inspect the effective mixed-agent posture from local config.
-3. After decomposition, classify each slice as `keep-local`, `delegate-exploration`, `delegate-implementation`, `delegate-validation`, `escalate-review`, or `no-safe-route`.
-4. If delegation is not supported or not worthwhile, stay direct and record the skipped reason.
-5. If delegation is worthwhile, derive the worker handoff from `agentic-workspace planning handoff --format json`.
-6. Choose any execution method that preserves that contract:
-   - internal delegation when the environment supports it and prefers it
-   - read-only exploration when one bounded question can avoid broad rereads
-   - external CLI or API handoff when another executor is cheaper or more available
-   - direct single-agent fallback when delegation would cost more than it saves
-7. Give the worker only the delegated handoff contract plus any explicit assignment for cleanup or commit.
-8. Keep lane shaping, roadmap routing, and issue decisions with the orchestrator unless they are explicitly delegated.
-9. Mirror durable residue and delegation outcome feedback back into checked-in planning before review, handoff, or session end.
+## Binding Boundary
 
-## Worker Contract
-
-Default worker ownership:
-
-- read-only exploration for one explicit question when assigned
-- bounded implementation
-- narrow validation
-- checked-in updates inside explicitly assigned owned surfaces
-- cleanup and commit only when explicitly assigned and still bounded
-
-Default worker stop conditions:
-
-- the delegated task needs broad rereads outside the explicit read-first refs
-- the task shape widens beyond the owned write scope
-- the chosen delegation method cannot preserve the checked-in contract
-- escalation boundaries are hit
-
-## Boundaries
-
-- Do not use this skill to turn repo config into a scheduler.
-- Do not hardcode vendor-specific routing rules into checked-in planning.
-- Do not let the delegated worker become the only place continuity lives.
-- Do not widen requested ends just because a stronger planner is available.
+- A binding non-local assignment forbids local implementation of the worker
+  slice. If dispatch cannot proceed, stop at the current action and use its
+  repair, reassign, override, or human-escalation route.
+- Only an authorized structured assignment transition can change the selected
+  target. Availability, convenience, token cost, or expected speed cannot.
+- The orchestrator may delegate bounded transport or execution, but not its
+  custody of intent, decomposition, admission, integration, proof
+  interpretation, or closeout.
+- Do not make vendor-specific routing policy or duplicate assignment/run state
+  in skill prose.
 
 ## Output
 
-For each orchestrated run, record:
-
-- whether delegation stayed direct, internal, or external
-- which bounded slice was delegated
-- what the handoff contract contained
-- route skipped reason when direct work was chosen
-- expected token savings, actual friction, proof result, and quality concern
-- any decomposition adjustment learned from the delegation outcome
-- what overhead remained
-- what workflow improvement signal, if any, should survive in checked-in planning or review residue
+Record the assignment and action identities/revisions, dispatched target and
+transport, bounded worker return, lifecycle action taken, AW proof result, and
+any residue routed to the continuing owner.

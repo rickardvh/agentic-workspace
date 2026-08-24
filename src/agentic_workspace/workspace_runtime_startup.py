@@ -830,6 +830,34 @@ def _apply_session_log_export_intent_route(*, payload: dict[str, Any], task_text
     }
 
 
+def _apply_assignment_action_to_start_payload(*, payload: dict[str, Any], assignment_action: dict[str, Any]) -> None:
+    assignment_command = str(assignment_action.get("command") or "")
+    assignment_blocks = assignment_action.get("implementation_allowed") is False
+    payload["workflow_sufficiency"] = _workflow_sufficiency_payload(
+        surface="start",
+        decision="canonical-assignment-action-required",
+        reason="Configured orchestrator best-fit routing selected the canonical assignment action.",
+        required_next_action=str(assignment_action.get("action") or ""),
+        evidence_required=["revision-bound assignment operation receipt"],
+        hard_gate=assignment_blocks,
+    )
+    payload["immediate_next_allowed_action"] = {
+        "action": str(assignment_action.get("action") or ""),
+        "summary": "Follow the canonical assignment action; do not rerank the selected target or fall back to local implementation.",
+        "command": assignment_command or None,
+        "run": assignment_command or None,
+        "risk": "binding-assignment" if assignment_blocks else "assignment-route",
+        "required_inputs": ["canonical assignment identity", "assignment decision revision"],
+        "next_proof": "Re-resolve the ordinary route from the resulting assignment operation receipt.",
+        "read_first": [assignment_command] if assignment_command else [],
+        "operation_invocation": copy.deepcopy(_as_dict(assignment_action.get("operation_invocation"))),
+        "assignment_decision_revision": assignment_action.get("assignment_decision_revision"),
+        "selected_target": assignment_action.get("selected_target"),
+        "target_identity_ref": assignment_action.get("target_identity_ref"),
+        "implementation_allowed": assignment_action.get("implementation_allowed"),
+    }
+
+
 def _start_payload(
     *, target_root: Path, changed_paths: list[str], task_text: str | None = None, profile: str | None = None
 ) -> dict[str, Any]:
@@ -1326,6 +1354,16 @@ def _start_payload(
             "read_first": [next_command],
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
         }
+    assignment_action = _as_dict(execution_posture.get("assignment_action"))
+    assignment_action_status = str(assignment_action.get("status") or "")
+    if assignment_action_status not in {"", "not-applicable"}:
+        payload["assignment_action"] = assignment_action
+    if (
+        (planning_safety_gate["workflow_sufficient"] or assignment_action_status in {"ready", "reconciliation-required"})
+        and assignment_action_status not in {"", "not-applicable", "direct-current-target"}
+        and assignment_action.get("action")
+    ):
+        _apply_assignment_action_to_start_payload(payload=payload, assignment_action=assignment_action)
     issue_reference_intent = _issue_reference_intent_payload(
         issue_scope_evidence=planning_safety_gate.get("issue_scope_evidence", {}), cli_invoke=config.cli_invoke
     )
@@ -1672,6 +1710,16 @@ def _start_payload(
         task_text=task_text,
     )
     _apply_session_log_export_intent_route(payload=payload, task_text=task_text, cli_invoke=config.cli_invoke)
+    if (
+        (planning_safety_gate["workflow_sufficient"] or assignment_action_status in {"ready", "reconciliation-required"})
+        and not normalized_paths
+        and not _is_config_posture_task(task_text)
+        and closeout_inspection.get("status") != "required"
+        and intent_discovery.get("status") != "ask-human"
+        and assignment_action_status not in {"", "not-applicable", "direct-current-target"}
+        and assignment_action.get("action")
+    ):
+        _apply_assignment_action_to_start_payload(payload=payload, assignment_action=assignment_action)
     if profile == "tiny":
         payload["routine_work_context"] = _routine_work_context_payload(
             source_payload=payload,

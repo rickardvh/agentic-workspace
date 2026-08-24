@@ -1,54 +1,53 @@
 ---
 name: planning-high-assurance-lifecycle
-description: Preserve intent, decomposition, assurance, delegation, proof, and closeout for broad or high-assurance planning work.
+description: Route broad or high-assurance work across its canonical planning, assignment, proof, intent, and closeout owners.
 ---
 
 # Planning High-Assurance Lifecycle
 
-Use this skill when work is broad, multi-lane, high-assurance, cross-boundary, or likely to grow beyond an initially bounded slice.
-This skill is the mandatory routed path when enabled-AW startup reports broad, milestone-scale, or high-assurance work without active Planning custody; do not treat advisory routing or `implementation_allowed` as permission to skip Planning before implementation.
+Use this umbrella route when work is broad, multi-lane, high-assurance,
+cross-boundary, or likely to grow beyond an initially bounded slice. When
+enabled-AW startup routes here, establish Planning custody before
+implementation.
 
 ## Primary Ownership
 
-This skill is the routing wrapper for broad or high-assurance work. It preserves the sequence across classification, decomposition, assurance, delegation, proof, and closeout, but it does not own the detailed semantics of each phase.
-
-Route intent satisfaction to `planning-intent-verification`, closeout mechanics to `planning-closeout-trust`, decomposition structure to `planning-decompose`, and compact state projection to `planning-reporting`.
+This skill is the routing wrapper and owns lifecycle sequencing only. It does
+not own decomposition semantics, assignment selection, dispatch,
+returned-result admission, integration, proof interpretation, intent
+satisfaction, or closeout mechanics.
 
 ## Route
 
-1. Classify the work shape before editing: direct task, bounded execplan, decomposition lane, epic, review, or recovery.
-2. If the work is broad or cross-boundary, run the planning CLI to create or promote a checked-in planning artifact before implementation.
-3. Tighten intent, non-goals, touched paths, proof, delegation posture, and closeout expectations until a weaker worker could implement a bounded slice mechanically.
-4. Record the assurance and delegation decision before implementation continues.
-5. Execute one bounded slice at a time; update the active execplan or decomposition when scope, proof, or residue changes.
-6. Promote dogfooding findings or review findings to planning records before implementing them.
-7. Close out with proof, intent satisfaction, durable residue routing, and `planning close-item` or `archive-plan` as appropriate.
-
-## Required Surfaces
-
-- `agentic-workspace start --target . --task "<task>" --format json`
-- `agentic-workspace summary --target . --format json`
-- `agentic-workspace planning new-plan|promote-to-plan|delegation-decision|close-item|archive-plan --target . --format json`
-- `agentic-workspace proof --target . --changed <paths> --format json`
+1. Start from the compact current decision and active Planning summary.
+2. Route intent and parent/lane/slice shaping to `planning-decompose`; tighten a
+   newly created bounded execplan through `planning-new-plan-tighten`.
+3. When the canonical assignment owner names unresolved assurance input, route
+   that pre-decision assessment to `planning-assurance-delegation` and return
+   its evidence to the assignment owner.
+4. Follow the resulting structured assignment state:
+   - selected-current-target work continues through the ordinary direct-work
+     owner without loading `planning-orchestrator-workflow`;
+   - a binding non-local assignment for an assigned orchestrator routes to
+     `planning-orchestrator-workflow`;
+   - missing, stale, tied, or unsafe assignment state returns to the exact
+     shaping, probe, repair, override, or human-decision action named by the
+     current decision.
+5. Route manual transport to `planning-manual-delegation` and delegated returns
+   to `planning-returned-result`; do not duplicate their procedures here.
+6. Route validation to AW-owned proof, semantic satisfaction to
+   `planning-intent-verification`, and closeout mechanics and residue
+   distillation to `planning-closeout-trust`.
 
 ## Stop Conditions
 
-Stop and tighten planning instead of coding when:
-
-- intent satisfaction cannot be checked from the current artifact
-- the task spans multiple modules, targets, or issue lanes without decomposition
-- validation proof is unclear or too broad for the claimed slice
-- delegation would be cheap and safe but no handoff packet exists
-- implementation exposes new durable residue without a routed owner
+Stop at the owning phase instead of coding when intent, decomposition,
+assignment identity/revision, work bounds, or proof requirements are missing or
+stale. Never use this umbrella route to bypass a binding assignment or to infer
+completion from a narrower phase result.
 
 ## Output Contract
 
-End with:
-
-- active planning artifact
-- slice completed or blocker
-- intent satisfaction status
-- proof run
-- delegation decision or reason skipped
-- planning mutations performed through CLI
-- follow-up issues or planning items created
+Report the active planning owner, current phase owner, assignment/action
+identity when present, bounded result or blocker, AW proof status, semantic
+intent status, closeout status, and routed continuation residue.

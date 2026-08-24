@@ -31,11 +31,14 @@ forbidden_task_classes = ["boundary-shaping", "reasoning-heavy"]
 escalation_target = "strong_planner"
 
 [delegation_targets.strong_planner]
+target_id = "strong_planner"
+target_revision = "rev-strong"
 strength = "strong"
 location = "local"
 confidence = 0.74
 task_fit = ["workflow design", "planning contract changes", "high-judgment review"]
 capability_classes = ["boundary-shaping", "reasoning-heavy", "mixed"]
 execution_methods = ["manual"]
+forbidden_task_classes = ["mechanical-follow-through"]
 cost_class = "premium"
 human_control_modes = ["manual", "suggest"]

@@ -252,6 +252,7 @@ Cheap implementer context for a bounded changed-path scope.
 | `execution_posture.assignment_gate` | object | no |  | Implementation gate that blocks unresolved or mismatched required-best-fit assignments. |  |  |
 | `execution_posture.delegated_run_lifecycle` | object | no |  | Delegated-run lifecycle projection for assignment handoff, execution, return, and admission. |  |  |
 | `execution_posture.decomposition_delegation` | object | no |  | Delegation candidates discovered from active planning decompositions, when active decomposed work is visible. |  |  |
+| `execution_posture.assignment_action` | object | no |  | Revision-bound typed action or terminal state compiled from the canonical assignment and current run lifecycle. |  |  |
 | `execution_posture.inference_limits` | array of string | yes |  | Limits that prevent the posture recommendation from becoming hidden execution authority. |  |  |
 | `target_evidence` | object | no |  | Provenance-aware target suitability evidence for the current changed-path scope. |  |  |
 | `assignment_policy` | object | no |  | Configured best-fit assignment policy for the current target and task scope. |  |  |
@@ -270,6 +271,7 @@ Cheap implementer context for a bounded changed-path scope.
 | `durable_intent_promotion.acceptance_item_count` | integer | no |  | Number of acceptance items considered for durable promotion. |  |  |
 | `durable_intent_promotion.closeout_question` | string | no |  | Question agents should answer before discarding task intent after closeout. |  |  |
 | `delegation_decision` | object | yes |  | Top-level copy of the compact delegation decision for next-action consumers. |  |  |
+| `assignment_action` | object | no |  | Top-level copy of the revision-bound canonical assignment action for ordinary next-action consumers. |  |  |
 | `workflow_sufficiency` | object | no |  | Small decision record that says whether the current implementer packet is enough for the next implementation step or which exact detail field should be requested. |  |  |
 | `planning_safety_gate` | object | no |  | Planning ownership guard for broad, high-assurance, decomposed, or scope-widened implementation work. |  |  |
 | `continuation_state` | object | no |  | Compact continuation-state contract for preserving only unfinished or handoff-relevant work, not historical residue. |  |  |

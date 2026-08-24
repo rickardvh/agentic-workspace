@@ -1266,6 +1266,7 @@ def _implement_payload(
             "when_uncertain": "Run preflight or summary and promote to checked-in planning before implementation when scope, proof, or continuation is not obvious.",
         },
         "execution_posture": execution_posture,
+        "assignment_action": copy.deepcopy(_as_dict(execution_posture.get("assignment_action"))),
         "planning_safety_gate": planning_safety_gate,
         "planning_revision": planning_safety_gate.get("planning_revision", {}),
         "context_authority_projection": resolve_context_authority_projection(
@@ -2155,10 +2156,17 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
     optimization_posture = _as_dict(payload.get("optimization_posture"))
     delegation_decision = execution_posture.get("delegation_decision", {}) if isinstance(execution_posture, dict) else {}
     assignment_gate = _as_dict(execution_posture.get("assignment_gate")) if isinstance(execution_posture, dict) else {}
+    assignment_action = _as_dict(execution_posture.get("assignment_action")) if isinstance(execution_posture, dict) else {}
+    assignment_action_status = str(assignment_action.get("status") or "")
     startup_route_rebind = _as_dict(payload.get("startup_route_rebind"))
     stale_startup_route = str(startup_route_rebind.get("status") or "") == "stale-projection-rejected"
-    assignment_gate_status = str(assignment_gate.get("status") or "")
-    assignment_blocks_implementation = assignment_gate_status in {"blocked", "blocked-target-mismatch", "handoff-required"}
+    assignment_policy_value = str(assignment_action.get("assignment_policy") or "")
+    assignment_changes_action = assignment_action_status not in {"", "not-applicable", "direct-current-target"} or (
+        assignment_action_status == "not-applicable"
+        and assignment_policy_value == "required-best-fit"
+        and assignment_gate.get("implementation_allowed") is False
+    )
+    assignment_blocks_implementation = assignment_changes_action and assignment_gate.get("implementation_allowed") is False
     planning_implementation_allowed = (
         bool(planning_safety_gate.get("implementation_allowed"))
         if isinstance(planning_safety_gate, dict) and "implementation_allowed" in planning_safety_gate
@@ -2175,7 +2183,8 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
     elif assignment_blocks_implementation:
         effective_implementation_allowed = False
         next_action = str(
-            delegation_decision.get("required_next_action")
+            assignment_action.get("action")
+            or delegation_decision.get("required_next_action")
             or assignment_gate.get("required_next_action")
             or "Resolve assignment or delegation authority before implementation."
         )
@@ -2243,6 +2252,37 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "raw_workspace_files": "not_action_changing",
         },
     )
+    if assignment_action_status not in {"", "not-applicable", "direct-current-target"}:
+        decision_packet["assignment_action"] = copy.deepcopy(assignment_action)
+    if assignment_blocks_implementation:
+        effects = _as_dict(decision_packet.get("effects"))
+        allowed_effects = [
+            item
+            for item in effects.get("allowed", [])
+            if isinstance(item, dict) and str(item.get("effect") or "") != "write-requested-paths"
+        ]
+        restricted_effects = [item for item in effects.get("restricted", []) if isinstance(item, dict)]
+        restricted_effects = [item for item in restricted_effects if str(item.get("effect") or "") != "write-requested-paths"]
+        restricted_effects.append(
+            {
+                "effect": "write-requested-paths",
+                "decision": "deny",
+                "reason": "binding-non-current-assignment",
+            }
+        )
+        effects.update(
+            {
+                "implementation_allowed": False,
+                "allowed": allowed_effects,
+                "restricted": restricted_effects,
+            }
+        )
+        blocked_claims = [str(item) for item in effects.get("blocked_claims", [])]
+        for claim in ("local-implementation", "local-product-mutation", "completion-from-transport"):
+            if claim not in blocked_claims:
+                blocked_claims.append(claim)
+        effects["blocked_claims"] = blocked_claims
+        decision_packet["effects"] = effects
     state_delta_missing_evidence = [str(item) for item in proof_commands if str(item).strip()] or [
         "proof execution evidence before hard completion claim"
     ]
@@ -2302,6 +2342,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "kind": "implementer-context-tiny/v1",
         "target": payload.get("target"),
         "communication_contract": communication_contract,
+        "assignment_action": copy.deepcopy(assignment_action),
         "action_signals": _compact_action_signals_payload(
             surface="implement",
             allowed_next_action=str(next_action),
@@ -2385,8 +2426,11 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "next": {
             "action": next_action,
             "summary": next_action,
-            "command": primary_command,
-            "run": primary_command,
+            "command": str(assignment_action.get("command") or "") if assignment_blocks_implementation else primary_command,
+            "run": str(assignment_action.get("command") or "") if assignment_blocks_implementation else primary_command,
+            "operation_invocation": copy.deepcopy(_as_dict(assignment_action.get("operation_invocation")))
+            if assignment_action_status not in {"", "not-applicable", "direct-current-target"}
+            else {},
             "commands": proof_commands if isinstance(proof_commands, list) else [],
             "status": payload.get("orientation", {}).get("status", "unknown"),
             "ask_human_only_if": "blocked",

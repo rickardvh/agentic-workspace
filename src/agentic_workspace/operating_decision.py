@@ -2108,12 +2108,24 @@ def _projection_surface_posture(payload: dict[str, Any]) -> dict[str, Any]:
     context = _as_dict(payload.get("context"))
     answer = _as_dict(payload.get("answer"))
     action_signals = _as_dict(payload.get("action_signals")) or _as_dict(context.get("action_signals"))
-    candidates = [
+    assignment_action = _as_dict(payload.get("assignment_action")) or _as_dict(context.get("assignment_action"))
+    assignment_action_status = str(assignment_action.get("status") or "")
+    assignment_changes_action = bool(assignment_action.get("action")) and assignment_action_status not in {
+        "",
+        "not-applicable",
+        "direct-current-target",
+    }
+    ordinary_candidates = [
         payload.get("primary_action"),
         payload.get("next_action"),
         payload.get("next"),
         _as_dict(payload.get("decision_packet")).get("next_action"),
         _as_dict(answer.get("decision_packet")).get("next_action"),
+    ]
+    candidates = [
+        *([assignment_action] if assignment_changes_action else []),
+        *ordinary_candidates,
+        *([assignment_action] if assignment_action and not assignment_changes_action else []),
     ]
     primary_action: dict[str, Any] = {}
     for candidate in candidates:

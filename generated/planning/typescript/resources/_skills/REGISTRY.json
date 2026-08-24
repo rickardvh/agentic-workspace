@@ -76,17 +76,23 @@
       "path": "planning-orchestrator-workflow/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
-      "summary": "run planner-to-worker delegated execution from checked-in planning using the local mixed-agent posture and a derived handoff contract",
+      "summary": "execute the sole post-assignment orchestrator procedure from a binding canonical assignment and action gate without reselecting the target",
       "activation_hints": {
-        "verbs": ["delegate", "orchestrate", "handoff", "split", "route"],
-        "nouns": ["worker", "planner", "delegation", "handoff", "orchestrator workflow"],
+        "nouns": ["assigned orchestrator", "binding assignment", "delegated run", "assignment action gate"],
         "phrases": [
-          "delegate this lane",
-          "run planner to worker workflow",
-          "derive worker handoff",
-          "orchestrate delegated execution"
+          "binding non-local assignment",
+          "assigned orchestrator workflow",
+          "reconcile delegated return"
         ],
-        "when": ["strong planner then bounded worker", "external or internal delegation", "delegated handoff reuse"]
+        "when": [
+          "structured current decision names this runtime as assigned orchestrator",
+          "binding assignment selects a non-local target and admits dispatch or return reconciliation"
+        ]
+      },
+      "activation_contract": {
+        "authority": "canonical current decision",
+        "requires": ["assigned-orchestrator role", "binding assignment identity and revision", "non-local selected target", "allowed action identity and revision"],
+        "excludes": ["selected current target", "absent or unresolved assignment"]
       }
     },
     {
@@ -169,18 +175,21 @@
       "path": "planning-assurance-delegation/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
-      "summary": "apply assurance and delegation posture before handing off or implementing planned work",
+      "summary": "supply unresolved assurance and capability evidence before the canonical assignment decision exists",
       "activation_hints": {
-        "verbs": ["assess", "classify", "delegate", "escalate", "handoff"],
-        "nouns": ["assurance", "delegation posture", "risk", "human input", "strong planner", "weak implementer"],
+        "verbs": ["assess", "classify"],
+        "nouns": ["pre-assignment assurance", "unresolved risk", "capability evidence", "proof requirement"],
         "phrases": [
-          "assurance classification",
-          "delegation posture",
-          "escalate to planner",
-          "handoff to weaker implementer",
-          "human input needed"
+          "pre-assignment assurance classification",
+          "unresolved assignment input",
+          "capability evidence before assignment"
         ],
-        "when": ["risk or capability fit is unclear", "delegation may improve quality", "delegation may save tokens safely"]
+        "when": ["canonical assignment is absent and its owner requests unresolved assurance input"]
+      },
+      "activation_contract": {
+        "authority": "canonical assignment owner",
+        "requires": ["assignment absent or unresolved", "named assurance input"],
+        "excludes": ["binding assignment", "dispatch", "returned-result handling"]
       }
     },
     {
@@ -188,10 +197,10 @@
       "path": "planning-high-assurance-lifecycle/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
-      "summary": "route broad or high-assurance planning work across intent, decomposition, assurance, delegation, proof, and closeout owners",
+      "summary": "route broad or high-assurance work across canonical planning, assignment, proof, intent, and closeout owners without duplicating their procedures",
       "activation_hints": {
         "verbs": ["classify", "decompose", "plan", "delegate", "prove", "close"],
-        "nouns": ["high assurance", "lifecycle", "intent satisfaction", "multi-lane work", "epic", "closeout", "delegation packet"],
+        "nouns": ["high assurance", "lifecycle", "intent satisfaction", "multi-lane work", "epic", "closeout"],
         "phrases": [
           "high assurance planning lifecycle",
           "preserve intent satisfaction",
@@ -205,8 +214,13 @@
           "work is broad or cross-boundary",
           "an initially small slice grows into multiple planning lanes",
           "intent preservation matters more than local task completion",
-          "delegation should be possible from structured planning artifacts"
+          "canonical phase owners must remain distinct"
         ]
+      },
+      "activation_contract": {
+        "authority": "enabled-AW startup and Planning custody",
+        "role": "umbrella-router",
+        "excludes": ["dispatch procedure", "returned-result admission procedure", "integration procedure"]
       }
     },
     {

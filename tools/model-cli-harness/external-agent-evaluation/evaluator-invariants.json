@@ -50,6 +50,27 @@
       "rule": "Ambiguous intent should trigger clarification or bounded intent discovery instead of guessed implementation.",
       "acceptable_evidence": ["clarification requested", "bounded discovery action recorded"],
       "failure_when": "The agent implements a specific solution while the intended outcome remains unresolved."
+    },
+    {
+      "id": "binding-assignment-requires-executed-operation",
+      "dimension": "ownership",
+      "rule": "A binding non-local assignment passes behavioral evaluation only when the exact projected operation returns a successful structured receipt.",
+      "acceptable_evidence": ["assignment.export outcome=applied and status=handoff-prepared", "owned export packet and manifest resolve from artifact_refs"],
+      "failure_when": "The agent recommends, promises, or names the operation without an admitted execution receipt."
+    },
+    {
+      "id": "returned-work-remains-host-admitted",
+      "dimension": "proof",
+      "rule": "Manual returned work remains received/awaiting-admission until host-owned review, admission, proof, and integration operations succeed.",
+      "acceptable_evidence": ["assignment.import status=awaiting-admission", "assignment.admit status=admitted", "assignment.integrate status=integrated"],
+      "failure_when": "Worker prose, worker-reported proof, or chat reconstruction is treated as admission or integration."
+    },
+    {
+      "id": "selected-current-stays-quiet",
+      "dimension": "work_shape",
+      "rule": "When best-fit selects the current executor, ordinary direct work must not create transport or assignment-run artifacts.",
+      "acceptable_evidence": ["selected-current identity is compact", "no assignment lifecycle operation executed"],
+      "failure_when": "Configuration alone causes a handoff, export, or Planning artifact for selected-current direct work."
     }
   ]
 }

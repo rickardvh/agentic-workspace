@@ -18,6 +18,7 @@ LANE_DIR = REPO_ROOT / "tools" / "model-cli-harness" / "external-agent-evaluatio
 SCRIPT = REPO_ROOT / "scripts" / "model_cli_harness" / "external_agent_evaluation_lane.py"
 HARNESS_SCRIPT = REPO_ROOT / "scripts" / "model_cli_harness" / "run_model_cli_harness.py"
 SBX_ADAPTER_SCRIPT = REPO_ROOT / "scripts" / "model_cli_harness" / "run_sbx_codex_adapter.py"
+CONFIGURED_FIXTURE_SCRIPT = LANE_DIR / "prepare_configured_orchestration_fixture.py"
 
 
 def _load_module():
@@ -42,6 +43,16 @@ def _load_harness_module():
 
 def _load_sbx_adapter_module():
     spec = importlib.util.spec_from_file_location("run_sbx_codex_adapter", SBX_ADAPTER_SCRIPT)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _load_configured_fixture_module():
+    spec = importlib.util.spec_from_file_location("prepare_configured_orchestration_fixture", CONFIGURED_FIXTURE_SCRIPT)
     assert spec is not None
     assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
@@ -391,7 +402,8 @@ def test_external_agent_lane_closure_report_is_ready_from_fixture_pack() -> None
     assert report["default_external_agent"] == {"adapter": "codex", "model": "gpt-5.3-codex-spark"}
     assert report["live_evaluation_agent"] == {"adapter": "codex", "model": "gpt-5.3-codex-spark"}
     assert report["fixture_closure_state"] == "ready_for_fixture_closure"
-    assert report["closure_state"] == "ready_for_full_closure"
+    assert report["closure_state"] == "partial_closure"
+    assert report["provider_availability"]["configured_orchestration_live_ready"] is False
     assert report["live_evaluation"]["status"] == "clean-with-admitted-weak-cases"
     assert report["live_evaluation"]["clean_run_count"] == 2
     assert report["live_evaluation"]["admitted_weak_run_count"] == 1
@@ -660,6 +672,107 @@ def test_model_cli_harness_rejects_operation_recognition_without_receipt(tmp_pat
     assert any("structured operation receipts" in warning["message"] for warning in warnings)
 
 
+def test_model_cli_harness_scores_assignment_lifecycle_from_operation_receipts_not_prose(tmp_path: Path) -> None:
+    module = _load_harness_module()
+    repo = tmp_path / "repo"
+    artifact = repo / ".agentic-workspace/local/assignment-runs/run-1/export/packet.json"
+    artifact.parent.mkdir(parents=True)
+    artifact.write_text(
+        json.dumps({"kind": "agentic-workspace/assignment-export-packet/v1", "run_id": "run-1"}),
+        encoding="utf-8",
+    )
+    receipt = {
+        "kind": "agentic-workspace/assignment-lifecycle-result/v1",
+        "operation_id": "assignment.export",
+        "transition": "export",
+        "status": "handoff-prepared",
+        "outcome": "applied",
+        "mutation_applied": True,
+        "run_id": "run-1",
+        "artifact_refs": [artifact.relative_to(repo).as_posix()],
+    }
+    stdout = json.dumps(
+        {
+            "type": "item.completed",
+            "item": {
+                "type": "command_execution",
+                "command": "agentic-workspace assignment export --format json",
+                "aggregated_output": json.dumps(receipt),
+                "exit_code": 0,
+            },
+        }
+    )
+    requirement = {
+        "operation_id": "assignment.export",
+        "result_kinds": ["agentic-workspace/assignment-lifecycle-result/v1"],
+        "required_statuses": ["handoff-prepared"],
+        "required_outcomes": ["applied"],
+        "mutation_applied": True,
+        "expected_fields": {"transition": "export"},
+        "required_artifact_kinds": ["agentic-workspace/assignment-export-packet/v1"],
+    }
+
+    warnings = module._metadata_workflow_warnings(
+        scenario={"id": "configured-route", "required_operation_receipts": [requirement]},
+        result={"status": "success", "stdout": stdout, "final_message": "Prepared the projected action."},
+        mutation_summary={"created": [artifact.relative_to(repo).as_posix()], "modified": [], "deleted": []},
+        repo_path=repo,
+    )
+    prose_only = module._metadata_workflow_warnings(
+        scenario={"id": "configured-route", "required_operation_receipts": [requirement]},
+        result={"status": "success", "final_message": "I will run assignment.export."},
+        mutation_summary={"created": [], "modified": [], "deleted": []},
+        repo_path=repo,
+    )
+
+    assert not [warning for warning in warnings if "operation receipt" in warning["message"].lower()]
+    assert any("structured operation receipts" in warning["message"] for warning in prose_only)
+
+
+def test_model_cli_harness_rejects_blocked_or_wrong_transition_assignment_receipt(tmp_path: Path) -> None:
+    module = _load_harness_module()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    receipt = {
+        "kind": "agentic-workspace/assignment-lifecycle-result/v1",
+        "operation_id": "assignment.export",
+        "transition": "import",
+        "status": "blocked",
+        "outcome": "blocked",
+        "mutation_applied": False,
+    }
+    stdout = json.dumps(
+        {
+            "type": "item.completed",
+            "item": {
+                "command": "agentic-workspace assignment export --format json",
+                "aggregated_output": json.dumps(receipt),
+                "exit_code": 0,
+            },
+        }
+    )
+
+    warnings = module._metadata_workflow_warnings(
+        scenario={
+            "id": "configured-route",
+            "required_operation_receipts": [
+                {
+                    "operation_id": "assignment.export",
+                    "required_statuses": ["handoff-prepared"],
+                    "required_outcomes": ["applied"],
+                    "mutation_applied": True,
+                    "expected_fields": {"transition": "export"},
+                }
+            ],
+        },
+        result={"status": "success", "stdout": stdout, "final_message": "Exported."},
+        mutation_summary={"created": [], "modified": [], "deleted": []},
+        repo_path=repo,
+    )
+
+    assert any("structured operation receipts" in warning["message"] for warning in warnings)
+
+
 def test_current_adapter_guidance_live_evidence_is_head_bound_and_honest() -> None:
     evidence_root = REPO_ROOT / "tools" / "model-cli-harness" / "external-agent-evaluation"
     payload = json.loads((evidence_root / "live-results-2026-08-14-adapter-guidance.json").read_text(encoding="utf-8"))
@@ -697,6 +810,142 @@ def test_current_adapter_guidance_live_evidence_is_head_bound_and_honest() -> No
     assert codex["evidence_ref"] == "live-results-2026-08-14-adapter-guidance.json"
     assert codex["evaluated_implementation_head"] == payload["evaluated_implementation_head"]
     assert {route["status"] for route in availability["routes"] if route["family"] != "openai-codex"} == {"unavailable"}
+
+
+def test_configured_orchestration_evaluation_matrix_covers_receipts_failures_cost_and_availability() -> None:
+    module = _load_module()
+    pack = module.load_pack()
+
+    assert module.validate_pack(pack) == []
+    matrix = pack["configured_orchestration"]
+    routes = {item["id"]: item for item in matrix["routes"]}
+    assert routes["ordinary-nonlocal-export"]["prompt_activation_terms"] == []
+    assert routes["ordinary-nonlocal-export"]["expected_operations"] == ["assignment.export"]
+    assert routes["selected-current-direct"]["expected_operations"] == []
+    assert routes["manual-return-lifecycle"]["expected_operations"] == [
+        "assignment.export",
+        "assignment.import",
+        "assignment.admit",
+        "assignment.integrate",
+    ]
+    failure_cases = {item["case"] for item in matrix["failure_matrix"]}
+    assert {"stale-return-revision", "malformed-return", "worker-refused-or-blocked", "tie-or-uncertainty", "no-safe-route"}.issubset(
+        failure_cases
+    )
+    comparisons = {item["id"]: item for item in matrix["total_successful_completion_cost"]["comparisons"]}
+    assert comparisons["bounded-mechanical-docs"]["preferred"] == "delegated"
+    assert comparisons["bounded-mechanical-docs"]["delegated"]["total"] < comparisons["bounded-mechanical-docs"]["stay_local"]["total"]
+    assert comparisons["judgment-heavy-contract-review"]["preferred"] == "stay-local"
+    assert (
+        comparisons["judgment-heavy-contract-review"]["stay_local"]["total"]
+        < comparisons["judgment-heavy-contract-review"]["delegated"]["total"]
+    )
+
+    availability = pack["provider_availability"]
+    assert availability["checked_at"] == "2026-08-24"
+    routes_by_family = {route["family"]: route for route in availability["routes"]}
+    assert routes_by_family["openai-codex"]["status"] == "cli-available-current-head-behavioral-pass"
+    assert routes_by_family["openai-codex"]["proof_class"] == "available-agent-behavioral"
+    assert routes_by_family["openai-codex"]["evidence_ref"] == "configured-orchestration-live-evidence-2026-08-24.json"
+    assert all("pass" not in route["status"] for family, route in routes_by_family.items() if family != "openai-codex")
+    assert any(route["family"] == "manual-general-purpose-agent" for route in availability["routes"])
+    report = module.build_closure_report(pack)
+    assert report["closure_state"] == "partial_closure"
+    assert report["provider_availability"]["configured_orchestration_live_ready"] is False
+    assert report["provider_availability"]["unavailable_or_unobserved"]
+
+
+def test_configured_orchestration_fixture_preparation_is_copy_local(tmp_path: Path) -> None:
+    module = _load_configured_fixture_module()
+    config = tmp_path / ".agentic-workspace" / "config.local.toml"
+    config.parent.mkdir(parents=True)
+    config.write_text('schema_version = 1\n\n[delegation]\nmode = "auto"\n', encoding="utf-8")
+
+    module.configure(tmp_path, task="Make a bounded mechanical documentation edit to add one compact README troubleshooting example.")
+
+    payload = tomllib.loads(config.read_text(encoding="utf-8"))
+    assert payload["delegation"] == {
+        "mode": "auto",
+        "execution_role": "orchestrator",
+        "assignment_policy": "required-best-fit",
+        "current_target": "strong_planner",
+        "manual_transport_policy": "allowed",
+    }
+    assert (tmp_path / ".agentic-workspace/planning/execplans/configured-orchestration-fixture.plan.json").is_file()
+    assert (tmp_path / ".agentic-workspace/planning/assignments/configured-orchestration-assignment.assignment.json").is_file()
+
+
+def test_configured_orchestration_ordinary_start_executes_revision_bound_export(tmp_path: Path) -> None:
+    fixture = REPO_ROOT / "tools/model-cli-harness/fixtures/aw-configured-host-repo"
+    repo = tmp_path / "repo"
+    shutil.copytree(fixture, repo)
+    subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
+    subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo, check=True)
+    subprocess.run(["git", "add", "."], cwd=repo, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "commit", "-m", "fixture baseline"], cwd=repo, check=True, capture_output=True, text=True)
+    task = "Make a bounded mechanical documentation edit that adds one compact troubleshooting example to the setup guide."
+    _load_configured_fixture_module().configure(repo, task=task)
+
+    start = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts/run_agentic_workspace.py"),
+            "start",
+            "--target",
+            str(repo),
+            "--task",
+            task,
+            "--format",
+            "json",
+        ],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    decision = json.loads(start.stdout)["decision_packet"]
+    assert decision["action"]["id"] == "export-assigned-handoff"
+    assert decision["action"]["operation"] == {"operation_id": "assignment.export"}
+    assert decision["action"]["command_effect"] == "mutating"
+    assert decision["effects"]["implementation_allowed"] is False
+    assert "implement the selected worker slice locally" in decision["effects"]["forbidden_actions"]
+
+    assignment = json.loads(
+        (repo / ".agentic-workspace/planning/assignments/configured-orchestration-assignment.assignment.json").read_text(encoding="utf-8")
+    )
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts/run_agentic_workspace.py"),
+            "assignment",
+            "export",
+            "--target",
+            str(repo),
+            "--assignment-id",
+            assignment["assignment_id"],
+            "--assignment-revision",
+            assignment["current_revision"],
+            "--run-id",
+            assignment["current_attempt"]["run_id"],
+            "--target-name",
+            assignment["target_name"],
+            "--transport",
+            "manual",
+            "--format",
+            "json",
+        ],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    receipt = json.loads(result.stdout)
+    assert receipt["operation_id"] == "assignment.export"
+    assert receipt["status"] == "handoff-prepared"
+    assert receipt["outcome"] == "applied"
+    assert (repo / ".agentic-workspace/local/assignment-runs/configured-orchestration-run-1/export/packet.json").is_file()
+    assert (repo / ".agentic-workspace/local/assignment-runs/configured-orchestration-run-1/export/prompt.md").is_file()
 
 
 def test_future_context_live_evaluation_is_head_bound_and_cost_complete() -> None:

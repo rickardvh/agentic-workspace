@@ -20,6 +20,8 @@ PACK_FILES = {
     "live_results": "live-results-2026-08-14-operating-context.json",
     "promotions": "promotion-decisions.sample.json",
     "surfaces": "surface-decisions.sample.json",
+    "configured_orchestration": "configured-orchestration-scenario-matrix.json",
+    "provider_availability": "provider-availability-2026-08-24.json",
 }
 
 OPERATING_LOOP_KIND = "agentic-workspace/operating-loop-decision/v1"
@@ -292,10 +294,79 @@ def validate_pack(pack: dict[str, dict[str, Any]]) -> list[str]:
     owner_surfaces = set(scorecard.get("owner_surfaces", []))
     result_values = set(scorecard.get("result_values", []))
     claim_safety_values = set(scorecard.get("claim_safety_values", []))
+    configured_orchestration = pack["configured_orchestration"]
+    provider_availability = pack["provider_availability"]
 
     _require(scorecard.get("kind") == "agentic-workspace/external-agent-scorecard/v1", "scorecard kind is invalid", errors)
     _require(len(dimensions) >= 8, "scorecard must define the major AW loop dimensions", errors)
     _require(len(failure_ids) >= 10, "scorecard must define stable failure ids", errors)
+    _require(
+        configured_orchestration.get("kind") == "agentic-workspace/configured-orchestration-evaluation-matrix/v1",
+        "configured orchestration matrix kind is invalid",
+        errors,
+    )
+    route_ids = {str(item.get("id")) for item in configured_orchestration.get("routes", [])}
+    _require(
+        {"ordinary-nonlocal-export", "binding-rejects-local-retention", "selected-current-direct", "manual-return-lifecycle"}.issubset(
+            route_ids
+        ),
+        "configured orchestration matrix is missing canonical route classes",
+        errors,
+    )
+    lifecycle = next(
+        (item for item in configured_orchestration.get("routes", []) if item.get("id") == "manual-return-lifecycle"), {}
+    )
+    _require(
+        lifecycle.get("expected_operations") == [
+            "assignment.export",
+            "assignment.import",
+            "assignment.admit",
+            "assignment.integrate",
+        ],
+        "manual return lifecycle must preserve canonical operation order",
+        errors,
+    )
+    failure_cases = {str(item.get("case")) for item in configured_orchestration.get("failure_matrix", [])}
+    _require(
+        {
+            "automatic-transport-unavailable-manual-allowed",
+            "worker-refused-or-blocked",
+            "stale-return-revision",
+            "malformed-return",
+            "return-awaiting-admission",
+            "failed-or-stale-proof",
+            "tie-or-uncertainty",
+            "no-safe-route",
+        }.issubset(failure_cases),
+        "configured orchestration failure matrix is incomplete",
+        errors,
+    )
+    comparisons = configured_orchestration.get("total_successful_completion_cost", {}).get("comparisons", [])
+    preferred_routes = {str(item.get("preferred")) for item in comparisons if isinstance(item, dict)}
+    for comparison in comparisons:
+        if not isinstance(comparison, dict):
+            continue
+        for route in ("delegated", "stay_local"):
+            costs = comparison.get(route, {})
+            if isinstance(costs, dict):
+                expected_total = sum(int(value) for key, value in costs.items() if key != "total")
+                _require(costs.get("total") == expected_total, f"cost comparison {comparison.get('id')} {route} total is invalid", errors)
+    _require(
+        {"delegated", "stay-local"}.issubset(preferred_routes),
+        "cost comparisons must cover beneficial delegation and justified stay-local",
+        errors,
+    )
+    _require(
+        provider_availability.get("kind") == "agentic-workspace/mixed-provider-availability/v1",
+        "current provider availability kind is invalid",
+        errors,
+    )
+    _require(provider_availability.get("checked_at") == "2026-08-24", "current provider availability date is invalid", errors)
+    _require(
+        any("cli-available" in str(route.get("status")) for route in provider_availability.get("routes", [])),
+        "current provider availability must record discovered CLI routes",
+        errors,
+    )
     boundary = scorecard.get("authority_boundary")
     _require(isinstance(boundary, dict), "scorecard must define authority_boundary", errors)
     if isinstance(boundary, dict):
@@ -636,6 +707,8 @@ def build_closure_report(pack: dict[str, dict[str, Any]]) -> dict[str, Any]:
         "operating_loop_observable": operating_loop_observability["record_count"] > 0,
         "completion_cost_observation_contract_exists": isinstance(pack["scenarios"].get("completion_cost_observation_contract"), dict),
         "completion_cost_observations_exist": completion_cost_observability["record_count"] > 0,
+        "configured_orchestration_matrix_exists": bool(pack.get("configured_orchestration", {}).get("routes")),
+        "current_provider_availability_recorded": bool(pack.get("provider_availability", {}).get("routes")),
     }
     fixture_closure_state = "ready_for_fixture_closure" if all(acceptance.values()) else "continued_work"
     live_status = "not-run"
@@ -646,9 +719,14 @@ def build_closure_report(pack: dict[str, dict[str, Any]]) -> dict[str, Any]:
             live_status = "clean-with-admitted-weak-cases"
         else:
             live_status = "unresolved-failures"
+    configured_orchestration_live_ready = not bool(
+        pack.get("provider_availability", {}).get("unavailable_or_unobserved", [])
+    )
     closure_state = (
         "ready_for_full_closure"
-        if fixture_closure_state == "ready_for_fixture_closure" and live_status in {"clean", "clean-with-admitted-weak-cases"}
+        if fixture_closure_state == "ready_for_fixture_closure"
+        and live_status in {"clean", "clean-with-admitted-weak-cases"}
+        and configured_orchestration_live_ready
         else "continued_work"
     )
     if closure_state == "continued_work" and any(acceptance.values()):
@@ -681,13 +759,31 @@ def build_closure_report(pack: dict[str, dict[str, Any]]) -> dict[str, Any]:
         "surface_decision_counts": dict(sorted(surface_decisions.items())),
         "operating_loop_observability": operating_loop_observability,
         "completion_cost_observability": completion_cost_observability,
+        "configured_orchestration": {
+            "route_count": len(pack.get("configured_orchestration", {}).get("routes", [])),
+            "failure_case_count": len(pack.get("configured_orchestration", {}).get("failure_matrix", [])),
+            "cost_comparison_count": len(
+                pack.get("configured_orchestration", {}).get("total_successful_completion_cost", {}).get("comparisons", [])
+            ),
+        },
+        "provider_availability": {
+            "checked_at": pack.get("provider_availability", {}).get("checked_at"),
+            "routes": pack.get("provider_availability", {}).get("routes", []),
+            "configured_orchestration_live_ready": configured_orchestration_live_ready,
+            "unavailable_or_unobserved": pack.get("provider_availability", {}).get("unavailable_or_unobserved", []),
+        },
         "acceptance": acceptance,
         "fixture_closure_state": fixture_closure_state,
         "closure_state": closure_state,
         "residue": [
             {
                 "owner": "maintainer",
-                "summary": "Live Codex Spark runs are recorded. Remaining failures must be promoted or fixed before closing the parent lane as fully complete.",
+                "summary": (
+                    "Current-head configured-orchestration behavioral receipts remain unobserved; run the maintained no-keyword, "
+                    "local-retention, selected-current, and manual-return scenarios before parent closure."
+                    if not configured_orchestration_live_ready
+                    else "Live runs are recorded. Remaining failures must be promoted or fixed before full parent closure."
+                ),
             }
         ],
     }

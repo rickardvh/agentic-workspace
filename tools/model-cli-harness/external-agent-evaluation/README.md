@@ -11,8 +11,9 @@ Use it to evaluate whether generic external agents follow the AW operating loop 
 - Verification/proof;
 - closeout and residue ownership;
 - package/host/generated/local boundary hygiene;
-- recovery.
+- recovery;
 - parent-intent satisfaction vs slice-local progress.
+- configured orchestration action and returned-result lifecycle evidence.
 
 The pack is intentionally compact. It provides machine-readable scorecard/taxonomy data, scenario probes, historical regression fixtures, sample result records, promotion decisions, surface-simplification decisions, evaluator invariants, and a lane-level closure report.
 
@@ -40,6 +41,8 @@ Trace-required result records must also include the normalized `agentic-workspac
 
 For #1680 completion-cost work, each probe can also emit `agentic-workspace/external-agent-completion-cost-observations/v1`. The observation packet is maintainer-evaluation evidence only, and records compact behavior-cost signals such as AW command count, proof command count, reread events, proof churn, over-planning, review/repair loops, handoff recovery status, unsafe closure claims, used AW output sections, and classified cost drivers.
 
+Configured-orchestration behavioral scenarios require command-output operation receipts. A final response that names `assignment.export`, promises to use it, or recommends a route does not pass. Receipt requirements may constrain canonical result kind, operation id, transition, status, outcome, mutation effect, nested fields, and owned artifact kinds while leaving runtime semantics with the assignment operation owner.
+
 Surface simplification decisions should be recorded in `surface-decisions.sample.json` before or alongside a default-output change. Each decision names the surface, owner, evidence records or scenarios, observed confusion or bypass evidence, current role, posture decision, before/after cost signal, expected cost change, authority-boundary guardrail, and rollback condition. Selector-routed detail must remain recoverable by explicit `--select` or report-section drill-down, and the compact default must still expose hard blockers, proof obligations, closure/residue blockers, and action signals.
 
 Run a real external-agent scenario only when maintainer evidence is needed. The Codex adapter defaults to GPT-5.3 Codex Spark:
@@ -65,6 +68,9 @@ Dry-run remains the default for harness invocations. Checked-in tests use fixtur
 - `promotion-decisions.sample.json`: repeated-failure promotion and dismissal examples.
 - `surface-decisions.sample.json`: keep/route/merge/generate/remove surface simplification decisions.
 - `operational-decision-trace.md`: shareable protocol for observable operational decisions without chain-of-thought disclosure.
+- `configured-orchestration-scenario-matrix.json`: no-keyword route, manual return lifecycle, recovery/failure, and total successful-completion cost matrix for #2696/#2700.
+- `provider-availability-2026-08-24.json`: current CLI discovery and explicit live-proof gaps; availability alone is not a behavioral pass.
+- `prepare_configured_orchestration_fixture.py`: copied-fixture-only local posture preparation for maintained orchestration scenarios.
 
 ## Closure Rule
 

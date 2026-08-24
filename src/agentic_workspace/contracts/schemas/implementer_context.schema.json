@@ -1517,6 +1517,11 @@
       "description": "Top-level copy of the compact delegation decision for next-action consumers.",
       "type": "object"
     },
+    "assignment_action": {
+      "additionalProperties": true,
+      "description": "Top-level copy of the revision-bound canonical assignment action for ordinary next-action consumers.",
+      "type": "object"
+    },
     "durable_intent": {
       "additionalProperties": true,
       "description": "Compact durable system or subsystem intent pressure that may affect scope, proof, delegation, or closeout.",
@@ -2570,6 +2575,11 @@
           "description": "Implementation gate that blocks unresolved or mismatched required-best-fit assignments.",
           "additionalProperties": true
         },
+        "assignment_action": {
+          "type": "object",
+          "description": "Revision-bound typed action or terminal state compiled from the canonical assignment and current run lifecycle.",
+          "additionalProperties": true
+        },
         "delegated_run_lifecycle": {
           "type": "object",
           "description": "Delegated-run lifecycle projection for assignment handoff, execution, return, and admission.",
@@ -2671,6 +2681,11 @@
     "delegation_decision": {
       "type": "object",
       "description": "Top-level copy of the compact delegation decision for next-action consumers.",
+      "additionalProperties": true
+    },
+    "assignment_action": {
+      "type": "object",
+      "description": "Top-level copy of the revision-bound canonical assignment action for ordinary next-action consumers.",
       "additionalProperties": true
     },
     "workflow_sufficiency": {
