@@ -1,6 +1,6 @@
 # Configured orchestration ordinary-action review — 2026-08-24
 
-Status: implementation evidence in progress. This review does not close #2696 or #2700.
+Status: complete for #2696 through #2700 at implementation head `3c5095c42`.
 
 ## Present evidence
 
@@ -14,25 +14,23 @@ Status: implementation evidence in progress. This review does not close #2696 or
 
 | Acceptance concern | Maintained evidence | Current claim |
 | --- | --- | --- |
-| Ordinary no-keyword non-local route | `configured-orchestrator-ordinary-nonlocal` | Scenario and receipt gate present; current-head live run pending |
-| Rejected local retention | `configured-orchestrator-reject-local-retention` | Scenario and mutation/receipt gate present; current-head live run pending |
-| Selected-current quietness | `configured-orchestrator-selected-current-quiet` | Scenario and no-transport control present; current-head live run pending |
-| Executed action, not prose | `required_operation_receipts` with assignment lifecycle result and artifact requirements | Deterministic scorer proof present |
-| Manual external lifecycle | `configured-orchestration-scenario-matrix.json#manual-return-lifecycle` | Deterministic operation-contract coverage present; distinct-provider return pending |
+| Ordinary no-keyword non-local route | `configured-orchestrator-ordinary-nonlocal` | Current-head Codex run executed `assignment.export`, produced an applied `handoff-prepared` receipt and canonical packet/prompt/manifest, and made no product edit |
+| Rejected local retention | `configured-orchestrator-reject-local-retention` | Current-head Codex run preserved the binding non-local gate, executed the exact export action, and left `README.md` unchanged |
+| Selected-current quietness | `configured-orchestrator-selected-current-quiet` | Current-head Codex run made one startup call; AW resolved `direct-current-target` for `strong_planner`, emitted no transport action, and created no assignment-run artifacts |
+| Executed action, not prose | `required_operation_receipts` with assignment lifecycle result and artifact requirements | Both non-local live controls passed receipt and artifact scoring; recommendation-only output cannot pass |
+| Manual external lifecycle | `configured-orchestration-scenario-matrix.json#manual-return-lifecycle` and `test_assignment_lifecycle_generated_wrappers_persist_local_artifacts` | Vendor-neutral export -> import/awaiting-admission -> blocked premature integration -> admit -> integrate proof is present; a distinct-provider adapter run remains optional residue |
 | Failure and recovery classes | `configured-orchestration-scenario-matrix.json#failure_matrix` | Deterministic matrix present; focused runtime tests remain the behavior owner |
-| Provider availability | `provider-availability-2026-08-24.json` | Codex, Copilot, and Gemini CLIs discovered; discovery is not a behavioral pass |
-| Total completion cost | `configured-orchestration-scenario-matrix.json#total_successful_completion_cost` | Deterministic normalized comparison present; observed current-head measurements pending |
+| Provider availability | `provider-availability-2026-08-24.json` | Codex 0.149.1 is an observed current-head behavioral pass; Copilot and Gemini remain availability-only |
+| Total completion cost | `configured-orchestration-scenario-matrix.json#total_successful_completion_cost` | Deterministic normalized comparison is supplemented by observed command/output/token proxies for all three current-head controls |
 
 ## Provider boundary
 
-On 2026-08-24 the maintainer environment exposed Codex CLI 0.149.1, GitHub Copilot CLI 1.0.80, and Gemini CLI 0.38.2. Those facts establish current command availability only. They do not establish authenticated execution, a distinct provider route, or current-head behavioral acceptance. Any live run must record the evaluated implementation head, adapter/model identity, executed assignment operation receipts, owned artifact references, warnings, retries/repairs, and completion-cost observations.
+On 2026-08-24 the maintainer environment exposed Codex CLI 0.149.1, GitHub Copilot CLI 1.0.80, and Gemini CLI 0.38.2. Codex `gpt-5.3-codex-spark` executed all three maintained controls against head `3c5095c42`; Copilot and Gemini discovery remains availability-only. The compact live record captures head, adapter/model identity, executed operation receipts, artifacts, warnings, command/output proxies, and billable-token proxies without checking in transcripts or chain-of-thought.
 
-## Remaining before closure
+## Closure boundary
 
-1. Stabilize the #2697–#2699 implementation head and run the maintained no-keyword scenarios against at least one available agent.
-2. Record an applied non-local `assignment.export` receipt without human correction and a separate rejected-local-retention run.
-3. Record selected-current direct quietness against the same implementation identity.
-4. Execute or explicitly retain as unavailable a general-purpose external return through export, import, awaiting-admission, admission/proof, and integration.
-5. Append observed total successful-completion cost and reconcile it with the deterministic comparison.
+The current-head non-local run had one harness-owned final-message path-hygiene warning; the harness repaired the exported message, while operation-receipt, artifact, command, and mutation scoring passed. This warning does not weaken the assignment result and is not relabeled as a clean provider-output result.
 
-Vendor-specific adapters remain outside this slice. Provider absence must stay explicit and cannot be converted into simulated live proof or permission for local execution.
+AW's routed proof also names `tests/test_model_cli_harness.py`, which does not exist in this repository. Manual verification inspected the changed schema, generated reference, scenario metadata, provider record, and closure evidence against their owning contracts. The maintained replacement `tests/test_external_agent_evaluation_lane.py` passed together with contract tooling, structured inventory, generated schema references, 211 focused runtime/Planning tests, and the three current-head live controls. No unchecked consumer risk was found beyond the explicitly retained path-hygiene warning and distinct-provider residue. Fifteen executable routed commands have accepted proof receipts; the missing legacy filename remains recorded as unavailable rather than falsely passed.
+
+Vendor-specific adapters and a distinct-provider full return remain outside this slice. The existing vendor-neutral lifecycle proof covers manual export/import/admission/integration semantics, and provider absence remains explicit rather than simulated. No known ordinary activation, action-construction, local-retention, selected-current, or returned-state ownership defect remains in the implemented claim boundary.

@@ -137,7 +137,8 @@ def test_delegation_skills_have_one_post_assignment_owner_and_current_target_exc
     )
     for text in (orchestrator, assurance, lifecycle, contract):
         lowered = text.lower()
-        assert all(branch not in lowered for branch in obsolete_branches)
+        for branch in obsolete_branches:
+            assert branch not in lowered
 
     orchestrator_activation = entries["planning-orchestrator-workflow"]["activation_contract"]
     assert orchestrator_activation["authority"] == "canonical current decision"

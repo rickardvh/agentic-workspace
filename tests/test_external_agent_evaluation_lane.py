@@ -843,7 +843,11 @@ def test_configured_orchestration_evaluation_matrix_covers_receipts_failures_cos
 
     availability = pack["provider_availability"]
     assert availability["checked_at"] == "2026-08-24"
-    assert all("pass" not in route["status"] for route in availability["routes"])
+    routes_by_family = {route["family"]: route for route in availability["routes"]}
+    assert routes_by_family["openai-codex"]["status"] == "cli-available-current-head-behavioral-pass"
+    assert routes_by_family["openai-codex"]["proof_class"] == "available-agent-behavioral"
+    assert routes_by_family["openai-codex"]["evidence_ref"] == "configured-orchestration-live-evidence-2026-08-24.json"
+    assert all("pass" not in route["status"] for family, route in routes_by_family.items() if family != "openai-codex")
     assert any(route["family"] == "manual-general-purpose-agent" for route in availability["routes"])
     report = module.build_closure_report(pack)
     assert report["closure_state"] == "partial_closure"

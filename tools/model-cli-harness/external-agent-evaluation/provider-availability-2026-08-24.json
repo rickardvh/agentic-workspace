@@ -6,10 +6,11 @@
   "routes": [
     {
       "family": "openai-codex",
-      "status": "cli-available-live-run-pending-current-implementation",
+      "status": "cli-available-current-head-behavioral-pass",
       "cli_version": "codex-cli 0.149.1",
-      "proof_class": "availability-only",
-      "fallback": "Run the maintained no-keyword scenarios after the implementation head is stable; do not reuse older head-bound behavior as current proof."
+      "proof_class": "available-agent-behavioral",
+      "evidence_ref": "configured-orchestration-live-evidence-2026-08-24.json",
+      "fallback": "Retain the deterministic lifecycle matrix and do not generalize one available model run into target policy."
     },
     {
       "family": "github-copilot",
@@ -34,9 +35,7 @@
     }
   ],
   "unavailable_or_unobserved": [
-    "current-head no-keyword non-local behavioral receipt",
-    "current-head rejected-local-retention behavioral receipt",
-    "current-head full manual external returned-result lifecycle run"
+    "distinct-provider full manual external returned-result lifecycle run"
   ],
   "rule": "CLI discovery is availability evidence only. A provider becomes behavioral proof only after a head-bound run records executed operation receipts and owned artifacts."
 }

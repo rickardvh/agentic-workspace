@@ -4,8 +4,8 @@
   "title": "Implement configured orchestration ordinary action path",
   "owner_level": "epic",
   "lifecycle": "live",
-  "phase": "implementation",
-  "revision": 2,
+  "phase": "closeout",
+  "revision": 3,
   "intent": {
     "outcome": "Close parent #2696 and children #2697-#2700 in one PR by making configured best-fit orchestration enter the ordinary startup path, compile canonical assignments into typed actions, reconcile returns through existing operations, and prove no-keyword autonomous delegation plus direct-work quietness.",
     "non_goals": [
@@ -45,12 +45,17 @@
       "owner": "current-work context configured-orchestration-ordinary-action"
     },
     "proof_posture": {
-      "state": "pending",
-      "refs": []
+      "state": "accepted",
+      "refs": [
+        "tools/model-cli-harness/external-agent-evaluation/configured-orchestration-live-evidence-2026-08-24.json",
+        "docs/reviews/configured-orchestration-ordinary-action-closure-2026-08-24.md"
+      ]
     },
     "external_posture": {
-      "state": "unobserved",
-      "refs": []
+      "state": "observed-current-head",
+      "refs": [
+        "tools/model-cli-harness/external-agent-evaluation/provider-availability-2026-08-24.json"
+      ]
     },
     "delegation": {
       "state": "recorded",
@@ -67,7 +72,7 @@
       "locator": ""
     }
   ],
-  "next_action": "Implement the canonical startup/action compiler locally while delegated workers update the post-assignment procedure topology and behavioral harness; then integrate and run focused plus routed proof.",
+  "next_action": "Publish the one-PR closure for #2696 through #2700 and preserve distinct-provider adapter work as explicit optional residue.",
   "blockers": [
     "None."
   ],
@@ -82,7 +87,11 @@
       "Manual export/import/admission and return failure matrix remain revision-bound and preserve AW-owned proof.",
       "AW implement/proof routing passes for all changed paths, followed by repository-required checks and human-verification boundary."
     ],
-    "refs": []
+    "refs": [
+      "tools/model-cli-harness/external-agent-evaluation/configured-orchestration-live-evidence-2026-08-24.json",
+      "tools/model-cli-harness/external-agent-evaluation/configured-orchestration-scenario-matrix.json",
+      "docs/reviews/configured-orchestration-ordinary-action-closure-2026-08-24.md"
+    ]
   },
   "continuation": {
     "owner": "repository maintainers",
