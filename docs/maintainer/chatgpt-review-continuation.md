@@ -54,16 +54,6 @@ The command resolves the branch only from that open PR and still requires the de
 
 ## Poll or watch
 
-## One-shot exact-head review
-
-When the persistent watcher is stopped, request one independent review by naming both the PR and its current full head SHA:
-
-```powershell
-uv run python tools/chatgpt_review_loop.py recheck --pr <number> --head <40-character-sha>
-```
-
-The request has its own durable receipt under `.agentic-workspace/local/chatgpt-review-loop/rechecks/`; it neither reads nor changes watcher lifecycle state. A duplicate PR/SHA request returns the existing running, awaiting, failed, or completed request instead of launching another reviewer. An already-posted exact-head verdict is returned directly. If the PR moves before or during review, the result is classified as stale and reports the exact command for the newly observed head. Review remains separate from addressing feedback, publishing, and merging.
-
 ## Declared stack restacking
 
 Use `tools/review_stack_ops.py` for descendants that must move after a reviewed base changes. It requires a JSON declaration with every PR, branch, old base, new base, and expected remote head written as a full SHA; it never discovers a rewrite target from branch ordering or abbreviated IDs:

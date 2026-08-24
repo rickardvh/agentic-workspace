@@ -214,7 +214,7 @@
         "tests/test_workspace_proof_cli.py"
       ],
       "recorded_by": "agent",
-      "notes": "Issue #2557 adds permanent regression evidence for stopped-watcher exact-head requests, duplicate reuse, stale review races, explicit full-SHA stack declarations, patch and ancestry preservation, exact force-with-lease publication, and bounded partial-write receipts."
+      "notes": "Historical #2557 evidence covered a local exact-head reviewer launcher that has since been removed; current regression authority covers externally supplied marker consumption plus explicit full-SHA stack declarations, patch and ancestry preservation, exact force-with-lease publication, and bounded partial-write receipts."
     },
     {
       "requirement_id": "test_evidence_change_decision",
@@ -228,7 +228,7 @@
         "tests/test_workspace_proof_cli.py"
       ],
       "recorded_by": "agent",
-      "notes": "The review-loop suite owns exact-head reviewer request lifecycle; the stack-operations suite owns declaration validation, real Git rewrite equivalence, CAS remote mutation, and PR metadata sequencing. No existing evidence was pruned."
+      "notes": "The review-loop suite owns externally supplied exact-head marker polling and continuation; it no longer owns or launches reviewer requests. The stack-operations suite owns declaration validation, real Git rewrite equivalence, CAS remote mutation, and PR metadata sequencing."
     },
     {
       "requirement_id": "domain:proof_route_authority",
