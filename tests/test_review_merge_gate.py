@@ -33,10 +33,12 @@ def _comment(
     association: str = "OWNER",
     identifier: int = 1,
     pr_number: int = 2501,
+    login: str = "independent-reviewer",
 ) -> dict[str, object]:
     return {
         "id": identifier,
         "author_association": association,
+        "user": {"login": login},
         "body": (
             f"decision: {decision}\n<!-- aw-chatgpt-review pr={pr_number} head={head} policy=pr-review-recheck-v1 decision={decision} -->"
         ),
@@ -129,6 +131,35 @@ def test_latest_current_head_merge_ready_decision_admits_merge() -> None:
 
     assert decision.status == "merge-ready"
     assert decision.conclusion == "success"
+    assert decision.review_url == "https://example.test/review/2"
+
+
+@pytest.mark.parametrize("association", ["OWNER", "MEMBER", "COLLABORATOR"])
+def test_self_authored_marker_cannot_satisfy_independent_gate(association: str) -> None:
+    decision = _module().review_gate_decision(
+        pr_number=2501,
+        head_sha=HEAD_A,
+        comments=[_comment(decision="merge-ready", association=association, login="implementation-owner")],
+        implementation_principals=["implementation-owner"],
+    )
+
+    assert decision.status == "review-self-authored"
+    assert decision.conclusion == "failure"
+    assert "ready-for-re-review" in decision.summary
+
+
+def test_independent_current_head_marker_remains_authoritative_after_self_authored_marker() -> None:
+    decision = _module().review_gate_decision(
+        pr_number=2501,
+        head_sha=HEAD_A,
+        comments=[
+            _comment(decision="merge-ready", identifier=1, login="implementation-owner"),
+            _comment(decision="merge-ready", identifier=2, login="independent-reviewer"),
+        ],
+        implementation_principals=["implementation-owner"],
+    )
+
+    assert decision.status == "merge-ready"
     assert decision.review_url == "https://example.test/review/2"
 
 

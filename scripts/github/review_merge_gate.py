@@ -42,20 +42,44 @@ def _comment_order(comment: dict[str, Any]) -> tuple[str, int]:
     return timestamp, identifier
 
 
+def _actor_login(payload: dict[str, Any]) -> str:
+    user = payload.get("user")
+    if not isinstance(user, dict):
+        return ""
+    return str(user.get("login") or "").strip().lower()
+
+
 def review_gate_decision(
     *,
     pr_number: int,
     head_sha: str,
     comments: Sequence[dict[str, Any]],
     carry_forward: Callable[[str, str], CarryForwardVerdict] | None = None,
+    implementation_principals: Sequence[str] = (),
 ) -> GateDecision:
-    candidates = [
+    associated = [
         comment
         for comment in comments
         if "aw-chatgpt-review" in str(comment.get("body", ""))
         and str(comment.get("author_association", "")).upper() in TRUSTED_ASSOCIATIONS
     ]
+    implementers = {str(principal).strip().lower() for principal in implementation_principals if str(principal).strip()}
+    self_authored = [comment for comment in associated if _actor_login(comment) in implementers]
+    candidates = [comment for comment in associated if _actor_login(comment) not in implementers]
     if not candidates:
+        if self_authored:
+            latest = max(self_authored, key=_comment_order)
+            return GateDecision(
+                status="review-self-authored",
+                conclusion="failure",
+                title="Implementer review is non-authoritative",
+                summary=(
+                    "The latest structured review was authored by an implementation principal; "
+                    "post fixes-applied/ready-for-re-review status and obtain a current-head review "
+                    "from a distinct configured authority."
+                ),
+                review_url=str(latest.get("html_url") or latest.get("url") or ""),
+            )
         return GateDecision(
             status="review-missing",
             conclusion="failure",
@@ -248,6 +272,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         pr_number=pr_number,
         head_sha=head_sha,
         comments=comments,
+        implementation_principals=[
+            str(pull_request.get("user", {}).get("login") or ""),
+            str(pull_request.get("head", {}).get("repo", {}).get("owner", {}).get("login") or ""),
+        ],
         carry_forward=lambda reviewed, current: _trusted_base_carry_forward(
             pr_number=pr_number,
             reviewed_head=reviewed,

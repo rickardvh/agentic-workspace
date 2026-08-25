@@ -1,0 +1,109 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2721-trust",
+  "title": "Enforce review authority and preserve explicit corrections",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "validation",
+  "revision": 2,
+  "intent": {
+    "outcome": "Make the implementing route non-authoritative under human/independent review policy and preserve explicit human corrections through trusted host custody to an owner-appropriate disposition even when the corrected agent takes no correction action.",
+    "non_goals": [
+      "Do not intercept arbitrary out-of-band GitHub operations.",
+      "Do not hard-code human review for policies that explicitly permit another verifier class.",
+      "Do not create a parallel review framework, correction ledger, or unconditional Memory policy store.",
+      "Leave decision-packet budgets, proof execution, external continuity, and dogfooding-signal changes to later lane slices."
+    ]
+  },
+  "parent": {
+    "owner_id": "issue-2721",
+    "contribution": "Establish the authority and correction-custody invariants on which every later lane slice and final supported-host replay depends.",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "AW role/effect routing and maintainer skill eligibility for protected review actions",
+      "repo-owned review-marker and merge-gate provenance admission",
+      "trusted correction observation, normalization, deduplication, disposition routing, and closeout projection",
+      "focused runtime, contract, fixture, documentation, and release-note surfaces required by #2725 and #2726"
+    ],
+    "effects": [
+      "Implementation-side status remains non-authoritative and routes to ready-for-re-review wording.",
+      "Self-authored approval evidence cannot satisfy human/independent review even through owner credentials.",
+      "An unresolved trusted correction blocks silent clean closeout until normalized, routed, or explicitly dismissed.",
+      "No-correction and policies allowing same-agent/automated review remain quiet and preserve configured semantics."
+    ]
+  },
+  "relationships": {
+    "selection": {
+        "state": "selected",
+        "owner": "issue-2721 lane current slice"
+    },
+    "proof_posture": {
+      "state": "focused-proof-passed",
+      "refs": [
+        "14 correction-route tests passed",
+        "110 review-stack and merge-gate tests passed",
+        "generated command-package static and conformance proof passed",
+        "contract tooling, schema references, structured inventory, Memory freshness, and routed proof checks passed"
+      ]
+    },
+    "external_posture": {
+        "state": "observed",
+        "refs": [
+          "#2725",
+          "#2726"
+        ]
+    }
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#2725",
+      "label": "Keep implementing agents non-authoritative under human-review policy",
+      "role": "child",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/2725"
+    },
+    {
+      "kind": "issue",
+      "target": "#2726",
+      "label": "Admit explicit human corrections before the affected session can close cleanly",
+      "role": "child",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/2726"
+    },
+    {
+      "kind": "lane",
+      "target": ".agentic-workspace/planning/lanes/issue-2721.lane.json",
+      "label": "Post-ship ordinary-path dogfooding lane",
+      "role": "parent"
+    }
+  ],
+  "next_action": "Open the first stacked PR against master, obtain independent review, and continue implementation on issue-2721-decision from this branch.",
+  "blockers": [],
+  "proof": {
+    "claims": [
+      "The implementation route cannot satisfy a configured human/independent review gate with its own evidence, including through owner credentials.",
+      "Valid current-head configured review still satisfies the gate and explicitly allowed same-agent/automated policies retain their semantics.",
+      "A trusted host can preserve and deduplicate an explicit human correction without corrected-agent cooperation.",
+      "Unresolved correction custody produces one exact disposition action and blocks silent clean closeout, while no-correction work stays quiet.",
+      "Owner-appropriate disposition reuses existing review/guidance/Memory/improvement owners and makes no duplicate policy record."
+    ],
+    "requirements": [
+      "Run focused runtime tests for review authority, marker admission, correction-event ingress, normalization/disposition, startup, and closeout.",
+      "Run the repo review-gate fixture with implementing and independent actors sharing and not sharing GitHub association classes.",
+      "Run routed Agentic Workspace proof for every changed path and the relevant workspace CLI invariant subset.",
+      "Record a maintained host replay covering zero correction-specific agent actions and a no-signal quiet counterexample."
+    ],
+    "refs": [
+      "uv run --active pytest tests/test_external_operation_clients.py tests/test_workspace_config_cli.py -k correction -q",
+      "uv run --active pytest tests/test_chatgpt_review_loop.py tests/test_review_stack_ops.py tests/test_review_merge_gate.py -q",
+      "uv run --active python scripts/check/check_generated_command_packages.py --require-node",
+      "uv run --active python scripts/check/check_generated_command_packages.py --conformance --require-node"
+    ]
+  },
+  "continuation": {
+    "owner": "issue-2721-decision",
+    "residual_intent": "Continue the lane with bounded selector-safe decision routes and task-level orchestration disposition after this trust slice is merged."
+  },
+  "specialist_contracts": []
+}

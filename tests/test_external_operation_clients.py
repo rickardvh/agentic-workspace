@@ -1454,6 +1454,111 @@ def test_signed_host_observation_survives_without_agent_normalization_and_routes
     assert unresolved_correction_signals(target_root=tmp_path, task="implement code change") == []
 
 
+def test_explicit_correction_can_resolve_to_existing_canonical_owner_without_duplicate_memory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / ".agentic-workspace").mkdir()
+    (tmp_path / ".agentic-workspace/config.toml").write_text("schema_version = 1\n", encoding="utf-8")
+    (tmp_path / ".agentic-workspace/config.local.toml").write_text(
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[delegation_targets.implementer]",
+                'target_id = "user-local:implementer"',
+                'target_revision = "rev-1"',
+                'aliases = ["implementer"]',
+                'strength = "strong"',
+                'execution_methods = ["internal"]',
+            ]
+        ),
+        encoding="utf-8",
+    )
+    from agentic_workspace.agent_guidance import (
+        apply_correction_event_operation,
+        guidance_promotion_from_store,
+        record_guidance_remember_receipt,
+        unresolved_correction_signals,
+    )
+
+    host = _trusted_guidance_host_event(
+        tmp_path,
+        authority="explicit-user-correction",
+        producer_class="human",
+        producer_id="user-1",
+        source_ref="host-conversation:self-review-correction",
+        source="explicit-user-correction",
+        host_admission_monkeypatch=monkeypatch,
+        import_event=False,
+        event_fields={"evidence_ref": "host-conversation:self-review-correction#correction", "task_class": "code-change"},
+    )
+    observed = apply_correction_event_operation(
+        target_root=tmp_path,
+        operation_id="correction-event.submit",
+        values={"trusted_host_event_json": json.dumps(host["event"])},
+    )
+    remember = record_guidance_remember_receipt(
+        target_root=tmp_path,
+        producer_class="human",
+        producer_id="user-1",
+        source_ref="host-conversation:self-review-correction",
+        instruction="Make this correction affect future review decisions.",
+        host_event_ref=host["event_ref"],
+    )
+    incomplete_disposition = apply_correction_event_operation(
+        target_root=tmp_path,
+        operation_id="correction-event.submit",
+        values={
+            "host_event_ref": host["event_ref"],
+            "target_identity_ref": "implementer",
+            "desired_behavior": "Report fixes applied and request independent re-review.",
+            "replaced_behavior": "Approve the implementation agent's own PR and claim merge-ready authority.",
+            "invariant_id": "implementation-review-separation",
+            "behavior_class": "review-authority",
+            "task_class": "code-change",
+            "scope_class": "code-change",
+            "route_decisions": ["canonical-owner"],
+            "canonical_owner_ref": "policy:#2264",
+        },
+    )
+
+    normalized = apply_correction_event_operation(
+        target_root=tmp_path,
+        operation_id="correction-event.submit",
+        values={
+            "host_event_ref": host["event_ref"],
+            "target_identity_ref": "implementer",
+            "desired_behavior": "Report fixes applied and request independent re-review.",
+            "replaced_behavior": "Approve the implementation agent's own PR and claim merge-ready authority.",
+            "invariant_id": "implementation-review-separation",
+            "behavior_class": "review-authority",
+            "task_class": "code-change",
+            "scope_class": "code-change",
+            "route_decisions": ["canonical-owner"],
+            "canonical_owner_ref": "policy:#2264",
+            "canonical_owner_evidence_ref": "issue:#2725",
+            "remember_receipt_ref": remember["receipt_ref"],
+        },
+    )
+
+    assert observed["status"] == "pending-normalization"
+    assert incomplete_disposition["status"] == "blocked"
+    assert incomplete_disposition["admission"]["rejected_events"][0]["reason"] == "rejected-missing-canonical-owner-evidence"
+    admitted = normalized["admission"]["admitted_events"][0]
+    assert admitted["routing_state"] == "routed"
+    assert normalized["admission"]["derived_routes"]["canonical_owner"] == [admitted["event_id"]]
+    assert unresolved_correction_signals(target_root=tmp_path, task="implement code change") == []
+
+    disposition = guidance_promotion_from_store(target_root=tmp_path, task_class="code-change", scope_class="code-change")
+    assert disposition["status"] == "resolved-existing-owner"
+    candidate = disposition["guidance"][0]
+    assert candidate["status"] == "resolved-existing-owner"
+    assert candidate["destination"]["owner_ref"] == "policy:#2264"
+    assert candidate["destination"]["owner_evidence_ref"] == "issue:#2725"
+    assert candidate["promotion_authority"]["remember_receipt"]["receipt_ref"] == remember["receipt_ref"]
+    assert not (tmp_path / ".agentic-workspace/memory/guidance-lifecycle.json").exists()
+
+
 def test_generated_python_operation_carries_signed_host_observation_without_private_imports(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

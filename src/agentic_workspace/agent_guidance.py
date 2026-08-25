@@ -91,7 +91,15 @@ GUIDANCE_LIFECYCLE_OPERATIONS = (
     "agent-guidance.delete",
 )
 ADMITTED_CORRECTION_AUTHORITIES = {"explicit-user-correction", "pr-review", "orchestrator-review", "evaluator-finding"}
-ADMITTED_ROUTE_DECISIONS = {"target-guidance", "target-suitability", "memory", "config", "issue", "no-retention"}
+ADMITTED_ROUTE_DECISIONS = {
+    "target-guidance",
+    "target-suitability",
+    "memory",
+    "config",
+    "issue",
+    "canonical-owner",
+    "no-retention",
+}
 TRUSTED_CORRECTION_PRODUCERS = {
     "explicit-user-correction": {"human", "human-reviewer", "user"},
     "pr-review": {"human-reviewer", "review-bot", "maintainer"},
@@ -388,6 +396,14 @@ def admit_correction_events(
         if unknown_routes:
             reject("rejected-unknown-route-decision", "Use admitted route decisions only.")
             continue
+        if "canonical-owner" in route_decisions and not (
+            str(event.get("canonical_owner_ref") or "").strip() and str(event.get("canonical_owner_evidence_ref") or "").strip()
+        ):
+            reject(
+                "rejected-missing-canonical-owner-evidence",
+                "Name the existing canonical_owner_ref and canonical_owner_evidence_ref before resolving without a new record.",
+            )
+            continue
         review_required = _correction_requires_review(event)
         if review_required:
             reject(
@@ -571,6 +587,7 @@ def admit_correction_events(
                 event["event_id"] for event in retained_events if "target-suitability" in event.get("route_decisions", [])
             ],
             "memory": [event["event_id"] for event in retained_events if "memory" in event.get("route_decisions", [])],
+            "canonical_owner": [event["event_id"] for event in retained_events if "canonical-owner" in event.get("route_decisions", [])],
             "no_retention": [event["event_id"] for event in retained_events if "no-retention" in event.get("route_decisions", [])],
             "low_authority": [event["event_id"] for event in low_authority_events[-CORRECTION_EVENT_RETENTION_CAP:]],
         },
@@ -1917,6 +1934,17 @@ def _guidance_destination_for_event(*, event: dict[str, Any], target_root: Path 
     safe_target_id = "".join(char if char.isalnum() or char in {"-", "_", "."} else "-" for char in target_id).strip("-") or "target"
     if "no-retention" in routes:
         return {"owner": "dismissal", "store": None, "route_decision": "no-retention", "promotable": False}
+    if "canonical-owner" in routes:
+        return {
+            "owner": "existing-canonical-owner",
+            "owner_ref": str(event.get("canonical_owner_ref") or ""),
+            "owner_evidence_ref": str(event.get("canonical_owner_evidence_ref") or ""),
+            "store": None,
+            "route_decision": "canonical-owner",
+            "promotable": False,
+            "promotion_status": "already-canonically-owned",
+            "rule": "The correction remains evidence of an enforcement failure while the invariant stays with its existing canonical owner; no duplicate guidance or Memory record is created.",
+        }
     if "target-guidance" in routes:
         if config is not None and getattr(config.local_override, "user_guidance_root", None):
             store = Path(config.local_override.user_guidance_root) / safe_target_id / "guidance-lifecycle.json"
@@ -2007,15 +2035,18 @@ def guidance_promotion_decision(
         promotable = (immediate or independent_recurrence) and not promotion_blocker and bool(destination.get("promotable"))
         applicability = event.get("semantic_identity") if isinstance(event.get("semantic_identity"), dict) else {}
         desired = str(event.get("desired_behavior") or "").strip()
+        already_owned = destination.get("route_decision") == "canonical-owner"
         candidates.append(
             {
                 "guidance_id": "guidance:"
                 + hashlib.sha256(str(event.get("normalized_correction_key") or event.get("event_id")).encode()).hexdigest()[:20],
-                "status": "active" if promotable else "candidate",
+                "status": "resolved-existing-owner" if already_owned else "active" if promotable else "candidate",
                 "instruction": desired,
                 "applicability": applicability,
                 "authority": authority,
-                "promotion_reason": "explicit-authorised-remember"
+                "promotion_reason": "already-canonically-owned"
+                if already_owned
+                else "explicit-authorised-remember"
                 if immediate
                 else "independent-recurrence"
                 if promotable
@@ -2042,6 +2073,8 @@ def guidance_promotion_decision(
         "kind": "agentic-workspace/agent-guidance-promotion-decision/v1",
         "status": "ready"
         if any(item["status"] == "active" for item in candidates)
+        else "resolved-existing-owner"
+        if candidates and all(item["status"] == "resolved-existing-owner" for item in candidates)
         else "review-required"
         if candidates or low_authority
         else "no-candidate",
@@ -2052,7 +2085,7 @@ def guidance_promotion_decision(
             "oversized_instruction_count": sum(len(item["instruction"]) > 280 for item in candidates),
             "raw_transcripts_retained": False,
         },
-        "rule": "Only explicit authorised remember instructions or independently admitted repeated corrections may activate durable guidance; self-observation remains a candidate.",
+        "rule": "Only explicit authorised remember instructions or independently admitted repeated corrections may activate durable guidance; an evidence-backed existing canonical owner resolves disposition without a duplicate record, and self-observation remains a candidate.",
     }
 
 

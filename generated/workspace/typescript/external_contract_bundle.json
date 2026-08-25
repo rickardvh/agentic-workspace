@@ -1,19 +1,19 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:2d5e45c63d8b458c8c4183c8573561996a3368f29389cbb7c21994e7e5c09239",
+  "profile_fingerprint": "sha256:306676309c427221492b6929c899774747cfbee8b01790561a511f371092fbaf",
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",
-    "client_package": "0.45.1",
+    "client_package": "0.46.0",
     "runtime_protocol": "1.0.0",
     "python_package": {
       "name": "agentic-workspace",
-      "version": "0.45.1"
+      "version": "0.46.0"
     },
     "typescript_package": {
       "name": "@agentic-workspace/workspace-cli",
-      "version": "0.45.1"
+      "version": "0.46.0"
     }
   },
   "operations": {
@@ -12053,8 +12053,8 @@
     "correction-event.correct-dispute": {
       "identity": "correction-event.correct-dispute",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:3b0b917cea70dd560705ea7f0836d137a0808224ae8915a776ca8916864eeb79",
-      "compatibility_fingerprint": "sha256:b487a4288f5786a06569c8431791d31e7e87d76e9b119c890f81bb18794be66a",
+      "fingerprint": "sha256:97ecd41409c8c973542bc3d3dd7e1086c6900deedfde5d0d83a4d1f036f3ea38",
+      "compatibility_fingerprint": "sha256:c2f24c79085745af80180662b9772c56c89757bbda2dc2af6d796c3b61b87380",
       "contract": {
         "classification": "local-record-append",
         "command_surface": {
@@ -12527,6 +12527,12 @@
                 "behavior_class": {
                   "type": "string"
                 },
+                "canonical_owner_evidence_ref": {
+                  "type": "string"
+                },
+                "canonical_owner_ref": {
+                  "type": "string"
+                },
                 "delivery_id": {
                   "type": "string"
                 },
@@ -12701,8 +12707,8 @@
     "correction-event.prune-compact": {
       "identity": "correction-event.prune-compact",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:f9c7f97379a685b33ca483f612c30825de2ba806fecf2c0ace73b855fa2e3075",
-      "compatibility_fingerprint": "sha256:9d2f63f2cd092c12a1a4b5a7740a07cf841b4ee0e2f060d72a09401697e04f1c",
+      "fingerprint": "sha256:0ae82de49a3ffe5bf358494f6234f54aac4f3154c1f3040c5144ffb280cd9adf",
+      "compatibility_fingerprint": "sha256:a9bcbe57075c8b97ab057a9b0b5343be47c0e92a49c0f6180666602f312dbec9",
       "contract": {
         "classification": "local-record-append",
         "command_surface": {
@@ -13175,6 +13181,12 @@
                 "behavior_class": {
                   "type": "string"
                 },
+                "canonical_owner_evidence_ref": {
+                  "type": "string"
+                },
+                "canonical_owner_ref": {
+                  "type": "string"
+                },
                 "delivery_id": {
                   "type": "string"
                 },
@@ -13349,8 +13361,8 @@
     "correction-event.query": {
       "identity": "correction-event.query",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:5b774a585bb23b873b940d16c06cacf4197257187d73fb615ceba70628de3304",
-      "compatibility_fingerprint": "sha256:ab3c99fb86ad0f4d7ab60d9e4ec4a4b1799cc524ec49b1290551a1bb9ab0ec41",
+      "fingerprint": "sha256:4168a7b27339ad965747f23f8ab28abcad7692a9b102bf789edcdf62a65b1064",
+      "compatibility_fingerprint": "sha256:dd8c6f7ee5a6038c888a21dc3f8fd1fff4a007b0be8512cf04f5f498ca907876",
       "contract": {
         "classification": "read-only-report",
         "command_surface": {
@@ -13853,6 +13865,12 @@
                 "behavior_class": {
                   "type": "string"
                 },
+                "canonical_owner_evidence_ref": {
+                  "type": "string"
+                },
+                "canonical_owner_ref": {
+                  "type": "string"
+                },
                 "delivery_id": {
                   "type": "string"
                 },
@@ -14027,8 +14045,8 @@
     "correction-event.submit": {
       "identity": "correction-event.submit",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:91584867981a4cfb0e1b6ad6c641b24b768e846bee272c4abd0417d18d438983",
-      "compatibility_fingerprint": "sha256:6fbb10c9a39efd7339a68ddebb985e84c96ee633dd27b88cd5725ee8656199cb",
+      "fingerprint": "sha256:077e7152351470396aa5aa766f46295d1cf39f76234b7181bb7acf83b487fac2",
+      "compatibility_fingerprint": "sha256:0029e1e25117d7e371391d7ad2fd0f9e1c56a5ba0e6fbd38010163cc8f465469",
       "contract": {
         "classification": "local-record-append",
         "command_surface": {
@@ -14048,6 +14066,7 @@
           "Caller-supplied producer labels cannot upgrade authority; trusted authority must resolve from trusted_authority_receipt_ref.",
           "Signed trusted_host_event_json is verified against pinned producer custody, channel, workspace, lifecycle, and signature before import.",
           "Incomplete trusted observations remain in existing trusted-authority custody until host_event_ref is normalized; downstream route decisions are separate.",
+          "A canonical-owner route requires both canonical_owner_ref and canonical_owner_evidence_ref and resolves disposition without creating duplicate Memory or guidance policy.",
           "Agent self-observation is preserved as low-authority non-routing evidence.",
           "Correction storage is local-only and has no checked-in repo meaning."
         ],
@@ -14182,6 +14201,16 @@
           },
           {
             "name": "route_decisions",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "canonical_owner_ref",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "canonical_owner_evidence_ref",
             "required": false,
             "source": "cli-option"
           },
@@ -14529,6 +14558,16 @@
               "source": "cli-option"
             },
             {
+              "name": "canonical_owner_ref",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "canonical_owner_evidence_ref",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
               "name": "evidence_hash",
               "required": false,
               "source": "cli-option"
@@ -14570,6 +14609,7 @@
             "Caller-supplied producer labels cannot upgrade authority; trusted authority must resolve from trusted_authority_receipt_ref.",
             "Signed trusted_host_event_json is verified against pinned producer custody, channel, workspace, lifecycle, and signature before import.",
             "Incomplete trusted observations remain in existing trusted-authority custody until host_event_ref is normalized; downstream route decisions are separate.",
+            "A canonical-owner route requires both canonical_owner_ref and canonical_owner_evidence_ref and resolves disposition without creating duplicate Memory or guidance policy.",
             "Agent self-observation is preserved as low-authority non-routing evidence.",
             "Correction storage is local-only and has no checked-in repo meaning."
           ]
@@ -14583,6 +14623,12 @@
                   "type": "string"
                 },
                 "behavior_class": {
+                  "type": "string"
+                },
+                "canonical_owner_evidence_ref": {
+                  "type": "string"
+                },
+                "canonical_owner_ref": {
                   "type": "string"
                 },
                 "delivery_id": {
@@ -14759,8 +14805,8 @@
     "correction-event.withdraw-supersede": {
       "identity": "correction-event.withdraw-supersede",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:ac48176dd7680b8ce23cadbcaa28958a84a3fbcd2dbcd13386461eec3e3fc08f",
-      "compatibility_fingerprint": "sha256:2de88b413341f22b5a0ff55cdc5bebb21b40d077359235a3d88ef156ad6e0f57",
+      "fingerprint": "sha256:9da2a9f769badcf008c7a44d920235f0bf6f9f05927d9c891e0156701a908714",
+      "compatibility_fingerprint": "sha256:3b319b3dfea5ad498138dee5023ab0c7351b11be1c598725dca622db7e24c5d2",
       "contract": {
         "classification": "local-record-append",
         "command_surface": {
@@ -15231,6 +15277,12 @@
                   "type": "string"
                 },
                 "behavior_class": {
+                  "type": "string"
+                },
+                "canonical_owner_evidence_ref": {
+                  "type": "string"
+                },
+                "canonical_owner_ref": {
                   "type": "string"
                 },
                 "delivery_id": {
@@ -22425,6 +22477,14 @@
             "description": "Stable behavior class for semantic correction identity.",
             "type": "string"
           },
+          "canonical_owner_evidence_ref": {
+            "description": "Evidence that the named canonical owner already owns the corrected invariant; required with the canonical-owner route.",
+            "type": "string"
+          },
+          "canonical_owner_ref": {
+            "description": "Existing policy, guidance, configuration, issue, or other canonical owner that already owns the corrected invariant.",
+            "type": "string"
+          },
           "delivery_id": {
             "description": "Stable delivery identifier for this correction event.",
             "type": "string"
@@ -22490,7 +22550,7 @@
             "type": "string"
           },
           "route_decisions": {
-            "description": "Requested routing decisions for trusted correction events.",
+            "description": "Requested routing decisions for trusted correction events, including evidence-backed canonical-owner disposition without duplicate retention.",
             "items": {
               "type": "string"
             },

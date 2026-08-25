@@ -13,6 +13,8 @@ Input accepted by generated correction-event lifecycle operations.
 | (root) | object | yes |  | Input accepted by generated correction-event lifecycle operations. |  | x-agentic-workspace-doc-role: "contract-reference" |
 | `authority` | string | no |  | Claimed correction authority; not trusted without a trusted authority receipt. |  |  |
 | `behavior_class` | string | no |  | Stable behavior class for semantic correction identity. |  |  |
+| `canonical_owner_evidence_ref` | string | no |  | Evidence that the named canonical owner already owns the corrected invariant; required with the canonical-owner route. |  |  |
+| `canonical_owner_ref` | string | no |  | Existing policy, guidance, configuration, issue, or other canonical owner that already owns the corrected invariant. |  |  |
 | `delivery_id` | string | no |  | Stable delivery identifier for this correction event. |  |  |
 | `desired_behavior` | string | no |  | Behavior the correction says should replace the previous behavior. |  |  |
 | `dry_run` | boolean | no |  | When true, report the intended operation without applying a storage mutation. |  |  |
@@ -27,7 +29,7 @@ Input accepted by generated correction-event lifecycle operations.
 | `producer_class` | string | no |  | Producer class used for authority resolution. |  |  |
 | `producer_id` | string | no |  | Producer identity used for audit and authority resolution. |  |  |
 | `replaced_behavior` | string | no |  | Behavior boundary being corrected or superseded. |  |  |
-| `route_decisions` | array of string | no |  | Requested routing decisions for trusted correction events. |  |  |
+| `route_decisions` | array of string | no |  | Requested routing decisions for trusted correction events, including evidence-backed canonical-owner disposition without duplicate retention. |  |  |
 | `scope_class` | string | no |  | Scope class where the correction applies. |  |  |
 | `phase` | string | no |  | Workflow phase where the correction applies. |  |  |
 | `subsystem` | string | no |  | Subsystem boundary where the correction applies. |  |  |

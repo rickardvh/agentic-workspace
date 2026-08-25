@@ -10400,6 +10400,20 @@ const commandDefinitions = [
             },
             {
               "flags": [
+                "--canonical-owner-ref"
+              ],
+              "help": "Existing canonical owner for an evidence-backed no-duplicate disposition.",
+              "name": "canonical_owner_ref"
+            },
+            {
+              "flags": [
+                "--canonical-owner-evidence-ref"
+              ],
+              "help": "Evidence that the named canonical owner already owns the corrected invariant.",
+              "name": "canonical_owner_evidence_ref"
+            },
+            {
+              "flags": [
                 "--evidence-hash"
               ],
               "help": "Evidence hash.",
