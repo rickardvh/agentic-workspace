@@ -25,7 +25,7 @@
       "tests/test_operating_projection_receipt.py",
       "tests/test_workspace_cli.py",
       ".release/changes/2740-operating-projection-replay.toml",
-      ".agentic-workspace/planning/closeout-evidence/issue-2740-operating-projection-replay.replay.json",
+      ".agentic-workspace/planning/closeout-evidence/issue-2740-operating-projection-replay.evidence.json",
       ".agentic-workspace/planning/**"
     ],
     "completion_criteria": [
@@ -74,7 +74,7 @@
       "state": "passed",
       "refs": [
         "b29318e9dbe1ef65f3571293d462d8184f637509",
-        ".agentic-workspace/planning/closeout-evidence/issue-2740-operating-projection-replay.replay.json",
+        ".agentic-workspace/planning/closeout-evidence/issue-2740-operating-projection-replay.evidence.json",
         "tests/test_operating_projection_receipt.py: 13 passed",
         "tests/test_workspace_cli.py -k operating_projection_receipt: 1 passed, 422 deselected",
         "selected-proof:eabdd25ecb1543f0",
@@ -112,7 +112,7 @@
     ],
     "refs": [
       "b29318e9dbe1ef65f3571293d462d8184f637509",
-      ".agentic-workspace/planning/closeout-evidence/issue-2740-operating-projection-replay.replay.json",
+      ".agentic-workspace/planning/closeout-evidence/issue-2740-operating-projection-replay.evidence.json",
       "tests/test_operating_projection_receipt.py: 13 passed",
       "tests/test_workspace_cli.py -k operating_projection_receipt: 1 passed, 422 deselected",
       "selected-proof:eabdd25ecb1543f0",
@@ -132,7 +132,7 @@
       ".release/changes/2740-operating-projection-replay.toml",
       ".agentic-workspace/planning/state.toml",
       ".agentic-workspace/planning/execplans/issue-2740-replay.plan.json",
-      ".agentic-workspace/planning/closeout-evidence/issue-2740-operating-projection-replay.replay.json",
+      ".agentic-workspace/planning/closeout-evidence/issue-2740-operating-projection-replay.evidence.json",
       ".agentic-workspace/proof/receipts/**"
     ],
     "forbidden_scope": [

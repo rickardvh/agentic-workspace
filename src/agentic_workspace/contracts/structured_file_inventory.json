@@ -839,6 +839,32 @@
       "storage_class": "historical-audit-distillation"
     },
     {
+      "checked_in_justification": "Bounded issue #2740 evidence retains measured cold/warm projection reuse, managed-state read counts, and deterministic replay deltas for post-review verification.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "guardrails": {
+        "max_bytes": 20000,
+        "preferred_refs": [
+          "issue",
+          "captured session command",
+          "focused replay tests"
+        ],
+        "routed_to": "#2740"
+      },
+      "notes": "Operating-projection replay evidence has a distinct measured shape from proof-route cost replay evidence and is validated by the focused runtime tests.",
+      "owner": "workspace-cli-runtime",
+      "pattern": ".agentic-workspace/planning/closeout-evidence/issue-2740-operating-projection-replay.evidence.json",
+      "reconstructable_from": [
+        "the captured session command",
+        "the cited implementation commit",
+        "tests/test_operating_projection_receipt.py"
+      ],
+      "schema_or_validator": "validator: uv run pytest tests/test_operating_projection_receipt.py tests/test_workspace_cli.py -k operating_projection_receipt",
+      "status": "typed-validator-backed",
+      "storage_class": "historical-audit-distillation"
+    },
+    {
       "checked_in_justification": "A bounded before/after proof-route replay preserves exact attribution, causal subject decisions, and claim coverage without retaining full session logs.",
       "editable_by_agents": true,
       "format": "json",
