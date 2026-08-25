@@ -13,7 +13,7 @@ import time
 from dataclasses import dataclass
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-from typing import Any, Callable, Iterator, Literal
+from typing import Any, Callable, Iterator, Literal, Mapping, Sequence
 
 _CACHE_KIND = "agentic-workspace/projection-reuse-record/v2"
 _CACHE_CONTRACT_VERSION = 6
@@ -60,6 +60,26 @@ _SELECTOR_ENRICHMENT_DEPENDENCIES = {
     ),
 }
 
+_PROJECTION_CONTEXT_FIELDS = ("branch", "head", "base")
+_PROJECTION_INVALIDATION_REASON_BY_FIELD = {
+    "branch": "branch-changed",
+    "head": "head-changed",
+    "base": "base-changed",
+    "task": "task-changed",
+    "selected_owner": "selected-owner-changed",
+    "planning": "planning-revision-changed",
+    "changed_paths": "changed-paths-changed",
+    "proof_subject": "proof-subject-changed",
+    "runtime_compatibility": "runtime-compatibility-changed",
+    "external_freshness": "external-freshness-changed",
+    "worktree": "admitted-worktree-changed",
+    "route_inputs": "route-inputs-changed",
+    "verification_inputs": "verification-inputs-changed",
+    "proof_inputs": "proof-inputs-changed",
+    "closeout_inputs": "closeout-inputs-changed",
+    "runtime_mirror_inputs": "runtime-mirror-inputs-changed",
+}
+
 
 def _expose_projection_reuse_receipt(*, operation: str, query: dict[str, Any]) -> bool:
     """Keep proof lineage visible where a caller supplied projection scope."""
@@ -104,6 +124,251 @@ class DependencyDigestResult:
         """Keep the historical two-value unpacking contract for direct callers."""
         yield self.digest
         yield self.dependencies
+
+
+@dataclass(frozen=True)
+class ProjectionConstituentSpec:
+    """Declare the semantic revision boundary for one canonical projection owner.
+
+    Branch, HEAD, and base are observational context by default.  A constituent
+    must opt into them as dependencies before a stack movement can invalidate
+    that owner's result.
+    """
+
+    constituent_id: str
+    dependency_fields: tuple[str, ...]
+    required_fields: tuple[str, ...] = ()
+
+
+STANDARD_PROJECTION_CONSTITUENT_SPECS = (
+    ProjectionConstituentSpec(
+        "route",
+        ("task", "selected_owner", "planning", "changed_paths", "route_inputs"),
+    ),
+    ProjectionConstituentSpec(
+        "verification",
+        ("task", "changed_paths", "verification_inputs"),
+    ),
+    ProjectionConstituentSpec(
+        "selected_proof",
+        ("task", "changed_paths", "proof_subject", "proof_inputs"),
+    ),
+    ProjectionConstituentSpec(
+        "closeout_trust",
+        ("task", "selected_owner", "planning", "changed_paths", "proof_subject", "closeout_inputs"),
+    ),
+    ProjectionConstituentSpec(
+        "runtime_mirror",
+        ("runtime_compatibility", "runtime_mirror_inputs"),
+    ),
+)
+
+
+def _projection_revision_available(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return value.strip().lower() not in {"", "unknown", "unavailable", "truncated"}
+    if isinstance(value, dict):
+        return str(value.get("status") or "current").strip().lower() not in {"unknown", "unavailable", "truncated"}
+    return True
+
+
+def _projection_identity_digest(value: Any) -> str:
+    return hashlib.sha256(
+        json.dumps(value, sort_keys=True, ensure_ascii=True, separators=(",", ":"), default=str).encode("utf-8")
+    ).hexdigest()
+
+
+def build_projection_constituent_identity(
+    *,
+    spec: ProjectionConstituentSpec,
+    input_revisions: Mapping[str, Any],
+    contextual_fields: Sequence[str] = _PROJECTION_CONTEXT_FIELDS,
+) -> dict[str, Any]:
+    """Build one owner-scoped input identity without treating stack position as freshness."""
+
+    dependency_fields = tuple(dict.fromkeys(spec.dependency_fields))
+    required_fields = tuple(dict.fromkeys(spec.required_fields or dependency_fields))
+    dependency_revisions = {
+        field: json.loads(json.dumps(input_revisions.get(field), sort_keys=True, default=str))
+        for field in dependency_fields
+        if field in input_revisions
+    }
+    missing_fields = [field for field in required_fields if field not in input_revisions]
+    unavailable_fields = [
+        field for field in required_fields if field in input_revisions and not _projection_revision_available(input_revisions[field])
+    ]
+    status = "current" if not missing_fields and not unavailable_fields else "unavailable"
+    canonical = {
+        "constituent_id": spec.constituent_id,
+        "dependency_fields": list(dependency_fields),
+        "dependency_revisions": dependency_revisions,
+    }
+    fingerprint = _projection_identity_digest(canonical)
+    context = {
+        field: json.loads(json.dumps(input_revisions.get(field), sort_keys=True, default=str))
+        for field in dict.fromkeys(contextual_fields)
+        if field in input_revisions
+    }
+    return {
+        "kind": "agentic-workspace/projection-constituent-identity/v1",
+        "status": status,
+        "constituent_id": spec.constituent_id,
+        "identity_id": f"projection-constituent:{spec.constituent_id}:{fingerprint[:16]}" if status == "current" else "",
+        "input_revision": f"sha256:{fingerprint}" if status == "current" else "",
+        "dependency_fields": list(dependency_fields),
+        "dependency_revisions": dependency_revisions,
+        "missing_dependency_fields": missing_fields,
+        "unavailable_dependency_fields": unavailable_fields,
+        "observed_context": context,
+        "observed_context_revision": f"sha256:{_projection_identity_digest(context)}",
+        "freshness_rule": (
+            "Reuse is governed only by declared semantic dependencies. Branch, HEAD, and base remain observational "
+            "unless this constituent explicitly declares them as dependency fields."
+        ),
+    }
+
+
+def build_standard_projection_constituent_identities(
+    *, input_revisions: Mapping[str, Any], specs: Sequence[ProjectionConstituentSpec] = STANDARD_PROJECTION_CONSTITUENT_SPECS
+) -> dict[str, dict[str, Any]]:
+    """Build the stable owner set consumed by the later task-scoped composer."""
+
+    return {spec.constituent_id: build_projection_constituent_identity(spec=spec, input_revisions=input_revisions) for spec in specs}
+
+
+def _projection_context_delta(previous: Mapping[str, Any], current: Mapping[str, Any]) -> list[dict[str, Any]]:
+    prior_context = previous.get("observed_context", {}) if isinstance(previous.get("observed_context"), dict) else {}
+    current_context = current.get("observed_context", {}) if isinstance(current.get("observed_context"), dict) else {}
+    return [
+        {
+            "field": field,
+            "reason": _PROJECTION_INVALIDATION_REASON_BY_FIELD.get(field, f"{field}-changed"),
+            "invalidates_constituent": field in current.get("dependency_fields", []),
+        }
+        for field in sorted(set(prior_context) | set(current_context))
+        if prior_context.get(field) != current_context.get(field)
+    ]
+
+
+def compare_projection_constituent_identity(*, previous: Mapping[str, Any] | None, current: Mapping[str, Any] | None) -> dict[str, Any]:
+    """Classify one owner result as reusable, invalidated, absent, or unknown."""
+
+    constituent_id = str((current or {}).get("constituent_id") or (previous or {}).get("constituent_id") or "unknown")
+    base = {
+        "kind": "agentic-workspace/projection-constituent-freshness/v1",
+        "constituent_id": constituent_id,
+        "context_delta": _projection_context_delta(previous or {}, current or {}),
+    }
+    if current is None:
+        return {
+            **base,
+            "status": "unavailable",
+            "freshness": "unknown",
+            "invalidation_reasons": ["current-identity-missing"],
+            "required_action": "establish-current-identity",
+        }
+    if current.get("kind") != "agentic-workspace/projection-constituent-identity/v1" or current.get("status") != "current":
+        unavailable = [
+            *[f"missing:{field}" for field in current.get("missing_dependency_fields", [])],
+            *[f"unavailable:{field}" for field in current.get("unavailable_dependency_fields", [])],
+        ]
+        return {
+            **base,
+            "status": "unavailable",
+            "freshness": "unknown",
+            "invalidation_reasons": unavailable or ["current-identity-unavailable"],
+            "required_action": "establish-current-identity",
+        }
+    if previous is None or previous.get("kind") != "agentic-workspace/projection-constituent-identity/v1":
+        return {
+            **base,
+            "status": "not-recorded",
+            "freshness": "not-recorded",
+            "invalidation_reasons": ["prior-identity-missing"],
+            "required_action": "build-constituent",
+        }
+    if previous.get("status") != "current":
+        return {
+            **base,
+            "status": "unavailable",
+            "freshness": "unknown",
+            "invalidation_reasons": ["prior-identity-unavailable"],
+            "required_action": "build-constituent",
+        }
+    if previous.get("constituent_id") != current.get("constituent_id"):
+        return {
+            **base,
+            "status": "invalidated",
+            "freshness": "stale",
+            "invalidation_reasons": ["constituent-owner-changed"],
+            "required_action": "build-constituent",
+        }
+    previous_revisions = previous.get("dependency_revisions", {}) if isinstance(previous.get("dependency_revisions"), dict) else {}
+    current_revisions = current.get("dependency_revisions", {}) if isinstance(current.get("dependency_revisions"), dict) else {}
+    changed_fields = [
+        field
+        for field in sorted(set(previous_revisions) | set(current_revisions))
+        if previous_revisions.get(field) != current_revisions.get(field)
+    ]
+    if not changed_fields and previous.get("input_revision") == current.get("input_revision"):
+        return {
+            **base,
+            "status": "reused",
+            "freshness": "current",
+            "invalidation_reasons": [],
+            "required_action": "reuse-owner-result",
+            "input_revision": current.get("input_revision", ""),
+        }
+    return {
+        **base,
+        "status": "invalidated",
+        "freshness": "stale",
+        "changed_dependency_fields": changed_fields,
+        "invalidation_reasons": [_PROJECTION_INVALIDATION_REASON_BY_FIELD.get(field, f"{field}-changed") for field in changed_fields]
+        or ["constituent-input-revision-changed"],
+        "required_action": "build-constituent",
+        "previous_input_revision": previous.get("input_revision", ""),
+        "current_input_revision": current.get("input_revision", ""),
+    }
+
+
+def compare_projection_constituent_sets(
+    *, previous: Mapping[str, Mapping[str, Any]], current: Mapping[str, Mapping[str, Any]]
+) -> dict[str, Any]:
+    """Return an exact partial-invalidation matrix for a composed projection."""
+
+    constituent_ids = sorted(set(previous) | set(current))
+    comparisons = {
+        constituent_id: compare_projection_constituent_identity(previous=previous.get(constituent_id), current=current.get(constituent_id))
+        for constituent_id in constituent_ids
+    }
+    reused = [key for key, value in comparisons.items() if value["status"] == "reused"]
+    invalidated = [key for key, value in comparisons.items() if value["status"] in {"invalidated", "not-recorded"}]
+    unknown = [key for key, value in comparisons.items() if value["status"] == "unavailable"]
+    if unknown:
+        status = "unknown"
+    elif invalidated and reused:
+        status = "partially-invalidated"
+    elif invalidated:
+        status = "invalidated"
+    else:
+        status = "reused"
+    return {
+        "kind": "agentic-workspace/projection-constituent-delta/v1",
+        "status": status,
+        "constituents": comparisons,
+        "reused_constituents": reused,
+        "invalidated_constituents": invalidated,
+        "unknown_constituents": unknown,
+        "focused_rebuild_constituents": [*invalidated, *unknown],
+        "broad_rebuild_required": False,
+        "rule": (
+            "Rebuild only invalidated or unknown canonical owner results. A broad rebuild requires a separate explicit "
+            "escalation decision and is never inferred from stack movement."
+        ),
+    }
 
 
 @dataclass(frozen=True)
@@ -607,20 +872,8 @@ def _operating_decision_revisions(input_revisions: dict[str, Any]) -> dict[str, 
 
 
 def _invalidation_reasons(previous: dict[str, Any], current: dict[str, Any]) -> list[str]:
-    reason_by_field = {
-        "branch": "branch-changed",
-        "head": "head-changed",
-        "task": "task-changed",
-        "selected_owner": "selected-owner-changed",
-        "planning": "planning-revision-changed",
-        "changed_paths": "changed-paths-changed",
-        "proof_subject": "proof-subject-changed",
-        "runtime_compatibility": "runtime-compatibility-changed",
-        "external_freshness": "external-freshness-changed",
-        "worktree": "admitted-worktree-changed",
-    }
     return [
-        reason_by_field.get(field, f"{field}-changed")
+        _PROJECTION_INVALIDATION_REASON_BY_FIELD.get(field, f"{field}-changed")
         for field in sorted(set(previous) | set(current))
         if previous.get(field) != current.get(field)
     ]
