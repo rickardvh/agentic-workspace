@@ -5,6 +5,8 @@ import json
 import os
 import subprocess
 import sys
+import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -318,6 +320,151 @@ def test_session_logging_concurrent_event_appends_remain_valid_and_monotonic(tmp
     assert issues == []
     assert len(events) == 25
     assert [event["sequence"] for event in events] == list(range(1, 26))
+
+
+def test_session_logging_serializes_overlapping_index_projection_updates(tmp_path: Path, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    state = session_logging.load_state_for_argv(["--target", str(target)])
+    session = session_logging.ensure_session(state=state, logical_identity="shared")
+    barrier = threading.Barrier(2)
+    active_writes = 0
+    maximum_active_writes = 0
+    observation_lock = threading.Lock()
+    original_write = session_logging._write_json_atomic
+
+    def observed_write(path: Path, payload: dict[str, object]) -> None:
+        nonlocal active_writes, maximum_active_writes
+        if path.name != "index.json":
+            original_write(path, payload)
+            return
+        with observation_lock:
+            active_writes += 1
+            maximum_active_writes = max(maximum_active_writes, active_writes)
+        try:
+            time.sleep(0.05)
+            original_write(path, payload)
+        finally:
+            with observation_lock:
+                active_writes -= 1
+
+    monkeypatch.setattr(session_logging, "_write_json_atomic", observed_write)
+
+    def append(index: int) -> str | None:
+        barrier.wait()
+        return session_logging.append_command_entry(
+            state=state,
+            session=session,
+            entry_id=f"concurrent-command-{index}",
+            argv=["session-log", "analyze", "--detail", "summary"],
+            capture=session_logging.CommandCapture(exit_code=0, stdout='{"status":"analyzed"}\n', stderr=""),
+        )
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        warnings = list(executor.map(append, range(2)))
+
+    assert warnings == [None, None]
+    assert maximum_active_writes == 1
+    index = json.loads((target / session_logging._index_path_for_session(session)).read_text(encoding="utf-8"))
+    entries = session_logging._entries_from_index(index)
+    assert {entry["id"] for entry in entries} == {"concurrent-command-0", "concurrent-command-1"}
+    events, issues = session_logging._read_event_stream(target / session_logging._event_path_for_session(session))
+    assert issues == []
+    completed = [event for event in events if event["event_type"] == "command.completed"]
+    assert {event["payload"]["entry"]["id"] for event in completed} == {"concurrent-command-0", "concurrent-command-1"}
+    assert len({event["event_id"] for event in events}) == len(events)
+    assert not (target / session_logging._index_lock_path_for_session(session)).exists()
+
+
+def test_session_logging_atomic_replace_retries_windows_access_denied(tmp_path: Path, monkeypatch) -> None:
+    path = tmp_path / "index.json"
+    original_replace = Path.replace
+    attempts = 0
+
+    def replace_with_transient_access_denied(source: Path, target: Path) -> Path:
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise PermissionError(5, "Access denied", str(target))
+        return original_replace(source, target)
+
+    monkeypatch.setattr(Path, "replace", replace_with_transient_access_denied)
+
+    session_logging._write_json_atomic(path, {"kind": session_logging.SESSION_LOG_INDEX_KIND, "entries": []})
+
+    assert attempts == 2
+    assert json.loads(path.read_text(encoding="utf-8"))["kind"] == session_logging.SESSION_LOG_INDEX_KIND
+    assert list(tmp_path.glob("index.json.*.tmp")) == []
+
+
+def test_session_log_concurrent_analyzers_complete_without_index_warning(tmp_path: Path, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
+    assert session_logging.run_with_session_logging(["config", "--target", str(target)], lambda _argv: 0) == 0
+    state = session_logging.load_state_for_argv(["--target", str(target)])
+    status = session_logging.status_payload(state=state)
+    barrier_root = tmp_path / "analyzer-barrier"
+    barrier_root.mkdir()
+    release_path = barrier_root / "release"
+    script = (
+        "import os, sys, time\n"
+        "from pathlib import Path\n"
+        "from agentic_workspace import cli\n"
+        "ready = Path(os.environ['AW_TEST_ANALYZER_READY'])\n"
+        "release = Path(os.environ['AW_TEST_ANALYZER_RELEASE'])\n"
+        "ready.write_text('ready', encoding='utf-8')\n"
+        "deadline = time.monotonic() + 10\n"
+        "while not release.exists():\n"
+        "    if time.monotonic() >= deadline: raise SystemExit('analyzer barrier timed out')\n"
+        "    time.sleep(0.01)\n"
+        "raise SystemExit(cli.main(['session-log', '--target', sys.argv[1], 'analyze', '--detail', sys.argv[2], '--format', 'json']))\n"
+    )
+    processes = []
+    for index, detail in enumerate(("summary", "candidates")):
+        child_env = dict(os.environ)
+        child_env["AW_TEST_ANALYZER_READY"] = str(barrier_root / f"ready-{index}")
+        child_env["AW_TEST_ANALYZER_RELEASE"] = str(release_path)
+        processes.append(
+            subprocess.Popen(
+                [sys.executable, "-c", script, str(target), detail],
+                cwd=Path.cwd(),
+                env=child_env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                encoding="utf-8",
+            )
+        )
+    deadline = time.monotonic() + 10
+    while len(list(barrier_root.glob("ready-*"))) != 2:
+        if time.monotonic() >= deadline:
+            for process in processes:
+                process.kill()
+            raise AssertionError("analyzer subprocesses did not reach the barrier")
+        time.sleep(0.01)
+    release_path.write_text("release", encoding="utf-8")
+    results = [process.communicate(timeout=20) for process in processes]
+
+    assert [process.returncode for process in processes] == [0, 0]
+    assert all("AW session logging warning" not in stderr for _stdout, stderr in results)
+    assert all(json.loads(stdout)["status"] == "analyzed" for stdout, _stderr in results)
+    index = json.loads(_current_index(target).read_text(encoding="utf-8"))
+    entries = session_logging._entries_from_index(index)
+    assert len(entries) == 3
+    assert len({entry["id"] for entry in entries}) == 3
+    events, issues = session_logging._read_event_stream(_current_events(target))
+    assert issues == []
+    completed = [event for event in events if event["event_type"] == "command.completed"]
+    assert len(completed) == 3
+    assert len({event["payload"]["entry"]["id"] for event in completed}) == 3
+    assert [event["sequence"] for event in events] == list(range(1, len(events) + 1))
+    analysis = session_logging.analyze_session_log(state=state, origin_scope="all")
+    exported = session_logging.export_session_log(state=state, include_artifacts=False)
+    assert analysis["index_status"] == "complete"
+    assert analysis["summary"]["command_count"] == 3
+    assert exported["logical_session_id"] == status["logical_session_id"]
+    assert exported["manifest"]["evidence_profile"]["source_command_count"] == 3
 
 
 def test_session_log_rotation_and_delegated_child_export_as_one_stream(tmp_path: Path, monkeypatch) -> None:

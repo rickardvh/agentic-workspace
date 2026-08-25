@@ -56,6 +56,7 @@ FRICTION_CANDIDATE_LIMIT = 10
 DEFAULT_ANALYSIS_PAGE_SIZE = 25
 MAX_ANALYSIS_PAGE_SIZE = 100
 DEFAULT_ANALYSIS_SERIALIZATION_BUDGET_BYTES = 64 * 1024
+ATOMIC_REPLACE_RETRY_SECONDS = 1.0
 SESSION_LOG_NON_AUTHORITATIVE_FOR = ("Planning", "Memory", "current owner", "proof", "closeout")
 SESSION_LOG_LOCAL_BOUNDARY = {
     "scope": "package-owned local diagnostic state",
@@ -435,91 +436,92 @@ def append_command_entry(
     try:
         session = session or ensure_session(state=state)
         _append_declared_gap(state=state, session=session)
-        entry_id = entry_id or f"cmd-{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8]}"
-        command_text = "agentic-workspace " + shlex.join(list(argv))
-        timestamp = datetime.now(UTC).isoformat()
-        index = _read_index(state=state, session=session) or {}
-        prior_entries = _entries_from_index(index)
-        origin = _command_origin()
-        provenance = _command_provenance(state=state)
-        segment = _segment_metadata(
-            state=state,
-            argv=argv,
-            command_text=command_text,
-            capture=capture,
-            provenance=provenance,
-            prior_entries=prior_entries,
-        )
-        expected_failure = capture.exit_code != 0 and _expected_fixture_failure(origin)
-        invocation_intent = _invocation_intent(origin=origin, argv=argv)
-        entry = _command_entry_markdown(
-            state=state,
-            session=session,
-            entry_id=entry_id,
-            timestamp=timestamp,
-            command_text=command_text,
-            capture=capture,
-            origin=origin,
-            expected_failure=expected_failure,
-            invocation_intent=invocation_intent,
-            provenance=provenance,
-            segment=segment,
-        )
-        _append_text(state.target_root / session["log_path"], entry)
-        _append_index_command(
-            state=state,
-            session=session,
-            entry_id=entry_id,
-            timestamp=timestamp,
-            command_text=command_text,
-            argv=argv,
-            capture=capture,
-            origin=origin,
-            expected_failure=expected_failure,
-            invocation_intent=invocation_intent,
-            provenance=provenance,
-            segment=segment,
-            parent_context=parent_context,
-        )
-        current_index = _read_index(state=state, session=session) or {}
-        indexed_entry = next(
-            (item for item in _entries_from_index(current_index) if str(item.get("id", "")) == entry_id),
-            None,
-        )
-        if indexed_entry is None:
-            _append_event(
+        with _session_index_lock(state=state, session=session):
+            entry_id = entry_id or f"cmd-{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8]}"
+            command_text = "agentic-workspace " + shlex.join(list(argv))
+            timestamp = datetime.now(UTC).isoformat()
+            index = _read_index(state=state, session=session) or {}
+            prior_entries = _entries_from_index(index)
+            origin = _command_origin()
+            provenance = _command_provenance(state=state)
+            segment = _segment_metadata(
+                state=state,
+                argv=argv,
+                command_text=command_text,
+                capture=capture,
+                provenance=provenance,
+                prior_entries=prior_entries,
+            )
+            expected_failure = capture.exit_code != 0 and _expected_fixture_failure(origin)
+            invocation_intent = _invocation_intent(origin=origin, argv=argv)
+            entry = _command_entry_markdown(
                 state=state,
                 session=session,
-                event_type="logging.gap",
+                entry_id=entry_id,
                 timestamp=timestamp,
-                payload={
-                    "reason": "command-view-missing-after-write",
-                    "entry_id": entry_id,
-                    "recoverable": True,
-                },
+                command_text=command_text,
+                capture=capture,
+                origin=origin,
+                expected_failure=expected_failure,
+                invocation_intent=invocation_intent,
+                provenance=provenance,
+                segment=segment,
             )
-        else:
-            _append_event(
+            _append_text(state.target_root / session["log_path"], entry)
+            _append_index_command(
                 state=state,
                 session=session,
-                event_type="command.completed",
-                timestamp=capture.finished_at or timestamp,
-                payload={"entry": indexed_entry},
+                entry_id=entry_id,
+                timestamp=timestamp,
+                command_text=command_text,
+                argv=argv,
+                capture=capture,
+                origin=origin,
+                expected_failure=expected_failure,
+                invocation_intent=invocation_intent,
+                provenance=provenance,
+                segment=segment,
+                parent_context=parent_context,
             )
-            surface = str(argv[0]) if argv else ""
-            if surface in {"start", "implement", "proof", "closeout"}:
+            current_index = _read_index(state=state, session=session) or {}
+            indexed_entry = next(
+                (item for item in _entries_from_index(current_index) if str(item.get("id", "")) == entry_id),
+                None,
+            )
+            if indexed_entry is None:
                 _append_event(
                     state=state,
                     session=session,
-                    event_type="workflow.transition",
-                    timestamp=capture.finished_at or timestamp,
+                    event_type="logging.gap",
+                    timestamp=timestamp,
                     payload={
                         "entry_id": entry_id,
-                        "surface": surface,
-                        "exit_status": capture.exit_code,
-                        "result": "completed" if capture.exit_code == 0 else "failed",
+                        "reason": "command-view-missing-after-write",
+                        "recoverable": True,
                     },
                 )
+            else:
+                _append_event(
+                    state=state,
+                    session=session,
+                    event_type="command.completed",
+                    timestamp=capture.finished_at or timestamp,
+                    payload={"entry": indexed_entry},
+                )
+                surface = str(argv[0]) if argv else ""
+                if surface in {"start", "implement", "proof", "closeout"}:
+                    _append_event(
+                        state=state,
+                        session=session,
+                        event_type="workflow.transition",
+                        timestamp=capture.finished_at or timestamp,
+                        payload={
+                            "entry_id": entry_id,
+                            "surface": surface,
+                            "exit_status": capture.exit_code,
+                            "result": "completed" if capture.exit_code == 0 else "failed",
+                        },
+                    )
     except Exception as exc:  # pragma: no cover - intentionally best effort
         return str(exc)
     return None
@@ -551,11 +553,12 @@ def append_note(*, state: SessionLoggingState, text: str) -> dict[str, Any]:
             "sha256": hashlib.sha256(note.encode("utf-8")).hexdigest(),
         },
     )
-    _append_text(
-        state.target_root / session["log_path"],
-        f"\n## Agent Note - {timestamp}\n\n{note}\n",
-    )
-    _append_index_note(state=state, session=session, timestamp=timestamp, text=note)
+    with _session_index_lock(state=state, session=session):
+        _append_text(
+            state.target_root / session["log_path"],
+            f"\n## Agent Note - {timestamp}\n\n{note}\n",
+        )
+        _append_index_note(state=state, session=session, timestamp=timestamp, text=note)
     return {
         "kind": "agentic-workspace/session-log-note/v1",
         "status": "appended",
@@ -1928,6 +1931,38 @@ def _index_path_for_session(session: dict[str, str]) -> Path:
     return Path(session["log_path"]).parent / "index.json"
 
 
+def _index_lock_path_for_session(session: dict[str, str]) -> Path:
+    return _index_path_for_session(session).parent / ".index.lock"
+
+
+@contextlib.contextmanager
+def _session_index_lock(*, state: SessionLoggingState, session: dict[str, str]) -> Iterator[None]:
+    lock_path = state.target_root / _index_lock_path_for_session(session)
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    deadline = time.perf_counter() + 5
+    while True:
+        try:
+            lock_path.mkdir()
+            break
+        except (FileExistsError, PermissionError):
+            try:
+                stale = time.time() - lock_path.stat().st_mtime > 30
+            except OSError:
+                stale = False
+            if stale:
+                with contextlib.suppress(OSError):
+                    lock_path.rmdir()
+                continue
+            if time.perf_counter() >= deadline:
+                raise TimeoutError(f"timed out waiting for session index lock: {lock_path}")
+            time.sleep(0.01)
+    try:
+        yield
+    finally:
+        with contextlib.suppress(OSError):
+            lock_path.rmdir()
+
+
 def _artifact_root_for_session(session: dict[str, str]) -> Path:
     return Path(session["log_path"]).parent / "artifacts"
 
@@ -1966,7 +2001,19 @@ def _write_json_atomic(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary_path = path.with_suffix(f"{path.suffix}.{uuid.uuid4().hex}.tmp")
     temporary_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    temporary_path.replace(path)
+    deadline = time.perf_counter() + ATOMIC_REPLACE_RETRY_SECONDS
+    try:
+        while True:
+            try:
+                temporary_path.replace(path)
+                break
+            except PermissionError:
+                if time.perf_counter() >= deadline:
+                    raise
+                time.sleep(0.01)
+    finally:
+        with contextlib.suppress(FileNotFoundError):
+            temporary_path.unlink()
 
 
 def _read_index(*, state: SessionLoggingState, session: dict[str, str]) -> dict[str, Any] | None:
@@ -2900,6 +2947,13 @@ def repair_session_log_index(*, state: SessionLoggingState, path: str = "", sess
             return _identity_required_payload(kind="agentic-workspace/session-log-index-repair/v1")
         return {"kind": "agentic-workspace/session-log-index-repair/v1", "status": "missing-log", "path": ""}
     effective_session = _session_for_log(state=state, log_path=log_path, session=session)
+    with _session_index_lock(state=state, session=effective_session):
+        return _repair_session_log_index_locked(state=state, log_path=log_path, session=session, effective_session=effective_session)
+
+
+def _repair_session_log_index_locked(
+    *, state: SessionLoggingState, log_path: Path, session: dict[str, str] | None, effective_session: dict[str, str]
+) -> dict[str, Any]:
     index = _read_index_for_log(state=state, log_path=log_path, session=session)
     existing = _entries_from_index(index or {})
     markdown_entries = _entries_from_markdown(log_path)

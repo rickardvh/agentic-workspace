@@ -169,6 +169,7 @@ jobs:
       - name: Prove path, subprocess, install, and semantic behavior
         run: |
           uv run pytest tests/test_external_integration_boundary.py tests/test_package_identity.py::test_install_survives_into_fresh_second_process -q
+          uv run pytest tests/test_workspace_session_logging.py::test_session_log_concurrent_analyzers_complete_without_index_warning -q
           uv run python scripts/check/check_generated_command_packages.py --conformance-shard --require-node
 
   support-bearing-promotion:
