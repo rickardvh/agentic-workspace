@@ -70,7 +70,7 @@
       "refs": [
         "tests/test_workspace_proof_cli.py template selection: 11 passed",
         "generic mutation safety selections: 10 passed",
-        "tests/test_workspace_proof_cli.py: 231 passed; one unrelated assertion fails identically at clean base 390f53358",
+        "tests/test_workspace_proof_cli.py: 232 passed",
         "routed validation: all selected commands passed after evidence classification repair"
       ]
     },
@@ -164,14 +164,14 @@
     "what happened": "Projected only required proof-template identity keys into semantic obligation and admission checks while retaining not-required baseline diagnostics.",
     "scope touched": "Proof-template runtime, focused proof CLI regressions, release metadata, and issue #2740 replay evidence classification.",
     "changed surfaces": "workspace_runtime_proof.py; test_workspace_proof_cli.py; release change; Planning plan/proposal; operating-projection evidence inventory classification.",
-    "validations run": "11 focused template tests; 10 mutation-safety tests; lint; typecheck; routed proof commands; 231/232 full proof CLI tests with the sole failure reproduced unchanged at clean base 390f53358.",
+    "validations run": "11 focused template tests; 10 mutation-safety tests; 6 proof-route strategy tests; lint; typecheck; routed proof commands; 232/232 full proof CLI tests.",
     "result for continuation": "Implementation and deterministic fixed-point regression are complete; exact-head canonical receipt finalization remains.",
     "next step": "Record receipts on the finalized subject and prove the receipt-only commit is observational."
   },
   "finished_run_review": {
     "review status": "complete",
     "scope respected": "Generic authority-envelope mutation admission and mutating-operation safety were not changed.",
-    "proof status": "passed with one exact-base-attributed unrelated full-suite failure",
+    "proof status": "passed",
     "intent served": "yes for the bounded proof-template fixed-point repair",
     "config compliance": "Feature-branch terminal Planning truth is represented by an archive-owner integration proposal.",
     "misinterpretation risk": "low",
@@ -191,7 +191,7 @@
     "larger-intent status": "satisfied for #2740 repair",
     "closure decision": "archive-owner-on-integration-target",
     "why this decision is honest": "The bounded implementation and proof are complete; independent review and target-branch lifecycle application remain external.",
-    "evidence carried forward": "Focused test counts, routed validation, canonical receipts, and exact clean-base attribution.",
+    "evidence carried forward": "Focused test counts, routed validation, canonical receipts, and canonical structured broad-escalation proof.",
     "reopen trigger": "Reopen if final receipt-only reconciliation is not accepted or independent review finds semantic identity loss."
   }
 }

@@ -9156,9 +9156,13 @@ def _proof_selection_for_changed_paths(
             elif strategy_outcome == "broad-escalation-required":
                 should_withhold_broad = lane_is_generic_broad_escalation or lane_contains_broad_command
             else:
-                should_withhold_broad = lane_is_generic_broad_escalation or (
-                    bool(lane.get("proof_profile"))
-                    and bool(generic_broad_commands.intersection(str(command).strip() for command in broad_commands))
+                should_withhold_broad = (
+                    lane_is_generic_broad_escalation
+                    or lane_is_subsystem_broad
+                    or (
+                        bool(lane.get("proof_profile"))
+                        and bool(generic_broad_commands.intersection(str(command).strip() for command in broad_commands))
+                    )
                 )
             if not should_withhold_broad:
                 continue
