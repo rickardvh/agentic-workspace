@@ -1083,7 +1083,7 @@ def _proof_template_live_obligation_id(
     changed_paths: list[str],
     selected_command: dict[str, Any],
 ) -> str:
-    current_identity = _proof_template_current_identity(selected_command=selected_command)
+    current_identity = _proof_template_semantic_identity(_proof_template_current_identity(selected_command=selected_command))
     canonical = {
         "template_command": str(required_command).strip(),
         "changed_paths": [str(path).strip().replace("\\", "/") for path in changed_paths if str(path).strip()],
@@ -1122,6 +1122,17 @@ _PROOF_TEMPLATE_REQUIRED_IDENTITY_KEYS = (
     "template_revision",
 )
 _PROOF_TEMPLATE_NOT_REQUIRED_IDENTITY_KEYS = ("evaluation_result_revision", "mutation_baseline")
+
+
+def _proof_template_semantic_identity(identity: dict[str, str]) -> dict[str, str]:
+    """Return only revisions that govern a non-mutating proof-template obligation.
+
+    Not-required revisions remain in the binding's diagnostic authority envelope,
+    but must not make a receipt-only commit invalidate the validation receipt that
+    records it.
+    """
+
+    return {key: str(identity.get(key) or "").strip() for key in _PROOF_TEMPLATE_REQUIRED_IDENTITY_KEYS}
 
 
 def _proof_template_short_hash(payload: Any) -> str:
@@ -1184,7 +1195,7 @@ def _proof_template_authority_resolution_for_lane(
     }
     authority_states: dict[str, dict[str, Any]] = {
         key: {
-            "status": "not-required" if key == "evaluation_result_revision" else "current",
+            "status": "not-required" if key in _PROOF_TEMPLATE_NOT_REQUIRED_IDENTITY_KEYS else "current",
             "revision": value,
             "source": "repo-proof-obligation-resolver",
             "provenance": "selected proof lane and current repository state",
@@ -1229,7 +1240,7 @@ def _proof_template_resolved_obligation(
     missing_identity = [key for key in _PROOF_TEMPLATE_REQUIRED_IDENTITY_KEYS if not current_identity[key]]
     missing_authority_state = [
         key
-        for key in current_identity
+        for key in _PROOF_TEMPLATE_REQUIRED_IDENTITY_KEYS
         if not isinstance(authority_states.get(key), dict)
         or str(_as_dict(authority_states.get(key)).get("revision") or "").strip() != current_identity[key]
     ]
@@ -1415,7 +1426,7 @@ def _proof_template_binding_admission(
     if selected_context and str(assignment.get("context_key") or "").strip() != selected_context:
         return {**base, "status": "rejected", "reason": "assignment-context-mismatch", "binding": binding}
     authority_revisions = binding.get("authority_revisions", {}) if isinstance(binding.get("authority_revisions"), dict) else {}
-    for key, current_value in current_identity.items():
+    for key, current_value in _proof_template_semantic_identity(current_identity).items():
         if str(authority_revisions.get(key) or "").strip() != current_value:
             return {**base, "status": "rejected", "reason": f"stale-{key}-template-binding", "binding": binding}
     if str(binding.get("live_obligation_id") or "").strip() != expected_id:
