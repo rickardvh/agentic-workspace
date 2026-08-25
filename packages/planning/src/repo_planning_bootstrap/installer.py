@@ -17235,7 +17235,8 @@ def targeted_execplan_write(
     unsupported_projection_fields = sorted(field for field in patch if field in {"parent"})
     lifecycle_value = str(patch.get("lifecycle") or "").strip().lower()
     terminal_lifecycle = lifecycle_value in {"completed", "complete", "closed", "archived", "superseded"}
-    if "phase" in patch and not terminal_lifecycle:
+    phase_value = str(patch.get("phase") or "").strip().lower()
+    if phase_value == "complete" and not terminal_lifecycle:
         unsupported_projection_fields.append("phase")
     if unsupported_projection_fields:
         return {
@@ -17247,6 +17248,8 @@ def targeted_execplan_write(
     updated = copy.deepcopy(record)
     for key, value in patch.items():
         updated[key] = copy.deepcopy(value)
+    if "next_action" in patch and isinstance(updated.get("canonical_core"), dict):
+        updated["canonical_core"]["next_action"] = str(patch["next_action"])
     updated["revision"] = int(record.get("revision") or 0) + 1
     findings = _json_schema_findings(payload=updated, schema_path=EXECPLAN_RECORD_SCHEMA_PATH)
     if findings:
