@@ -33,6 +33,7 @@
     "architecture_principles",
     "workflow_obligations",
     "assurance_requirements",
+    "operating_projection_receipt",
     "product_managed_enclave",
     "ownership_diagnostics",
     "surface_value_guardrail",
@@ -86,6 +87,7 @@
     "compile only active improvement pressure into posture obligations; keep mitigated, promoted, accepted-risk, and obsolete pressure quiet by default",
     "make recent successful-completion cost evidence inspectable without broad dogfooding or review archaeology",
     "compress routine agent routing into authority, active work, evidence, durable knowledge, and promotion residue without changing canonical owners",
-    "expose continuation, completion, external-evidence, automation-readiness, and migration-pilot answers as derived projections rather than new stores or runtime ownership"
+    "expose continuation, completion, external-evidence, automation-readiness, and migration-pilot answers as derived projections rather than new stores or runtime ownership",
+    "compose task-scoped route, verification, proof freshness, closeout trust, and runtime mirror state as a derived identity receipt without creating a second proof authority"
   ]
 }

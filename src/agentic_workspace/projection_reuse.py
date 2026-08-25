@@ -58,6 +58,12 @@ _SELECTOR_ENRICHMENT_DEPENDENCIES = {
         ".agentic-workspace/local/proof-receipts/last.json",
         ".agentic-workspace/planning/archive/index.json",
     ),
+    "operating_projection_receipt": (
+        ".agentic-workspace/local/proof-receipts/last.json",
+        ".agentic-workspace/local/proof-receipts/history.jsonl",
+        ".agentic-workspace/local/cache/proof-reuse.json",
+        ".agentic-workspace/planning/archive/index.json",
+    ),
 }
 
 _PROJECTION_CONTEXT_FIELDS = ("branch", "head", "base")

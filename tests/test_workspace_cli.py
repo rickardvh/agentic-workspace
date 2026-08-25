@@ -15781,6 +15781,43 @@ def test_proof_reuse_v2_reuses_unrelated_descendants_and_rejects_exact_identity_
     assert wrong_head["identity_failures"] == ["wrong-head"]
 
 
+def test_report_operating_projection_receipt_is_lazy_and_task_scoped(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "report",
+                "--target",
+                str(tmp_path),
+                "--section",
+                "operating_projection_receipt",
+                "--task",
+                "repair #2740",
+                "--changed",
+                "src/widget.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    receipt = json.loads(capsys.readouterr().out)["answer"]
+
+    assert receipt["kind"] == "agentic-workspace/operating-projection-receipt/v1"
+    assert receipt["scope"] == {"task": "repair #2740", "changed_paths": ["src/widget.py"]}
+    assert set(receipt["owner_results"]) == {
+        "route",
+        "verification",
+        "selected_proof",
+        "closeout_trust",
+        "runtime_mirror",
+    }
+    assert receipt["reuse_index"]["stores_proof"] is False
+
+
 def test_report_runtime_mirror_consistency_detects_missing_and_mismatched_shapes(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0

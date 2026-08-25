@@ -106,6 +106,10 @@
     {
       "surface": "optional task text and changed-path list for task-scoped closeout trust sections",
       "required": false
+    },
+    {
+      "surface": "canonical proof receipts and derived constituent identity index for the task-scoped operating projection receipt",
+      "required": false
     }
   ],
   "writes": [],
@@ -148,6 +152,8 @@
     "Unknown sections should be treated as usage errors.",
     "Optional task text and changed paths may refine task-scoped section payloads, but must not change default repo-wide closeout trust semantics.",
     "Exact field selectors must operate on the selected report payload and must not force a lazy section to build the full report.",
+    "The operating projection receipt must remain a derived composition, store no proof evidence, and present stale or ambiguous proof as requiring rerun rather than current.",
+    "Branch, HEAD, and base are observational stack context unless an owner explicitly declares them as semantic freshness dependencies.",
     "The strict-current failure policy blocks only current executable and installed/configured state; archive history and maintenance debt remain non-blocking."
   ],
   "proof": [
@@ -156,6 +162,7 @@
     "task-scoped closeout trust distinguishes bounded task-switch residue from repo-wide active-plan closure blockers",
     "operational-compression section selector returns compact advisory measures",
     "sectioned exact field selection returns selected-output JSON without full-report assembly",
+    "operating projection receipt tests prove same-input reuse, constituent-level invalidation, stale-proof fallback, and explicit broad escalation",
     "strict-current negative fixtures prove deterministic non-zero exit semantics and archive-only success"
   ],
   "migration_status": "draft-contract-only"

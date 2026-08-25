@@ -164,8 +164,10 @@ from agentic_workspace.operating_decision import (
     project_startup_claim_effect_authority,
     projection_surface_builder_inputs,
 )
+from agentic_workspace.operating_projection_receipt import build_operating_projection_receipt, observed_stack_context
 from agentic_workspace.projection_reuse import (
     ProjectionProgress,
+    admitted_projection_revisions,
     enforce_projection_serialization_budget,
     lookup_projection_reuse,
     prepare_projection_reuse,
@@ -14095,6 +14097,12 @@ _LAZY_REPORT_SECTION_CATALOG: tuple[dict[str, str], ...] = (
         "when_to_use": "when evidence production or review provenance matters more than ordinary proof selection",
     },
     {
+        "section": "operating_projection_receipt",
+        "kind": "agentic-workspace/operating-projection-receipt/v1",
+        "purpose": "task-scoped route, verification, selected-proof freshness, closeout-trust, and runtime-mirror receipt",
+        "when_to_use": "during stacked-PR implementation and repair loops when a bounded freshness delta should replace repeated owner inspections",
+    },
+    {
         "section": "requirement_grounding",
         "kind": "agentic-workspace/requirement-grounding/v1",
         "purpose": "requirement refs, applicability, interpretation, design effects, verification evidence, gaps, and claim boundaries",
@@ -17557,6 +17565,74 @@ def _run_lazy_report_section_command(
 
     normalized_changed_paths = _normalize_changed_paths(changed_paths or [])
     task_issue_refs = sorted(set(re.findall("#\\d+", task_text or "")))
+
+    if normalized == "operating_projection_receipt":
+        if not str(task_text or "").strip():
+            raise WorkspaceUsageError("report --section operating_projection_receipt requires --task <task>")
+        route = _summary_planning_route_decision_payload(
+            target_root=target_root,
+            task_text=task_text,
+            changed_paths=normalized_changed_paths,
+        )
+        assurance_requirements = _assurance_requirements_report_payload(
+            config=config,
+            target_root=target_root,
+            active_planning_record=active_planning_record,
+            task_text=task_text,
+            changed_paths=normalized_changed_paths,
+        )
+        verification = _verification_report_compact_projection(
+            _verification_report_payload(
+                target_root=target_root,
+                active_planning_record=active_planning_record,
+                assurance_requirements=assurance_requirements,
+                task_text=task_text,
+                changed_paths=normalized_changed_paths,
+            )
+        )
+        proof_selection = _proof_selection_for_changed_paths(
+            changed_paths=normalized_changed_paths,
+            target_root=target_root,
+            task_text=task_text,
+            include_durable_intent=False,
+            include_assurance_requirements=False,
+            include_routine_work_context=False,
+            include_runtime_diagnostics=False,
+            include_test_strategy_check=False,
+        )
+        closeout_trust = _report_closeout_trust_payload(
+            module_reports=_selected_module_closeout_reports(target_root=target_root, selected_modules=selected_modules),
+            target_root=target_root,
+            config=config,
+            cli_invoke=config.cli_invoke,
+            task_text=task_text,
+            changed_paths=normalized_changed_paths,
+            compact=True,
+        )
+        runtime_mirror = _runtime_mirror_surface_consistency_payload(target_root=target_root, cli_invoke=config.cli_invoke)
+        revisions, _dependencies, _findings = admitted_projection_revisions(
+            root=target_root,
+            operation="report",
+            query={"section": normalized, "task": task_text or "", "changed": normalized_changed_paths},
+        )
+        stack_context = observed_stack_context(
+            target_root=target_root,
+            branch=str(revisions.get("branch") or ""),
+            head=str(revisions.get("head") or ""),
+        )
+        payload[normalized] = build_operating_projection_receipt(
+            target_root=target_root,
+            task_text=str(task_text or ""),
+            changed_paths=normalized_changed_paths,
+            admitted_revisions=revisions,
+            stack_context=stack_context,
+            route=route,
+            verification=verification,
+            proof_selection=proof_selection,
+            closeout_trust=closeout_trust,
+            runtime_mirror=runtime_mirror,
+        )
+        return _select_report_payload(payload, profile="router", section=normalized)
 
     if normalized in {"assurance_requirements", "verification", "requirement_grounding", "applicable_intent"}:
         assurance_requirements = _assurance_requirements_report_payload(
