@@ -6138,7 +6138,7 @@ def test_start_default_routes_memory_and_installed_state_detail_behind_selectors
 
     assert "memory_decision_packet" not in payload
     assert "installed_state_compatibility" not in payload
-    assert set(payload) == {"kind", "target", "decision_packet"}
+    assert set(payload) == {"kind", "target", "decision_packet", "task_assignment_disposition"}
     assert "--select <field[,field...]>" in payload["decision_packet"]["detail_routes"]["select"]
 
     assert (
@@ -8587,7 +8587,7 @@ def test_generated_ordinary_guidance_is_executable_from_default_decision_packet_
     )
     payload = json.loads(capsys.readouterr().out)
 
-    assert set(payload) == {"kind", "target", "decision_packet"}
+    assert set(payload) == {"kind", "target", "decision_packet", "task_assignment_disposition"}
     assert "communication_contract" not in payload
     decision = payload["decision_packet"]
     action = decision["action"]
@@ -8656,7 +8656,7 @@ def test_start_default_compresses_representative_first_contact_without_losing_de
         assert measurement["json_bytes"] <= baseline["json_bytes"] * 0.5
         assert measurement["human_lines"] <= baseline["human_lines"] * 0.5
         assert measurement["field_count"] <= baseline["field_count"] * 0.5
-        assert set(payloads[name]) == {"kind", "target", "decision_packet"}
+        assert set(payloads[name]) == {"kind", "target", "decision_packet", "task_assignment_disposition"}
         decision = payloads[name]["decision_packet"]
         assert isinstance(decision, dict)
         assert decision["identity"]["revision"]
