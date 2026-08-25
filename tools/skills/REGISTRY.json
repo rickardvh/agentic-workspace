@@ -47,12 +47,12 @@
       "path": "pr-review-recheck/SKILL.md",
       "scope": "repo-owned",
       "stability": "repo-managed",
-      "summary": "review, re-review, and assess merge readiness for this repo's pull requests using intent, proof, closure, CI, and semver boundaries",
+      "summary": "independent external assessment of a submitted change by an agent that did not implement or modify the patch",
       "activation_hints": {
-        "verbs": ["review", "re-review", "recheck", "approve", "merge", "comment"],
-        "nouns": ["pull request", "PR", "merge readiness", "review comment", "CI", "semver label"],
-        "phrases": ["review PR", "review pull request", "recheck PR", "check again", "merge if ready", "mark ready", "post a comment"],
-        "when": ["reviewing or rechecking pull requests", "deciding whether a PR is ready", "checking whether review feedback was addressed"]
+        "verbs": ["audit independently", "externally re-review"],
+        "nouns": ["independent external reviewer", "external review authority", "independent merge-readiness audit"],
+        "phrases": ["act as independent external reviewer", "independent external review of PR", "review a patch you did not implement"],
+        "when": ["a distinct external review agent is evaluating another agent's implementation", "the current agent did not implement modify or push the reviewed patch"]
       }
     },
     {

@@ -15,7 +15,7 @@ Generated, non-authoritative helper. It points to compact query surfaces and own
 - Run `uv run agentic-workspace preflight --format json` only when you need bundled takeover or recovery context.
 - Run `uv run agentic-workspace report --target . --format json` when you need health, warnings, or section hints.
 - For nontrivial GitHub issue work, follow `tools/skills/github-issue-shaping/SKILL.md`, then `tools/skills/github-issue-creation/SKILL.md` only when creation is required.
-- For PR review or recheck, follow `tools/skills/pr-review-recheck/SKILL.md`.
+- For independent external PR review by an agent that did not implement the patch, follow `tools/skills/pr-review-recheck/SKILL.md`; implementation agents addressing feedback must not load it.
 
 ## Constraints
 

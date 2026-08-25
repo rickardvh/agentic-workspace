@@ -458,6 +458,8 @@ def test_rendered_routing_adapter_stays_secondary_and_compact() -> None:
     assert "uv run agentic-workspace report --target . --format json" not in text
     assert "tools/skills/github-issue-shaping/SKILL.md" in text
     assert "tools/skills/pr-review-recheck/SKILL.md" in text
+    assert "only independent external PR review" in text
+    assert "implementation agents addressing feedback must not load it" in text
     assert len(text.splitlines()) <= 22
 
 
@@ -474,6 +476,8 @@ def test_issue_and_review_skills_audit_architectural_assumptions() -> None:
     assert "PR violates a sound issue requirement" in review_skill
     assert "issue requirement is wrong or too strong" in review_skill
     assert "every selector to be cheaper" in review_skill
+    assert "current agent did not implement, modify, or push the PR patch" in review_skill
+    assert "does not authorize implementation-agent self-review" in review_skill
 
 
 def test_rendered_quickstart_routes_issue_and_review_work_without_copying_doctrine() -> None:
@@ -483,5 +487,7 @@ def test_rendered_quickstart_routes_issue_and_review_work_without_copying_doctri
     assert "tools/skills/github-issue-shaping/SKILL.md" in text
     assert "tools/skills/github-issue-creation/SKILL.md" in text
     assert "tools/skills/pr-review-recheck/SKILL.md" in text
+    assert "independent external PR review by an agent that did not implement the patch" in text
+    assert "implementation agents addressing feedback must not load it" in text
     assert "directly observed evidence" not in text
     assert len(text.splitlines()) <= 28

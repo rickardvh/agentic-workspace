@@ -1094,6 +1094,44 @@ def test_implement_open_issues_keeps_startup_authoritative_and_recommendations_b
     assert specialist["recommendation_authority"] == "admitted"
 
 
+def test_review_skill_routes_only_to_independent_external_reviewer(capsys) -> None:
+    target = Path(__file__).resolve().parents[1]
+
+    assert (
+        cli.main(
+            [
+                "skills",
+                "--target",
+                str(target),
+                "--task",
+                "Address blocking review comments on my PR, implement the fixes, and push the branch",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    implementer_payload = json.loads(capsys.readouterr().out)
+    assert "pr-review-recheck" not in {entry["id"] for entry in implementer_payload["recommendations"]}
+
+    assert (
+        cli.main(
+            [
+                "skills",
+                "--target",
+                str(target),
+                "--task",
+                "Act as independent external reviewer and review a patch you did not implement",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    reviewer_payload = json.loads(capsys.readouterr().out)
+    assert "pr-review-recheck" in {entry["id"] for entry in reviewer_payload["recommendations"]}
+
+
 def test_skills_command_recommends_memory_router_for_note_selection_task(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
