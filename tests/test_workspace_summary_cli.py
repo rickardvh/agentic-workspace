@@ -6,6 +6,7 @@ import subprocess
 import time
 import tomllib
 from pathlib import Path
+from typing import Any
 
 import pytest
 from repo_planning_bootstrap import installer as planning_installer
@@ -1889,6 +1890,9 @@ candidates = []
                     }
                 )
             )
+        if command[:3] == ["gh", "api", "--paginate"]:
+            assert command[3:] == ["--slurp", "repos/acme/project/issues/11/sub_issues?per_page=100"]
+            return Result(json.dumps([[{"number": 12}]]))
         assert command[:3] == ["gh", "issue", "list"]
         assert command[command.index("--state") + 1] == "all"
         return Result(
@@ -1966,7 +1970,18 @@ candidates = [
                         "status": "open",
                         "kind": "issue",
                         "planning_residue_expected": "optional",
-                    }
+                    },
+                    *[
+                        {
+                            "system": "github",
+                            "id": f"#{number}",
+                            "title": f"Older cached lane {number}",
+                            "status": "closed",
+                            "kind": "lane",
+                            "observation_id": f"github:issue:{number}:old",
+                        }
+                        for number in range(100, 130)
+                    ],
                 ],
             },
             indent=2,
@@ -2002,6 +2017,9 @@ candidates = [
                     }
                 )
             )
+        if command[:3] == ["gh", "api", "--paginate"]:
+            assert command[3:] == ["--slurp", "repos/acme/project/issues/11/sub_issues?per_page=100"]
+            return Result(json.dumps([[{"number": 12}]]))
         assert command[:3] == ["gh", "issue", "list"]
         return Result(
             json.dumps(
@@ -2023,7 +2041,7 @@ candidates = [
                         "title": "Parent intake lane",
                         "state": "OPEN",
                         "url": "https://github.com/acme/project/issues/11",
-                        "labels": [{"name": "priority/high"}],
+                        "labels": [{"name": "priority:P0"}],
                         "createdAt": "2026-04-28T00:00:00Z",
                         "updatedAt": "2026-05-20T00:00:00Z",
                         "closedAt": "",
@@ -2039,7 +2057,7 @@ candidates = [
                         "createdAt": "2026-04-28T00:00:00Z",
                         "updatedAt": "2026-05-20T00:00:00Z",
                         "closedAt": "",
-                        "body": "## Issue kind\nslice\n\nParent: #11\n",
+                        "body": "## Issue kind\nslice\n",
                         "comments": 0,
                     },
                 ]
@@ -2070,6 +2088,12 @@ candidates = [
     assert grouping["parent_lanes"][0]["id"] == "#11"
     assert grouping["child_issue_clusters"][0]["parent_id"] == "#11"
     assert grouping["child_issue_clusters"][0]["child_count"] == 1
+    assert grouping["standalone_count"] == 0
+    assert dry_run_payload["relationship_observation"]["status"] == "complete"
+    parent_candidate = next(
+        candidate for candidate in dry_run_payload["planning_candidate_suggestions"]["candidates"] if candidate["refs"] == "GitHub #11"
+    )
+    assert parent_candidate["priority"] == "P0"
     stale_candidate = dry_run_payload["stale_planning_candidate_reconciliation"]["stale_candidates"][0]
     assert stale_candidate["id"] == "github-10-stale"
     assert stale_candidate["reconcile_command"] == (
@@ -2116,7 +2140,154 @@ candidates = [
     assert cli.main(["report", "--target", str(tmp_path), "--section", "external_work_delta", "--format", "json"]) == 0
     delta = json.loads(capsys.readouterr().out)
     assert delta["answer"]["status"] == "snapshot-only"
-    assert delta["answer"]["item_count"] == 3
+    assert delta["answer"]["item_count"] == 33
+
+
+@pytest.mark.parametrize("child_count", [9, 10])
+def test_github_native_sub_issue_hierarchy_preserves_historical_and_current_lane_shape(
+    tmp_path: Path, monkeypatch, child_count: int
+) -> None:
+    parent = workspace_runtime_core._github_issue_to_external_intent_item(
+        issue={
+            "number": 2721,
+            "title": "Open work lane",
+            "state": "OPEN",
+            "url": "https://github.com/acme/project/issues/2721",
+            "labels": [{"name": "priority:P0"}],
+            "updatedAt": "2026-08-25T10:30:51Z",
+            "body": "## Issue kind\nlane\n",
+        },
+        repo="acme/project",
+    )
+    assert parent is not None
+    children = [
+        workspace_runtime_core._github_issue_to_external_intent_item(
+            issue={
+                "number": number,
+                "title": f"Child {number}",
+                "state": "OPEN",
+                "url": f"https://github.com/acme/project/issues/{number}",
+                "labels": [],
+                "updatedAt": "2026-08-25T10:30:51Z",
+                "body": "## Issue kind\nslice\n",
+            },
+            repo="acme/project",
+        )
+        for number in range(2722, 2722 + child_count)
+    ]
+    items = [parent, *[item for item in children if item is not None]]
+    monkeypatch.setattr(
+        workspace_runtime_core,
+        "_run_gh_json",
+        lambda args, cwd: [{"number": number} for number in range(2722, 2722 + child_count)],
+    )
+
+    observation = workspace_runtime_core._github_native_sub_issue_relationships(target_root=tmp_path, repo="acme/project", items=items)
+    candidates = workspace_runtime_core._planning_candidate_suggestions_from_external_items(target_root=tmp_path, items=items)
+    grouping = workspace_runtime_core._external_issue_grouping_hints(items=items, candidates=candidates["candidates"])
+
+    assert observation["status"] == "complete"
+    assert grouping["parent_lane_count"] == 1
+    assert grouping["standalone_count"] == 0
+    assert grouping["child_issue_clusters"][0]["parent_id"] == "#2721"
+    assert grouping["child_issue_clusters"][0]["child_count"] == child_count
+    assert candidates["candidates"][0]["priority"] == "P0"
+    assert all(item["relationships"]["source"] == "github-native-sub-issues" for item in items)
+
+
+def test_github_native_sub_issue_partial_failure_is_not_flattened(tmp_path: Path, monkeypatch) -> None:
+    parent = workspace_runtime_core._github_issue_to_external_intent_item(
+        issue={
+            "number": 90,
+            "title": "Parent lane",
+            "state": "OPEN",
+            "url": "https://github.com/acme/project/issues/90",
+            "labels": [],
+            "updatedAt": "2026-08-25T10:30:51Z",
+            "body": "## Issue kind\nlane\n",
+        },
+        repo="acme/project",
+    )
+    assert parent is not None
+    child = workspace_runtime_core._github_issue_to_external_intent_item(
+        issue={
+            "number": 91,
+            "title": "Potential child",
+            "state": "OPEN",
+            "url": "https://github.com/acme/project/issues/91",
+            "labels": [],
+            "updatedAt": "2026-08-25T10:30:51Z",
+            "body": "## Issue kind\nslice\n",
+        },
+        repo="acme/project",
+    )
+    assert child is not None
+
+    def unavailable(args, cwd):
+        raise workspace_runtime_core.WorkspaceUsageError("HTTP 403: rate limit or permission denied")
+
+    monkeypatch.setattr(workspace_runtime_core, "_run_gh_json", unavailable)
+    observation = workspace_runtime_core._github_native_sub_issue_relationships(
+        target_root=tmp_path, repo="acme/project", items=[parent, child]
+    )
+    grouping = workspace_runtime_core._external_issue_grouping_hints(items=[parent, child])
+
+    assert observation["status"] == "partial"
+    assert observation["error_count"] == 1
+    assert parent["relationships"]["posture"] == "partial"
+    assert child["relationships"]["posture"] == "partial"
+    assert grouping["relationship_evidence"]["partial_count"] == 2
+    assert grouping["relationship_evidence"]["unknown_count"] == 2
+    assert grouping["standalone_count"] == 0
+    assert grouping["standalone_candidates"] == []
+
+
+def test_github_native_sub_issue_query_truncation_keeps_unobserved_children_unknown(tmp_path: Path, monkeypatch) -> None:
+    def item(number: int, kind: str) -> dict[str, Any]:
+        result = workspace_runtime_core._github_issue_to_external_intent_item(
+            issue={
+                "number": number,
+                "title": f"{kind.title()} {number}",
+                "state": "OPEN",
+                "url": f"https://github.com/acme/project/issues/{number}",
+                "labels": [],
+                "updatedAt": "2026-08-25T10:30:51Z",
+                "body": f"## Issue kind\n{kind}\n",
+            },
+            repo="acme/project",
+        )
+        assert result is not None
+        return result
+
+    first_parent = item(100, "lane")
+    truncated_parent = item(101, "lane")
+    potential_child = item(102, "slice")
+    monkeypatch.setattr(workspace_runtime_core, "_run_gh_json", lambda args, cwd: [])
+
+    observation = workspace_runtime_core._github_native_sub_issue_relationships(
+        target_root=tmp_path,
+        repo="acme/project",
+        items=[first_parent, truncated_parent, potential_child],
+        max_parent_queries=1,
+    )
+    grouping = workspace_runtime_core._external_issue_grouping_hints(items=[first_parent, truncated_parent, potential_child])
+
+    assert observation["status"] == "partial"
+    assert observation["truncated"] is True
+    assert truncated_parent["relationships"]["posture"] == "partial"
+    assert potential_child["relationships"]["posture"] == "partial"
+    assert grouping["standalone_count"] == 0
+    assert grouping["standalone_candidates"] == []
+
+
+def test_external_issue_grouping_keeps_hierarchy_unsupported_provider_items_flat() -> None:
+    grouping = workspace_runtime_core._external_issue_grouping_hints(
+        items=[{"id": "#103", "title": "Flat provider item", "kind": "issue", "status": "open"}]
+    )
+
+    assert grouping["standalone_count"] == 1
+    assert grouping["standalone_candidates"][0]["id"] == "#103"
+    assert grouping["standalone_candidates"][0]["relationship_posture"] == "unsupported"
 
 
 def test_external_intent_refresh_requires_explicit_refs_before_candidate_promotion(tmp_path: Path, monkeypatch, capsys) -> None:

@@ -5881,6 +5881,40 @@ def _host_domain_proof_lanes_for_changed_paths(
     return _apply_domain_lane_precedence(lanes)
 
 
+def _machine_local_config_proof_lane(changed_paths: list[str]) -> dict[str, Any] | None:
+    local_paths = [path for path in changed_paths if path == ".agentic-workspace/config.local.toml"]
+    if not local_paths:
+        return None
+    return {
+        "id": "domain:machine_local_config",
+        "when": "declared machine-local workspace configuration changed",
+        "enough_proof": [
+            "uv run --active python scripts/run_agentic_workspace.py config --target . --format json",
+            "uv run --active python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+        ],
+        "recovery_signal": "invalid local syntax, merged posture, or contract binding blocks the effective-local-config claim",
+        "proof_kind": "targeted-test",
+        "proof_responsibility": "machine-local-closeout",
+        "execution_mode": "serial-required",
+        "domain_lane": {
+            "id": "machine_local_config",
+            "purpose": "Validate ignored local configuration and its effective merged runtime posture without shared proof authority.",
+            "source": "built-in machine-local proof boundary",
+            "owner": "workspace structured config + local proof receipt owner",
+            "matched_paths": [{"path": path, "pattern": ".agentic-workspace/config.local.toml"} for path in local_paths],
+            "matched_scope": "machine-local-config",
+            "claim_boundary": "effective-local-configuration-only",
+            "route_role": "behavior",
+        },
+        "matched_paths": local_paths,
+        "matched_path_patterns": [".agentic-workspace/config.local.toml"],
+        "matched_scope": "machine-local-config",
+        "claim_boundary": "effective-local-configuration-only",
+        "evidence_concepts": ["structured-config", "effective-runtime-posture", "machine-local-evidence"],
+        "authority_refs": [".agentic-workspace/local/proof-receipts/runs"],
+    }
+
+
 def _domain_lane_precedence_value(lane: dict[str, Any]) -> int | None:
     raw = str(lane.get("precedence") or _as_dict(lane.get("domain_lane")).get("precedence") or "").strip()
     if not raw:
@@ -8966,6 +9000,9 @@ def _proof_selection_for_changed_paths(
             }
         )
     domain_lanes = _host_domain_proof_lanes_for_changed_paths(config=config, changed_paths=changed_paths, task_text=task_text)
+    if machine_local_lane := _machine_local_config_proof_lane(changed_paths):
+        domain_lanes.append(machine_local_lane)
+        domain_lanes = _apply_domain_lane_precedence(domain_lanes)
     domain_lanes = _annotate_domain_lane_evidence_concepts(domain_lanes=domain_lanes, verification=verification)
     selected_lanes.extend(active_plan_lanes)
     selected_lanes.extend(concern_lanes)

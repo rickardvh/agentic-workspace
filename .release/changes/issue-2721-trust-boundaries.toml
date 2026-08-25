@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Reject implementer-authored review authority and route trusted corrections to existing canonical owners without duplicate policy records."

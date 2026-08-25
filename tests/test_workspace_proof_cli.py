@@ -9859,3 +9859,241 @@ review_owner = "security"
     assert [item["kind"] for item in concepts["used"]] == ["core", "host-declared"]
     assert concepts["degraded"][0]["state"] == "undeclared-host-concept"
     assert verification["evidence_concepts"]["status"] == "attention"
+
+
+def _selected_execution_fixture(commands: list[str], *, local: bool = True) -> dict[str, object]:
+    return {
+        "required_commands": commands,
+        "selected_lanes": [
+            {
+                "id": "domain:machine_local_config" if local else "domain:shared_config",
+                "required_commands": commands,
+            }
+        ],
+    }
+
+
+def test_selected_proof_execution_reconciles_and_reuses_local_receipts(tmp_path: Path, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    _write(tmp_path / ".gitignore", ".agentic-workspace/local/\n.agentic-workspace/config.local.toml\n")
+    _write(tmp_path / ".agentic-workspace/config.toml", "schema_version = 1\n")
+    _write(tmp_path / ".agentic-workspace/config.local.toml", "schema_version = 1\n")
+    commands = ["check-one", "check-two", "check-three", "check-four"]
+    calls: list[str] = []
+    monkeypatch.setattr(
+        workspace_runtime_core,
+        "_proof_selection_for_changed_paths",
+        lambda **_: _selected_execution_fixture(commands),
+    )
+
+    def run(command: str, **_: object) -> subprocess.CompletedProcess[str]:
+        calls.append(command)
+        return subprocess.CompletedProcess(command, 0, stdout=f"{command} passed", stderr="")
+
+    monkeypatch.setattr(workspace_runtime_core, "run_trusted_shell", run)
+    before = subprocess.run(["git", "status", "--short"], cwd=tmp_path, capture_output=True, text=True, check=True).stdout
+    first = workspace_runtime_core._execute_selected_proof_payload(
+        target_root=tmp_path,
+        changed_paths=[".agentic-workspace/config.local.toml"],
+        task_text="verify local config",
+        run_id="",
+        timeout_seconds="30",
+        cancel_file="",
+        dry_run=False,
+    )
+    after = subprocess.run(["git", "status", "--short"], cwd=tmp_path, capture_output=True, text=True, check=True).stdout
+    assert first["status"] == "completed"
+    assert first["coverage"]["passed_count"] == 4
+    assert first["claim_boundary"]["status"] == "effective-local-configuration-verified"
+    assert first["claim_boundary"]["shared_repository_claim_allowed"] is False
+    assert len(json.dumps(first).encode("utf-8")) < 16_384
+    assert before == after
+
+    _write(tmp_path / "README.md", "unrelated repository edit\n")
+    reused = workspace_runtime_core._execute_selected_proof_payload(
+        target_root=tmp_path,
+        changed_paths=[".agentic-workspace/config.local.toml"],
+        task_text="verify local config",
+        run_id=first["run"]["id"],
+        timeout_seconds="30",
+        cancel_file="",
+        dry_run=False,
+    )
+    assert reused["status"] == "reused-fresh-evidence"
+    assert calls == commands
+
+
+def test_selected_proof_execution_resumes_failure_and_blocks_stale_subject(tmp_path: Path, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / ".agentic-workspace/config.toml", "schema_version = 1\n")
+    local_path = tmp_path / ".agentic-workspace/config.local.toml"
+    _write(local_path, "schema_version = 1\n")
+    commands = ["check-one", "check-two"]
+    calls: list[str] = []
+    fail_second = True
+    monkeypatch.setattr(
+        workspace_runtime_core,
+        "_proof_selection_for_changed_paths",
+        lambda **_: _selected_execution_fixture(commands),
+    )
+
+    def run(command: str, **_: object) -> subprocess.CompletedProcess[str]:
+        calls.append(command)
+        returncode = 1 if command == "check-two" and fail_second else 0
+        return subprocess.CompletedProcess(command, returncode, stdout="", stderr="failed" if returncode else "")
+
+    monkeypatch.setattr(workspace_runtime_core, "run_trusted_shell", run)
+    first = workspace_runtime_core._execute_selected_proof_payload(
+        target_root=tmp_path,
+        changed_paths=[".agentic-workspace/config.local.toml"],
+        task_text=None,
+        run_id="proof-run",
+        timeout_seconds="30",
+        cancel_file="",
+        dry_run=False,
+    )
+    assert first["status"] == "partial"
+    assert first["outcome"] == "failed"
+
+    fail_second = False
+    resumed = workspace_runtime_core._execute_selected_proof_payload(
+        target_root=tmp_path,
+        changed_paths=[".agentic-workspace/config.local.toml"],
+        task_text=None,
+        run_id="proof-run",
+        timeout_seconds="30",
+        cancel_file="",
+        dry_run=False,
+    )
+    assert resumed["status"] == "completed"
+    assert calls == ["check-one", "check-two", "check-two"]
+
+    _write(local_path, "schema_version = 1\n# changed subject\n")
+    stale = workspace_runtime_core._execute_selected_proof_payload(
+        target_root=tmp_path,
+        changed_paths=[".agentic-workspace/config.local.toml"],
+        task_text=None,
+        run_id="proof-run",
+        timeout_seconds="30",
+        cancel_file="",
+        dry_run=False,
+    )
+    assert stale["status"] == "stale-subject-blocked"
+    assert stale["claim_boundary"]["completion_claim_allowed"] is False
+
+
+def test_selected_proof_execution_records_cancel_and_timeout_outcomes(tmp_path: Path, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / ".agentic-workspace/config.toml", "schema_version = 1\n")
+    _write(tmp_path / ".agentic-workspace/config.local.toml", "schema_version = 1\n")
+    monkeypatch.setattr(
+        workspace_runtime_core,
+        "_proof_selection_for_changed_paths",
+        lambda **_: _selected_execution_fixture(["slow-check"]),
+    )
+    cancel = tmp_path / ".agentic-workspace/local/cancel"
+    _write(cancel, "cancel\n")
+    cancelled = workspace_runtime_core._execute_selected_proof_payload(
+        target_root=tmp_path,
+        changed_paths=[".agentic-workspace/config.local.toml"],
+        task_text=None,
+        run_id="cancelled-run",
+        timeout_seconds="1",
+        cancel_file=".agentic-workspace/local/cancel",
+        dry_run=False,
+    )
+    assert cancelled["outcome"] == "cancelled"
+
+    def timeout(*_: object, **__: object) -> subprocess.CompletedProcess[str]:
+        raise subprocess.TimeoutExpired("slow-check", 1)
+
+    monkeypatch.setattr(workspace_runtime_core, "run_trusted_shell", timeout)
+    timed_out = workspace_runtime_core._execute_selected_proof_payload(
+        target_root=tmp_path,
+        changed_paths=[".agentic-workspace/config.local.toml"],
+        task_text=None,
+        run_id="timeout-run",
+        timeout_seconds="1",
+        cancel_file="",
+        dry_run=False,
+    )
+    assert timed_out["outcome"] == "timeout"
+    assert timed_out["next_action"]["action"] == "resume-selected-proof"
+
+
+def test_selected_proof_execution_keeps_route_refinement_claim_blocked(tmp_path: Path, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "changed.py", "VALUE = 1\n")
+    selection = _selected_execution_fixture(["focused-check"], local=False)
+    selection["route_refinement_required"] = {"status": "required"}
+    monkeypatch.setattr(workspace_runtime_core, "_proof_selection_for_changed_paths", lambda **_: selection)
+    monkeypatch.setattr(
+        workspace_runtime_core,
+        "run_trusted_shell",
+        lambda command, **_: subprocess.CompletedProcess(command, 0, stdout="", stderr=""),
+    )
+    result = workspace_runtime_core._execute_selected_proof_payload(
+        target_root=tmp_path,
+        changed_paths=["changed.py"],
+        task_text=None,
+        run_id="",
+        timeout_seconds="30",
+        cancel_file="",
+        dry_run=False,
+    )
+    assert result["status"] == "completed-with-unresolved-obligations"
+    assert result["outcome"] == "blocked"
+    assert result["claim_boundary"]["completion_claim_allowed"] is False
+    assert result["next_action"]["action"] == "repair-proof-route"
+
+
+def test_machine_local_config_has_focused_local_lane_but_shared_config_does_not(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    local = workspace_runtime_proof._proof_selection_for_changed_paths(
+        changed_paths=[".agentic-workspace/config.local.toml"],
+        target_root=tmp_path,
+        include_durable_intent=False,
+    )
+    local_lane = next(lane for lane in local["selected_lanes"] if lane["id"] == "domain:machine_local_config")
+    assert local_lane["claim_boundary"] == "effective-local-configuration-only"
+    assert local["route_refinement_required"]["status"] != "required"
+
+    shared = workspace_runtime_proof._proof_selection_for_changed_paths(
+        changed_paths=[".agentic-workspace/config.toml"],
+        target_root=tmp_path,
+        include_durable_intent=False,
+    )
+    assert all(lane["id"] != "domain:machine_local_config" for lane in shared["selected_lanes"])
+
+
+def test_proof_cli_exposes_typed_selected_execution_dry_run(tmp_path: Path, capsys, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    monkeypatch.setattr(
+        workspace_runtime_core,
+        "_proof_selection_for_changed_paths",
+        lambda **_: _selected_execution_fixture(["check-local-config"]),
+    )
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                ".agentic-workspace/config.local.toml",
+                "--execute-selected",
+                "--dry-run",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/proof-execution-result/v1"
+    assert payload["status"] == "dry-run"
+    assert payload["persistence"]["repository_residue"] is False

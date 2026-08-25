@@ -1,0 +1,94 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2721-continuity",
+  "title": "Preserve external hierarchy and reconcile completed Planning owners",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "validation",
+  "revision": 3,
+  "intent": {
+    "outcome": "Ordinary startup routes stale external-backed owners through revision-bound refresh/reconciliation, while GitHub native sub-issue hierarchy and explicit supported priority survive as provider-agnostic evidence.",
+    "non_goals": [
+      "Do not make GitHub state semantic completion authority.",
+      "Do not teach core Planning GitHub API or label syntax.",
+      "Do not add a second relationship, priority, or closeout ledger."
+    ]
+  },
+  "parent": {
+    "owner_id": "issue-2721",
+    "contribution": "Fourth stacked-PR layer: external continuity for #2729 and #2731.",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "src/agentic_workspace/workspace_runtime_core.py",
+      "src/agentic_workspace/workspace_runtime_planning.py",
+      "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-external-intent-evidence.schema.json",
+      ".agentic-workspace/planning/schemas/planning-external-intent-evidence.schema.json",
+      "tests/test_workspace_cli.py",
+      "tests/test_workspace_summary_cli.py"
+    ],
+    "effects": [
+      "GitHub refresh performs bounded native hierarchy observation and reports partial/unavailable evidence honestly.",
+      "Planning grouping and candidate priority consume normalized relationship and priority fields.",
+      "External-backed active-owner routing remains quiet without matching refs and uses current observation plus CAS reconciliation authority when matched."
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected",
+      "owner": "issue-2721-continuity"
+    },
+    "proof_posture": {
+      "state": "review-repair-proof-passed",
+      "refs": [
+        "7 continuity regression cases passed",
+        "472 broad workspace cases passed with four inherited stack-base assertion failures",
+        "full Planning test target passed",
+        "workspace and Planning lint/typecheck passed",
+        "live #2721 replay observed one P0 parent with ten native children and zero standalone children",
+        "parent-plus-child permission failure and parent-query truncation fixtures preserve unknown relationship posture and emit zero false standalone candidates",
+        "PR #2735 pre-review-repair head passed CI, Security baseline, and PR Semver Label checks"
+      ]
+    },
+    "external_posture": {
+      "state": "current",
+      "refs": ["GitHub #2729", "GitHub #2731"]
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "GitHub issues #2729 and #2731 under lane #2721",
+      "label": "GitHub issues #2729 and #2731 under lane #2721",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Complete refreshed hosted validation and independent review for published PR #2735, then merge it after PR #2734 while preserving child-specific closure boundaries.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Native GitHub hierarchy and explicit priority round-trip through provider-agnostic external intent.",
+      "Stale or completed external-backed owners route through revision-bound refresh/reconciliation without granting provider state semantic authority.",
+      "Partial hierarchy evidence never masquerades as a flat topology."
+    ],
+    "requirements": [
+      "Run focused external-intent and active-owner reconciliation tests.",
+      "Run schema generation/contract checks for the changed evidence surface.",
+      "Replay the live #2721 refresh and inspect the ten-child P0 cluster before PR publication."
+    ],
+    "refs": [
+      "tests/test_workspace_summary_cli.py native hierarchy and partial-provider fixtures",
+      "tests/test_workspace_cli.py semantic-authority owner reconciliation fixture",
+      "live external-intent dry-run at 2026-08-25T12:38Z"
+    ]
+  },
+  "continuation": {
+    "owner": "issue-2721-signals",
+    "residual_intent": "The consequential-signal and combined replay layer is already published as PR #2736; remaining work is refreshed review, ordered merge, and later child-specific closure evidence."
+  },
+  "specialist_contracts": []
+}

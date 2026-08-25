@@ -1,0 +1,95 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2721-proof",
+  "title": "Execute selected proof and keep machine-local evidence local",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "validation",
+  "revision": 2,
+  "intent": {
+    "outcome": "Execute the currently selected proof set through one typed, resumable operation that owns run identity, command capture, compact receipt reconciliation, and honest claim scope; give ignored machine-local config focused local proof without repository residue.",
+    "non_goals": [
+      "Do not replace manual receipt admission as an interoperability and recovery route.",
+      "Do not promote machine-local evidence into repository, PR, release, or parent-lane authority.",
+      "Do not introduce a second proof framework or make every proof selection a broad suite."
+    ]
+  },
+  "parent": {
+    "owner_id": "issue-2721",
+    "contribution": "Closes the proof execution and local-evidence acceptance for GitHub issues #2727 and #2728 while preserving later continuity and signal slices.",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "proof CLI option and operation contracts",
+      "selected-proof execution, progress, timeout/cancel, resume/reuse, compact run records, and reconciliation",
+      "machine-local config classification, focused route, evidence identity, and local-only claim boundary",
+      "focused proof execution and locality regressions plus generated command surfaces"
+    ],
+    "effects": [
+      "One command executes the selected proof and returns a compact owner-coverage and claim decision.",
+      "Completed attempts remain addressable in local run records and successful commands are not duplicated on revision-safe resume.",
+      "Changed subjects fail closed instead of reusing stale evidence.",
+      "Ignored local config proof starts and ends without repository proof residue and cannot satisfy shared claims."
+    ]
+  },
+  "relationships": {
+    "selection": {
+        "state": "selected",
+        "owner": "issue-2721 lane current slice"
+    },
+    "proof_posture": {
+        "state": "hosted-proof-passed",
+        "refs": [
+          "6 selected-proof execution/locality acceptance tests passed",
+          "real three-command local-config execute and fresh-reuse replay passed with zero git-status delta",
+          "230 of 231 full proof-runtime tests passed; one unchanged broad-escalation baseline assertion remains",
+          "generated static/conformance, contract tooling, structured inventory, typecheck, Ruff, compileall, and routed proof checks passed",
+          "PR #2734 exact head passed CI, Security baseline, and PR Semver Label checks"
+        ]
+    },
+    "external_posture": {
+        "state": "observed",
+        "refs": ["#2727", "#2728"]
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "GitHub issues #2727 and #2728 under lane #2721",
+      "label": "GitHub issues #2727 and #2728 under lane #2721",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Obtain independent review for published PR #2734, then retain the local-only evidence boundary while published PRs #2735-#2736 are reviewed and the stack is merged in order.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Selected proof executes and reconciles through one supported typed operation.",
+      "Failures, timeouts, cancellation, partial resume, fresh reuse, and stale subjects are explicit and revision-safe.",
+      "Machine-local config receives a focused claim-capable local result with zero repository receipt residue.",
+      "Local evidence cannot authorize shared repository, PR, release, or parent claims."
+    ],
+    "requirements": [
+      "Run end-to-end executor fixtures for pass, failure, timeout/cancel, resume, reuse, and stale revision.",
+      "Run local-config clean-status, invalidation, unrelated-edit reuse, shared-claim rejection, and shared-config counterexample fixtures.",
+      "Refresh generated command surfaces and run static/conformance checks.",
+      "Run changed-path routed proof before claiming readiness."
+    ],
+    "refs": [
+      "uv run --active pytest tests/test_workspace_proof_cli.py -k selected_proof_execution-or-machine_local_config -q",
+      "uv run --active python scripts/check/check_generated_command_packages.py --require-node",
+      "uv run --active python scripts/check/check_generated_command_packages.py --conformance --require-node",
+      "uv run --active python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+      "make typecheck"
+    ]
+  },
+  "continuation": {
+    "owner": "issue-2721-continuity",
+    "residual_intent": "Continuity and signal layers are already published as PRs #2735-#2736; remaining work is independent review, ordered merge, and later child-specific closure evidence."
+  },
+  "specialist_contracts": []
+}

@@ -485,6 +485,11 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "repo_posture": _compact_repo_posture_projection(payload.get("repo_posture", {})),
         "delegation_decision": _compact_start_delegation_decision(payload.get("delegation_decision", {})),
         **(
+            {"task_assignment_disposition": payload["task_assignment_disposition"]}
+            if isinstance(payload.get("task_assignment_disposition"), dict)
+            else {}
+        ),
+        **(
             {"effective_orchestration": payload["effective_orchestration"]}
             if isinstance(payload.get("effective_orchestration"), dict)
             else {}
@@ -1251,6 +1256,7 @@ def _start_payload(
             ),
             "rule": "Startup projects current assignment authority; lifecycle mutations remain owned by assignment operations.",
         }
+    payload["task_assignment_disposition"] = execution_posture["task_assignment_disposition"]
     payload["delegation_decision"] = _compact_start_delegation_decision(execution_posture["delegation_decision"])
     effective_orchestration = _as_dict(execution_posture.get("effective_orchestration"))
     if effective_orchestration.get("surface_in_startup") is True:
@@ -2258,6 +2264,12 @@ def _apply_required_payload_target_start_gate(
     }
 
 
+def _compact_task_assignment_disposition(disposition: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "outcome": disposition.get("outcome", "blocked-unavailable"),
+    }
+
+
 def _ordinary_start_decision_payload(
     *,
     selected: dict[str, Any],
@@ -2451,6 +2463,11 @@ def _ordinary_start_decision_payload(
         "kind": selected.get("kind", "startup-context/v1"),
         "target": selected.get("target", "."),
         "decision_packet": decision,
+        **(
+            {"task_assignment_disposition": _compact_task_assignment_disposition(copy.deepcopy(selected["task_assignment_disposition"]))}
+            if isinstance(selected.get("task_assignment_disposition"), dict)
+            else {}
+        ),
         **(
             {"effective_orchestration": copy.deepcopy(selected["effective_orchestration"])}
             if isinstance(selected.get("effective_orchestration"), dict)
@@ -3018,6 +3035,11 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         ),
         "communication_contract": compact_communication_contract_payload(surface="startup"),
         **(
+            {"task_assignment_disposition": payload["task_assignment_disposition"]}
+            if isinstance(payload.get("task_assignment_disposition"), dict)
+            else {}
+        ),
+        **(
             {"effective_orchestration": payload["effective_orchestration"]}
             if isinstance(payload.get("effective_orchestration"), dict)
             else {}
@@ -3272,6 +3294,86 @@ def _active_state_has_planning(active_state: Any) -> bool:
     )
 
 
+def _fast_start_selected_decision_payload(
+    *,
+    target_root: Path,
+    config: WorkspaceConfig,
+    task_text: str | None,
+    changed_paths: list[str],
+    select: str,
+) -> dict[str, Any] | None:
+    requested = [item.strip() for item in select.split(",") if item.strip()]
+    fast_fields = {
+        "action_signals",
+        "dogfooding_signal_status",
+        "effective_orchestration",
+        "task_assignment_disposition",
+    }
+    if not requested or any(item not in fast_fields for item in requested):
+        return None
+    active_summary = _fast_planning_active_summary(target_root=target_root)
+    execution_posture = _execution_posture_payload(
+        config=config,
+        changed_paths=_normalize_changed_paths(changed_paths),
+        task_text=task_text,
+        target_root=target_root,
+    )
+    planning_gate = _planning_safety_gate_payload(
+        target_root=target_root,
+        config=config,
+        changed_paths=_normalize_changed_paths(changed_paths),
+        task_text=task_text,
+        execution_posture=execution_posture,
+    )
+    route = _as_dict(planning_gate.get("route_decision"))
+    route_action = _as_dict(route.get("next_safe_action"))
+    dogfooding = _dogfooding_signal_status_payload(
+        target_root=target_root,
+        config=config,
+        task_text=task_text,
+        cli_invoke=config.cli_invoke,
+        active_planning_present=bool(active_summary.get("todo_active_count") or active_summary.get("active_execplan")),
+    )
+    changed_signals = [f"planning_safety={planning_gate.get('status')}:{planning_gate.get('gate_result') or planning_gate.get('decision')}"]
+    if dogfooding.get("status") not in {None, "", "not_applicable"}:
+        changed_signals.append(f"dogfooding_signal_status={dogfooding.get('status')}")
+    blocked_claims = [str(item) for item in _list_payload(route.get("blocked_claims")) if str(item).strip()]
+    action_signals = _compact_action_signals_payload(
+        surface="start",
+        allowed_next_action=str(route_action.get("action") or planning_gate.get("required_next_action") or ""),
+        hard_blockers=blocked_claims,
+        implementation_allowed=bool(planning_gate.get("implementation_allowed", route.get("implementation_allowed", False))),
+        read_only_allowed=True,
+        proof_required=str(route.get("proof_expectation") or "").strip() not in {"", "no file proof unless the task later becomes an edit"},
+        proof_commands=[],
+        changed_signals=changed_signals,
+        advisory_selectors=["dogfooding_signal_status", "effective_orchestration"],
+        agent_judgment="Agent owns task semantics; Planning and assignment owners constrain effects and claims.",
+    )
+    action_signals["decision_identity"] = {
+        "planning_revision": _as_dict(planning_gate.get("planning_revision")).get("revision_id"),
+        "selected_owner": route.get("selected_owner"),
+        "selected_owner_revision": _as_dict(route.get("selected_owner_identity")).get("revision"),
+    }
+    action_signals["claim_boundary"] = {
+        "allowed_claims": _list_payload(route.get("allowed_claims")),
+        "blocked_claims": blocked_claims,
+        "mutation_authority": route.get("mutation_authority"),
+    }
+    action_signals["construction_profile"] = {
+        "id": "start-selected-decision/v1",
+        "broad_start_payload_constructed": False,
+        "rule": "Selected decision fields construct only assignment, Planning safety, and requested advisory owners.",
+    }
+    source = {
+        "action_signals": action_signals,
+        "dogfooding_signal_status": dogfooding,
+        "effective_orchestration": _compact_start_effective_orchestration(execution_posture.get("effective_orchestration")),
+        "task_assignment_disposition": execution_posture.get("task_assignment_disposition"),
+    }
+    return _select_payload_fields(source, select=select, source_command="start")
+
+
 def _run_start_context_adapter(args: argparse.Namespace) -> int:
     target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
     _validate_target_root(command_name="start", target_root=target_root)
@@ -3293,6 +3395,17 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
         _emit_payload(payload=inventory_payload, format_name=args.format)
         return 0
     changed_paths = list(getattr(args, "changed", []) or [])
+    if selected_fields and (
+        fast_selected := _fast_start_selected_decision_payload(
+            target_root=target_root,
+            config=config,
+            task_text=task_text,
+            changed_paths=changed_paths,
+            select=str(selected_fields),
+        )
+    ):
+        _emit_payload(payload=fast_selected, format_name=args.format)
+        return 0
     effective_profile = _start_profile_for_select(requested_profile=start_profile, select=selected_fields)
     reuse_query = {
         "profile": effective_profile,

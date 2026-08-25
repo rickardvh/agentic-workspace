@@ -3343,7 +3343,7 @@ def _planning_reconciliation_transaction(
                     "kind": "close-slice",
                     "id": item["owner_id"],
                     "path": item["path"],
-                    "owned_fields": ["lifecycle", "phase", "revision"],
+                    "owned_fields": ["lifecycle", "phase", "revision", "todo.active_items", "todo.queued_items"],
                     "evidence": item["observation_ids"],
                 }
             )
@@ -3353,7 +3353,9 @@ def _planning_reconciliation_transaction(
         "blocked_owner_ids": [item["owner_id"] for item in owner_transitions if item["transition"] == "blocked"],
         "selected_owner_id": str(selected_owner.get("owner_id") or "") if selected_owner else "",
         "owner_fields": ["lifecycle", "phase", "revision"],
-        "selection_fields": ["todo.active_items", "todo.queued_items"] if selected_owner else [],
+        "selection_fields": ["todo.active_items", "todo.queued_items"]
+        if selected_owner or any(item["transition"] == "close-slice" for item in owner_transitions)
+        else [],
     }
     external_revision = hashlib.sha256(json.dumps(owner_observations, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[
         :20
@@ -3456,8 +3458,30 @@ def _planning_reconciliation_transaction(
             _write_execplan_record(record_path=owner_path, record=owner, render_markdown=False)
             closed_owner_ids.append(transition["owner_id"])
         selection_changed: list[str] = []
+        state = _read_state_from_toml(target_root) or {}
+        todo = state.get("todo", {}) if isinstance(state, dict) else {}
+        state_changed = False
+        closed_paths = {item["path"] for item in owner_transitions if item["transition"] == "close-slice"}
+        for todo_field in ("active_items", "queued_items"):
+            raw_items = todo.get(todo_field, []) if isinstance(todo, dict) else []
+            if not isinstance(raw_items, list):
+                continue
+            retained = [
+                item
+                for item in raw_items
+                if not (
+                    isinstance(item, dict)
+                    and (
+                        str(item.get("id") or "") in closed_owner_ids
+                        or str(item.get("surface") or item.get("execplan") or "") in closed_paths
+                    )
+                )
+            ]
+            if retained != raw_items:
+                todo[todo_field] = retained
+                selection_changed.append(f"todo.{todo_field}")
+                state_changed = True
         if selected_owner is not None:
-            state = _read_state_from_toml(target_root) or {}
             selected_path = target_root / selected_owner["path"]
             selected_record = _load_execplan_record(selected_path)
             if selected_record is None:
@@ -3465,8 +3489,10 @@ def _planning_reconciliation_transaction(
             selected_state, selection_changed = _owner_selection_state_patch(
                 target_root, state, owner_path=selected_path, owner_record=selected_record
             )
-            if selection_changed:
-                _write_state_to_toml(target_root, selected_state)
+            state = selected_state
+            state_changed = state_changed or bool(selection_changed)
+        if state_changed:
+            _write_state_to_toml(target_root, state)
         receipt_path.parent.mkdir(parents=True, exist_ok=True)
         receipt = {
             "kind": "agentic-planning/reconciliation-receipt/v1",

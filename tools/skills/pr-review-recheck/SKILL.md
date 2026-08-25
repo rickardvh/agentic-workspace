@@ -99,4 +99,4 @@ Report in this shape:
 - Prefer evidence from the current PR head over stale prior comments.
 - Do not infer merge readiness from passing CI alone.
 - Keep comments focused on actionable blockers or durable suggestions.
-- If GitHub disallows a formal review action because the independent external reviewer shares the PR author's account, post the review as a top-level PR comment instead. This fallback does not authorize implementation-agent self-review.
+- If GitHub disallows a formal review action because the reviewer shares the PR author's account, a top-level comment may communicate findings but cannot satisfy the repository's human/independent review gate. This fallback does not authorize implementation-agent self-review. Report the patch as ready for re-review and obtain a current-head verdict from a distinct configured authority; shared credential association never manufactures separation of duty.

@@ -1151,6 +1151,8 @@ def test_session_log_analysis_is_live_agent_first_for_mixed_pr_2166_bundle(tmp_p
                 "id": f"pytest-{position}",
                 "command": "summry --target ." if position < 15 else "modules --verbose --target .",
                 "origin": {"classification": "pytest", "source": "PYTEST_CURRENT_TEST", "detail": ""},
+                "invocation_intent": session_logging._invocation_intent(origin={"classification": "pytest"}, argv=("summry",)),
+                "invocation_outcome": {},
                 "parent_context": {"entry_id": "fixture-owner", "command": "pytest", "context": "test_session_fixture"},
                 "exit_status": 2 if position < 15 else 0,
                 "output_bytes": 200,
@@ -1253,14 +1255,14 @@ def test_session_log_preserves_producer_invocation_intent_and_matches_observed_o
 
     state = session_logging.load_state_for_argv(["--target", str(target)])
     analysis = session_logging.analyze_session_log(state=state, origin_scope="all")
-    assert analysis["summary"]["matched_expectation_count"] == 2
+    assert analysis["summary"]["matched_expectation_count"] == 3
     assert analysis["summary"]["unmatched_expectation_count"] == 1
-    assert analysis["summary"]["unknown_expectation_count"] == 1
+    assert analysis["summary"]["unknown_expectation_count"] == 0
     assert analysis["summary"]["unexpected_failure_count"] == 1
     assert analysis["summary"]["live_agent_failure_count"] == 1
     assert analysis["matched_invocations"][0]["invocation_intent"]["invocation_class"] == "negative-fixture"
     assert analysis["unmatched_invocations"][0]["invocation_outcome"]["observed"]["exit_class"] == "failure"
-    assert analysis["unknown_invocations"][0]["invocation_outcome"]["match"] == "unknown"
+    assert analysis["unknown_invocations"] == []
     assert analysis["summary"]["failed_count"] == 1
     assert len(analysis["failed_commands"]) == 1
     assert len(analysis["observed_nonzero_exits"]) == 2
@@ -1277,8 +1279,79 @@ def test_session_log_preserves_producer_invocation_intent_and_matches_observed_o
     assert negative["exit_status"] == 2
     assert negative["exit_class"] == "failure"
     assert negative["invocation_outcome"]["match"] == "matched"
-    assert negative["invocation_outcome"]["expectation_provenance"]["source"] == "producer-environment"
+    assert negative["invocation_outcome"]["expectation_provenance"]["source"] == "producer-environment+generated-command-package-ir"
     assert negative["invocation_outcome"]["observed"] != negative["invocation_outcome"]["expected"]
+
+
+def test_supported_workspace_commands_declare_generated_operation_purpose_without_producer_hints() -> None:
+    expected_operations = {
+        ("start",): "start.context",
+        ("status",): "status.report",
+        ("proof",): "proof.report",
+        ("proof", "--record-receipt"): "proof.report",
+        ("report",): "report.combined",
+        ("reconcile",): "reconcile.report",
+        ("planning", "reconcile"): "planning.front-door",
+        ("session-log", "status"): "session-log.manage",
+    }
+
+    for argv, operation_id in expected_operations.items():
+        intent = session_logging._invocation_intent(origin={"classification": "agent"}, argv=argv)
+        assert intent["status"] == "declared"
+        assert intent["invocation_class"] == "product-operation"
+        assert intent["operation_id"] == operation_id
+        assert intent["purpose_id"] == operation_id
+        assert intent["purpose_summary"]
+        assert intent["expected"]["exit_class"] == "success"
+        assert intent["provenance"]["source"] == "generated-command-package-ir"
+
+    unknown = session_logging._invocation_intent(origin={"classification": "agent"}, argv=("custom-helper",))
+    assert unknown["status"] == "unknown"
+    assert unknown["invocation_class"] == "unknown"
+    assert unknown["operation_id"] == ""
+
+
+def test_consequential_session_replay_emits_stable_material_candidates(tmp_path: Path, capsys, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
+    commands = [
+        *[["status", "--target", str(target)] for _ in range(3)],
+        *[["proof", "--target", str(target)] for _ in range(2)],
+        *[["proof", "--record-receipt", "--receipt-command", f"receipt-{index}", "--target", str(target)] for index in range(4)],
+        ["start", "--target", str(target), "--task", "lane replay"],
+        ["report", "--target", str(target)],
+        ["reconcile", "--target", str(target)],
+        ["session-log", "status", "--target", str(target)],
+        ["config", "--target", str(target)],
+    ]
+    assert len(commands) == 14
+    for argv in commands:
+        assert session_logging.run_with_session_logging(argv, lambda _argv: print('{"status":"ok"}') or 0) == 0
+    capsys.readouterr()
+
+    state = session_logging.load_state_for_argv(["--target", str(target)])
+    first = session_logging.analyze_session_log(state=state)
+    second = session_logging.analyze_session_log(state=state)
+    assert first["summary"]["command_count"] == 14
+    assert first["summary"]["failure_count"] == 0
+    assert first["summary"]["unknown_expectation_count"] == 0
+    assert first["summary"]["matched_expectation_count"] == 14
+    candidates = {item["id"]: item for item in first["friction_candidates"]}
+    assert {"repeated-command", "duplicate-output", "receipt-choreography"} <= candidates.keys()
+    assert candidates["receipt-choreography"]["improvement_signal"]["occurrence_count"] == 4
+    assert candidates["receipt-choreography"]["improvement_signal"]["confidence"] == "high"
+    first_fingerprints = {
+        item["id"]: item["improvement_signal"]["evidence_fingerprint"]
+        for item in first["friction_candidates"]
+        if item.get("improvement_signal")
+    }
+    second_fingerprints = {
+        item["id"]: item["improvement_signal"]["evidence_fingerprint"]
+        for item in second["friction_candidates"]
+        if item.get("improvement_signal")
+    }
+    assert first_fingerprints == second_fingerprints
 
 
 def _run_logged_subprocess(target: Path, *, env: dict[str, str], return_code: int) -> subprocess.CompletedProcess[str]:
@@ -1302,7 +1375,7 @@ def _run_logged_subprocess(target: Path, *, env: dict[str, str], return_code: in
     )
 
 
-def test_pytest_subprocess_helper_declares_invocation_intent_without_inference(tmp_path: Path) -> None:
+def test_pytest_subprocess_helper_combines_producer_and_generated_invocation_intent(tmp_path: Path) -> None:
     target = _target(tmp_path)
     _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
     base_env = {key: value for key, value in os.environ.items() if not key.startswith("AW_SESSION_LOG_")}
@@ -1363,11 +1436,11 @@ def test_pytest_subprocess_helper_declares_invocation_intent_without_inference(t
 
     state = session_logging.load_state_for_argv(["--target", str(target)])
     analysis = session_logging.analyze_session_log(state=state, origin_scope="all")
-    assert analysis["summary"]["matched_expectation_count"] == 2
+    assert analysis["summary"]["matched_expectation_count"] == 3
     assert analysis["summary"]["unmatched_expectation_count"] == 2
     assert analysis["summary"]["expected_success_failure_count"] == 1
     assert analysis["summary"]["expected_failure_success_count"] == 1
-    assert analysis["summary"]["unknown_expectation_count"] == 1
+    assert analysis["summary"]["unknown_expectation_count"] == 0
     assert analysis["summary"]["unexpected_failure_count"] == 1
     assert len(analysis["observed_nonzero_exits"]) == 2
     assert len(analysis["failed_commands"]) == 1
@@ -1395,10 +1468,11 @@ def test_pytest_subprocess_helper_declares_invocation_intent_without_inference(t
     assert expected_failure_success["invocation_outcome"]["observed"]["exit_class"] == "success"
     assert expected_failure_success not in analysis["failed_commands"]
 
-    unknown = analysis["unknown_invocations"][0]
-    assert unknown["invocation_intent"]["status"] == "unknown"
-    assert unknown["invocation_intent"]["expected"] == {"exit_class": "unknown", "reason_class": "unknown"}
-    assert unknown["invocation_outcome"]["observed"]["exit_class"] == "success"
+    assert analysis["unknown_invocations"] == []
+    generated = [entry for entry in analysis["matched_invocations"] if entry["invocation_intent"]["operation_id"] == "config.report"][0]
+    assert generated["invocation_intent"]["status"] == "declared"
+    assert generated["invocation_intent"]["operation_id"] == "config.report"
+    assert generated["invocation_outcome"]["match"] == "matched"
 
 
 def test_session_log_reports_and_repairs_partial_index_without_losing_entries(tmp_path: Path, capsys, monkeypatch) -> None:
@@ -1538,10 +1612,13 @@ def test_session_log_index_deduplicates_metadata_and_analysis_pages_episodes(tmp
     assert summary["detail"] == "summary"
     assert summary["detail_page"] is None
     page = session_logging.analyze_session_log(state=state, detail="entries", page=2, page_size=2)
+    assert page["kind"] == "agentic-workspace/session-log-analysis-detail/v1"
     assert page["detail_page"]["total_count"] == 3
     assert page["detail_page"]["page"] == 2
     assert len(page["detail_page"]["items"]) == 1
     assert page["export_routing"]["artifact_class"] == "normalized-share-safe"
+    assert page["full_analysis"]["status"] == "omitted"
+    assert "failed_commands" not in page
     assert (
         source_cli.main(
             [

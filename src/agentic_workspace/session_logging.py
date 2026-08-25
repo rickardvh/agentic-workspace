@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import functools
 import gzip
 import hashlib
 import io
@@ -450,7 +451,7 @@ def append_command_entry(
             prior_entries=prior_entries,
         )
         expected_failure = capture.exit_code != 0 and _expected_fixture_failure(origin)
-        invocation_intent = _invocation_intent(origin=origin)
+        invocation_intent = _invocation_intent(origin=origin, argv=argv)
         entry = _command_entry_markdown(
             state=state,
             session=session,
@@ -1529,11 +1530,61 @@ def _expected_fixture_failure(origin: dict[str, Any]) -> bool:
     return explicit in {"1", "true", "yes"}
 
 
-def _invocation_intent(*, origin: dict[str, Any]) -> dict[str, Any]:
+@functools.lru_cache(maxsize=1)
+def _declared_workspace_command_interfaces() -> tuple[dict[str, Any], ...]:
+    from agentic_workspace.contract_tooling import command_package_ir_manifest
+
+    package = next(
+        (
+            item
+            for item in command_package_ir_manifest().get("packages", [])
+            if isinstance(item, dict) and item.get("id") == "root-workspace"
+        ),
+        {},
+    )
+    return tuple(item for item in package.get("commands", []) if isinstance(item, dict))
+
+
+def _declared_operation_intent(argv: Sequence[str]) -> dict[str, str]:
+    """Resolve structured argv through generated command IR, not command prose."""
+    if not argv:
+        return {}
+    command = next(
+        (item for item in _declared_workspace_command_interfaces() if str(item.get("interface", {}).get("name") or "") == str(argv[0])),
+        None,
+    )
+    if command is None:
+        return {}
+    interface = command.get("interface", {}) if isinstance(command.get("interface"), dict) else {}
+    operation_ref = command.get("operation_ref", {}) if isinstance(command.get("operation_ref"), dict) else {}
+    for token in argv[1:]:
+        if str(token).startswith("-"):
+            break
+        subcommands = [item for item in interface.get("subcommands", []) if isinstance(item, dict)]
+        selected = next((item for item in subcommands if str(item.get("name") or "") == str(token)), None)
+        if selected is None:
+            break
+        interface = selected
+        nested_ref = selected.get("operation_ref", {}) if isinstance(selected.get("operation_ref"), dict) else {}
+        if nested_ref:
+            operation_ref = nested_ref
+    operation_id = str(operation_ref.get("id") or "").strip()
+    if not operation_id:
+        return {}
+    return {
+        "operation_id": operation_id,
+        "purpose_id": operation_id,
+        "purpose_summary": str(interface.get("help") or "").strip(),
+        "source": "generated-command-package-ir",
+    }
+
+
+def _invocation_intent(*, origin: dict[str, Any], argv: Sequence[str] = ()) -> dict[str, Any]:
     expected_failure = _expected_fixture_failure(origin)
     expected_exit = os.environ.get("AW_SESSION_LOG_EXPECTED_EXIT", "").strip().lower()
     if not expected_exit and expected_failure:
         expected_exit = "failure"
+    declared_operation = _declared_operation_intent(argv)
     invocation_class = os.environ.get("AW_SESSION_LOG_INVOCATION_CLASS", "").strip().lower()
     allowed_classes = {
         "product-operation",
@@ -1544,7 +1595,7 @@ def _invocation_intent(*, origin: dict[str, Any]) -> dict[str, Any]:
         "synthetic-check",
     }
     if invocation_class not in allowed_classes:
-        invocation_class = "unknown"
+        invocation_class = "product-operation" if declared_operation else "unknown"
     scenario_id = os.environ.get("AW_SESSION_LOG_SCENARIO_ID", "").strip()
     if not scenario_id and expected_failure and os.environ.get("PYTEST_CURRENT_TEST"):
         scenario_id = os.environ["PYTEST_CURRENT_TEST"].split(" ", 1)[0]
@@ -1555,21 +1606,33 @@ def _invocation_intent(*, origin: dict[str, Any]) -> dict[str, Any]:
             expected_exit,
             os.environ.get("AW_SESSION_LOG_EXPECTED_REASON_CLASS"),
             invocation_class != "unknown",
+            declared_operation,
         )
     )
     return {
         "kind": "agentic-workspace/invocation-intent/v1",
         "status": "declared" if supplied else "unknown",
-        "purpose_id": os.environ.get("AW_SESSION_LOG_PURPOSE_ID", "").strip(),
+        "purpose_id": os.environ.get("AW_SESSION_LOG_PURPOSE_ID", "").strip() or str(declared_operation.get("purpose_id") or ""),
+        "purpose_summary": str(declared_operation.get("purpose_summary") or ""),
+        "operation_id": str(declared_operation.get("operation_id") or ""),
         "scenario_id": scenario_id,
         "invocation_class": invocation_class,
         "expected": {
-            "exit_class": expected_exit if expected_exit in {"success", "failure"} else "unknown",
+            "exit_class": expected_exit if expected_exit in {"success", "failure"} else "success" if declared_operation else "unknown",
             "reason_class": os.environ.get("AW_SESSION_LOG_EXPECTED_REASON_CLASS", "").strip() or "unknown",
         },
         "provenance": {
             "producer": str(origin.get("classification") or "unknown"),
-            "source": "producer-environment" if supplied else "not-supplied",
+            "source": (
+                "producer-environment+generated-command-package-ir"
+                if declared_operation
+                and any(os.environ.get(name) for name in ("AW_SESSION_LOG_PURPOSE_ID", "AW_SESSION_LOG_INVOCATION_CLASS"))
+                else "generated-command-package-ir"
+                if declared_operation
+                else "producer-environment"
+                if supplied
+                else "not-supplied"
+            ),
             "fields": [
                 name
                 for name in (
@@ -2539,6 +2602,10 @@ def _slow_command_friction_candidates(entries: list[dict[str, Any]]) -> list[dic
         normalized_command_class = str(group["normalized_command_class"])
         applicability = "applicable-to-proof-route-maintenance" if normalized_command_class == "validation-command" else "review-before-use"
         lifecycle_status = "live-applicable" if severity == "protective-action" else "candidate-local-observation"
+        symptom = f"{command} exceeded the slow-command threshold."
+        evidence_fingerprint = _improvement_signal_fingerprint(
+            signal_kind="validation_friction", symptom=symptom, owner_hint="proof-router"
+        )
         candidates.append(
             {
                 "id": f"slow-command:{digest}",
@@ -2574,7 +2641,7 @@ def _slow_command_friction_candidates(entries: list[dict[str, Any]]) -> list[dic
                     "applicable_live": lifecycle_status == "live-applicable",
                     "applicable_to_current_route": normalized_command_class == "validation-command",
                     "observed_during": "session-log analyze",
-                    "symptom": f"{command} exceeded the slow-command threshold.",
+                    "symptom": symptom,
                     "cost": f"{occurrence_count} run(s), total {duration_ms_total}ms, max {duration_ms_max}ms.",
                     "expected_benefit": "Select a dependency-bound focused proof route and avoid unrelated broad reruns.",
                     "suspected_owner": "proof-router",
@@ -2590,6 +2657,7 @@ def _slow_command_friction_candidates(entries: list[dict[str, Any]]) -> list[dic
                     "evidence_classes": ["machine_observed"],
                     "mutation_authorized": False,
                     "route_identity": f"proof-route-friction:{digest}",
+                    "evidence_fingerprint": evidence_fingerprint,
                     "allowed_lifecycle_states": ["active", "mitigated", "accepted-risk", "promoted-to-issue", "obsolete"],
                     "consumption_rule": (
                         "Only active, applicable validation-friction signals may influence proof-route escalation; "
@@ -2631,6 +2699,8 @@ def _friction_candidates(
     for item in repeated[:LARGE_OUTPUT_SUMMARY_LIMIT]:
         command = str(item["command"])
         digest = hashlib.sha256(command.encode("utf-8")).hexdigest()[:10]
+        symptom = f"{command} was re-entered {item['count']} times in one session."
+        fingerprint = _improvement_signal_fingerprint(signal_kind="workflow_cost", symptom=symptom, owner_hint="operating-loop")
         candidates.append(
             {
                 "id": "repeated-command",
@@ -2640,7 +2710,7 @@ def _friction_candidates(
                     "candidate_kind": "improvement_signal_candidate",
                     "kind": "workflow_cost",
                     "observed_during": "session-log analyze",
-                    "symptom": f"{command} was re-entered {item['count']} times in one session.",
+                    "symptom": symptom,
                     "cost": "Repeated routing or maintenance re-entry adds command, reconstruction, and correction cost.",
                     "expected_benefit": "Route the task once through the existing owner and avoid repeated maintenance entry.",
                     "suspected_owner": "operating-loop",
@@ -2654,16 +2724,82 @@ def _friction_candidates(
                     "occurrence_count": int(item["count"]),
                     "evidence_classes": ["machine_observed"],
                     "evidence_refs": [f"session-log:repeated-command:{digest}"],
+                    "evidence_fingerprint": fingerprint,
                     "mutation_authorized": False,
                 },
             }
         )
     for item in duplicates[:LARGE_OUTPUT_SUMMARY_LIMIT]:
+        symptom = "Equivalent AW output was produced repeatedly in one logical session."
+        fingerprint = _improvement_signal_fingerprint(signal_kind="workflow_cost", symptom=symptom, owner_hint="operating-loop")
         candidates.append(
             {
                 "id": "duplicate-output",
                 "summary": f"Same output digest appeared {item['count']} times.",
                 "owner": "operating-loop",
+                "improvement_signal": {
+                    "candidate_kind": "improvement_signal_candidate",
+                    "kind": "workflow_cost",
+                    "observed_during": "session-log analyze",
+                    "symptom": symptom,
+                    "cost": f"The same result was reconstructed {item['count']} times instead of being reused.",
+                    "expected_benefit": "Reuse the admitted result or route once through its canonical owner.",
+                    "suspected_owner": "operating-loop",
+                    "likely_remediation": "agent_aid",
+                    "confidence": "medium",
+                    "recurrence": "repeated",
+                    "immediate_action": "route",
+                    "retention": "shrink_after_fix",
+                    "source": "session_log.duplicate_output",
+                    "scope_relation": "current-scope",
+                    "occurrence_count": int(item["count"]),
+                    "evidence_classes": ["machine_observed"],
+                    "evidence_refs": [f"session-log:duplicate-output:{str(item.get('sha256') or '')[:12]}"],
+                    "evidence_fingerprint": fingerprint,
+                    "mutation_authorized": False,
+                },
+            }
+        )
+    receipt_entries = [
+        entry
+        for entry in entries
+        if any(
+            str(token).lower() == marker or str(token).lower().startswith("--receipt-")
+            for token in entry.get("argv", [])
+            for marker in ("--record-receipt", "--record-proof-receipt", "--proof-receipt")
+        )
+    ]
+    if len(receipt_entries) >= 3:
+        symptom = "Proof evidence required repeated receipt-write choreography after proof selection."
+        fingerprint = _improvement_signal_fingerprint(
+            signal_kind="workflow_cost", symptom=symptom, owner_hint="proof-receipt-reconciliation"
+        )
+        candidates.append(
+            {
+                "id": "receipt-choreography",
+                "summary": f"Proof evidence used {len(receipt_entries)} separate receipt-oriented commands.",
+                "owner": "proof-receipt-reconciliation",
+                "improvement_signal": {
+                    "candidate_kind": "improvement_signal_candidate",
+                    "kind": "workflow_cost",
+                    "observed_during": "session-log analyze",
+                    "symptom": symptom,
+                    "cost": f"{len(receipt_entries)} separate receipt-oriented commands increased closeout choreography.",
+                    "expected_benefit": "Execute and reconcile selected proof through one supported transaction.",
+                    "suspected_owner": "proof-receipt-reconciliation",
+                    "likely_remediation": "validation",
+                    "confidence": "high",
+                    "recurrence": "repeated",
+                    "immediate_action": "route",
+                    "retention": "shrink_after_fix",
+                    "source": "session_log.receipt_choreography",
+                    "scope_relation": "current-scope",
+                    "occurrence_count": len(receipt_entries),
+                    "evidence_classes": ["machine_observed"],
+                    "evidence_refs": [str(entry.get("id") or "") for entry in receipt_entries if entry.get("id")],
+                    "evidence_fingerprint": fingerprint,
+                    "mutation_authorized": False,
+                },
             }
         )
     candidates.extend(_slow_command_friction_candidates(entries))
@@ -3487,7 +3623,7 @@ def analyze_session_log(
         if selected_detail != "summary"
         else None
     )
-    return {
+    analysis_payload = {
         "kind": "agentic-workspace/session-log-analysis/v1",
         "status": "analyzed",
         "enabled": state.enabled,
@@ -3592,6 +3728,30 @@ def analyze_session_log(
         "authoritative": False,
         "rule": SESSION_LOG_LOCAL_BOUNDARY["rule"],
     }
+    if selected_detail != "summary":
+        return {
+            "kind": "agentic-workspace/session-log-analysis-detail/v1",
+            "status": "analyzed",
+            "enabled": state.enabled,
+            "path": analysis_payload["path"],
+            "index_path": analysis_payload["index_path"],
+            "index_status": analysis_payload["index_status"],
+            "session_scope": session_scope,
+            "detail": selected_detail,
+            "detail_page": detail_payload,
+            "summary": analysis_payload["summary"],
+            "bounded_collections": analysis_payload["bounded_collections"],
+            "full_analysis": {
+                "status": "omitted",
+                "command": "agentic-workspace session-log analyze --detail summary --format json",
+                "rule": "A detail selector returns only its bounded page and compact session counts; broad analysis requires the explicit summary route.",
+            },
+            "export_routing": analysis_payload["export_routing"],
+            "local_diagnostic_boundary": analysis_payload["local_diagnostic_boundary"],
+            "local_only": True,
+            "authoritative": False,
+        }
+    return analysis_payload
 
 
 def _system_exit_code(exc: SystemExit) -> int:

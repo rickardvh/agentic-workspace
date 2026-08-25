@@ -10,6 +10,14 @@
       "description": "Stable behavior class for semantic correction identity.",
       "type": "string"
     },
+    "canonical_owner_evidence_ref": {
+      "description": "Evidence that the named canonical owner already owns the corrected invariant; required with the canonical-owner route.",
+      "type": "string"
+    },
+    "canonical_owner_ref": {
+      "description": "Existing policy, guidance, configuration, issue, or other canonical owner that already owns the corrected invariant.",
+      "type": "string"
+    },
     "delivery_id": {
       "description": "Stable delivery identifier for this correction event.",
       "type": "string"
@@ -75,7 +83,7 @@
       "type": "string"
     },
     "route_decisions": {
-      "description": "Requested routing decisions for trusted correction events.",
+      "description": "Requested routing decisions for trusted correction events, including evidence-backed canonical-owner disposition without duplicate retention.",
       "items": {
         "type": "string"
       },

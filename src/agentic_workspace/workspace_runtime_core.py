@@ -6626,7 +6626,14 @@ def _improvement_signal_candidates_from_session_intake(
     session_intake = _session_improvement_intake_payload(target_root=target_root, config=config, cli_invoke=config.cli_invoke)
     status = str(session_intake.get("status") or "unknown")
     candidates: list[dict[str, Any]] = []
-    active_outcomes = {"unresolved", "recorded_chat_only", "recorded_session_only", "routed_to_issue", "review_required"}
+    active_outcomes = {
+        "unresolved",
+        "recorded_chat_only",
+        "recorded_session_only",
+        "routed_to_issue",
+        "review_required",
+        "pending_disposition",
+    }
     destinations = [
         str(item)
         for decision in _list_payload(session_intake.get("routing_decisions"))
@@ -7154,8 +7161,10 @@ def _dogfooding_signal_status_outcome(cache: dict[str, Any]) -> dict[str, Any]:
     ] or [str(item) for item in _list_payload(cache.get("signals")) if not isinstance(item, dict) and str(item).strip()]
     destinations = [str(item) for item in _list_payload(cache.get("destinations")) if str(item).strip()]
     raw_status = str(cache.get("status") or cache.get("outcome") or "").strip()
-    dismissal_reason = str(cache.get("dismissal_reason") or cache.get("reason") or "").strip()
-    deferred_reason = str(cache.get("deferred_reason") or cache.get("reason") or "").strip()
+    reason = str(cache.get("reason") or "").strip()
+    dismissal_reason = str(cache.get("dismissal_reason") or (reason if raw_status == "dismissed_with_reason" else "")).strip()
+    deferred_reason = str(cache.get("deferred_reason") or (reason if raw_status == "deferred_to_roadmap" else "")).strip()
+    accepted_risk_reason = str(cache.get("accepted_risk_reason") or (reason if raw_status == "accepted-risk" else "")).strip()
     durable_route_statuses = {
         "routed_to_issue",
         "routed_to_planning",
@@ -7179,6 +7188,9 @@ def _dogfooding_signal_status_outcome(cache: dict[str, Any]) -> dict[str, Any]:
         "routed_to_docs",
         "deferred_to_roadmap",
         "dismissed_with_reason",
+        "fixed",
+        "accepted-risk",
+        "pending_disposition",
         "unresolved",
     }:
         status = "unresolved" if signals else "not_checked"
@@ -7190,19 +7202,30 @@ def _dogfooding_signal_status_outcome(cache: dict[str, Any]) -> dict[str, Any]:
         status = "unresolved"
     if status == "deferred_to_roadmap" and not (destinations or deferred_reason):
         status = "unresolved"
-    closeout_blocked = status == "unresolved"
-    durable_residue = status in durable_route_statuses or status in {"deferred_to_roadmap", "unresolved"}
+    if status == "accepted-risk" and not accepted_risk_reason:
+        status = "unresolved"
+    closeout_blocked = status in {"pending_disposition", "unresolved"}
+    durable_residue = status in durable_route_statuses or status in {
+        "deferred_to_roadmap",
+        "accepted-risk",
+        "pending_disposition",
+        "unresolved",
+    }
     durability = (
         "canonical_repo_history"
         if status in durable_route_statuses
         else "roadmap_or_future_work"
         if status == "deferred_to_roadmap"
+        else "accepted_risk"
+        if status == "accepted-risk"
         else "local_chat_only"
         if status == "recorded_chat_only"
         else "local_session_only"
         if status == "recorded_session_only"
         else "none"
-        if status in {"checked_none", "dismissed_with_reason"}
+        if status in {"checked_none", "dismissed_with_reason", "fixed"}
+        else "fingerprinted-local-index"
+        if status == "pending_disposition"
         else "unresolved"
         if status == "unresolved"
         else "not_checked"
@@ -7214,6 +7237,7 @@ def _dogfooding_signal_status_outcome(cache: dict[str, Any]) -> dict[str, Any]:
         "destinations": destinations,
         "dismissal_reason": dismissal_reason,
         "deferred_reason": deferred_reason,
+        "accepted_risk_reason": accepted_risk_reason,
         "closeout_blocked": closeout_blocked,
         "durable_residue": durable_residue,
         "durability": durability,
@@ -7354,9 +7378,9 @@ def _session_improvement_intake_payload(*, target_root: Path, config: WorkspaceC
                 "routing_decisions": indexed_intake["routing_decisions"],
                 "capture_routes": capture_routes,
                 "operational_effect": {
-                    "status": "review-required",
+                    "status": "closeout-blocking",
                     "changes": [],
-                    "disposition": "indexed-candidates-await-review",
+                    "disposition": "material-index-candidates-await-explicit-disposition",
                     "durability": "fingerprinted-local-index",
                 },
                 "repo_wide_existing": {
@@ -7366,7 +7390,10 @@ def _session_improvement_intake_payload(*, target_root: Path, config: WorkspaceC
                     "included_by_default": False,
                     "rule": "Use the bounded defaults selector first; full repo-wide scan can be expensive.",
                 },
-                "claim_boundary": "Indexed candidates are self-admitted for review only; they are not promoted or closeout-authoritative.",
+                "claim_boundary": (
+                    "Material indexed candidates remain diagnostic-only and cannot mutate canonical owners, but broad clean closeout "
+                    "waits for capture, routing, deferral, dismissal, or accepted risk."
+                ),
             }
         return {
             "kind": "workspace-session-improvement-intake/v1",
@@ -7472,10 +7499,28 @@ def _session_index_improvement_intake(*, target_root: Path, config: WorkspaceCon
     candidates = [item for item in _list_payload(detail_page.get("items")) if isinstance(item, dict)]
     if not candidates:
         return None
+    material_candidates = []
+    for candidate in candidates:
+        improvement_signal = _as_dict(candidate.get("improvement_signal"))
+        if improvement_signal and (
+            str(improvement_signal.get("confidence") or "").lower() == "high"
+            or str(improvement_signal.get("recurrence") or "").lower() in {"repeated", "human_confirmed", "recurring"}
+            or int(improvement_signal.get("occurrence_count") or 1) >= 2
+            or improvement_signal.get("applicable_live") is True
+        ):
+            material_candidates.append(candidate)
+    material_candidates.sort(
+        key=lambda candidate: (
+            str(_as_dict(candidate.get("improvement_signal")).get("confidence") or "").lower() == "high",
+            _as_dict(candidate.get("improvement_signal")).get("applicable_live") is True,
+            int(_as_dict(candidate.get("improvement_signal")).get("occurrence_count") or 1),
+        ),
+        reverse=True,
+    )
     signals = []
     decisions = []
     seen_fingerprints: set[str] = set()
-    for candidate in candidates:
+    for candidate in material_candidates[:1]:
         improvement_signal = _as_dict(candidate.get("improvement_signal"))
         fingerprint = (
             str(improvement_signal.get("evidence_fingerprint") or "")
@@ -7490,31 +7535,33 @@ def _session_index_improvement_intake(*, target_root: Path, config: WorkspaceCon
                 "signal": str(
                     improvement_signal.get("symptom") or candidate.get("summary") or candidate.get("id") or "session-log candidate"
                 ),
-                "outcome": "review_required",
-                "routing_decision": "review-before-promotion",
+                "outcome": "pending_disposition",
+                "routing_decision": "capture-route-defer-or-dismiss",
                 "durability": "fingerprinted-local-index",
                 "fingerprint": fingerprint,
-                "reviewed": False,
+                "reviewed": True,
                 "evidence_classes": ["machine_observed"],
                 "evidence_refs": [str(item) for item in _list_payload(improvement_signal.get("evidence_refs")) if str(item).strip()],
             }
         )
         decisions.append(
             {
-                "outcome": "review_required",
-                "decision": "review-before-promotion",
+                "outcome": "pending_disposition",
+                "decision": "capture-route-defer-or-dismiss",
                 "destinations": [],
-                "durable_residue": False,
-                "closeout_blocked": False,
+                "durable_residue": True,
+                "closeout_blocked": True,
                 "fingerprint": fingerprint,
             }
         )
+    if not signals:
+        return None
     return {
         "source": {
             "status": "complete-index",
             "path": str(analysis.get("index_path") or ""),
             "analysis_kind": str(analysis.get("kind") or ""),
-            "self_admission": "bounded session-log candidates",
+            "self_admission": "bounded material session-log candidates",
         },
         "signals": signals,
         "routing_decisions": decisions,
@@ -14030,6 +14077,12 @@ _LAZY_REPORT_SECTION_CATALOG: tuple[dict[str, str], ...] = (
         "when_to_use": "when the router hints omit rare or high-context sections and the agent needs a selector index",
     },
     {
+        "section": "findings",
+        "kind": "agentic-workspace/findings-projection/v1",
+        "purpose": "bounded current routing findings without constructing the full report graph",
+        "when_to_use": "when warnings or blockers must be inspected before choosing a deeper module-specific report",
+    },
+    {
         "section": "assurance_requirements",
         "kind": "agentic-workspace/assurance-requirements/v1",
         "purpose": "repo-declared assurance requirements, evidence obligations, proof profile, and claim-boundary facts",
@@ -17314,6 +17367,47 @@ def _run_lazy_report_section_command(
 
     active_planning_record = _active_planning_record_for_report_section(target_root=target_root)
 
+    if normalized == "findings":
+        config_warnings = [str(item) for item in getattr(config, "warnings", ()) if str(item).strip()]
+        findings = [
+            {
+                "severity": "warning",
+                "module": "workspace",
+                "message": warning,
+                "authority": "resolved-config",
+            }
+            for warning in config_warnings[:8]
+        ]
+        payload["findings"] = {
+            "kind": "agentic-workspace/findings-projection/v1",
+            "status": "attention" if findings else "no-router-findings",
+            "findings": findings,
+            "finding_count": len(findings),
+            "construction_boundary": {
+                "profile": "report-findings-router/v1",
+                "full_report_constructed": False,
+                "module_reports_constructed": False,
+                "rule": "This selector reports action-changing router findings only; module diagnostics remain lazy and independently invocable.",
+            },
+            "module_routes": [
+                _command_with_cli_invoke(
+                    command=f"agentic-workspace {module} report --target ./repo --format json",
+                    cli_invoke=config.cli_invoke,
+                )
+                for module in selected_modules
+            ],
+            "next_action": {
+                "command": _command_with_cli_invoke(
+                    command="agentic-workspace doctor --target ./repo --format json",
+                    cli_invoke=config.cli_invoke,
+                )
+                if findings
+                else None,
+                "summary": "Inspect the compact doctor route." if findings else "No router finding changes the next action.",
+            },
+        }
+        return _select_report_payload(payload, profile="router", section=normalized)
+
     if normalized == "repo_posture":
         payload["repo_posture"] = _repo_posture_payload(config=config, surface="report", compact=False)
         return _select_report_payload(payload, profile="router", section=normalized)
@@ -17927,26 +18021,17 @@ def _run_report_router_command(
     changed_paths: list[str] | None = None,
 ) -> dict[str, Any]:
     projection_cancellation_checkpoint()
-    status_payload = _run_lifecycle_command(
-        command_name="status",
-        target_root=target_root,
-        local_only_repo_root=None,
-        selected_modules=selected_modules,
-        resolved_preset=resolved_preset,
-        descriptors=descriptors,
-        dry_run=False,
-        non_interactive=False,
-        config=config,
-        compact_status=True,
-        include_local_footprint=False,
-    )
-    warnings = list(status_payload.get("warnings", []))
+    # The ordinary report is a router, not a compact spelling of the full
+    # lifecycle report. Deep module status used to dominate this path even
+    # though its payload was discarded by the router projection.
+    warnings = [str(item) for item in getattr(config, "warnings", ()) if str(item).strip()]
+    installed_modules = _fast_installed_modules(target_root=target_root)
+    status_payload = {
+        "health": "attention" if warnings else "routing-only",
+        "warnings": warnings,
+        "registry": [{"name": name, "installed": True} for name in installed_modules],
+    }
     findings = [{"severity": "warning", "module": "workspace", "message": str(warning)} for warning in warnings]
-    installed_modules = [
-        str(entry["name"])
-        for entry in status_payload.get("registry", [])
-        if isinstance(entry, dict) and entry.get("installed") and entry.get("name")
-    ] or _fast_installed_modules(target_root=target_root)
     external_work_delta = _external_work_delta_payload(target_root=target_root)
     external_work_reconciliation = _external_work_reconciliation_payload(
         module_reports=[], external_work_delta=external_work_delta, cli_invoke=config.cli_invoke
@@ -17991,7 +18076,7 @@ def _run_report_router_command(
         cli_invoke=config.cli_invoke,
     )
     next_command = _command_with_cli_invoke(command="agentic-workspace doctor --target ./repo --format json", cli_invoke=config.cli_invoke)
-    if str(status_payload.get("health", "unknown")) == "healthy":
+    if not warnings:
         next_action = {"summary": "No immediate action", "commands": []}
     else:
         next_action = {
@@ -27117,6 +27202,25 @@ def _github_planning_residue_expected(labels: list[str]) -> str:
     return "optional"
 
 
+def _github_supported_priority(labels: Sequence[str]) -> dict[str, str]:
+    """Translate provider syntax at the adapter boundary, never in Planning."""
+    aliases = {
+        "priority/high": "P1",
+        "priority/medium": "P2",
+        "priority/low": "P3",
+        "priority/lowest": "P4",
+    }
+    for raw_label in labels:
+        label = str(raw_label).strip()
+        match = re.fullmatch(r"priority\s*[:/]\s*(p[0-4])", label, flags=re.IGNORECASE)
+        if match:
+            return {"value": match.group(1).upper(), "source": "explicit-provider"}
+        alias = aliases.get(label.lower())
+        if alias:
+            return {"value": alias, "source": "explicit-provider"}
+    return {"value": "", "source": "absent"}
+
+
 def _markdown_section_value(body: str, heading: str) -> str:
     lines = body.splitlines()
     heading_normalized = heading.strip().lower()
@@ -27221,6 +27325,17 @@ def _github_issue_to_external_intent_item(*, issue: dict[str, Any], repo: str) -
         "url": locator,
         "source_repository": repo,
         "labels": labels,
+        "priority": _github_supported_priority(labels),
+        "relationships": {
+            "posture": "unobserved",
+            "parent_id": "",
+            "child_ids": [],
+            "source": "github-native-sub-issues",
+            "repository": repo,
+            "observed_at": updated_at,
+            "external_revision": observation_revision,
+            "reason": "native relationship observation has not run",
+        },
         "created_at": str(issue.get("createdAt", "")).strip(),
         "updated_at": updated_at,
         "closed_at": str(issue.get("closedAt", "") or "").strip(),
@@ -27252,6 +27367,96 @@ def _github_issue_to_external_intent_item(*, issue: dict[str, Any], repo: str) -
             "labels": labels,
             "comments_count": _github_comments_count(issue.get("comments")),
         },
+    }
+
+
+def _github_native_sub_issue_relationships(
+    *, target_root: Path, repo: str, items: list[dict[str, Any]], max_parent_queries: int = 25
+) -> dict[str, Any]:
+    """Admit bounded native hierarchy into provider-agnostic item fields."""
+    by_id = {str(item.get("id") or "").strip(): item for item in items if str(item.get("id") or "").strip()}
+    parents = [item for item in items if str(item.get("kind") or "").strip() in {"lane", "epic"}]
+    queried = parents[:max_parent_queries]
+    errors: list[dict[str, str]] = []
+    for parent in queried:
+        parent_id = str(parent.get("id") or "").strip()
+        number = parent_id.lstrip("#")
+        try:
+            raw_children = _run_gh_json(
+                ["api", "--paginate", "--slurp", f"repos/{repo}/issues/{number}/sub_issues?per_page=100"], cwd=target_root
+            )
+        except WorkspaceUsageError as exc:
+            errors.append({"parent_id": parent_id, "reason": str(exc)[:240]})
+            relationship = _as_dict(parent.get("relationships"))
+            relationship.update({"posture": "partial", "reason": "native relationship query failed"})
+            parent["relationships"] = relationship
+            continue
+        child_rows: list[Any] = []
+        for value in _list_payload(raw_children):
+            child_rows.extend(value if isinstance(value, list) else [value])
+        child_ids: list[str] = []
+        for position, child in enumerate(child_rows):
+            if not isinstance(child, dict) or child.get("number") is None:
+                continue
+            child_id = f"#{int(child['number'])}"
+            if child_id not in child_ids:
+                child_ids.append(child_id)
+            selected_child = by_id.get(child_id)
+            if selected_child is None:
+                continue
+            selected_child["parent_id"] = parent_id
+            child_relationship = _as_dict(selected_child.get("relationships"))
+            child_relationship.update(
+                {
+                    "posture": "complete",
+                    "parent_id": parent_id,
+                    "child_ids": [],
+                    "position": position,
+                    "reason": "native parent relationship observed",
+                }
+            )
+            selected_child["relationships"] = child_relationship
+        parent_relationship = _as_dict(parent.get("relationships"))
+        parent_relationship.update(
+            {
+                "posture": "complete",
+                "parent_id": "",
+                "child_ids": child_ids,
+                "reason": "native child relationships observed",
+            }
+        )
+        parent["relationships"] = parent_relationship
+    truncated = len(parents) > len(queried)
+    status = "partial" if errors or truncated else "complete" if queried else "not-needed"
+    for item in items:
+        relationship = _as_dict(item.get("relationships"))
+        if str(relationship.get("posture") or "") != "unobserved":
+            continue
+        if status == "partial":
+            relationship.update(
+                {
+                    "posture": "partial",
+                    "reason": "native hierarchy observation incomplete; parent linkage remains unknown",
+                }
+            )
+        elif status == "complete":
+            relationship.update(
+                {
+                    "posture": "complete",
+                    "reason": "native hierarchy observation completed without selected parent linkage",
+                }
+            )
+        item["relationships"] = relationship
+    return {
+        "status": status,
+        "source": "github-native-sub-issues",
+        "parent_candidate_count": len(parents),
+        "parent_query_count": len(queried),
+        "max_parent_queries": max_parent_queries,
+        "truncated": truncated,
+        "error_count": len(errors),
+        "errors": errors[:3],
+        "rule": "Partial or failed provider hierarchy evidence must not be interpreted as a flat topology.",
     }
 
 
@@ -27335,23 +27540,11 @@ def _github_current_pull_request_evidence(*, target_root: Path, repo: str) -> li
     return evidence
 
 
-def _planning_candidate_priority_from_labels(labels: Sequence[str]) -> str | None:
-    normalized = {str(label).strip().lower() for label in labels}
-    if "priority/high" in normalized:
-        return "P1"
-    if "priority/medium" in normalized:
-        return "P2"
-    if "priority/low" in normalized:
-        return "P3"
-    if "priority/lowest" in normalized:
-        return "P4"
-    return None
-
-
 def _planning_candidate_priority_from_item(item: dict[str, Any]) -> tuple[str | None, str]:
-    priority = _planning_candidate_priority_from_labels([str(label) for label in item.get("labels", [])])
-    if priority is not None:
-        return priority, "label"
+    normalized_priority = _as_dict(item.get("priority"))
+    priority = str(normalized_priority.get("value") or "").strip().upper()
+    if priority in {"P0", "P1", "P2", "P3", "P4"}:
+        return priority, str(normalized_priority.get("source") or "explicit")
     if str(item.get("kind", "")) == "lane":
         return "P1", "inferred-lane"
     if str(item.get("kind", "")) == "slice":
@@ -27444,12 +27637,15 @@ def _external_issue_grouping_hints(*, items: list[dict[str, Any]], candidates: l
         ref = str(item.get("id", "")).strip()
         title = str(item.get("title", "")).strip()
         kind = str(item.get("kind", "")).strip()
-        parent_id = str(item.get("parent_id", "")).strip()
+        relationships = _as_dict(item.get("relationships"))
+        relationship_posture = str(relationships.get("posture") or "unsupported").strip()
+        parent_id = str(relationships.get("parent_id") or item.get("parent_id", "")).strip()
         compact_item = {
             "id": ref,
             "title": title,
             "kind": kind or "issue",
             "has_planning_candidate": ref in candidate_refs,
+            "relationship_posture": relationship_posture,
         }
         if kind in {"lane", "epic"}:
             parent_lanes.append(compact_item)
@@ -27468,7 +27664,8 @@ def _external_issue_grouping_hints(*, items: list[dict[str, Any]], candidates: l
             if len(cluster["children"]) < 3:
                 cluster["children"].append(compact_item)
             continue
-        standalone.append(compact_item)
+        if relationship_posture in {"complete", "unsupported"}:
+            standalone.append(compact_item)
     parent_lanes = sorted(parent_lanes, key=lambda item: int(str(item.get("id", "0")).lstrip("#") or "0"))[:3]
     clusters = sorted(child_clusters.values(), key=lambda item: (-int(item.get("child_count", 0)), str(item.get("parent_id", ""))))[:3]
     standalone = sorted(standalone, key=lambda item: int(str(item.get("id", "0")).lstrip("#") or "0"))[:3]
@@ -27481,9 +27678,19 @@ def _external_issue_grouping_hints(*, items: list[dict[str, Any]], candidates: l
         "standalone_count": sum(
             1
             for item in open_items
-            if str(item.get("kind", "")).strip() not in {"lane", "epic"} and not str(item.get("parent_id", "")).strip()
+            if str(item.get("kind", "")).strip() not in {"lane", "epic"}
+            and not str(_as_dict(item.get("relationships")).get("parent_id") or item.get("parent_id", "")).strip()
+            and str(_as_dict(item.get("relationships")).get("posture") or "unsupported").strip() in {"complete", "unsupported"}
         ),
         "candidate_backed_count": len(candidate_refs),
+        "relationship_evidence": {
+            "complete_count": sum(1 for item in open_items if str(_as_dict(item.get("relationships")).get("posture") or "") == "complete"),
+            "partial_count": sum(1 for item in open_items if str(_as_dict(item.get("relationships")).get("posture") or "") == "partial"),
+            "unknown_count": sum(
+                1 for item in open_items if str(_as_dict(item.get("relationships")).get("posture") or "") in {"partial", "unobserved"}
+            ),
+            "unsupported_count": sum(1 for item in open_items if not isinstance(item.get("relationships"), dict)),
+        },
         "parent_lanes": parent_lanes,
         "child_issue_clusters": clusters,
         "standalone_candidates": standalone,
@@ -27679,6 +27886,54 @@ def _stale_planning_candidate_reconciliation(
         }
     state_path.write_text(updated, encoding="utf-8")
     return {"status": "applied", "path": relative_path, "stale_count": len(stale), "stale_candidates": stale, "applied_count": removed}
+
+
+def _reconcile_external_active_owners_after_refresh(*, target_root: Path, requested: bool, dry_run: bool) -> dict[str, Any]:
+    """Compose refreshed evidence with Planning's existing CAS reconciliation owner."""
+    if not requested:
+        return {"status": "not-requested"}
+    from repo_planning_bootstrap.installer import planning_reconcile
+
+    preview = planning_reconcile(target=target_root, preview=True, dry_run=dry_run)
+    proposal = _as_dict(preview.get("proposal"))
+    transitions = [item for item in _list_payload(proposal.get("owner_transitions")) if isinstance(item, dict)]
+    relevant = [item for item in transitions if str(item.get("transition") or "") in {"close-slice", "blocked"}]
+    if not relevant:
+        return {
+            "status": "not-applicable",
+            "reason": "refreshed evidence did not change a live external-backed owner",
+            "owner_transition_count": 0,
+        }
+    blocked = [item for item in relevant if str(item.get("transition") or "") == "blocked"]
+    if blocked:
+        return {
+            "status": "blocked",
+            "reason": "semantic-completion-authority-required",
+            "blocked_owners": blocked,
+            "proposal_id": str(proposal.get("proposal_id") or ""),
+            "claim_boundary": "External completion cannot satisfy missing Planning proof or intent authority.",
+        }
+    if dry_run:
+        return {
+            "status": "dry-run",
+            "proposal_id": str(proposal.get("proposal_id") or ""),
+            "owner_transitions": relevant,
+        }
+    proposal_id = str(proposal.get("proposal_id") or "")
+    planning_revision = str(_as_dict(proposal.get("source")).get("planning_revision") or "")
+    applied = planning_reconcile(
+        target=target_root,
+        apply=True,
+        proposal=proposal_id,
+        expected_planning_revision=planning_revision,
+    )
+    return {
+        "status": str(applied.get("status") or "blocked"),
+        "proposal_id": proposal_id,
+        "planning_revision": planning_revision,
+        "owner_transitions": relevant,
+        "receipt": _as_dict(applied.get("receipt")),
+    }
 
 
 def _load_existing_external_intent_evidence(path: Path) -> dict[str, Any]:
@@ -27894,6 +28149,11 @@ def _refresh_github_external_intent_evidence(
             if item is not None
         ]
         items = fetched_items
+    relationship_observation = _github_native_sub_issue_relationships(
+        target_root=target_root,
+        repo=resolved_repo,
+        items=fetched_items if normalized_issue_refs else items,
+    )
     pull_requests = _github_current_pull_request_evidence(target_root=target_root, repo=resolved_repo)
     items.extend(
         {
@@ -27964,6 +28224,7 @@ def _refresh_github_external_intent_evidence(
         "limit_source": limit_source,
         "issue_refs": normalized_issue_refs,
         "fetch_mode": fetch_mode,
+        "relationship_observation": relationship_observation,
         "command": (
             "; ".join(
                 f"gh issue view {ref.lstrip('#')} --json number,title,state,url,labels,createdAt,updatedAt,closedAt,body,comments"
@@ -28022,6 +28283,11 @@ def _refresh_github_external_intent_evidence(
             ),
         }
     )
+    active_owner_reconciliation = _reconcile_external_active_owners_after_refresh(
+        target_root=target_root,
+        requested=apply_planning_candidates and bool(normalized_issue_refs),
+        dry_run=dry_run,
+    )
     refreshed_items = []
     items_by_id = {str(item.get("id") or "").strip(): item for item in items}
     for ref in normalized_issue_refs:
@@ -28065,10 +28331,12 @@ def _refresh_github_external_intent_evidence(
         "limit_source": limit_source,
         "issue_refs": normalized_issue_refs,
         "fetch_mode": fetch_mode,
+        "relationship_observation": relationship_observation,
         "refreshed_items": refreshed_items,
         "planning_candidate_suggestions": planning_candidate_suggestions,
         "planning_candidate_grouping": planning_candidate_grouping,
         "planning_candidate_apply": planning_candidate_apply,
+        "active_owner_reconciliation": active_owner_reconciliation,
         "stale_planning_candidate_reconciliation": stale_planning_candidate_reconciliation,
         "provider_rule": "Core planning consumes only provider-agnostic external intent evidence; GitHub access stays in this optional adapter.",
     }
@@ -28091,6 +28359,7 @@ def _compact_issue_scoped_external_intent_refresh(payload: dict[str, Any]) -> di
         "issue_refs": issue_refs,
         "fetch_mode": payload.get("fetch_mode", "issue-view"),
         "refreshed_items": refreshed_items,
+        "active_owner_reconciliation": payload.get("active_owner_reconciliation", {"status": "not-requested"}),
         "detail_command": "Repeat with --verbose to inspect candidate, grouping, cache, and reconciliation detail.",
         "provider_rule": payload.get("provider_rule", ""),
     }
@@ -32636,6 +32905,14 @@ def _dogfooding_signal_status_payload(
         cli_invoke=cli_invoke,
         target_arg=target_arg,
     )
+    indexed_intake = _session_index_improvement_intake(target_root=target_root, config=config) if not cache else None
+    if indexed_intake is not None:
+        cache = {
+            "status": "pending_disposition",
+            "signals": indexed_intake["signals"],
+            "reason": "Material current-session analyzer evidence awaits capture, routing, deferral, or dismissal.",
+            "source": indexed_intake["source"],
+        }
     allowed_statuses = {
         "not_checked",
         "checked_none",
@@ -32647,6 +32924,9 @@ def _dogfooding_signal_status_payload(
         "routed_to_docs",
         "deferred_to_roadmap",
         "dismissed_with_reason",
+        "fixed",
+        "accepted-risk",
+        "pending_disposition",
         "unresolved",
     }
     if cache.get("_cache_error"):
@@ -32668,6 +32948,7 @@ def _dogfooding_signal_status_payload(
         reason = str(cache.get("reason") or "").strip()
         closeout_blocked = bool(outcome["closeout_blocked"])
     signals = cast(list[str], outcome["signals"])
+    signal_records = [item for item in _list_payload(outcome.get("signal_records")) if isinstance(item, dict)]
     destinations = cast(list[str], outcome["destinations"])
     payload = {
         "kind": "agentic-workspace/dogfooding-signal-status/v1",
@@ -32679,8 +32960,10 @@ def _dogfooding_signal_status_payload(
         "destinations": destinations[:5],
         "dismissal_reason": str(outcome["dismissal_reason"]),
         "deferred_reason": str(outcome["deferred_reason"]),
+        "accepted_risk_reason": str(outcome.get("accepted_risk_reason") or ""),
         "signal_count": len(signals),
         "sample_signals": signals[:3],
+        "pending_candidate": signal_records[0] if status == "pending_disposition" and signal_records else {},
         "durability": str(outcome["durability"]),
         "durable_residue": bool(outcome["durable_residue"]),
         "canonical_repo_history": bool(outcome["canonical_repo_history"]),
@@ -32708,6 +32991,28 @@ def _dogfooding_signal_status_payload(
         "allowed_statuses": sorted(allowed_statuses),
         "claim_boundary": "A broad done claim is qualified until dogfooding signals are checked and routed, recorded locally, deferred, dismissed, or left visibly unresolved.",
     }
+    if status == "pending_disposition" and signal_records:
+        candidate = signal_records[0]
+        evidence_args = " ".join(
+            f"--evidence-ref {shlex.quote(str(ref))}" for ref in _list_payload(candidate.get("evidence_refs"))[:3] if str(ref).strip()
+        )
+        capture_command = (
+            "agentic-workspace session-log signal --target ./repo --kind workaround "
+            f"--symptom {shlex.quote(str(candidate.get('symptom') or candidate.get('signal') or 'material session friction'))} "
+            f"--cost {shlex.quote(str(candidate.get('cost') or 'Repeated current-session work adds avoidable operating cost.'))} "
+            f"--owner-hint {shlex.quote(str(candidate.get('suspected_owner') or 'workspace'))} "
+            f"--scope-relation {shlex.quote(str(candidate.get('scope_relation') or 'current-scope'))} "
+            f"--recurrence {shlex.quote(str(candidate.get('recurrence') or 'repeated'))} "
+            f"--likely-remediation {shlex.quote(str(candidate.get('likely_remediation') or 'unknown'))} "
+            f"--evidence-class machine_observed {evidence_args} --format json"
+        )
+        payload["next_action"] = {
+            "id": "capture-material-session-signal",
+            "command": _command_with_cli_invoke(command=capture_command, cli_invoke=cli_invoke, target_arg=target_arg),
+            "evidence_fingerprint": str(candidate.get("evidence_fingerprint") or candidate.get("fingerprint") or ""),
+            "effect": "materialize the same fingerprinted candidate in the existing local improvement-signal cache",
+            "mutation_authorized": False,
+        }
     return {key: value for key, value in payload.items() if value not in ("", [], {})}
 
 
@@ -33560,6 +33865,7 @@ def _start_tiny_payload_fast(
     execution_posture = _execution_posture_payload(
         config=config, changed_paths=_normalize_changed_paths(changed_paths), task_text=task_text, target_root=target_root
     )
+    payload["task_assignment_disposition"] = execution_posture["task_assignment_disposition"]
     payload["delegation_decision"] = _compact_start_delegation_decision(execution_posture["delegation_decision"])
     effective_orchestration = _as_dict(execution_posture.get("effective_orchestration"))
     if effective_orchestration.get("surface_in_startup") is True:
@@ -43892,6 +44198,12 @@ def _execution_posture_payload(
         delegation_control=delegation_control,
         cli_invoke=config.cli_invoke,
     )
+    task_assignment_disposition = _task_assignment_disposition_payload(
+        assignment_decision=assignment_decision,
+        assignment_gate=assignment_gate,
+        assignment_action=assignment_action,
+        effective_orchestration=effective_orchestration,
+    )
     return {
         "kind": "agentic-workspace/execution-posture/v1",
         "capability_posture": posture,
@@ -43903,6 +44215,7 @@ def _execution_posture_payload(
         "assignment_decision": assignment_decision,
         "assignment_gate": assignment_gate,
         "assignment_action": assignment_action,
+        "task_assignment_disposition": task_assignment_disposition,
         "implementation_allowed": assignment_gate["implementation_allowed"],
         "selected_target": target,
         "decomposition_delegation": decomposition_delegation,
@@ -43922,6 +44235,64 @@ def _execution_posture_payload(
             "No delegation target may reduce required validation, review, or closeout evidence.",
             "Automatic execution is permitted only when local delegation control resolves to auto.",
         ],
+    }
+
+
+def _task_assignment_disposition_payload(
+    *,
+    assignment_decision: dict[str, Any],
+    assignment_gate: dict[str, Any],
+    assignment_action: dict[str, Any],
+    effective_orchestration: dict[str, Any],
+) -> dict[str, Any]:
+    action_status = str(assignment_action.get("status") or "not-applicable")
+    if action_status == "direct-current-target":
+        outcome = "execute-here"
+        evaluated_state = "evaluated-local"
+    elif action_status in {"ready", "reconciliation-required"}:
+        outcome = "delegate-bounded-slice"
+        evaluated_state = "delegated"
+    else:
+        outcome = "blocked-unavailable"
+        evaluated_state = "transport-blocked" if assignment_gate.get("implementation_allowed") is False else "unevaluated"
+    selected_target = str(assignment_action.get("selected_target") or assignment_decision.get("selected_target") or "")
+    current_target = str(assignment_decision.get("current_target") or "")
+    ranking = [item for item in assignment_decision.get("candidate_scores", []) if isinstance(item, dict)]
+    selected_score = next((item for item in ranking if str(item.get("target") or "") == selected_target), {})
+    operation = _as_dict(assignment_action.get("operation_invocation"))
+    return {
+        "kind": "agentic-workspace/task-assignment-disposition/v1",
+        "status": "evaluated",
+        "outcome": outcome,
+        "evaluation_state": evaluated_state,
+        "assignment_decision_revision": assignment_action.get("assignment_decision_revision")
+        or assignment_decision.get("assignment_decision_revision"),
+        "selected_target": selected_target or None,
+        "current_target": current_target or None,
+        "current_target_deliberately_retained": outcome == "execute-here" and bool(selected_target and selected_target == current_target),
+        "decisive_factors": {
+            "task_class": assignment_decision.get("task_class"),
+            "scope_class": assignment_decision.get("scope_class"),
+            "quality_fit": _as_dict(selected_score.get("ranking_components")).get("declared_fit"),
+            "runtime_fit": selected_score.get("runtime_recommendation"),
+            "current_target_retention": _as_dict(selected_score.get("ranking_components")).get("current_target_retention"),
+            "proof_eligible": _as_dict(selected_score.get("eligibility")).get("proof"),
+            "transport_eligible": _as_dict(selected_score.get("eligibility")).get("execution_transport"),
+        },
+        "next_action": {
+            "action": assignment_action.get("action") or assignment_gate.get("required_next_action"),
+            "command": assignment_action.get("command"),
+            "operation_invocation": operation or None,
+            "implementation_allowed": assignment_gate.get("implementation_allowed"),
+        },
+        "external_receipt": {
+            "required": outcome == "delegate-bounded-slice",
+            "owner": "assignment action/receipt lifecycle" if outcome == "delegate-bounded-slice" else None,
+            "rule": "External execution requires revision-bound action and return-admission evidence; deliberate local retention creates no skip receipt.",
+        },
+        "transport": _as_dict(effective_orchestration.get("transport")),
+        "detail_selector": "effective_orchestration",
+        "rule": "Binding assignment is evaluated once per task; execution consumes this disposition without reranking or silent local fallback.",
     }
 
 
@@ -45441,7 +45812,7 @@ def _task_posture_packet_payload(
     explicit_dogfooding_pressure = any(
         marker in dogfooding_task_text for marker in ("#2046", "self-improvement", "operational effectiveness")
     )
-    obligation_statuses = {"recorded_chat_only", "recorded_session_only", "unresolved"}
+    obligation_statuses = {"recorded_chat_only", "recorded_session_only", "pending_disposition", "unresolved"}
     if dogfooding_signal_status.get("applies_to_current_work") and (
         dogfooding_status in obligation_statuses or (dogfooding_status == "not_checked" and explicit_dogfooding_pressure)
     ):
@@ -49165,6 +49536,7 @@ def _tiny_required_proof_commands(answer: dict[str, Any]) -> list[str]:
 PROOF_RECEIPT_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "proof-receipts" / "last.json"
 PROOF_RECEIPT_HISTORY_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "proof-receipts" / "history.jsonl"
 PROOF_REUSE_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "cache" / "proof-reuse.json"
+PROOF_RUNS_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "proof-receipts" / "runs"
 
 
 def _proof_receipt_result_failed(result: str) -> bool:
@@ -49814,6 +50186,311 @@ def _validated_proof_receipt_inputs(*, command: str, result: str) -> tuple[str, 
     return command, result
 
 
+def _proof_execution_subject(*, target_root: Path, changed_paths: list[str], required_commands: list[str]) -> dict[str, Any]:
+    normalized_paths = _normalize_changed_paths(changed_paths)
+    machine_local = bool(normalized_paths) and all(path == WORKSPACE_LOCAL_CONFIG_PATH.as_posix() for path in normalized_paths)
+    identity_paths = list(normalized_paths)
+    if machine_local and WORKSPACE_CONFIG_PATH.as_posix() not in identity_paths:
+        identity_paths.append(WORKSPACE_CONFIG_PATH.as_posix())
+    path_fingerprints = {path: _file_sha256(target_root / path) or "missing" for path in identity_paths}
+    payload = {
+        "changed_paths": normalized_paths,
+        "identity_paths": identity_paths,
+        "path_fingerprints": path_fingerprints,
+        "required_commands": required_commands,
+        "runtime": {
+            "agentic_workspace": __version__,
+            "python": f"{sys.version_info.major}.{sys.version_info.minor}",
+        },
+        "claim_scope": "machine-local-effective-config" if machine_local else "repository-selected-proof",
+    }
+    payload["revision"] = "sha256:" + hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+    return payload
+
+
+def _proof_execution_result_payload(
+    *,
+    run: dict[str, Any],
+    selection: dict[str, Any],
+    status: str,
+) -> dict[str, Any]:
+    run_receipt_ref = (PROOF_RUNS_RELATIVE_PATH / str(run["run_id"]) / "run.json").as_posix()
+    command_records = [item for item in _list_payload(run.get("commands")) if isinstance(item, dict)]
+    record_by_command = {str(item.get("command") or ""): item for item in command_records}
+    required_commands = [str(item) for item in _list_payload(run.get("required_commands"))]
+    selected_lanes = [item for item in _list_payload(selection.get("selected_lanes")) if isinstance(item, dict)]
+    owner_coverage = []
+    for lane in selected_lanes:
+        lane_commands = [str(item) for item in _list_payload(lane.get("required_commands")) if str(item).strip()]
+        if not lane_commands:
+            continue
+        passed = [command for command in lane_commands if record_by_command.get(command, {}).get("status") == "passed"]
+        owner_coverage.append(
+            {
+                "owner": str(lane.get("id") or "unknown"),
+                "status": "satisfied" if len(passed) == len(lane_commands) else "incomplete",
+                "required_count": len(lane_commands),
+                "passed_count": len(passed),
+            }
+        )
+    passed_count = sum(record_by_command.get(command, {}).get("status") == "passed" for command in required_commands)
+    failure_records = [item for item in command_records if item.get("status") in {"failed", "timeout", "cancelled"}]
+    commands_complete = bool(required_commands) and passed_count == len(required_commands)
+    selection_blockers: list[str] = []
+    if _as_dict(selection.get("route_refinement_required")).get("status") == "required":
+        selection_blockers.append("route-refinement-required")
+    satisfied_owners = {str(item.get("owner") or "") for item in owner_coverage if item.get("status") == "satisfied"}
+    unresolved_manual_obligations = [
+        item
+        for item in _list_payload(selection.get("manual_proof_obligations"))
+        if isinstance(item, dict) and str(item.get("id") or "") not in satisfied_owners
+    ]
+    if unresolved_manual_obligations:
+        selection_blockers.append("manual-proof-obligations")
+    complete = commands_complete and not selection_blockers
+    local_scope = _as_dict(run.get("subject")).get("claim_scope") == "machine-local-effective-config"
+    if complete and local_scope:
+        claim_boundary = {
+            "status": "effective-local-configuration-verified",
+            "scope": "machine-local",
+            "completion_claim_allowed": True,
+            "shared_repository_claim_allowed": False,
+            "pr_release_or_parent_claim_allowed": False,
+            "rule": "Current local evidence verifies only the effective machine-local configuration; it cannot satisfy shared repository, PR, release, or parent claims.",
+        }
+    elif complete:
+        claim_boundary = {
+            "status": "selected-proof-executed",
+            "scope": "repository-selected-proof",
+            "completion_claim_allowed": False,
+            "shared_repository_claim_allowed": True,
+            "rule": "Selected proof execution is current evidence; completion still requires intent and closeout reconciliation.",
+        }
+    else:
+        claim_boundary = {
+            "status": "blocked",
+            "scope": "machine-local" if local_scope else "repository-selected-proof",
+            "completion_claim_allowed": False,
+            "shared_repository_claim_allowed": False,
+            "rule": "Failed, timed-out, cancelled, or incomplete selected proof cannot authorize a completion claim.",
+        }
+    next_action = (
+        {"action": "reconcile-closeout", "command": "agentic-workspace planning closeout --target . --proof-from last --format json"}
+        if complete and not local_scope
+        else {"action": "continue-with-verified-local-config", "command": None}
+        if complete
+        else {
+            "action": "repair-proof-route",
+            "command": "agentic-workspace proof --target . --changed <paths> --select route_refinement_required,manual_proof_obligations --format json",
+        }
+        if commands_complete and selection_blockers
+        else {
+            "action": "resume-selected-proof",
+            "command": f"agentic-workspace proof --target . --changed <paths> --execute-selected --proof-run-id {run['run_id']} --format json",
+        }
+    )
+    return {
+        "kind": "agentic-workspace/proof-execution-result/v1",
+        "status": "completed-with-unresolved-obligations" if commands_complete and selection_blockers else status,
+        "outcome": "passed"
+        if complete
+        else "blocked"
+        if commands_complete
+        else str(failure_records[-1].get("status") if failure_records else "incomplete"),
+        "run": {
+            "id": run["run_id"],
+            "attempt": run.get("attempt", 1),
+            "subject_revision": _as_dict(run.get("subject")).get("revision"),
+            "receipt_ref": run_receipt_ref,
+        },
+        "coverage": {
+            "required_count": len(required_commands),
+            "passed_count": passed_count,
+            "remaining_count": max(0, len(required_commands) - passed_count),
+            "owners": owner_coverage,
+            "selection_obligations": selection_blockers,
+        },
+        "failures": [
+            {"command_id": item.get("command_id"), "status": item.get("status"), "exit_code": item.get("exit_code")}
+            for item in failure_records
+        ],
+        "claim_boundary": claim_boundary,
+        "next_action": next_action,
+        "detail_routes": {
+            "run_receipt": run_receipt_ref,
+            "command_receipts": [str(item.get("receipt_ref") or "") for item in command_records],
+            "resume": next_action.get("command"),
+        },
+        "persistence": {
+            "owner": ".agentic-workspace/local/proof-receipts/runs",
+            "repository_residue": False,
+            "delta_shape": "one bounded run receipt plus individually addressable local command receipts",
+        },
+    }
+
+
+def _execute_selected_proof_payload(
+    *,
+    target_root: Path,
+    changed_paths: list[str],
+    task_text: str | None,
+    run_id: str,
+    timeout_seconds: str,
+    cancel_file: str,
+    dry_run: bool,
+) -> dict[str, Any]:
+    selection = _proof_selection_for_changed_paths(
+        changed_paths=changed_paths,
+        target_root=target_root,
+        task_text=task_text,
+        include_durable_intent=False,
+    )
+    required_commands = [str(item) for item in _list_payload(selection.get("required_commands")) if str(item).strip()]
+    if not required_commands:
+        return {
+            "kind": "agentic-workspace/proof-execution-result/v1",
+            "status": "blocked-no-executable-proof",
+            "outcome": "blocked",
+            "claim_boundary": {"status": "blocked", "completion_claim_allowed": False},
+            "next_action": {
+                "action": "repair-proof-route",
+                "command": "agentic-workspace proof --target . --changed <paths> --format json",
+            },
+        }
+    try:
+        timeout = float(timeout_seconds or 600)
+    except ValueError as exc:
+        raise WorkspaceUsageError("--proof-timeout-seconds must be numeric.") from exc
+    if timeout <= 0:
+        raise WorkspaceUsageError("--proof-timeout-seconds must be greater than zero.")
+    subject = _proof_execution_subject(target_root=target_root, changed_paths=changed_paths, required_commands=required_commands)
+    requested_run_id = str(run_id or "").strip()
+    if requested_run_id and not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}", requested_run_id):
+        raise WorkspaceUsageError("--proof-run-id must be a safe 1-64 character identifier.")
+    effective_run_id = requested_run_id or str(subject["revision"]).removeprefix("sha256:")[:20]
+    run_root = target_root / PROOF_RUNS_RELATIVE_PATH / effective_run_id
+    run_path = run_root / "run.json"
+    existing: dict[str, Any] = {}
+    if run_path.is_file():
+        try:
+            loaded = json.loads(run_path.read_text(encoding="utf-8"))
+            existing = loaded if isinstance(loaded, dict) else {}
+        except (OSError, json.JSONDecodeError):
+            existing = {}
+    existing_revision = str(_as_dict(existing.get("subject")).get("revision") or "")
+    if existing and existing_revision != subject["revision"]:
+        return {
+            "kind": "agentic-workspace/proof-execution-result/v1",
+            "status": "stale-subject-blocked",
+            "outcome": "blocked",
+            "run": {
+                "id": effective_run_id,
+                "recorded_subject_revision": existing_revision,
+                "current_subject_revision": subject["revision"],
+            },
+            "claim_boundary": {
+                "status": "blocked",
+                "completion_claim_allowed": False,
+                "rule": "A named run cannot admit results for a changed proof subject.",
+            },
+            "next_action": {
+                "action": "start-current-subject-run",
+                "command": "agentic-workspace proof --target . --changed <paths> --execute-selected --format json",
+            },
+        }
+    run = existing or {
+        "kind": "agentic-workspace/proof-execution-run/v1",
+        "run_id": effective_run_id,
+        "subject": subject,
+        "required_commands": required_commands,
+        "commands": [],
+        "attempt": 0,
+        "created_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+    }
+    records = [item for item in _list_payload(run.get("commands")) if isinstance(item, dict)]
+    passed_commands = {str(item.get("command") or "") for item in records if item.get("status") == "passed"}
+    if len(passed_commands.intersection(required_commands)) == len(required_commands):
+        return _proof_execution_result_payload(run=run, selection=selection, status="reused-fresh-evidence")
+    if dry_run:
+        run["attempt"] = int(run.get("attempt") or 0) + 1
+        return _proof_execution_result_payload(run=run, selection=selection, status="dry-run")
+    cancel_path: Path | None = None
+    if cancel_file:
+        candidate = Path(cancel_file)
+        cancel_path = candidate if candidate.is_absolute() else target_root / candidate
+    run["attempt"] = int(run.get("attempt") or 0) + 1
+    for index, command in enumerate(required_commands, start=1):
+        if command in passed_commands:
+            continue
+        command_id = hashlib.sha256(command.encode("utf-8")).hexdigest()[:16]
+        if cancel_path is not None and cancel_path.exists():
+            cancelled_receipt = {
+                "kind": "agentic-workspace/proof-execution-command-receipt/v1",
+                "command_id": command_id,
+                "command": command,
+                "status": "cancelled",
+                "exit_code": None,
+                "attempt": run["attempt"],
+                "subject_revision": subject["revision"],
+                "receipt_ref": (PROOF_RUNS_RELATIVE_PATH / effective_run_id / f"{command_id}.json").as_posix(),
+            }
+            _write_json_file(
+                destination=target_root / str(cancelled_receipt["receipt_ref"]),
+                payload=cancelled_receipt,
+                dry_run=False,
+            )
+            records = [item for item in records if str(item.get("command") or "") != command]
+            records.append(cancelled_receipt)
+            break
+        print(f"[proof {index}/{len(required_commands)}] {command}", file=sys.stderr, flush=True)
+        started = time.monotonic()
+        try:
+            completed = run_trusted_shell(
+                command,
+                trust_source="checked-repository-proof-route",
+                admitted=True,
+                cwd=target_root,
+                timeout=timeout,
+            )
+            status = "passed" if completed.returncode == 0 else "failed"
+            exit_code: int | None = completed.returncode
+            stdout = completed.stdout or ""
+            stderr = completed.stderr or ""
+        except subprocess.TimeoutExpired as exc:
+            status = "timeout"
+            exit_code = None
+            stdout = str(exc.stdout or "")
+            stderr = str(exc.stderr or "")
+        receipt_ref = PROOF_RUNS_RELATIVE_PATH / effective_run_id / f"{command_id}.json"
+        receipt = {
+            "kind": "agentic-workspace/proof-execution-command-receipt/v1",
+            "command_id": command_id,
+            "command": command,
+            "status": status,
+            "exit_code": exit_code,
+            "duration_seconds": round(time.monotonic() - started, 3),
+            "attempt": run["attempt"],
+            "subject_revision": subject["revision"],
+            "stdout_tail": stdout[-2000:],
+            "stderr_tail": stderr[-2000:],
+            "receipt_ref": receipt_ref.as_posix(),
+        }
+        _write_json_file(destination=target_root / receipt_ref, payload=receipt, dry_run=False)
+        records = [item for item in records if str(item.get("command") or "") != command]
+        records.append({key: value for key, value in receipt.items() if key not in {"stdout_tail", "stderr_tail"}})
+        run["commands"] = records
+        run["updated_at"] = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+        _write_json_file(destination=run_path, payload=run, dry_run=False)
+        if status != "passed":
+            break
+    run["commands"] = records
+    run["updated_at"] = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    _write_json_file(destination=run_path, payload=run, dry_run=False)
+    final_passed = {str(item.get("command") or "") for item in records if item.get("status") == "passed"}
+    result_status = "completed" if len(final_passed.intersection(required_commands)) == len(required_commands) else "partial"
+    return _proof_execution_result_payload(run=run, selection=selection, status=result_status)
+
+
 def _emit_proof_next_decision_text(payload: dict[str, Any]) -> None:
     next_action = _as_dict(payload.get("next"))
     claim = _as_dict(payload.get("claim_boundary"))
@@ -49846,6 +50523,10 @@ def _emit_proof(
     task_text: str | None = None,
     profile: str = "full",
     select: str | None = None,
+    execute_selected: bool = False,
+    proof_run_id: str = "",
+    proof_timeout_seconds: str = "600",
+    proof_cancel_file: str = "",
     record_receipt: bool = False,
     receipt_command: str = "",
     receipt_result: str = "",
@@ -49883,6 +50564,24 @@ def _emit_proof(
         return int(prevalidation_error["exit_status"])
     if inventory_payload := _selector_inventory_selected_payload(select=select, source_command="proof"):
         _emit_payload(payload=inventory_payload, format_name=format_name)
+        return 0
+    if execute_selected:
+        if not normalized_paths:
+            raise WorkspaceUsageError("--execute-selected requires at least one --changed path.")
+        if route or current_only or record_receipt or route_repair_mode:
+            raise WorkspaceUsageError("--execute-selected cannot be combined with --route, --current, --record-receipt, or route repair.")
+        payload = _execute_selected_proof_payload(
+            target_root=target_root,
+            changed_paths=normalized_paths,
+            task_text=task_text,
+            run_id=proof_run_id,
+            timeout_seconds=proof_timeout_seconds,
+            cancel_file=proof_cancel_file,
+            dry_run=dry_run,
+        )
+        if select:
+            payload = _select_payload_fields(payload, select=select, source_command="proof")
+        _emit_payload(payload=payload, format_name=format_name)
         return 0
     if route_repair_mode:
         from agentic_workspace.workspace_runtime_proof import _proof_route_repair_operation_payload
@@ -51936,6 +52635,9 @@ def _load_workspace_operation_config(values: dict[str, Any], _arguments: dict[st
     _validate_descriptor_contract(descriptors)
     config = config_lib.load_workspace_config(target_root=values["target_root"], valid_presets=set(descriptors))
     if _arguments.get("include_payload"):
+        if inventory_payload := _selector_inventory_selected_payload(select=values.get("select"), source_command="config"):
+            values["select"] = None
+            return {"config": config, "result": inventory_payload}
         if prevalidation_error := _selector_prevalidation_error(select=values.get("select"), source_command="config"):
             values["select"] = None
             return {"config": config, "result": prevalidation_error}

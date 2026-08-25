@@ -17,6 +17,7 @@
     "Caller-supplied producer labels cannot upgrade authority; trusted authority must resolve from trusted_authority_receipt_ref.",
     "Signed trusted_host_event_json is verified against pinned producer custody, channel, workspace, lifecycle, and signature before import.",
     "Incomplete trusted observations remain in existing trusted-authority custody until host_event_ref is normalized; downstream route decisions are separate.",
+    "A canonical-owner route requires both canonical_owner_ref and canonical_owner_evidence_ref and resolves disposition without creating duplicate Memory or guidance policy.",
     "Agent self-observation is preserved as low-authority non-routing evidence.",
     "Correction storage is local-only and has no checked-in repo meaning."
   ],
@@ -151,6 +152,16 @@
     },
     {
       "name": "route_decisions",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "canonical_owner_ref",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "canonical_owner_evidence_ref",
       "required": false,
       "source": "cli-option"
     },

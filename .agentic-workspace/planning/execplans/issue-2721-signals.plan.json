@@ -1,0 +1,94 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2721-signals",
+  "title": "Make material session friction consequential before closeout",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "validation",
+  "revision": 3,
+  "intent": {
+    "outcome": "Material current-session analyzer evidence becomes one stable pending improvement candidate that blocks broad clean closeout until captured or explicitly disposed, while generated operation metadata classifies supported AW invocations without guessing raw command text.",
+    "non_goals": [
+      "Do not auto-file issues or grant diagnostics mutation authority.",
+      "Do not make low-confidence or no-signal sessions noisy or blocking.",
+      "Do not infer intent from free-form shell command strings when generated command/operation contracts can declare it."
+    ]
+  },
+  "parent": {
+    "owner_id": "issue-2721",
+    "contribution": "Final stacked-PR layer for #2730 and the lane-level ordinary supported-host replay.",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "src/agentic_workspace/session_logging.py",
+      "src/agentic_workspace/workspace_runtime_core.py",
+      "tests/test_workspace_session_logging.py",
+      "tests/test_workspace_cli.py",
+      "lane planning and maintained replay evidence"
+    ],
+    "effects": [
+      "Generated operation identity and summary populate invocation intent for supported AW commands.",
+      "Repeated commands, duplicate output, and receipt choreography produce fingerprinted material candidates.",
+      "Complete-index material candidates surface as pending disposition and constrain closeout with one exact capture action.",
+      "No-material-signal and explicitly disposed signals remain quiet."
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected",
+      "owner": "issue-2721-signals"
+    },
+    "proof_posture": {
+      "state": "hosted-proof-passed",
+      "refs": [
+        "tests/test_workspace_session_logging.py::test_consequential_session_replay_emits_stable_material_candidates",
+        "tests/test_workspace_cli.py::test_session_index_intake_selects_one_strongest_material_candidate",
+        ".agentic-workspace/planning/closeout-evidence/issue-2721-supported-host-replay.closeout.json",
+        "all five published stack layers passed CI, Security baseline, and PR Semver Label checks before review repair",
+        "review repair preserves partial hierarchy as unknown and reconciles every carried Planning owner to review/merge continuation"
+      ]
+    },
+    "external_posture": {
+      "state": "current",
+      "refs": ["GitHub #2730", "parent lane #2721"]
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "GitHub issue #2730 and final replay under lane #2721",
+      "label": "GitHub issue #2730 and final replay under lane #2721",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Complete refreshed hosted validation for the review repairs, obtain independent approval across PRs #2732-#2736, then merge the stack in order and reconcile child and parent closure from master.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Material current-session analyzer evidence reaches one stable pending/captured/routed/dismissed disposition before broad clean closeout.",
+      "Supported AW invocations carry generated operation/purpose metadata; undeclared producers remain unknown.",
+      "Equivalent machine and human evidence deduplicates, and quiet sessions remain unobtrusive."
+    ],
+    "requirements": [
+      "Replay 14 current-task commands with repeated status/proof, duplicate output, and receipt choreography.",
+      "Prove stable fingerprint, exact capture route, closeout effect, human strengthening, resolved/dismissed quietness, and no-signal path.",
+      "Run focused session logging/workspace tests and the combined lane proof selected by changed paths."
+    ],
+    "refs": [
+      "tests/test_workspace_session_logging.py::test_consequential_session_replay_emits_stable_material_candidates",
+      "tests/test_workspace_session_logging.py::test_supported_workspace_commands_declare_generated_operation_purpose_without_producer_hints",
+      "tests/test_workspace_cli.py::test_session_improvement_intake_self_admits_material_index_as_pending_disposition",
+      "tests/test_workspace_cli.py::test_session_index_intake_selects_one_strongest_material_candidate",
+      ".agentic-workspace/planning/closeout-evidence/issue-2721-supported-host-replay.closeout.json"
+    ]
+  },
+  "continuation": {
+    "owner": "none",
+    "residual_intent": "none"
+  },
+  "specialist_contracts": []
+}

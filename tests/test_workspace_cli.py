@@ -63,6 +63,8 @@ def test_active_external_backed_owner_routes_refresh_then_reconciliation(tmp_pat
     assert stale["status"] == "refresh-required"
     assert stale["reason_code"] == "external-observation-stale"
     assert stale["refresh_command"].startswith("uv run agentic-workspace external-intent refresh-github")
+    assert "--issue #42" in stale["refresh_command"]
+    assert "--apply-planning-candidates" in stale["refresh_command"]
 
     assert workspace_runtime_planning._active_owner_external_reconciliation(
         target_root=tmp_path,
@@ -539,6 +541,77 @@ def test_completed_child_reconciliation_is_cross_consumer_idempotent_and_fails_c
     assert route["owner_admission"]["repair_route"]["status"] == "available"
 
 
+@pytest.mark.parametrize(("proof_state", "expected_status"), [("satisfied", "applied"), ("pending", "blocked")])
+def test_refreshed_external_owner_reconciliation_applies_only_with_semantic_authority(
+    tmp_path: Path, proof_state: str, expected_status: str
+) -> None:
+    from repo_planning_bootstrap import installer as planning_installer
+
+    _write_completed_child_reconciliation_fixture(tmp_path)
+    owner_path = tmp_path / ".agentic-workspace/planning/execplans/merged-child.plan.json"
+    owner = planning_installer._load_execplan_record(owner_path)
+    assert owner is not None
+    owner.setdefault("relationships", {})["proof_posture"] = {"state": proof_state, "refs": ["proof:merged-child"]}
+    owner.setdefault("references", []).append(
+        {"kind": "issue", "target": "#42", "label": "GitHub #42", "role": "external-owner", "locator": ""}
+    )
+    planning_installer._write_execplan_record(record_path=owner_path, record=owner)
+    _write(
+        tmp_path / ".agentic-workspace/local/cache/external-intent-evidence.json",
+        json.dumps(
+            {
+                "kind": "planning-external-intent-evidence/v1",
+                "refreshed_at": "2026-08-25T12:00:00+00:00",
+                "refresh_metadata": {"adapter": "fixture", "refreshed_at": "2026-08-25T12:00:00+00:00"},
+                "items": [
+                    {
+                        "system": "github",
+                        "id": "#42",
+                        "status": "closed",
+                        "kind": "issue",
+                        "observation_id": "github:issue:42:merged",
+                        "external_revision": "merged",
+                        "observed_at": "2026-08-25T12:00:00+00:00",
+                        "freshness": {
+                            "status": "current",
+                            "observed_at": "2026-08-25T12:00:00+00:00",
+                            "expires_at": "2099-01-01T00:00:00+00:00",
+                            "max_age_seconds": 86400,
+                        },
+                        "owner": {"id": "#42", "kind": "issue", "locator": "github:acme/project:issue:42"},
+                        "status_class": "completed",
+                        "blockers": [],
+                        "evidence_refs": ["#42"],
+                        "provenance": {
+                            "provider_class": "github",
+                            "resolver_id": "fixture",
+                            "source_ref": "github:acme/project:issue:42",
+                            "refresh_id": "merged",
+                        },
+                        "refresh_route": "fixture-refresh",
+                        "availability": "available",
+                        "contradictions": [],
+                    }
+                ],
+            }
+        ),
+    )
+
+    result = workspace_runtime_core._reconcile_external_active_owners_after_refresh(target_root=tmp_path, requested=True, dry_run=False)
+    state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
+    active_ids = {item["id"] for item in state["todo"]["active_items"]}
+
+    assert result["status"] == expected_status
+    if proof_state == "satisfied":
+        assert "merged-child" not in active_ids
+        closed = planning_installer._load_execplan_record(owner_path)
+        assert closed is not None and closed["lifecycle"] == "closed"
+        assert result["receipt"]["closed_owner_ids"] == ["merged-child.plan"]
+    else:
+        assert "merged-child" in active_ids
+        assert result["reason"] == "semantic-completion-authority-required"
+
+
 @pytest.mark.parametrize(
     ("argv", "blocked_command"),
     [
@@ -925,6 +998,48 @@ def test_explicit_selector_inventory_and_prevalidation_share_declared_nested_sel
     defaults_projection = json.loads(capsys.readouterr().out)
     assert defaults_projection["kind"] == "agentic-workspace/selected-output/v1"
     assert defaults_projection["values"] == {"answer.command": "agentic-workspace defaults --section root_cli_authority --format json"}
+
+
+def test_config_advertised_target_selectors_round_trip_through_the_emitting_surface(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert cli.main(["config", "--target", str(tmp_path), "--select", "selector_inventory", "--format", "json"]) == 0
+    inventory = json.loads(capsys.readouterr().out)["values"]["selector_inventory"]
+    assert inventory["invocation"] == {
+        "command": "agentic-workspace config --target . --select selector_inventory --format json",
+        "surface": "config",
+        "selector_option": "--select",
+    }
+    for selector in ("mixed_agent.target_identity", "mixed_agent.target_evidence"):
+        assert selector in inventory["selectors"]
+        assert cli.main(["config", "--target", str(tmp_path), "--select", selector, "--format", "json"]) == 0
+        projection = json.loads(capsys.readouterr().out)
+        assert projection["kind"] == "agentic-workspace/selected-output/v1"
+        assert selector in projection["values"]
+
+    generated_cli = Path(__file__).resolve().parents[1] / "generated/workspace/typescript/src/cli.mjs"
+    generated = subprocess.run(
+        [
+            "node",
+            str(generated_cli),
+            "config",
+            "--target",
+            str(tmp_path),
+            "--select",
+            "mixed_agent.target_identity,mixed_agent.target_evidence",
+            "--format",
+            "json",
+        ],
+        capture_output=True,
+        check=False,
+    )
+    assert generated.returncode == 0, generated.stderr.decode("utf-8")
+    generated_projection = json.loads(generated.stdout.decode("utf-8"))
+    assert generated_projection["kind"] == "agentic-workspace/selected-output/v1"
+    for selector in ("mixed_agent.target_identity", "mixed_agent.target_evidence"):
+        value = generated_projection["values"][selector]
+        assert value["status"] == "unavailable-in-generated-typescript-host"
+        assert value["continuation"].endswith(f"--select {selector} --format json")
 
 
 def test_generated_workspace_operations_prevalidate_before_payload_producers(tmp_path: Path, monkeypatch) -> None:
@@ -6096,7 +6211,7 @@ def test_start_default_routes_memory_and_installed_state_detail_behind_selectors
 
     assert "memory_decision_packet" not in payload
     assert "installed_state_compatibility" not in payload
-    assert set(payload) == {"kind", "target", "decision_packet"}
+    assert set(payload) == {"kind", "target", "decision_packet", "task_assignment_disposition"}
     assert "--select <field[,field...]>" in payload["decision_packet"]["detail_routes"]["select"]
 
     assert (
@@ -8545,7 +8660,7 @@ def test_generated_ordinary_guidance_is_executable_from_default_decision_packet_
     )
     payload = json.loads(capsys.readouterr().out)
 
-    assert set(payload) == {"kind", "target", "decision_packet"}
+    assert set(payload) == {"kind", "target", "decision_packet", "task_assignment_disposition"}
     assert "communication_contract" not in payload
     decision = payload["decision_packet"]
     action = decision["action"]
@@ -8611,10 +8726,10 @@ def test_start_default_compresses_representative_first_contact_without_losing_de
     measurements = {name: _startup_output_measurement(payload) for name, payload in payloads.items()}
     for name, measurement in measurements.items():
         baseline = master_baselines[name]
-        assert measurement["json_bytes"] <= baseline["json_bytes"] * 0.5
+        assert measurement["json_bytes"] <= baseline["json_bytes"] * 0.5 + 64  # explicit assignment outcome envelope
         assert measurement["human_lines"] <= baseline["human_lines"] * 0.5
-        assert measurement["field_count"] <= baseline["field_count"] * 0.5
-        assert set(payloads[name]) == {"kind", "target", "decision_packet"}
+        assert measurement["field_count"] <= baseline["field_count"] * 0.5 + 2
+        assert set(payloads[name]) == {"kind", "target", "decision_packet", "task_assignment_disposition"}
         decision = payloads[name]["decision_packet"]
         assert isinstance(decision, dict)
         assert decision["identity"]["revision"]
@@ -15854,6 +15969,27 @@ def test_report_dogfooding_signal_status_covers_closeout_states(tmp_path: Path, 
     dismissed = json.loads(capsys.readouterr().out)["answer"]
     assert dismissed["status"] == "dismissed_with_reason"
     assert dismissed["dismissal_reason"] == "operator typo, not product friction"
+    assert dismissed["closeout_blocked"] is False
+
+    cache_path.write_text(
+        json.dumps({"status": "fixed", "signals": ["receipt choreography"], "reason": "proof execution now reconciles receipts"}),
+        encoding="utf-8",
+    )
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "dogfooding_signal_status", "--format", "json"]) == 0
+    fixed = json.loads(capsys.readouterr().out)["answer"]
+    assert fixed["status"] == "fixed"
+    assert fixed["closeout_blocked"] is False
+    assert fixed["durable_residue"] is False
+
+    cache_path.write_text(
+        json.dumps({"status": "accepted-risk", "signals": ["bounded repeat"], "accepted_risk_reason": "bounded maintenance cost"}),
+        encoding="utf-8",
+    )
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "dogfooding_signal_status", "--format", "json"]) == 0
+    accepted = json.loads(capsys.readouterr().out)["answer"]
+    assert accepted["status"] == "accepted-risk"
+    assert accepted["closeout_blocked"] is False
+    assert accepted["accepted_risk_reason"] == "bounded maintenance cost"
 
     cache_path.write_text(json.dumps({"signals": ["unrouted friction"]}), encoding="utf-8")
     assert cli.main(["report", "--target", str(tmp_path), "--section", "dogfooding_signal_status", "--format", "json"]) == 0
@@ -16046,7 +16182,7 @@ def test_session_log_signal_captures_strengthens_and_routes_structured_candidate
     assert session["routing_decisions"][0]["closeout_blocked"] is True
 
 
-def test_session_improvement_intake_self_admits_complete_index_for_review(tmp_path: Path, capsys, monkeypatch) -> None:
+def test_session_improvement_intake_self_admits_material_index_as_pending_disposition(tmp_path: Path, capsys, monkeypatch) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
     capsys.readouterr()
@@ -16061,11 +16197,21 @@ def test_session_improvement_intake_self_admits_complete_index_for_review(tmp_pa
     assert payload["status"] == "session_observed"
     assert payload["session_signal_source"]["status"] == "complete-index"
     signal = payload["session_observed_signals"][0]
-    assert signal["outcome"] == "review_required"
-    assert signal["reviewed"] is False
-    assert len(signal["fingerprint"]) == 64
-    assert payload["routing_decisions"][0]["closeout_blocked"] is False
-    assert "not promoted" in payload["claim_boundary"]
+    assert signal["outcome"] == "pending_disposition"
+    assert signal["reviewed"] is True
+    assert len(signal["fingerprint"]) == 20
+    assert payload["routing_decisions"][0]["closeout_blocked"] is True
+    assert payload["operational_effect"]["status"] == "closeout-blocking"
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "dogfooding_signal_status", "--format", "json"]) == 0
+    status = json.loads(capsys.readouterr().out)["answer"]
+    assert status["status"] == "pending_disposition"
+    assert status["closeout_blocked"] is True
+    assert "dismissal_reason" not in status
+    assert "deferred_reason" not in status
+    assert status["next_action"]["id"] == "capture-material-session-signal"
+    assert "session-log signal" in status["next_action"]["command"]
+    assert status["next_action"]["evidence_fingerprint"] == signal["evidence_fingerprint"]
 
 
 def test_session_log_download_intent_routes_to_export_without_transfer_approval(tmp_path: Path, capsys) -> None:
@@ -16098,11 +16244,25 @@ def test_session_log_download_intent_routes_to_export_without_transfer_approval(
     assert payload["next_safe_action"]["next_safe_action"] == "run-session-log-export"
 
 
-def test_session_index_intake_deduplicates_stable_candidates_before_review(tmp_path: Path, monkeypatch) -> None:
+def test_session_index_intake_deduplicates_stable_material_candidates_before_disposition(tmp_path: Path, monkeypatch) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
     config = workspace_runtime_core._load_workspace_config(target_root=tmp_path)
-    candidate = {"id": "same", "summary": "Repeated session signal", "count": 2}
+    candidate = {
+        "id": "same",
+        "summary": "Repeated session signal",
+        "count": 2,
+        "improvement_signal": {
+            "kind": "workflow_cost",
+            "symptom": "Status was repeated in one session.",
+            "cost": "Repeated routing work.",
+            "suspected_owner": "operating-loop",
+            "confidence": "medium",
+            "recurrence": "repeated",
+            "occurrence_count": 2,
+            "evidence_fingerprint": "stable-material-id",
+        },
+    }
     monkeypatch.setattr(
         session_logging,
         "analyze_session_log",
@@ -16120,8 +16280,53 @@ def test_session_index_intake_deduplicates_stable_candidates_before_review(tmp_p
     assert first is not None and second is not None
     assert len(first["signals"]) == len(first["routing_decisions"]) == 1
     assert first["signals"][0]["fingerprint"] == second["signals"][0]["fingerprint"]
-    assert first["signals"][0]["reviewed"] is False
+    assert first["signals"][0]["reviewed"] is True
     assert first["routing_decisions"][0]["destinations"] == []
+    assert first["routing_decisions"][0]["closeout_blocked"] is True
+
+
+def test_session_index_intake_selects_one_strongest_material_candidate(tmp_path: Path, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    config = workspace_runtime_core._load_workspace_config(target_root=tmp_path)
+
+    def candidate(candidate_id: str, *, confidence: str, count: int) -> dict[str, object]:
+        return {
+            "id": candidate_id,
+            "summary": candidate_id,
+            "improvement_signal": {
+                "kind": "workflow_cost",
+                "symptom": candidate_id,
+                "confidence": confidence,
+                "recurrence": "repeated",
+                "occurrence_count": count,
+                "evidence_fingerprint": f"fingerprint-{candidate_id}",
+            },
+        }
+
+    monkeypatch.setattr(
+        session_logging,
+        "analyze_session_log",
+        lambda **_kwargs: {
+            "kind": "agentic-workspace/session-log-analysis/v1",
+            "status": "analyzed",
+            "index_status": "complete",
+            "index_path": ".agentic-workspace/local/session-logging/index.json",
+            "detail_page": {
+                "items": [
+                    candidate("repeated-command", confidence="medium", count=3),
+                    candidate("duplicate-output", confidence="medium", count=14),
+                    candidate("receipt-choreography", confidence="high", count=4),
+                ]
+            },
+        },
+    )
+
+    intake = workspace_runtime_core._session_index_improvement_intake(target_root=tmp_path, config=config)
+    assert intake is not None
+    assert len(intake["signals"]) == len(intake["routing_decisions"]) == 1
+    assert intake["signals"][0]["signal"] == "receipt-choreography"
+    assert intake["signals"][0]["fingerprint"] == "fingerprint-receipt-choreography"
 
 
 def test_selected_dogfooding_report_sections_stay_compact(tmp_path: Path, capsys) -> None:
@@ -16744,6 +16949,95 @@ def test_report_defaults_use_router_without_full_report_or_local_footprint(tmp_p
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["decision_packet"]["surface"] == "report"
+
+
+def test_report_router_and_findings_section_do_not_construct_module_lifecycle_reports(tmp_path: Path, capsys, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+
+    def _unexpected(*args, **kwargs):
+        raise AssertionError("bounded report routes must not construct module lifecycle reports")
+
+    monkeypatch.setattr(workspace_runtime_core, "_run_lifecycle_command", _unexpected)
+    monkeypatch.setattr(workspace_runtime_core, "_selected_module_reports", _unexpected)
+
+    assert cli.main(["report", "--target", str(tmp_path), "--format", "json"]) == 0
+    router = json.loads(capsys.readouterr().out)
+    assert router["decision_packet"]["surface"] == "report"
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "findings", "--format", "json"]) == 0
+    findings = json.loads(capsys.readouterr().out)["answer"]
+    assert findings["kind"] == "agentic-workspace/findings-projection/v1"
+    assert findings["construction_boundary"]["full_report_constructed"] is False
+    assert findings["construction_boundary"]["module_reports_constructed"] is False
+
+
+def test_selected_start_decision_route_is_narrow_and_preserves_claim_and_assignment_identity(tmp_path: Path, capsys, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+
+    def _unexpected(*args, **kwargs):
+        raise AssertionError("selected decision route must not construct the broad start payload")
+
+    monkeypatch.setattr(workspace_runtime_startup, "_start_payload", _unexpected)
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Summarize current dogfooding signals",
+                "--select",
+                "dogfooding_signal_status,action_signals,task_assignment_disposition",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    signals = payload["values"]["action_signals"]
+    assert signals["construction_profile"]["broad_start_payload_constructed"] is False
+    assert "blocked_claims" in signals["claim_boundary"]
+    disposition = payload["values"]["task_assignment_disposition"]
+    assert disposition["evaluation_state"] in {"evaluated-local", "delegated", "transport-blocked", "unevaluated"}
+    assert disposition["assignment_decision_revision"]
+
+
+def test_task_assignment_disposition_distinguishes_deliberate_local_and_external_action() -> None:
+    local = workspace_runtime_core._task_assignment_disposition_payload(
+        assignment_decision={
+            "selected_target": "current",
+            "current_target": "current",
+            "assignment_decision_revision": "sha256:local",
+            "candidate_scores": [{"target": "current", "ranking_components": {}, "eligibility": {}}],
+        },
+        assignment_gate={"implementation_allowed": True, "required_next_action": "continue"},
+        assignment_action={"status": "direct-current-target", "selected_target": "current", "action": "continue"},
+        effective_orchestration={"transport": {"effective_mode": "auto"}},
+    )
+    assert local["outcome"] == "execute-here"
+    assert local["current_target_deliberately_retained"] is True
+    assert local["external_receipt"]["required"] is False
+
+    delegated = workspace_runtime_core._task_assignment_disposition_payload(
+        assignment_decision={
+            "selected_target": "worker",
+            "current_target": "current",
+            "assignment_decision_revision": "sha256:external",
+            "candidate_scores": [{"target": "worker", "ranking_components": {}, "eligibility": {}}],
+        },
+        assignment_gate={"implementation_allowed": False, "required_next_action": "dispatch"},
+        assignment_action={
+            "status": "ready",
+            "selected_target": "worker",
+            "action": "dispatch",
+            "operation_invocation": {"operation_id": "assignment.export"},
+        },
+        effective_orchestration={"transport": {"effective_mode": "auto"}},
+    )
+    assert delegated["outcome"] == "delegate-bounded-slice"
+    assert delegated["next_action"]["operation_invocation"]["operation_id"] == "assignment.export"
+    assert delegated["external_receipt"]["required"] is True
 
 
 def test_report_selector_bypasses_projection_dependency_discovery(tmp_path: Path, capsys, monkeypatch) -> None:
