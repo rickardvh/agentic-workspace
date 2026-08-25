@@ -5,7 +5,7 @@
   "owner_level": "slice",
   "lifecycle": "live",
   "phase": "implementation",
-  "revision": 4,
+  "revision": 5,
   "canonical_core": {
     "requested_outcome": "Reuse admitted task-scoped operating constituent results across unchanged and HEAD-only replay, invalidate only semantic dependants, and prove reduced managed-state construction without weakening proof freshness.",
     "hard_constraints": "Do not create a second proof authority, cache rendered command text, make HEAD a semantic dependency, or broaden proof outside the canonical proof strategy.",
@@ -80,7 +80,7 @@
     "delegation": {
       "state": "recorded",
       "route": "delegate-implementation",
-      "reason": "Parallel stack completion with bounded replay/performance implementation ownership"
+      "reason": "Bounded implementer repairs cache dependency identities and replay proof without widening orchestration context."
     }
   },
   "references": [
