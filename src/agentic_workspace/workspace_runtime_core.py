@@ -27381,6 +27381,25 @@ def _github_native_sub_issue_relationships(
         parent["relationships"] = parent_relationship
     truncated = len(parents) > len(queried)
     status = "partial" if errors or truncated else "complete" if queried else "not-needed"
+    for item in items:
+        relationship = _as_dict(item.get("relationships"))
+        if str(relationship.get("posture") or "") != "unobserved":
+            continue
+        if status == "partial":
+            relationship.update(
+                {
+                    "posture": "partial",
+                    "reason": "native hierarchy observation incomplete; parent linkage remains unknown",
+                }
+            )
+        elif status == "complete":
+            relationship.update(
+                {
+                    "posture": "complete",
+                    "reason": "native hierarchy observation completed without selected parent linkage",
+                }
+            )
+        item["relationships"] = relationship
     return {
         "status": status,
         "source": "github-native-sub-issues",
@@ -27598,7 +27617,8 @@ def _external_issue_grouping_hints(*, items: list[dict[str, Any]], candidates: l
             if len(cluster["children"]) < 3:
                 cluster["children"].append(compact_item)
             continue
-        standalone.append(compact_item)
+        if relationship_posture in {"complete", "unsupported"}:
+            standalone.append(compact_item)
     parent_lanes = sorted(parent_lanes, key=lambda item: int(str(item.get("id", "0")).lstrip("#") or "0"))[:3]
     clusters = sorted(child_clusters.values(), key=lambda item: (-int(item.get("child_count", 0)), str(item.get("parent_id", ""))))[:3]
     standalone = sorted(standalone, key=lambda item: int(str(item.get("id", "0")).lstrip("#") or "0"))[:3]
@@ -27613,11 +27633,15 @@ def _external_issue_grouping_hints(*, items: list[dict[str, Any]], candidates: l
             for item in open_items
             if str(item.get("kind", "")).strip() not in {"lane", "epic"}
             and not str(_as_dict(item.get("relationships")).get("parent_id") or item.get("parent_id", "")).strip()
+            and str(_as_dict(item.get("relationships")).get("posture") or "unsupported").strip() in {"complete", "unsupported"}
         ),
         "candidate_backed_count": len(candidate_refs),
         "relationship_evidence": {
             "complete_count": sum(1 for item in open_items if str(_as_dict(item.get("relationships")).get("posture") or "") == "complete"),
             "partial_count": sum(1 for item in open_items if str(_as_dict(item.get("relationships")).get("posture") or "") == "partial"),
+            "unknown_count": sum(
+                1 for item in open_items if str(_as_dict(item.get("relationships")).get("posture") or "") in {"partial", "unobserved"}
+            ),
             "unsupported_count": sum(1 for item in open_items if not isinstance(item.get("relationships"), dict)),
         },
         "parent_lanes": parent_lanes,

@@ -40,13 +40,15 @@
       "owner": "issue-2721-continuity"
     },
     "proof_posture": {
-      "state": "focused-proof-passed",
+      "state": "review-repair-proof-passed",
       "refs": [
         "7 continuity regression cases passed",
         "472 broad workspace cases passed with four inherited stack-base assertion failures",
         "full Planning test target passed",
         "workspace and Planning lint/typecheck passed",
-        "live #2721 replay observed one P0 parent with ten native children and zero standalone children"
+        "live #2721 replay observed one P0 parent with ten native children and zero standalone children",
+        "parent-plus-child permission failure and parent-query truncation fixtures preserve unknown relationship posture and emit zero false standalone candidates",
+        "PR #2735 pre-review-repair head passed CI, Security baseline, and PR Semver Label checks"
       ]
     },
     "external_posture": {
@@ -63,7 +65,7 @@
       "locator": ""
     }
   ],
-  "next_action": "Publish the fourth stacked PR on codex/2721-proof-execution, then continue #2730 and the combined replay on the signals branch.",
+  "next_action": "Complete refreshed hosted validation and independent review for published PR #2735, then merge it after PR #2734 while preserving child-specific closure boundaries.",
   "blockers": [
     "None."
   ],
@@ -86,7 +88,7 @@
   },
   "continuation": {
     "owner": "issue-2721-signals",
-    "residual_intent": "Make material dogfooding friction consequential and complete the combined supported-host replay."
+    "residual_intent": "The consequential-signal and combined replay layer is already published as PR #2736; remaining work is refreshed review, ordered merge, and later child-specific closure evidence."
   },
   "specialist_contracts": []
 }

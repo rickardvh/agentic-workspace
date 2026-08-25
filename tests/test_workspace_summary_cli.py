@@ -6,6 +6,7 @@ import subprocess
 import time
 import tomllib
 from pathlib import Path
+from typing import Any
 
 import pytest
 from repo_planning_bootstrap import installer as planning_installer
@@ -2208,18 +2209,85 @@ def test_github_native_sub_issue_partial_failure_is_not_flattened(tmp_path: Path
         repo="acme/project",
     )
     assert parent is not None
+    child = workspace_runtime_core._github_issue_to_external_intent_item(
+        issue={
+            "number": 91,
+            "title": "Potential child",
+            "state": "OPEN",
+            "url": "https://github.com/acme/project/issues/91",
+            "labels": [],
+            "updatedAt": "2026-08-25T10:30:51Z",
+            "body": "## Issue kind\nslice\n",
+        },
+        repo="acme/project",
+    )
+    assert child is not None
 
     def unavailable(args, cwd):
         raise workspace_runtime_core.WorkspaceUsageError("HTTP 403: rate limit or permission denied")
 
     monkeypatch.setattr(workspace_runtime_core, "_run_gh_json", unavailable)
-    observation = workspace_runtime_core._github_native_sub_issue_relationships(target_root=tmp_path, repo="acme/project", items=[parent])
-    grouping = workspace_runtime_core._external_issue_grouping_hints(items=[parent])
+    observation = workspace_runtime_core._github_native_sub_issue_relationships(
+        target_root=tmp_path, repo="acme/project", items=[parent, child]
+    )
+    grouping = workspace_runtime_core._external_issue_grouping_hints(items=[parent, child])
 
     assert observation["status"] == "partial"
     assert observation["error_count"] == 1
     assert parent["relationships"]["posture"] == "partial"
-    assert grouping["relationship_evidence"]["partial_count"] == 1
+    assert child["relationships"]["posture"] == "partial"
+    assert grouping["relationship_evidence"]["partial_count"] == 2
+    assert grouping["relationship_evidence"]["unknown_count"] == 2
+    assert grouping["standalone_count"] == 0
+    assert grouping["standalone_candidates"] == []
+
+
+def test_github_native_sub_issue_query_truncation_keeps_unobserved_children_unknown(tmp_path: Path, monkeypatch) -> None:
+    def item(number: int, kind: str) -> dict[str, Any]:
+        result = workspace_runtime_core._github_issue_to_external_intent_item(
+            issue={
+                "number": number,
+                "title": f"{kind.title()} {number}",
+                "state": "OPEN",
+                "url": f"https://github.com/acme/project/issues/{number}",
+                "labels": [],
+                "updatedAt": "2026-08-25T10:30:51Z",
+                "body": f"## Issue kind\n{kind}\n",
+            },
+            repo="acme/project",
+        )
+        assert result is not None
+        return result
+
+    first_parent = item(100, "lane")
+    truncated_parent = item(101, "lane")
+    potential_child = item(102, "slice")
+    monkeypatch.setattr(workspace_runtime_core, "_run_gh_json", lambda args, cwd: [])
+
+    observation = workspace_runtime_core._github_native_sub_issue_relationships(
+        target_root=tmp_path,
+        repo="acme/project",
+        items=[first_parent, truncated_parent, potential_child],
+        max_parent_queries=1,
+    )
+    grouping = workspace_runtime_core._external_issue_grouping_hints(items=[first_parent, truncated_parent, potential_child])
+
+    assert observation["status"] == "partial"
+    assert observation["truncated"] is True
+    assert truncated_parent["relationships"]["posture"] == "partial"
+    assert potential_child["relationships"]["posture"] == "partial"
+    assert grouping["standalone_count"] == 0
+    assert grouping["standalone_candidates"] == []
+
+
+def test_external_issue_grouping_keeps_hierarchy_unsupported_provider_items_flat() -> None:
+    grouping = workspace_runtime_core._external_issue_grouping_hints(
+        items=[{"id": "#103", "title": "Flat provider item", "kind": "issue", "status": "open"}]
+    )
+
+    assert grouping["standalone_count"] == 1
+    assert grouping["standalone_candidates"][0]["id"] == "#103"
+    assert grouping["standalone_candidates"][0]["relationship_posture"] == "unsupported"
 
 
 def test_external_intent_refresh_requires_explicit_refs_before_candidate_promotion(tmp_path: Path, monkeypatch, capsys) -> None:
