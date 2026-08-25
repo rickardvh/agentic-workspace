@@ -2,7 +2,7 @@
   "kind": "planning-lane/v1",
   "id": "issue-2721",
   "title": "Close post-ship ordinary-path gaps found in Codex dogfooding",
-  "status": "archived",
+  "status": "active",
   "parent_decomposition_ref": "",
   "lane_outcome": "Implement and prove all ten child issues #2722-#2731 through dependency-aware stacked PRs from current master, preserving independent closure boundaries and culminating in an ordinary supported-host replay.",
   "purpose_for_parent": "Restore ordinary resolve-act-reconcile trust across decision, authority, correction, proof, continuity, and improvement-signal owners without creating parallel frameworks.",
@@ -91,22 +91,21 @@
       "PR #2734 proof execution and local evidence",
       "PR #2735 external hierarchy and Planning continuity",
       "PR #2736 consequential signals and supported-host replay",
-      ".agentic-workspace/planning/closeout-evidence/issue-2721-supported-host-replay.closeout.json",
-      "PRs #2732-#2736 are merged in order; each exact head passed CI, Security, semver, and Review approval; 18 focused master acceptance cases passed across all five slices; canonical slice closeout evidence is retained."
+      ".agentic-workspace/planning/closeout-evidence/issue-2721-supported-host-replay.closeout.json"
     ],
     "known_gaps": [
       "independent stack review",
       "ordered merge and target-branch reconciliation"
     ]
   },
-  "residual_lane_work": "none",
-  "lane_to_epic_contribution": "All ten child outcomes and the maintained ordinary-host replay are implemented, independently reviewed, merged, and reconciled on master.",
-  "parent_close_permission": "may-close-parent",
+  "residual_lane_work": "Complete refreshed review-repair checks and independent approval, then merge in order and reconcile child/parent closure on the target branch.",
+  "lane_to_epic_contribution": "All ten child implementations are represented across five dependency-ordered stack layers with local proof and a maintained combined replay.",
+  "parent_close_permission": "do-not-close-parent",
   "closeout_state": {
-    "status": "blocked",
-    "summary": "All ten child outcomes and the maintained ordinary-host replay are implemented, independently reviewed, merged, and reconciled on master.",
-    "residual_work": "none",
-    "next_owner": "none"
+    "status": "open",
+    "summary": "",
+    "residual_work": "",
+    "next_owner": ""
   },
   "references": [
     {
@@ -124,90 +123,5 @@
       "locator": "https://github.com/rickardvh/agentic-workspace/issues/2722"
     }
   ],
-  "notes": "Each slice is one stacked PR boundary unless proof forces a smaller child-preserving split. Every PR must link its child issues with closing keywords and name its immediate base branch.",
-  "completion_gate": {
-    "kind": "agentic-workspace/completion-gate/v1",
-    "status": "continue-required",
-    "active_intent_satisfied": false,
-    "human_accepted_partial": false,
-    "claim_level_requested": "full-intent-complete",
-    "claim_level_allowed": "partial-progress",
-    "required_next_action": "continue-current-work",
-    "claim_authorization": {
-      "kind": "agentic-workspace/claim-authorization/v1",
-      "allowed_claim_classes": [
-        "partial_progress",
-        "slice_complete"
-      ],
-      "blocked_claim_classes": [
-        "lane_complete",
-        "parent_complete",
-        "full_intent_complete",
-        "issue_closure"
-      ],
-      "closure_actions": [
-        {
-          "kind": "issue_closure",
-          "target": "#2721",
-          "authorized": false,
-          "reason": "issue closure requires full-intent completion authorization from the completion gate"
-        },
-        {
-          "kind": "issue_closure",
-          "target": "#2722",
-          "authorized": false,
-          "reason": "issue closure requires full-intent completion authorization from the completion gate"
-        },
-        {
-          "kind": "issue_closure",
-          "target": "#2731",
-          "authorized": false,
-          "reason": "issue closure requires full-intent completion authorization from the completion gate"
-        }
-      ],
-      "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
-      "diagnostics": {
-        "unsafe_claim_examples": [
-          "done",
-          "implemented",
-          "complete",
-          "finished",
-          "all",
-          "full intent complete",
-          "Closes #2721",
-          "Closes #2722",
-          "Closes #2731"
-        ],
-        "diagnostic_only": true
-      }
-    },
-    "residual_intent": "yes",
-    "self_review": {
-      "question": "Does the delivered work satisfy the active human intent?",
-      "answer": "no",
-      "reason": "yes"
-    },
-    "continuation": {
-      "owner_surface": "",
-      "created_or_required": true,
-      "reason": "yes"
-    },
-    "authority_boundary": {
-      "aw_owns": [
-        "forcing the transition rule",
-        "blocking unsupported structured claim classes and closure actions",
-        "routing continuation"
-      ],
-      "agent_owns": [
-        "semantic satisfaction judgment",
-        "evidence interpretation",
-        "next implementation decisions"
-      ],
-      "human_owns": [
-        "accepting narrower scope",
-        "changing intent",
-        "accepting unresolved residual intent"
-      ]
-    }
-  }
+  "notes": "Each slice is one stacked PR boundary unless proof forces a smaller child-preserving split. Every PR must link its child issues with closing keywords and name its immediate base branch."
 }
