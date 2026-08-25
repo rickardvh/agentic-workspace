@@ -8706,6 +8706,15 @@ def _proof_selection_for_changed_paths(
                 for composition in _list_payload(_PROOF_SELECTION_RULES.get("owner_baseline_composition")):
                     if not isinstance(composition, dict) or str(composition.get("when_selected") or "") != selected_lane:
                         continue
+                    affected_scope = _as_dict(composition.get("affected_scope"))
+                    affected_exact = {str(path) for path in _list_payload(affected_scope.get("exact")) if str(path).strip()}
+                    affected_prefixes = tuple(
+                        str(prefix) for prefix in _list_payload(affected_scope.get("prefixes")) if str(prefix).strip()
+                    )
+                    if not any(
+                        path in affected_exact or (affected_prefixes and path.startswith(affected_prefixes)) for path in changed_paths
+                    ):
+                        continue
                     complementary_lanes: list[str] = []
                     for baseline_lane in _list_payload(composition.get("lanes")):
                         baseline_lane = str(baseline_lane).strip()

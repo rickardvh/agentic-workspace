@@ -235,6 +235,7 @@ Cheap implementer context for a bounded changed-path scope.
 | `execution_posture.delegation_control.human_control` | object | yes |  | Human-control boundary for delegation. |  |  |
 | `execution_posture.delegation_control.human_control.rule` | string | yes |  | Human-control rule for local delegation. |  |  |
 | `execution_posture.delegation_control.human_control.next_action` | string | yes |  | Allowed next action under the current mode. |  |  |
+| `execution_posture.effective_orchestration` | object | no |  | Derived current orchestration posture separating assignment policy from transport availability and human override. |  |  |
 | `execution_posture.selected_target` | object \| null | yes |  | Suggested local delegation target when one matches the inferred posture. |  |  |
 | `execution_posture.capability_handoff_packets` | ref `#/$defs/capability_handoff_packets` | yes |  | Capability-aware handoff packet templates for escalation, down-routing, human clarification, review fallback, and no-safe-route cases. |  |  |
 | `execution_posture.capability_handoff_packets.rule` | string | yes |  | Rule for when to use capability handoff packets. |  |  |
@@ -254,6 +255,7 @@ Cheap implementer context for a bounded changed-path scope.
 | `execution_posture.decomposition_delegation` | object | no |  | Delegation candidates discovered from active planning decompositions, when active decomposed work is visible. |  |  |
 | `execution_posture.assignment_action` | object | no |  | Revision-bound typed action or terminal state compiled from the canonical assignment and current run lifecycle. |  |  |
 | `execution_posture.inference_limits` | array of string | yes |  | Limits that prevent the posture recommendation from becoming hidden execution authority. |  |  |
+| `effective_orchestration` | object | no |  | Derived current orchestration posture separating assignment policy from transport availability and human override. |  |  |
 | `target_evidence` | object | no |  | Provenance-aware target suitability evidence for the current changed-path scope. |  |  |
 | `assignment_policy` | object | no |  | Configured best-fit assignment policy for the current target and task scope. |  |  |
 | `assignment_decision` | object | no |  | Derived assignment or escalation decision based on target evidence and policy. |  |  |
