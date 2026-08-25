@@ -41,12 +41,13 @@
         "owner": "issue-2721-decision"
     },
     "proof_posture": {
-        "state": "focused-proof-passed",
+        "state": "hosted-proof-passed",
         "refs": [
           "9 focused workspace decision-route and improvement-intake tests passed",
           "82 session logging tests passed",
           "generated Python and TypeScript static/conformance proof passed",
-          "contract tooling, structured inventory, typecheck, compileall, Ruff, and routed report checks passed"
+          "contract tooling, structured inventory, typecheck, compileall, Ruff, and routed report checks passed",
+          "PR #2733 exact head passed CI, Security baseline, and PR Semver Label checks"
         ]
     },
     "external_posture": {
@@ -67,7 +68,7 @@
       "locator": ""
     }
   ],
-  "next_action": "Publish the second stacked PR against codex/2721-trust-authority-correction, obtain independent review, and continue with issue-2721-proof.",
+  "next_action": "Obtain independent review for published PR #2733 and preserve its bounded child evidence while the published #2734-#2736 continuation is reviewed and merged in order.",
   "blockers": [
     "None."
   ],
@@ -93,7 +94,7 @@
   },
   "continuation": {
     "owner": "issue-2721-proof",
-    "residual_intent": "Continue the lane with one-step proof execution and machine-local evidence locality after this decision slice is merged."
+    "residual_intent": "Proof, continuity, and signal layers are already published as PRs #2734-#2736; remaining work is independent review, ordered merge, and later child-specific closure evidence."
   },
   "specialist_contracts": []
 }
