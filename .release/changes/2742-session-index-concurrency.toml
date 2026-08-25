@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Serialize concurrent session-index projection writes and retry transient Windows replacement failures."
