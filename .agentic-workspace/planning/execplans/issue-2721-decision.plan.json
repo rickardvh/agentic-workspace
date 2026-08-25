@@ -1,0 +1,99 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2721-decision",
+  "title": "Make decisions bounded executable and assignment-aware",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "validation",
+  "revision": 2,
+  "intent": {
+    "outcome": "Make ordinary decision routes bounded and stream-safe, ensure every advertised config selector executes on host and generated surfaces, and expose a typed task-level execute/delegate/blocked disposition.",
+    "non_goals": [
+      "Do not implement proof execution or receipt persistence owned by the next slice.",
+      "Do not change provider-specific delegation transports or claim that an external assignment ran without a receipt.",
+      "Do not absorb external-intent continuity or improvement-signal closeout work."
+    ]
+  },
+  "parent": {
+    "owner_id": "issue-2721",
+    "contribution": "Closes the decision-surface acceptance for GitHub issues #2722, #2723, and #2724 while leaving proof execution and later lane slices explicit.",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "src/agentic_workspace/workspace_runtime_core.py and workspace_runtime_startup.py decision construction paths",
+      "src/agentic_workspace/workspace_selector_validation.py canonical selector metadata",
+      "src/agentic_workspace/session_logging.py bounded detail projection",
+      "src/agentic_workspace/contracts/typescript_primitive_support.mjs and generated TypeScript hosts",
+      "scripts/generate/workspace_command_generation.py selector metadata generation",
+      "focused workspace CLI and session logging regressions"
+    ],
+    "effects": [
+      "Default report and selected start avoid constructing unrelated lifecycle/module payloads.",
+      "Config selector inventory is executable and self-describing across Python and generated TypeScript.",
+      "Task assignment exposes a typed disposition and retains local execution quietly when it is best fit.",
+      "Session detail remains available through a bounded paged projection rather than embedding broad analysis."
+    ]
+  },
+  "relationships": {
+    "selection": {
+        "state": "selected",
+        "owner": "issue-2721-decision"
+    },
+    "proof_posture": {
+        "state": "focused-proof-passed",
+        "refs": [
+          "9 focused workspace decision-route and improvement-intake tests passed",
+          "82 session logging tests passed",
+          "generated Python and TypeScript static/conformance proof passed",
+          "contract tooling, structured inventory, typecheck, compileall, Ruff, and routed report checks passed"
+        ]
+    },
+    "external_posture": {
+        "state": "observed",
+        "refs": [
+          "#2722",
+          "#2723",
+          "#2724"
+        ]
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "GitHub issues #2722 #2723 and #2724 under lane #2721",
+      "label": "GitHub issues #2722 #2723 and #2724 under lane #2721",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Publish the second stacked PR against codex/2721-trust-authority-correction, obtain independent review, and continue with issue-2721-proof.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Default and findings reports are bounded and avoid unrelated broad construction.",
+      "Advertised target selectors round-trip through host and generated TypeScript surfaces.",
+      "Selected startup decisions expose claim identity and typed task assignment without constructing the broad startup payload.",
+      "Session detail output is bounded and routes omitted analysis explicitly."
+    ],
+    "requirements": [
+      "Run focused workspace CLI and session logging tests.",
+      "Refresh generated command surfaces and verify freshness/conformance.",
+      "Run the proof selected by implement --changed before claiming readiness."
+    ],
+    "refs": [
+      "uv run --active pytest tests/test_workspace_cli.py -k decision-route-and-improvement-intake-subset -q",
+      "uv run --active pytest tests/test_workspace_session_logging.py -q",
+      "uv run --active python scripts/check/check_generated_command_packages.py --require-node",
+      "uv run --active python scripts/check/check_generated_command_packages.py --conformance --require-node",
+      "make typecheck"
+    ]
+  },
+  "continuation": {
+    "owner": "issue-2721-proof",
+    "residual_intent": "Continue the lane with one-step proof execution and machine-local evidence locality after this decision slice is merged."
+  },
+  "specialist_contracts": []
+}

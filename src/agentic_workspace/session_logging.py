@@ -3487,7 +3487,7 @@ def analyze_session_log(
         if selected_detail != "summary"
         else None
     )
-    return {
+    analysis_payload = {
         "kind": "agentic-workspace/session-log-analysis/v1",
         "status": "analyzed",
         "enabled": state.enabled,
@@ -3592,6 +3592,30 @@ def analyze_session_log(
         "authoritative": False,
         "rule": SESSION_LOG_LOCAL_BOUNDARY["rule"],
     }
+    if selected_detail != "summary":
+        return {
+            "kind": "agentic-workspace/session-log-analysis-detail/v1",
+            "status": "analyzed",
+            "enabled": state.enabled,
+            "path": analysis_payload["path"],
+            "index_path": analysis_payload["index_path"],
+            "index_status": analysis_payload["index_status"],
+            "session_scope": session_scope,
+            "detail": selected_detail,
+            "detail_page": detail_payload,
+            "summary": analysis_payload["summary"],
+            "bounded_collections": analysis_payload["bounded_collections"],
+            "full_analysis": {
+                "status": "omitted",
+                "command": "agentic-workspace session-log analyze --detail summary --format json",
+                "rule": "A detail selector returns only its bounded page and compact session counts; broad analysis requires the explicit summary route.",
+            },
+            "export_routing": analysis_payload["export_routing"],
+            "local_diagnostic_boundary": analysis_payload["local_diagnostic_boundary"],
+            "local_only": True,
+            "authoritative": False,
+        }
+    return analysis_payload
 
 
 def _system_exit_code(exc: SystemExit) -> int:

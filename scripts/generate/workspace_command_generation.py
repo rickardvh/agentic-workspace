@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import ast
 import json
+import re
 from pathlib import Path
 
 from command_generation import (
@@ -21,6 +23,39 @@ PYTHON_PRIMITIVE_SUPPORT_PATH = "src/agentic_workspace/contracts/python_primitiv
 TYPESCRIPT_PRIMITIVE_SUPPORT_PATH = "src/agentic_workspace/contracts/typescript_primitive_support.mjs"
 OPERATION_PRIMITIVES_PATH = "src/agentic_workspace/contracts/operation_primitives.json"
 RELEASE_OWNERSHIP_PATH = ".github/release-ownership.json"
+SELECTOR_AUTHORITY_PATH = "src/agentic_workspace/workspace_selector_validation.py"
+
+
+def _canonical_selector_descriptors(*, repo_root: Path) -> dict[str, list[str]]:
+    tree = ast.parse((repo_root / SELECTOR_AUTHORITY_PATH).read_text(encoding="utf-8"))
+    for node in tree.body:
+        if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name) and node.target.id == "_SELECTOR_DESCRIPTORS_BY_COMMAND":
+            value = ast.literal_eval(node.value)
+            return {str(command): [str(selector) for selector in selectors] for command, selectors in value.items()}
+    raise RuntimeError(f"selector authority missing from {SELECTOR_AUTHORITY_PATH}")
+
+
+def _patch_typescript_selector_descriptors(output: GeneratedOutput, *, repo_root: Path) -> GeneratedOutput:
+    path = output.path if output.path.is_absolute() else repo_root / output.path
+    if path.relative_to(repo_root).as_posix() != "generated/workspace/typescript/src/hostPrimitiveSupport.mjs":
+        return output
+    descriptors = _canonical_selector_descriptors(repo_root=repo_root)
+    supported = {command: descriptors[command] for command in ("config", "defaults", "summary", "proof")}
+    replacement = (
+        "const WORKSPACE_SELECTOR_DESCRIPTORS = "
+        + json.dumps(supported, indent=2, ensure_ascii=False)
+        + ";\n\nconst WORKSPACE_DEPRECATED_SELECTOR_REPLACEMENTS"
+    )
+    content, count = re.subn(
+        r"const WORKSPACE_SELECTOR_DESCRIPTORS = \{.*?\};\r?\n\r?\nconst WORKSPACE_DEPRECATED_SELECTOR_REPLACEMENTS",
+        replacement,
+        output.content,
+        count=1,
+        flags=re.DOTALL,
+    )
+    if count != 1:
+        raise RuntimeError("generated TypeScript selector descriptor block was not found")
+    return GeneratedOutput(path=output.path, content=content)
 
 
 def _operation_refs(command: dict[str, object], inherited: dict[str, object] | None = None) -> list[dict[str, object]]:
@@ -969,17 +1004,20 @@ def render_workspace_command_package_outputs(
     )
     release_metadata = _typescript_release_package_metadata(repo_root=repo_root)
     normalized_outputs = [
-        _patch_typescript_license_test(
-            _patch_external_consumer_exports(
-                _patch_typescript_runtime_template_ops(
-                    _patch_typescript_strict_preflight_gate(
-                        _patch_workspace_typescript_sample_command_test(
-                            _patch_python_operation_exit_status(
-                                _patch_python_structured_usage_errors(
-                                    _patch_planning_python_runtime_values(
-                                        _patch_typescript_structured_usage_errors(
-                                            _normalize_releaseable_typescript_package_json(
-                                                output, release_metadata=release_metadata, repo_root=repo_root
+        _patch_typescript_selector_descriptors(
+            _patch_typescript_license_test(
+                _patch_external_consumer_exports(
+                    _patch_typescript_runtime_template_ops(
+                        _patch_typescript_strict_preflight_gate(
+                            _patch_workspace_typescript_sample_command_test(
+                                _patch_python_operation_exit_status(
+                                    _patch_python_structured_usage_errors(
+                                        _patch_planning_python_runtime_values(
+                                            _patch_typescript_structured_usage_errors(
+                                                _normalize_releaseable_typescript_package_json(
+                                                    output, release_metadata=release_metadata, repo_root=repo_root
+                                                ),
+                                                repo_root=repo_root,
                                             ),
                                             repo_root=repo_root,
                                         ),
@@ -988,9 +1026,9 @@ def render_workspace_command_package_outputs(
                                     repo_root=repo_root,
                                 ),
                                 repo_root=repo_root,
+                                manifest=effective_manifest,
                             ),
                             repo_root=repo_root,
-                            manifest=effective_manifest,
                         ),
                         repo_root=repo_root,
                     ),

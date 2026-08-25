@@ -34,7 +34,7 @@
     {
       "id": "issue-2721-decision",
       "title": "Make decisions bounded, executable, and assignment-aware",
-      "status": "planned",
+      "status": "ready",
       "execplan_ref": ".agentic-workspace/planning/execplans/issue-2721-decision.plan.json",
       "depends_on": [
         "issue-2721-trust"
@@ -80,7 +80,7 @@
       "residual_after_slice": "Only hosted checks, independent stack review, ordered merge, child closure, and parent closeout remain."
     }
   ],
-  "current_slice": "issue-2721-trust",
+  "current_slice": "issue-2721-decision",
   "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
   "proof_strategy": "Each stack slice must pass focused owner tests and routed proof; the complete lane additionally requires hosted checks, independent review, issue-specific acceptance evidence, and a maintained end-to-end Codex dogfood replay.",
   "proof_aggregation": {

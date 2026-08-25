@@ -14030,6 +14030,12 @@ _LAZY_REPORT_SECTION_CATALOG: tuple[dict[str, str], ...] = (
         "when_to_use": "when the router hints omit rare or high-context sections and the agent needs a selector index",
     },
     {
+        "section": "findings",
+        "kind": "agentic-workspace/findings-projection/v1",
+        "purpose": "bounded current routing findings without constructing the full report graph",
+        "when_to_use": "when warnings or blockers must be inspected before choosing a deeper module-specific report",
+    },
+    {
         "section": "assurance_requirements",
         "kind": "agentic-workspace/assurance-requirements/v1",
         "purpose": "repo-declared assurance requirements, evidence obligations, proof profile, and claim-boundary facts",
@@ -17314,6 +17320,47 @@ def _run_lazy_report_section_command(
 
     active_planning_record = _active_planning_record_for_report_section(target_root=target_root)
 
+    if normalized == "findings":
+        config_warnings = [str(item) for item in getattr(config, "warnings", ()) if str(item).strip()]
+        findings = [
+            {
+                "severity": "warning",
+                "module": "workspace",
+                "message": warning,
+                "authority": "resolved-config",
+            }
+            for warning in config_warnings[:8]
+        ]
+        payload["findings"] = {
+            "kind": "agentic-workspace/findings-projection/v1",
+            "status": "attention" if findings else "no-router-findings",
+            "findings": findings,
+            "finding_count": len(findings),
+            "construction_boundary": {
+                "profile": "report-findings-router/v1",
+                "full_report_constructed": False,
+                "module_reports_constructed": False,
+                "rule": "This selector reports action-changing router findings only; module diagnostics remain lazy and independently invocable.",
+            },
+            "module_routes": [
+                _command_with_cli_invoke(
+                    command=f"agentic-workspace {module} report --target ./repo --format json",
+                    cli_invoke=config.cli_invoke,
+                )
+                for module in selected_modules
+            ],
+            "next_action": {
+                "command": _command_with_cli_invoke(
+                    command="agentic-workspace doctor --target ./repo --format json",
+                    cli_invoke=config.cli_invoke,
+                )
+                if findings
+                else None,
+                "summary": "Inspect the compact doctor route." if findings else "No router finding changes the next action.",
+            },
+        }
+        return _select_report_payload(payload, profile="router", section=normalized)
+
     if normalized == "repo_posture":
         payload["repo_posture"] = _repo_posture_payload(config=config, surface="report", compact=False)
         return _select_report_payload(payload, profile="router", section=normalized)
@@ -17927,26 +17974,17 @@ def _run_report_router_command(
     changed_paths: list[str] | None = None,
 ) -> dict[str, Any]:
     projection_cancellation_checkpoint()
-    status_payload = _run_lifecycle_command(
-        command_name="status",
-        target_root=target_root,
-        local_only_repo_root=None,
-        selected_modules=selected_modules,
-        resolved_preset=resolved_preset,
-        descriptors=descriptors,
-        dry_run=False,
-        non_interactive=False,
-        config=config,
-        compact_status=True,
-        include_local_footprint=False,
-    )
-    warnings = list(status_payload.get("warnings", []))
+    # The ordinary report is a router, not a compact spelling of the full
+    # lifecycle report. Deep module status used to dominate this path even
+    # though its payload was discarded by the router projection.
+    warnings = [str(item) for item in getattr(config, "warnings", ()) if str(item).strip()]
+    installed_modules = _fast_installed_modules(target_root=target_root)
+    status_payload = {
+        "health": "attention" if warnings else "routing-only",
+        "warnings": warnings,
+        "registry": [{"name": name, "installed": True} for name in installed_modules],
+    }
     findings = [{"severity": "warning", "module": "workspace", "message": str(warning)} for warning in warnings]
-    installed_modules = [
-        str(entry["name"])
-        for entry in status_payload.get("registry", [])
-        if isinstance(entry, dict) and entry.get("installed") and entry.get("name")
-    ] or _fast_installed_modules(target_root=target_root)
     external_work_delta = _external_work_delta_payload(target_root=target_root)
     external_work_reconciliation = _external_work_reconciliation_payload(
         module_reports=[], external_work_delta=external_work_delta, cli_invoke=config.cli_invoke
@@ -17991,7 +18029,7 @@ def _run_report_router_command(
         cli_invoke=config.cli_invoke,
     )
     next_command = _command_with_cli_invoke(command="agentic-workspace doctor --target ./repo --format json", cli_invoke=config.cli_invoke)
-    if str(status_payload.get("health", "unknown")) == "healthy":
+    if not warnings:
         next_action = {"summary": "No immediate action", "commands": []}
     else:
         next_action = {
@@ -33560,6 +33598,7 @@ def _start_tiny_payload_fast(
     execution_posture = _execution_posture_payload(
         config=config, changed_paths=_normalize_changed_paths(changed_paths), task_text=task_text, target_root=target_root
     )
+    payload["task_assignment_disposition"] = execution_posture["task_assignment_disposition"]
     payload["delegation_decision"] = _compact_start_delegation_decision(execution_posture["delegation_decision"])
     effective_orchestration = _as_dict(execution_posture.get("effective_orchestration"))
     if effective_orchestration.get("surface_in_startup") is True:
@@ -43892,6 +43931,12 @@ def _execution_posture_payload(
         delegation_control=delegation_control,
         cli_invoke=config.cli_invoke,
     )
+    task_assignment_disposition = _task_assignment_disposition_payload(
+        assignment_decision=assignment_decision,
+        assignment_gate=assignment_gate,
+        assignment_action=assignment_action,
+        effective_orchestration=effective_orchestration,
+    )
     return {
         "kind": "agentic-workspace/execution-posture/v1",
         "capability_posture": posture,
@@ -43903,6 +43948,7 @@ def _execution_posture_payload(
         "assignment_decision": assignment_decision,
         "assignment_gate": assignment_gate,
         "assignment_action": assignment_action,
+        "task_assignment_disposition": task_assignment_disposition,
         "implementation_allowed": assignment_gate["implementation_allowed"],
         "selected_target": target,
         "decomposition_delegation": decomposition_delegation,
@@ -43922,6 +43968,64 @@ def _execution_posture_payload(
             "No delegation target may reduce required validation, review, or closeout evidence.",
             "Automatic execution is permitted only when local delegation control resolves to auto.",
         ],
+    }
+
+
+def _task_assignment_disposition_payload(
+    *,
+    assignment_decision: dict[str, Any],
+    assignment_gate: dict[str, Any],
+    assignment_action: dict[str, Any],
+    effective_orchestration: dict[str, Any],
+) -> dict[str, Any]:
+    action_status = str(assignment_action.get("status") or "not-applicable")
+    if action_status == "direct-current-target":
+        outcome = "execute-here"
+        evaluated_state = "evaluated-local"
+    elif action_status in {"ready", "reconciliation-required"}:
+        outcome = "delegate-bounded-slice"
+        evaluated_state = "delegated"
+    else:
+        outcome = "blocked-unavailable"
+        evaluated_state = "transport-blocked" if assignment_gate.get("implementation_allowed") is False else "unevaluated"
+    selected_target = str(assignment_action.get("selected_target") or assignment_decision.get("selected_target") or "")
+    current_target = str(assignment_decision.get("current_target") or "")
+    ranking = [item for item in assignment_decision.get("candidate_scores", []) if isinstance(item, dict)]
+    selected_score = next((item for item in ranking if str(item.get("target") or "") == selected_target), {})
+    operation = _as_dict(assignment_action.get("operation_invocation"))
+    return {
+        "kind": "agentic-workspace/task-assignment-disposition/v1",
+        "status": "evaluated",
+        "outcome": outcome,
+        "evaluation_state": evaluated_state,
+        "assignment_decision_revision": assignment_action.get("assignment_decision_revision")
+        or assignment_decision.get("assignment_decision_revision"),
+        "selected_target": selected_target or None,
+        "current_target": current_target or None,
+        "current_target_deliberately_retained": outcome == "execute-here" and bool(selected_target and selected_target == current_target),
+        "decisive_factors": {
+            "task_class": assignment_decision.get("task_class"),
+            "scope_class": assignment_decision.get("scope_class"),
+            "quality_fit": _as_dict(selected_score.get("ranking_components")).get("declared_fit"),
+            "runtime_fit": selected_score.get("runtime_recommendation"),
+            "current_target_retention": _as_dict(selected_score.get("ranking_components")).get("current_target_retention"),
+            "proof_eligible": _as_dict(selected_score.get("eligibility")).get("proof"),
+            "transport_eligible": _as_dict(selected_score.get("eligibility")).get("execution_transport"),
+        },
+        "next_action": {
+            "action": assignment_action.get("action") or assignment_gate.get("required_next_action"),
+            "command": assignment_action.get("command"),
+            "operation_invocation": operation or None,
+            "implementation_allowed": assignment_gate.get("implementation_allowed"),
+        },
+        "external_receipt": {
+            "required": outcome == "delegate-bounded-slice",
+            "owner": "assignment action/receipt lifecycle" if outcome == "delegate-bounded-slice" else None,
+            "rule": "External execution requires revision-bound action and return-admission evidence; deliberate local retention creates no skip receipt.",
+        },
+        "transport": _as_dict(effective_orchestration.get("transport")),
+        "detail_selector": "effective_orchestration",
+        "rule": "Binding assignment is evaluated once per task; execution consumes this disposition without reranking or silent local fallback.",
     }
 
 
@@ -51936,6 +52040,9 @@ def _load_workspace_operation_config(values: dict[str, Any], _arguments: dict[st
     _validate_descriptor_contract(descriptors)
     config = config_lib.load_workspace_config(target_root=values["target_root"], valid_presets=set(descriptors))
     if _arguments.get("include_payload"):
+        if inventory_payload := _selector_inventory_selected_payload(select=values.get("select"), source_command="config"):
+            values["select"] = None
+            return {"config": config, "result": inventory_payload}
         if prevalidation_error := _selector_prevalidation_error(select=values.get("select"), source_command="config"):
             values["select"] = None
             return {"config": config, "result": prevalidation_error}

@@ -424,6 +424,11 @@
       "description": "Compact local delegation, escalation, clarification, or stay-local decision derived from local posture and task signals.",
       "additionalProperties": true
     },
+    "task_assignment_disposition": {
+      "type": "object",
+      "description": "Typed task-level execute-here, delegate-bounded-slice, or blocked-unavailable disposition consumed by the ordinary action path.",
+      "additionalProperties": true
+    },
     "task_intent": {
       "type": "object",
       "description": "Compact task-intent carry-forward guidance for subsequent implement --changed calls, including acceptance expectations when task text is present.",

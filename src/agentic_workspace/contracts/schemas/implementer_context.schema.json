@@ -1517,6 +1517,11 @@
       "description": "Top-level copy of the compact delegation decision for next-action consumers.",
       "type": "object"
     },
+    "task_assignment_disposition": {
+      "additionalProperties": true,
+      "description": "Top-level typed task assignment disposition for ordinary execute, delegate, or blocked next-action consumers.",
+      "type": "object"
+    },
     "assignment_action": {
       "additionalProperties": true,
       "description": "Top-level copy of the revision-bound canonical assignment action for ordinary next-action consumers.",
@@ -1590,6 +1595,11 @@
         "delegation_decision": {
           "additionalProperties": true,
           "description": "Compact local delegation, escalation, clarification, or stay-local decision derived from local posture and changed-path signals.",
+          "type": "object"
+        },
+        "task_assignment_disposition": {
+          "additionalProperties": true,
+          "description": "Typed task-level execute-here, delegate-bounded-slice, or blocked-unavailable disposition.",
           "type": "object"
         },
         "implementation_allowed": {
@@ -2531,6 +2541,11 @@
           "description": "Compact local delegation, escalation, clarification, or stay-local decision derived from local posture and changed-path signals.",
           "additionalProperties": true
         },
+        "task_assignment_disposition": {
+          "type": "object",
+          "description": "Typed task-level execute-here, delegate-bounded-slice, or blocked-unavailable disposition.",
+          "additionalProperties": true
+        },
         "implementation_allowed": {
           "type": "boolean",
           "description": "Whether the selected assignment/delegation posture permits local implementation for this scope."
@@ -2696,6 +2711,11 @@
     "delegation_decision": {
       "type": "object",
       "description": "Top-level copy of the compact delegation decision for next-action consumers.",
+      "additionalProperties": true
+    },
+    "task_assignment_disposition": {
+      "type": "object",
+      "description": "Top-level typed task assignment disposition for ordinary execute, delegate, or blocked next-action consumers.",
       "additionalProperties": true
     },
     "assignment_action": {

@@ -517,6 +517,8 @@ const WORKSPACE_SELECTOR_LIMITS = {
   max_error_items: 8,
 };
 
+// Generated TypeScript command output replaces this compatibility template
+// from the canonical Python metadata in workspace_selector_validation.py.
 const WORKSPACE_SELECTOR_DESCRIPTORS = {
   config: [
     'workspace',
@@ -908,6 +910,13 @@ function workspaceConfig(values) {
   const config = existsSync(configPath) ? parseTomlTables(readText(configPath), 'workspace') : {};
   const modulesConfig = existsSync(configPath) ? parseTomlTables(readText(configPath), 'modules') : {};
   const enabledModules = Array.isArray(modulesConfig.enabled) ? modulesConfig.enabled.map(String) : ['planning', 'memory'];
+  const unavailable = (selector) => ({
+    kind: 'agentic-workspace/config-projection-unavailable/v1',
+    status: 'unavailable-in-generated-typescript-host',
+    selector,
+    continuation: `agentic-workspace config --target . --select ${selector} --format json`,
+    rule: 'The selector is valid and executable; this generated host reports typed unavailability when it cannot reproduce Python host-owned runtime evidence.',
+  });
   return {
     kind: 'agentic-workspace/config/v1',
     profile: 'tiny',
@@ -917,12 +926,38 @@ function workspaceConfig(values) {
     local_config_path: join(targetRoot, '.agentic-workspace/config.local.toml').replace(/\\/g, '/'),
     config_present: existsSync(configPath),
     local_config_present: existsSync(join(targetRoot, '.agentic-workspace/config.local.toml')),
+    target: targetRoot,
+    warnings: [],
+    modules: enabledModules,
     workspace: {
+      enabled: true,
+      enabled_source: 'generated-typescript-default',
       cli_invoke: String(config.cli_invoke ?? 'uv run agentic-workspace'),
       enabled_modules: enabledModules,
       agent_instructions_file: String(config.agent_instructions_file ?? 'AGENTS.md'),
+      workflow_obligation_ids: [],
+      workflow_obligations: [],
+      improvement_latitude: String(config.improvement_latitude ?? 'report_only'),
       optimization_bias: String(config.optimization_bias ?? 'balanced'),
+      optimization_bias_source: 'resolved-config',
     },
+    mixed_agent: {
+      runtime_resolution: unavailable('mixed_agent.runtime_resolution'),
+      effective_orchestration: unavailable('mixed_agent.effective_orchestration'),
+      assignment_policy: unavailable('mixed_agent.assignment_policy'),
+      target_identity: unavailable('mixed_agent.target_identity'),
+      correction_feedback: unavailable('mixed_agent.correction_feedback'),
+      target_evidence: unavailable('mixed_agent.target_evidence'),
+      assignment_decision: unavailable('mixed_agent.assignment_decision'),
+    },
+    local_runtime: {
+      status: 'unavailable-in-generated-typescript-host',
+      assignment_policy: unavailable('local_runtime.assignment_policy'),
+    },
+    assurance: unavailable('assurance'),
+    config_enforcement: unavailable('config_enforcement'),
+    config_effect_audit: unavailable('config_effect_audit'),
+    cli_compatibility: unavailable('cli_compatibility'),
   };
 }
 

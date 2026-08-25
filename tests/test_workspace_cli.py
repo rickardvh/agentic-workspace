@@ -927,6 +927,48 @@ def test_explicit_selector_inventory_and_prevalidation_share_declared_nested_sel
     assert defaults_projection["values"] == {"answer.command": "agentic-workspace defaults --section root_cli_authority --format json"}
 
 
+def test_config_advertised_target_selectors_round_trip_through_the_emitting_surface(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert cli.main(["config", "--target", str(tmp_path), "--select", "selector_inventory", "--format", "json"]) == 0
+    inventory = json.loads(capsys.readouterr().out)["values"]["selector_inventory"]
+    assert inventory["invocation"] == {
+        "command": "agentic-workspace config --target . --select selector_inventory --format json",
+        "surface": "config",
+        "selector_option": "--select",
+    }
+    for selector in ("mixed_agent.target_identity", "mixed_agent.target_evidence"):
+        assert selector in inventory["selectors"]
+        assert cli.main(["config", "--target", str(tmp_path), "--select", selector, "--format", "json"]) == 0
+        projection = json.loads(capsys.readouterr().out)
+        assert projection["kind"] == "agentic-workspace/selected-output/v1"
+        assert selector in projection["values"]
+
+    generated_cli = Path(__file__).resolve().parents[1] / "generated/workspace/typescript/src/cli.mjs"
+    generated = subprocess.run(
+        [
+            "node",
+            str(generated_cli),
+            "config",
+            "--target",
+            str(tmp_path),
+            "--select",
+            "mixed_agent.target_identity,mixed_agent.target_evidence",
+            "--format",
+            "json",
+        ],
+        capture_output=True,
+        check=False,
+    )
+    assert generated.returncode == 0, generated.stderr.decode("utf-8")
+    generated_projection = json.loads(generated.stdout.decode("utf-8"))
+    assert generated_projection["kind"] == "agentic-workspace/selected-output/v1"
+    for selector in ("mixed_agent.target_identity", "mixed_agent.target_evidence"):
+        value = generated_projection["values"][selector]
+        assert value["status"] == "unavailable-in-generated-typescript-host"
+        assert value["continuation"].endswith(f"--select {selector} --format json")
+
+
 def test_generated_workspace_operations_prevalidate_before_payload_producers(tmp_path: Path, monkeypatch) -> None:
     from generated.workspace.python.commands import config_report, defaults_report
 
@@ -16744,6 +16786,95 @@ def test_report_defaults_use_router_without_full_report_or_local_footprint(tmp_p
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["decision_packet"]["surface"] == "report"
+
+
+def test_report_router_and_findings_section_do_not_construct_module_lifecycle_reports(tmp_path: Path, capsys, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+
+    def _unexpected(*args, **kwargs):
+        raise AssertionError("bounded report routes must not construct module lifecycle reports")
+
+    monkeypatch.setattr(workspace_runtime_core, "_run_lifecycle_command", _unexpected)
+    monkeypatch.setattr(workspace_runtime_core, "_selected_module_reports", _unexpected)
+
+    assert cli.main(["report", "--target", str(tmp_path), "--format", "json"]) == 0
+    router = json.loads(capsys.readouterr().out)
+    assert router["decision_packet"]["surface"] == "report"
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "findings", "--format", "json"]) == 0
+    findings = json.loads(capsys.readouterr().out)["answer"]
+    assert findings["kind"] == "agentic-workspace/findings-projection/v1"
+    assert findings["construction_boundary"]["full_report_constructed"] is False
+    assert findings["construction_boundary"]["module_reports_constructed"] is False
+
+
+def test_selected_start_decision_route_is_narrow_and_preserves_claim_and_assignment_identity(tmp_path: Path, capsys, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+
+    def _unexpected(*args, **kwargs):
+        raise AssertionError("selected decision route must not construct the broad start payload")
+
+    monkeypatch.setattr(workspace_runtime_startup, "_start_payload", _unexpected)
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Summarize current dogfooding signals",
+                "--select",
+                "dogfooding_signal_status,action_signals,task_assignment_disposition",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    signals = payload["values"]["action_signals"]
+    assert signals["construction_profile"]["broad_start_payload_constructed"] is False
+    assert "blocked_claims" in signals["claim_boundary"]
+    disposition = payload["values"]["task_assignment_disposition"]
+    assert disposition["evaluation_state"] in {"evaluated-local", "delegated", "transport-blocked", "unevaluated"}
+    assert disposition["assignment_decision_revision"]
+
+
+def test_task_assignment_disposition_distinguishes_deliberate_local_and_external_action() -> None:
+    local = workspace_runtime_core._task_assignment_disposition_payload(
+        assignment_decision={
+            "selected_target": "current",
+            "current_target": "current",
+            "assignment_decision_revision": "sha256:local",
+            "candidate_scores": [{"target": "current", "ranking_components": {}, "eligibility": {}}],
+        },
+        assignment_gate={"implementation_allowed": True, "required_next_action": "continue"},
+        assignment_action={"status": "direct-current-target", "selected_target": "current", "action": "continue"},
+        effective_orchestration={"transport": {"effective_mode": "auto"}},
+    )
+    assert local["outcome"] == "execute-here"
+    assert local["current_target_deliberately_retained"] is True
+    assert local["external_receipt"]["required"] is False
+
+    delegated = workspace_runtime_core._task_assignment_disposition_payload(
+        assignment_decision={
+            "selected_target": "worker",
+            "current_target": "current",
+            "assignment_decision_revision": "sha256:external",
+            "candidate_scores": [{"target": "worker", "ranking_components": {}, "eligibility": {}}],
+        },
+        assignment_gate={"implementation_allowed": False, "required_next_action": "dispatch"},
+        assignment_action={
+            "status": "ready",
+            "selected_target": "worker",
+            "action": "dispatch",
+            "operation_invocation": {"operation_id": "assignment.export"},
+        },
+        effective_orchestration={"transport": {"effective_mode": "auto"}},
+    )
+    assert delegated["outcome"] == "delegate-bounded-slice"
+    assert delegated["next_action"]["operation_invocation"]["operation_id"] == "assignment.export"
+    assert delegated["external_receipt"]["required"] is True
 
 
 def test_report_selector_bypasses_projection_dependency_discovery(tmp_path: Path, capsys, monkeypatch) -> None:

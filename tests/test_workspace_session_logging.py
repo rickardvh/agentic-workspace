@@ -1538,10 +1538,13 @@ def test_session_log_index_deduplicates_metadata_and_analysis_pages_episodes(tmp
     assert summary["detail"] == "summary"
     assert summary["detail_page"] is None
     page = session_logging.analyze_session_log(state=state, detail="entries", page=2, page_size=2)
+    assert page["kind"] == "agentic-workspace/session-log-analysis-detail/v1"
     assert page["detail_page"]["total_count"] == 3
     assert page["detail_page"]["page"] == 2
     assert len(page["detail_page"]["items"]) == 1
     assert page["export_routing"]["artifact_class"] == "normalized-share-safe"
+    assert page["full_analysis"]["status"] == "omitted"
+    assert "failed_commands" not in page
     assert (
         source_cli.main(
             [
