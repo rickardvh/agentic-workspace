@@ -90,16 +90,16 @@
       "PR #2733 decision routing and assignment",
       "PR #2734 proof execution and local evidence",
       "PR #2735 external hierarchy and Planning continuity",
+      "PR #2736 consequential signals and supported-host replay",
       ".agentic-workspace/planning/closeout-evidence/issue-2721-supported-host-replay.replay.json"
     ],
     "known_gaps": [
-      "fifth stacked PR publication",
       "hosted checks across the complete stack",
       "independent stack review",
       "ordered merge and target-branch reconciliation"
     ]
   },
-  "residual_lane_work": "Publish the fifth stack layer, obtain hosted checks and independent review, then merge in order and reconcile child/parent closure on the target branch.",
+  "residual_lane_work": "Obtain hosted checks and independent review, then merge in order and reconcile child/parent closure on the target branch.",
   "lane_to_epic_contribution": "All ten child implementations are represented across five dependency-ordered stack layers with local proof and a maintained combined replay.",
   "parent_close_permission": "do-not-close-parent",
   "closeout_state": {

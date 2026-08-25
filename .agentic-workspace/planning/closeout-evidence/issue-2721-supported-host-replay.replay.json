@@ -40,7 +40,7 @@
     {
       "id": "consequential-signals",
       "issues": ["#2730"],
-      "pull_request": "top stack layer",
+      "pull_request": "#2736",
       "outcome": "A maintained 14-command replay has zero failures and zero unknown supported-operation expectations; repeated status/proof, duplicate output, and four proof-receipt writes select one stable pending candidate with an exact action and a broad-closeout block.",
       "evidence": [
         "tests/test_workspace_session_logging.py::test_consequential_session_replay_emits_stable_material_candidates",

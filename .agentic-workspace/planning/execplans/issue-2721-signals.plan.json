@@ -61,7 +61,7 @@
       "locator": ""
     }
   ],
-  "next_action": "Finish routed validation, publish the fifth stacked PR on the continuity branch, and wait for hosted checks and independent review.",
+  "next_action": "Wait for hosted checks and independent review on PR #2736, then merge the five-layer stack in order.",
   "blockers": [
     "None."
   ],
