@@ -27155,6 +27155,25 @@ def _github_planning_residue_expected(labels: list[str]) -> str:
     return "optional"
 
 
+def _github_supported_priority(labels: Sequence[str]) -> dict[str, str]:
+    """Translate provider syntax at the adapter boundary, never in Planning."""
+    aliases = {
+        "priority/high": "P1",
+        "priority/medium": "P2",
+        "priority/low": "P3",
+        "priority/lowest": "P4",
+    }
+    for raw_label in labels:
+        label = str(raw_label).strip()
+        match = re.fullmatch(r"priority\s*[:/]\s*(p[0-4])", label, flags=re.IGNORECASE)
+        if match:
+            return {"value": match.group(1).upper(), "source": "explicit-provider"}
+        alias = aliases.get(label.lower())
+        if alias:
+            return {"value": alias, "source": "explicit-provider"}
+    return {"value": "", "source": "absent"}
+
+
 def _markdown_section_value(body: str, heading: str) -> str:
     lines = body.splitlines()
     heading_normalized = heading.strip().lower()
@@ -27259,6 +27278,17 @@ def _github_issue_to_external_intent_item(*, issue: dict[str, Any], repo: str) -
         "url": locator,
         "source_repository": repo,
         "labels": labels,
+        "priority": _github_supported_priority(labels),
+        "relationships": {
+            "posture": "unobserved",
+            "parent_id": "",
+            "child_ids": [],
+            "source": "github-native-sub-issues",
+            "repository": repo,
+            "observed_at": updated_at,
+            "external_revision": observation_revision,
+            "reason": "native relationship observation has not run",
+        },
         "created_at": str(issue.get("createdAt", "")).strip(),
         "updated_at": updated_at,
         "closed_at": str(issue.get("closedAt", "") or "").strip(),
@@ -27290,6 +27320,77 @@ def _github_issue_to_external_intent_item(*, issue: dict[str, Any], repo: str) -
             "labels": labels,
             "comments_count": _github_comments_count(issue.get("comments")),
         },
+    }
+
+
+def _github_native_sub_issue_relationships(
+    *, target_root: Path, repo: str, items: list[dict[str, Any]], max_parent_queries: int = 25
+) -> dict[str, Any]:
+    """Admit bounded native hierarchy into provider-agnostic item fields."""
+    by_id = {str(item.get("id") or "").strip(): item for item in items if str(item.get("id") or "").strip()}
+    parents = [item for item in items if str(item.get("kind") or "").strip() in {"lane", "epic"}]
+    queried = parents[:max_parent_queries]
+    errors: list[dict[str, str]] = []
+    for parent in queried:
+        parent_id = str(parent.get("id") or "").strip()
+        number = parent_id.lstrip("#")
+        try:
+            raw_children = _run_gh_json(
+                ["api", "--paginate", "--slurp", f"repos/{repo}/issues/{number}/sub_issues?per_page=100"], cwd=target_root
+            )
+        except WorkspaceUsageError as exc:
+            errors.append({"parent_id": parent_id, "reason": str(exc)[:240]})
+            relationship = _as_dict(parent.get("relationships"))
+            relationship.update({"posture": "partial", "reason": "native relationship query failed"})
+            parent["relationships"] = relationship
+            continue
+        child_rows: list[Any] = []
+        for value in _list_payload(raw_children):
+            child_rows.extend(value if isinstance(value, list) else [value])
+        child_ids: list[str] = []
+        for position, child in enumerate(child_rows):
+            if not isinstance(child, dict) or child.get("number") is None:
+                continue
+            child_id = f"#{int(child['number'])}"
+            if child_id not in child_ids:
+                child_ids.append(child_id)
+            selected_child = by_id.get(child_id)
+            if selected_child is None:
+                continue
+            selected_child["parent_id"] = parent_id
+            child_relationship = _as_dict(selected_child.get("relationships"))
+            child_relationship.update(
+                {
+                    "posture": "complete",
+                    "parent_id": parent_id,
+                    "child_ids": [],
+                    "position": position,
+                    "reason": "native parent relationship observed",
+                }
+            )
+            selected_child["relationships"] = child_relationship
+        parent_relationship = _as_dict(parent.get("relationships"))
+        parent_relationship.update(
+            {
+                "posture": "complete",
+                "parent_id": "",
+                "child_ids": child_ids,
+                "reason": "native child relationships observed",
+            }
+        )
+        parent["relationships"] = parent_relationship
+    truncated = len(parents) > len(queried)
+    status = "partial" if errors or truncated else "complete" if queried else "not-needed"
+    return {
+        "status": status,
+        "source": "github-native-sub-issues",
+        "parent_candidate_count": len(parents),
+        "parent_query_count": len(queried),
+        "max_parent_queries": max_parent_queries,
+        "truncated": truncated,
+        "error_count": len(errors),
+        "errors": errors[:3],
+        "rule": "Partial or failed provider hierarchy evidence must not be interpreted as a flat topology.",
     }
 
 
@@ -27373,23 +27474,11 @@ def _github_current_pull_request_evidence(*, target_root: Path, repo: str) -> li
     return evidence
 
 
-def _planning_candidate_priority_from_labels(labels: Sequence[str]) -> str | None:
-    normalized = {str(label).strip().lower() for label in labels}
-    if "priority/high" in normalized:
-        return "P1"
-    if "priority/medium" in normalized:
-        return "P2"
-    if "priority/low" in normalized:
-        return "P3"
-    if "priority/lowest" in normalized:
-        return "P4"
-    return None
-
-
 def _planning_candidate_priority_from_item(item: dict[str, Any]) -> tuple[str | None, str]:
-    priority = _planning_candidate_priority_from_labels([str(label) for label in item.get("labels", [])])
-    if priority is not None:
-        return priority, "label"
+    normalized_priority = _as_dict(item.get("priority"))
+    priority = str(normalized_priority.get("value") or "").strip().upper()
+    if priority in {"P0", "P1", "P2", "P3", "P4"}:
+        return priority, str(normalized_priority.get("source") or "explicit")
     if str(item.get("kind", "")) == "lane":
         return "P1", "inferred-lane"
     if str(item.get("kind", "")) == "slice":
@@ -27482,12 +27571,15 @@ def _external_issue_grouping_hints(*, items: list[dict[str, Any]], candidates: l
         ref = str(item.get("id", "")).strip()
         title = str(item.get("title", "")).strip()
         kind = str(item.get("kind", "")).strip()
-        parent_id = str(item.get("parent_id", "")).strip()
+        relationships = _as_dict(item.get("relationships"))
+        relationship_posture = str(relationships.get("posture") or "unsupported").strip()
+        parent_id = str(relationships.get("parent_id") or item.get("parent_id", "")).strip()
         compact_item = {
             "id": ref,
             "title": title,
             "kind": kind or "issue",
             "has_planning_candidate": ref in candidate_refs,
+            "relationship_posture": relationship_posture,
         }
         if kind in {"lane", "epic"}:
             parent_lanes.append(compact_item)
@@ -27519,9 +27611,15 @@ def _external_issue_grouping_hints(*, items: list[dict[str, Any]], candidates: l
         "standalone_count": sum(
             1
             for item in open_items
-            if str(item.get("kind", "")).strip() not in {"lane", "epic"} and not str(item.get("parent_id", "")).strip()
+            if str(item.get("kind", "")).strip() not in {"lane", "epic"}
+            and not str(_as_dict(item.get("relationships")).get("parent_id") or item.get("parent_id", "")).strip()
         ),
         "candidate_backed_count": len(candidate_refs),
+        "relationship_evidence": {
+            "complete_count": sum(1 for item in open_items if str(_as_dict(item.get("relationships")).get("posture") or "") == "complete"),
+            "partial_count": sum(1 for item in open_items if str(_as_dict(item.get("relationships")).get("posture") or "") == "partial"),
+            "unsupported_count": sum(1 for item in open_items if not isinstance(item.get("relationships"), dict)),
+        },
         "parent_lanes": parent_lanes,
         "child_issue_clusters": clusters,
         "standalone_candidates": standalone,
@@ -27717,6 +27815,54 @@ def _stale_planning_candidate_reconciliation(
         }
     state_path.write_text(updated, encoding="utf-8")
     return {"status": "applied", "path": relative_path, "stale_count": len(stale), "stale_candidates": stale, "applied_count": removed}
+
+
+def _reconcile_external_active_owners_after_refresh(*, target_root: Path, requested: bool, dry_run: bool) -> dict[str, Any]:
+    """Compose refreshed evidence with Planning's existing CAS reconciliation owner."""
+    if not requested:
+        return {"status": "not-requested"}
+    from repo_planning_bootstrap.installer import planning_reconcile
+
+    preview = planning_reconcile(target=target_root, preview=True, dry_run=dry_run)
+    proposal = _as_dict(preview.get("proposal"))
+    transitions = [item for item in _list_payload(proposal.get("owner_transitions")) if isinstance(item, dict)]
+    relevant = [item for item in transitions if str(item.get("transition") or "") in {"close-slice", "blocked"}]
+    if not relevant:
+        return {
+            "status": "not-applicable",
+            "reason": "refreshed evidence did not change a live external-backed owner",
+            "owner_transition_count": 0,
+        }
+    blocked = [item for item in relevant if str(item.get("transition") or "") == "blocked"]
+    if blocked:
+        return {
+            "status": "blocked",
+            "reason": "semantic-completion-authority-required",
+            "blocked_owners": blocked,
+            "proposal_id": str(proposal.get("proposal_id") or ""),
+            "claim_boundary": "External completion cannot satisfy missing Planning proof or intent authority.",
+        }
+    if dry_run:
+        return {
+            "status": "dry-run",
+            "proposal_id": str(proposal.get("proposal_id") or ""),
+            "owner_transitions": relevant,
+        }
+    proposal_id = str(proposal.get("proposal_id") or "")
+    planning_revision = str(_as_dict(proposal.get("source")).get("planning_revision") or "")
+    applied = planning_reconcile(
+        target=target_root,
+        apply=True,
+        proposal=proposal_id,
+        expected_planning_revision=planning_revision,
+    )
+    return {
+        "status": str(applied.get("status") or "blocked"),
+        "proposal_id": proposal_id,
+        "planning_revision": planning_revision,
+        "owner_transitions": relevant,
+        "receipt": _as_dict(applied.get("receipt")),
+    }
 
 
 def _load_existing_external_intent_evidence(path: Path) -> dict[str, Any]:
@@ -27932,6 +28078,11 @@ def _refresh_github_external_intent_evidence(
             if item is not None
         ]
         items = fetched_items
+    relationship_observation = _github_native_sub_issue_relationships(
+        target_root=target_root,
+        repo=resolved_repo,
+        items=fetched_items if normalized_issue_refs else items,
+    )
     pull_requests = _github_current_pull_request_evidence(target_root=target_root, repo=resolved_repo)
     items.extend(
         {
@@ -28002,6 +28153,7 @@ def _refresh_github_external_intent_evidence(
         "limit_source": limit_source,
         "issue_refs": normalized_issue_refs,
         "fetch_mode": fetch_mode,
+        "relationship_observation": relationship_observation,
         "command": (
             "; ".join(
                 f"gh issue view {ref.lstrip('#')} --json number,title,state,url,labels,createdAt,updatedAt,closedAt,body,comments"
@@ -28060,6 +28212,11 @@ def _refresh_github_external_intent_evidence(
             ),
         }
     )
+    active_owner_reconciliation = _reconcile_external_active_owners_after_refresh(
+        target_root=target_root,
+        requested=apply_planning_candidates and bool(normalized_issue_refs),
+        dry_run=dry_run,
+    )
     refreshed_items = []
     items_by_id = {str(item.get("id") or "").strip(): item for item in items}
     for ref in normalized_issue_refs:
@@ -28103,10 +28260,12 @@ def _refresh_github_external_intent_evidence(
         "limit_source": limit_source,
         "issue_refs": normalized_issue_refs,
         "fetch_mode": fetch_mode,
+        "relationship_observation": relationship_observation,
         "refreshed_items": refreshed_items,
         "planning_candidate_suggestions": planning_candidate_suggestions,
         "planning_candidate_grouping": planning_candidate_grouping,
         "planning_candidate_apply": planning_candidate_apply,
+        "active_owner_reconciliation": active_owner_reconciliation,
         "stale_planning_candidate_reconciliation": stale_planning_candidate_reconciliation,
         "provider_rule": "Core planning consumes only provider-agnostic external intent evidence; GitHub access stays in this optional adapter.",
     }
@@ -28129,6 +28288,7 @@ def _compact_issue_scoped_external_intent_refresh(payload: dict[str, Any]) -> di
         "issue_refs": issue_refs,
         "fetch_mode": payload.get("fetch_mode", "issue-view"),
         "refreshed_items": refreshed_items,
+        "active_owner_reconciliation": payload.get("active_owner_reconciliation", {"status": "not-requested"}),
         "detail_command": "Repeat with --verbose to inspect candidate, grouping, cache, and reconciliation detail.",
         "provider_rule": payload.get("provider_rule", ""),
     }

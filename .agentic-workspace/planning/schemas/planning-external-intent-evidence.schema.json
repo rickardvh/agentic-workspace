@@ -77,6 +77,33 @@
         "fetch_mode": {
           "type": "string"
         },
+        "relationship_observation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "source", "parent_candidate_count", "parent_query_count", "max_parent_queries", "truncated", "error_count", "errors", "rule"],
+          "properties": {
+            "status": { "enum": ["complete", "partial", "not-needed", "unsupported", "unavailable"] },
+            "source": { "type": "string" },
+            "parent_candidate_count": { "type": "integer", "minimum": 0 },
+            "parent_query_count": { "type": "integer", "minimum": 0 },
+            "max_parent_queries": { "type": "integer", "minimum": 0 },
+            "truncated": { "type": "boolean" },
+            "error_count": { "type": "integer", "minimum": 0 },
+            "errors": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["parent_id", "reason"],
+                "properties": {
+                  "parent_id": { "type": "string" },
+                  "reason": { "type": "string" }
+                }
+              }
+            },
+            "rule": { "type": "string" }
+          }
+        },
         "command": {
           "type": "string"
         },
@@ -174,6 +201,31 @@
             "type": "array",
             "items": {
               "type": "string"
+            }
+          },
+          "priority": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["value", "source"],
+            "properties": {
+              "value": { "enum": ["", "P0", "P1", "P2", "P3", "P4"] },
+              "source": { "enum": ["absent", "explicit-provider", "inferred-lane", "inferred-slice", "inferred-planning"] }
+            }
+          },
+          "relationships": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["posture", "parent_id", "child_ids", "source", "repository", "observed_at", "external_revision", "reason"],
+            "properties": {
+              "posture": { "enum": ["unobserved", "complete", "partial", "unsupported", "unavailable"] },
+              "parent_id": { "type": "string" },
+              "child_ids": { "type": "array", "items": { "type": "string" } },
+              "position": { "type": "integer", "minimum": 0 },
+              "source": { "type": "string" },
+              "repository": { "type": "string" },
+              "observed_at": { "type": "string" },
+              "external_revision": { "type": "string" },
+              "reason": { "type": "string" }
             }
           },
           "created_at": {

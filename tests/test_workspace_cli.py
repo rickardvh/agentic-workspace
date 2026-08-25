@@ -63,6 +63,8 @@ def test_active_external_backed_owner_routes_refresh_then_reconciliation(tmp_pat
     assert stale["status"] == "refresh-required"
     assert stale["reason_code"] == "external-observation-stale"
     assert stale["refresh_command"].startswith("uv run agentic-workspace external-intent refresh-github")
+    assert "--issue #42" in stale["refresh_command"]
+    assert "--apply-planning-candidates" in stale["refresh_command"]
 
     assert workspace_runtime_planning._active_owner_external_reconciliation(
         target_root=tmp_path,
@@ -537,6 +539,77 @@ def test_completed_child_reconciliation_is_cross_consumer_idempotent_and_fails_c
     assert "claim-active-plan-progress" in route["blocked_claims"]
     assert route["selected_owner"].endswith("merged-child.plan.json")
     assert route["owner_admission"]["repair_route"]["status"] == "available"
+
+
+@pytest.mark.parametrize(("proof_state", "expected_status"), [("satisfied", "applied"), ("pending", "blocked")])
+def test_refreshed_external_owner_reconciliation_applies_only_with_semantic_authority(
+    tmp_path: Path, proof_state: str, expected_status: str
+) -> None:
+    from repo_planning_bootstrap import installer as planning_installer
+
+    _write_completed_child_reconciliation_fixture(tmp_path)
+    owner_path = tmp_path / ".agentic-workspace/planning/execplans/merged-child.plan.json"
+    owner = planning_installer._load_execplan_record(owner_path)
+    assert owner is not None
+    owner.setdefault("relationships", {})["proof_posture"] = {"state": proof_state, "refs": ["proof:merged-child"]}
+    owner.setdefault("references", []).append(
+        {"kind": "issue", "target": "#42", "label": "GitHub #42", "role": "external-owner", "locator": ""}
+    )
+    planning_installer._write_execplan_record(record_path=owner_path, record=owner)
+    _write(
+        tmp_path / ".agentic-workspace/local/cache/external-intent-evidence.json",
+        json.dumps(
+            {
+                "kind": "planning-external-intent-evidence/v1",
+                "refreshed_at": "2026-08-25T12:00:00+00:00",
+                "refresh_metadata": {"adapter": "fixture", "refreshed_at": "2026-08-25T12:00:00+00:00"},
+                "items": [
+                    {
+                        "system": "github",
+                        "id": "#42",
+                        "status": "closed",
+                        "kind": "issue",
+                        "observation_id": "github:issue:42:merged",
+                        "external_revision": "merged",
+                        "observed_at": "2026-08-25T12:00:00+00:00",
+                        "freshness": {
+                            "status": "current",
+                            "observed_at": "2026-08-25T12:00:00+00:00",
+                            "expires_at": "2099-01-01T00:00:00+00:00",
+                            "max_age_seconds": 86400,
+                        },
+                        "owner": {"id": "#42", "kind": "issue", "locator": "github:acme/project:issue:42"},
+                        "status_class": "completed",
+                        "blockers": [],
+                        "evidence_refs": ["#42"],
+                        "provenance": {
+                            "provider_class": "github",
+                            "resolver_id": "fixture",
+                            "source_ref": "github:acme/project:issue:42",
+                            "refresh_id": "merged",
+                        },
+                        "refresh_route": "fixture-refresh",
+                        "availability": "available",
+                        "contradictions": [],
+                    }
+                ],
+            }
+        ),
+    )
+
+    result = workspace_runtime_core._reconcile_external_active_owners_after_refresh(target_root=tmp_path, requested=True, dry_run=False)
+    state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
+    active_ids = {item["id"] for item in state["todo"]["active_items"]}
+
+    assert result["status"] == expected_status
+    if proof_state == "satisfied":
+        assert "merged-child" not in active_ids
+        closed = planning_installer._load_execplan_record(owner_path)
+        assert closed is not None and closed["lifecycle"] == "closed"
+        assert result["receipt"]["closed_owner_ids"] == ["merged-child.plan"]
+    else:
+        assert "merged-child" in active_ids
+        assert result["reason"] == "semantic-completion-authority-required"
 
 
 @pytest.mark.parametrize(
