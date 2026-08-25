@@ -10,6 +10,7 @@ import hashlib
 import json
 import os
 import subprocess
+import time
 import uuid
 from pathlib import Path
 from typing import Any, Callable, Mapping, cast
@@ -20,11 +21,62 @@ from agentic_workspace.projection_reuse import (
 )
 
 _RECEIPT_KIND = "agentic-workspace/operating-projection-receipt/v1"
-_INDEX_KIND = "agentic-workspace/operating-projection-result-cache/v2"
+_INDEX_KIND = "agentic-workspace/operating-projection-result-cache/v3"
 _GIT_TIMEOUT_SECONDS = 0.75
 
 ProjectionSource = Mapping[str, Any] | Callable[[], Mapping[str, Any]]
-_OWNER_EVIDENCE_PATHS = {
+_OWNER_INPUT_PATTERNS = {
+    "route_sources": (
+        ".agentic-workspace/config.toml",
+        ".agentic-workspace/config.local.toml",
+        "src/agentic_workspace/config.py",
+        "src/agentic_workspace/workspace_runtime_core.py",
+        "src/agentic_workspace/workspace_runtime_planning.py",
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+    ),
+    "verification_sources": (
+        ".agentic-workspace/config.toml",
+        ".agentic-workspace/config.local.toml",
+        ".agentic-workspace/verification/manifest.toml",
+        ".agentic-workspace/verification/assurance-evidence-records.json",
+        ".agentic-workspace/local/validation-results/history.jsonl",
+        "src/agentic_workspace/config.py",
+        "src/agentic_workspace/workspace_runtime_core.py",
+        "src/agentic_workspace/workspace_runtime_proof.py",
+        "packages/verification/src/repo_verification_bootstrap/runtime_primitives.py",
+    ),
+    "proof_sources": (
+        ".agentic-workspace/config.toml",
+        ".agentic-workspace/config.local.toml",
+        ".agentic-workspace/verification/manifest.toml",
+        "src/agentic_workspace/config.py",
+        "src/agentic_workspace/contracts/proof_routes.json",
+        "src/agentic_workspace/contracts/proof_selection_rules.json",
+        "src/agentic_workspace/workspace_runtime_core.py",
+        "src/agentic_workspace/workspace_runtime_proof.py",
+    ),
+    "closeout_sources": (
+        ".agentic-workspace/config.toml",
+        ".agentic-workspace/config.local.toml",
+        ".agentic-workspace/verification/manifest.toml",
+        ".agentic-workspace/verification/assurance-evidence-records.json",
+        ".agentic-workspace/local/validation-results/history.jsonl",
+        ".agentic-workspace/planning/integration-proposals/*.integration-proposal.json",
+        ".agentic-workspace/planning/closeout-evidence/*.json",
+        "src/agentic_workspace/config.py",
+        "src/agentic_workspace/workspace_runtime_core.py",
+        "src/agentic_workspace/workspace_runtime_planning.py",
+        "src/agentic_workspace/workspace_runtime_proof.py",
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/verification/src/repo_verification_bootstrap/runtime_primitives.py",
+    ),
+    "runtime_mirror_sources": (
+        ".agentic-workspace/config.toml",
+        ".agentic-workspace/config.local.toml",
+        "src/agentic_workspace/config.py",
+        "src/agentic_workspace/workspace_runtime_core.py",
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+    ),
     "proof_evidence": (
         ".agentic-workspace/local/proof-receipts/last.json",
         ".agentic-workspace/local/proof-receipts/history.jsonl",
@@ -53,20 +105,89 @@ def _git(target_root: Path, *args: str) -> str:
     return completed.stdout.strip() if completed.returncode == 0 else ""
 
 
-def operating_projection_evidence_revisions(*, target_root: Path) -> dict[str, str]:
-    """Return stable canonical evidence revisions without observational proof-cache HEAD metadata."""
+def _has_glob(pattern: str) -> bool:
+    return any(character in pattern for character in "*?[")
+
+
+def _owner_input_revisions(
+    *, target_root: Path, previous_files: Mapping[str, Mapping[str, Any]]
+) -> tuple[dict[str, str], dict[str, dict[str, Any]], dict[str, Any]]:
+    """Hash actual owner source/config inputs; metadata is evidence, never a content shortcut."""
+
+    group_paths: dict[str, list[tuple[str, str]]] = {}
+    unique_paths: dict[str, Path] = {}
+    directory_scans = 0
+    for group, patterns in _OWNER_INPUT_PATTERNS.items():
+        entries: list[tuple[str, str]] = []
+        for pattern in patterns:
+            if _has_glob(pattern):
+                directory_scans += 1
+                matches = sorted(path for path in target_root.glob(pattern) if path.is_file())
+                if not matches:
+                    entries.append((pattern, "<no-matches>"))
+                for path in matches:
+                    relative = path.relative_to(target_root).as_posix()
+                    entries.append((pattern, relative))
+                    unique_paths[relative] = path
+            else:
+                entries.append((pattern, pattern))
+                unique_paths[pattern] = target_root / pattern
+        group_paths[group] = entries
+
+    current_files: dict[str, dict[str, Any]] = {}
+    content_read_paths: list[str] = []
+    metadata_match_paths: list[str] = []
+    missing_paths: list[str] = []
+    stat_count = 0
+    for relative, path in sorted(unique_paths.items()):
+        try:
+            stat = path.stat()
+            stat_count += 1
+            signature = ":".join(
+                str(value)
+                for value in (
+                    stat.st_size,
+                    stat.st_mtime_ns,
+                    getattr(stat, "st_ctime_ns", 0),
+                    getattr(stat, "st_dev", 0),
+                    getattr(stat, "st_ino", 0),
+                )
+            )
+        except OSError:
+            signature = "missing"
+        previous = previous_files.get(relative, {})
+        if signature != "missing" and previous.get("signature") == signature:
+            metadata_match_paths.append(relative)
+        if signature == "missing":
+            digest = "missing"
+            missing_paths.append(relative)
+        else:
+            try:
+                digest = hashlib.sha256(path.read_bytes()).hexdigest()
+                content_read_paths.append(relative)
+            except OSError:
+                digest = "unavailable"
+                missing_paths.append(relative)
+        current_files[relative] = {"signature": signature, "sha256": digest}
 
     revisions: dict[str, str] = {}
-    for owner, relatives in _OWNER_EVIDENCE_PATHS.items():
-        digest = hashlib.sha256()
-        for relative in relatives:
-            digest.update(relative.encode())
-            try:
-                digest.update((target_root / relative).read_bytes())
-            except OSError:
-                digest.update(b"<missing>")
-        revisions[owner] = f"sha256:{digest.hexdigest()}"
-    return revisions
+    for group, entries in group_paths.items():
+        identity = [
+            {"pattern": pattern, "path": relative, "sha256": current_files.get(relative, {}).get("sha256", relative)}
+            for pattern, relative in entries
+        ]
+        revisions[group] = _digest(identity)
+    measurement = {
+        "managed_state_content_read_count": len(content_read_paths),
+        "managed_state_content_read_paths": content_read_paths,
+        "managed_state_metadata_match_count": len(metadata_match_paths),
+        "managed_state_metadata_match_paths": metadata_match_paths,
+        "managed_state_digest_reuse_count": 0,
+        "managed_state_stat_count": stat_count,
+        "managed_state_directory_scan_count": directory_scans,
+        "managed_state_missing_paths": missing_paths,
+    }
+    return revisions, current_files, measurement
 
 
 def observed_stack_context(*, target_root: Path, branch: str = "", head: str = "") -> dict[str, Any]:
@@ -149,26 +270,39 @@ def _index_path(target_root: Path, task_text: str) -> Path:
     return target_root / ".agentic-workspace/local/projection-cache/operating-projection-receipts" / f"{task_key}.json"
 
 
-def _load_previous_cache(path: Path) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
+def _load_previous_cache(
+    path: Path,
+) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]], dict[str, dict[str, Any]], dict[str, int]]:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
-        return {}, {}
+        return {}, {}, {}, {"cache_content_read_count": 0}
     identities = payload.get("constituent_identities", {}) if payload.get("kind") == _INDEX_KIND else {}
     results = payload.get("owner_results", {}) if payload.get("kind") == _INDEX_KIND else {}
+    input_files = payload.get("owner_input_files", {}) if payload.get("kind") == _INDEX_KIND else {}
     return (
         identities if isinstance(identities, dict) else {},
         {key: value for key, value in results.items() if isinstance(value, dict)} if isinstance(results, dict) else {},
+        {key: value for key, value in input_files.items() if isinstance(value, dict)} if isinstance(input_files, dict) else {},
+        {"cache_content_read_count": 1},
     )
 
 
-def _record_cache(path: Path, *, task_revision: str, identities: Mapping[str, Any], owner_results: Mapping[str, Mapping[str, Any]]) -> None:
+def _record_cache(
+    path: Path,
+    *,
+    task_revision: str,
+    identities: Mapping[str, Any],
+    owner_results: Mapping[str, Mapping[str, Any]],
+    owner_input_files: Mapping[str, Mapping[str, Any]],
+) -> None:
     record = {
         "kind": _INDEX_KIND,
         "authority": "derived owner-result cache only; canonical owners and proof receipts remain authoritative",
         "task_revision": task_revision,
         "constituent_identities": identities,
         "owner_results": owner_results,
+        "owner_input_files": owner_input_files,
         "stores_proof_evidence": False,
     }
     temporary = path.with_name(f".{path.name}.{os.getpid()}.{uuid.uuid4().hex}.tmp")
@@ -185,9 +319,9 @@ def _semantic_input_revisions(*, admitted_revisions: Mapping[str, Any], stack_co
     revisions["selected_owner"] = revisions.get("selected_owner") or "none"
     revisions.update({key: stack_context.get(key, "unavailable") for key in ("branch", "head", "base")})
     dependency_groups = {
-        "route_inputs": ("task", "selected_owner", "planning", "changed_paths"),
-        "verification_inputs": ("task", "changed_paths"),
-        "proof_inputs": ("task", "changed_paths", "proof_subject", "proof_evidence"),
+        "route_inputs": ("task", "selected_owner", "planning", "changed_paths", "route_sources"),
+        "verification_inputs": ("task", "planning", "changed_paths", "verification_sources"),
+        "proof_inputs": ("task", "changed_paths", "proof_subject", "proof_evidence", "proof_sources"),
         "closeout_inputs": (
             "task",
             "selected_owner",
@@ -196,8 +330,10 @@ def _semantic_input_revisions(*, admitted_revisions: Mapping[str, Any], stack_co
             "proof_subject",
             "proof_evidence",
             "closeout_evidence",
+            "branch",
+            "closeout_sources",
         ),
-        "runtime_mirror_inputs": ("runtime_compatibility",),
+        "runtime_mirror_inputs": ("runtime_compatibility", "runtime_mirror_sources"),
     }
     for result_field, fields in dependency_groups.items():
         values = {field: revisions.get(field, "unavailable") for field in fields}
@@ -248,10 +384,18 @@ def build_operating_projection_receipt(
 ) -> dict[str, Any]:
     """Compose owner results and a conservative constituent-level freshness delta."""
 
-    input_revisions = _semantic_input_revisions(admitted_revisions=admitted_revisions, stack_context=stack_context)
-    identities = build_standard_projection_constituent_identities(input_revisions=input_revisions)
+    started_ns = time.perf_counter_ns()
     index_path = _index_path(target_root, task_text)
-    previous_identities, cached_results = _load_previous_cache(index_path)
+    previous_identities, cached_results, previous_input_files, cache_measurement = _load_previous_cache(index_path)
+    owner_input_revisions, owner_input_files, owner_input_measurement = _owner_input_revisions(
+        target_root=target_root,
+        previous_files=previous_input_files,
+    )
+    input_revisions = _semantic_input_revisions(
+        admitted_revisions={**admitted_revisions, **owner_input_revisions},
+        stack_context=stack_context,
+    )
+    identities = build_standard_projection_constituent_identities(input_revisions=input_revisions)
     delta = compare_projection_constituent_sets(previous=previous_identities, current=identities)
     sources = {
         "route": route,
@@ -278,12 +422,14 @@ def build_operating_projection_receipt(
             task_revision=str(input_revisions.get("task") or ""),
             identities=identities,
             owner_results=owner_results,
+            owner_input_files=owner_input_files,
         )
     selected_proof = owner_results["selected_proof"]
     proof_attention = selected_proof["freshness"] != "current"
     owner_attention = any(
         str(result.get("status") or "").lower() in {"attention", "blocked", "failed", "unavailable"} for result in owner_results.values()
     ) or bool(delta["unknown_constituents"])
+    receipt_build_elapsed_ms = round((time.perf_counter_ns() - started_ns) / 1_000_000, 3)
     return {
         "kind": _RECEIPT_KIND,
         "status": "attention" if proof_attention or owner_attention else "current",
@@ -306,6 +452,18 @@ def build_operating_projection_receipt(
             "changed_paths": input_revisions.get("changed_paths", "unavailable"),
             "proof_subject": input_revisions.get("proof_subject", "unavailable"),
             "runtime_compatibility": input_revisions.get("runtime_compatibility", "unavailable"),
+            "owner_source_revisions": {
+                field: input_revisions[field]
+                for field in (
+                    "route_sources",
+                    "verification_sources",
+                    "proof_sources",
+                    "closeout_sources",
+                    "runtime_mirror_sources",
+                    "proof_evidence",
+                    "closeout_evidence",
+                )
+            },
             "owner_input_revisions": {
                 field: input_revisions[field]
                 for field in (
@@ -338,13 +496,14 @@ def build_operating_projection_receipt(
             "rule": "The local cache stores admitted derived owner-result projections, never canonical proof evidence. Proof authority remains solely in canonical proof receipts.",
         },
         "construction_profile": {
-            "cache_reads": 1,
-            "semantic_evidence_reads": 3,
+            **cache_measurement,
+            **owner_input_measurement,
             "owner_result_construction_count": len(result_constructions),
             "owner_result_reuse_count": len(result_reuse),
             "constructed_constituents": result_constructions,
             "reused_constituents": result_reuse,
             "duplicate_reconstruction_eliminated": not result_constructions and len(result_reuse) == len(sources),
-            "rule": "Counters measure deterministic owner-builder invocations; warm unchanged calls read one derived cache and invoke no owner builders.",
+            "receipt_build_elapsed_ms": receipt_build_elapsed_ms,
+            "rule": "Counters and elapsed time are measured in this receipt build. Every semantic dependency is content-hashed; warm unchanged calls reuse admitted owner results without invoking owner builders.",
         },
     }

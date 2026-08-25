@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -49,13 +50,20 @@ def _revisions(*, changed: str = "changed-v1") -> dict[str, str]:
     }
 
 
-def _build(tmp_path: Path, *, revisions: dict[str, str] | None = None, head: str = "head-1", **owners: Any) -> dict[str, Any]:
+def _build(
+    tmp_path: Path,
+    *,
+    revisions: dict[str, str] | None = None,
+    branch: str = "feature",
+    head: str = "head-1",
+    **owners: Any,
+) -> dict[str, Any]:
     return build_operating_projection_receipt(
         target_root=tmp_path,
         task_text="repair #2740",
         changed_paths=["src/widget.py"],
         admitted_revisions=revisions or _revisions(),
-        stack_context={"branch": "feature", "head": head, "base": "base-1", "status": "current"},
+        stack_context={"branch": branch, "head": head, "base": "base-1", "status": "current"},
         **owners,
     )
 
@@ -81,16 +89,16 @@ def test_unchanged_replay_reuses_admitted_owner_results_without_reconstruction(t
 
     assert first["construction_profile"]["owner_result_construction_count"] == 5
     assert first["construction_profile"]["owner_result_reuse_count"] == 0
-    assert second["construction_profile"] == {
-        "cache_reads": 1,
-        "semantic_evidence_reads": 3,
-        "owner_result_construction_count": 0,
-        "owner_result_reuse_count": 5,
-        "constructed_constituents": [],
-        "reused_constituents": ["route", "verification", "selected_proof", "closeout_trust", "runtime_mirror"],
-        "duplicate_reconstruction_eliminated": True,
-        "rule": "Counters measure deterministic owner-builder invocations; warm unchanged calls read one derived cache and invoke no owner builders.",
-    }
+    profile = second["construction_profile"]
+    assert profile["cache_content_read_count"] == 1
+    assert profile["managed_state_content_read_count"] == len(profile["managed_state_content_read_paths"])
+    assert profile["managed_state_digest_reuse_count"] == 0
+    assert profile["owner_result_construction_count"] == 0
+    assert profile["owner_result_reuse_count"] == 5
+    assert profile["constructed_constituents"] == []
+    assert profile["reused_constituents"] == ["route", "verification", "selected_proof", "closeout_trust", "runtime_mirror"]
+    assert profile["duplicate_reconstruction_eliminated"] is True
+    assert profile["receipt_build_elapsed_ms"] >= 0
     assert restacked["construction_profile"]["owner_result_construction_count"] == 0
     assert counters == {name: 1 for name in _owner_inputs()}
     assert second["owner_results"] == first["owner_results"] == restacked["owner_results"]
@@ -112,6 +120,15 @@ def test_receipt_reuses_constituents_when_only_observed_head_moves(tmp_path: Pat
     }
     for constituent in second["freshness_delta"]["constituents"].values():
         assert constituent["context_delta"] == [{"field": "head", "reason": "head-changed", "invalidates_constituent": False}]
+
+
+def test_branch_change_rebuilds_only_closeout_because_closeout_reads_feature_integration_state(tmp_path: Path) -> None:
+    _build(tmp_path, **_owner_inputs())
+    counters: dict[str, int] = {}
+    changed = _build(tmp_path, branch="other-feature", **_counted_owner_inputs(counters))
+
+    assert changed["construction_profile"]["constructed_constituents"] == ["closeout_trust"]
+    assert counters == {"closeout_trust": 1}
 
 
 def test_changed_path_delta_invalidates_only_dependent_constituents(tmp_path: Path) -> None:
@@ -152,14 +169,81 @@ def test_review_fix_delta_rebuilds_only_affected_results_with_focused_guidance(t
 
 
 def test_canonical_proof_receipt_delta_invalidates_only_proof_consumers(tmp_path: Path) -> None:
+    receipt_path = tmp_path / ".agentic-workspace/local/proof-receipts/last.json"
+    receipt_path.parent.mkdir(parents=True)
+    receipt_path.write_text('{"revision":1}\n', encoding="utf-8")
     _build(tmp_path, **_owner_inputs())
     counters: dict[str, int] = {}
-    revisions = _revisions()
-    revisions["proof_evidence"] = "proof-receipts-v2"
-    changed = _build(tmp_path, revisions=revisions, **_counted_owner_inputs(counters))
+    receipt_path.write_text('{"revision":2}\n', encoding="utf-8")
+    changed = _build(tmp_path, **_counted_owner_inputs(counters))
 
     assert changed["construction_profile"]["constructed_constituents"] == ["selected_proof", "closeout_trust"]
     assert counters == {"proof_selection": 1, "closeout_trust": 1}
+
+
+def test_runtime_primitives_review_fix_rebuilds_only_runtime_mirror(tmp_path: Path) -> None:
+    primitives = tmp_path / "src/agentic_workspace/workspace_runtime_primitives.py"
+    primitives.parent.mkdir(parents=True)
+    primitives.write_text("runtime = 'v1'\n", encoding="utf-8")
+    _build(tmp_path, **_owner_inputs())
+    counters: dict[str, int] = {}
+
+    primitives.write_text("runtime = 'v2'\n", encoding="utf-8")
+    changed = _build(tmp_path, **_counted_owner_inputs(counters))
+
+    assert changed["construction_profile"]["constructed_constituents"] == ["runtime_mirror"]
+    assert counters == {"runtime_mirror": 1}
+
+
+def test_verification_evidence_review_fix_rebuilds_verification_and_closeout(tmp_path: Path) -> None:
+    history = tmp_path / ".agentic-workspace/local/validation-results/history.jsonl"
+    history.parent.mkdir(parents=True)
+    history.write_text('{"result":"v1"}\n', encoding="utf-8")
+    _build(tmp_path, **_owner_inputs())
+    counters: dict[str, int] = {}
+
+    history.write_text('{"result":"v2"}\n', encoding="utf-8")
+    changed = _build(tmp_path, **_counted_owner_inputs(counters))
+
+    assert changed["construction_profile"]["constructed_constituents"] == ["verification", "closeout_trust"]
+    assert counters == {"verification": 1, "closeout_trust": 1}
+
+
+def test_closeout_integration_review_fix_rebuilds_only_closeout(tmp_path: Path) -> None:
+    proposal = tmp_path / ".agentic-workspace/planning/integration-proposals/replay.integration-proposal.json"
+    proposal.parent.mkdir(parents=True)
+    proposal.write_text('{"revision":1}\n', encoding="utf-8")
+    _build(tmp_path, **_owner_inputs())
+    counters: dict[str, int] = {}
+
+    proposal.write_text('{"revision":2}\n', encoding="utf-8")
+    changed = _build(tmp_path, **_counted_owner_inputs(counters))
+
+    assert changed["construction_profile"]["constructed_constituents"] == ["closeout_trust"]
+    assert counters == {"closeout_trust": 1}
+
+
+def test_same_size_restored_mtime_source_edit_cannot_reuse_stale_results(tmp_path: Path) -> None:
+    core = tmp_path / "src/agentic_workspace/workspace_runtime_core.py"
+    core.parent.mkdir(parents=True)
+    core.write_text("owner='aaaa'\n", encoding="utf-8")
+    original = core.stat()
+    _build(tmp_path, **_owner_inputs())
+    counters: dict[str, int] = {}
+
+    core.write_text("owner='bbbb'\n", encoding="utf-8")
+    os.utime(core, ns=(original.st_atime_ns, original.st_mtime_ns))
+    changed = _build(tmp_path, **_counted_owner_inputs(counters))
+
+    assert set(changed["construction_profile"]["constructed_constituents"]) == {
+        "route",
+        "verification",
+        "selected_proof",
+        "closeout_trust",
+        "runtime_mirror",
+    }
+    assert counters == {name: 1 for name in _owner_inputs()}
+    assert changed["construction_profile"]["managed_state_digest_reuse_count"] == 0
 
 
 def test_stale_proof_is_never_current_and_routes_a_focused_rerun(tmp_path: Path) -> None:
@@ -189,7 +273,11 @@ def test_missing_semantic_identity_is_conservative_and_never_reused(tmp_path: Pa
     receipt = _build(tmp_path, revisions=revisions, **_counted_owner_inputs(counters))
 
     assert receipt["status"] == "attention"
-    assert set(receipt["freshness_delta"]["unknown_constituents"]) == {"route", "closeout_trust"}
-    assert set(receipt["rerun_guidance"]["identity_attention_constituents"]) == {"route", "closeout_trust"}
-    assert counters == {"route": 1, "closeout_trust": 1}
+    assert set(receipt["freshness_delta"]["unknown_constituents"]) == {"route", "verification", "closeout_trust"}
+    assert set(receipt["rerun_guidance"]["identity_attention_constituents"]) == {
+        "route",
+        "verification",
+        "closeout_trust",
+    }
+    assert counters == {"route": 1, "verification": 1, "closeout_trust": 1}
     assert receipt["rerun_guidance"]["broad_required"] is False

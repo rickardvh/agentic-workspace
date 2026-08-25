@@ -167,7 +167,6 @@ from agentic_workspace.operating_decision import (
 from agentic_workspace.operating_projection_receipt import (
     build_operating_projection_receipt,
     observed_stack_context,
-    operating_projection_evidence_revisions,
 )
 from agentic_workspace.projection_reuse import (
     ProjectionProgress,
@@ -17578,7 +17577,6 @@ def _run_lazy_report_section_command(
             operation="report",
             query={"section": normalized, "task": task_text or "", "changed": normalized_changed_paths},
         )
-        revisions.update(operating_projection_evidence_revisions(target_root=target_root))
         stack_context = observed_stack_context(
             target_root=target_root,
             branch=str(revisions.get("branch") or ""),
