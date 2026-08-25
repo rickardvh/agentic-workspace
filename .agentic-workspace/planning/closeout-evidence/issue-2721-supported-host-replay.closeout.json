@@ -38,7 +38,7 @@
     "typecheck": "workspace, Memory, Planning, and Verification passed",
     "contract_surfaces": "contract tooling, structured inventory, generated-package checks, and adapter conformance passed",
     "broad_workspace": "original top-layer run: 1232 passed, 2 skipped, 17 failures",
-    "base_attribution": "all 17 failing node ids reproduced with the same assertions on the then-immediate base 7f5603ec9; top-layer regressions=0; lower-stack CI repairs were subsequently restacked through base 35bae78a8"
+    "base_attribution": "all 17 failing node ids reproduced with the same assertions on the then-immediate base 7f5603ec9; top-layer regressions=0; lower-stack CI repairs were subsequently restacked through PR #2735"
   },
   "intent_satisfaction": {
     "implemented": "material current-session evidence changes routing/closeout before a broad clean claim; supported operations are purpose-declared and undeclared semantics remain unknown",
