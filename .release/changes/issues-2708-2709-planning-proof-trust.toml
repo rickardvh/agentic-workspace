@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Make workflow routes current, owner-complete, decision-first, mechanically resolvable, and explicit about effective orchestration for issues #2708 through #2712."

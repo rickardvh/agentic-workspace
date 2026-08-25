@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Expose bounded local-only session capture degradation when logical identity is missing, rate-limit repeats, and record recovery without inventing history."
