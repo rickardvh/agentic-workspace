@@ -1,0 +1,72 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2721-closure-repair",
+  "title": "Repair issue 2721 closure authority",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "shaping",
+  "revision": 1,
+  "intent": {
+    "outcome": "Restore honest Planning authority for the completed issue-2721 lane, record satisfied aggregate proof and child intent, and obtain independent re-review of the exact PR head.",
+    "non_goals": [
+      "Do not change product behavior already delivered by PRs 2732 through 2736.",
+      "Do not advance descendant implementation PRs until the repaired closure head passes review."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "Repair the closure record that authorizes issues 2721 through 2731 to close.",
+    "closure_boundary": "planning closure repair and exact-head review only"
+  },
+  "scope": {
+    "owned": [
+      ".agentic-workspace/planning/lanes/issue-2721.lane.json",
+      ".agentic-workspace/planning/lanes/archive/issue-2721.lane.json",
+      ".agentic-workspace/planning/execplans/issue-2721-*.plan.json",
+      ".agentic-workspace/planning/closeout-evidence/issue-2721-*.closeout.json",
+      ".agentic-workspace/planning/state.toml"
+    ],
+    "effects": [
+      "PR 2741 review authority",
+      "GitHub issue closure authorization for issues 2721 through 2731",
+      "stacked descendant bases"
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "unselected",
+      "owner": "current-work context"
+    },
+    "proof_posture": {
+      "state": "pending",
+      "refs": []
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    }
+  },
+  "references": [],
+  "next_action": "Recover the prematurely archived lane, reconcile each completed slice through supported Planning writers, close and archive the lane with satisfied proof, then request independent exact-head re-review.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Repair issue 2721 closure authority is implemented, validated, and closed out honestly."
+    ],
+    "requirements": [
+      "Planning summary and doctor report no closure-authority contradiction.",
+      "The archived lane records satisfied proof, closed status, and a completion gate authorizing the intended issue closure.",
+      "Each child closeout records satisfied child intent with no unowned residue.",
+      "The existing focused issue-2721 validation suite remains green.",
+      "A distinct reviewer approves the exact repaired PR head."
+    ],
+    "refs": []
+  },
+  "continuation": {
+    "owner": "none",
+    "residual_intent": "none"
+  },
+  "specialist_contracts": []
+}
