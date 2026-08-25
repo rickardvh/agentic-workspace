@@ -3,7 +3,7 @@
 
 Exact current command values generated from `cli_commands.json` and `cli_option_groups.json`. The schema-shape references remain at `cli-commands.md` and `cli-option-groups.md`.
 
-- Contract digest: `sha256:e83a5066993228536c31d205581570f1c40248d111a50e32885578b5bfdc2cf0`
+- Contract digest: `sha256:81c5e9760461ae323b32057e2dc86d05103ccdd05de086a7f3cc1f6b369ac3e7`
 - Program: `agentic-workspace`
 - Command/subcommand count: 123
 
@@ -88,7 +88,7 @@ Shared-state mutability and ignored local diagnostics are separate. A `no` below
 | `agentic-workspace start` | `core_context_router` | `ordinary_host_repo` | no | 6 | Return the minimum safe startup context for beginning work in a target repository. |
 | `agentic-workspace implement` | `core_context_router` | `ordinary_host_repo` | no | 7 | Return a cheap-implementer context for a bounded changed-path scope. |
 | `agentic-workspace defaults` | `core_context_router` | `ordinary_host_repo` | no | 4 | Show the machine-readable default-route contract for startup, lifecycle, skills, validation, and combined installs. |
-| `agentic-workspace proof` | `core_context_router` | `ordinary_host_repo` | yes | 34 | Show the canonical proof routes and current workspace proof summary. |
+| `agentic-workspace proof` | `core_context_router` | `ordinary_host_repo` | yes | 38 | Show the canonical proof routes and current workspace proof summary. |
 | `agentic-workspace setup` | `reusable_host_repo_diagnostics` | `advanced_host_repo` | no | 4 | Show the bounded post-bootstrap setup guidance for a mature repository. |
 | `agentic-workspace ownership` | `core_context_router` | `ordinary_host_repo` | no | 4 | Show the canonical ownership and authority mapping for the target repository. |
 | `agentic-workspace config` | `core_context_router` | `ordinary_host_repo` | no | 4 | Show the resolved repo-owned workspace config layered onto product defaults. |
@@ -1078,6 +1078,10 @@ changed-path proof routing, authority checks, and explicit proof receipt recordi
 | `--route` | no | `—` | — | `value` | Return one proof route by id instead of the full proof surface. |
 | `--current` | no | `—` | — | `store_true` | Return only the current proof summary. |
 | `--changed` | no | `—` | — | `extend; nargs=*` | Return required proof commands for the provided repo-relative changed paths. |
+| `--execute-selected` | no | `—` | — | `store_true` | Execute and reconcile the currently selected changed-path proof set as one resumable operation. |
+| `--proof-run-id` | no | `—` | — | `value` | Optional existing proof run identity to resume; stale subject identities fail closed. |
+| `--proof-timeout-seconds` | no | `600` | — | `value` | Per-command timeout budget for selected proof execution. |
+| `--proof-cancel-file` | no | `—` | — | `value` | Optional cancellation sentinel checked before each selected proof command. |
 | `--record-receipt` | no | `—` | — | `store_true` | Record a compact proof receipt from an actually run validation command. |
 | `--receipt-command` | no | `—` | — | `value` | Validation command or evidence to store in the proof receipt. |
 | `--receipt-result` | no | `—` | — | `value` | Validation result to store in the proof receipt, such as passed or failed. |
