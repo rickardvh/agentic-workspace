@@ -17275,8 +17275,14 @@ def targeted_execplan_write(
                     if terminal_lifecycle:
                         state_projection_changes[f"todo.{bucket}.{plan_id}"] = {"before": before, "after": None}
                         continue
+                    if "phase" in patch:
+                        item["phase"] = str(patch["phase"])
                     if "next_action" in patch:
                         item["next_action"] = str(patch["next_action"])
+                    if "proof" in patch and isinstance(patch["proof"], dict):
+                        proof_summary = str(patch["proof"].get("summary") or "").strip()
+                        if proof_summary:
+                            item["proof"] = proof_summary
                     if lifecycle_value:
                         item["status"] = str(patch["lifecycle"])
                     if before != item:

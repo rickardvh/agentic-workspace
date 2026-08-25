@@ -756,7 +756,11 @@ def test_targeted_execplan_writer_allows_live_phase_reconciliation(tmp_path: Pat
     applied = installer_mod.targeted_execplan_write(
         target=tmp_path,
         plan="active-plan",
-        patch={"phase": "validation", "next_action": "await independent review"},
+        patch={
+            "phase": "validation",
+            "next_action": "await independent review",
+            "proof": {"summary": "Implementation revision abc123; independent review pending."},
+        },
         expected_planning_revision=revision,
         expected_owner_revision=1,
         apply=True,
@@ -769,7 +773,9 @@ def test_targeted_execplan_writer_allows_live_phase_reconciliation(tmp_path: Pat
     assert updated["canonical_core"]["next_action"] == "await independent review"
     state = installer_mod._read_state_from_toml(tmp_path)
     assert state["todo"]["active_items"][0]["status"] == "active"
+    assert state["todo"]["active_items"][0]["phase"] == "validation"
     assert state["todo"]["active_items"][0]["next_action"] == "await independent review"
+    assert state["todo"]["active_items"][0]["proof"] == "Implementation revision abc123; independent review pending."
 
 
 def test_targeted_execplan_writer_rejects_unsupported_parent_projection(tmp_path: Path) -> None:
