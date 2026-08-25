@@ -2,7 +2,7 @@
   "kind": "planning-closeout-evidence/v1",
   "title": "Enforce review authority and preserve explicit corrections",
   "plan_id": "issue-2721-trust",
-  "created_at": "2026-08-25T18:12:04.469115+00:00",
+  "created_at": "2026-08-25T18:35:26.737053+00:00",
   "source_plan": ".agentic-workspace/planning/execplans/issue-2721-trust.plan.json",
   "intended_archive": ".agentic-workspace/planning/execplans/archive/issue-2721-trust.plan.json",
   "retention": {
@@ -12,52 +12,52 @@
     "ordinary_route": "report --section closeout_report --format json"
   },
   "claim_level": "slice",
-  "outcome": "Implementing agents remain non-authoritative under human/independent policy and explicit corrections survive through trusted custody.",
+  "outcome": "Review authority and explicit correction custody now satisfy issues #2725 and #2726.",
   "contribution": "Establish the authority and correction-custody invariants on which every later lane slice and final supported-host replay depends.",
   "evidence_refs": [
-    "2 focused trust/correction tests passed on master; PR #2732 exact head passed hosted CI, Security, semver and Review approval and is merged."
+    "PR #2732 merged after focused review-authority and correction-custody tests plus hosted CI, Security baseline, Semver, and independent approval."
   ],
   "residual": {
     "status": "open",
-    "owner": "issue-2721-decision"
+    "owner": ".agentic-workspace/planning/lanes/issue-2721.lane.json"
   },
   "closure": {
     "authority": "planning closeout writer",
     "provenance": "completed-plan cleanup retained compact closeout evidence instead of a full execplan archive",
-    "reopen_trigger": "Reopen when issue-2721-decision activates a fresh bounded slice."
+    "reopen_trigger": "Reopen when .agentic-workspace/planning/lanes/issue-2721.lane.json activates a fresh bounded slice."
   },
-  "revision": 3,
+  "revision": 4,
   "active_milestone": {
     "status": "completed"
   },
   "proof_report": {
-    "validation proof": "2 focused trust/correction tests passed on master; PR #2732 exact head passed hosted CI, Security, semver and Review approval and is merged."
+    "validation proof": "PR #2732 merged after focused review-authority and correction-custody tests plus hosted CI, Security baseline, Semver, and independent approval."
   },
   "intent_satisfaction": {
     "was original intent fully satisfied?": "no",
-    "unsolved intent passed to": "issue-2721-decision"
+    "unsolved intent passed to": ".agentic-workspace/planning/lanes/issue-2721.lane.json"
   },
   "intent_continuity": {
     "this slice completes the larger intended outcome": "no",
-    "continuation surface": "issue-2721-decision"
+    "continuation surface": ".agentic-workspace/planning/lanes/issue-2721.lane.json"
   },
   "child_intent_satisfaction": {
-    "status": "not-recorded",
-    "scope": "not-recorded",
-    "parent_intent_effect": "unknown"
+    "status": "satisfied",
+    "scope": "bounded-child",
+    "parent_intent_effect": "none"
   },
   "closure_check": {
     "closeout scope": "slice",
     "larger-intent status": "open",
     "closure decision": "archive-but-keep-lane-open",
-    "reopen trigger": "Reopen when issue-2721-decision activates a fresh bounded slice."
+    "reopen trigger": "Reopen when .agentic-workspace/planning/lanes/issue-2721.lane.json activates a fresh bounded slice."
   },
   "execution_summary": {
-    "outcome delivered": "Implementing agents remain non-authoritative under human/independent policy and explicit corrections survive through trusted custody.",
-    "follow-on routed to": "issue-2721-decision"
+    "outcome delivered": "Review authority and explicit correction custody now satisfy issues #2725 and #2726.",
+    "follow-on routed to": ".agentic-workspace/planning/lanes/issue-2721.lane.json"
   },
   "execution_run": {
-    "changed surfaces": "Merged PR #2732 is present on master.",
-    "next step": "continue from issue-2721-decision"
+    "changed surfaces": "PR #2732 and issue-2721 Planning records",
+    "next step": "continue from .agentic-workspace/planning/lanes/issue-2721.lane.json"
   }
 }
