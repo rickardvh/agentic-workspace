@@ -129,6 +129,48 @@ def test_launcher_does_not_refresh_generated_cli_for_start(monkeypatch) -> None:
     assert observed == [["start", "--target", ".", "--format", "json"]]
 
 
+def test_launcher_maps_codex_thread_to_portable_session_identity(monkeypatch) -> None:
+    module = _load_module()
+    monkeypatch.setenv(module.CODEX_SESSION_IDENTITY_ENV, "private-codex-thread")
+    monkeypatch.delenv(module.AW_SESSION_IDENTITY_ENV, raising=False)
+    monkeypatch.setattr(module, "_admit_runtime_identity", lambda: True)
+    monkeypatch.setattr(
+        module,
+        "_dispatch_to_source_cli",
+        lambda _argv: 0 if os.environ[module.AW_SESSION_IDENTITY_ENV] == "private-codex-thread" else 1,
+    )
+
+    assert module.main(["start", "--target", ".", "--format", "json"]) == 0
+
+
+def test_launcher_preserves_existing_portable_session_identity(monkeypatch) -> None:
+    module = _load_module()
+    monkeypatch.setenv(module.CODEX_SESSION_IDENTITY_ENV, "codex-thread")
+    monkeypatch.setenv(module.AW_SESSION_IDENTITY_ENV, "portable-session")
+    monkeypatch.setattr(module, "_admit_runtime_identity", lambda: True)
+    monkeypatch.setattr(
+        module,
+        "_dispatch_to_source_cli",
+        lambda _argv: 0 if os.environ[module.AW_SESSION_IDENTITY_ENV] == "portable-session" else 1,
+    )
+
+    assert module.main(["start", "--target", ".", "--format", "json"]) == 0
+
+
+def test_launcher_leaves_session_identity_unset_outside_codex(monkeypatch) -> None:
+    module = _load_module()
+    monkeypatch.delenv(module.CODEX_SESSION_IDENTITY_ENV, raising=False)
+    monkeypatch.delenv(module.AW_SESSION_IDENTITY_ENV, raising=False)
+    monkeypatch.setattr(module, "_admit_runtime_identity", lambda: True)
+    monkeypatch.setattr(
+        module,
+        "_dispatch_to_source_cli",
+        lambda _argv: 0 if module.AW_SESSION_IDENTITY_ENV not in os.environ else 1,
+    )
+
+    assert module.main(["start", "--target", ".", "--format", "json"]) == 0
+
+
 def test_runtime_identity_rejects_editable_distribution_from_sibling_checkout(tmp_path: Path) -> None:
     module = _load_module()
     target = tmp_path / "target"
@@ -277,7 +319,7 @@ def test_active_no_sync_runtime_identity_is_stable_across_two_checkouts(tmp_path
 def test_repo_configured_active_invocation_forbids_dependency_sync() -> None:
     config = (SCRIPT_PATH.parents[1] / ".agentic-workspace" / "config.toml").read_text(encoding="utf-8")
 
-    assert 'cli_invoke = "uv run --active --no-sync python scripts/run_agentic_workspace.py"' in config
+    assert 'cli_invoke = "uv run --frozen --active --no-sync python scripts/run_agentic_workspace.py"' in config
 
 
 def test_launcher_force_refresh_still_applies_to_start(monkeypatch) -> None:

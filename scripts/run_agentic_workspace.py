@@ -25,6 +25,8 @@ RUNTIME_DISTRIBUTION_PATHS = {
     "agentic-workspace-planning": Path("packages/planning"),
     "agentic-workspace-verification": Path("packages/verification"),
 }
+CODEX_SESSION_IDENTITY_ENV = "CODEX_THREAD_ID"
+AW_SESSION_IDENTITY_ENV = "AW_SESSION_LOGICAL_IDENTITY"
 
 GENERATION_DEPENDENCY_PATTERNS = (
     "pyproject.toml",
@@ -483,6 +485,18 @@ def _dispatch_to_source_cli(argv: Sequence[str]) -> int:
     return int(cli_main(list(argv)))
 
 
+def _bridge_codex_session_identity() -> bool:
+    """Map Codex's opaque thread identity into AW's portable session contract."""
+
+    if os.environ.get(AW_SESSION_IDENTITY_ENV, "").strip():
+        return False
+    codex_identity = os.environ.get(CODEX_SESSION_IDENTITY_ENV, "").strip()
+    if not codex_identity:
+        return False
+    os.environ[AW_SESSION_IDENTITY_ENV] = codex_identity
+    return True
+
+
 def _editable_distribution_origin(distribution: importlib.metadata.Distribution) -> Path | None:
     raw = distribution.read_text("direct_url.json")
     if not raw:
@@ -559,6 +573,7 @@ def _should_refresh_generated_cli_for_argv(argv: Sequence[str]) -> bool:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
+    _bridge_codex_session_identity()
     if not _admit_runtime_identity():
         return 2
     if _should_refresh_generated_cli_for_argv(args):
