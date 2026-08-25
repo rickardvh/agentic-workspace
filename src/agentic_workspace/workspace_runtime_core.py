@@ -164,7 +164,11 @@ from agentic_workspace.operating_decision import (
     project_startup_claim_effect_authority,
     projection_surface_builder_inputs,
 )
-from agentic_workspace.operating_projection_receipt import build_operating_projection_receipt, observed_stack_context
+from agentic_workspace.operating_projection_receipt import (
+    build_operating_projection_receipt,
+    observed_stack_context,
+    operating_projection_evidence_revisions,
+)
 from agentic_workspace.projection_reuse import (
     ProjectionProgress,
     admitted_projection_revisions,
@@ -17569,52 +17573,12 @@ def _run_lazy_report_section_command(
     if normalized == "operating_projection_receipt":
         if not str(task_text or "").strip():
             raise WorkspaceUsageError("report --section operating_projection_receipt requires --task <task>")
-        route = _summary_planning_route_decision_payload(
-            target_root=target_root,
-            task_text=task_text,
-            changed_paths=normalized_changed_paths,
-        )
-        assurance_requirements = _assurance_requirements_report_payload(
-            config=config,
-            target_root=target_root,
-            active_planning_record=active_planning_record,
-            task_text=task_text,
-            changed_paths=normalized_changed_paths,
-        )
-        verification = _verification_report_compact_projection(
-            _verification_report_payload(
-                target_root=target_root,
-                active_planning_record=active_planning_record,
-                assurance_requirements=assurance_requirements,
-                task_text=task_text,
-                changed_paths=normalized_changed_paths,
-            )
-        )
-        proof_selection = _proof_selection_for_changed_paths(
-            changed_paths=normalized_changed_paths,
-            target_root=target_root,
-            task_text=task_text,
-            include_durable_intent=False,
-            include_assurance_requirements=False,
-            include_routine_work_context=False,
-            include_runtime_diagnostics=False,
-            include_test_strategy_check=False,
-        )
-        closeout_trust = _report_closeout_trust_payload(
-            module_reports=_selected_module_closeout_reports(target_root=target_root, selected_modules=selected_modules),
-            target_root=target_root,
-            config=config,
-            cli_invoke=config.cli_invoke,
-            task_text=task_text,
-            changed_paths=normalized_changed_paths,
-            compact=True,
-        )
-        runtime_mirror = _runtime_mirror_surface_consistency_payload(target_root=target_root, cli_invoke=config.cli_invoke)
         revisions, _dependencies, _findings = admitted_projection_revisions(
             root=target_root,
             operation="report",
             query={"section": normalized, "task": task_text or "", "changed": normalized_changed_paths},
         )
+        revisions.update(operating_projection_evidence_revisions(target_root=target_root))
         stack_context = observed_stack_context(
             target_root=target_root,
             branch=str(revisions.get("branch") or ""),
@@ -17626,11 +17590,46 @@ def _run_lazy_report_section_command(
             changed_paths=normalized_changed_paths,
             admitted_revisions=revisions,
             stack_context=stack_context,
-            route=route,
-            verification=verification,
-            proof_selection=proof_selection,
-            closeout_trust=closeout_trust,
-            runtime_mirror=runtime_mirror,
+            route=lambda: _summary_planning_route_decision_payload(
+                target_root=target_root,
+                task_text=task_text,
+                changed_paths=normalized_changed_paths,
+            ),
+            verification=lambda: _verification_report_compact_projection(
+                _verification_report_payload(
+                    target_root=target_root,
+                    active_planning_record=active_planning_record,
+                    assurance_requirements=_assurance_requirements_report_payload(
+                        config=config,
+                        target_root=target_root,
+                        active_planning_record=active_planning_record,
+                        task_text=task_text,
+                        changed_paths=normalized_changed_paths,
+                    ),
+                    task_text=task_text,
+                    changed_paths=normalized_changed_paths,
+                )
+            ),
+            proof_selection=lambda: _proof_selection_for_changed_paths(
+                changed_paths=normalized_changed_paths,
+                target_root=target_root,
+                task_text=task_text,
+                include_durable_intent=False,
+                include_assurance_requirements=False,
+                include_routine_work_context=False,
+                include_runtime_diagnostics=False,
+                include_test_strategy_check=False,
+            ),
+            closeout_trust=lambda: _report_closeout_trust_payload(
+                module_reports=_selected_module_closeout_reports(target_root=target_root, selected_modules=selected_modules),
+                target_root=target_root,
+                config=config,
+                cli_invoke=config.cli_invoke,
+                task_text=task_text,
+                changed_paths=normalized_changed_paths,
+                compact=True,
+            ),
+            runtime_mirror=lambda: _runtime_mirror_surface_consistency_payload(target_root=target_root, cli_invoke=config.cli_invoke),
         )
         return _select_report_payload(payload, profile="router", section=normalized)
 

@@ -1,0 +1,154 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2740-replay",
+  "title": "Issue 2740 replay and performance proof",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "implementation",
+  "revision": 4,
+  "canonical_core": {
+    "requested_outcome": "Reuse admitted task-scoped operating constituent results across unchanged and HEAD-only replay, invalidate only semantic dependants, and prove reduced managed-state construction without weakening proof freshness.",
+    "hard_constraints": "Do not create a second proof authority, cache rendered command text, make HEAD a semantic dependency, or broaden proof outside the canonical proof strategy.",
+    "agent_may_decide": "The derived-cache schema, lazy construction boundary, deterministic counters, and focused test structure within the confirmed write scope.",
+    "escalate_when": "Implementation requires a new proof authority, files outside the confirmed write scope, or a broad proof escalation not selected by canonical strategy.",
+    "next_action": "Record the completed validation evidence, run routed proof, and close out the bounded issue slice.",
+    "proof_expectations": [
+      "uv run --active pytest tests/test_operating_projection_receipt.py tests/test_workspace_cli.py -q",
+      "make lint-workspace",
+      "make typecheck",
+      "uv run --active python scripts/check/check_generated_command_packages.py --require-node",
+      "uv run --frozen --active --no-sync python scripts/run_agentic_workspace.py proof --target . --changed <paths> --format json"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/operating_projection_receipt.py",
+      "src/agentic_workspace/workspace_runtime_core.py",
+      "tests/test_operating_projection_receipt.py",
+      "tests/test_workspace_cli.py",
+      ".release/changes/2740-operating-projection-replay.toml",
+      ".agentic-workspace/planning/**"
+    ],
+    "completion_criteria": [
+      "Repeated unchanged and HEAD-only inspection reuses all five admitted constituent results.",
+      "Review-fix deltas invalidate only affected constituents and retain focused rerun guidance.",
+      "Canonical proof evidence invalidates proof and closeout consumers without invalidating unrelated constituents.",
+      "Missing or ambiguous identity inputs never produce unsafe reuse.",
+      "Focused, full CLI, lint, type, generated, contract, and routed proof checks pass."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "Close this bounded issue slice after current routed proof; do not open or self-review the PR from this worker."
+  },
+  "intent": {
+    "outcome": "Reuse admitted task-scoped operating constituent results across unchanged and HEAD-only replay, invalidate only semantic dependants, and prove reduced managed-state construction without weakening proof freshness.",
+    "non_goals": [
+      "Do not create a second proof authority or cache rendered command text.",
+      "Do not make branch, HEAD, or base semantic dependencies by default.",
+      "Do not broaden proof unless the canonical proof strategy explicitly escalates."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "Create a bounded plan for Issue 2740 replay and performance proof.",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "src/agentic_workspace/operating_projection_receipt.py",
+      "src/agentic_workspace/workspace_runtime_core.py",
+      "tests/test_operating_projection_receipt.py",
+      "tests/test_workspace_cli.py",
+      ".release/changes/2740-operating-projection-replay.toml"
+    ],
+    "effects": [
+      "Local derived operating-projection cache stores reusable admitted owner-result projections plus semantic identities.",
+      "Repeated task receipt inspection avoids reconstructing unchanged owner projections.",
+      "Focused and broad rerun guidance continues to come from canonical proof strategy and reconciliation."
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "unselected",
+      "owner": "current-work context"
+    },
+    "proof_posture": {
+      "state": "pending",
+      "refs": []
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    },
+    "delegation": {
+      "state": "recorded",
+      "route": "delegate-implementation",
+      "reason": "Parallel stack completion with bounded replay/performance implementation ownership"
+    }
+  },
+  "references": [
+    "https://github.com/rickardvh/agentic-workspace/issues/2740",
+    "PR #2745"
+  ],
+  "next_action": "Implement lazy admitted constituent-result reuse and deterministic replay/performance coverage, then run focused and routed proof.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Issue 2740 replay and performance proof is implemented, validated, and closed out honestly."
+    ],
+    "requirements": [
+      "uv run --frozen --active --no-sync pytest tests/test_operating_projection_receipt.py -q",
+      "uv run --frozen --active --no-sync pytest tests/test_workspace_cli.py -k operating_projection_receipt -q",
+      "uv run --frozen --active --no-sync ruff check src/agentic_workspace/operating_projection_receipt.py src/agentic_workspace/workspace_runtime_core.py tests/test_operating_projection_receipt.py tests/test_workspace_cli.py",
+      "uv run --frozen --active --no-sync mypy src/agentic_workspace/operating_projection_receipt.py",
+      "uv run --frozen --active --no-sync python scripts/check/check_generated_command_packages.py --require-node"
+    ],
+    "refs": []
+  },
+  "continuation": {
+    "owner": "none",
+    "residual_intent": "none"
+  },
+  "execution_bounds": {
+    "allowed_write_scope": [
+      "src/agentic_workspace/operating_projection_receipt.py",
+      "src/agentic_workspace/workspace_runtime_core.py",
+      "tests/test_operating_projection_receipt.py",
+      "tests/test_workspace_cli.py",
+      ".release/changes/2740-operating-projection-replay.toml",
+      ".agentic-workspace/planning/state.toml",
+      ".agentic-workspace/planning/execplans/issue-2740-replay.plan.json",
+      ".agentic-workspace/proof/receipts/**"
+    ],
+    "forbidden_scope": [
+      "Proof authority semantics outside canonical proof receipts and strategy",
+      "Unrelated runtime, documentation, and workflow surfaces"
+    ]
+  },
+  "stop_conditions": {
+    "stop when": "Routed proof fails after all exact selected commands pass.",
+    "escalate when boundary reached": "Implementation requires a new proof authority or files outside the confirmed write scope.",
+    "escalate on scope drift": "A requested change affects unrelated runtime, documentation, or workflow surfaces.",
+    "escalate on proof failure": "Canonical proof strategy requires an unexplained broad escalation."
+  },
+  "validation_commands": [
+    "uv run --active pytest tests/test_operating_projection_receipt.py tests/test_workspace_cli.py -q",
+    "make lint-workspace",
+    "make typecheck",
+    "uv run --active python scripts/check/check_generated_command_packages.py --require-node",
+    "uv run --frozen --active --no-sync python scripts/run_agentic_workspace.py proof --target . --changed <paths> --format json"
+  ],
+  "completion_criteria": [
+    "Repeated unchanged and HEAD-only inspection reuses all five admitted constituent results.",
+    "Review-fix deltas invalidate only affected constituents and retain focused rerun guidance.",
+    "Canonical proof evidence invalidates proof and closeout consumers without invalidating unrelated constituents.",
+    "Missing or ambiguous identity inputs never produce unsafe reuse.",
+    "Focused, full CLI, lint, type, generated, contract, and routed proof checks pass."
+  ],
+  "specialist_contracts": [
+    {
+      "kind": "planning-delegation/v1",
+      "target": "planning://delegation/delegate-implementation",
+      "revision": 1
+    }
+  ]
+}
