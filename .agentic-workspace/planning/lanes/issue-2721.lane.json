@@ -70,7 +70,7 @@
     {
       "id": "issue-2721-signals",
       "title": "Make material session friction consequential before closeout",
-      "status": "planned",
+      "status": "active",
       "execplan_ref": ".agentic-workspace/planning/execplans/issue-2721-signals.plan.json",
       "depends_on": [
         "issue-2721-continuity"
@@ -80,17 +80,28 @@
       "residual_after_slice": "Only hosted checks, independent stack review, ordered merge, child closure, and parent closeout remain."
     }
   ],
-  "current_slice": "issue-2721-continuity",
+  "current_slice": "issue-2721-signals",
   "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
   "proof_strategy": "Each stack slice must pass focused owner tests and routed proof; the complete lane additionally requires hosted checks, independent review, issue-specific acceptance evidence, and a maintained end-to-end Codex dogfood replay.",
   "proof_aggregation": {
-    "status": "not-started",
-    "evidence": [],
-    "known_gaps": []
+    "status": "partial",
+    "evidence": [
+      "PR #2732 trust/authority/correction",
+      "PR #2733 decision routing and assignment",
+      "PR #2734 proof execution and local evidence",
+      "PR #2735 external hierarchy and Planning continuity",
+      ".agentic-workspace/planning/closeout-evidence/issue-2721-supported-host-replay.replay.json"
+    ],
+    "known_gaps": [
+      "fifth stacked PR publication",
+      "hosted checks across the complete stack",
+      "independent stack review",
+      "ordered merge and target-branch reconciliation"
+    ]
   },
-  "residual_lane_work": "not evaluated",
-  "lane_to_epic_contribution": "not evaluated",
-  "parent_close_permission": "not-evaluated",
+  "residual_lane_work": "Publish the fifth stack layer, obtain hosted checks and independent review, then merge in order and reconcile child/parent closure on the target branch.",
+  "lane_to_epic_contribution": "All ten child implementations are represented across five dependency-ordered stack layers with local proof and a maintained combined replay.",
+  "parent_close_permission": "do-not-close-parent",
   "closeout_state": {
     "status": "open",
     "summary": "",

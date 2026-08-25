@@ -15969,6 +15969,27 @@ def test_report_dogfooding_signal_status_covers_closeout_states(tmp_path: Path, 
     dismissed = json.loads(capsys.readouterr().out)["answer"]
     assert dismissed["status"] == "dismissed_with_reason"
     assert dismissed["dismissal_reason"] == "operator typo, not product friction"
+    assert dismissed["closeout_blocked"] is False
+
+    cache_path.write_text(
+        json.dumps({"status": "fixed", "signals": ["receipt choreography"], "reason": "proof execution now reconciles receipts"}),
+        encoding="utf-8",
+    )
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "dogfooding_signal_status", "--format", "json"]) == 0
+    fixed = json.loads(capsys.readouterr().out)["answer"]
+    assert fixed["status"] == "fixed"
+    assert fixed["closeout_blocked"] is False
+    assert fixed["durable_residue"] is False
+
+    cache_path.write_text(
+        json.dumps({"status": "accepted-risk", "signals": ["bounded repeat"], "accepted_risk_reason": "bounded maintenance cost"}),
+        encoding="utf-8",
+    )
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "dogfooding_signal_status", "--format", "json"]) == 0
+    accepted = json.loads(capsys.readouterr().out)["answer"]
+    assert accepted["status"] == "accepted-risk"
+    assert accepted["closeout_blocked"] is False
+    assert accepted["accepted_risk_reason"] == "bounded maintenance cost"
 
     cache_path.write_text(json.dumps({"signals": ["unrouted friction"]}), encoding="utf-8")
     assert cli.main(["report", "--target", str(tmp_path), "--section", "dogfooding_signal_status", "--format", "json"]) == 0
@@ -16161,7 +16182,7 @@ def test_session_log_signal_captures_strengthens_and_routes_structured_candidate
     assert session["routing_decisions"][0]["closeout_blocked"] is True
 
 
-def test_session_improvement_intake_self_admits_complete_index_for_review(tmp_path: Path, capsys, monkeypatch) -> None:
+def test_session_improvement_intake_self_admits_material_index_as_pending_disposition(tmp_path: Path, capsys, monkeypatch) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
     capsys.readouterr()
@@ -16176,11 +16197,21 @@ def test_session_improvement_intake_self_admits_complete_index_for_review(tmp_pa
     assert payload["status"] == "session_observed"
     assert payload["session_signal_source"]["status"] == "complete-index"
     signal = payload["session_observed_signals"][0]
-    assert signal["outcome"] == "review_required"
-    assert signal["reviewed"] is False
-    assert len(signal["fingerprint"]) == 64
-    assert payload["routing_decisions"][0]["closeout_blocked"] is False
-    assert "not promoted" in payload["claim_boundary"]
+    assert signal["outcome"] == "pending_disposition"
+    assert signal["reviewed"] is True
+    assert len(signal["fingerprint"]) == 20
+    assert payload["routing_decisions"][0]["closeout_blocked"] is True
+    assert payload["operational_effect"]["status"] == "closeout-blocking"
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "dogfooding_signal_status", "--format", "json"]) == 0
+    status = json.loads(capsys.readouterr().out)["answer"]
+    assert status["status"] == "pending_disposition"
+    assert status["closeout_blocked"] is True
+    assert "dismissal_reason" not in status
+    assert "deferred_reason" not in status
+    assert status["next_action"]["id"] == "capture-material-session-signal"
+    assert "session-log signal" in status["next_action"]["command"]
+    assert status["next_action"]["evidence_fingerprint"] == signal["evidence_fingerprint"]
 
 
 def test_session_log_download_intent_routes_to_export_without_transfer_approval(tmp_path: Path, capsys) -> None:
@@ -16213,11 +16244,25 @@ def test_session_log_download_intent_routes_to_export_without_transfer_approval(
     assert payload["next_safe_action"]["next_safe_action"] == "run-session-log-export"
 
 
-def test_session_index_intake_deduplicates_stable_candidates_before_review(tmp_path: Path, monkeypatch) -> None:
+def test_session_index_intake_deduplicates_stable_material_candidates_before_disposition(tmp_path: Path, monkeypatch) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
     config = workspace_runtime_core._load_workspace_config(target_root=tmp_path)
-    candidate = {"id": "same", "summary": "Repeated session signal", "count": 2}
+    candidate = {
+        "id": "same",
+        "summary": "Repeated session signal",
+        "count": 2,
+        "improvement_signal": {
+            "kind": "workflow_cost",
+            "symptom": "Status was repeated in one session.",
+            "cost": "Repeated routing work.",
+            "suspected_owner": "operating-loop",
+            "confidence": "medium",
+            "recurrence": "repeated",
+            "occurrence_count": 2,
+            "evidence_fingerprint": "stable-material-id",
+        },
+    }
     monkeypatch.setattr(
         session_logging,
         "analyze_session_log",
@@ -16235,8 +16280,53 @@ def test_session_index_intake_deduplicates_stable_candidates_before_review(tmp_p
     assert first is not None and second is not None
     assert len(first["signals"]) == len(first["routing_decisions"]) == 1
     assert first["signals"][0]["fingerprint"] == second["signals"][0]["fingerprint"]
-    assert first["signals"][0]["reviewed"] is False
+    assert first["signals"][0]["reviewed"] is True
     assert first["routing_decisions"][0]["destinations"] == []
+    assert first["routing_decisions"][0]["closeout_blocked"] is True
+
+
+def test_session_index_intake_selects_one_strongest_material_candidate(tmp_path: Path, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    config = workspace_runtime_core._load_workspace_config(target_root=tmp_path)
+
+    def candidate(candidate_id: str, *, confidence: str, count: int) -> dict[str, object]:
+        return {
+            "id": candidate_id,
+            "summary": candidate_id,
+            "improvement_signal": {
+                "kind": "workflow_cost",
+                "symptom": candidate_id,
+                "confidence": confidence,
+                "recurrence": "repeated",
+                "occurrence_count": count,
+                "evidence_fingerprint": f"fingerprint-{candidate_id}",
+            },
+        }
+
+    monkeypatch.setattr(
+        session_logging,
+        "analyze_session_log",
+        lambda **_kwargs: {
+            "kind": "agentic-workspace/session-log-analysis/v1",
+            "status": "analyzed",
+            "index_status": "complete",
+            "index_path": ".agentic-workspace/local/session-logging/index.json",
+            "detail_page": {
+                "items": [
+                    candidate("repeated-command", confidence="medium", count=3),
+                    candidate("duplicate-output", confidence="medium", count=14),
+                    candidate("receipt-choreography", confidence="high", count=4),
+                ]
+            },
+        },
+    )
+
+    intake = workspace_runtime_core._session_index_improvement_intake(target_root=tmp_path, config=config)
+    assert intake is not None
+    assert len(intake["signals"]) == len(intake["routing_decisions"]) == 1
+    assert intake["signals"][0]["signal"] == "receipt-choreography"
+    assert intake["signals"][0]["fingerprint"] == "fingerprint-receipt-choreography"
 
 
 def test_selected_dogfooding_report_sections_stay_compact(tmp_path: Path, capsys) -> None:

@@ -6626,7 +6626,14 @@ def _improvement_signal_candidates_from_session_intake(
     session_intake = _session_improvement_intake_payload(target_root=target_root, config=config, cli_invoke=config.cli_invoke)
     status = str(session_intake.get("status") or "unknown")
     candidates: list[dict[str, Any]] = []
-    active_outcomes = {"unresolved", "recorded_chat_only", "recorded_session_only", "routed_to_issue", "review_required"}
+    active_outcomes = {
+        "unresolved",
+        "recorded_chat_only",
+        "recorded_session_only",
+        "routed_to_issue",
+        "review_required",
+        "pending_disposition",
+    }
     destinations = [
         str(item)
         for decision in _list_payload(session_intake.get("routing_decisions"))
@@ -7154,8 +7161,10 @@ def _dogfooding_signal_status_outcome(cache: dict[str, Any]) -> dict[str, Any]:
     ] or [str(item) for item in _list_payload(cache.get("signals")) if not isinstance(item, dict) and str(item).strip()]
     destinations = [str(item) for item in _list_payload(cache.get("destinations")) if str(item).strip()]
     raw_status = str(cache.get("status") or cache.get("outcome") or "").strip()
-    dismissal_reason = str(cache.get("dismissal_reason") or cache.get("reason") or "").strip()
-    deferred_reason = str(cache.get("deferred_reason") or cache.get("reason") or "").strip()
+    reason = str(cache.get("reason") or "").strip()
+    dismissal_reason = str(cache.get("dismissal_reason") or (reason if raw_status == "dismissed_with_reason" else "")).strip()
+    deferred_reason = str(cache.get("deferred_reason") or (reason if raw_status == "deferred_to_roadmap" else "")).strip()
+    accepted_risk_reason = str(cache.get("accepted_risk_reason") or (reason if raw_status == "accepted-risk" else "")).strip()
     durable_route_statuses = {
         "routed_to_issue",
         "routed_to_planning",
@@ -7179,6 +7188,9 @@ def _dogfooding_signal_status_outcome(cache: dict[str, Any]) -> dict[str, Any]:
         "routed_to_docs",
         "deferred_to_roadmap",
         "dismissed_with_reason",
+        "fixed",
+        "accepted-risk",
+        "pending_disposition",
         "unresolved",
     }:
         status = "unresolved" if signals else "not_checked"
@@ -7190,19 +7202,30 @@ def _dogfooding_signal_status_outcome(cache: dict[str, Any]) -> dict[str, Any]:
         status = "unresolved"
     if status == "deferred_to_roadmap" and not (destinations or deferred_reason):
         status = "unresolved"
-    closeout_blocked = status == "unresolved"
-    durable_residue = status in durable_route_statuses or status in {"deferred_to_roadmap", "unresolved"}
+    if status == "accepted-risk" and not accepted_risk_reason:
+        status = "unresolved"
+    closeout_blocked = status in {"pending_disposition", "unresolved"}
+    durable_residue = status in durable_route_statuses or status in {
+        "deferred_to_roadmap",
+        "accepted-risk",
+        "pending_disposition",
+        "unresolved",
+    }
     durability = (
         "canonical_repo_history"
         if status in durable_route_statuses
         else "roadmap_or_future_work"
         if status == "deferred_to_roadmap"
+        else "accepted_risk"
+        if status == "accepted-risk"
         else "local_chat_only"
         if status == "recorded_chat_only"
         else "local_session_only"
         if status == "recorded_session_only"
         else "none"
-        if status in {"checked_none", "dismissed_with_reason"}
+        if status in {"checked_none", "dismissed_with_reason", "fixed"}
+        else "fingerprinted-local-index"
+        if status == "pending_disposition"
         else "unresolved"
         if status == "unresolved"
         else "not_checked"
@@ -7214,6 +7237,7 @@ def _dogfooding_signal_status_outcome(cache: dict[str, Any]) -> dict[str, Any]:
         "destinations": destinations,
         "dismissal_reason": dismissal_reason,
         "deferred_reason": deferred_reason,
+        "accepted_risk_reason": accepted_risk_reason,
         "closeout_blocked": closeout_blocked,
         "durable_residue": durable_residue,
         "durability": durability,
@@ -7354,9 +7378,9 @@ def _session_improvement_intake_payload(*, target_root: Path, config: WorkspaceC
                 "routing_decisions": indexed_intake["routing_decisions"],
                 "capture_routes": capture_routes,
                 "operational_effect": {
-                    "status": "review-required",
+                    "status": "closeout-blocking",
                     "changes": [],
-                    "disposition": "indexed-candidates-await-review",
+                    "disposition": "material-index-candidates-await-explicit-disposition",
                     "durability": "fingerprinted-local-index",
                 },
                 "repo_wide_existing": {
@@ -7366,7 +7390,10 @@ def _session_improvement_intake_payload(*, target_root: Path, config: WorkspaceC
                     "included_by_default": False,
                     "rule": "Use the bounded defaults selector first; full repo-wide scan can be expensive.",
                 },
-                "claim_boundary": "Indexed candidates are self-admitted for review only; they are not promoted or closeout-authoritative.",
+                "claim_boundary": (
+                    "Material indexed candidates remain diagnostic-only and cannot mutate canonical owners, but broad clean closeout "
+                    "waits for capture, routing, deferral, dismissal, or accepted risk."
+                ),
             }
         return {
             "kind": "workspace-session-improvement-intake/v1",
@@ -7472,10 +7499,28 @@ def _session_index_improvement_intake(*, target_root: Path, config: WorkspaceCon
     candidates = [item for item in _list_payload(detail_page.get("items")) if isinstance(item, dict)]
     if not candidates:
         return None
+    material_candidates = []
+    for candidate in candidates:
+        improvement_signal = _as_dict(candidate.get("improvement_signal"))
+        if improvement_signal and (
+            str(improvement_signal.get("confidence") or "").lower() == "high"
+            or str(improvement_signal.get("recurrence") or "").lower() in {"repeated", "human_confirmed", "recurring"}
+            or int(improvement_signal.get("occurrence_count") or 1) >= 2
+            or improvement_signal.get("applicable_live") is True
+        ):
+            material_candidates.append(candidate)
+    material_candidates.sort(
+        key=lambda candidate: (
+            str(_as_dict(candidate.get("improvement_signal")).get("confidence") or "").lower() == "high",
+            _as_dict(candidate.get("improvement_signal")).get("applicable_live") is True,
+            int(_as_dict(candidate.get("improvement_signal")).get("occurrence_count") or 1),
+        ),
+        reverse=True,
+    )
     signals = []
     decisions = []
     seen_fingerprints: set[str] = set()
-    for candidate in candidates:
+    for candidate in material_candidates[:1]:
         improvement_signal = _as_dict(candidate.get("improvement_signal"))
         fingerprint = (
             str(improvement_signal.get("evidence_fingerprint") or "")
@@ -7490,31 +7535,33 @@ def _session_index_improvement_intake(*, target_root: Path, config: WorkspaceCon
                 "signal": str(
                     improvement_signal.get("symptom") or candidate.get("summary") or candidate.get("id") or "session-log candidate"
                 ),
-                "outcome": "review_required",
-                "routing_decision": "review-before-promotion",
+                "outcome": "pending_disposition",
+                "routing_decision": "capture-route-defer-or-dismiss",
                 "durability": "fingerprinted-local-index",
                 "fingerprint": fingerprint,
-                "reviewed": False,
+                "reviewed": True,
                 "evidence_classes": ["machine_observed"],
                 "evidence_refs": [str(item) for item in _list_payload(improvement_signal.get("evidence_refs")) if str(item).strip()],
             }
         )
         decisions.append(
             {
-                "outcome": "review_required",
-                "decision": "review-before-promotion",
+                "outcome": "pending_disposition",
+                "decision": "capture-route-defer-or-dismiss",
                 "destinations": [],
-                "durable_residue": False,
-                "closeout_blocked": False,
+                "durable_residue": True,
+                "closeout_blocked": True,
                 "fingerprint": fingerprint,
             }
         )
+    if not signals:
+        return None
     return {
         "source": {
             "status": "complete-index",
             "path": str(analysis.get("index_path") or ""),
             "analysis_kind": str(analysis.get("kind") or ""),
-            "self_admission": "bounded session-log candidates",
+            "self_admission": "bounded material session-log candidates",
         },
         "signals": signals,
         "routing_decisions": decisions,
@@ -32858,6 +32905,14 @@ def _dogfooding_signal_status_payload(
         cli_invoke=cli_invoke,
         target_arg=target_arg,
     )
+    indexed_intake = _session_index_improvement_intake(target_root=target_root, config=config) if not cache else None
+    if indexed_intake is not None:
+        cache = {
+            "status": "pending_disposition",
+            "signals": indexed_intake["signals"],
+            "reason": "Material current-session analyzer evidence awaits capture, routing, deferral, or dismissal.",
+            "source": indexed_intake["source"],
+        }
     allowed_statuses = {
         "not_checked",
         "checked_none",
@@ -32869,6 +32924,9 @@ def _dogfooding_signal_status_payload(
         "routed_to_docs",
         "deferred_to_roadmap",
         "dismissed_with_reason",
+        "fixed",
+        "accepted-risk",
+        "pending_disposition",
         "unresolved",
     }
     if cache.get("_cache_error"):
@@ -32890,6 +32948,7 @@ def _dogfooding_signal_status_payload(
         reason = str(cache.get("reason") or "").strip()
         closeout_blocked = bool(outcome["closeout_blocked"])
     signals = cast(list[str], outcome["signals"])
+    signal_records = [item for item in _list_payload(outcome.get("signal_records")) if isinstance(item, dict)]
     destinations = cast(list[str], outcome["destinations"])
     payload = {
         "kind": "agentic-workspace/dogfooding-signal-status/v1",
@@ -32901,8 +32960,10 @@ def _dogfooding_signal_status_payload(
         "destinations": destinations[:5],
         "dismissal_reason": str(outcome["dismissal_reason"]),
         "deferred_reason": str(outcome["deferred_reason"]),
+        "accepted_risk_reason": str(outcome.get("accepted_risk_reason") or ""),
         "signal_count": len(signals),
         "sample_signals": signals[:3],
+        "pending_candidate": signal_records[0] if status == "pending_disposition" and signal_records else {},
         "durability": str(outcome["durability"]),
         "durable_residue": bool(outcome["durable_residue"]),
         "canonical_repo_history": bool(outcome["canonical_repo_history"]),
@@ -32930,6 +32991,28 @@ def _dogfooding_signal_status_payload(
         "allowed_statuses": sorted(allowed_statuses),
         "claim_boundary": "A broad done claim is qualified until dogfooding signals are checked and routed, recorded locally, deferred, dismissed, or left visibly unresolved.",
     }
+    if status == "pending_disposition" and signal_records:
+        candidate = signal_records[0]
+        evidence_args = " ".join(
+            f"--evidence-ref {shlex.quote(str(ref))}" for ref in _list_payload(candidate.get("evidence_refs"))[:3] if str(ref).strip()
+        )
+        capture_command = (
+            "agentic-workspace session-log signal --target ./repo --kind workaround "
+            f"--symptom {shlex.quote(str(candidate.get('symptom') or candidate.get('signal') or 'material session friction'))} "
+            f"--cost {shlex.quote(str(candidate.get('cost') or 'Repeated current-session work adds avoidable operating cost.'))} "
+            f"--owner-hint {shlex.quote(str(candidate.get('suspected_owner') or 'workspace'))} "
+            f"--scope-relation {shlex.quote(str(candidate.get('scope_relation') or 'current-scope'))} "
+            f"--recurrence {shlex.quote(str(candidate.get('recurrence') or 'repeated'))} "
+            f"--likely-remediation {shlex.quote(str(candidate.get('likely_remediation') or 'unknown'))} "
+            f"--evidence-class machine_observed {evidence_args} --format json"
+        )
+        payload["next_action"] = {
+            "id": "capture-material-session-signal",
+            "command": _command_with_cli_invoke(command=capture_command, cli_invoke=cli_invoke, target_arg=target_arg),
+            "evidence_fingerprint": str(candidate.get("evidence_fingerprint") or candidate.get("fingerprint") or ""),
+            "effect": "materialize the same fingerprinted candidate in the existing local improvement-signal cache",
+            "mutation_authorized": False,
+        }
     return {key: value for key, value in payload.items() if value not in ("", [], {})}
 
 
@@ -45729,7 +45812,7 @@ def _task_posture_packet_payload(
     explicit_dogfooding_pressure = any(
         marker in dogfooding_task_text for marker in ("#2046", "self-improvement", "operational effectiveness")
     )
-    obligation_statuses = {"recorded_chat_only", "recorded_session_only", "unresolved"}
+    obligation_statuses = {"recorded_chat_only", "recorded_session_only", "pending_disposition", "unresolved"}
     if dogfooding_signal_status.get("applies_to_current_work") and (
         dogfooding_status in obligation_statuses or (dogfooding_status == "not_checked" and explicit_dogfooding_pressure)
     ):
