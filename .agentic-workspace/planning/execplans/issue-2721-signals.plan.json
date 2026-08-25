@@ -40,11 +40,13 @@
       "owner": "issue-2721-signals"
     },
     "proof_posture": {
-      "state": "current-local",
+      "state": "hosted-proof-passed",
       "refs": [
         "tests/test_workspace_session_logging.py::test_consequential_session_replay_emits_stable_material_candidates",
         "tests/test_workspace_cli.py::test_session_index_intake_selects_one_strongest_material_candidate",
-        ".agentic-workspace/planning/closeout-evidence/issue-2721-supported-host-replay.closeout.json"
+        ".agentic-workspace/planning/closeout-evidence/issue-2721-supported-host-replay.closeout.json",
+        "all five published stack layers passed CI, Security baseline, and PR Semver Label checks before review repair",
+        "review repair preserves partial hierarchy as unknown and reconciles every carried Planning owner to review/merge continuation"
       ]
     },
     "external_posture": {
@@ -61,7 +63,7 @@
       "locator": ""
     }
   ],
-  "next_action": "Wait for hosted checks and independent review on PR #2736, then merge the five-layer stack in order.",
+  "next_action": "Complete refreshed hosted validation for the review repairs, obtain independent approval across PRs #2732-#2736, then merge the stack in order and reconcile child and parent closure from master.",
   "blockers": [
     "None."
   ],

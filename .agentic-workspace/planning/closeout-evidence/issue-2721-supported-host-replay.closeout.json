@@ -10,7 +10,7 @@
     "authority": "lane #2721"
   },
   "claim_level": "lane",
-  "outcome": "All five stack layers have current local implementation proof and a maintained ordinary supported-host replay; external closeout gates remain.",
+  "outcome": "All five published stack layers have focused implementation proof, hosted validation, and a maintained ordinary supported-host replay; independent review and merge gates remain.",
   "contribution": "PRs #2732-#2736 cover trust/correction, bounded decisions/assignment, proof execution/local evidence, external continuity, and consequential session signals for issues #2722-#2731.",
   "evidence_refs": [
     "PR #2732",
@@ -46,7 +46,7 @@
     "diagnostic_boundary": "diagnostics remain candidate evidence only and cannot mutate canonical owners"
   },
   "residual": {
-    "hosted_checks": "pending across the complete stack",
+    "hosted_checks": "CI, Security baseline, and PR Semver Label checks passed across all five published pre-review-repair heads; refreshed checks are required for the review repairs",
     "independent_review": "pending",
     "ordered_merge": "pending",
     "target_reconciliation": "pending after merge"
@@ -56,5 +56,5 @@
     "issue_permission": "do not close #2730 before hosted review and ordered merge",
     "claim_boundary": "local implementation and replay proof only; external follow-through remains"
   },
-  "revision": 2
+  "revision": 3
 }

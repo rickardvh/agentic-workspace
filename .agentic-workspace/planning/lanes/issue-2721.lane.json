@@ -77,7 +77,7 @@
       ],
       "purpose_for_lane": "Close #2730 and satisfy the parent replay by turning material analyzer evidence into one deduplicated disposition that constrains clean closeout while quiet sessions stay quiet.",
       "proof": "Captured 14-command replay, producer-declared purpose coverage, deduplication/disposition fixtures, no-signal quiet path, routed proof, and a fresh supported-host dogfood run.",
-      "residual_after_slice": "Only hosted checks, independent stack review, ordered merge, child closure, and parent closeout remain."
+      "residual_after_slice": "Only refreshed review-repair checks, independent stack approval, ordered merge, child closure, and parent closeout remain."
     }
   ],
   "current_slice": "issue-2721-signals",
@@ -94,12 +94,11 @@
       ".agentic-workspace/planning/closeout-evidence/issue-2721-supported-host-replay.closeout.json"
     ],
     "known_gaps": [
-      "hosted checks across the complete stack",
       "independent stack review",
       "ordered merge and target-branch reconciliation"
     ]
   },
-  "residual_lane_work": "Obtain hosted checks and independent review, then merge in order and reconcile child/parent closure on the target branch.",
+  "residual_lane_work": "Complete refreshed review-repair checks and independent approval, then merge in order and reconcile child/parent closure on the target branch.",
   "lane_to_epic_contribution": "All ten child implementations are represented across five dependency-ordered stack layers with local proof and a maintained combined replay.",
   "parent_close_permission": "do-not-close-parent",
   "closeout_state": {
