@@ -4,14 +4,14 @@
   "title": "Issue 2740 replay and performance proof",
   "owner_level": "slice",
   "lifecycle": "live",
-  "phase": "implementation",
-  "revision": 5,
+  "phase": "closeout",
+  "revision": 8,
   "canonical_core": {
     "requested_outcome": "Reuse admitted task-scoped operating constituent results across unchanged and HEAD-only replay, invalidate only semantic dependants, and prove reduced managed-state construction without weakening proof freshness.",
     "hard_constraints": "Do not create a second proof authority, cache rendered command text, make HEAD a semantic dependency, or broaden proof outside the canonical proof strategy.",
     "agent_may_decide": "The derived-cache schema, lazy construction boundary, deterministic counters, and focused test structure within the confirmed write scope.",
     "escalate_when": "Implementation requires a new proof authority, files outside the confirmed write scope, or a broad proof escalation not selected by canonical strategy.",
-    "next_action": "Record the completed validation evidence, run routed proof, and close out the bounded issue slice.",
+    "next_action": "Commit the accepted proof receipts and replay evidence, push the implementer branch, and hand PR review back to the independent reviewer.",
     "proof_expectations": [
       "uv run --active pytest tests/test_operating_projection_receipt.py tests/test_workspace_cli.py -q",
       "make lint-workspace",
@@ -25,6 +25,7 @@
       "tests/test_operating_projection_receipt.py",
       "tests/test_workspace_cli.py",
       ".release/changes/2740-operating-projection-replay.toml",
+      ".agentic-workspace/planning/closeout-evidence/issue-2740-operating-projection-replay.replay.json",
       ".agentic-workspace/planning/**"
     ],
     "completion_criteria": [
@@ -70,8 +71,15 @@
       "owner": "current-work context"
     },
     "proof_posture": {
-      "state": "pending",
-      "refs": []
+      "state": "passed",
+      "refs": [
+        "b29318e9dbe1ef65f3571293d462d8184f637509",
+        ".agentic-workspace/planning/closeout-evidence/issue-2740-operating-projection-replay.replay.json",
+        "tests/test_operating_projection_receipt.py: 13 passed",
+        "tests/test_workspace_cli.py -k operating_projection_receipt: 1 passed, 422 deselected",
+        "selected-proof:eabdd25ecb1543f0",
+        "proof fingerprint eabdd25ecb1543f0166ac0965673ec6160ce0af6ccc1aae4911dc786fe795d74: sufficient-recorded"
+      ]
     },
     "external_posture": {
       "state": "unobserved",
@@ -80,14 +88,14 @@
     "delegation": {
       "state": "recorded",
       "route": "delegate-implementation",
-      "reason": "Bounded implementer repairs cache dependency identities and replay proof without widening orchestration context."
+      "reason": "Keep bounded review repair with the assigned implementer."
     }
   },
   "references": [
     "https://github.com/rickardvh/agentic-workspace/issues/2740",
     "PR #2745"
   ],
-  "next_action": "Implement lazy admitted constituent-result reuse and deterministic replay/performance coverage, then run focused and routed proof.",
+  "next_action": "Commit accepted proof receipts and replay evidence, push the implementer branch, and hand review back without self-reviewing or merging.",
   "blockers": [
     "None."
   ],
@@ -102,7 +110,14 @@
       "uv run --frozen --active --no-sync mypy src/agentic_workspace/operating_projection_receipt.py",
       "uv run --frozen --active --no-sync python scripts/check/check_generated_command_packages.py --require-node"
     ],
-    "refs": []
+    "refs": [
+      "b29318e9dbe1ef65f3571293d462d8184f637509",
+      ".agentic-workspace/planning/closeout-evidence/issue-2740-operating-projection-replay.replay.json",
+      "tests/test_operating_projection_receipt.py: 13 passed",
+      "tests/test_workspace_cli.py -k operating_projection_receipt: 1 passed, 422 deselected",
+      "selected-proof:eabdd25ecb1543f0",
+      "436 passed in 323.09s; AW proof sufficient-recorded with zero gaps"
+    ]
   },
   "continuation": {
     "owner": "none",
@@ -117,6 +132,7 @@
       ".release/changes/2740-operating-projection-replay.toml",
       ".agentic-workspace/planning/state.toml",
       ".agentic-workspace/planning/execplans/issue-2740-replay.plan.json",
+      ".agentic-workspace/planning/closeout-evidence/issue-2740-operating-projection-replay.replay.json",
       ".agentic-workspace/proof/receipts/**"
     ],
     "forbidden_scope": [

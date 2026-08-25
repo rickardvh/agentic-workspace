@@ -17,10 +17,10 @@
     "feature branch does not close parent/lane lifecycle truth",
     "integration apply is target-branch authoritative"
   ],
-  "expected_subject_revision": "da15bbfbef0c82a4",
-  "expected_planning_revision": "0816d9c8bb938d9b",
-  "created_at": "2026-08-25T19:40:45.050119Z",
-  "updated_at": "2026-08-25T19:40:45.050119Z",
+  "expected_subject_revision": "fcca7f4b82fb0eac",
+  "expected_planning_revision": "cc6c1b81fc6c0875",
+  "created_at": "2026-08-25T20:26:25.997510Z",
+  "updated_at": "2026-08-25T20:26:25.997510Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -36,5 +36,5 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "3b0ac668510da825"
+  "proposal_revision": "129350084d1e3908"
 }
