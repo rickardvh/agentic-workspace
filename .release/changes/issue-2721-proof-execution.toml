@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Execute selected proof as one resumable receipt transaction and verify ignored local configuration without repository residue."

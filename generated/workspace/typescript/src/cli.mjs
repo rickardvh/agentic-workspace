@@ -4938,6 +4938,38 @@ const commandDefinitions = [
         {
           "action": "store_true",
           "flags": [
+            "--execute-selected"
+          ],
+          "help": "Execute and reconcile the currently selected changed-path proof set as one resumable operation.",
+          "name": "execute_selected"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--proof-run-id"
+          ],
+          "help": "Optional existing proof run identity to resume; stale subject identities fail closed.",
+          "name": "proof_run_id"
+        },
+        {
+          "default": "600",
+          "flags": [
+            "--proof-timeout-seconds"
+          ],
+          "help": "Per-command timeout budget for selected proof execution.",
+          "name": "proof_timeout_seconds"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--proof-cancel-file"
+          ],
+          "help": "Optional cancellation sentinel checked before each selected proof command.",
+          "name": "proof_cancel_file"
+        },
+        {
+          "action": "store_true",
+          "flags": [
             "--record-receipt"
           ],
           "help": "Record a compact proof receipt from an actually run validation command.",

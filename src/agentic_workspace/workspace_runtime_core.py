@@ -49269,6 +49269,7 @@ def _tiny_required_proof_commands(answer: dict[str, Any]) -> list[str]:
 PROOF_RECEIPT_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "proof-receipts" / "last.json"
 PROOF_RECEIPT_HISTORY_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "proof-receipts" / "history.jsonl"
 PROOF_REUSE_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "cache" / "proof-reuse.json"
+PROOF_RUNS_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "proof-receipts" / "runs"
 
 
 def _proof_receipt_result_failed(result: str) -> bool:
@@ -49918,6 +49919,311 @@ def _validated_proof_receipt_inputs(*, command: str, result: str) -> tuple[str, 
     return command, result
 
 
+def _proof_execution_subject(*, target_root: Path, changed_paths: list[str], required_commands: list[str]) -> dict[str, Any]:
+    normalized_paths = _normalize_changed_paths(changed_paths)
+    machine_local = bool(normalized_paths) and all(path == WORKSPACE_LOCAL_CONFIG_PATH.as_posix() for path in normalized_paths)
+    identity_paths = list(normalized_paths)
+    if machine_local and WORKSPACE_CONFIG_PATH.as_posix() not in identity_paths:
+        identity_paths.append(WORKSPACE_CONFIG_PATH.as_posix())
+    path_fingerprints = {path: _file_sha256(target_root / path) or "missing" for path in identity_paths}
+    payload = {
+        "changed_paths": normalized_paths,
+        "identity_paths": identity_paths,
+        "path_fingerprints": path_fingerprints,
+        "required_commands": required_commands,
+        "runtime": {
+            "agentic_workspace": __version__,
+            "python": f"{sys.version_info.major}.{sys.version_info.minor}",
+        },
+        "claim_scope": "machine-local-effective-config" if machine_local else "repository-selected-proof",
+    }
+    payload["revision"] = "sha256:" + hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+    return payload
+
+
+def _proof_execution_result_payload(
+    *,
+    run: dict[str, Any],
+    selection: dict[str, Any],
+    status: str,
+) -> dict[str, Any]:
+    run_receipt_ref = (PROOF_RUNS_RELATIVE_PATH / str(run["run_id"]) / "run.json").as_posix()
+    command_records = [item for item in _list_payload(run.get("commands")) if isinstance(item, dict)]
+    record_by_command = {str(item.get("command") or ""): item for item in command_records}
+    required_commands = [str(item) for item in _list_payload(run.get("required_commands"))]
+    selected_lanes = [item for item in _list_payload(selection.get("selected_lanes")) if isinstance(item, dict)]
+    owner_coverage = []
+    for lane in selected_lanes:
+        lane_commands = [str(item) for item in _list_payload(lane.get("required_commands")) if str(item).strip()]
+        if not lane_commands:
+            continue
+        passed = [command for command in lane_commands if record_by_command.get(command, {}).get("status") == "passed"]
+        owner_coverage.append(
+            {
+                "owner": str(lane.get("id") or "unknown"),
+                "status": "satisfied" if len(passed) == len(lane_commands) else "incomplete",
+                "required_count": len(lane_commands),
+                "passed_count": len(passed),
+            }
+        )
+    passed_count = sum(record_by_command.get(command, {}).get("status") == "passed" for command in required_commands)
+    failure_records = [item for item in command_records if item.get("status") in {"failed", "timeout", "cancelled"}]
+    commands_complete = bool(required_commands) and passed_count == len(required_commands)
+    selection_blockers: list[str] = []
+    if _as_dict(selection.get("route_refinement_required")).get("status") == "required":
+        selection_blockers.append("route-refinement-required")
+    satisfied_owners = {str(item.get("owner") or "") for item in owner_coverage if item.get("status") == "satisfied"}
+    unresolved_manual_obligations = [
+        item
+        for item in _list_payload(selection.get("manual_proof_obligations"))
+        if isinstance(item, dict) and str(item.get("id") or "") not in satisfied_owners
+    ]
+    if unresolved_manual_obligations:
+        selection_blockers.append("manual-proof-obligations")
+    complete = commands_complete and not selection_blockers
+    local_scope = _as_dict(run.get("subject")).get("claim_scope") == "machine-local-effective-config"
+    if complete and local_scope:
+        claim_boundary = {
+            "status": "effective-local-configuration-verified",
+            "scope": "machine-local",
+            "completion_claim_allowed": True,
+            "shared_repository_claim_allowed": False,
+            "pr_release_or_parent_claim_allowed": False,
+            "rule": "Current local evidence verifies only the effective machine-local configuration; it cannot satisfy shared repository, PR, release, or parent claims.",
+        }
+    elif complete:
+        claim_boundary = {
+            "status": "selected-proof-executed",
+            "scope": "repository-selected-proof",
+            "completion_claim_allowed": False,
+            "shared_repository_claim_allowed": True,
+            "rule": "Selected proof execution is current evidence; completion still requires intent and closeout reconciliation.",
+        }
+    else:
+        claim_boundary = {
+            "status": "blocked",
+            "scope": "machine-local" if local_scope else "repository-selected-proof",
+            "completion_claim_allowed": False,
+            "shared_repository_claim_allowed": False,
+            "rule": "Failed, timed-out, cancelled, or incomplete selected proof cannot authorize a completion claim.",
+        }
+    next_action = (
+        {"action": "reconcile-closeout", "command": "agentic-workspace planning closeout --target . --proof-from last --format json"}
+        if complete and not local_scope
+        else {"action": "continue-with-verified-local-config", "command": None}
+        if complete
+        else {
+            "action": "repair-proof-route",
+            "command": "agentic-workspace proof --target . --changed <paths> --select route_refinement_required,manual_proof_obligations --format json",
+        }
+        if commands_complete and selection_blockers
+        else {
+            "action": "resume-selected-proof",
+            "command": f"agentic-workspace proof --target . --changed <paths> --execute-selected --proof-run-id {run['run_id']} --format json",
+        }
+    )
+    return {
+        "kind": "agentic-workspace/proof-execution-result/v1",
+        "status": "completed-with-unresolved-obligations" if commands_complete and selection_blockers else status,
+        "outcome": "passed"
+        if complete
+        else "blocked"
+        if commands_complete
+        else str(failure_records[-1].get("status") if failure_records else "incomplete"),
+        "run": {
+            "id": run["run_id"],
+            "attempt": run.get("attempt", 1),
+            "subject_revision": _as_dict(run.get("subject")).get("revision"),
+            "receipt_ref": run_receipt_ref,
+        },
+        "coverage": {
+            "required_count": len(required_commands),
+            "passed_count": passed_count,
+            "remaining_count": max(0, len(required_commands) - passed_count),
+            "owners": owner_coverage,
+            "selection_obligations": selection_blockers,
+        },
+        "failures": [
+            {"command_id": item.get("command_id"), "status": item.get("status"), "exit_code": item.get("exit_code")}
+            for item in failure_records
+        ],
+        "claim_boundary": claim_boundary,
+        "next_action": next_action,
+        "detail_routes": {
+            "run_receipt": run_receipt_ref,
+            "command_receipts": [str(item.get("receipt_ref") or "") for item in command_records],
+            "resume": next_action.get("command"),
+        },
+        "persistence": {
+            "owner": ".agentic-workspace/local/proof-receipts/runs",
+            "repository_residue": False,
+            "delta_shape": "one bounded run receipt plus individually addressable local command receipts",
+        },
+    }
+
+
+def _execute_selected_proof_payload(
+    *,
+    target_root: Path,
+    changed_paths: list[str],
+    task_text: str | None,
+    run_id: str,
+    timeout_seconds: str,
+    cancel_file: str,
+    dry_run: bool,
+) -> dict[str, Any]:
+    selection = _proof_selection_for_changed_paths(
+        changed_paths=changed_paths,
+        target_root=target_root,
+        task_text=task_text,
+        include_durable_intent=False,
+    )
+    required_commands = [str(item) for item in _list_payload(selection.get("required_commands")) if str(item).strip()]
+    if not required_commands:
+        return {
+            "kind": "agentic-workspace/proof-execution-result/v1",
+            "status": "blocked-no-executable-proof",
+            "outcome": "blocked",
+            "claim_boundary": {"status": "blocked", "completion_claim_allowed": False},
+            "next_action": {
+                "action": "repair-proof-route",
+                "command": "agentic-workspace proof --target . --changed <paths> --format json",
+            },
+        }
+    try:
+        timeout = float(timeout_seconds or 600)
+    except ValueError as exc:
+        raise WorkspaceUsageError("--proof-timeout-seconds must be numeric.") from exc
+    if timeout <= 0:
+        raise WorkspaceUsageError("--proof-timeout-seconds must be greater than zero.")
+    subject = _proof_execution_subject(target_root=target_root, changed_paths=changed_paths, required_commands=required_commands)
+    requested_run_id = str(run_id or "").strip()
+    if requested_run_id and not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}", requested_run_id):
+        raise WorkspaceUsageError("--proof-run-id must be a safe 1-64 character identifier.")
+    effective_run_id = requested_run_id or str(subject["revision"]).removeprefix("sha256:")[:20]
+    run_root = target_root / PROOF_RUNS_RELATIVE_PATH / effective_run_id
+    run_path = run_root / "run.json"
+    existing: dict[str, Any] = {}
+    if run_path.is_file():
+        try:
+            loaded = json.loads(run_path.read_text(encoding="utf-8"))
+            existing = loaded if isinstance(loaded, dict) else {}
+        except (OSError, json.JSONDecodeError):
+            existing = {}
+    existing_revision = str(_as_dict(existing.get("subject")).get("revision") or "")
+    if existing and existing_revision != subject["revision"]:
+        return {
+            "kind": "agentic-workspace/proof-execution-result/v1",
+            "status": "stale-subject-blocked",
+            "outcome": "blocked",
+            "run": {
+                "id": effective_run_id,
+                "recorded_subject_revision": existing_revision,
+                "current_subject_revision": subject["revision"],
+            },
+            "claim_boundary": {
+                "status": "blocked",
+                "completion_claim_allowed": False,
+                "rule": "A named run cannot admit results for a changed proof subject.",
+            },
+            "next_action": {
+                "action": "start-current-subject-run",
+                "command": "agentic-workspace proof --target . --changed <paths> --execute-selected --format json",
+            },
+        }
+    run = existing or {
+        "kind": "agentic-workspace/proof-execution-run/v1",
+        "run_id": effective_run_id,
+        "subject": subject,
+        "required_commands": required_commands,
+        "commands": [],
+        "attempt": 0,
+        "created_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+    }
+    records = [item for item in _list_payload(run.get("commands")) if isinstance(item, dict)]
+    passed_commands = {str(item.get("command") or "") for item in records if item.get("status") == "passed"}
+    if len(passed_commands.intersection(required_commands)) == len(required_commands):
+        return _proof_execution_result_payload(run=run, selection=selection, status="reused-fresh-evidence")
+    if dry_run:
+        run["attempt"] = int(run.get("attempt") or 0) + 1
+        return _proof_execution_result_payload(run=run, selection=selection, status="dry-run")
+    cancel_path: Path | None = None
+    if cancel_file:
+        candidate = Path(cancel_file)
+        cancel_path = candidate if candidate.is_absolute() else target_root / candidate
+    run["attempt"] = int(run.get("attempt") or 0) + 1
+    for index, command in enumerate(required_commands, start=1):
+        if command in passed_commands:
+            continue
+        command_id = hashlib.sha256(command.encode("utf-8")).hexdigest()[:16]
+        if cancel_path is not None and cancel_path.exists():
+            cancelled_receipt = {
+                "kind": "agentic-workspace/proof-execution-command-receipt/v1",
+                "command_id": command_id,
+                "command": command,
+                "status": "cancelled",
+                "exit_code": None,
+                "attempt": run["attempt"],
+                "subject_revision": subject["revision"],
+                "receipt_ref": (PROOF_RUNS_RELATIVE_PATH / effective_run_id / f"{command_id}.json").as_posix(),
+            }
+            _write_json_file(
+                destination=target_root / str(cancelled_receipt["receipt_ref"]),
+                payload=cancelled_receipt,
+                dry_run=False,
+            )
+            records = [item for item in records if str(item.get("command") or "") != command]
+            records.append(cancelled_receipt)
+            break
+        print(f"[proof {index}/{len(required_commands)}] {command}", file=sys.stderr, flush=True)
+        started = time.monotonic()
+        try:
+            completed = run_trusted_shell(
+                command,
+                trust_source="checked-repository-proof-route",
+                admitted=True,
+                cwd=target_root,
+                timeout=timeout,
+            )
+            status = "passed" if completed.returncode == 0 else "failed"
+            exit_code: int | None = completed.returncode
+            stdout = completed.stdout or ""
+            stderr = completed.stderr or ""
+        except subprocess.TimeoutExpired as exc:
+            status = "timeout"
+            exit_code = None
+            stdout = str(exc.stdout or "")
+            stderr = str(exc.stderr or "")
+        receipt_ref = PROOF_RUNS_RELATIVE_PATH / effective_run_id / f"{command_id}.json"
+        receipt = {
+            "kind": "agentic-workspace/proof-execution-command-receipt/v1",
+            "command_id": command_id,
+            "command": command,
+            "status": status,
+            "exit_code": exit_code,
+            "duration_seconds": round(time.monotonic() - started, 3),
+            "attempt": run["attempt"],
+            "subject_revision": subject["revision"],
+            "stdout_tail": stdout[-2000:],
+            "stderr_tail": stderr[-2000:],
+            "receipt_ref": receipt_ref.as_posix(),
+        }
+        _write_json_file(destination=target_root / receipt_ref, payload=receipt, dry_run=False)
+        records = [item for item in records if str(item.get("command") or "") != command]
+        records.append({key: value for key, value in receipt.items() if key not in {"stdout_tail", "stderr_tail"}})
+        run["commands"] = records
+        run["updated_at"] = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+        _write_json_file(destination=run_path, payload=run, dry_run=False)
+        if status != "passed":
+            break
+    run["commands"] = records
+    run["updated_at"] = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    _write_json_file(destination=run_path, payload=run, dry_run=False)
+    final_passed = {str(item.get("command") or "") for item in records if item.get("status") == "passed"}
+    result_status = "completed" if len(final_passed.intersection(required_commands)) == len(required_commands) else "partial"
+    return _proof_execution_result_payload(run=run, selection=selection, status=result_status)
+
+
 def _emit_proof_next_decision_text(payload: dict[str, Any]) -> None:
     next_action = _as_dict(payload.get("next"))
     claim = _as_dict(payload.get("claim_boundary"))
@@ -49950,6 +50256,10 @@ def _emit_proof(
     task_text: str | None = None,
     profile: str = "full",
     select: str | None = None,
+    execute_selected: bool = False,
+    proof_run_id: str = "",
+    proof_timeout_seconds: str = "600",
+    proof_cancel_file: str = "",
     record_receipt: bool = False,
     receipt_command: str = "",
     receipt_result: str = "",
@@ -49987,6 +50297,24 @@ def _emit_proof(
         return int(prevalidation_error["exit_status"])
     if inventory_payload := _selector_inventory_selected_payload(select=select, source_command="proof"):
         _emit_payload(payload=inventory_payload, format_name=format_name)
+        return 0
+    if execute_selected:
+        if not normalized_paths:
+            raise WorkspaceUsageError("--execute-selected requires at least one --changed path.")
+        if route or current_only or record_receipt or route_repair_mode:
+            raise WorkspaceUsageError("--execute-selected cannot be combined with --route, --current, --record-receipt, or route repair.")
+        payload = _execute_selected_proof_payload(
+            target_root=target_root,
+            changed_paths=normalized_paths,
+            task_text=task_text,
+            run_id=proof_run_id,
+            timeout_seconds=proof_timeout_seconds,
+            cancel_file=proof_cancel_file,
+            dry_run=dry_run,
+        )
+        if select:
+            payload = _select_payload_fields(payload, select=select, source_command="proof")
+        _emit_payload(payload=payload, format_name=format_name)
         return 0
     if route_repair_mode:
         from agentic_workspace.workspace_runtime_proof import _proof_route_repair_operation_payload
