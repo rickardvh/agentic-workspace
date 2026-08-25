@@ -45,6 +45,14 @@
             "name": "task_text"
           },
           {
+            "action": "store_true",
+            "flags": [
+              "--verbose"
+            ],
+            "help": "Emit full protocol, scenario, route, and evidence inventories.",
+            "name": "verbose"
+          },
+          {
             "choices": [
               "text",
               "json"
@@ -156,6 +164,9 @@
             },
             "task_text": {
               "value": "task_text"
+            },
+            "verbose": {
+              "value": "verbose"
             }
           },
           "primitive": "verification.report.load"
@@ -176,6 +187,11 @@
           "arg": "task_text",
           "default": "",
           "name": "task_text"
+        },
+        {
+          "arg": "verbose",
+          "default": false,
+          "name": "verbose"
         },
         {
           "arg": "format",

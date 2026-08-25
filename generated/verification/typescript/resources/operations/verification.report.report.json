@@ -34,6 +34,11 @@
       "source": "cli-option"
     },
     {
+      "name": "verbose",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
       "name": "format",
       "required": false,
       "source": "cli-option"
@@ -65,6 +70,9 @@
           },
           "task_text": {
             "value": "task_text"
+          },
+          "verbose": {
+            "value": "verbose"
           }
         },
         "description": "Load the package-owned Verification report projection.",

@@ -532,6 +532,8 @@ const WORKSPACE_SELECTOR_DESCRIPTORS = {
     'config_path',
     'modules',
     'mixed_agent',
+    'mixed_agent.effective_orchestration',
+    'mixed_agent.assignment_policy',
     'mixed_agent.runtime_resolution',
     'assurance',
     'config_enforcement',
@@ -594,6 +596,7 @@ const WORKSPACE_SELECTOR_DESCRIPTORS = {
     'proof_narrowness',
     'proof_decision',
     'proof_route_maintenance',
+    'learned_proof_route_model',
     'proof_next_decision',
     'proof_obligations',
     'proof_command_tiers',
@@ -622,6 +625,9 @@ const WORKSPACE_SELECTOR_DESCRIPTORS = {
 const WORKSPACE_DEPRECATED_SELECTOR_REPLACEMENTS = {
   config: {
     'workspace.feature_tier': 'workspace.enabled_modules',
+  },
+  proof: {
+    'target_proof_capabilities': 'proof_next_decision',
   },
 };
 
@@ -759,6 +765,11 @@ function workspaceSelectorReplacements(sourceCommand, selectors) {
   return Object.fromEntries(entries);
 }
 
+function workspaceSelectorReplacementCommand(sourceCommand, selectors, replacements) {
+  const corrected = [...new Set(selectors.map((selector) => replacements[selector] ?? selector))];
+  return `agentic-workspace ${sourceCommand} --target . --select ${corrected.join(',')} --format json`;
+}
+
 function workspaceSelectorPrevalidationError(select, sourceCommand) {
   const request = workspaceSelectorRequest(select, sourceCommand);
   if (request.error) return request.error;
@@ -802,9 +813,12 @@ function workspaceSelectorPrevalidationError(select, sourceCommand) {
     corrected_action: inventoryCommand,
   };
   if (Object.keys(replacementSelectors).length) {
+    const replacementCommand = workspaceSelectorReplacementCommand(sourceCommand, request.selectors, replacementSelectors);
     payload.deprecated_selectors = Object.keys(replacementSelectors);
     payload.replacement_selectors = replacementSelectors;
-    payload.replacement_rule = 'Deprecated selectors are rejected atomically with a bounded replacement hint.';
+    payload.replacement_command = replacementCommand;
+    payload.corrected_action = replacementCommand;
+    payload.replacement_rule = 'Deprecated selectors are rejected atomically with their exact current selector and copyable replacement command.';
   }
   return fitWorkspaceSelectorError(payload);
 }

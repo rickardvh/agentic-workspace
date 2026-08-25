@@ -141,6 +141,13 @@
       "source_ref": "proof://receipts/459f572c4804e353",
       "status": "current"
     },
+    "45feb3e24cb6cd76": {
+      "path": "45feb3e24cb6cd76.json",
+      "producer_class": "aw-proof",
+      "revision": "2026-08-25T08:20:05+00:00",
+      "source_ref": "proof://receipts/45feb3e24cb6cd76",
+      "status": "current"
+    },
     "463fe544aba5a5a3": {
       "path": "463fe544aba5a5a3.json",
       "producer_class": "aw-proof",
@@ -629,6 +636,13 @@
       "producer_class": "aw-proof",
       "revision": "2026-08-24T19:00:09+00:00",
       "source_ref": "proof://receipts/eafa8aabe0c16175",
+      "status": "current"
+    },
+    "ee35005a46121867": {
+      "path": "ee35005a46121867.json",
+      "producer_class": "aw-proof",
+      "revision": "2026-08-25T08:19:57+00:00",
+      "source_ref": "proof://receipts/ee35005a46121867",
       "status": "current"
     },
     "ee60beb375adb70a": {

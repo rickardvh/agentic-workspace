@@ -37,6 +37,7 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'target': getattr(args, 'target', None),
                 'changed_paths': getattr(args, 'changed_paths', []),
                 'task_text': getattr(args, 'task_text', ''),
+                'verbose': getattr(args, 'verbose', False),
                 'format': getattr(args, 'format', 'text'),
         },
     )
@@ -55,6 +56,7 @@ def run_operation_callable(operation: dict[str, Any], values: Mapping[str, Any])
                 'target': values.get('target', None),
                 'changed_paths': values.get('changed_paths', []),
                 'task_text': values.get('task_text', ''),
+                'verbose': values.get('verbose', False),
                 'format': values.get('format', 'text'),
             },
         ).get('result')
@@ -100,4 +102,4 @@ def _handle_path_target_root_resolve(values: dict[str, Any], _arguments: dict[st
 def _handle_verification_report_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
     from .verification_runtime import verification_report_payload
 
-    return verification_report_payload(changed_paths=values.get('changed_paths'), target_root=values.get('target_root'), task_text=values.get('task_text'))
+    return verification_report_payload(changed_paths=values.get('changed_paths'), target_root=values.get('target_root'), task_text=values.get('task_text'), verbose=values.get('verbose'))

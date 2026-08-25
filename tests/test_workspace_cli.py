@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tomllib
 from datetime import date, datetime, timedelta, timezone
+from types import SimpleNamespace
 from typing import Any
 
 from repo_verification_bootstrap import runtime_primitives as verification_runtime_primitives
@@ -18,6 +19,103 @@ from tests.workspace_cli_support import *
 
 from agentic_workspace import session_logging
 from agentic_workspace.config import workspace_pointer_block
+
+
+def test_active_external_backed_owner_routes_refresh_then_reconciliation(tmp_path: Path) -> None:
+    cache = tmp_path / ".agentic-workspace/local/cache/external-intent-evidence.json"
+    active_summary = {
+        "active_execplan": ".agentic-workspace/planning/execplans/external-owner.plan.json",
+        "active_owner_refs": ["#42", "issue-42"],
+    }
+    config = SimpleNamespace(cli_invoke="uv run agentic-workspace")
+    planning_revision = {"revision_id": "revision-42"}
+    item = {
+        "id": "#42",
+        "status": "closed",
+        "status_class": "completed",
+        "observation_id": "github:issue:42:current",
+        "external_revision": "current",
+        "freshness": {"status": "current", "expires_at": "2099-01-01T00:00:00+00:00"},
+    }
+    _write(cache, json.dumps({"kind": "planning-external-intent-evidence/v1", "items": [item]}))
+
+    current = workspace_runtime_planning._active_owner_external_reconciliation(
+        target_root=tmp_path,
+        active_summary=active_summary,
+        config=config,
+        planning_revision=planning_revision,
+    )
+
+    assert current["status"] == "reconciliation-required"
+    assert current["reason_code"] == "external-owner-completed"
+    assert "planning reconcile --target . --preview" in current["reconcile_command"]
+    assert "--expect-planning-revision revision-42" in current["reconcile_command"]
+
+    item["freshness"] = {"status": "current", "expires_at": "2000-01-01T00:00:00+00:00"}
+    _write(cache, json.dumps({"kind": "planning-external-intent-evidence/v1", "items": [item]}))
+    stale = workspace_runtime_planning._active_owner_external_reconciliation(
+        target_root=tmp_path,
+        active_summary=active_summary,
+        config=config,
+        planning_revision=planning_revision,
+    )
+
+    assert stale["status"] == "refresh-required"
+    assert stale["reason_code"] == "external-observation-stale"
+    assert stale["refresh_command"].startswith("uv run agentic-workspace external-intent refresh-github")
+
+    assert workspace_runtime_planning._active_owner_external_reconciliation(
+        target_root=tmp_path,
+        active_summary={"active_execplan": active_summary["active_execplan"], "active_owner_refs": []},
+        config=config,
+        planning_revision=planning_revision,
+    ) == {"status": "not-applicable"}
+
+
+def test_planning_route_decision_makes_external_owner_recovery_copyable() -> None:
+    common = {
+        "status": "external-observation-stale",
+        "task_relation": "continues-selected-owner",
+        "required_transition": "reconcile",
+        "active_execplan": ".agentic-workspace/planning/execplans/owner.plan.json",
+        "external_refresh_command": "aw external-intent refresh-github --target . --state all --storage cache --format json",
+        "reconciliation_preview_command": "aw planning reconcile --target . --preview --expect-planning-revision rev-1 --format json",
+        "route_inputs": {
+            "task_binding": {"mode": "mutation", "identity": "task-1"},
+            "owner": {"ref": ".agentic-workspace/planning/execplans/owner.plan.json", "lifecycle": "live"},
+            "admitted_external_observation": {
+                "status": "refresh-required",
+                "matched_observation_ids": ["github:issue:42:old"],
+                "external_revisions": ["old"],
+            },
+        },
+    }
+    stale = workspace_runtime_planning._planning_route_decision_payload(
+        {**common, "owner_posture": "externally-stale"}, planning_revision={"revision_id": "rev-1"}
+    )
+    assert stale["next_safe_action"]["action"] == "refresh-external-evidence"
+    assert stale["next_safe_action"]["command"] == common["external_refresh_command"]
+    assert stale["implementation_allowed"] is False
+    assert stale["action_identity"]["external_observation_revision"]
+
+    changed = workspace_runtime_planning._planning_route_decision_payload(
+        {
+            **common,
+            "status": "external-owner-completed",
+            "owner_posture": "external-conflict",
+            "route_inputs": {
+                **common["route_inputs"],
+                "admitted_external_observation": {
+                    "status": "reconciliation-required",
+                    "matched_observation_ids": ["github:issue:42:closed"],
+                    "external_revisions": ["closed"],
+                },
+            },
+        },
+        planning_revision={"revision_id": "rev-1"},
+    )
+    assert changed["next_safe_action"]["action"] == "compile-planning-reconciliation-proposal"
+    assert changed["next_safe_action"]["command"] == common["reconciliation_preview_command"]
 
 
 def test_successful_completion_cost_discovers_manifest_indexed_custom_output_root(tmp_path: Path) -> None:
@@ -977,7 +1075,12 @@ def test_generated_selector_validation_matches_host_contract_for_canonical_bound
         }
     if case_name == "deprecated_replacement":
         assert host_payload["replacement_selectors"] == {"workspace.feature_tier": "workspace.enabled_modules"}
-        assert host_payload["replacement_rule"] == "Deprecated selectors are rejected atomically with a bounded replacement hint."
+        assert host_payload["replacement_rule"] == (
+            "Deprecated selectors are rejected atomically with their exact current selector and copyable replacement command."
+        )
+        assert host_payload["replacement_command"] == (
+            "agentic-workspace config --target . --select workspace.enabled_modules --format json"
+        )
 
 
 @pytest.mark.parametrize(
@@ -9360,7 +9463,7 @@ def test_implement_routes_post_closeout_archive_residue_as_verification(tmp_path
     assert gate["changed_path_facts"]["archived_planning_residue"]["status"] == "completed-closeout-residue"
 
 
-def test_start_does_not_force_unrelated_active_plan_closeout_for_independent_task(tmp_path: Path, capsys) -> None:
+def test_start_reconciles_current_external_completion_before_independent_task(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
     capsys.readouterr()
@@ -9383,10 +9486,12 @@ def test_start_does_not_force_unrelated_active_plan_closeout_for_independent_tas
     payload = json.loads(capsys.readouterr().out)
     decision = payload["decision_packet"]
 
-    assert decision["action"]["id"] == "inspect-current-task"
+    assert decision["action"]["id"] == "compile-planning-reconciliation-proposal"
+    assert "planning reconcile --target . --preview" in decision["action"]["command"]
     assert decision["owner"]["task_relation"] == "bounded-independent"
-    assert decision["owner"]["required_transition"] == "none"
-    assert decision["effects"]["implementation_allowed"] is True
+    assert decision["owner"]["owner_posture"] == "external-conflict"
+    assert decision["owner"]["required_transition"] == "reconcile"
+    assert decision["effects"]["implementation_allowed"] is False
     assert "claim-active-plan-progress" in decision["effects"]["blocked_claims"]
 
 
@@ -10221,6 +10326,7 @@ def test_route_decision_consumer_profiles_share_one_authority_and_recovery_matri
         "selected_owner_revision",
         "selected_owner_lifecycle",
         "selected_owner_projection_status",
+        "external_observation_revision",
         "task_binding_identity",
         "mutation_baseline_id",
         "reconciliation_proposal_revision",
@@ -13972,7 +14078,51 @@ def test_start_required_skill_projection_survives_compact_catalog(tmp_path: Path
     )
     payload = json.loads(capsys.readouterr().out)
     assert payload["decision_packet"]["action"]["skill"] == "planning-reporting"
-    assert "skill_detail" in payload["decision_packet"]["detail_routes"]
+    assert payload["decision_packet"]["action"]["skill_route"] == {
+        "id": "planning-reporting",
+        "path": ".agentic-workspace/planning/skills/planning-reporting/SKILL.md",
+        "owner": "agentic-planning",
+        "module": "planning",
+    }
+    assert "agentic-workspace skills" in payload["decision_packet"]["detail_routes"]["skills"]
+
+
+def test_start_surfaces_transport_auto_without_binding_best_fit(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    (tmp_path / ".agentic-workspace/config.local.toml").write_text(
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[delegation]",
+                'mode = "auto"',
+                'execution_role = "ordinary-executor"',
+                'assignment_policy = "local-preferred"',
+                "",
+                "[safety]",
+                "safe_to_auto_run_commands = true",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
+    config_payload = json.loads(capsys.readouterr().out)
+    assert config_payload["mixed_agent"]["effective_orchestration"]["status"] == "transport-auto-local-assignment"
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Fix a typo", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert "effective_orchestration" in payload, payload.keys()
+    posture = payload["effective_orchestration"]
+    assert posture["status"] == "transport-auto-local-assignment"
+    assert "binding best-fit orchestration is not enabled" in posture["summary"]
+    assert posture["assignment"] == {
+        "execution_role": "ordinary-executor",
+        "policy": "local-preferred",
+        "authority": "local",
+    }
 
 
 def test_start_select_surfaces_memory_decision_packet(tmp_path: Path, capsys) -> None:

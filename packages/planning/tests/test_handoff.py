@@ -742,6 +742,42 @@ def test_targeted_execplan_writer_rejects_phase_only_terminal_projection(tmp_pat
     assert state["todo"]["active_items"][0]["id"] == "lane-plan"
 
 
+def test_targeted_execplan_writer_allows_live_phase_reconciliation(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    plan_path = tmp_path / ".agentic-workspace/planning/execplans/active-plan.plan.json"
+    _write_live_execplan_state(tmp_path, item_id="active-plan")
+    _write_execplan_record(plan_path, item_id="active-plan", status="in-progress")
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    record["revision"] = 1
+    record["phase"] = "shaping"
+    plan_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    revision = planning_revision(tmp_path)["revision_id"]
+
+    applied = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="active-plan",
+        patch={
+            "phase": "validation",
+            "next_action": "await independent review",
+            "proof": {"summary": "Implementation revision abc123; independent review pending."},
+        },
+        expected_planning_revision=revision,
+        expected_owner_revision=1,
+        apply=True,
+    )
+
+    assert applied["status"] == "applied"
+    updated = json.loads(plan_path.read_text(encoding="utf-8"))
+    assert installer_mod._execplan_lifecycle(updated) == "live"
+    assert updated["phase"] == "validation"
+    assert updated["canonical_core"]["next_action"] == "await independent review"
+    state = installer_mod._read_state_from_toml(tmp_path)
+    assert state["todo"]["active_items"][0]["status"] == "active"
+    assert state["todo"]["active_items"][0]["phase"] == "validation"
+    assert state["todo"]["active_items"][0]["next_action"] == "await independent review"
+    assert state["todo"]["active_items"][0]["proof"] == "Implementation revision abc123; independent review pending."
+
+
 def test_targeted_execplan_writer_rejects_unsupported_parent_projection(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     plan_path = tmp_path / ".agentic-workspace/planning/execplans/active-plan.plan.json"
@@ -1339,4 +1375,7 @@ def test_planning_handoff_command_emits_json(tmp_path: Path, capsys) -> None:
     assert exit_code == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["kind"] == "planning-handoff/v1"
+    assert payload["profile"] == "decision-envelope"
     assert payload["handoff_contract"]["status"] == "present"
+    assert payload["construction"]["historical_sources_loaded"] is False
+    assert payload["detail_routes"]["exact_contract"].endswith("--select handoff_contract --format json")

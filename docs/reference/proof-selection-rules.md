@@ -16,6 +16,7 @@ Rules for selecting validation lanes from changed paths and task scope.
 | `lane_proof_kinds` | object | no |  | Optional proof-kind classifications keyed by validation lane id. |  |  |
 | `lane_proof_kinds.<name>` | enum `"diff-review"`, `"surface-check"`, `"targeted-test"`, `"full-test"` | no |  | Proof kind for one validation lane. |  |  |
 | `broad_acceptance_lanes` | array of string | no |  | Lanes where broad proof is required when selected, even if the lane remains a targeted-test kind. |  |  |
+| `owner_baseline_composition` | array of object | no |  | Proof-authority compositions that retain an affected owner's baseline only when the overall changed scope matches that owner. |  |  |
 | `docs_only_reducer` | object | no |  | Second-stage classifier that can downgrade docs-only path-prefix matches to review proof. |  |  |
 | `docs_only_reducer.lane` | string | yes |  | Lane to use after reducing an eligible docs-only match. |  |  |
 | `docs_only_reducer.eligibility` | const `"whole-source-lane"` | yes |  | Require every changed path in the matched source lane to be reducer-eligible before replacing executable proof with docs review. |  |  |

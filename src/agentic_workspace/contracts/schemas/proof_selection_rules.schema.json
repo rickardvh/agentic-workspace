@@ -83,6 +83,43 @@
       },
       "description": "Lanes where broad proof is required when selected, even if the lane remains a targeted-test kind."
     },
+    "owner_baseline_composition": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["when_selected", "affected_scope", "lanes", "reason"],
+        "properties": {
+          "when_selected": {"type": "string"},
+          "affected_scope": {
+            "type": "object",
+            "properties": {
+              "exact": {
+                "type": "array",
+                "items": {"type": "string"}
+              },
+              "prefixes": {
+                "type": "array",
+                "items": {"type": "string"}
+              }
+            },
+            "anyOf": [
+              {"required": ["exact"]},
+              {"required": ["prefixes"]}
+            ],
+            "additionalProperties": false,
+            "description": "Changed-scope paths that establish the semantic owner whose baseline must complement the selected feature lane."
+          },
+          "lanes": {
+            "type": "array",
+            "minItems": 1,
+            "items": {"type": "string"}
+          },
+          "reason": {"type": "string"}
+        },
+        "additionalProperties": false
+      },
+      "description": "Proof-authority compositions that retain an affected owner's baseline only when the overall changed scope matches that owner."
+    },
     "docs_only_reducer": {
       "type": "object",
       "required": [

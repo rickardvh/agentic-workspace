@@ -539,7 +539,7 @@ def _handle_planning_bootstrap_doctor_load(values: dict[str, Any], _arguments: d
 def _handle_planning_handoff_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
     from .planning_installer import planning_handoff
 
-    return planning_handoff(target=values.get('target'))
+    return planning_handoff(target=values.get('target'), verbose=values.get('verbose'))
 
 
 def _handle_planning_init_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:

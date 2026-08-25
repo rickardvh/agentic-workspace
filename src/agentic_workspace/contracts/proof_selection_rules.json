@@ -16,6 +16,23 @@
     "generated_command_packages",
     "workspace_cli"
   ],
+  "owner_baseline_composition": [
+    {
+      "when_selected": "contract_tooling",
+      "affected_scope": {
+        "exact": [
+          "src/agentic_workspace/operating_decision.py"
+        ],
+        "prefixes": [
+          "src/agentic_workspace/workspace_runtime"
+        ]
+      },
+      "lanes": [
+        "workspace_cli"
+      ],
+      "reason": "Contract proof complements the Workspace baseline only when the changed scope also affects operating-decision or Workspace runtime ownership."
+    }
+  ],
   "docs_only_reducer": {
     "lane": "repo_docs_review",
     "eligibility": "whole-source-lane",

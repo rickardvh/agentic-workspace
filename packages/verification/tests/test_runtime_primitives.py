@@ -215,6 +215,16 @@ def test_verification_report_absent_manifest(tmp_path: Path) -> None:
     assert payload["evidence_strategy"]["proof_decision"]["decision_authority"] == "agent"
 
 
+def test_verification_report_compact_profile_is_decision_first_with_exact_detail_route(tmp_path: Path) -> None:
+    payload = verification_report_payload(target_root=tmp_path, changed_paths=[], task_text="", verbose=False)
+
+    assert payload["profile"] == "decision-envelope"
+    assert payload["status"] == "absent"
+    assert payload["counts"]["active_protocols"] == 0
+    assert "configured_protocols" not in payload
+    assert payload["detail_routes"]["full_report"] == "agentic-verification report --target . --verbose --format json"
+
+
 def test_verification_report_suggests_assurance_first_jumpstart_lanes_from_host_evidence(tmp_path: Path) -> None:
     manifest = tmp_path / ".agentic-workspace" / "verification" / "manifest.toml"
     manifest.parent.mkdir(parents=True)

@@ -78,6 +78,10 @@ PLANNING_READ_DEPENDENCY_PLAN: dict[str, dict[str, Any]] = {
     "active_contract": {"sources": ["planning-state", "selected-owner"], "resolver": "selected-owner-record"},
     "resumable_contract": {"sources": ["planning-state", "selected-owner"], "resolver": "selected-owner-record"},
     "continuation_view": {"sources": ["planning-state", "selected-owner"], "resolver": "selected-owner-continuation"},
+    "handoff_contract": {
+        "sources": ["planning-state", "selected-owner"],
+        "resolver": "selected-owner-handoff",
+    },
     "planning_surface_health": {
         "sources": ["planning-state", "live-owner-index", "lanes", "issue-relations", "integration-proposals"],
         "resolver": "tiny-health",
@@ -2147,12 +2151,29 @@ def _selected_owner_query_payload(*, target_root: Path) -> dict[str, Any]:
         planning_record=planning_record,
         summary_profile="selected-query",
     )
+    intent_interpretation_contract = _active_intent_interpretation_contract(
+        target_root=target_root,
+        planning_record=planning_record,
+        active_execplans=active_execplans,
+    )
+    context_budget_contract = _active_context_budget_contract(
+        target_root=target_root,
+        planning_record=planning_record,
+        active_execplans=active_execplans,
+    )
+    handoff_contract = _active_handoff_contract(
+        planning_record=planning_record,
+        hierarchy_contract={"status": "unavailable", "reason": "not required by the selected handoff query"},
+        context_budget_contract=context_budget_contract,
+        intent_interpretation_contract=intent_interpretation_contract,
+    )
     return {
         "planning_revision": planning_revision(target_root),
         "planning_record": planning_record,
         "active_contract": _contract_projection(active_contract, view_name="active_contract"),
         "resumable_contract": _contract_projection(resumable_contract, view_name="resumable_contract"),
         "continuation_view": continuation_view,
+        "handoff_contract": _contract_projection(handoff_contract, view_name="handoff_contract"),
     }
 
 
@@ -2170,7 +2191,14 @@ def planning_summary_query(
     """
     target_root = resolve_target_root(target)
     requested = tuple(sorted({str(selector).split(".", 1)[0].strip() for selector in selectors if str(selector).strip()}))
-    supported = {"planning_revision", "planning_record", "active_contract", "resumable_contract", "continuation_view"}
+    supported = {
+        "planning_revision",
+        "planning_record",
+        "active_contract",
+        "resumable_contract",
+        "continuation_view",
+        "handoff_contract",
+    }
     if not requested or not set(requested) <= supported:
         return {
             "status": "unsupported",
@@ -2947,17 +2975,78 @@ def planning_report_tiny(*, target: str | Path | None = None) -> dict[str, Any]:
     }
 
 
-def planning_handoff(*, target: str | Path | None = None) -> dict[str, Any]:
-    summary = planning_summary(target=target)
-    handoff_contract = summary.get("handoff_contract", {})
+def planning_handoff(*, target: str | Path | None = None, verbose: bool | None = None) -> dict[str, Any]:
+    if verbose is not False:
+        summary = planning_summary(target=target)
+        handoff_contract = summary.get("handoff_contract", {})
+        return {
+            "kind": "planning-handoff/v1",
+            "schema": _planning_handoff_schema(),
+            "target_root": summary["target_root"],
+            "handoff_contract": handoff_contract,
+            "manual_external_relay": _planning_manual_external_relay(handoff_contract),
+            "warnings": [warning.copy() for warning in summary.get("warnings", [])],
+            "warning_count": int(summary.get("warning_count", 0)),
+        }
+
+    target_root = resolve_target_root(target)
+    query = planning_summary_query(target=target_root, selectors=["planning_revision", "handoff_contract"])
+    selected = query.get("payload", {}) if query.get("status") == "present" else {}
+    handoff_contract = selected.get("handoff_contract", {})
+    if handoff_contract.get("status") != "present" and not _read_state_from_toml(target_root):
+        # Compatibility for pre-TOML Planning state: retain the bounded output
+        # shape while using the legacy reader only when no structured state
+        # index exists to support the query-shaped path.
+        legacy_summary = planning_summary(target=target_root)
+        selected = {
+            "planning_revision": legacy_summary.get("planning_revision", {}),
+            "handoff_contract": legacy_summary.get("handoff_contract", {}),
+        }
+        handoff_contract = selected["handoff_contract"]
+    compact_contract = _planning_handoff_compact_projection(handoff_contract)
     return {
         "kind": "planning-handoff/v1",
-        "schema": _planning_handoff_schema(),
-        "target_root": summary["target_root"],
-        "handoff_contract": handoff_contract,
-        "manual_external_relay": _planning_manual_external_relay(handoff_contract),
-        "warnings": [warning.copy() for warning in summary.get("warnings", [])],
-        "warning_count": int(summary.get("warning_count", 0)),
+        "profile": "decision-envelope",
+        "status": compact_contract.get("status", "unavailable"),
+        "target_root": str(target_root),
+        "planning_revision": selected.get("planning_revision", {}),
+        "handoff_contract": compact_contract,
+        "manual_external_relay": _planning_manual_external_relay(compact_contract),
+        "detail_routes": {
+            "full_handoff": "agentic-planning handoff --target . --verbose --format json",
+            "exact_contract": "agentic-planning summary --target . --select handoff_contract --format json",
+        },
+        "construction": query.get("query_diagnostics", {}),
+    }
+
+
+def _planning_handoff_compact_projection(handoff_contract: Any) -> dict[str, Any]:
+    if not isinstance(handoff_contract, dict):
+        return {"status": "unavailable", "reason": "Planning handoff contract was not available"}
+    if handoff_contract.get("status") != "present":
+        return {key: handoff_contract[key] for key in ("status", "reason") if key in handoff_contract}
+    ready_worker_prompt = handoff_contract.get("ready_worker_prompt", {})
+    return {
+        "status": "present",
+        "task": handoff_contract.get("task", {}),
+        "role_metadata": handoff_contract.get("role_metadata", {}),
+        "next_role_needed": handoff_contract.get("next_role_needed", ""),
+        "next_action": handoff_contract.get("next_action", ""),
+        "read_first": handoff_contract.get("read_first", []),
+        "owned_write_scope": handoff_contract.get("owned_write_scope", []),
+        "proof_expectations": handoff_contract.get("proof_expectations", []),
+        "implementation_blockers": handoff_contract.get("implementation_blockers", []),
+        "ready_worker_prompt": {
+            key: ready_worker_prompt[key]
+            for key in ("kind", "status", "source", "plan_path", "copy_paste")
+            if isinstance(ready_worker_prompt, dict) and key in ready_worker_prompt
+        },
+        "omitted_detail": [
+            "execution and stop-condition contracts",
+            "assurance and traceability detail",
+            "return templates and worker ownership policy",
+            "manual-relay constraints",
+        ],
     }
 
 
@@ -17146,7 +17235,8 @@ def targeted_execplan_write(
     unsupported_projection_fields = sorted(field for field in patch if field in {"parent"})
     lifecycle_value = str(patch.get("lifecycle") or "").strip().lower()
     terminal_lifecycle = lifecycle_value in {"completed", "complete", "closed", "archived", "superseded"}
-    if "phase" in patch and not terminal_lifecycle:
+    phase_value = str(patch.get("phase") or "").strip().lower()
+    if phase_value == "complete" and not terminal_lifecycle:
         unsupported_projection_fields.append("phase")
     if unsupported_projection_fields:
         return {
@@ -17158,6 +17248,8 @@ def targeted_execplan_write(
     updated = copy.deepcopy(record)
     for key, value in patch.items():
         updated[key] = copy.deepcopy(value)
+    if "next_action" in patch and isinstance(updated.get("canonical_core"), dict):
+        updated["canonical_core"]["next_action"] = str(patch["next_action"])
     updated["revision"] = int(record.get("revision") or 0) + 1
     findings = _json_schema_findings(payload=updated, schema_path=EXECPLAN_RECORD_SCHEMA_PATH)
     if findings:
@@ -17183,8 +17275,14 @@ def targeted_execplan_write(
                     if terminal_lifecycle:
                         state_projection_changes[f"todo.{bucket}.{plan_id}"] = {"before": before, "after": None}
                         continue
+                    if "phase" in patch:
+                        item["phase"] = str(patch["phase"])
                     if "next_action" in patch:
                         item["next_action"] = str(patch["next_action"])
+                    if "proof" in patch and isinstance(patch["proof"], dict):
+                        proof_summary = str(patch["proof"].get("summary") or "").strip()
+                        if proof_summary:
+                            item["proof"] = proof_summary
                     if lifecycle_value:
                         item["status"] = str(patch["lifecycle"])
                     if before != item:

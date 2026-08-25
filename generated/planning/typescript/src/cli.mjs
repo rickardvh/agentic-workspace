@@ -850,6 +850,14 @@ const commandDefinitions = [
           "name": "target"
         },
         {
+          "action": "store_true",
+          "flags": [
+            "--verbose"
+          ],
+          "help": "Emit the full handoff contract instead of the ordinary decision envelope.",
+          "name": "verbose"
+        },
+        {
           "choices": [
             "text",
             "json"

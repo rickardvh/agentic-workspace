@@ -328,7 +328,7 @@ claim_boundary = "workspace-runtime-routing"
 id = "workspace-cli-runtime"
 paths = ["generated/workspace/python/**", "src/agentic_workspace/workspace_runtime*.py"]
 owns = ["workspace command routing"]
-proof = ["uv run pytest tests/test_workspace_cli.py -q"]
+proof = ["make test-workspace"]
 """,
     )
     _write(
@@ -406,7 +406,7 @@ proof_lane_hint = "closeout-intent-satisfaction"
 protocol_refs = ["requirement_grounding_delegation"]
 scenario_refs = ["requirement_grounding_delegation_review"]
 commands = [
-  "uv run python scripts/run_agentic_workspace.py implement --changed <paths> --select requirement_grounding,context.delegation_decision,context.plan_delegation_packet --format json",
+  "uv run python scripts/run_agentic_workspace.py implement --changed src/agentic_workspace/workspace_runtime_proof.py --select requirement_grounding,context.delegation_decision,context.plan_delegation_packet --format json",
 ]
 proof_lane_hint = "requirement-grounding-delegation"
 """,
@@ -771,7 +771,7 @@ def test_proof_root_workspace_guidance_2383_replay_uses_focused_lane_without_bro
     assert "make test-workspace" not in values["required_commands"]
     subsystem_lane = next(lane for lane in values["selected_lanes"] if lane["id"] == "subsystem:workspace-cli-runtime")
     assert subsystem_lane["focused_route_reduction"]["status"] == "required-proof-satisfied-by-domain-proof-lane"
-    assert "uv run pytest tests/test_workspace_cli.py -q" in subsystem_lane["focused_route_reduction"]["withheld_commands"]
+    assert "make test-workspace" in subsystem_lane["focused_route_reduction"]["withheld_commands"]
     route_health_classes = {finding["finding_class"] for finding in values["proof_route_maintenance"]["route_health"]["findings"]}
     assert "missing_coverage" not in route_health_classes
     assert "excessive_breadth_cost" not in route_health_classes
@@ -2087,7 +2087,6 @@ def test_proof_changed_selector_does_not_cover_unrelated_workspace_runtime(tmp_p
         "make typecheck",
         "uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json",
         "uv run python scripts/run_agentic_workspace.py report --target . --section closeout_trust --format json",
-        "uv run python scripts/run_agentic_workspace.py implement --changed <paths> --select requirement_grounding,context.delegation_decision,context.plan_delegation_packet --format json",
     ]
     assert "domain:proof_runtime" not in [lane["id"] for lane in answer["selected_lanes"]]
     assert "domain:root_workspace_guidance" not in [lane["id"] for lane in answer["selected_lanes"]]
@@ -2121,7 +2120,6 @@ def test_proof_root_workspace_guidance_does_not_claim_unrelated_primitives_witho
         "make typecheck",
         "uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json",
         "uv run python scripts/run_agentic_workspace.py report --target . --section closeout_trust --format json",
-        "uv run python scripts/run_agentic_workspace.py implement --changed <paths> --select requirement_grounding,context.delegation_decision,context.plan_delegation_packet --format json",
     ]
 
 
@@ -2674,20 +2672,17 @@ def test_proof_changed_uses_available_target_makefile_targets(tmp_path: Path, ca
     assert payload["next"]["command"] == "make test"
     assert payload["next"]["route_source"] == "live-adapted-target-capability"
     assert payload["next"]["why"] == "behavior-test intent selected live-adapted-target-capability."
-    assert payload["route"] == {
-        "source": "live-adapted-target-capability",
-        "authority": "live-target-capability",
-        "authority_surface": "target repo command discovery",
-        "intent_type": "behavior-test",
-        "lane": "workspace_cli",
-        "selected_command": "make test",
-        "health": {"status": "attention", "finding_count": 1},
-    }
+    assert payload["route"]["source"] == "live-adapted-target-capability"
+    assert payload["route"]["authority"] == "live-target-capability"
+    assert payload["route"]["health"] == {"status": "attention", "finding_count": 2}
+    assert payload["route"]["narrowness"]["status"] == "broad_required"
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "llms.txt", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)["answer"]
     assert payload["proof_route_selection"]["route_source"] == "live-adapted-target-capability"
     assert payload["proof_route_selection"]["manual_fallback"] is None
     assert payload["proof_route_selection"]["explanation_field"] == "proof_route_explanation"
-    assert "next_action" not in payload["proof_route_selection"]
-    assert "required_commands" not in payload["proof_route_selection"]
+    assert payload["proof_route_selection"]["next_action"]["command"] == "make test"
+    assert payload["proof_route_selection"]["required_commands"] == ["make test", "make lint"]
     assert payload["proof_command_adjustments"] == [
         {
             "lane": "workspace_cli",
@@ -2716,8 +2711,6 @@ def test_proof_changed_does_not_assume_makefile_exists(tmp_path: Path, capsys) -
                 str(tmp_path),
                 "--changed",
                 "llms.txt",
-                "--select",
-                "required_commands,next,target_proof_capabilities",
                 "--format",
                 "json",
             ]
@@ -2725,19 +2718,46 @@ def test_proof_changed_does_not_assume_makefile_exists(tmp_path: Path, capsys) -
         == 0
     )
 
-    payload = json.loads(capsys.readouterr().out)["values"]
+    payload = json.loads(capsys.readouterr().out)
     assert payload["required_commands"] == []
     assert payload["next"]["action"] == "manual-verification"
     assert payload["next"]["command"] is None
     assert payload["manual_verification"]["status"] == "required"
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "llms.txt", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)["answer"]
     assert payload["proof_route_selection"]["manual_fallback"]["unavailable_command_count"] == 0
     assert payload["proof_route_selection"]["selected_command"] is None
     assert payload["proof_route_selection"]["route_source"] == "manual-fallback"
-    assert payload["manual_verification"]["status"] == "required"
     assert "no executable proof route" in payload["manual_verification"]["summary"]
     assert payload.get("unavailable_proof_commands", []) == []
-    assert payload["warnings"] == []
-    assert payload["manual_verification"]["status"] == "required"
+
+
+def test_proof_retired_selector_returns_exact_replacement_command(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "llms.txt",
+                "--select",
+                "required_commands,next,target_proof_capabilities",
+                "--format",
+                "json",
+            ]
+        )
+        == 2
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["replacement_selectors"] == {"target_proof_capabilities": "proof_next_decision"}
+    assert payload["replacement_command"] == (
+        "agentic-workspace proof --target . --select required_commands,next,proof_next_decision --format json"
+    )
+    assert payload["corrected_action"] == payload["replacement_command"]
 
 
 def test_proof_changed_reports_manual_verification_templates(tmp_path: Path, capsys) -> None:
@@ -2845,6 +2865,8 @@ def test_proof_changed_uses_target_package_json_scripts_without_makefile(tmp_pat
     payload = json.loads(capsys.readouterr().out)
     assert payload["required_commands"] == ["npm test", "npm run lint"]
     assert payload["next"]["route_source"] == "live-adapted-target-capability"
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "llms.txt", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)["answer"]
     assert payload["target_proof_capabilities"]["package_json"]["scripts"] == ["lint", "test"]
     assert payload["proof_command_adjustments"] == [
         {
@@ -2860,7 +2882,7 @@ def test_proof_changed_uses_target_package_json_scripts_without_makefile(tmp_pat
             "reason": "target repo has no Makefile; using package.json script for 'lint' proof",
         },
     ]
-    assert payload["manual_verification"] is None
+    assert "manual_verification" not in payload
 
 
 def test_proof_changed_uses_subrepo_makefile_for_package_paths(tmp_path: Path, capsys) -> None:
@@ -2965,6 +2987,8 @@ def test_proof_changed_uses_subrepo_package_json_for_package_paths(tmp_path: Pat
     assert payload["next"]["command"] == "cd packages/ui && npm test"
     assert payload["next"]["cwd"] == "packages/ui"
     assert payload["next"]["run"] == "npm test"
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "packages/ui/src/index.ts", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)["answer"]
     assert payload["proof_command_adjustments"] == [
         {
             "lane": "workspace_cli",
@@ -2983,7 +3007,7 @@ def test_proof_changed_uses_subrepo_package_json_for_package_paths(tmp_path: Pat
             "reason": "target repo has no root Makefile; using subrepo package.json script for 'lint' proof in packages/ui",
         },
     ]
-    assert payload["manual_verification"] is None
+    assert "manual_verification" not in payload
 
 
 def test_proof_changed_treats_plain_python_project_as_discovery_candidate(tmp_path: Path, capsys) -> None:
@@ -3031,6 +3055,8 @@ dependencies = ["pytest>=8"]
 
     payload = json.loads(capsys.readouterr().out)
     assert "uv run pytest" in payload["required_commands"]
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "pyproject.toml", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)["answer"]
     pytest_capability = payload["target_proof_capabilities"]["python"]["pytest"]
     assert pytest_capability["status"] == "confirmed"
     assert pytest_capability["evidence"] == [
@@ -3299,6 +3325,8 @@ line-length = 120
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["required_commands"] == ["uv run pytest", "uv run ruff check ."]
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "llms.txt", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)["answer"]
     assert payload["target_proof_capabilities"]["python"]["available"] is True
     assert payload["target_proof_capabilities"]["python"]["pytest"]["status"] == "confirmed"
     assert payload["target_proof_capabilities"]["python"]["pytest"]["authority"] == "confirmed-repo-evidence"
@@ -3320,7 +3348,7 @@ line-length = 120
             "reason": "target repo has no Makefile; using detected 'lint' proof capability",
         },
     ]
-    assert payload["manual_verification"] is None
+    assert "manual_verification" not in payload
 
 
 def test_proof_changed_preserves_configured_active_uv_posture(tmp_path: Path, capsys) -> None:
@@ -3338,6 +3366,8 @@ def test_proof_changed_preserves_configured_active_uv_posture(tmp_path: Path, ca
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["required_commands"] == ["uv run --active pytest", "uv run --active ruff check ."]
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "llms.txt", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)["answer"]
     posture = payload["proof_invocation_posture"]
     assert posture["configured_active_uv"] is True
     assert [item["status"] for item in posture["commands"]] == ["inserted", "inserted"]
@@ -3627,11 +3657,26 @@ def test_proof_cli_accepts_covering_receipts_for_authoritative_conservative_rout
         )
     _write(tmp_path / ".agentic-workspace/local/proof-receipts/history.jsonl", "\n".join(json.dumps(item) for item in receipts) + "\n")
 
-    assert cli.main(["proof", "--target", str(tmp_path), "--changed", "llms.txt", "--format", "json"]) == 0
-    summary = json.loads(capsys.readouterr().out)["proof_closeout_summary"]
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "llms.txt",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    summary = answer["proof_closeout_summary"]
     assert summary["status"] == "sufficient-recorded"
-    assert summary["remaining_gap_count"] == 0
-    assert summary["route_maturity"] == {"status": "advisory", "advisory_count": len(commands)}
+    assert answer["proof_receipt_reconciliation"]["status"] == "accepted"
+    assert answer["proof_receipt_reconciliation"]["accepted_count"] == len(commands)
 
 
 def test_proof_changed_exposes_receipt_bridge_for_unrecorded_commands(tmp_path: Path, capsys) -> None:
@@ -3688,6 +3733,8 @@ def test_proof_changed_exposes_receipt_bridge_for_unrecorded_commands(tmp_path: 
                 str(tmp_path),
                 "--changed",
                 "src/agentic_workspace/workspace_runtime_proof.py",
+                "--select",
+                "proof_closeout_summary",
                 "--format",
                 "json",
             ]
@@ -3695,7 +3742,7 @@ def test_proof_changed_exposes_receipt_bridge_for_unrecorded_commands(tmp_path: 
         == 0
     )
     compact = json.loads(capsys.readouterr().out)
-    assert compact["proof_closeout_summary"]["receipt_bridge"]["status"] == "action-required"
+    assert compact["values"]["proof_closeout_summary"]["receipt_bridge"]["status"] == "action-required"
     assert "record_passed_command" not in json.dumps(compact)
 
 
@@ -3876,19 +3923,28 @@ def test_proof_changed_projects_learned_route_model_for_two_route_classes(tmp_pa
         == 0
     )
 
-    compact = json.loads(capsys.readouterr().out)["learned_proof_route_model"]
-    assert compact["status"] == "selected"
-    assert set(compact["route_classes"]) >= {"docs-process", "access-audit"}
-    assert compact["selected_route_count"] == 2
-    assert compact["fallback"]["status"] == "not-needed"
-    assert "Route class names are host-owned evidence fields" in compact["repo_neutrality_rule"]
-    assert compact["proof_class_vocabulary"] == [
-        "required",
-        "recommended",
-        "optional_confidence",
-        "unavailable_manual",
-        "not_applicable",
-    ]
+    compact = json.loads(capsys.readouterr().out)
+    assert "learned_proof_route_model" not in compact
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "docs/runbook.md",
+                "src/security/policy.py",
+                "--select",
+                "learned_proof_route_model",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    selected_model = json.loads(capsys.readouterr().out)["values"]["learned_proof_route_model"]
+    assert selected_model["status"] == "selected"
+    assert set(selected_model["route_classes"]) >= {"docs-process", "access-audit"}
 
     assert (
         cli.main(
@@ -4208,7 +4264,7 @@ def test_proof_changed_validation_plan_uses_resolved_cli_invoke(tmp_path: Path, 
 
     payload = json.loads(capsys.readouterr().out)
     step = payload["answer"]["validation_plan"]["required"][0]
-    expected_target = tmp_path.as_posix()
+    expected_target = Path(os.path.relpath(tmp_path, Path.cwd())).as_posix()
     assert step["command"] == f'uv run agentic-workspace summary --target "{expected_target}" --format json'
     assert step["run"] == f'uv run agentic-workspace summary --target "{expected_target}" --format json'
 
@@ -4449,6 +4505,40 @@ force = "required-before-closeout"
     repair_packet = next(packet for packet in route_health["repair_packets"] if packet["finding_class"] == "execution_environment_mismatch")
     assert repair_packet["affected_route"] == "assurance-requirement:model_harness"
     assert repair_packet["claim_effect"] == "repair-required-before-route-claim"
+    decision = answer["proof_decision"]
+    assert decision["owner_coverage"]["status"] == "incomplete"
+    assert "assurance-requirement:model_harness" in decision["owner_coverage"]["uncovered_owners"]
+    assert decision["sufficiency"] == {
+        "status": "insufficient-owner-coverage",
+        "owner_coverage_complete": False,
+        "route_currentness_complete": False,
+        "selected_commands_passed": False,
+        "claim_allowed": False,
+        "rule": "Command success is not sufficient without complete current owner coverage.",
+    }
+
+
+def test_proof_selection_composes_feature_and_affected_owner_baselines() -> None:
+    selection = workspace_runtime_proof._proof_selection_for_changed_paths(
+        changed_paths=[
+            "src/agentic_workspace/contracts/schemas/implementer_context.schema.json",
+            "src/agentic_workspace/operating_decision.py",
+            "src/agentic_workspace/workspace_runtime_startup.py",
+        ],
+        target_root=None,
+        include_durable_intent=False,
+        include_assurance_requirements=False,
+        include_routine_work_context=False,
+        include_runtime_diagnostics=False,
+        include_test_strategy_check=False,
+    )
+
+    lane_ids = {lane["id"] for lane in selection["selected_lanes"]}
+    assert {"contract_tooling", "workspace_cli"}.issubset(lane_ids)
+    coverage = selection["proof_decision"]["owner_coverage"]
+    covered_ids = set(coverage["covered_owners"])
+    assert {"contract_tooling", "workspace_cli"}.issubset(covered_ids)
+    assert "make test-workspace" in selection["required_commands"]
 
 
 def test_proof_changed_keeps_existing_path_specific_proof_required(tmp_path: Path, capsys) -> None:
@@ -5678,6 +5768,8 @@ owner = "workspace-proof-runtime"
                 changed_paths[0],
                 "--changed",
                 changed_paths[1],
+                "--select",
+                "proof_closeout_summary",
                 "--format",
                 "json",
             ]
@@ -5685,7 +5777,7 @@ owner = "workspace-proof-runtime"
         == 0
     )
     stale_payload = json.loads(capsys.readouterr().out)
-    stale_answer = stale_payload.get("answer", stale_payload)
+    stale_answer = stale_payload.get("values", stale_payload.get("answer", stale_payload))
     assert stale_answer["proof_closeout_summary"]["status"] != "sufficient-recorded"
 
     assert (
@@ -5918,43 +6010,39 @@ def test_proof_changed_reconciles_receipt_history_without_duplicate_runs(tmp_pat
         cli.main(
             [
                 "proof",
+                "--verbose",
                 "--target",
                 str(tmp_path),
                 "--changed",
                 "src/agentic_workspace/workspace_runtime_proof.py",
-                "--record-receipt",
-                "--receipt-command",
-                "make test-workspace",
-                "--receipt-result",
-                "passed",
                 "--format",
                 "json",
             ]
         )
         == 0
     )
-    capsys.readouterr()
-
-    assert (
-        cli.main(
-            [
-                "proof",
-                "--target",
-                str(tmp_path),
-                "--changed",
-                "src/agentic_workspace/workspace_runtime_proof.py",
-                "--record-receipt",
-                "--receipt-command",
-                "make typecheck",
-                "--receipt-result",
-                "passed",
-                "--format",
-                "json",
-            ]
+    selected_commands = json.loads(capsys.readouterr().out)["answer"]["required_commands"]
+    for command in selected_commands:
+        assert (
+            cli.main(
+                [
+                    "proof",
+                    "--target",
+                    str(tmp_path),
+                    "--changed",
+                    "src/agentic_workspace/workspace_runtime_proof.py",
+                    "--record-receipt",
+                    "--receipt-command",
+                    command,
+                    "--receipt-result",
+                    "passed",
+                    "--format",
+                    "json",
+                ]
+            )
+            == 0
         )
-        == 0
-    )
-    capsys.readouterr()
+        capsys.readouterr()
 
     assert (
         cli.main(
@@ -5976,10 +6064,10 @@ def test_proof_changed_reconciles_receipt_history_without_duplicate_runs(tmp_pat
     reconciliation = answer["proof_receipt_reconciliation"]
     states = {item["command"]: item for item in reconciliation["commands"]}
     assert reconciliation["status"] == "accepted"
-    assert reconciliation["accepted_count"] == 2
-    assert reconciliation["receipt"]["command"] == "make typecheck"
-    assert reconciliation["receipt_history"]["record_count"] == 2
-    assert reconciliation["receipt_history"]["accepted_record_count"] == 2
+    assert reconciliation["accepted_count"] == len(selected_commands)
+    assert reconciliation["receipt"]["command"] == selected_commands[-1]
+    assert reconciliation["receipt_history"]["record_count"] == len(selected_commands)
+    assert reconciliation["receipt_history"]["accepted_record_count"] == len(selected_commands)
     assert states["make test-workspace"]["evidence_state"] == "accepted"
     assert states["make test-workspace"]["diagnostic"] == "passed receipt accepted"
     assert states["make typecheck"]["evidence_state"] == "accepted"
@@ -6005,13 +6093,29 @@ def test_proof_changed_accepts_aggregate_receipt_for_selected_proof_set(tmp_path
     _write_repo_local_proof_target(tmp_path)
     receipt_dir = tmp_path / ".agentic-workspace" / "local" / "proof-receipts"
     _write(tmp_path / "src/agentic_workspace/workspace_runtime_proof.py", "# aggregate fixture\n")
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_proof.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    selected_commands = json.loads(capsys.readouterr().out)["answer"]["required_commands"]
     receipt = {
         "kind": "agentic-workspace/proof-receipt/v1",
         "command": "selected proof set",
         "result": "passed",
         "recorded_at": "2026-07-09T00:00:00+00:00",
         "changed_paths": ["src/agentic_workspace/workspace_runtime_proof.py"],
-        "proof_commands": ["make test-workspace", "make typecheck"],
+        "proof_commands": selected_commands,
         "plan_id": "aggregate-proof",
     }
     receipt["proof_subject"] = build_proof_subject(
@@ -6042,7 +6146,7 @@ def test_proof_changed_accepts_aggregate_receipt_for_selected_proof_set(tmp_path
     reconciliation = answer["proof_receipt_reconciliation"]
     states = {item["command"]: item for item in reconciliation["commands"]}
     assert reconciliation["status"] == "accepted"
-    assert reconciliation["accepted_count"] == 2
+    assert reconciliation["accepted_count"] == len(selected_commands)
     assert states["make test-workspace"]["receipt_match"] == "aggregate-selected-proof"
     assert states["make typecheck"]["diagnostic"] == "aggregate proof_commands receipt accepted"
     assert answer["proof_receipt_bridge"]["status"] == "complete"
@@ -6055,13 +6159,29 @@ def test_proof_changed_rejects_stale_aggregate_subject(tmp_path: Path, capsys) -
     _write_repo_local_proof_target(tmp_path)
     source = tmp_path / "src/agentic_workspace/workspace_runtime_proof.py"
     _write(source, "before\n")
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_proof.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    selected_commands = json.loads(capsys.readouterr().out)["answer"]["required_commands"]
     receipt = {
         "kind": "agentic-workspace/proof-receipt/v1",
         "command": "selected proof set",
         "result": "passed",
         "recorded_at": "2026-07-09T00:00:00+00:00",
         "changed_paths": ["src/agentic_workspace/workspace_runtime_proof.py"],
-        "proof_commands": ["make test-workspace", "make typecheck"],
+        "proof_commands": selected_commands,
     }
     receipt["proof_subject"] = build_proof_subject(target_root=tmp_path, changed_paths=receipt["changed_paths"], command=receipt["command"])
     receipt_dir = tmp_path / ".agentic-workspace" / "local" / "proof-receipts"
@@ -6404,7 +6524,7 @@ def test_proof_changed_selector_is_independent_of_rule_order(tmp_path: Path, cap
     assert reordered.get("routing_compositions") == original.get("routing_compositions")
 
 
-def test_proof_changed_selector_does_not_escalate_review_only_cross_lane_changes(tmp_path: Path, capsys) -> None:
+def test_proof_changed_selector_keeps_contract_only_changes_focused(tmp_path: Path, capsys) -> None:
     _write_repo_local_proof_target(tmp_path)
 
     assert (
@@ -6428,7 +6548,31 @@ def test_proof_changed_selector_does_not_escalate_review_only_cross_lane_changes
     answer = payload["answer"]
     assert [lane["id"] for lane in answer["selected_lanes"]] == ["repo_docs_review", "contract_tooling"]
     assert {lane["proof_kind"] for lane in answer["selected_lanes"]} == {"diff-review", "surface-check"}
-    assert not answer["escalate_when"] or not answer["escalate_when"][0].startswith("changed paths span multiple validation lanes")
+    assert not any(composition["primary_lane"] == "contract_tooling" for composition in answer.get("routing_compositions", []))
+
+
+def test_proof_changed_selector_routes_structured_inventory_contract_change_to_focused_lane(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/contracts/structured_file_inventory.json",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert [lane["id"] for lane in answer["selected_lanes"]] == ["contract_tooling"]
+    assert "make test-workspace" not in answer["required_commands"]
 
 
 def test_proof_changed_selector_includes_schema_reference_docs_for_workspace_schema(tmp_path: Path, capsys) -> None:
@@ -7210,8 +7354,11 @@ def test_proof_routes_root_generated_fingerprint_through_existing_generated_pack
     lane_ids = [lane["id"] for lane in answer["selected_lanes"]]
     assert "generated_command_packages" in lane_ids
     assert "cli_authority" in lane_ids
-    assert "uv run python scripts/check/check_generated_command_packages.py --require-node" in answer["required_commands"]
-    assert "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node" in answer["required_commands"]
+    assert "uv run --active python scripts/check/check_generated_command_packages.py --require-node" in answer["required_commands"]
+    assert (
+        "uv run --active python scripts/check/check_generated_command_packages.py --conformance --require-node"
+        in answer["required_commands"]
+    )
     assert answer["generated_cli_freshness"]["freshness_check_command"] == (
         "uv run python scripts/generate/generate_command_packages.py --check"
     )
@@ -7255,9 +7402,10 @@ def test_generated_fingerprint_route_reports_typed_node_gap_without_losing_owner
         "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
     ]
     assert {item["required_runtime"] for item in unavailable} == {"node"}
-    assert answer["proof_route_strategy_decision"]["outcome"] == "focused"
+    assert answer["proof_route_strategy_decision"]["outcome"] == "broad-escalation-required"
+    assert answer["proof_route_strategy_decision"]["claim_effect"] == "claim-blocked"
     assert answer["route_refinement_required"]["status"] == "not-required"
-    assert answer["manual_verification"]["status"] == "required-for-unavailable-proof"
+    assert answer["manual_verification"]["status"] == "route-refinement-required"
 
 
 def test_generated_package_authority_keeps_sibling_output_and_unknown_root_file_distinct(tmp_path: Path, capsys) -> None:

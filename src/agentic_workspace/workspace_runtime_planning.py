@@ -14,6 +14,7 @@ import re
 import subprocess
 import tomllib
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -64,6 +65,83 @@ PLANNING_FRONT_DOOR_OPERATION_PATH = "packages/planning/src/repo_planning_bootst
 
 def _stable_revision(value: Any) -> str:
     return hashlib.sha256(json.dumps(value, sort_keys=True, default=str, separators=(",", ":")).encode()).hexdigest()
+
+
+def _active_owner_external_reconciliation(
+    *, target_root: Path, active_summary: dict[str, Any], config: WorkspaceConfig, planning_revision: dict[str, Any]
+) -> dict[str, Any]:
+    """Project only external evidence that can change the selected owner's next action."""
+    refs = sorted({ref for ref in _as_list(active_summary.get("active_owner_refs")) if re.fullmatch(r"#\d+", str(ref))})
+    owner_ref = str(active_summary.get("active_execplan") or "")
+    if not owner_ref or not refs:
+        return {"status": "not-applicable"}
+    evidence_path = target_root / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json"
+    if not evidence_path.is_file():
+        evidence_path = target_root / ".agentic-workspace" / "planning" / "external-intent-evidence.json"
+    refresh_command = _command_with_cli_invoke(
+        command="agentic-workspace external-intent refresh-github --target . --state all --storage cache --format json",
+        cli_invoke=config.cli_invoke,
+    )
+    reconcile_command = _command_with_expected_planning_revision(
+        _command_with_cli_invoke(
+            command="agentic-workspace planning reconcile --target . --preview --format json",
+            cli_invoke=config.cli_invoke,
+        ),
+        planning_revision=planning_revision,
+    )
+    try:
+        payload = json.loads(evidence_path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return {"status": "not-applicable"}
+    items = [
+        item
+        for item in _as_list(_as_dict(payload).get("items"))
+        if isinstance(item, dict) and str(item.get("id") or item.get("number") or "") in refs
+    ]
+    if not items:
+        return {"status": "not-applicable"}
+
+    def _expired(item: dict[str, Any]) -> bool:
+        freshness = _as_dict(item.get("freshness"))
+        if str(freshness.get("status") or "") == "stale":
+            return True
+        expires_at = str(freshness.get("expires_at") or "").strip()
+        if not expires_at:
+            refreshed_at = str(_as_dict(payload).get("refreshed_at") or "").strip()
+            if not refreshed_at:
+                return True
+            try:
+                refreshed = datetime.fromisoformat(refreshed_at.replace("Z", "+00:00"))
+            except ValueError:
+                return True
+            if refreshed.tzinfo is None:
+                refreshed = refreshed.replace(tzinfo=timezone.utc)
+            return datetime.now(timezone.utc) > refreshed.astimezone(timezone.utc) + timedelta(hours=24)
+        try:
+            expires = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
+        except ValueError:
+            return True
+        if expires.tzinfo is None:
+            expires = expires.replace(tzinfo=timezone.utc)
+        return datetime.now(timezone.utc) > expires.astimezone(timezone.utc)
+
+    stale = [item for item in items if _expired(item)]
+    completed_statuses = {"closed", "complete", "completed", "done", "merged", "published", "released"}
+    completed = [item for item in items if str(item.get("status_class") or item.get("status") or "").strip().lower() in completed_statuses]
+    status = "refresh-required" if stale else "reconciliation-required" if completed else "current"
+    return {
+        "kind": "agentic-planning/active-owner-external-currentness/v1",
+        "status": status,
+        "owner_ref": owner_ref,
+        "issue_refs": refs,
+        "matched_observation_ids": [str(item.get("observation_id") or item.get("id") or "") for item in items],
+        "external_revisions": [str(item.get("external_revision") or item.get("updated_at") or "") for item in items],
+        "reason_code": "external-observation-stale" if stale else "external-owner-completed" if completed else "external-owner-current",
+        "refresh_command": refresh_command,
+        "reconcile_command": reconcile_command,
+        "claim_effect": "block-owner-dependent-work-until-refresh-or-reconciliation" if status != "current" else "none",
+        "authority_boundary": "External state is currentness evidence; Planning remains the authority for intent, proof, and owner transitions.",
+    }
 
 
 def _as_list(value: Any) -> list[Any]:
@@ -1473,6 +1551,7 @@ def _planning_route_decision_payload(
                 "selected_owner_revision",
                 "selected_owner_lifecycle",
                 "selected_owner_projection_status",
+                "external_observation_revision",
                 "task_binding_identity",
                 "mutation_baseline_id",
                 "reconciliation_proposal_revision",
@@ -1647,6 +1726,7 @@ def _route_decision_next_action_packet(
     task_binding = _as_dict(route_inputs.get("task_binding"))
     claim_effect_boundary = copy.deepcopy(_as_dict(route_inputs.get("claim_effect_boundary")))
     owner_facts = _as_dict(route_inputs.get("owner"))
+    external_observation = _as_dict(route_inputs.get("admitted_external_observation"))
     owner_admission = _as_dict(route_evidence.get("owner_admission"))
     selected_owner = _as_dict(owner_admission.get("selected_owner"))
     selected_owner_ref = str(route_evidence.get("active_execplan") or owner_facts.get("ref") or selected_owner.get("ref") or "")
@@ -1741,9 +1821,26 @@ def _route_decision_next_action_packet(
         proof = "record selected-owner evidence and re-resolve the route decision"
         required_inputs = ["owner candidates", "selection basis", "Planning revision"]
         risk = "owner-selection-required"
+    elif required_transition == "reconcile" and owner_posture == "externally-stale" and route_evidence.get("external_refresh_command"):
+        action = "refresh-external-evidence"
+        summary = "Refresh the selected owner's external evidence before relying on its next action or completion state."
+        command = str(route_evidence.get("external_refresh_command") or "")
+        proof = str(route_evidence.get("reconciliation_preview_command") or "compile a current Planning reconciliation proposal")
+        required_inputs = ["selected owner", "related external references", "fresh external observation"]
+        risk = "external-owner-evidence-stale"
+    elif (
+        required_transition == "reconcile" and owner_posture == "external-conflict" and route_evidence.get("reconciliation_preview_command")
+    ):
+        action = "compile-planning-reconciliation-proposal"
+        summary = "Compile the smallest honest Planning transition from current external completion evidence and local proof."
+        command = str(route_evidence.get("reconciliation_preview_command") or "")
+        proof = "review and apply the revision-bound reconciliation proposal; external completion alone cannot close intent"
+        required_inputs = ["selected owner", "current external completion evidence", "local proof posture", "Planning revision"]
+        risk = "external-owner-state-changed"
     elif required_transition == "reconcile":
         action = "refresh-planning-reconciliation-proposal"
         summary = "Refresh the Planning reconciliation proposal before applying a transition."
+        command = str(route_evidence.get("reconciliation_preview_command") or "")
         proof = "produce a current reconciliation proposal and re-enter the Planning front door"
         required_inputs = ["selected owner", "conflict evidence", "Planning revision"]
         risk = "fresh-reconciliation-proposal-required"
@@ -1803,6 +1900,15 @@ def _route_decision_next_action_packet(
         "selected_owner_revision": selected_owner_revision,
         "selected_owner_lifecycle": selected_owner_lifecycle,
         "selected_owner_projection_status": selected_owner_projection_status,
+        "external_observation_revision": _stable_revision(
+            {
+                "status": external_observation.get("status"),
+                "observation_ids": external_observation.get("matched_observation_ids", []),
+                "external_revisions": external_observation.get("external_revisions", []),
+            }
+        )
+        if external_observation and external_observation.get("status") != "not-applicable"
+        else "",
         "task_binding_identity": str(task_binding.get("identity") or task_binding.get("task_digest") or ""),
         "task_binding_mode": str(task_binding.get("mode") or ""),
         "mutation_baseline_id": str(mutation_baseline.get("baseline_id") or ""),
@@ -1852,6 +1958,7 @@ def _route_decision_next_action_packet(
                     "selected_owner_revision",
                     "selected_owner_lifecycle",
                     "selected_owner_projection_status",
+                    "external_observation_revision",
                     "task_binding_identity",
                     "task_binding_mode",
                     "mutation_baseline_id",
@@ -1933,6 +2040,7 @@ def validate_planning_route_action_invocation(
             "blocked_claims",
             "reconciliation_proposal_id",
             "reconciliation_proposal_revision",
+            "external_observation_revision",
         ]
         if str(caller_identity.get(field) or "") != str(live_identity.get(field) or "")
     ]
@@ -3455,19 +3563,34 @@ def _planning_safety_gate_payload(
         path_classification=path_classification,
     )
     reconciliation_proposal = _current_reconciliation_proposal(target_root=target_root, planning_revision=planning_revision)
+    external_reconciliation = _active_owner_external_reconciliation(
+        target_root=target_root,
+        active_summary=active_summary,
+        config=config,
+        planning_revision=planning_revision,
+    )
     route_evidence = {
         **route_evidence,
+        "admitted_external_observation": external_reconciliation,
+        "external_refresh_command": str(external_reconciliation.get("refresh_command") or ""),
+        "reconciliation_preview_command": str(external_reconciliation.get("reconcile_command") or ""),
         **_structured_route_inputs(
             target_root=target_root,
             active_summary=active_summary,
             task_text=task_text,
             changed_paths=changed_paths,
-            route_evidence=route_evidence,
+            route_evidence={**route_evidence, "admitted_external_observation": external_reconciliation},
             planning_revision=planning_revision,
             proposal=reconciliation_proposal,
             path_classification=path_classification,
         ),
     }
+    if external_reconciliation.get("status") in {"refresh-required", "reconciliation-required"}:
+        route_evidence["status"] = str(external_reconciliation.get("reason_code") or "external-owner-currentness-required")
+        route_evidence["owner_posture"] = (
+            "externally-stale" if external_reconciliation.get("status") == "refresh-required" else "external-conflict"
+        )
+        route_evidence["required_transition"] = "reconcile"
     route_decision = _planning_route_decision_payload(
         route_evidence,
         planning_revision=planning_revision,
