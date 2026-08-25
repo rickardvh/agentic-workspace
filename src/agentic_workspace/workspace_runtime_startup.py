@@ -2264,6 +2264,12 @@ def _apply_required_payload_target_start_gate(
     }
 
 
+def _compact_task_assignment_disposition(disposition: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "outcome": disposition.get("outcome", "blocked-unavailable"),
+    }
+
+
 def _ordinary_start_decision_payload(
     *,
     selected: dict[str, Any],
@@ -2458,7 +2464,7 @@ def _ordinary_start_decision_payload(
         "target": selected.get("target", "."),
         "decision_packet": decision,
         **(
-            {"task_assignment_disposition": copy.deepcopy(selected["task_assignment_disposition"])}
+            {"task_assignment_disposition": _compact_task_assignment_disposition(copy.deepcopy(selected["task_assignment_disposition"]))}
             if isinstance(selected.get("task_assignment_disposition"), dict)
             else {}
         ),
