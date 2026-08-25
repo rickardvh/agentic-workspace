@@ -44,7 +44,7 @@
       "refs": [
         "tests/test_workspace_session_logging.py::test_consequential_session_replay_emits_stable_material_candidates",
         "tests/test_workspace_cli.py::test_session_index_intake_selects_one_strongest_material_candidate",
-        ".agentic-workspace/planning/closeout-evidence/issue-2721-supported-host-replay.replay.json"
+        ".agentic-workspace/planning/closeout-evidence/issue-2721-supported-host-replay.closeout.json"
       ]
     },
     "external_posture": {
@@ -81,7 +81,7 @@
       "tests/test_workspace_session_logging.py::test_supported_workspace_commands_declare_generated_operation_purpose_without_producer_hints",
       "tests/test_workspace_cli.py::test_session_improvement_intake_self_admits_material_index_as_pending_disposition",
       "tests/test_workspace_cli.py::test_session_index_intake_selects_one_strongest_material_candidate",
-      ".agentic-workspace/planning/closeout-evidence/issue-2721-supported-host-replay.replay.json"
+      ".agentic-workspace/planning/closeout-evidence/issue-2721-supported-host-replay.closeout.json"
     ]
   },
   "continuation": {

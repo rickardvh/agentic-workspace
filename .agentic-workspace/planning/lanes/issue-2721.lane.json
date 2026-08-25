@@ -91,7 +91,7 @@
       "PR #2734 proof execution and local evidence",
       "PR #2735 external hierarchy and Planning continuity",
       "PR #2736 consequential signals and supported-host replay",
-      ".agentic-workspace/planning/closeout-evidence/issue-2721-supported-host-replay.replay.json"
+      ".agentic-workspace/planning/closeout-evidence/issue-2721-supported-host-replay.closeout.json"
     ],
     "known_gaps": [
       "hosted checks across the complete stack",
