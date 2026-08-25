@@ -1,0 +1,63 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Preserve external hierarchy and reconcile completed Planning owners",
+  "plan_id": "issue-2721-continuity",
+  "created_at": "2026-08-25T18:12:52.392958+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/issue-2721-continuity.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/issue-2721-continuity.plan.json",
+  "retention": {
+    "state": "cleanup-distilled-without-full-archive",
+    "reason": "completed-plan cleanup retained compact closeout evidence instead of a full execplan archive",
+    "canonical_evidence": "compact closeout tombstone",
+    "ordinary_route": "report --section closeout_report --format json"
+  },
+  "claim_level": "slice",
+  "outcome": "Hierarchy and priority persist; completed external owners reconcile before routing.",
+  "contribution": "Fourth stacked-PR layer: external continuity for #2729 and #2731.",
+  "evidence_refs": [
+    "5 focused continuity tests passed; PR #2735 checks and independent review passed and it is merged."
+  ],
+  "residual": {
+    "status": "open",
+    "owner": "issue-2721-signals"
+  },
+  "closure": {
+    "authority": "planning closeout writer",
+    "provenance": "completed-plan cleanup retained compact closeout evidence instead of a full execplan archive",
+    "reopen_trigger": "Reopen when issue-2721-signals activates a fresh bounded slice."
+  },
+  "revision": 4,
+  "active_milestone": {
+    "status": "completed"
+  },
+  "proof_report": {
+    "validation proof": "5 focused continuity tests passed; PR #2735 checks and independent review passed and it is merged."
+  },
+  "intent_satisfaction": {
+    "was original intent fully satisfied?": "no",
+    "unsolved intent passed to": "issue-2721-signals"
+  },
+  "intent_continuity": {
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "issue-2721-signals"
+  },
+  "child_intent_satisfaction": {
+    "status": "not-recorded",
+    "scope": "not-recorded",
+    "parent_intent_effect": "unknown"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "reopen trigger": "Reopen when issue-2721-signals activates a fresh bounded slice."
+  },
+  "execution_summary": {
+    "outcome delivered": "Hierarchy and priority persist; completed external owners reconcile before routing.",
+    "follow-on routed to": "issue-2721-signals"
+  },
+  "execution_run": {
+    "changed surfaces": "PR #2735 merged on master.",
+    "next step": "continue from issue-2721-signals"
+  }
+}

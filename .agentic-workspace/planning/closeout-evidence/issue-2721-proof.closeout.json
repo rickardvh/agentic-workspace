@@ -1,0 +1,63 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Execute selected proof and keep machine-local evidence local",
+  "plan_id": "issue-2721-proof",
+  "created_at": "2026-08-25T18:12:23.352886+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/issue-2721-proof.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/issue-2721-proof.plan.json",
+  "retention": {
+    "state": "cleanup-distilled-without-full-archive",
+    "reason": "completed-plan cleanup retained compact closeout evidence instead of a full execplan archive",
+    "canonical_evidence": "compact closeout tombstone",
+    "ordinary_route": "report --section closeout_report --format json"
+  },
+  "claim_level": "slice",
+  "outcome": "Selected proof executes and reconciles through one supported operation, while machine-local proof leaves no repository claim residue.",
+  "contribution": "Closes the proof execution and local-evidence acceptance for GitHub issues #2727 and #2728 while preserving later continuity and signal slices.",
+  "evidence_refs": [
+    "See proof_report.validation proof."
+  ],
+  "residual": {
+    "status": "open",
+    "owner": "issue-2721-continuity"
+  },
+  "closure": {
+    "authority": "planning closeout writer",
+    "provenance": "completed-plan cleanup retained compact closeout evidence instead of a full execplan archive",
+    "reopen_trigger": "Reopen when issue-2721-continuity activates a fresh bounded slice."
+  },
+  "revision": 3,
+  "active_milestone": {
+    "status": "completed"
+  },
+  "proof_report": {
+    "validation proof": "4 focused selected-proof execution, resume/staleness, cancel/timeout, and machine-local config tests passed on master; PR #2734 exact head passed hosted CI, Security, semver and Review approval and is merged."
+  },
+  "intent_satisfaction": {
+    "was original intent fully satisfied?": "no",
+    "unsolved intent passed to": "issue-2721-continuity"
+  },
+  "intent_continuity": {
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "issue-2721-continuity"
+  },
+  "child_intent_satisfaction": {
+    "status": "not-recorded",
+    "scope": "not-recorded",
+    "parent_intent_effect": "unknown"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "reopen trigger": "Reopen when issue-2721-continuity activates a fresh bounded slice."
+  },
+  "execution_summary": {
+    "outcome delivered": "Selected proof executes and reconciles through one supported operation, while machine-local proof leaves no repository claim residue.",
+    "follow-on routed to": "issue-2721-continuity"
+  },
+  "execution_run": {
+    "changed surfaces": "Merged PR #2734 is present on master.",
+    "next step": "continue from issue-2721-continuity"
+  }
+}
