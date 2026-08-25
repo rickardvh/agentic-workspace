@@ -1,11 +1,21 @@
 ---
 name: pr-review-recheck
-description: Review, re-review, or assess merge readiness for Agentic Workspace pull requests while preserving intent, proof, closure, CI, and semver boundaries.
+description: Independently review or re-review Agentic Workspace pull requests when the current agent did not implement or modify the PR patch. Use only for external review authority; do not use while addressing feedback, implementing fixes, reporting implementation evidence, or assessing your own changes.
 ---
 
 # PR Review / Recheck
 
-Use this repo-owned skill when reviewing an Agentic Workspace PR, checking a fix after review feedback, or deciding whether a PR is ready to merge. This is maintainer workflow guidance for this repository only; do not ship it as an installed AW skill.
+Use this repo-owned skill only as an independent external reviewer of an Agentic Workspace PR. This is maintainer workflow guidance for this repository only; do not ship it as an installed AW skill.
+
+## Eligibility Boundary
+
+Before using this procedure, establish that the current agent did not implement, modify, or push the PR patch being reviewed.
+
+- An implementation agent addressing review comments may report its fixes and evidence, but must not use this skill, emit an authoritative `merge-ready` marker, or satisfy `Review approval` for its own work.
+- A request to address blockers, fix CI, update a PR, or check whether comments were addressed does not assign independent review authority.
+- Human approval to continue implementation does not make the implementation agent independent. Route the completed head to a distinct external review agent or leave `Review approval` pending.
+- A reviewer may share the GitHub account that opened the PR; that is only an account/API limitation and does not permit the agent that implemented the patch to approve itself.
+- If authorship or role separation is unclear, stop before applying this skill and request an independent review.
 
 ## Procedure
 
@@ -89,4 +99,4 @@ Report in this shape:
 - Prefer evidence from the current PR head over stale prior comments.
 - Do not infer merge readiness from passing CI alone.
 - Keep comments focused on actionable blockers or durable suggestions.
-- If GitHub disallows a formal review action on an own-account PR, post the review as a top-level PR comment instead.
+- If GitHub disallows a formal review action because the independent external reviewer shares the PR author's account, post the review as a top-level PR comment instead. This fallback does not authorize implementation-agent self-review.
