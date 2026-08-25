@@ -2,7 +2,7 @@
   "kind": "agentic-workspace/proof-receipt/v1",
   "command": "uv run --active python scripts/run_agentic_workspace.py implement --changed src/agentic_workspace/operating_projection_receipt.py src/agentic_workspace/workspace_runtime_core.py tests/test_operating_projection_receipt.py tests/test_workspace_cli.py .release/changes/2740-operating-projection-replay.toml .agentic-workspace/planning/closeout-evidence/issue-2740-operating-projection-replay.replay.json .agentic-workspace/planning/execplans/issue-2740-replay.plan.json --select requirement_grounding,context.delegation_decision,context.plan_delegation_packet --format json",
   "result": "passed",
-  "recorded_at": "2026-08-25T20:23:49+00:00",
+  "recorded_at": "2026-08-25T20:36:51+00:00",
   "changed_paths": [
     "src/agentic_workspace/operating_projection_receipt.py",
     "src/agentic_workspace/workspace_runtime_core.py",
@@ -82,7 +82,7 @@
   "proof_template_binding": {
     "kind": "agentic-workspace/proof-template-binding/v1",
     "status": "current",
-    "live_obligation_id": "proof-template-obligation:9b9708f1c40cbd233244",
+    "live_obligation_id": "proof-template-obligation:90bed4eec24a683374c4",
     "command": {
       "template": "uv run --active python scripts/run_agentic_workspace.py implement --changed <paths> --select requirement_grounding,context.delegation_decision,context.plan_delegation_packet --format json",
       "concrete": "uv run --active python scripts/run_agentic_workspace.py implement --changed src/agentic_workspace/operating_projection_receipt.py src/agentic_workspace/workspace_runtime_core.py tests/test_operating_projection_receipt.py tests/test_workspace_cli.py .release/changes/2740-operating-projection-replay.toml .agentic-workspace/planning/closeout-evidence/issue-2740-operating-projection-replay.replay.json .agentic-workspace/planning/execplans/issue-2740-replay.plan.json --select requirement_grounding,context.delegation_decision,context.plan_delegation_packet --format json",
@@ -113,7 +113,7 @@
       "selector_registry_revision": "2c25c001c985534c",
       "template_revision": "cf06e3aed3f14309",
       "evaluation_result_revision": "not-required:evaluation",
-      "mutation_baseline": "118a4fee88128f92"
+      "mutation_baseline": "49d9c9e30aed9ffc"
     },
     "authority_states": {
       "lane_id": {
@@ -178,14 +178,14 @@
       },
       "mutation_baseline": {
         "status": "current",
-        "revision": "118a4fee88128f92",
+        "revision": "49d9c9e30aed9ffc",
         "source": "repo-proof-obligation-resolver",
         "provenance": "selected proof lane and current repository state",
         "payload": {
           "kind": "agentic-workspace/mutation-baseline/v1",
-          "status": "dirty-scope-advisory-baseline",
-          "baseline_id": "118a4fee88128f92",
-          "head": "b29318e9dbe1ef65f3571293d462d8184f637509",
+          "status": "clean-scope",
+          "baseline_id": "49d9c9e30aed9ffc",
+          "head": "390f53358e3493c037f05708642edab8c5199ddf",
           "observation": {
             "ok": true,
             "head": {
@@ -237,55 +237,10 @@
             "comparison": "stable-target-and-assignment-context"
           },
           "observed_state": {
-            "entry_count": 2,
-            "entries": [
-              {
-                "path": ".agentic-workspace/planning/execplans/issue-2740-replay.plan.json",
-                "original_path": null,
-                "paths": [
-                  ".agentic-workspace/planning/execplans/issue-2740-replay.plan.json"
-                ],
-                "index_status": " ",
-                "worktree_status": "M",
-                "untracked": false,
-                "managed_local_state": false,
-                "rename_or_copy": false,
-                "classification": "unstaged",
-                "object_identities": [
-                  {
-                    "path": ".agentic-workspace/planning/execplans/issue-2740-replay.plan.json",
-                    "head_object": "1c2b0f6b3de72d35e15276eab0768097dde525c9",
-                    "worktree_object": "8af9094a1745a77771dbfd65f4af20340efae70b",
-                    "head_observed": true,
-                    "worktree_observed": true
-                  }
-                ]
-              },
-              {
-                "path": ".agentic-workspace/planning/closeout-evidence/issue-2740-operating-projection-replay.replay.json",
-                "original_path": null,
-                "paths": [
-                  ".agentic-workspace/planning/closeout-evidence/issue-2740-operating-projection-replay.replay.json"
-                ],
-                "index_status": "?",
-                "worktree_status": "?",
-                "untracked": true,
-                "managed_local_state": false,
-                "rename_or_copy": false,
-                "classification": "untracked",
-                "object_identities": [
-                  {
-                    "path": ".agentic-workspace/planning/closeout-evidence/issue-2740-operating-projection-replay.replay.json",
-                    "head_object": "HEAD:.agentic-workspace/planning/closeout-evidence/issue-2740-operating-projection-replay.replay.json",
-                    "worktree_object": "457d9f28bdf9f423ce9770836a7bb7d9862d7875",
-                    "head_observed": false,
-                    "worktree_observed": true
-                  }
-                ]
-              }
-            ],
-            "enforcement_fingerprint": "f00b7c2b462ccf16f4587ebb037bfa44961f69a37e7c8daf8937a818f0736cdb",
-            "enforcement_entry_count": 2,
+            "entry_count": 0,
+            "entries": [],
+            "enforcement_fingerprint": "99641d69a03b02539bbec4318fd2820a5aa9a7894d8ddb238ed5e4ce0cfcb2d2",
+            "enforcement_entry_count": 0,
             "enforcement_scope": "full-scoped-status",
             "omitted_entry_count": 0,
             "untracked_managed_count": 0
@@ -341,7 +296,7 @@
           "boundary_enforcement": {
             "kind": "agentic-workspace/mutation-boundary-enforcement/v1",
             "status": "fail-closed-contract",
-            "baseline_id": "118a4fee88128f92",
+            "baseline_id": "49d9c9e30aed9ffc",
             "boundaries": [
               {
                 "id": "returned-worker-admission",
@@ -448,7 +403,7 @@
     },
     "result_provenance": {
       "result": "passed",
-      "recorded_at": "2026-08-25T20:23:49+00:00",
+      "recorded_at": "2026-08-25T20:36:51+00:00",
       "proof_subject_fingerprint": "c3d887073c5256b95db60285e9d32f3500a02bcaacd674dae03e0aa9f1a3251c"
     },
     "freshness": {
@@ -517,14 +472,14 @@
         },
         "mutation_baseline": {
           "status": "current",
-          "revision": "118a4fee88128f92",
+          "revision": "49d9c9e30aed9ffc",
           "source": "repo-proof-obligation-resolver",
           "provenance": "selected proof lane and current repository state",
           "payload": {
             "kind": "agentic-workspace/mutation-baseline/v1",
-            "status": "dirty-scope-advisory-baseline",
-            "baseline_id": "118a4fee88128f92",
-            "head": "b29318e9dbe1ef65f3571293d462d8184f637509",
+            "status": "clean-scope",
+            "baseline_id": "49d9c9e30aed9ffc",
+            "head": "390f53358e3493c037f05708642edab8c5199ddf",
             "observation": {
               "ok": true,
               "head": {
@@ -576,55 +531,10 @@
               "comparison": "stable-target-and-assignment-context"
             },
             "observed_state": {
-              "entry_count": 2,
-              "entries": [
-                {
-                  "path": ".agentic-workspace/planning/execplans/issue-2740-replay.plan.json",
-                  "original_path": null,
-                  "paths": [
-                    ".agentic-workspace/planning/execplans/issue-2740-replay.plan.json"
-                  ],
-                  "index_status": " ",
-                  "worktree_status": "M",
-                  "untracked": false,
-                  "managed_local_state": false,
-                  "rename_or_copy": false,
-                  "classification": "unstaged",
-                  "object_identities": [
-                    {
-                      "path": ".agentic-workspace/planning/execplans/issue-2740-replay.plan.json",
-                      "head_object": "1c2b0f6b3de72d35e15276eab0768097dde525c9",
-                      "worktree_object": "8af9094a1745a77771dbfd65f4af20340efae70b",
-                      "head_observed": true,
-                      "worktree_observed": true
-                    }
-                  ]
-                },
-                {
-                  "path": ".agentic-workspace/planning/closeout-evidence/issue-2740-operating-projection-replay.replay.json",
-                  "original_path": null,
-                  "paths": [
-                    ".agentic-workspace/planning/closeout-evidence/issue-2740-operating-projection-replay.replay.json"
-                  ],
-                  "index_status": "?",
-                  "worktree_status": "?",
-                  "untracked": true,
-                  "managed_local_state": false,
-                  "rename_or_copy": false,
-                  "classification": "untracked",
-                  "object_identities": [
-                    {
-                      "path": ".agentic-workspace/planning/closeout-evidence/issue-2740-operating-projection-replay.replay.json",
-                      "head_object": "HEAD:.agentic-workspace/planning/closeout-evidence/issue-2740-operating-projection-replay.replay.json",
-                      "worktree_object": "457d9f28bdf9f423ce9770836a7bb7d9862d7875",
-                      "head_observed": false,
-                      "worktree_observed": true
-                    }
-                  ]
-                }
-              ],
-              "enforcement_fingerprint": "f00b7c2b462ccf16f4587ebb037bfa44961f69a37e7c8daf8937a818f0736cdb",
-              "enforcement_entry_count": 2,
+              "entry_count": 0,
+              "entries": [],
+              "enforcement_fingerprint": "99641d69a03b02539bbec4318fd2820a5aa9a7894d8ddb238ed5e4ce0cfcb2d2",
+              "enforcement_entry_count": 0,
               "enforcement_scope": "full-scoped-status",
               "omitted_entry_count": 0,
               "untracked_managed_count": 0
@@ -680,7 +590,7 @@
             "boundary_enforcement": {
               "kind": "agentic-workspace/mutation-boundary-enforcement/v1",
               "status": "fail-closed-contract",
-              "baseline_id": "118a4fee88128f92",
+              "baseline_id": "49d9c9e30aed9ffc",
               "boundaries": [
                 {
                   "id": "returned-worker-admission",
@@ -800,5 +710,5 @@
   "confidence": "high",
   "source_ref": "proof://receipts/a2e6b6bce8d76301",
   "status": "current",
-  "revision": "2026-08-25T20:23:49+00:00"
+  "revision": "2026-08-25T20:36:51+00:00"
 }
