@@ -40,12 +40,13 @@
         "owner": "issue-2721 lane current slice"
     },
     "proof_posture": {
-      "state": "focused-proof-passed",
+      "state": "hosted-proof-passed",
       "refs": [
         "14 correction-route tests passed",
         "110 review-stack and merge-gate tests passed",
         "generated command-package static and conformance proof passed",
-        "contract tooling, schema references, structured inventory, Memory freshness, and routed proof checks passed"
+        "contract tooling, schema references, structured inventory, Memory freshness, and routed proof checks passed",
+        "PR #2732 exact head passed CI, Security baseline, and PR Semver Label checks"
       ]
     },
     "external_posture": {
@@ -78,7 +79,7 @@
       "role": "parent"
     }
   ],
-  "next_action": "Open the first stacked PR against master, obtain independent review, and continue implementation on issue-2721-decision from this branch.",
+  "next_action": "Obtain independent review for published PR #2732, then merge the published five-PR stack #2732-#2736 in order after every layer is approved.",
   "blockers": [],
   "proof": {
     "claims": [
@@ -103,7 +104,7 @@
   },
   "continuation": {
     "owner": "issue-2721-decision",
-    "residual_intent": "Continue the lane with bounded selector-safe decision routes and task-level orchestration disposition after this trust slice is merged."
+    "residual_intent": "The full #2732-#2736 stack is published and hosted validation is green; preserve child-specific closure boundaries through independent review and ordered merge."
   },
   "specialist_contracts": []
 }
