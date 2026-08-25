@@ -4520,7 +4520,11 @@ force = "required-before-closeout"
 
 def test_proof_selection_composes_feature_and_affected_owner_baselines() -> None:
     selection = workspace_runtime_proof._proof_selection_for_changed_paths(
-        changed_paths=["src/agentic_workspace/contracts/proof_selection_rules.json"],
+        changed_paths=[
+            "src/agentic_workspace/contracts/schemas/implementer_context.schema.json",
+            "src/agentic_workspace/operating_decision.py",
+            "src/agentic_workspace/workspace_runtime_startup.py",
+        ],
         target_root=None,
         include_durable_intent=False,
         include_assurance_requirements=False,
@@ -6520,7 +6524,7 @@ def test_proof_changed_selector_is_independent_of_rule_order(tmp_path: Path, cap
     assert reordered.get("routing_compositions") == original.get("routing_compositions")
 
 
-def test_proof_changed_selector_retains_workspace_owner_baseline_for_contract_changes(tmp_path: Path, capsys) -> None:
+def test_proof_changed_selector_keeps_contract_only_changes_focused(tmp_path: Path, capsys) -> None:
     _write_repo_local_proof_target(tmp_path)
 
     assert (
@@ -6542,12 +6546,33 @@ def test_proof_changed_selector_retains_workspace_owner_baseline_for_contract_ch
 
     payload = json.loads(capsys.readouterr().out)
     answer = payload["answer"]
-    assert [lane["id"] for lane in answer["selected_lanes"]] == ["repo_docs_review", "contract_tooling", "workspace_cli"]
-    assert {lane["proof_kind"] for lane in answer["selected_lanes"]} == {"diff-review", "surface-check", "targeted-test"}
-    assert any(
-        composition["primary_lane"] == "contract_tooling" and composition["complementary_lanes"] == ["workspace_cli"]
-        for composition in answer["routing_compositions"]
+    assert [lane["id"] for lane in answer["selected_lanes"]] == ["repo_docs_review", "contract_tooling"]
+    assert {lane["proof_kind"] for lane in answer["selected_lanes"]} == {"diff-review", "surface-check"}
+    assert not any(composition["primary_lane"] == "contract_tooling" for composition in answer.get("routing_compositions", []))
+
+
+def test_proof_changed_selector_routes_structured_inventory_contract_change_to_focused_lane(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/contracts/structured_file_inventory.json",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
     )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert [lane["id"] for lane in answer["selected_lanes"]] == ["contract_tooling"]
+    assert "make test-workspace" not in answer["required_commands"]
 
 
 def test_proof_changed_selector_includes_schema_reference_docs_for_workspace_schema(tmp_path: Path, capsys) -> None:
