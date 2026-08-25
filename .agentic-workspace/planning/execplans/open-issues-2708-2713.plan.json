@@ -5,7 +5,7 @@
   "owner_level": "slice",
   "lifecycle": "live",
   "phase": "validation",
-  "revision": 2,
+  "revision": 3,
   "canonical_core": {
     "requested_outcome": "Implement every currently open issue (#2708-#2713) as a dependency-aware stack of grouped pull requests based on current master.",
     "hard_constraints": "Preserve external evidence as evidence rather than authority; preserve assignment-versus-transport semantics; keep default outputs decision-first; keep session logs local and non-authoritative; close no issue without its acceptance evidence.",
@@ -129,6 +129,7 @@
     "Independent external review and ordered merge remain pending."
   ],
   "proof": {
+    "summary": "Implementation revisions ef4cadf69 for PR #2716 and 2c4b1b7f9 for PR #2717 are recorded; refreshed hosted checks and independent review remain pending.",
     "claims": [
       "PR #2716 implements #2708 through #2712 and its review repairs.",
       "PR #2717 implements #2713 and its fail-open review repair."
