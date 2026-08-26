@@ -6294,6 +6294,50 @@ def _select_broad_domain_lane(
     )
 
 
+def _explicit_broad_escalation_reason(
+    *,
+    domain_lanes: list[dict[str, Any]],
+    changed_paths: list[str],
+    route_refinement_required: dict[str, Any],
+) -> dict[str, Any] | None:
+    if str(route_refinement_required.get("status", "")) == "required":
+        return None
+    for lane in domain_lanes:
+        if str(lane.get("id", "")) != "domain:workspace_broad_suite":
+            continue
+        domain = _as_dict(lane.get("domain_lane"))
+        matched_markers = [str(item) for item in _list_payload(domain.get("matched_task_markers")) if str(item).strip()]
+        typed_conditions = [str(item) for item in _list_payload(domain.get("escalation_conditions")) if str(item).strip()]
+        if not matched_markers or "explicit-request" not in typed_conditions:
+            return None
+        return {
+            "kind": "agentic-workspace/structured-broad-escalation/v1",
+            "status": "selected",
+            "reason_code": "explicit-request",
+            "matched_evidence": [
+                {
+                    "lane_id": str(lane.get("id", "")),
+                    "owner": str(domain.get("owner", "")),
+                    "matched_task_markers": matched_markers,
+                    "claim_boundary": str(lane.get("claim_boundary", "")),
+                    "typed_conditions": typed_conditions,
+                }
+            ],
+            "changed_paths": changed_paths,
+            "distinct_owners": [str(domain.get("owner", ""))] if domain.get("owner") else [],
+            "distinct_claim_boundaries": [str(lane.get("claim_boundary", ""))] if lane.get("claim_boundary") else [],
+            "matched_typed_conditions": ["explicit-request"],
+            "matched_task_markers": matched_markers,
+            "evidence_unavailable_from_focused_routes": [
+                "The task explicitly selected a host-declared broad route after focused route coverage was confirmed."
+            ],
+            "proportionality": "Broad workspace proof is selected only from an explicit marker and typed host authority.",
+            "resource_posture": "broad/high-cost; explicitly requested after route refinement checks",
+            "authority_source": ".agentic-workspace/config.toml [assurance.domain_proof_lanes.workspace_broad_suite]",
+        }
+    return None
+
+
 def _proof_route_strategy_decision_payload(
     *,
     changed_paths: list[str],
@@ -9082,7 +9126,7 @@ def _proof_selection_for_changed_paths(
     )
     broad_acceptance_lanes = {str(lane_id) for lane_id in _list_payload(_PROOF_SELECTION_RULES.get("broad_acceptance_lanes"))}
     generic_broad_lane_ids = broad_acceptance_lanes
-    explicit_broad_lane_selected = any(
+    broad_lane_matched = any(
         str(lane.get("id", "")) == "domain:workspace_broad_suite"
         or str(lane.get("claim_boundary", "")) == "explicit-broad-escalation-required"
         for lane in selected_lanes
@@ -9093,8 +9137,15 @@ def _proof_selection_for_changed_paths(
         active_assurance_requirements=active_assurance_requirements,
         local_high_risk_overlay=local_high_risk_overlay,
     )
+    explicit_broad_escalation_reason = _explicit_broad_escalation_reason(
+        domain_lanes=domain_lanes,
+        changed_paths=changed_paths,
+        route_refinement_required=preliminary_route_refinement,
+    )
+    if explicit_broad_escalation_reason is not None:
+        broad_escalation_reason = explicit_broad_escalation_reason
     applicable_friction_findings = _applicable_validation_friction_findings(target_root=target_root, changed_paths=changed_paths)
-    if broad_escalation_reason is not None and not explicit_broad_lane_selected:
+    if broad_escalation_reason is not None and not broad_lane_matched:
         broad_lane = _select_broad_domain_lane(
             config=config,
             changed_paths=changed_paths,
@@ -9103,7 +9154,8 @@ def _proof_selection_for_changed_paths(
         if broad_lane is not None:
             domain_lanes.append(broad_lane)
             selected_lanes.append(broad_lane)
-            explicit_broad_lane_selected = True
+            broad_lane_matched = True
+    explicit_broad_lane_selected = broad_escalation_reason is not None and broad_lane_matched
     generic_broad_commands = {
         str(command).strip()
         for lane in selected_lanes
@@ -9137,6 +9189,16 @@ def _proof_selection_for_changed_paths(
     if strategy_outcome in {"focused", "route-refinement-required", "broad-escalated", "broad-escalation-required"}:
         for lane in selected_lanes:
             if str(lane.get("id", "")).startswith("domain:"):
+                if str(lane.get("id", "")) == "domain:workspace_broad_suite" and strategy_outcome != "broad-escalated":
+                    optional = [str(command) for command in _list_payload(lane.get("optional_commands")) if str(command).strip()]
+                    lane["optional_commands"] = _dedupe(
+                        [*optional, *[str(command) for command in _list_payload(lane.get("enough_proof")) if str(command).strip()]]
+                    )
+                    lane["enough_proof"] = []
+                    lane["focused_route_reduction"] = {
+                        "status": "broad-proof-withheld-without-structured-escalation",
+                        "reason": "A broad task marker requires matching typed escalation authority and healthy focused coverage.",
+                    }
                 continue
             broad_commands = [str(command) for command in _list_payload(lane.get("enough_proof")) if str(command).strip()]
             if not broad_commands:
