@@ -812,6 +812,12 @@
     },
     {
       "adapter_kind": "process",
+      "id": "correction-event.identity-init.process",
+      "operation_id": "correction-event.identity-init",
+      "path": "conformance/correction-event.identity-init.process.json"
+    },
+    {
+      "adapter_kind": "process",
       "id": "correction-event.submit.process",
       "operation_id": "correction-event.submit",
       "path": "conformance/correction-event.submit.process.json"

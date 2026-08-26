@@ -35,6 +35,7 @@ from . import autopilot_run as _command_autopilot_run
 from . import checkpoint_write as _command_checkpoint_write
 from . import config_report as _command_config_report
 from . import correction_event_correct_dispute as _command_correction_event_correct_dispute
+from . import correction_event_identity_init as _command_correction_event_identity_init
 from . import correction_event_prune_compact as _command_correction_event_prune_compact
 from . import correction_event_query as _command_correction_event_query
 from . import correction_event_submit as _command_correction_event_submit
@@ -120,6 +121,7 @@ GENERATED_COMMAND_HANDLERS = {
     'checkpoint.write': _command_checkpoint_write.run,
     'config.report': _command_config_report.run,
     'correction-event.correct-dispute': _command_correction_event_correct_dispute.run,
+    'correction-event.identity-init': _command_correction_event_identity_init.run,
     'correction-event.prune-compact': _command_correction_event_prune_compact.run,
     'correction-event.query': _command_correction_event_query.run,
     'correction-event.submit': _command_correction_event_submit.run,

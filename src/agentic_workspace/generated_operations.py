@@ -229,6 +229,18 @@ def correction_event_correct_dispute(
     )
 
 
+def correction_event_identity_init(
+    values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None
+) -> dict[str, Any]:
+    return invoke_operation(
+        "correction-event.identity-init",
+        values,
+        target=target,
+        invocation=invocation,
+        allow_runtime_backed=True,
+    )
+
+
 def correction_event_prune_compact(
     values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None
 ) -> dict[str, Any]:

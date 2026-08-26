@@ -274,6 +274,7 @@ def run_operation_values(operation: dict[str, Any], *, initial_values: Mapping[s
         'assignment.repair',
         'config.report',
         'correction-event.correct-dispute',
+        'correction-event.identity-init',
         'correction-event.prune-compact',
         'correction-event.query',
         'correction-event.submit',

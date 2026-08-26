@@ -6,7 +6,10 @@
   "additionalProperties": true,
   "properties": {
     "kind": {
-      "const": "agentic-workspace/correction-event-operation-result/v1",
+      "enum": [
+        "agentic-workspace/correction-event-operation-result/v1",
+        "agentic-workspace/target-identity-initialization/v1"
+      ],
       "description": "Stable result envelope discriminator."
     },
     "operation_id": {
@@ -32,6 +35,18 @@
     "admission": {
       "type": "object",
       "description": "Admission, rejection, low-authority, retention, and routing details."
+    },
+    "target_profile": {
+      "type": "string",
+      "description": "Uniquely resolved configured profile whose stable identity was initialized."
+    },
+    "target_id": {
+      "type": "string",
+      "description": "Persisted or proposed stable local target identity."
+    },
+    "config_path": {
+      "type": "string",
+      "description": "Ignored local configuration path that owns the stable target identity."
     }
   },
   "required": [

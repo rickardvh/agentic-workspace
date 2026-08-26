@@ -5,6 +5,7 @@ import hashlib
 import hmac
 import json
 import os
+import re
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Callable
@@ -72,6 +73,7 @@ def _load_trusted_authority_host_event_from_inbox(*, target_root: Path, host_eve
 
 
 CORRECTION_EVENT_OPERATIONS = (
+    "correction-event.identity-init",
     "correction-event.submit",
     "correction-event.query",
     "correction-event.correct-dispute",
@@ -300,6 +302,167 @@ def resolve_target_identity(*, subjects: list[dict[str, Any]], value: str) -> di
             "recovery": "set delegation_targets.<target>.target_id before using target guidance",
         }
     return {"status": "known", "subject": subject, "matched_by": matched_by, "recovery": "not-needed"}
+
+
+def _target_identity_repair_plan(*, subjects: list[dict[str, Any]], current_name: str) -> dict[str, Any]:
+    """Return one collision-checked local identity initialization route.
+
+    Profile names remain lookup hints, never durable identity proof.  The
+    proposed id becomes authoritative only after the explicit local config
+    mutation records it.
+    """
+
+    matches = [
+        subject for subject in subjects if subject.get("profile_name") == current_name or current_name in set(subject.get("aliases", []))
+    ]
+    missing = [subject for subject in matches if not subject.get("stable_target_id")]
+    if len(matches) != 1 or len(missing) != 1:
+        return {
+            "status": "unavailable",
+            "reason": "target-profile-not-uniquely-resolvable",
+            "operation": "correction-event identity-init",
+        }
+    subject = missing[0]
+    profile_name = str(subject.get("profile_name") or current_name)
+    slug = re.sub(r"[^a-z0-9]+", "-", profile_name.lower()).strip("-") or "target"
+    seed = json.dumps(
+        {
+            "profile_name": profile_name,
+            "provider": subject.get("provider"),
+            "model_family": subject.get("model_family"),
+            "role_identity": subject.get("role_identity"),
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    suffix = hashlib.sha256(seed.encode("utf-8")).hexdigest()[:10]
+    proposed_id = f"user-local:{slug}-{suffix}"
+    existing_ids = {str(item.get("stable_target_id")) for item in subjects if item.get("stable_target_id")}
+    if proposed_id in existing_ids:
+        return {
+            "status": "unavailable",
+            "reason": "proposed-target-id-collides",
+            "operation": "correction-event identity-init",
+        }
+    return {
+        "status": "ready",
+        "operation": "correction-event identity-init",
+        "operation_id": "correction-event.identity-init",
+        "target_profile": profile_name,
+        "proposed_target_id": proposed_id,
+        "config_path": WORKSPACE_LOCAL_CONFIG_PATH.as_posix(),
+        "config_table": f"delegation_targets.{profile_name}",
+        "checked_in": False,
+        "dry_run_command": (
+            f"agentic-workspace correction-event identity-init --target . --target-profile {profile_name} --dry-run --format json"
+        ),
+        "apply_command": f"agentic-workspace correction-event identity-init --target . --target-profile {profile_name} --format json",
+        "recheck_command": "agentic-workspace config --target . --select mixed_agent.target_identity --format json",
+        "authority_boundary": "The generated proposal is not identity proof; the explicit local config write establishes the stable id.",
+    }
+
+
+def initialize_target_identity(*, target_root: Path, values: dict[str, Any]) -> dict[str, Any]:
+    """Persist one generated stable target id in the ignored local config."""
+
+    config = load_workspace_config(target_root=target_root)
+    local_override = config.local_override
+    subjects = [_target_identity_subject(profile) for profile in local_override.delegation_targets]
+    profile_name = str(values.get("target_profile") or local_override.current_target or "").strip()
+    existing = resolve_target_identity(subjects=subjects, value=profile_name)
+    if existing.get("status") == "known" and isinstance(existing.get("subject"), dict):
+        return {
+            "kind": "agentic-workspace/target-identity-initialization/v1",
+            "operation_id": "correction-event.identity-init",
+            "status": "already-initialized",
+            "mutation_applied": False,
+            "target_profile": profile_name,
+            "target_id": existing["subject"].get("stable_target_id"),
+            "reason": "idempotent-replay",
+            "checked_in_repo_effect": "none",
+        }
+    plan = _target_identity_repair_plan(subjects=subjects, current_name=profile_name)
+    if plan.get("status") != "ready":
+        return {
+            "kind": "agentic-workspace/target-identity-initialization/v1",
+            "operation_id": "correction-event.identity-init",
+            "status": "blocked",
+            "mutation_applied": False,
+            "repair": plan,
+        }
+    configured_id = str(values.get("target_id") or "").strip()
+    proposed_id = str(plan["proposed_target_id"])
+    target_id = configured_id or proposed_id
+    if configured_id and configured_id != proposed_id:
+        existing_ids = {str(item.get("stable_target_id")) for item in subjects if item.get("stable_target_id")}
+        if configured_id in existing_ids:
+            return {
+                "kind": "agentic-workspace/target-identity-initialization/v1",
+                "operation_id": "correction-event.identity-init",
+                "status": "blocked",
+                "mutation_applied": False,
+                "reason": "target-id-already-owned-by-another-profile",
+                "target_id": configured_id,
+            }
+    local_path = target_root / WORKSPACE_LOCAL_CONFIG_PATH
+    before = local_path.read_text(encoding="utf-8") if local_path.exists() else "schema_version = 1\n"
+    before_digest = "sha256:" + hashlib.sha256(before.encode("utf-8")).hexdigest()
+    expected_digest = str(values.get("expected_config_digest") or "").strip()
+    if expected_digest and expected_digest != before_digest:
+        return {
+            "kind": "agentic-workspace/target-identity-initialization/v1",
+            "operation_id": "correction-event.identity-init",
+            "status": "blocked",
+            "mutation_applied": False,
+            "reason": "local-config-revision-mismatch",
+            "expected_config_digest": expected_digest,
+            "current_config_digest": before_digest,
+            "recovery": "Rerun identity-init --dry-run and apply the refreshed operation.",
+        }
+    table = f"[delegation_targets.{profile_name}]"
+    lines = before.splitlines()
+    try:
+        table_index = next(index for index, line in enumerate(lines) if line.strip() == table)
+    except StopIteration:
+        lines.extend(([""] if lines and lines[-1] else []) + [table, f'target_id = "{target_id}"'])
+    else:
+        end = next((index for index in range(table_index + 1, len(lines)) if lines[index].lstrip().startswith("[")), len(lines))
+        current_line = next(
+            (index for index in range(table_index + 1, end) if lines[index].strip().startswith("target_id")),
+            None,
+        )
+        if current_line is not None:
+            current_value = lines[current_line].split("=", 1)[1].strip().strip('"')
+            return {
+                "kind": "agentic-workspace/target-identity-initialization/v1",
+                "operation_id": "correction-event.identity-init",
+                "status": "already-initialized" if current_value == target_id else "blocked",
+                "mutation_applied": False,
+                "target_profile": profile_name,
+                "target_id": current_value,
+                "reason": "target-profile-already-has-different-id" if current_value != target_id else "idempotent-replay",
+            }
+        lines.insert(table_index + 1, f'target_id = "{target_id}"')
+    after = "\n".join(lines).rstrip() + "\n"
+    after_digest = "sha256:" + hashlib.sha256(after.encode("utf-8")).hexdigest()
+    result = {
+        "kind": "agentic-workspace/target-identity-initialization/v1",
+        "operation_id": "correction-event.identity-init",
+        "status": "planned" if values.get("dry_run") else "initialized",
+        "mutation_applied": False if values.get("dry_run") else True,
+        "target_profile": profile_name,
+        "target_id": target_id,
+        "config_path": WORKSPACE_LOCAL_CONFIG_PATH.as_posix(),
+        "checked_in_repo_effect": "none",
+        "config_digest_before": before_digest,
+        "config_digest_after": after_digest,
+        "recheck_command": plan["recheck_command"],
+        "continuity_rule": "The persisted stable target id survives profile rename; aliases remain migration hints only.",
+    }
+    if not values.get("dry_run"):
+        local_path.parent.mkdir(parents=True, exist_ok=True)
+        local_path.write_text(after, encoding="utf-8")
+    return result
 
 
 def admit_correction_events(
@@ -604,6 +767,8 @@ def apply_correction_event_operation(
     """Apply a generated correction-event operation to bounded local storage."""
 
     operation = operation_id.removeprefix("correction-event.")
+    if operation == "identity-init":
+        return initialize_target_identity(target_root=target_root, values=values)
     observation_import: dict[str, Any] = {}
     if operation == "submit" and values.get("trusted_host_event_json"):
         observation_import = _import_trusted_correction_observation(target_root=target_root, values=values)
@@ -3589,6 +3754,7 @@ def target_identity_posture(*, local_override: MixedAgentLocalOverride, target_r
     current_status = resolution["status"]
     recovery = str(resolution.get("recovery") or "resolve target identity")
     current_subject = resolution.get("subject") if isinstance(resolution.get("subject"), dict) else None
+    identity_repair = _target_identity_repair_plan(subjects=subjects, current_name=current_name)
     user_root = local_override.user_guidance_root
     overlay_path = local_override.target_guidance_overlay_path or WORKSPACE_LOCAL_TARGET_GUIDANCE_OVERLAY_DEFAULT_PATH
     correction_path = local_override.correction_events_path or WORKSPACE_LOCAL_CORRECTION_EVENTS_DEFAULT_PATH
@@ -3612,6 +3778,13 @@ def target_identity_posture(*, local_override: MixedAgentLocalOverride, target_r
             },
             "recovery": recovery,
             "fail_closed": current_status not in {"known"},
+            "capability_posture": {
+                "assignment": "available" if current_name else "unavailable",
+                "correction_events": "available" if current_status == "known" else "identity-required",
+                "target_guidance": "available" if current_status == "known" else "identity-required",
+                "suitability_evidence": "available" if current_status == "known" else "identity-required",
+            },
+            "identity_repair": identity_repair if current_status != "known" else {"status": "not-required"},
         },
         "subjects": subjects,
         "storage": {
