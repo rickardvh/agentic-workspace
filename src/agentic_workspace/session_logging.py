@@ -2186,7 +2186,7 @@ def _normalized_index_entries(entries: Iterable[dict[str, Any]]) -> tuple[list[d
         ):
             if payload:
                 identity = _record_identity(prefix, payload)
-                records[table][identity] = payload
+                records[table].setdefault(identity, payload)
                 if field == "context_ref":
                     segment[field] = identity
                 else:

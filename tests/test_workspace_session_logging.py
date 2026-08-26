@@ -1734,6 +1734,8 @@ def test_context_record_identity_excludes_observation_time() -> None:
     second = {"kind": "agentic-workspace/current-work-context/v1", "freshness": {"resolved_at": "2026-01-01T00:00:03Z"}}
 
     assert session_logging._record_identity("context", first) == session_logging._record_identity("context", second)
+    _, records = session_logging._normalized_index_entries([{"segment": {"work_context": first}}, {"segment": {"work_context": second}}])
+    assert list(records["contexts"].values()) == [first]
 
 
 def test_session_log_index_deduplicates_metadata_and_analysis_pages_episodes(tmp_path: Path, capsys, monkeypatch) -> None:
