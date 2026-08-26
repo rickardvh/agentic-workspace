@@ -5,7 +5,7 @@
   "owner_level": "epic",
   "lifecycle": "live",
   "phase": "implementation",
-  "revision": 8,
+  "revision": 9,
   "intent": {
     "outcome": "Starting from current master, implement GitHub issues #2722, #2740, #2748, #2749, #2750, #2752, #2753, #2754, and #2755 as dependency-ordered stacked pull requests grouped by coherent lane.",
     "non_goals": [
@@ -68,7 +68,7 @@
     "https://github.com/rickardvh/agentic-workspace/issues/2754",
     "https://github.com/rickardvh/agentic-workspace/issues/2755"
   ],
-  "next_action": "Publish lane 4 for #2749 stacked on PR #2758, then implement and publish lane 5 for #2755 from the lane 4 head.",
+  "next_action": "Validate and publish lane 5 for #2755 stacked on PR #2759, then inspect the complete hosted stack without merging.",
   "blockers": [
     "None. Escalate if an issue requires changing an authority boundary or cannot satisfy its maintained replay without redesign beyond this stack."
   ],
@@ -98,7 +98,11 @@
       "Lane 4 regression proves source static validation cannot substitute for packed-artifact semantics",
       "Lane 4 workspace generated/release and integration suites passed; contract suite passed after restoring the maintained split-suite inventory",
       "Lane 4 external consumer readiness passed for Python and TypeScript after refreshing runner/profile-bound conformance receipts",
-      "Lane 4 runtime ownership checker passed after extracting proof execution projection and future-context distillation owners"
+      "Lane 4 runtime ownership checker passed after extracting proof execution projection and future-context distillation owners",
+      "Lane 4 commit 699c5490f",
+      "Lane 4 PR https://github.com/rickardvh/agentic-workspace/pull/2759",
+      "Lane 5 maintained PR #2746 replay finds issue comment 5425598890 in one complete intake and classifies ready-for-re-review/distinct-authority-required",
+      "Lane 5 counterexamples cover submitted review, inline thread, stale prior head, hosted failure without review blocker, incomplete required surface, and clean complete intake"
     ]
   },
   "continuation": {

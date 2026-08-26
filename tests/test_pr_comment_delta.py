@@ -10,6 +10,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = REPO_ROOT / "scripts" / "github" / "pr_comment_delta.py"
 README = REPO_ROOT / "scripts" / "github" / "README.md"
 REVIEW_HEAD = "a" * 40
+PR2746_FIXTURE = REPO_ROOT / "tests" / "fixtures" / "pr_review_intake" / "pr2746.json"
 
 
 def _load_module():
@@ -83,6 +84,30 @@ def _fixture() -> dict:
                 "is_resolved": True,
             },
         ],
+    }
+
+
+def _complete_review_payload(*, comments=None, reviews=None, threads=None, checks=None, head: str = REVIEW_HEAD) -> dict:
+    return {
+        "repository": "rickardvh/agentic-workspace",
+        "pr_number": 99,
+        "data": {
+            "repository": {
+                "pullRequest": {
+                    "url": "https://github.com/rickardvh/agentic-workspace/pull/99",
+                    "headRefOid": head,
+                    "updatedAt": "2026-08-26T12:00:00Z",
+                    "comments": {"pageInfo": {"hasNextPage": False}, "nodes": comments or []},
+                    "reviews": {"pageInfo": {"hasNextPage": False}, "nodes": reviews or []},
+                    "reviewThreads": {"pageInfo": {"hasNextPage": False}, "nodes": threads or []},
+                    "commits": {
+                        "nodes": [
+                            {"commit": {"statusCheckRollup": {"contexts": {"pageInfo": {"hasNextPage": False}, "nodes": checks or []}}}}
+                        ]
+                    },
+                }
+            }
+        },
     }
 
 
@@ -465,6 +490,119 @@ def test_pr_comment_delta_separates_outdated_threads_from_addressed_threads() ->
     statuses = {item["url"].split("#")[-1]: item["addressing_status"] for item in packet["items"]}
     assert statuses == {"outdated": "outdated", "resolved": "already_addressed"}
     assert all(item["action_required"] is False for item in packet["items"])
+
+
+def test_pr2746_complete_intake_finds_top_level_blocker_and_preserves_independent_authority() -> None:
+    module = _load_module()
+    packet = module.build_packet(
+        json.loads(PR2746_FIXTURE.read_text(encoding="utf-8")),
+        referenced_comment_ids={"5425598890"},
+    )
+
+    intake = packet["review_intake"]
+    assert intake["status"] == "complete"
+    assert intake["classification"] == "ready_for_re_review_distinct_authority"
+    assert intake["found_referenced_comment_ids"] == ["5425598890"]
+    assert intake["referenced_items"][0]["kind"] == "issue_comment"
+    assert intake["hosted_check_failures"][0]["name"] == "Review approval"
+    assert intake["independent_review_authority"] == {
+        "implementation_agent_eligible": False,
+        "merge_ready_authority": False,
+        "owner": "tools/skills/pr-review-recheck/SKILL.md",
+        "rule": "Complete intake may support fixes-applied / ready-for-re-review reporting; it never grants self-approval or merge-ready authority.",
+    }
+    assert intake["history_residue"] == {"checked_in_ledger_created": False, "full_history_dumped": False}
+    assert intake["tool_call_comparison"]["human_surface_redirection_required"] is False
+    assert len(intake["tool_call_comparison"]["after"]) == 1
+
+
+def test_complete_intake_classifies_submitted_review_and_inline_patch_requests() -> None:
+    module = _load_module()
+    review_packet = module.build_packet(
+        _complete_review_payload(
+            reviews=[
+                {
+                    "databaseId": 7,
+                    "url": "https://example.test/review/7",
+                    "body": "Please update src/app.py and add a focused test.",
+                    "state": "CHANGES_REQUESTED",
+                    "submittedAt": "2026-08-26T11:00:00Z",
+                    "author": {"login": "reviewer"},
+                    "commit": {"oid": REVIEW_HEAD},
+                }
+            ]
+        )
+    )
+    assert review_packet["review_intake"]["classification"] == "patch_changes_requested"
+    assert review_packet["items"][0]["kind"] == "review"
+
+    inline_packet = module.build_packet(
+        _complete_review_payload(
+            threads=[
+                {
+                    "isResolved": False,
+                    "isOutdated": False,
+                    "comments": {
+                        "pageInfo": {"hasNextPage": False},
+                        "nodes": [
+                            {
+                                "databaseId": 8,
+                                "url": "https://example.test/thread/8",
+                                "body": "Please fix this assertion.",
+                                "createdAt": "2026-08-26T11:00:00Z",
+                                "path": "tests/test_app.py",
+                                "line": 8,
+                                "author": {"login": "reviewer"},
+                                "commit": {"oid": REVIEW_HEAD},
+                            }
+                        ],
+                    },
+                }
+            ]
+        )
+    )
+    assert inline_packet["review_intake"]["classification"] == "patch_changes_requested"
+    assert inline_packet["items"][0]["kind"] == "review_thread_comment"
+
+
+def test_complete_intake_distinguishes_stale_blocker_hosted_failure_and_clean_state() -> None:
+    module = _load_module()
+    old_head = "b" * 40
+    stale = module.build_packet(
+        _complete_review_payload(
+            comments=[
+                {
+                    "databaseId": 9,
+                    "url": "https://example.test/comment/9",
+                    "body": f"Please update src/app.py. <!-- aw-chatgpt-review pr=99 head={old_head} policy=pr-review-recheck-v1 decision=blocked -->",
+                    "createdAt": "2026-08-25T11:00:00Z",
+                    "author": {"login": "reviewer"},
+                }
+            ]
+        )
+    )
+    assert stale["review_intake"]["classification"] == "stale_superseded_comment"
+    assert stale["items"][0]["implementation_posture"] == "stale_superseded_comment"
+
+    failed = module.build_packet(_complete_review_payload(checks=[{"name": "windows", "status": "COMPLETED", "conclusion": "FAILURE"}]))
+    assert failed["review_intake"]["classification"] == "hosted_check_failure"
+    assert failed["new_comment_count"] == 0
+
+    clean = module.build_packet(_complete_review_payload())
+    assert clean["review_intake"]["classification"] == "no_current_blocker"
+    assert clean["review_intake"]["status"] == "complete"
+
+
+def test_missing_referenced_blocker_fails_closed_when_any_surface_is_incomplete() -> None:
+    module = _load_module()
+    payload = _complete_review_payload()
+    del payload["data"]["repository"]["pullRequest"]["commits"]
+    packet = module.build_packet(payload, referenced_comment_ids={"5425598890"})
+
+    assert packet["review_intake"]["status"] == "incomplete"
+    assert packet["review_intake"]["classification"] == "intake_incomplete"
+    assert packet["review_intake"]["incomplete_surfaces"] == ["hosted_checks"]
+    assert packet["review_intake"]["missing_referenced_comment_ids"] == ["5425598890"]
 
 
 def test_pr_comment_delta_reports_graphql_truncation_boundaries() -> None:

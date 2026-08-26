@@ -21,6 +21,14 @@ ISSUE_COMMENT_LIMIT = 100
 REVIEW_LIMIT = 100
 REVIEW_THREAD_LIMIT = 100
 THREAD_COMMENT_LIMIT = 20
+CHECK_LIMIT = 100
+REQUIRED_REVIEW_SURFACES = (
+    "issue_comments",
+    "submitted_reviews",
+    "inline_review_threads",
+    "hosted_checks",
+    "current_head_ordering",
+)
 CATEGORIES = (
     "actionable_code_doc_body_change",
     "pr_metadata_body_only_change",
@@ -127,6 +135,7 @@ def _normalize_graphql(payload: dict[str, Any]) -> dict[str, Any]:
                 "created_at": review.get("submittedAt"),
                 "author": review.get("author"),
                 "review_state": review.get("state"),
+                "head_sha": (review.get("commit") or {}).get("oid"),
             }
         )
     page_info = _page_info(pr.get("reviewThreads"))
@@ -156,6 +165,25 @@ def _normalize_graphql(payload: dict[str, Any]) -> dict[str, Any]:
                     "is_resolved": thread.get("isResolved"),
                     "is_outdated": thread.get("isOutdated"),
                     "reply_to_database_id": (comment.get("replyTo") or {}).get("databaseId"),
+                    "head_sha": ((comment.get("commit") or {}).get("oid") or (comment.get("originalCommit") or {}).get("oid")),
+                }
+            )
+    checks: list[dict[str, Any]] = []
+    rollup = ((pr.get("commits") or {}).get("nodes") or [{}])[-1].get("commit", {}).get("statusCheckRollup")
+    if isinstance(rollup, dict):
+        contexts = rollup.get("contexts", {})
+        if _page_info(contexts).get("hasNextPage") is True:
+            truncated_surfaces.append("statusCheckRollup.contexts")
+        for check in contexts.get("nodes", []) or []:
+            if not isinstance(check, dict):
+                continue
+            checks.append(
+                {
+                    "name": check.get("name") or check.get("context"),
+                    "status": check.get("status"),
+                    "conclusion": check.get("conclusion") or check.get("state"),
+                    "completed_at": check.get("completedAt") or check.get("createdAt"),
+                    "url": check.get("detailsUrl") or check.get("targetUrl"),
                 }
             )
     return {
@@ -163,7 +191,9 @@ def _normalize_graphql(payload: dict[str, Any]) -> dict[str, Any]:
         "pr_number": payload.get("pr_number") or payload.get("number"),
         "pr_url": pr.get("url") or payload.get("pr_url"),
         "pr_head_sha": pr.get("headRefOid") or payload.get("pr_head_sha") or payload.get("head_sha"),
+        "pr_updated_at": pr.get("updatedAt") or payload.get("pr_updated_at"),
         "comments": comments if comments else payload.get("comments", []),
+        "checks": checks if isinstance(rollup, dict) else payload.get("checks"),
         "pagination": {
             "truncated": bool(truncated_surfaces),
             "truncated_surfaces": truncated_surfaces,
@@ -400,7 +430,135 @@ def _item_identity(item: dict[str, Any]) -> str:
     return _excerpt(_text(item.get("body")), limit=80)
 
 
-def build_packet(payload: dict[str, Any], *, since: datetime | None = None, seen_urls: set[str] | None = None) -> dict[str, Any]:
+def _database_id(item: dict[str, Any]) -> str:
+    return _text(item.get("database_id") or item.get("databaseId"))
+
+
+def _marker_head(body: str) -> str:
+    match = re.search(r"<!--\s*aw-chatgpt-review\b[^>]*\bhead=([0-9a-f]{40})", body, re.IGNORECASE)
+    return match.group(1).lower() if match else ""
+
+
+def _implementation_posture(item: dict[str, Any], *, current_head: str) -> str:
+    body = _text(item.get("body"))
+    lower = body.lower()
+    item_head = _text(item.get("head_sha")) or _marker_head(body)
+    if item_head and current_head and item_head.lower() != current_head.lower():
+        return "stale_superseded_comment"
+    if (
+        "no further implementation" in lower
+        or "no further patch" in lower
+        or "ready for re-review" in lower
+    ) and any(term in lower for term in ("distinct configured review authority", "distinct review authority", "review approval separation")):
+        return "ready_for_re_review_distinct_authority"
+    if item.get("addressing_status") == "unresolved_action" and item.get("category") == "actionable_code_doc_body_change":
+        return "patch_changes_requested"
+    return "informational_or_ambiguous"
+
+
+def _review_intake(
+    normalized: dict[str, Any],
+    items: list[dict[str, Any]],
+    *,
+    referenced_comment_ids: set[str],
+    pagination: dict[str, Any],
+) -> dict[str, Any]:
+    current_head = _text(normalized.get("pr_head_sha"))
+    comment_surfaces = normalized.get("comment_surfaces", {}) if isinstance(normalized.get("comment_surfaces"), dict) else {}
+    inspected_comments = set(comment_surfaces.get("inspected", []))
+    checks = normalized.get("checks")
+    complete_graphql_comments = {"issue_comments", "reviews", "review_threads"}.issubset(inspected_comments)
+    surface_status = {
+        "issue_comments": "complete" if complete_graphql_comments else "unavailable",
+        "submitted_reviews": "complete" if complete_graphql_comments else "unavailable",
+        "inline_review_threads": "complete" if complete_graphql_comments else "unavailable",
+        "hosted_checks": "complete" if isinstance(checks, list) else "unavailable",
+        "current_head_ordering": "complete" if current_head else "unavailable",
+    }
+    for surface in pagination.get("truncated_surfaces", []):
+        if surface == "comments":
+            surface_status["issue_comments"] = "truncated"
+        elif surface == "reviews":
+            surface_status["submitted_reviews"] = "truncated"
+        elif surface.startswith("reviewThreads"):
+            surface_status["inline_review_threads"] = "truncated"
+        elif surface.startswith("statusCheckRollup"):
+            surface_status["hosted_checks"] = "truncated"
+    incomplete = [surface for surface in REQUIRED_REVIEW_SURFACES if surface_status[surface] != "complete"]
+    referenced = []
+    found_ids: set[str] = set()
+    for item in items:
+        database_id = _text(item.get("database_id"))
+        if database_id and database_id in referenced_comment_ids:
+            found_ids.add(database_id)
+            referenced.append(item)
+    missing_referenced = sorted(referenced_comment_ids - found_ids)
+    failed_checks = [
+        {
+            "name": _text(check.get("name")),
+            "status": _text(check.get("status")),
+            "conclusion": _text(check.get("conclusion")),
+            "url": _text(check.get("url")),
+        }
+        for check in (checks or [])
+        if isinstance(check, dict)
+        and _text(check.get("conclusion")).lower() in {"failure", "failed", "timed_out", "cancelled", "action_required"}
+    ]
+    postures = [item["implementation_posture"] for item in items]
+    referenced_postures = [item["implementation_posture"] for item in referenced]
+    if incomplete:
+        classification = "intake_incomplete"
+    elif missing_referenced:
+        classification = "referenced_blocker_not_found"
+    elif "ready_for_re_review_distinct_authority" in referenced_postures:
+        classification = "ready_for_re_review_distinct_authority"
+    elif "patch_changes_requested" in referenced_postures:
+        classification = "patch_changes_requested"
+    elif "stale_superseded_comment" in referenced_postures:
+        classification = "stale_superseded_comment"
+    elif "patch_changes_requested" in postures:
+        classification = "patch_changes_requested"
+    elif "ready_for_re_review_distinct_authority" in postures:
+        classification = "ready_for_re_review_distinct_authority"
+    elif failed_checks:
+        classification = "hosted_check_failure"
+    elif "stale_superseded_comment" in postures:
+        classification = "stale_superseded_comment"
+    else:
+        classification = "no_current_blocker"
+    return {
+        "kind": "agentic-workspace/pr-review-intake/v1",
+        "status": "complete" if not incomplete else "incomplete",
+        "classification": classification,
+        "surface_status": surface_status,
+        "incomplete_surfaces": incomplete,
+        "referenced_comment_ids": sorted(referenced_comment_ids),
+        "found_referenced_comment_ids": sorted(found_ids),
+        "missing_referenced_comment_ids": missing_referenced,
+        "referenced_items": referenced,
+        "hosted_check_failures": failed_checks,
+        "independent_review_authority": {
+            "implementation_agent_eligible": False,
+            "merge_ready_authority": False,
+            "owner": "tools/skills/pr-review-recheck/SKILL.md",
+            "rule": "Complete intake may support fixes-applied / ready-for-re-review reporting; it never grants self-approval or merge-ready authority.",
+        },
+        "tool_call_comparison": {
+            "before": ["inspect hosted checks", "inspect inline review threads", "human identifies missed surface", "fetch issue comments"],
+            "after": ["run one bounded pr_comment_delta intake across all required surfaces"],
+            "human_surface_redirection_required": False,
+        },
+        "history_residue": {"checked_in_ledger_created": False, "full_history_dumped": False},
+    }
+
+
+def build_packet(
+    payload: dict[str, Any],
+    *,
+    since: datetime | None = None,
+    seen_urls: set[str] | None = None,
+    referenced_comment_ids: set[str] | None = None,
+) -> dict[str, Any]:
     normalized = _normalize_graphql(payload)
     seen_urls = seen_urls or set()
     items: list[dict[str, Any]] = []
@@ -431,6 +589,11 @@ def build_packet(payload: dict[str, Any], *, since: datetime | None = None, seen
             "author": _author_login(raw.get("author")),
             "created_at": created.isoformat().replace("+00:00", "Z") if created else "",
             "body_excerpt": _excerpt(_text(raw.get("body"))),
+            "database_id": _database_id(raw),
+            "implementation_posture": _implementation_posture(
+                {**raw, "addressing_status": addressing_status, "category": category},
+                current_head=_text(normalized.get("pr_head_sha")),
+            ),
         }
         for key in ("path", "line", "is_resolved", "is_outdated"):
             if key in raw and raw.get(key) not in (None, ""):
@@ -441,6 +604,12 @@ def build_packet(payload: dict[str, Any], *, since: datetime | None = None, seen
     for item in items:
         counts[item["category"]] += 1
     pagination = _as_pagination(normalized.get("pagination"))
+    review_intake = _review_intake(
+        normalized,
+        items,
+        referenced_comment_ids=referenced_comment_ids or set(),
+        pagination=pagination,
+    )
     return {
         "kind": PACKET_KIND,
         "repository": normalized.get("repository") or "",
@@ -468,6 +637,7 @@ def build_packet(payload: dict[str, Any], *, since: datetime | None = None, seen
         "items": items,
         "pagination": pagination,
         "comment_surfaces": normalized.get("comment_surfaces", {}),
+        "review_intake": review_intake,
         "smallest_next_action": _smallest_next_action(counts, pagination=pagination),
         "write_safety": {
             "github_writes_performed": False,
@@ -521,12 +691,13 @@ query($owner: String!, $name: String!, $number: Int!) {
     pullRequest(number: $number) {
       url
       headRefOid
+      updatedAt
       comments(first: 100) {
         nodes { databaseId url body createdAt updatedAt author { login } }
         pageInfo { hasNextPage endCursor }
       }
       reviews(first: 100) {
-        nodes { databaseId url body state submittedAt author { login } }
+        nodes { databaseId url body state submittedAt author { login } commit { oid } }
         pageInfo { hasNextPage endCursor }
       }
       reviewThreads(first: 100) {
@@ -548,6 +719,23 @@ query($owner: String!, $name: String!, $number: Int!) {
               diffHunk
               author { login }
               replyTo { databaseId }
+              commit { oid }
+              originalCommit { oid }
+            }
+          }
+        }
+      }
+      commits(last: 1) {
+        nodes {
+          commit {
+            statusCheckRollup {
+              contexts(first: 100) {
+                pageInfo { hasNextPage endCursor }
+                nodes {
+                  ... on CheckRun { name status conclusion completedAt detailsUrl }
+                  ... on StatusContext { context state createdAt targetUrl }
+                }
+              }
             }
           }
         }
@@ -593,6 +781,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--pr", type=int, help="Pull request number when fetching through gh.")
     parser.add_argument("--since", help="Only include comments created after this ISO timestamp.")
     parser.add_argument("--baseline-json", type=Path, help="JSON with seen_comment_urls to suppress already-seen comments.")
+    parser.add_argument(
+        "--referenced-comment",
+        action="append",
+        default=[],
+        help="Top-level/review comment database id explicitly referenced by the user; repeat as needed.",
+    )
     parser.add_argument("--format", choices=("json",), default="json")
     return parser
 
@@ -602,7 +796,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.repo and args.pr is None:
         raise SystemExit("--repo requires --pr")
     payload = json.loads(args.fixture.read_text(encoding="utf-8")) if args.fixture else _fetch_with_gh(repo=args.repo, pr_number=args.pr)
-    packet = build_packet(payload, since=_parse_timestamp(args.since), seen_urls=_baseline_seen_urls(args.baseline_json))
+    packet = build_packet(
+        payload,
+        since=_parse_timestamp(args.since),
+        seen_urls=_baseline_seen_urls(args.baseline_json),
+        referenced_comment_ids={str(item).strip() for item in args.referenced_comment if str(item).strip()},
+    )
     print(json.dumps(packet, indent=2, sort_keys=True))
     return 0
 
