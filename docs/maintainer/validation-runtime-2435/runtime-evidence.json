@@ -16,11 +16,11 @@
     },
     "after_reference": {
       "ref": "checked-in broad validation manifest for PR #2400",
-      "measured_head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
-      "measured_tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51",
-      "plan_graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
-      "tree_identity": "8969af43dba72a76af66d88bf8fbfea326cc24bd^{tree}",
-      "source": "local `make check-bounded-parallel` measurement at 8969af43dba72a76af66d88bf8fbfea326cc24bd",
+      "measured_head": "9f9015785ead815afa9554243311b92218a8900c",
+      "measured_tree": "418cce9c3c85670a411cc6671d37dcf43cb13f4d",
+      "plan_graph_sha256": "73acb5e062087db9c2449ccdbe0da2c52983e7c5c8a3de3ae6cf1723a4624ecc",
+      "tree_identity": "9f9015785ead815afa9554243311b92218a8900c^{tree}",
+      "source": "local `make check-bounded-parallel` measurement at 9f9015785ead815afa9554243311b92218a8900c",
       "manifest": "docs/maintainer/validation-runtime-2435/check-bounded-parallel-manifest.json"
     }
   },
@@ -125,13 +125,13 @@
       ],
       "proof_purpose": "exact broad validation command with bounded parallel execution and checked-in manifest reconciliation",
       "posture": "explicit bounded parallel local Make target",
-      "duration_seconds": 469.826431,
+      "duration_seconds": 313.326658,
       "outcome": "passed",
-      "source": "local `make check-bounded-parallel` measurement at 8969af43dba72a76af66d88bf8fbfea326cc24bd",
+      "source": "local `make check-bounded-parallel` measurement at 9f9015785ead815afa9554243311b92218a8900c",
       "manifest": "docs/maintainer/validation-runtime-2435/check-bounded-parallel-manifest.json",
-      "measured_head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
-      "measured_tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51",
-      "plan_graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce"
+      "measured_head": "9f9015785ead815afa9554243311b92218a8900c",
+      "measured_tree": "418cce9c3c85670a411cc6671d37dcf43cb13f4d",
+      "plan_graph_sha256": "73acb5e062087db9c2449ccdbe0da2c52983e7c5c8a3de3ae6cf1723a4624ecc"
     }
   ],
   "measurement_series": [
@@ -169,10 +169,11 @@
         468.654615,
         466.202311,
         470.052145,
-        469.826431
+        469.826431,
+        313.326658
       ],
       "outcome": "passed",
-      "source": "local exact broad-target measurements through 8969af43dba72a76af66d88bf8fbfea326cc24bd",
+      "source": "local exact broad-target measurements through 9f9015785ead815afa9554243311b92218a8900c",
       "manifest": "docs/maintainer/validation-runtime-2435/check-bounded-parallel-manifest.json"
     }
   ],
@@ -198,21 +199,21 @@
     {
       "phase": "after",
       "command": "make check-bounded-parallel",
-      "summed_work_seconds": 857.726544,
-      "critical_path_seconds": 469.826431,
+      "summed_work_seconds": 689.998171,
+      "critical_path_seconds": 313.326658,
       "manifest": "docs/maintainer/validation-runtime-2435/check-bounded-parallel-manifest.json",
       "top_contributors": [
         {
-          "constituent_id": "test.workspace-cli",
-          "duration_seconds": 245.423648
+          "constituent_id": "test.workspace-proof",
+          "duration_seconds": 188.215496
         },
         {
-          "constituent_id": "test.workspace-proof",
-          "duration_seconds": 118.097327
+          "constituent_id": "test.workspace-cli",
+          "duration_seconds": 124.383779
         },
         {
           "constituent_id": "test.planning",
-          "duration_seconds": 115.911123
+          "duration_seconds": 87.429096
         }
       ]
     }
