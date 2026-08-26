@@ -4,7 +4,7 @@
   "title": "Implement all open issues by lane in stacked PRs",
   "owner_level": "epic",
   "lifecycle": "live",
-  "phase": "review",
+  "phase": "validation",
   "revision": 11,
   "intent": {
     "outcome": "Starting from current master, implement GitHub issues #2722, #2740, #2748, #2749, #2750, #2752, #2753, #2754, and #2755 as dependency-ordered stacked pull requests grouped by coherent lane.",
