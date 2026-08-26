@@ -111,7 +111,7 @@ def test_root_startup_pointer_repair_preserves_repo_content_and_clears_doctor_wa
     repair_payload = json.loads(capsys.readouterr().out)
     assert repair_payload["repair_scope"]["affected_surfaces"] == ["AGENTS.md"]
     updated = agents_path.read_text(encoding="utf-8")
-    assert updated == before + cli.workspace_pointer_block(cli_invoke=REPO_LOCAL_CLI_INVOKE) + after
+    assert updated == before + cli.workspace_pointer_block(cli_invoke=cli.DEFAULT_CLI_INVOKE) + after
 
     assert cli.main(["doctor", "--verbose", "--target", str(target), "--format", "json"]) == 0
     after_doctor = json.loads(capsys.readouterr().out)
@@ -242,7 +242,7 @@ def test_upgrade_adopt_local_only_transitions_to_checked_in_mode(tmp_path: Path,
     gitignore_text = (target / ".gitignore").read_text(encoding="utf-8")
     assert ".agentic-workspace/local/" in gitignore_text
     assert not (target / "AGENTS.local.md").exists()
-    assert cli.workspace_pointer_block(cli_invoke=REPO_LOCAL_CLI_INVOKE) in (target / "AGENTS.md").read_text(encoding="utf-8")
+    assert cli.workspace_pointer_block(cli_invoke=cli.DEFAULT_CLI_INVOKE) in (target / "AGENTS.md").read_text(encoding="utf-8")
     receipt = json.loads((target / ".agentic-workspace" / "adoption-receipt.json").read_text(encoding="utf-8"))
     assert receipt["payload_mirror"] is False
 
@@ -489,14 +489,17 @@ def test_doctor_compact_payload_closure_plan_names_full_repair_lane(monkeypatch,
     assert surface_classes["generated_payload_projections"]["refresh_command"] == (
         "uv run python scripts/generate/generate_command_packages.py"
     )
-    assert surface_classes["local_scratch_blockers"]["status"] == "ignored-local-only"
-    assert surface_classes["local_scratch_blockers"]["nested_repo_paths"] == []
+    assert surface_classes["local_scratch_blockers"]["status"] == "attention-unowned-nested-repositories"
+    assert surface_classes["local_scratch_blockers"]["nested_repo_paths"] == [
+        ".agentic-workspace/local/scratch/one/repo",
+    ]
     assert surface_classes["local_scratch_blockers"]["dry_run_command"] == ("git clean -ndx -- .agentic-workspace/local/scratch")
     assert surface_classes["local_scratch_blockers"]["cleanup_command_after_review"] == (
         "git clean -fdx -- .agentic-workspace/local/scratch"
     )
     assert surface_classes["local_scratch_blockers"]["rule"] == (
-        "Ignore AW local scratch contents for payload closure; cleanup remains explicitly scoped to local scratch roots."
+        "Exclude only producer-owned harness roots; unowned nested repositories remain explicit attention. "
+        "Cleanup remains scoped to reviewed local scratch roots."
     )
     assert surface_classes["installed_payload"]["action_state"]["state"] == "no_repair_needed"
     assert surface_classes["provenance"]["hygiene_check"] == "make absolute-paths"
@@ -1197,12 +1200,15 @@ def test_doctor_select_reports_available_fields_for_missing_selector(tmp_path: P
     assert cli.main(["init", "--target", str(target)]) == 0
     capsys.readouterr()
 
-    assert cli.main(["doctor", "--target", str(target), "--format", "json", "--select", "missing.field"]) == 0
+    assert cli.main(["doctor", "--target", str(target), "--format", "json", "--select", "missing.field"]) == 2
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["kind"] == "agentic-workspace/selector-validation-error/v1"
+    assert payload["exit_class"] == "usage-or-validation-error"
+    assert payload["safe_to_retry"] is True
     assert payload["unknown_selectors"] == ["missing.field"]
     assert "health" in payload["selector_inventory"]["sample"]
+    assert payload["selector_inventory"]["discovery_command"].endswith("--select selector_inventory --format json")
 
 
 def test_status_select_returns_requested_fields(tmp_path: Path, capsys) -> None:
@@ -1243,13 +1249,16 @@ def test_status_select_reports_available_fields_for_missing_selector(tmp_path: P
     assert cli.main(["init", "--target", str(target)]) == 0
     capsys.readouterr()
 
-    assert cli.main(["status", "--target", str(target), "--format", "json", "--select", "missing.field"]) == 0
+    assert cli.main(["status", "--target", str(target), "--format", "json", "--select", "missing.field"]) == 2
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["kind"] == "agentic-workspace/selector-validation-error/v1"
     assert payload["source_command"] == "status"
+    assert payload["exit_class"] == "usage-or-validation-error"
+    assert payload["safe_to_retry"] is True
     assert payload["unknown_selectors"] == ["missing.field"]
     assert "health" in payload["selector_inventory"]["sample"]
+    assert payload["selector_inventory"]["discovery_command"].endswith("--select selector_inventory --format json")
 
 
 def test_doctor_reports_cli_executable_drift_with_concrete_next_action(tmp_path: Path, capsys) -> None:

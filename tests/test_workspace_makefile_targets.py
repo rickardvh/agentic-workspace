@@ -75,13 +75,18 @@ def test_workspace_split_targets_preserve_serial_pytest_contract() -> None:
     assert "check-bounded-parallel:" in text
     assert "$(MAKE) test-workspace-cli WORKSPACE_PYTEST_PARALLEL_ARGS='-n 16'" in text
     assert (
-        "$(MAKE) -j 4 test-workspace-proof test-workspace-session-review test-workspace-contracts test-workspace-generated-release "
+        "$(MAKE) -j 4 test-workspace-proof test-workspace-session-review test-workspace-contracts-measurement test-workspace-generated-release "
         "test-workspace-integration test-memory test-planning test-verification lint-nosync typecheck-nosync format-check-nosync "
-        "verify-nosync memory-freshness-strict maintainer-surfaces validation-runtime-plan structured-file-inventory "
+        "verify-nosync memory-freshness-strict maintainer-surfaces validation-runtime-plan-measurement structured-file-inventory "
         "package-artifact-duplicates agent-aids absolute-paths composed-operation-scenarios WORKSPACE_PYTEST_PARALLEL_ARGS='-n 16' "
         "WORKSPACE_PROOF_PYTEST_PARALLEL_ARGS='-n 8' MEMORY_PYTEST_PARALLEL_ARGS='-n 8' PLANNING_PYTEST_PARALLEL_ARGS='' "
         "VERIFICATION_PYTEST_PARALLEL_ARGS='-n 8'"
     ) in text
+    assert "validation-runtime-plan-measurement:" in text
+    assert "check_validation_runtime_plan.py --measurement-phase" in text
+    assert "not test_validation_runtime_plan_matches_makefile_ci_and_evidence" in text
+    assert "validation-runtime-plan:\n" in text
+    assert "test-workspace-contracts:\n" in text
 
 
 def test_workspace_broad_suite_exposes_split_target_matrix() -> None:
@@ -113,8 +118,10 @@ def test_makefile_allocates_fresh_top_level_run_and_preserves_admitted_child_joi
         '\t@echo "$(VALIDATION_RUN_ID)|$(VALIDATION_JOIN_TOKEN)|$(VALIDATION_RUN_PROVENANCE)"\n',
         encoding="utf-8",
     )
-    stale_environment = {**os.environ, "VALIDATION_RUN_ID": "stale-run"}
-    stale_environment.pop("VALIDATION_JOIN_TOKEN", None)
+    clean_environment = os.environ.copy()
+    for key in ("VALIDATION_RUN_ID", "VALIDATION_JOIN_TOKEN", "VALIDATION_RUN_PROVENANCE"):
+        clean_environment.pop(key, None)
+    stale_environment = {**clean_environment, "VALIDATION_RUN_ID": "stale-run"}
 
     allocated = (
         subprocess.run(
@@ -137,7 +144,7 @@ def test_makefile_allocates_fresh_top_level_run_and_preserves_admitted_child_joi
         subprocess.run(
             ["make", "-f", str(fixture), "print-validation-context"],
             cwd=WORKSPACE_ROOT,
-            env={**os.environ, "VALIDATION_RUN_ID": allocated_run, "VALIDATION_JOIN_TOKEN": allocated_token},
+            env={**clean_environment, "VALIDATION_RUN_ID": allocated_run, "VALIDATION_JOIN_TOKEN": allocated_token},
             capture_output=True,
             text=True,
             check=True,

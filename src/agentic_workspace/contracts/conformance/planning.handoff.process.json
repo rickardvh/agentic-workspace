@@ -50,7 +50,13 @@
       ]
     },
     "idempotency": {
-      "run_twice": true
+      "run_twice": true,
+      "ignored_stdout_json_paths": [
+        [
+          "construction",
+          "elapsed_ms"
+        ]
+      ]
     },
     "safety": {
       "no_writes_outside_repo_root": true

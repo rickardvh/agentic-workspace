@@ -12,6 +12,16 @@ Use it when you want one derived inspection surface for combined workspace state
 - Prefer one bounded question at a time when the report can answer it cheaply.
 - Surface setup discovery before any seed writes happen.
 
+## Task-Scoped Operating Projection Receipt
+
+Use `report --section operating_projection_receipt --task "<task>" --changed <path> --format json` during a stacked-PR implementation or review-repair loop when one bounded answer should replace repeated route, Verification, proof, closeout-trust, and runtime-mirror inspections.
+
+The receipt is non-authoritative derived composition. Each field retains its canonical owner, and the local reuse index stores only constituent input identities. Proof evidence remains exclusively in `.agentic-workspace/local/proof-receipts`; the receipt never creates or accepts a second proof cache.
+
+`input_identity` includes task, selected Planning owner and revision, changed-path and proof-subject revisions, runtime compatibility, and observed branch/HEAD/base context. Constituents declare their semantic dependencies independently. A rebase or restack is therefore visible without automatically invalidating owners whose inputs did not change, while changed paths, proof receipts, Planning state, or runtime inputs invalidate only their declared dependents.
+
+`freshness_delta` names reused, invalidated, and unknown constituents plus the focused rebuild set. Unknown or stale selected proof is never current and yields focused rerun commands from canonical receipt reconciliation. Broad proof appears only when the existing proof-route strategy records an explicit broad escalation reason.
+
 ## Shared Schema
 
 The report command emits a `schema` object with:

@@ -45,7 +45,7 @@ def observe_composed_operation_authority(
     if scenario_id not in ACTIVE_RELEASE_GATE_SCENARIOS:
         return {}
     gate = _planning_gate(implement)
-    if gate.get("gate_result") != "direct-work-allowed" or gate.get("implementation_allowed") is not True:
+    if gate.get("gate_result") != "direct-work-allowed" or gate.get("workflow_sufficient") is not True:
         return {}
     operation_authority = _operation_authority(implement)
     if not _operation_authority_supports_contract(operation_authority):
@@ -75,7 +75,7 @@ def observe_composed_operation_authority(
             "producer_module": "agentic_workspace.workspace_runtime_implement",
             "surface": "implement",
             "gate_result": str(gate.get("gate_result") or ""),
-            "implementation_allowed": gate.get("implementation_allowed"),
+            "workflow_sufficient": gate.get("workflow_sufficient"),
             "decision_packet_kind": str(decision_packet.get("kind") or ""),
             "decision_packet_surface": str(decision_packet.get("surface") or ""),
             "proof_detail_route": str(detail_routes.get("proof_detail") or ""),
@@ -124,6 +124,9 @@ def _authority_packet(
 
 
 def _planning_gate(packet: dict[str, Any]) -> dict[str, Any]:
+    direct = packet.get("planning_safety_gate")
+    if isinstance(direct, dict):
+        return direct
     context = packet.get("context") if isinstance(packet.get("context"), dict) else {}
     gate = context.get("planning_safety_gate") if isinstance(context, dict) else {}
     return gate if isinstance(gate, dict) else {}

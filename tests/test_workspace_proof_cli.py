@@ -670,6 +670,41 @@ owner = "workspace-cli-runtime"
     )
 
 
+def _append_task_selected_broad_proof_lane(target: Path) -> None:
+    makefile = target / "Makefile"
+    makefile.write_text(
+        makefile.read_text(encoding="utf-8")
+        + """
+
+test-workspace-proof:
+\tpython -c "print('workspace proof')"
+
+test-workspace-session-review:
+\tpython -c "print('workspace session review')"
+""",
+        encoding="utf-8",
+    )
+    config = target / ".agentic-workspace" / "config.toml"
+    config.write_text(
+        config.read_text(encoding="utf-8")
+        + """
+
+[assurance.domain_proof_lanes.workspace_broad_suite]
+purpose = "Explicit broad workspace validation route."
+applies_to_task_markers = ["broad workspace proof"]
+commands = ["make test-workspace-proof", "make test-workspace-session-review"]
+proof_profiles = ["workspace_behavior"]
+escalation_conditions = ["explicit-request"]
+claim_boundary = "explicit-broad-escalation-required"
+owner = "workspace-cli-runtime"
+route_role = "broad"
+precedence = "10"
+allowed_composition = ["behavior"]
+""",
+        encoding="utf-8",
+    )
+
+
 def _replace_workspace_subsystem_proof(target: Path, command: str) -> None:
     ownership = target / ".agentic-workspace" / "OWNERSHIP.toml"
     text = ownership.read_text(encoding="utf-8")
@@ -2038,6 +2073,88 @@ def test_proof_receipt_resolves_selected_route_identity_when_caller_omits_it(tmp
     assert execution["route_id"] == "domain:proof_runtime"
     assert execution["command_id"] == execution["command_identity"]
     assert execution["route_identity_source"] == "proof_selection.selected_commands"
+
+
+def test_task_selected_broad_commands_can_be_selected_and_recorded_with_identical_context(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    _append_focused_proof_runtime_lane(tmp_path)
+    _append_task_selected_broad_proof_lane(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_proof.py", "VALUE = 1\n")
+    _write(tmp_path / "tests" / "test_workspace_proof_cli.py", "def test_changed_selector():\n    assert True\n")
+    task = "Run broad workspace proof for this change."
+    changed = "src/agentic_workspace/workspace_runtime_proof.py"
+    expected_commands = ["make test-workspace-proof", "make test-workspace-session-review"]
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--task",
+                task,
+                "--changed",
+                changed,
+                "--select",
+                "required_commands",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    required_commands = json.loads(capsys.readouterr().out)["values"]["required_commands"]
+    for command in expected_commands:
+        assert command in required_commands
+
+    for command in expected_commands:
+        assert (
+            cli.main(
+                [
+                    "proof",
+                    "--target",
+                    str(tmp_path),
+                    "--task",
+                    task,
+                    "--changed",
+                    changed,
+                    "--record-receipt",
+                    "--receipt-command",
+                    command,
+                    "--receipt-result",
+                    "passed",
+                    "--format",
+                    "json",
+                ]
+            )
+            == 0
+        )
+        capsys.readouterr()
+        receipt = json.loads((tmp_path / ".agentic-workspace" / "local" / "proof-receipts" / "last.json").read_text(encoding="utf-8"))
+        assert receipt["command"] == command
+        assert receipt["execution"]["route_id"] == "domain:workspace_broad_suite"
+        assert receipt["execution"]["route_identity_source"] == "proof_selection.selected_commands"
+
+
+@pytest.mark.parametrize("command", ["make test-workspace", "make test-workspace-contracts"])
+def test_task_selected_broad_receipt_rejects_stale_or_unselected_command(tmp_path: Path, command: str) -> None:
+    from agentic_workspace.config import WorkspaceUsageError
+    from agentic_workspace.workspace_runtime_primitives import _record_proof_receipt_payload
+
+    _write_repo_local_proof_target(tmp_path)
+    _append_focused_proof_runtime_lane(tmp_path)
+    _append_task_selected_broad_proof_lane(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_proof.py", "VALUE = 1\n")
+    _write(tmp_path / "tests" / "test_workspace_proof_cli.py", "def test_changed_selector():\n    assert True\n")
+
+    with pytest.raises(WorkspaceUsageError, match="does not resolve to a current selected proof command"):
+        _record_proof_receipt_payload(
+            target_root=tmp_path,
+            command=command,
+            result="passed",
+            changed_paths=["src/agentic_workspace/workspace_runtime_proof.py"],
+            task_text="Run broad workspace proof for this change.",
+        )
 
 
 def test_proof_receipt_rejects_unmatched_wrapper_command(tmp_path: Path) -> None:
@@ -5558,8 +5675,6 @@ def test_reconciliation_rejects_stale_or_cross_context_instantiated_template_rec
     [
         ("owner_revision", "owner-rev-2", "stale-owner_revision-template-binding"),
         ("assignment_revision", "assignment-rev-2", "stale-assignment_revision-template-binding"),
-        ("evaluation_result_revision", "eval-2", "stale-evaluation_result_revision-template-binding"),
-        ("mutation_baseline", "baseline-2", "stale-mutation_baseline-template-binding"),
         ("selector_registry_revision", "selector-registry-rev-2", "stale-selector_registry_revision-template-binding"),
         ("template_revision", "template-rev-2", "stale-template_revision-template-binding"),
     ],
@@ -5617,6 +5732,67 @@ def test_reconciliation_rejects_current_authority_drift_when_receipt_still_claim
     assert state["evidence_state"] == "template-binding-rejected"
     assert state["diagnostic"] == reason
     assert state["live_obligation_binding"]["binding"]["freshness"]["status"] == "current"
+
+
+@pytest.mark.parametrize(
+    ("current_field", "current_value"),
+    [
+        ("evaluation_result_revision", "eval-2"),
+        ("mutation_baseline", "baseline-2"),
+    ],
+)
+def test_reconciliation_accepts_not_required_template_authority_drift(tmp_path: Path, current_field: str, current_value: str) -> None:
+    from agentic_workspace.proof_subject import build_proof_subject
+    from agentic_workspace.workspace_runtime_proof import _proof_receipt_reconciliation_payload
+
+    receipt_dir = tmp_path / ".agentic-workspace/local/proof-receipts"
+    receipt_dir.mkdir(parents=True)
+    changed_paths = ["src/agentic_workspace/workspace_runtime_proof.py", "tests/test_workspace_proof_cli.py"]
+    for path in changed_paths:
+        _write(tmp_path / path, f"fixture for {path}\n")
+    template_command = (
+        "uv run python scripts/run_agentic_workspace.py implement --changed <paths> --select requirement_grounding --format json"
+    )
+    concrete_command = (
+        "uv run python scripts/run_agentic_workspace.py implement "
+        "--changed src/agentic_workspace/workspace_runtime_proof.py tests/test_workspace_proof_cli.py "
+        "--select requirement_grounding --format json"
+    )
+    receipt_selected_command = _proof_template_selected_command_fixture(command=template_command)
+    current_selected_command = json.loads(json.dumps(receipt_selected_command))
+    current_selected_command[current_field] = current_value
+    current_selected_command["authority_resolution"]["current_identity"][current_field] = current_value
+    current_selected_command["authority_resolution"]["authority_states"][current_field]["revision"] = current_value
+    receipt = {
+        "kind": "agentic-workspace/proof-receipt/v1",
+        "command": concrete_command,
+        "result": "passed",
+        "recorded_at": "2026-07-11T08:00:00+00:00",
+        "changed_paths": changed_paths,
+    }
+    receipt["proof_subject"] = build_proof_subject(target_root=tmp_path, changed_paths=changed_paths, command=concrete_command)
+    receipt["proof_template_binding"] = _proof_template_binding_fixture(
+        template_command=template_command,
+        concrete_command=concrete_command,
+        changed_paths=changed_paths,
+        selected_command=receipt_selected_command,
+        receipt=receipt,
+    )
+    assert receipt["proof_template_binding"]["authority_revisions"][current_field] != current_value
+    (receipt_dir / "last.json").write_text(json.dumps(receipt), encoding="utf-8")
+
+    reconciliation = _proof_receipt_reconciliation_payload(
+        target_root=tmp_path,
+        changed_paths=changed_paths,
+        required_commands=[template_command],
+        selected_commands=[current_selected_command],
+    )
+
+    assert reconciliation["status"] == "accepted"
+    state = reconciliation["commands"][0]
+    assert state["evidence_state"] == "accepted"
+    admission = state["live_obligation_binding"]
+    assert admission["status"] == "accepted"
 
 
 def test_reconciliation_rejects_template_receipt_when_current_obligation_identity_is_incomplete(tmp_path: Path) -> None:
@@ -5730,6 +5906,9 @@ owner = "workspace-proof-runtime"
     assert binding["command"]["concrete"] == concrete_command
     assert binding["authority_states"]["evaluation_result_revision"]["status"] == "not-required"
     assert binding["authority_revisions"]["evaluation_result_revision"] == "not-required:evaluation"
+    assert binding["authority_states"]["mutation_baseline"]["status"] == "not-required"
+    assert binding["authority_revisions"]["mutation_baseline"]
+    assert "payload" in binding["authority_states"]["mutation_baseline"]
 
     assert (
         cli.main(
@@ -5811,6 +5990,122 @@ owner = "workspace-proof-runtime"
     assert stale_state["evidence_state"] == "template-binding-rejected"
     assert stale_state["diagnostic"] == "stale-lane_revision-template-binding"
     assert stale_state["minimum_rerun_command"] == template_command
+
+
+def test_proof_template_receipt_only_commit_is_fixed_point_but_subject_change_is_stale(tmp_path: Path, capsys) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "agent@example.test"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.name", "Agent"], cwd=tmp_path, check=True)
+    _write_empty_proof_planning_state(tmp_path)
+    changed_paths = ["src/agentic_workspace/workspace_runtime_proof.py", "tests/test_workspace_proof_cli.py"]
+    for path in changed_paths:
+        _write(tmp_path / path, f"fixture for {path}\n")
+    _write(tmp_path / "scripts" / "run_agentic_workspace.py", "print('fixture aw')\n")
+    template_command = (
+        "uv run python scripts/run_agentic_workspace.py implement --changed <paths> --select requirement_grounding --format json"
+    )
+    concrete_command = (
+        "uv run python scripts/run_agentic_workspace.py implement "
+        "--changed src/agentic_workspace/workspace_runtime_proof.py tests/test_workspace_proof_cli.py "
+        "--select requirement_grounding --format json"
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        f'''\
+schema_version = 1
+
+[workspace]
+cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
+
+[assurance.domain_proof_lanes.proof_template_receipts]
+purpose = "Proof template receipt fixed point."
+applies_to_paths = ["src/agentic_workspace/workspace_runtime_proof.py", "tests/test_workspace_proof_cli.py"]
+commands = ["{template_command}"]
+owner = "workspace-proof-runtime"
+''',
+    )
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
+    subprocess.run(["git", "commit", "-m", "subject A"], cwd=tmp_path, check=True, capture_output=True)
+    head_a = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=tmp_path, text=True).strip()
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                *changed_paths,
+                "--record-receipt",
+                "--receipt-command",
+                concrete_command,
+                "--receipt-result",
+                "passed",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    written = json.loads(capsys.readouterr().out)
+    receipt_ref = written["trusted_producer_receipt_ref"].removeprefix("proof://receipts/")
+    canonical_receipt = tmp_path / ".agentic-workspace" / "proof" / "receipts" / f"{receipt_ref}.json"
+    canonical_index = tmp_path / ".agentic-workspace" / "proof" / "receipts" / "index.json"
+    receipt = json.loads(canonical_receipt.read_text(encoding="utf-8"))
+    baseline = receipt["proof_template_binding"]["authority_states"]["mutation_baseline"]
+    assert baseline["status"] == "not-required"
+    assert baseline["payload"]["head"] == head_a
+    subprocess.run(["git", "add", str(canonical_receipt), str(canonical_index)], cwd=tmp_path, check=True)
+    subprocess.run(["git", "commit", "-m", "receipt B"], cwd=tmp_path, check=True, capture_output=True)
+    head_b = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=tmp_path, text=True).strip()
+    assert head_b != head_a
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                *changed_paths,
+                "--select",
+                "proof_closeout_summary,proof_receipt_reconciliation",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    fixed_point = json.loads(capsys.readouterr().out)["values"]
+    assert fixed_point["proof_closeout_summary"]["status"] == "sufficient-recorded"
+    state = fixed_point["proof_receipt_reconciliation"]["commands"][0]
+    assert state["evidence_state"] == "accepted"
+    assert state["live_obligation_binding"]["status"] == "accepted"
+    assert head_b != baseline["payload"]["head"]
+
+    subject_path = tmp_path / changed_paths[0]
+    subject_path.write_text(subject_path.read_text(encoding="utf-8") + "# review fix\n", encoding="utf-8")
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                *changed_paths,
+                "--select",
+                "proof_closeout_summary,proof_receipt_reconciliation",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    stale = json.loads(capsys.readouterr().out)["values"]
+    assert stale["proof_closeout_summary"]["status"] != "sufficient-recorded"
+    stale_state = stale["proof_receipt_reconciliation"]["commands"][0]
+    assert stale_state["evidence_state"] == "subject-stale"
+    assert stale_state["subject_freshness"]["status"] != "reusable"
 
 
 @pytest.mark.parametrize(
@@ -7841,6 +8136,204 @@ commands = ["python -c \\"print('audit proof')\\""]
 
     packet = json.loads(capsys.readouterr().out)["values"]["proof_decision"]
     assert all(not lane["id"].startswith("domain:") for lane in packet["selected_lanes"])
+
+
+def _append_explicit_broad_proof_fixture(target: Path, *, explicit_request: bool = True) -> None:
+    _write(
+        target / "Makefile",
+        (target / "Makefile").read_text(encoding="utf-8")
+        + """
+test-workspace-cli:
+\tpython -c "print('workspace cli')"
+
+test-workspace-proof:
+\tpython -c "print('workspace proof')"
+
+test-workspace-session-review:
+\tpython -c "print('workspace session review')"
+
+test-workspace-contracts:
+\tpython -c "print('workspace contracts')"
+
+test-workspace-generated-release:
+\tpython -c "print('workspace generated release')"
+
+test-workspace-integration:
+\tpython -c "print('workspace integration')"
+
+lint-workspace:
+\tpython -c "print('workspace lint')"
+""",
+    )
+    broad_conditions = '["explicit-request"]' if explicit_request else '["cross-owner"]'
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        (target / ".agentic-workspace" / "config.toml").read_text(encoding="utf-8")
+        + f"""
+
+[assurance.domain_proof_lanes.runtime_contract]
+purpose = "Runtime contract behavior."
+applies_to_paths = ["src/agentic_workspace/workspace_runtime_proof.py"]
+commands = ["python -c \\"print('runtime proof')\\""]
+proof_profiles = ["workspace_behavior"]
+escalation_conditions = ["explicit-request"]
+claim_boundary = "runtime-contract-proof"
+owner = "workspace-cli-runtime"
+
+[assurance.domain_proof_lanes.workspace_broad_suite]
+purpose = "Explicit broad workspace validation route."
+applies_to_task_markers = ["broad workspace proof"]
+commands = [
+  "make test-workspace-cli",
+  "make test-workspace-proof",
+  "make test-workspace-session-review",
+  "make test-workspace-contracts",
+  "make test-workspace-generated-release",
+  "make test-workspace-integration",
+  "make lint-workspace",
+]
+proof_profiles = ["workspace_behavior"]
+escalation_conditions = {broad_conditions}
+claim_boundary = "explicit-broad-escalation-required"
+owner = "workspace-cli-runtime"
+route_role = "broad"
+""",
+    )
+
+
+def test_explicit_broad_marker_selects_structured_broad_route_after_healthy_coverage(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    _append_explicit_broad_proof_fixture(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_proof.py", "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_proof.py",
+                "--task",
+                "Run broad workspace proof for this change.",
+                "--select",
+                "proof_route_strategy_decision,route_refinement_required,required_commands,selected_lanes",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    values = json.loads(capsys.readouterr().out)["values"]
+    decision = values["proof_route_strategy_decision"]
+    assert decision["outcome"] == "broad-escalated"
+    assert decision["reason_code"] == "explicit-request"
+    assert decision["broad_escalation"]["matched_task_markers"] == ["broad workspace proof"]
+    assert values["route_refinement_required"]["status"] == "not-required"
+    assert "domain:workspace_broad_suite" in [lane["id"] for lane in values["selected_lanes"]]
+    expected = {
+        "make test-workspace-cli",
+        "make test-workspace-proof",
+        "make test-workspace-session-review",
+        "make test-workspace-contracts",
+        "make test-workspace-generated-release",
+        "make test-workspace-integration",
+    }
+    assert expected.issubset(values["required_commands"])
+
+
+def test_explicit_broad_marker_cannot_bypass_focused_coverage_gap(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    _append_explicit_broad_proof_fixture(tmp_path)
+    changed = "src/agentic_workspace/workspace_runtime_uncovered.py"
+    _write(tmp_path / changed, "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                changed,
+                "--task",
+                "Run broad workspace proof for this change.",
+                "--select",
+                "proof_route_strategy_decision,route_refinement_required,required_commands",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    values = json.loads(capsys.readouterr().out)["values"]
+    assert values["proof_route_strategy_decision"]["outcome"] == "route-refinement-required"
+    assert values["route_refinement_required"]["uncovered_paths"] == [changed]
+    assert all(not command.startswith("make test-workspace-") for command in values["required_commands"])
+
+
+def test_explicit_broad_marker_requires_typed_explicit_request_condition(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    _append_explicit_broad_proof_fixture(tmp_path, explicit_request=False)
+    changed = "src/agentic_workspace/workspace_runtime_proof.py"
+    _write(tmp_path / changed, "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                changed,
+                "--task",
+                "Run broad workspace proof for this change.",
+                "--select",
+                "proof_route_strategy_decision,required_commands",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    values = json.loads(capsys.readouterr().out)["values"]
+    assert values["proof_route_strategy_decision"]["outcome"] == "focused"
+    assert values["proof_route_strategy_decision"]["explicit_broad_lane_selected"] is False
+    assert all(not command.startswith("make test-workspace-") for command in values["required_commands"])
+
+
+def test_ordinary_focused_task_does_not_select_explicit_broad_route(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    _append_explicit_broad_proof_fixture(tmp_path)
+    changed = "src/agentic_workspace/workspace_runtime_proof.py"
+    _write(tmp_path / changed, "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                changed,
+                "--task",
+                "Check the focused runtime change.",
+                "--select",
+                "proof_route_strategy_decision,required_commands,selected_lanes",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    values = json.loads(capsys.readouterr().out)["values"]
+    assert values["proof_route_strategy_decision"]["outcome"] == "focused"
+    assert "domain:workspace_broad_suite" not in [lane["id"] for lane in values["selected_lanes"]]
+    assert all(not command.startswith("make test-workspace-") for command in values["required_commands"])
 
 
 def test_proof_route_strategy_decision_selects_structured_broad_escalation_for_two_domain_owners(tmp_path: Path, capsys) -> None:

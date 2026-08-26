@@ -28,6 +28,7 @@ Conformance fixture contract for proving an operation adapter behaves as expecte
 | `expectations.stdout.allow_empty` | boolean | no |  | Whether empty stdout is acceptable for text-mode refusal cases. |  |  |
 | `expectations.stdout.contains` | array of string | no |  | Required stdout substrings for text fixtures. |  |  |
 | `expectations.stdout.field_assertions` | array of ref `#/$defs/field_assertion` | yes |  | Field-level stdout assertions evaluated after parsing. |  |  |
+| `expectations.stdout.typescript_field_assertions` | array of ref `#/$defs/field_assertion` | no |  | TypeScript-specific stdout assertions used when the native compact projection intentionally differs from the canonical runtime projection. |  |  |
 | `expectations.stderr` | object | yes |  | Policy for stderr emitted by the adapter command. |  |  |
 | `expectations.stderr.allow_non_empty` | boolean | yes |  | Whether non-empty stderr is acceptable for this fixture. |  |  |
 | `expectations.stderr.contains` | array of string | no |  | Required stderr substrings for refusal or usage-error fixtures. |  |  |
@@ -38,5 +39,6 @@ Conformance fixture contract for proving an operation adapter behaves as expecte
 | `expectations.filesystem.forbidden_paths` | ref `#/$defs/path_list` | yes |  | Paths that must not be created or modified. |  |  |
 | `expectations.idempotency` | object | yes |  | Repeated-run behavior expected from the adapter. |  |  |
 | `expectations.idempotency.run_twice` | boolean | yes |  | Whether to run the command twice against the fixture. |  |  |
+| `expectations.idempotency.ignored_stdout_json_paths` | array of array of string | no |  | Explicit volatile JSON paths omitted only from repeated-run stdout comparison. |  |  |
 | `expectations.safety` | object | yes |  | Safety invariants checked during conformance. |  |  |
 | `expectations.safety.no_writes_outside_repo_root` | boolean | yes |  | Whether writes outside the repository root are forbidden. |  |  |

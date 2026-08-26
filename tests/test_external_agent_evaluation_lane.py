@@ -1689,6 +1689,8 @@ def test_model_cli_harness_local_wheelhouse_environment_is_fixture_bound(tmp_pat
 
     assert "VIRTUAL_ENV" not in result
     assert Path(result["UV_PROJECT_ENVIRONMENT"]) == tmp_path / "fixture" / ".venv"
+    assert Path(result["UV_CACHE_DIR"]) == tmp_path / "fixture" / ".uv-cache"
+    assert result["UV_LINK_MODE"] == "copy"
     assert result["PATH"] == "bin"
 
 
@@ -1778,6 +1780,7 @@ def test_model_cli_harness_fixture_runtime_mismatch_is_fallback_only(tmp_path: P
     (repo / "pyproject.toml").write_text("[project]\nname='fixture'\nversion='0'\n", encoding="utf-8")
     responses = iter(
         [
+            {"returncode": 0, "stdout": ""},
             {
                 "returncode": 0,
                 "stdout": json.dumps(

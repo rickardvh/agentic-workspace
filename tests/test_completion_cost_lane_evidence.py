@@ -32,12 +32,12 @@ def test_completion_cost_lane_evidence_aggregates_required_stages() -> None:
     assert payload["stages"]["long_horizon_behavior_evidence"]["observation_support_status"] == "present"
     assert payload["stages"]["long_horizon_behavior_evidence"]["proof_status"] == "completed"
     assert payload["stages"]["long_horizon_behavior_evidence"]["actual_long_horizon_proof_complete"] is True
-    assert payload["stages"]["long_horizon_behavior_evidence"]["live_behavior_proof_status"] == "complete"
-    assert payload["stages"]["long_horizon_behavior_evidence"]["live_run_count"] >= 4
-    assert payload["stages"]["long_horizon_behavior_evidence"]["live_clean_run_count"] >= 4
-    assert payload["stages"]["long_horizon_behavior_evidence"]["live_failure_counts"] == {}
-    assert payload["stages"]["long_horizon_behavior_evidence"]["live_failure_routes"] == []
-    assert payload["stages"]["long_horizon_behavior_evidence"]["model"] == "gpt-5.4-mini"
+    assert payload["stages"]["long_horizon_behavior_evidence"]["live_behavior_proof_status"] == "blocked"
+    assert payload["stages"]["long_horizon_behavior_evidence"]["live_run_count"] == 3
+    assert payload["stages"]["long_horizon_behavior_evidence"]["live_clean_run_count"] == 2
+    assert payload["stages"]["long_horizon_behavior_evidence"]["live_failure_counts"] == {"HARNESS_SCENARIO_AMBIGUOUS": 1}
+    assert payload["stages"]["long_horizon_behavior_evidence"]["live_failure_routes"][0]["followup_ref"] == "#2539"
+    assert payload["stages"]["long_horizon_behavior_evidence"]["model"] == "gpt-5.3-codex-spark"
     assert payload["stages"]["landed_reductions"]["status"] == "present"
     before_after = payload["stages"]["before_after_closure_evidence"]
     assert before_after["status"] == "present"

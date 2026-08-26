@@ -87,6 +87,8 @@
         "pytest",
         "-n",
         "16",
+        "tests/test_dynamic_instruction_projection.py",
+        "tests/test_operating_projection_receipt.py",
         "tests/test_workspace_cli.py",
         "tests/test_workspace_cli_blackbox.py",
         "tests/test_workspace_config_cli.py",
@@ -117,7 +119,9 @@
         "pytest",
         "-n",
         "8",
+        "tests/test_assurance_authority.py",
         "tests/test_generated_command_package_proof_runner.py",
+        "tests/test_output_profile_budgets.py",
         "tests/test_proof_subject.py",
         "tests/test_workspace_proof_cli.py",
         "tests/test_workspace_proof_generated_packages_cli.py"
@@ -139,6 +143,9 @@
         "tests/test_codex_session_identity_agent_aid.py",
         "tests/test_github_check_inspection.py",
         "tests/test_pr_comment_delta.py",
+        "tests/test_review_merge_gate.py",
+        "tests/test_review_stack_ops.py",
+        "tests/test_review_stack_transitions.py",
         "tests/test_start_chatgpt_review_poller.py",
         "tests/test_workspace_session_logging.py"
       ]
@@ -157,15 +164,59 @@
         "16",
         "tests/test_agent_aids.py",
         "tests/test_command_surface_bundle_check.py",
+        "tests/test_contract_catalogues.py",
         "tests/test_contract_tooling_surfaces.py",
         "tests/test_github_issue_body_agent_aid.py",
+        "tests/test_instruction_clause_ir.py",
+        "tests/test_intent_feedback.py",
+        "tests/test_module_contract.py",
         "tests/test_no_absolute_paths.py",
         "tests/test_package_artifact_duplicates.py",
         "tests/test_prompt_semantic_markers.py",
+        "tests/test_review_scale_extracted_boundaries.py",
+        "tests/test_runtime_compatibility.py",
         "tests/test_schema_reference_docs.py",
+        "tests/test_scoped_instructions.py",
         "tests/test_structured_file_inventory.py",
         "tests/test_validation_runtime_plan.py",
         "tests/test_workspace_makefile_targets.py"
+      ]
+    },
+    "workspace contract measurement tests": {
+      "id": "test.workspace-contracts-measurement",
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "measurement-phase contract partition; only checked-in manifest freshness is deferred until evidence promotion and full standalone validation",
+      "command": [
+        "uv",
+        "run",
+        "pytest",
+        "-n",
+        "16",
+        "tests/test_agent_aids.py",
+        "tests/test_command_surface_bundle_check.py",
+        "tests/test_contract_catalogues.py",
+        "tests/test_contract_tooling_surfaces.py",
+        "tests/test_github_issue_body_agent_aid.py",
+        "tests/test_instruction_clause_ir.py",
+        "tests/test_intent_feedback.py",
+        "tests/test_module_contract.py",
+        "tests/test_no_absolute_paths.py",
+        "tests/test_package_artifact_duplicates.py",
+        "tests/test_prompt_semantic_markers.py",
+        "tests/test_review_scale_extracted_boundaries.py",
+        "tests/test_runtime_compatibility.py",
+        "tests/test_runtime_implementation_ownership.py",
+        "tests/test_schema_reference_docs.py",
+        "tests/test_security_supply_chain.py",
+        "tests/test_scoped_instructions.py",
+        "tests/test_structured_file_inventory.py",
+        "tests/test_trusted_execution.py",
+        "tests/test_validation_runtime_plan.py",
+        "tests/test_workspace_makefile_targets.py",
+        "-k",
+        "not test_validation_runtime_plan_matches_makefile_ci_and_evidence"
       ]
     },
     "workspace generated and release tests": {
@@ -180,12 +231,15 @@
         "pytest",
         "-n",
         "16",
+        "tests/test_branch_carried_package_state.py",
         "tests/test_command_generation_integration.py",
         "tests/test_command_generation_release_promotion.py",
         "tests/test_coordinated_release.py",
         "tests/test_generated_tool_conformance.py",
+        "tests/test_package_identity.py",
         "tests/test_release_recovery_status.py",
         "tests/test_release_workflows.py",
+        "tests/test_support_bearing_promotion.py",
         "tests/test_workspace_packaging.py"
       ]
     },
@@ -201,6 +255,7 @@
         "pytest",
         "-n",
         "16",
+        "tests/test_adaptation.py",
         "tests/test_agentic_workspace_launcher.py",
         "tests/test_compact_command_runner.py",
         "tests/test_composed_operation_scenarios.py",
@@ -208,8 +263,10 @@
         "tests/test_completion_cost_lane_evidence.py",
         "tests/test_completion_cost_live_behavior_proof.py",
         "tests/test_completion_cost_schema_analysis.py",
+        "tests/test_cross_drive_target_paths.py",
         "tests/test_external_agent_evaluation_lane.py",
         "tests/test_external_consumer_profile.py",
+        "tests/test_external_consumer_readiness.py",
         "tests/test_external_integration_boundary.py",
         "tests/test_external_operation_clients.py",
         "tests/test_git_hooks.py",
@@ -217,7 +274,13 @@
         "tests/test_lifecycle_smoke.py",
         "tests/test_long_horizon_episode.py",
         "tests/test_maintainer_surfaces.py",
+        "tests/test_memory_effectiveness.py",
+        "tests/test_module_extension_scenario_matrix.py",
+        "tests/test_planning_delegation.py",
+        "tests/test_reconciliation.py",
         "tests/test_repository_scanning.py",
+        "tests/test_repo_evolution_scenario.py",
+        "tests/test_repo_improvement_effectiveness.py",
         "tests/test_source_payload_operational_install.py"
       ]
     },
@@ -653,6 +716,19 @@
       ],
       "proof_purpose": "regenerate generated JSON Schema reference documentation"
     },
+    "render contract catalogues": {
+      "id": "render-schema-reference.catalogues",
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "regenerate current-value contract catalogues",
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "scripts/generate/generate_contract_catalogues.py"
+      ]
+    },
     "render command packages": {
       "id": "render-command-packages",
       "dependencies": [
@@ -675,6 +751,20 @@
         "--check-annotations"
       ]
     },
+    "contract catalogues": {
+      "id": "schema-reference-docs.catalogues",
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "check generated current-value contract catalogues",
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "scripts/generate/generate_contract_catalogues.py",
+        "--check"
+      ]
+    },
     "validation runtime plan": {
       "id": "validation-runtime.plan",
       "dependencies": [
@@ -686,6 +776,20 @@
         "run",
         "python",
         "scripts/check/check_validation_runtime_plan.py"
+      ]
+    },
+    "validation runtime plan measurement": {
+      "id": "validation-runtime.plan-measurement",
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "measurement-phase validation graph proof; checked-in manifest freshness is deferred until evidence promotion and full standalone validation",
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "scripts/check/check_validation_runtime_plan.py",
+        "--measurement-phase"
       ]
     },
     "structured file inventory": {
@@ -740,6 +844,7 @@
         "sync.all",
         "render-agent-docs",
         "schema-reference-docs",
+        "schema-reference-docs.catalogues",
         "planning-surfaces",
         "source-payload-boundary",
         "verify.memory",
@@ -920,6 +1025,17 @@
       "proof_purpose": "contract, schema, inventory, and guardrail behavior partition",
       "execution_posture": "serial by default; pytest-xdist opt-in only",
       "owner_boundary": "workspace tests"
+    },
+    {
+      "id": "test.workspace-contracts-measurement",
+      "make_target": "test-workspace-contracts-measurement",
+      "command": "make test-workspace-contracts-measurement",
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "measurement-phase contract partition; only checked-in manifest freshness is deferred until evidence promotion and full standalone validation",
+      "execution_posture": "bounded measurement with explicit checked-in-manifest freshness deferral",
+      "owner_boundary": "workspace validation-runtime measurement"
     },
     {
       "id": "test.workspace-generated-release",
@@ -1372,6 +1488,16 @@
       "owner_boundary": "maintainer generated docs"
     },
     {
+      "id": "render-schema-reference.catalogues",
+      "command": "uv run python scripts/generate/generate_contract_catalogues.py",
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "regenerate current-value contract catalogues",
+      "execution_posture": "serial generated-surface check",
+      "owner_boundary": "maintainer contract catalogue authority"
+    },
+    {
       "id": "render-command-packages",
       "make_target": "render-command-packages",
       "command": "make render-command-packages",
@@ -1392,6 +1518,16 @@
       "proof_purpose": "check generated JSON Schema reference documentation and annotations",
       "execution_posture": "serial structural gate",
       "owner_boundary": "maintainer generated docs"
+    },
+    {
+      "id": "schema-reference-docs.catalogues",
+      "command": "uv run python scripts/generate/generate_contract_catalogues.py --check",
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "check generated current-value contract catalogues",
+      "execution_posture": "serial structural gate",
+      "owner_boundary": "maintainer contract catalogue authority"
     },
     {
       "id": "source-payload-boundary",
@@ -1425,6 +1561,17 @@
       "proof_purpose": "validation graph, trace, CI/local drift, duplicate, and runtime evidence contract",
       "execution_posture": "serial structural gate",
       "owner_boundary": "maintainer validation runtime"
+    },
+    {
+      "id": "validation-runtime.plan-measurement",
+      "make_target": "validation-runtime-plan-measurement",
+      "command": "make validation-runtime-plan-measurement",
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "measurement-phase validation graph proof; checked-in manifest freshness is deferred until evidence promotion and full standalone validation",
+      "execution_posture": "bounded measurement with explicit checked-in-manifest freshness deferral",
+      "owner_boundary": "maintainer validation-runtime measurement"
     },
     {
       "id": "structured-file-inventory.full",
@@ -1478,6 +1625,7 @@
         "sync.all",
         "render-agent-docs",
         "schema-reference-docs",
+        "schema-reference-docs.catalogues",
         "planning-surfaces",
         "source-payload-boundary",
         "verify.memory",
@@ -1495,6 +1643,7 @@
         "sync.all",
         "render-agent-docs",
         "schema-reference-docs",
+        "schema-reference-docs.catalogues",
         "planning-surfaces.strict",
         "source-payload-boundary.strict",
         "verify.memory",
@@ -1610,7 +1759,7 @@
           "outcome": "passed"
         },
         {
-          "constituent_id": "test.workspace-contracts",
+          "constituent_id": "test.workspace-contracts-measurement",
           "outcome": "passed"
         },
         {
@@ -1718,6 +1867,10 @@
           "outcome": "passed"
         },
         {
+          "constituent_id": "schema-reference-docs.catalogues",
+          "outcome": "passed"
+        },
+        {
           "constituent_id": "planning-surfaces",
           "outcome": "passed"
         },
@@ -1730,7 +1883,7 @@
           "outcome": "passed"
         },
         {
-          "constituent_id": "validation-runtime.plan",
+          "constituent_id": "validation-runtime.plan-measurement",
           "outcome": "passed"
         },
         {

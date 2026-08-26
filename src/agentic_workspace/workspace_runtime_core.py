@@ -164,8 +164,13 @@ from agentic_workspace.operating_decision import (
     project_startup_claim_effect_authority,
     projection_surface_builder_inputs,
 )
+from agentic_workspace.operating_projection_receipt import (
+    build_operating_projection_receipt,
+    observed_stack_context,
+)
 from agentic_workspace.projection_reuse import (
     ProjectionProgress,
+    admitted_projection_revisions,
     enforce_projection_serialization_budget,
     lookup_projection_reuse,
     prepare_projection_reuse,
@@ -4417,6 +4422,7 @@ def _compact_verification(value: Any) -> dict[str, Any]:
             for item in active[:3]
             if isinstance(item, dict)
         ],
+        "match_evidence": copy.deepcopy(_as_dict(value.get("match_evidence"))),
         "evidence_status": [
             {
                 key: item.get(key)
@@ -14095,6 +14101,12 @@ _LAZY_REPORT_SECTION_CATALOG: tuple[dict[str, str], ...] = (
         "when_to_use": "when evidence production or review provenance matters more than ordinary proof selection",
     },
     {
+        "section": "operating_projection_receipt",
+        "kind": "agentic-workspace/operating-projection-receipt/v1",
+        "purpose": "task-scoped route, verification, selected-proof freshness, closeout-trust, and runtime-mirror receipt",
+        "when_to_use": "during stacked-PR implementation and repair loops when a bounded freshness delta should replace repeated owner inspections",
+    },
+    {
         "section": "requirement_grounding",
         "kind": "agentic-workspace/requirement-grounding/v1",
         "purpose": "requirement refs, applicability, interpretation, design effects, verification evidence, gaps, and claim boundaries",
@@ -17558,6 +17570,68 @@ def _run_lazy_report_section_command(
     normalized_changed_paths = _normalize_changed_paths(changed_paths or [])
     task_issue_refs = sorted(set(re.findall("#\\d+", task_text or "")))
 
+    if normalized == "operating_projection_receipt":
+        if not str(task_text or "").strip():
+            raise WorkspaceUsageError("report --section operating_projection_receipt requires --task <task>")
+        revisions, _dependencies, _findings = admitted_projection_revisions(
+            root=target_root,
+            operation="report",
+            query={"section": normalized, "task": task_text or "", "changed": normalized_changed_paths},
+        )
+        stack_context = observed_stack_context(
+            target_root=target_root,
+            branch=str(revisions.get("branch") or ""),
+            head=str(revisions.get("head") or ""),
+        )
+        payload[normalized] = build_operating_projection_receipt(
+            target_root=target_root,
+            task_text=str(task_text or ""),
+            changed_paths=normalized_changed_paths,
+            admitted_revisions=revisions,
+            stack_context=stack_context,
+            route=lambda: _summary_planning_route_decision_payload(
+                target_root=target_root,
+                task_text=task_text,
+                changed_paths=normalized_changed_paths,
+            ),
+            verification=lambda: _verification_report_compact_projection(
+                _verification_report_payload(
+                    target_root=target_root,
+                    active_planning_record=active_planning_record,
+                    assurance_requirements=_assurance_requirements_report_payload(
+                        config=config,
+                        target_root=target_root,
+                        active_planning_record=active_planning_record,
+                        task_text=task_text,
+                        changed_paths=normalized_changed_paths,
+                    ),
+                    task_text=task_text,
+                    changed_paths=normalized_changed_paths,
+                )
+            ),
+            proof_selection=lambda: _proof_selection_for_changed_paths(
+                changed_paths=normalized_changed_paths,
+                target_root=target_root,
+                task_text=task_text,
+                include_durable_intent=False,
+                include_assurance_requirements=False,
+                include_routine_work_context=False,
+                include_runtime_diagnostics=False,
+                include_test_strategy_check=False,
+            ),
+            closeout_trust=lambda: _report_closeout_trust_payload(
+                module_reports=_selected_module_closeout_reports(target_root=target_root, selected_modules=selected_modules),
+                target_root=target_root,
+                config=config,
+                cli_invoke=config.cli_invoke,
+                task_text=task_text,
+                changed_paths=normalized_changed_paths,
+                compact=True,
+            ),
+            runtime_mirror=lambda: _runtime_mirror_surface_consistency_payload(target_root=target_root, cli_invoke=config.cli_invoke),
+        )
+        return _select_report_payload(payload, profile="router", section=normalized)
+
     if normalized in {"assurance_requirements", "verification", "requirement_grounding", "applicable_intent"}:
         assurance_requirements = _assurance_requirements_report_payload(
             config=config,
@@ -17577,6 +17651,7 @@ def _run_lazy_report_section_command(
         payload["assurance_requirements"] = _assurance_requirements_with_verification(assurance_requirements, verification)
         if normalized == "verification":
             payload["verification"] = _verification_report_compact_projection(verification)
+            payload["verification"]["match_evidence"] = copy.deepcopy(_as_dict(verification.get("match_evidence")))
         if normalized == "requirement_grounding":
             payload["requirement_grounding"] = _requirement_grounding_payload(
                 target_root=target_root,
@@ -49845,12 +49920,31 @@ def _write_proof_reuse_cache_from_receipt(
     }
 
 
+def _proof_receipt_failure_context(
+    *, target_root: Path, command: str, result: str, changed_paths: list[str], receipt_log: str
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    """Resolve optional retry and log-derived failure context for a receipt."""
+    retry_ladder = _proof_receipt_retry_ladder(command=command, result=result, changed_paths=changed_paths)
+    log_source = _proof_receipt_log_source(target_root=target_root, receipt_log=receipt_log)
+    if log_source is None:
+        return retry_ladder, None
+    log_text, log_source_payload = log_source
+    return retry_ladder, _proof_failure_summary(
+        command=command,
+        result=result,
+        changed_paths=changed_paths,
+        log_text=log_text,
+        log_source=log_source_payload,
+    )
+
+
 def _record_proof_receipt_payload(
     *,
     target_root: Path,
     command: str,
     result: str,
     changed_paths: list[str],
+    task_text: str | None = None,
     plan_id: str = "",
     receipt_log: str = "",
     receipt_route_id: str = "",
@@ -49916,6 +50010,7 @@ def _record_proof_receipt_payload(
             changed_paths=receipt["changed_paths"],
             target_root=target_root,
             include_durable_intent=False,
+            task_text=task_text,
         )
         selected = _selected_proof_command_for_receipt(selection=selection, command=command)
         if isinstance(selected, dict):
@@ -49957,7 +50052,11 @@ def _record_proof_receipt_payload(
     )
     from agentic_workspace.workspace_runtime_proof import _proof_template_binding_for_recorded_receipt
 
-    template_binding = _proof_template_binding_for_recorded_receipt(target_root=target_root, receipt=receipt)
+    template_binding = _proof_template_binding_for_recorded_receipt(
+        target_root=target_root,
+        receipt=receipt,
+        task_text=task_text,
+    )
     if template_binding.get("status") == "rejected":
         raise WorkspaceUsageError(
             f"Proof receipt template binding rejected ({template_binding['reason']}): "
@@ -49999,20 +50098,15 @@ def _record_proof_receipt_payload(
             "claim_sufficiency_source": "proof_receipt_admission.proof_sufficient",
             "rule": "Route-health retirement requires a matching guarded apply receipt, current authority revision, complete passed guarded validation, and AW-owned sufficient proof admission.",
         }
-    repair_retry_ladder = _proof_receipt_retry_ladder(command=command, result=result, changed_paths=changed_paths)
+    repair_retry_ladder, failure_summary = _proof_receipt_failure_context(
+        target_root=target_root,
+        command=command,
+        result=result,
+        changed_paths=changed_paths,
+        receipt_log=receipt_log,
+    )
     if repair_retry_ladder is not None:
         receipt["repair_retry_ladder"] = repair_retry_ladder
-    log_source = _proof_receipt_log_source(target_root=target_root, receipt_log=receipt_log)
-    failure_summary = None
-    if log_source is not None:
-        log_text, log_source_payload = log_source
-        failure_summary = _proof_failure_summary(
-            command=command,
-            result=result,
-            changed_paths=changed_paths,
-            log_text=log_text,
-            log_source=log_source_payload,
-        )
     if failure_summary is not None:
         receipt["failure_summary"] = failure_summary
     assignment_context = _proof_receipt_assignment_context(target_root=target_root)
@@ -50612,6 +50706,7 @@ def _emit_proof(
             command=receipt_command,
             result=receipt_result,
             changed_paths=normalized_paths,
+            task_text=task_text,
             plan_id=receipt_plan,
             receipt_log=receipt_log,
             receipt_route_id=receipt_route_id,
@@ -50763,8 +50858,7 @@ def _emit_proof(
                     full_detail_command=full_detail_command,
                 )
         if not select:
-            for peer_field in ("context", "task_context", "projection_reuse"):
-                payload.pop(peer_field, None)
+            payload.pop("task_context", None)
         tiny_commands = [str(command) for command in _list_payload(payload.get("required_commands"))]
         if tiny_commands and all(command.startswith("git diff --") for command in tiny_commands):
             payload.pop("projection_reuse", None)
@@ -50913,11 +51007,20 @@ def _ordinary_summary_continuation_payload(*, summary: dict[str, Any], target_ro
     }
     for routed_field in ("source_freshness", "omitted_detail", "write_responsibility"):
         view.pop(routed_field, None)
-    return {
+    projected = {
         "kind": "planning-summary/v1",
         "target_root": target_value,
         "continuation_view": view,
     }
+    if isinstance(summary.get("projection_reuse"), dict):
+        projected["projection_reuse"] = copy.deepcopy(summary["projection_reuse"])
+    projection_context = _as_dict(summary.get("context"))
+    revalidation = _as_dict(projection_context.get("projection_decision_input_revalidation"))
+    if revalidation.get("status") not in {None, "", "current"}:
+        projected["context"] = {
+            "projection_decision_input_revalidation": copy.deepcopy(revalidation),
+        }
+    return projected
 
 
 def _print_ordinary_continuation_view(summary: dict[str, Any]) -> None:
@@ -59200,6 +59303,7 @@ def _skills_recommendation_first_payload(payload: dict[str, Any], *, target_root
     startup_default = next((item for item in recommendations if item.get("id") == "workspace-startup"), None)
     task_lower = str(task_text or "").lower()
     specialist_takeover_markers = {
+        "planning-autopilot": ("autopilot", "active milestone", "current active milestone", "execplan"),
         "workspace-intent-discovery": ("vague", "ambiguous", "classify shape", "clarify intent"),
         "workspace-proof-selection": ("select proof", "proof before completion", "passed with warning"),
         "workspace-setup-jumpstart": ("newly installed", "populate surfaces", "setup jumpstart"),

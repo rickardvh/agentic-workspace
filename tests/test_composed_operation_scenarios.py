@@ -24,7 +24,7 @@ def _checker_module():
 def _ordinary_direct_implement_packet() -> dict[str, object]:
     return {
         "context": {
-            "planning_safety_gate": {"gate_result": "direct-work-allowed", "implementation_allowed": True},
+            "planning_safety_gate": {"gate_result": "direct-work-allowed", "workflow_sufficient": True},
             "operation_authority": {
                 "kind": "agentic-workspace/operation-authority-projection/v1",
                 "producer_module": "agentic_workspace.workspace_runtime_implement",

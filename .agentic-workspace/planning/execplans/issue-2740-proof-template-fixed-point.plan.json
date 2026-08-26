@@ -1,0 +1,197 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2740-proof-template-fixed-point",
+  "title": "Issue 2740 proof-template receipt fixed point",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "closeout",
+  "revision": 4,
+  "canonical_core": {
+    "requested_outcome": "Make non-mutating proof-template receipts stable across receipt-only commits without weakening mutation safety or proof-subject freshness.",
+    "hard_constraints": "Exclude only declared not-required template identity keys from semantic binding; retain their diagnostic payload and preserve generic mutation admission.",
+    "agent_may_decide": "The narrow helper structure and regression-test mechanics within the declared files.",
+    "escalate_when": "The fix requires weakening authority_envelope mutation-baseline comparison, changing mutating-operation safety, or altering unrelated proof identities.",
+    "next_action": "Record exact-head receipts, commit only the canonical receipt/index files, and verify reconciliation remains accepted before publishing for independent review.",
+    "proof_expectations": [
+      "uv run --active pytest tests/test_workspace_proof_cli.py -k proof_template -q",
+      "make lint-workspace",
+      "make typecheck",
+      "uv run --frozen --active --no-sync python scripts/run_agentic_workspace.py proof --target . --changed <paths> --format json"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/workspace_runtime_proof.py",
+      "tests/test_workspace_proof_cli.py",
+      ".release/changes/2740-operating-projection-replay.toml",
+      ".agentic-workspace/planning/**",
+      ".agentic-workspace/proof/receipts/**"
+    ],
+    "completion_criteria": [
+      "A non-mutating template receipt recorded at commit A remains accepted after a receipt/index-only commit B.",
+      "Changing a declared proof-subject path still makes the receipt stale.",
+      "Mutation-baseline diagnostics remain present while not-required keys do not affect semantic template identity.",
+      "Generic mutation admission and mutating-operation safety tests remain green."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "Propose target-branch archival after exact fixed-point proof; do not self-review or merge."
+  },
+  "intent": {
+    "outcome": "Make non-mutating proof-template receipts stable across receipt-only commits without weakening mutation safety or proof-subject freshness.",
+    "non_goals": [
+      "Do not change authority_envelope generic mutation-baseline comparison.",
+      "Do not weaken mutating operation safety or omit mutation-baseline diagnostics.",
+      "Do not alter owner, lane, assignment, selector, template, or proof-subject identities."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "PR #2746 post-commit proof review",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "src/agentic_workspace/workspace_runtime_proof.py",
+      "tests/test_workspace_proof_cli.py",
+      ".release/changes/2740-operating-projection-replay.toml",
+      ".agentic-workspace/planning/**",
+      ".agentic-workspace/proof/receipts/**"
+    ],
+    "effects": [
+      "Non-mutating proof-template binding ignores explicitly not-required identity revisions semantically while retaining diagnostic state.",
+      "Receipt-only commits become a proof fixed point; proof-subject changes remain stale."
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "unselected",
+      "owner": "current-work context"
+    },
+    "proof_posture": {
+      "state": "passed",
+      "refs": [
+        "tests/test_workspace_proof_cli.py template selection: 11 passed",
+        "generic mutation safety selections: 10 passed",
+        "tests/test_workspace_proof_cli.py: 232 passed",
+        "routed validation: all selected commands passed after evidence classification repair"
+      ]
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    },
+    "delegation": {
+      "state": "recorded",
+      "route": "delegate-implementation",
+      "reason": "Keep the bounded proof-template repair with the assigned implementer."
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "PR #2746 post-commit proof review",
+      "label": "PR #2746 post-commit proof review",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Finalize canonical receipts at the committed proof subject, make the receipt/index-only commit, then verify the receipt remains current at that new head.",
+  "blockers": [],
+  "proof": {
+    "claims": [
+      "Issue 2740 proof-template receipt fixed point is implemented, validated, and closed out honestly."
+    ],
+    "requirements": [
+      "uv run --active pytest tests/test_workspace_proof_cli.py -k proof_template -q",
+      "make lint-workspace",
+      "make typecheck",
+      "uv run --frozen --active --no-sync python scripts/run_agentic_workspace.py proof --target . --changed <paths> --format json"
+    ],
+    "refs": [
+      "tests/test_workspace_proof_cli.py template selection: 11 passed",
+      "tests/test_workspace_proof_cli.py mutation-safety selections: 10 passed",
+      "make lint-workspace: passed",
+      "make typecheck: passed",
+      "structured file inventory and classified operating-projection evidence validator: passed"
+    ]
+  },
+  "continuation": {
+    "owner": "none",
+    "residual_intent": "none"
+  },
+  "execution_bounds": {
+    "allowed_write_scope": [
+      "src/agentic_workspace/workspace_runtime_proof.py",
+      "tests/test_workspace_proof_cli.py",
+      ".release/changes/2740-operating-projection-replay.toml",
+      ".agentic-workspace/planning/state.toml",
+      ".agentic-workspace/planning/execplans/issue-2740-proof-template-fixed-point.plan.json",
+      ".agentic-workspace/planning/integration-proposals/**",
+      ".agentic-workspace/planning/closeout-evidence/**",
+      ".agentic-workspace/proof/receipts/**"
+    ],
+    "forbidden_scope": [
+      "authority_envelope generic mutation admission",
+      "mutating operation safety semantics",
+      "unrelated proof/runtime surfaces"
+    ]
+  },
+  "validation_commands": [
+    "uv run --active pytest tests/test_workspace_proof_cli.py -k proof_template -q",
+    "make lint-workspace",
+    "make typecheck",
+    "uv run --frozen --active --no-sync python scripts/run_agentic_workspace.py proof --target . --changed <paths> --format json"
+  ],
+  "completion_criteria": [
+    "Receipt recorded at A remains accepted at B when B changes only canonical receipt/index files.",
+    "Declared proof-subject changes invalidate the receipt.",
+    "Not-required baseline state remains available diagnostically.",
+    "Mutation safety tests pass unchanged."
+  ],
+  "specialist_contracts": [
+    {
+      "kind": "planning-delegation/v1",
+      "target": "planning://delegation/delegate-implementation",
+      "revision": 1
+    }
+  ],
+  "active_milestone": {
+    "status": "completed",
+    "ready": "ready",
+    "blocked": "independent review and target-branch integration only"
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "assigned implementation session",
+    "what happened": "Projected only required proof-template identity keys into semantic obligation and admission checks while retaining not-required baseline diagnostics.",
+    "scope touched": "Proof-template runtime, focused proof CLI regressions, release metadata, and issue #2740 replay evidence classification.",
+    "changed surfaces": "workspace_runtime_proof.py; test_workspace_proof_cli.py; release change; Planning plan/proposal; operating-projection evidence inventory classification.",
+    "validations run": "11 focused template tests; 10 mutation-safety tests; 6 proof-route strategy tests; lint; typecheck; routed proof commands; 232/232 full proof CLI tests.",
+    "result for continuation": "Implementation and deterministic fixed-point regression are complete; exact-head canonical receipt finalization remains.",
+    "next step": "Record receipts on the finalized subject and prove the receipt-only commit is observational."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Generic authority-envelope mutation admission and mutating-operation safety were not changed.",
+    "proof status": "passed",
+    "intent served": "yes for the bounded proof-template fixed-point repair",
+    "config compliance": "Feature-branch terminal Planning truth is represented by an archive-owner integration proposal.",
+    "misinterpretation risk": "low",
+    "follow-on decision": "independent review and integration"
+  },
+  "execution_summary": {
+    "outcome delivered": "Receipt-only finalization no longer changes non-mutating proof-template semantic identity, while proof-subject and required authority drift still invalidate receipts.",
+    "validation confirmed": "Focused, safety, lint, typecheck, routed, inventory, and deterministic real-Git fixed-point proof passed.",
+    "follow-on routed to": "independent PR review and target-branch archive-owner proposal",
+    "post-work posterity capture": "canonical proof receipts plus integration proposal",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "exact-head receipt finalization"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed-pending-integration",
+    "larger-intent status": "satisfied for #2740 repair",
+    "closure decision": "archive-owner-on-integration-target",
+    "why this decision is honest": "The bounded implementation and proof are complete; independent review and target-branch lifecycle application remain external.",
+    "evidence carried forward": "Focused test counts, routed validation, canonical receipts, and canonical structured broad-escalation proof.",
+    "reopen trigger": "Reopen if final receipt-only reconciliation is not accepted or independent review finds semantic identity loss."
+  }
+}

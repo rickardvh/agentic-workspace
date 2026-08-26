@@ -41,10 +41,18 @@
         },
         {
           "path": [
-            "drill_down",
-            "rule"
+            "decision_packet",
+            "kind"
           ],
-          "equals": "Compact default omits selector inventory/schemas; use --select or --verbose for detail."
+          "equals": "agentic-workspace/ordinary-start-decision/v1"
+        }
+      ],
+      "typescript_field_assertions": [
+        {
+          "path": [
+            "kind"
+          ],
+          "equals": "startup-context/v1"
         },
         {
           "path": [
@@ -67,7 +75,8 @@
       ],
       "forbidden_paths": [],
       "allowed_write_directories": [
-        ".agentic-workspace/local/improvement-pressure"
+        ".agentic-workspace/local/improvement-pressure",
+        ".agentic-workspace/local/projection-cache"
       ]
     },
     "idempotency": {

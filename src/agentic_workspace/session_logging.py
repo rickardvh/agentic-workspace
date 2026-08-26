@@ -2152,7 +2152,13 @@ def _entries_from_index(index: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def _record_identity(prefix: str, payload: dict[str, Any]) -> str:
-    digest = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:16]
+    identity_payload = payload
+    if prefix == "context" and isinstance(payload.get("freshness"), dict):
+        identity_payload = {
+            **payload,
+            "freshness": {key: value for key, value in payload["freshness"].items() if key != "resolved_at"},
+        }
+    digest = hashlib.sha256(json.dumps(identity_payload, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:16]
     raw_revision = payload.get("revision")
     revision = str(raw_revision if isinstance(raw_revision, (str, int)) else payload.get("head") or "unversioned")[:12]
     revision = re.sub(r"[^A-Za-z0-9._-]", "-", revision)
@@ -2180,7 +2186,7 @@ def _normalized_index_entries(entries: Iterable[dict[str, Any]]) -> tuple[list[d
         ):
             if payload:
                 identity = _record_identity(prefix, payload)
-                records[table][identity] = payload
+                records[table].setdefault(identity, payload)
                 if field == "context_ref":
                     segment[field] = identity
                 else:

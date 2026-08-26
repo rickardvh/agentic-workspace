@@ -10,6 +10,14 @@ from typing import Any
 from tests.workspace_cli_support import cli
 
 
+def _allow_contended_git_authority(monkeypatch: Any) -> None:
+    """Keep real Git authoritative when xdist briefly delays Windows probes."""
+
+    from agentic_workspace import projection_reuse
+
+    monkeypatch.setattr(projection_reuse, "_GIT_TIMEOUT_SECONDS", 5.0)
+
+
 def _target(tmp_path: Path) -> Path:
     tmp_path.mkdir(parents=True, exist_ok=True)
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
@@ -168,7 +176,8 @@ def test_start_implement_and_proof_reuse_each_surface_admitted_decision(tmp_path
         }
 
 
-def test_selected_closeout_and_planning_projections_are_bounded_and_warm_reused(tmp_path: Path, capsys) -> None:
+def test_selected_closeout_and_planning_projections_are_bounded_and_warm_reused(tmp_path: Path, capsys, monkeypatch) -> None:
+    _allow_contended_git_authority(monkeypatch)
     target = _target(tmp_path)
     capsys.readouterr()
     commands = [
@@ -196,6 +205,7 @@ def test_selected_closeout_and_planning_projections_are_bounded_and_warm_reused(
 def test_query_shaped_public_selectors_measure_cold_and_warm_reuse_cost(tmp_path: Path, capsys, monkeypatch) -> None:
     from agentic_workspace import projection_reuse
 
+    _allow_contended_git_authority(monkeypatch)
     target = _target(tmp_path)
     memory_root = target / ".agentic-workspace" / "memory" / "repo"
     memory_root.mkdir(parents=True, exist_ok=True)
@@ -665,6 +675,7 @@ def test_each_ordinary_surface_rejects_selected_owner_race_after_builder(tmp_pat
             scoped.setattr(runtime_module, "prepare_projection_reuse", racing_prepare)
             assert cli.main(command) == 0
         payload = json.loads(capsys.readouterr().out)
+        assert "context" in payload, operation
         context = payload["context"]
         assert context["projection_decision_input_revalidation"]["status"] == "stale"
         assert context["projection_decision_input_revalidation"]["changed_fields"] == ["selected_owner"]

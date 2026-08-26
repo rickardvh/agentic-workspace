@@ -200,6 +200,14 @@
                 "description": "One entry in the field assertions list."
               },
               "description": "Field-level stdout assertions evaluated after parsing."
+            },
+            "typescript_field_assertions": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/field_assertion",
+                "description": "One entry in the TypeScript field assertions list."
+              },
+              "description": "TypeScript-specific stdout assertions used when the native compact projection intentionally differs from the canonical runtime projection."
             }
           },
           "additionalProperties": false,
@@ -265,6 +273,18 @@
             "run_twice": {
               "type": "boolean",
               "description": "Whether to run the command twice against the fixture."
+            },
+            "ignored_stdout_json_paths": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "description": "Explicit volatile JSON paths omitted only from repeated-run stdout comparison."
             }
           },
           "additionalProperties": false,

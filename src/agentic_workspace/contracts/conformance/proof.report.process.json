@@ -48,6 +48,28 @@
         },
         {
           "path": [
+            "detail_routes",
+            "verbose"
+          ],
+          "equals": "agentic-workspace proof --target . --changed <paths> --verbose --format json"
+        }
+      ],
+      "typescript_field_assertions": [
+        {
+          "path": [
+            "kind"
+          ],
+          "equals": "proof-next-decision/v1"
+        },
+        {
+          "path": [
+            "next",
+            "action"
+          ],
+          "equals": "manual-verification"
+        },
+        {
+          "path": [
             "detail_command"
           ],
           "equals": "agentic-workspace proof --verbose --changed <paths> --format json"
@@ -66,11 +88,18 @@
       ],
       "forbidden_paths": [],
       "allowed_write_directories": [
-        ".agentic-workspace/local/improvement-pressure"
+        ".agentic-workspace/local/improvement-pressure",
+        ".agentic-workspace/local/projection-cache"
       ]
     },
     "idempotency": {
-      "run_twice": true
+      "run_twice": true,
+      "ignored_stdout_json_paths": [
+        [
+          "projection_reuse",
+          "status"
+        ]
+      ]
     },
     "safety": {
       "no_writes_outside_repo_root": true

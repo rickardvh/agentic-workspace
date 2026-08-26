@@ -470,6 +470,12 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
             else {}
         ),
         "memory_decision_packet": payload.get("memory_decision_packet", {}),
+        **(
+            {"durable_intent": _tiny_durable_intent(payload["durable_intent"])}
+            if isinstance(payload.get("durable_intent"), dict)
+            and _as_dict(payload["durable_intent"].get("subsystem_intent")).get("matched_count", 0)
+            else {}
+        ),
         **({"continuation_view": payload["continuation_view"]} if isinstance(payload.get("continuation_view"), dict) else {}),
         **(
             {"continuation_reorientation": payload["continuation_reorientation"]}
@@ -522,6 +528,12 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
             **({"task_search": skill_routing["task_search"]} if isinstance(skill_routing, dict) and "task_search" in skill_routing else {}),
         },
     }
+    projection_context = _as_dict(payload.get("context"))
+    revalidation = _as_dict(projection_context.get("projection_decision_input_revalidation"))
+    if revalidation.get("status") not in {None, "", "current"}:
+        projected["context"] = {
+            "projection_decision_input_revalidation": copy.deepcopy(revalidation),
+        }
     if isinstance(payload.get("parent_intent_status"), dict):
         projected["parent_intent_status"] = {
             key: payload["parent_intent_status"].get(key)
@@ -687,6 +699,15 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
     local_footprint_attention = isinstance(local_footprint, dict) and local_footprint.get("status") == "attention"
     if local_footprint_attention:
         projected["local_footprint"] = local_footprint
+    compact_changed_signals = ["local_footprint=attention"] if local_footprint_attention else []
+    if isinstance(cli_compatibility, dict) and cli_compatibility.get("status") in {
+        "advisory-drift",
+        "blocking-drift",
+        "warning-drift",
+    }:
+        compact_changed_signals.append(f"cli_compatibility={cli_compatibility.get('status')}")
+    if isinstance(installed_state_triage, dict) and installed_state_triage.get("status") not in {None, "", "not_applicable"}:
+        compact_changed_signals.append(f"installed_state_drift_triage={installed_state_triage.get('status')}")
     projected["action_signals"] = _compact_action_signals_payload(
         surface="start",
         allowed_next_action=str(projected["next_safe_action"].get("next_safe_action", "")),
@@ -695,7 +716,7 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         read_only_allowed=bool(projected["next_safe_action"].get("read_only_allowed")),
         proof_required=bool(projected["next_safe_action"].get("proof_required")),
         proof_commands=_tiny_required_proof_commands(payload.get("proof", {})) if isinstance(payload.get("proof"), dict) else [],
-        changed_signals=["local_footprint=attention"] if local_footprint_attention else [],
+        changed_signals=compact_changed_signals,
         advisory_selectors=[
             "skill_routing",
             "workflow_sufficiency",
@@ -2459,7 +2480,7 @@ def _ordinary_start_decision_payload(
         **({"attention": attention} if attention else {}),
         "detail_routes": detail_routes,
     }
-    return {
+    projected = {
         "kind": selected.get("kind", "startup-context/v1"),
         "target": selected.get("target", "."),
         "decision_packet": decision,
@@ -2474,6 +2495,11 @@ def _ordinary_start_decision_payload(
             else {}
         ),
     }
+    durable_intent = _as_dict(source_payload.get("durable_intent"))
+    subsystem_intent = _as_dict(durable_intent.get("subsystem_intent"))
+    if durable_intent.get("status") == "present" and int(subsystem_intent.get("matched_count", 0) or 0):
+        projected["durable_intent"] = _tiny_durable_intent(durable_intent)
+    return projected
 
 
 def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, target_root: Path | None = None) -> dict[str, Any]:
