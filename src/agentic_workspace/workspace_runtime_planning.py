@@ -468,6 +468,115 @@ def _active_execplan_record_payload(*, target_root: Path) -> tuple[str, dict[str
     return active_surface, loaded if isinstance(loaded, dict) else {}
 
 
+def _bounded_external_issue_effect_payload(
+    *, task_text: str | None, changed_paths: list[str], active_planning_present: bool
+) -> dict[str, Any]:
+    """Classify a bounded tracker write without granting repository custody.
+
+    This is deliberately provider-neutral and requires positive scope and safety
+    facts.  Merely mentioning issues, a count, or "preliminary" is insufficient.
+    """
+
+    text = " ".join(str(task_text or "").lower().split())
+    tracker_subject = bool(re.search(r"\b(issue|issues|ticket|tickets|tracker item|tracker items)\b", text))
+    external_write = bool(re.search(r"\b(file|create|open|submit|refine|update)\b", text)) and tracker_subject
+    bounded_scope = any(
+        (
+            bool(re.search(r"\bexactly\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\b", text)),
+            bool(
+                re.search(
+                    r"\bthese\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)?\s*(?:already[- ]identified\s+)?(?:issues|tickets|tracker items)\b",
+                    text,
+                )
+            ),
+            "already-identified" in text,
+            "already identified" in text,
+        )
+    )
+    duplicate_guard = any(term in text for term in ("duplicate-safe", "duplicate safe", "check for duplicates", "duplicate search"))
+    constraint_marker = bool(re.search(r"\b(do not|don't|without|no)\b", text))
+    no_repository_effect = constraint_marker and bool(
+        re.search(
+            r"\b(implement(?:ing|ation)?|edit(?:ing)? product source|source changes?|repo(?:sitory)? changes?|changing repository files)\b",
+            text,
+        )
+    )
+    no_terminal_tracker_effect = (
+        constraint_marker and bool(re.search(r"\b(merge|merging|merged)\b", text)) and bool(re.search(r"\b(close|closing|closed)\b", text))
+    )
+    durable_shape = any(
+        term in text
+        for term in (
+            "parent issue",
+            "parent ticket",
+            "implementation lane",
+            "create a lane",
+            "multi-session",
+            "decompose",
+            "unresolved decomposition",
+            "implement and",
+            "then implement",
+            "also implement",
+            "plus implementation",
+        )
+    )
+    admitted = all(
+        (
+            external_write,
+            bounded_scope,
+            duplicate_guard,
+            no_repository_effect,
+            no_terminal_tracker_effect,
+            not durable_shape,
+            not changed_paths,
+            not active_planning_present,
+        )
+    )
+    observed = {
+        "external_tracker_write": external_write,
+        "bounded_candidate_set": bounded_scope,
+        "duplicate_check_required": duplicate_guard,
+        "repository_effects_explicitly_excluded": no_repository_effect,
+        "merge_and_close_effects_explicitly_excluded": no_terminal_tracker_effect,
+        "durable_execution_shape_detected": durable_shape,
+        "changed_path_count": len(changed_paths),
+        "active_planning_present": active_planning_present,
+    }
+    if admitted:
+        return {
+            "kind": "agentic-workspace/bounded-external-effect-route/v1",
+            "status": "direct-route-admitted",
+            "effect_class": "external-issue-filing",
+            "planning_custody_required": False,
+            "observed_facts": observed,
+            "required_safety_checks": [
+                "duplicate-search",
+                "issue-shaping-and-template-compliance",
+                "explicit-external-write-authority",
+                "truthful-post-create-reconciliation",
+            ],
+            "residue_policy": "External tracker receipts remain coordination evidence; create no checked-in Planning owner solely for permission.",
+            "provider_boundary": "The effect class is a bounded external tracker write; no GitHub-specific planning bypass is granted.",
+            "rule": "A positively bounded external tracker effect may use its existing intake/write owner without checked-in Planning custody.",
+        }
+    reason_codes = [key for key, value in observed.items() if value is False]
+    if durable_shape:
+        reason_codes.append("durable-execution-shape-detected")
+    if changed_paths:
+        reason_codes.append("repository-changes-present")
+    if active_planning_present:
+        reason_codes.append("active-owner-conflict-or-continuation")
+    return {
+        "kind": "agentic-workspace/bounded-external-effect-route/v1",
+        "status": "not-admitted",
+        "effect_class": "repo-implementation-or-unbounded-work" if durable_shape or changed_paths else "unclassified",
+        "planning_custody_required": bool(durable_shape or changed_paths or active_planning_present),
+        "observed_facts": observed,
+        "reason_codes": sorted(set(reason_codes)),
+        "rule": "Counts or tracker wording alone never exempt work from Planning custody.",
+    }
+
+
 def _custody_only_planning_payload(
     *,
     active_planning_present: bool,
@@ -3525,6 +3634,11 @@ def _planning_safety_gate_payload(
         work_shape=work_shape,
         proof_burden=proof_burden,
     )
+    bounded_external_effect = _bounded_external_issue_effect_payload(
+        task_text=task_text,
+        changed_paths=changed_paths,
+        active_planning_present=active_planning_present,
+    )
     promotion_command = _planning_safety_promotion_command(
         config=config,
         decomposition_delegation=decomposition_delegation if isinstance(decomposition_delegation, dict) else {},
@@ -3675,6 +3789,15 @@ def _planning_safety_gate_payload(
         reason = "Implementation paths are mixed with planning recovery paths without active planning ownership."
         required_next_action = "checkpoint-planning-before-implementation"
         workflow_sufficient = False
+    elif bounded_external_effect.get("status") == "direct-route-admitted":
+        status = "clear"
+        decision = "bounded-external-effect-direct"
+        reason = (
+            "The requested effect is a bounded external issue filing with repository, implementation, merge, and close "
+            "effects excluded; its existing intake/write owner supplies duplicate, template, authority, and reconciliation safety."
+        )
+        required_next_action = "perform-bounded-external-issue-filing"
+        workflow_sufficient = True
     elif (
         (not active_planning_present)
         and (not changed_paths)
@@ -3826,6 +3949,7 @@ def _planning_safety_gate_payload(
                 f"dirty_shape={path_classification.get('dirty_shape')}",
                 f"candidate_pressure={candidate_pressure.get('status')}",
                 f"issue_ref_count={len(issue_refs)}",
+                f"effect_class={bounded_external_effect.get('effect_class')}",
             ],
             missing_evidence=(
                 ["external issue intent evidence"]
@@ -3858,6 +3982,7 @@ def _planning_safety_gate_payload(
         "issue_scope_evidence": issue_scope_evidence,
         "candidate_pressure": candidate_pressure,
         "work_shape_study": work_shape_study,
+        "bounded_external_effect": bounded_external_effect,
         "custody_planning": custody_planning,
         "hierarchy_owner_requirement": hierarchy_owner_requirement,
         "repair_route": {

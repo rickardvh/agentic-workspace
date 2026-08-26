@@ -196,6 +196,22 @@ route_role = "behavior"
 precedence = "50"
 allowed_composition = ["maintenance", "evidence"]
 
+[assurance.domain_proof_lanes.planning_reconciliation_runtime]
+purpose = "Focused Planning-to-workspace reconciliation, residue disposition, and bounded-effect routing behavior."
+applies_to_paths = [".agentic-workspace/planning/schemas/**", "packages/planning/bootstrap/.agentic-workspace/planning/schemas/**", "src/agentic_workspace/operating_decision.py", "src/agentic_workspace/reconciliation.py", "src/agentic_workspace/workspace_runtime_planning.py"]
+commands = ["uv run pytest packages/planning/tests/test_promote.py tests/test_reconciliation.py tests/test_workspace_cli.py -q", "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success", "uv run python scripts/check/check_structured_file_inventory.py --quiet-success"]
+review_aids = ["Confirm future-context disposition remains explicit and owner-backed, bounded external effects stay fail-closed, schema mirrors are synchronized, and no parallel Memory or Planning authority is introduced."]
+evidence_concepts = ["planning-workspace-reconciliation", "bounded-external-effects", "owner-backed-residue"]
+proof_profiles = ["workspace_behavior"]
+authority_refs = [".agentic-workspace/config.toml", ".agentic-workspace/planning/schemas/planning-execplan.schema.json", "packages/planning/AGENTS.md"]
+escalation = ["the change alters external-effect authority beyond bounded issue filing, creates a new durable owner, or crosses independent review authority"]
+escalation_conditions = ["cross-owner", "cross-claim-boundary", "high-risk-requirement"]
+claim_boundary = "focused-planning-reconciliation-proof-required-before-routing-or-residue-claim"
+owner = "planning"
+route_role = "behavior"
+precedence = "65"
+allowed_composition = ["maintenance", "evidence", "broad"]
+
 [assurance.domain_proof_lanes.verification_package_behavior]
 purpose = "Focused Verification package behavior."
 applies_to_paths = ["packages/verification/src/**", "packages/verification/tests/**"]

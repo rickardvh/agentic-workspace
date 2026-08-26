@@ -12499,10 +12499,16 @@ def _active_closeout_distillation_contract(
     explicit = _record_section_dict(record, "closeout_distillation") or {}
     buckets = _closeout_distillation_buckets(record=record, explicit=explicit)
     counts = {bucket: len(items) for bucket, items in buckets.items()}
-    promoted_count = sum(counts[bucket] for bucket in ("memory", "config_check", "docs", "issue_follow_up", "continuation"))
+    promoted_count = sum(
+        counts[bucket] for bucket in ("memory", "config_check", "docs", "issue_follow_up", "continuation", "stronger_owner")
+    )
     discarded_count = counts["discard"]
     recommended_next_action = "Closeout distillation is ready for plan removal or continuation routing."
-    if not promoted_count and not discarded_count:
+    if counts["unresolved"]:
+        recommended_next_action = (
+            "Resolve each known future-context candidate with one owner-backed disposition before transferring closeout custody."
+        )
+    elif not promoted_count and not discarded_count:
         recommended_next_action = (
             "Complete closeout distillation before closeout so durable learning has an owner or is intentionally discarded."
         )
@@ -12515,8 +12521,8 @@ def _active_closeout_distillation_contract(
         "status": "present",
         "current_plan": plan_path.relative_to(target_root).as_posix(),
         "rule": (
-            "Closeout should route durable learning to continuation, Memory, config/checks, docs, or issue follow-up, "
-            "and explicitly discard non-recurring execution detail instead of making archived execplans the normal knowledge base."
+            "Closeout should route known future-context signals to continuation, Memory, config/checks, docs, issue follow-up, "
+            "a stronger canonical owner, dismissal, or one unresolved owner/action; unevaluated is never none-found."
         ),
         "archive_role": "completed execplans are removed after distillation by default; legacy archives are compatibility evidence only",
         "buckets": buckets,
@@ -12524,6 +12530,7 @@ def _active_closeout_distillation_contract(
             **counts,
             "promoted_or_routed_count": promoted_count,
             "intentionally_discarded_count": discarded_count,
+            "unresolved_candidate_count": counts["unresolved"],
         },
         "recommended_next_action": recommended_next_action,
         "minimal_refs": _dedupe(
@@ -12556,6 +12563,8 @@ def _closeout_distillation_buckets(*, record: dict[str, Any], explicit: dict[str
         "config_check": [],
         "docs": [],
         "issue_follow_up": [],
+        "stronger_owner": [],
+        "unresolved": [],
     }
     explicit_buckets = record.get("closeout_distillation", {}) if isinstance(record, dict) else {}
     if isinstance(explicit_buckets, dict):
@@ -12610,6 +12619,39 @@ def _closeout_distillation_buckets(*, record: dict[str, Any], explicit: dict[str
         if bucket in buckets:
             buckets[bucket].append(item)
 
+    future_context_signals = record.get("future_context_signals", []) if isinstance(record, dict) else []
+    if isinstance(future_context_signals, list):
+        for raw_signal in future_context_signals:
+            if not isinstance(raw_signal, dict) or raw_signal.get("relevant") is False:
+                continue
+            disposition = raw_signal.get("disposition", {})
+            disposition = disposition if isinstance(disposition, dict) else {}
+            outcome = str(disposition.get("outcome", "unresolved")).strip().lower().replace("_", "-")
+            owner = str(disposition.get("owner") or raw_signal.get("owner") or "").strip()
+            rationale = str(disposition.get("rationale") or raw_signal.get("rationale") or "").strip()
+            summary = str(raw_signal.get("summary") or raw_signal.get("signal_id") or "known future-context signal").strip()
+            source = f"future_context_signals.{str(raw_signal.get('signal_id') or 'unknown')}"
+            item = {"summary": summary, "owner": owner, "source": source, "rationale": rationale}
+            if outcome in {"capture", "update-existing"}:
+                owner_text = owner.lower()
+                bucket = (
+                    "memory"
+                    if "memory" in owner_text
+                    else "docs"
+                    if "doc" in owner_text
+                    else "config_check"
+                    if any(term in owner_text for term in ("config", "check", "test", "contract", "proof", "code"))
+                    else "unresolved"
+                )
+            elif outcome in {"route-stronger", "already-absorbed"}:
+                bucket = "stronger_owner" if owner and rationale else "unresolved"
+            elif outcome == "dismiss":
+                bucket = "discard" if rationale else "unresolved"
+            else:
+                bucket = "unresolved"
+                item["next_action"] = str(disposition.get("next_action") or raw_signal.get("required_decision") or "").strip()
+            buckets[bucket].append(item)
+
     for ref in [] if buckets["issue_follow_up"] else (_record_section_references(record, "references") or []):
         role = str(ref.get("role", "")).lower()
         if "follow" in role or "issue" in str(ref.get("kind", "")).lower():
@@ -12621,7 +12663,11 @@ def _closeout_distillation_buckets(*, record: dict[str, Any], explicit: dict[str
                 }
             )
 
-    if not buckets["discard"] and (not knowledge or knowledge.strip().lower() in {"none", "none.", "n/a", "not needed", "no"}):
+    if (
+        not buckets["discard"]
+        and not future_context_signals
+        and (not knowledge or knowledge.strip().lower() in {"none", "none.", "n/a", "not needed", "no"})
+    ):
         buckets["discard"].append(
             {
                 "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
@@ -18695,6 +18741,13 @@ def _invalid_closeout_distillation_message(
 ) -> dict[str, str] | None:
     buckets = _closeout_distillation_buckets(record=record, explicit={})
     routed_count = sum(len(items) for items in buckets.values())
+    if buckets["unresolved"]:
+        first = buckets["unresolved"][0]
+        return {
+            "warning_class": "archive_unresolved_future_context",
+            "message": "Completed execplan still has known future-relevant residue without an owner-backed disposition.",
+            "detail": str(first.get("next_action") or first.get("summary") or EXECPLAN_CLOSEOUT_DISTILLATION_QUESTION),
+        }
     if routed_count == 0:
         return {
             "warning_class": "archive_missing_closeout_distillation",
@@ -18743,6 +18796,8 @@ def _add_closeout_distillation_actions(
         ("config_check", "config/checks/tests/contracts"),
         ("continuation", "planning continuation"),
         ("issue_follow_up", "issue follow-up"),
+        ("stronger_owner", "stronger canonical owner"),
+        ("unresolved", "unresolved future-context custody"),
     ):
         for item in buckets[bucket]:
             result.add("distillation route", plan_path, f"{owner_label}: {item.get('summary', '')}")
@@ -19054,7 +19109,16 @@ def _prepare_execplan_closeout(
     patch["improvement_signal_review"] = _prepared_improvement_signal_review(record)
 
     buckets = _closeout_distillation_buckets(record=record, explicit={})
-    for bucket in ("discard", "continuation", "memory", "config_check", "docs", "issue_follow_up"):
+    for bucket in (
+        "discard",
+        "continuation",
+        "memory",
+        "config_check",
+        "docs",
+        "issue_follow_up",
+        "stronger_owner",
+        "unresolved",
+    ):
         buckets.setdefault(bucket, [])
     if not buckets["discard"]:
         buckets["discard"].append(
@@ -19507,7 +19571,16 @@ def archive_parent_lane_closeout(
             "durable_residue": _parent_lane_durable_residue(item),
         }
     )
-    buckets = {"discard": [], "continuation": [], "memory": [], "config_check": [], "docs": [], "issue_follow_up": []}
+    buckets = {
+        "discard": [],
+        "continuation": [],
+        "memory": [],
+        "config_check": [],
+        "docs": [],
+        "issue_follow_up": [],
+        "stronger_owner": [],
+        "unresolved": [],
+    }
     buckets["discard"].append(
         {
             "summary": discard_summary or "Historical parent-lane bookkeeping is reconstructable from the archive record and child refs.",
@@ -23983,6 +24056,8 @@ def _build_legacy_execplan_record_from_todo_item(
                 "config_check": [],
                 "docs": [],
                 "issue_follow_up": [],
+                "stronger_owner": [],
+                "unresolved": [],
             }
         },
         "drift_log": [f"{date.today().isoformat()}: Promoted from TODO direct-task shape into an execplan."],
@@ -24142,6 +24217,8 @@ def _build_execplan_record_from_todo_item(
                 "config_check": [],
                 "docs": [],
                 "issue_follow_up": [],
+                "stronger_owner": [],
+                "unresolved": [],
             }
         },
         "drift_log": [],

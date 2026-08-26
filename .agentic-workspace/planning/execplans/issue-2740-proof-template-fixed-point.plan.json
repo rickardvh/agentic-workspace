@@ -60,6 +60,23 @@
       "Receipt-only commits become a proof fixed point; proof-subject changes remain stale."
     ]
   },
+  "future_context_signals": [
+    {
+      "kind": "agentic-workspace/future-context-signal/v1",
+      "signal_id": "planning-effect:proof-publication-fixed-point",
+      "source_class": "planning-scope-effect",
+      "authority_state": "owner-admitted",
+      "status": "resolved",
+      "relevant": true,
+      "owner": "proof/code/test",
+      "summary": "Proof-owned receipt and index publication must reach a fixed point while real proof-subject changes remain stale.",
+      "disposition": {
+        "outcome": "already-absorbed",
+        "owner": "proof/code/test",
+        "rationale": "The deterministic invariant is enforced by the proof runtime and maintained regression tests, so a duplicate Memory note would be weaker than the canonical owner."
+      }
+    }
+  ],
   "relationships": {
     "selection": {
       "state": "unselected",

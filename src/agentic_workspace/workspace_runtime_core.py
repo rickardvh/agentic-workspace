@@ -29862,6 +29862,8 @@ def _apply_lane_shaping_gate_to_start_payload(
     changed_paths: list[str],
     startup_template: dict[str, Any],
 ) -> None:
+    if _as_dict(planning_safety_gate.get("bounded_external_effect")).get("status") == "direct-route-admitted":
+        return
     lane_gate = _lane_shaping_gate_payload(
         config=config,
         planning_safety_gate=planning_safety_gate,
@@ -33990,6 +33992,29 @@ def _start_tiny_payload_fast(
         planning_safety_gate["status"] not in {"satisfied", "clear"} or custody_applies or task_switch_visible_by_default
     ) and route_transition != "inspect-current-task-scope":
         payload["planning_safety_gate"] = planning_safety_gate
+    bounded_external_effect = _as_dict(planning_safety_gate.get("bounded_external_effect"))
+    if bounded_external_effect.get("status") == "direct-route-admitted":
+        payload["bounded_external_effect"] = bounded_external_effect
+        payload["workflow_sufficiency"] = _workflow_sufficiency_payload(
+            surface="start",
+            decision="bounded-external-effect-direct",
+            reason=str(planning_safety_gate.get("reason") or "Bounded external tracker effect is ready for its write owner."),
+            required_next_action="perform-bounded-external-issue-filing",
+            evidence_required=list(bounded_external_effect.get("required_safety_checks") or []),
+        )
+        payload["immediate_next_allowed_action"] = {
+            "action": "perform-bounded-external-issue-filing",
+            "summary": "Use the existing external issue intake/write owner without creating checked-in Planning custody.",
+            "command": "",
+            "run": None,
+            "risk": "bounded-external-write",
+            "required_inputs": list(bounded_external_effect.get("required_safety_checks") or []),
+            "next_proof": "Reconcile created tracker identities, duplicate decisions, and failed writes against the requested bounded set.",
+            "read_first": [],
+            "open_execplan_only_when": (
+                "The task expands into repository implementation, unresolved decomposition, multi-session continuation, or an active-owner conflict."
+            ),
+        }
     if route_applies and (route_transition != "none" or route_relation == "bounded-independent"):
         next_packet = route_decision.get("next_safe_action", {})
         if isinstance(next_packet, dict):

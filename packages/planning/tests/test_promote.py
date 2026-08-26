@@ -1150,6 +1150,66 @@ def test_archive_prepare_closeout_routes_improvement_signal_review_states(tmp_pa
     } in buckets["discard"]
 
 
+def test_closeout_distillation_preserves_future_context_dispositions_without_forcing_memory() -> None:
+    plan = json.loads(
+        (_Path(__file__).parents[3] / ".agentic-workspace/planning/execplans/issue-2740-proof-template-fixed-point.plan.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    buckets = installer_mod._closeout_distillation_buckets(record=plan, explicit={})
+    assert buckets["stronger_owner"] == [
+        {
+            "summary": "Proof-owned receipt and index publication must reach a fixed point while real proof-subject changes remain stale.",
+            "owner": "proof/code/test",
+            "source": "future_context_signals.planning-effect:proof-publication-fixed-point",
+            "rationale": (
+                "The deterministic invariant is enforced by the proof runtime and maintained regression tests, so a duplicate "
+                "Memory note would be weaker than the canonical owner."
+            ),
+        }
+    ]
+    assert buckets["memory"] == []
+    assert buckets["discard"] == []
+    assert buckets["unresolved"] == []
+
+
+def test_closeout_distillation_rejects_unevaluated_known_signal_and_stays_quiet_without_one(tmp_path: Path) -> None:
+    record = {
+        "execution_summary": {"knowledge promoted (Memory/Docs/Config)": "none"},
+        "future_context_signals": [
+            {
+                "signal_id": "agent:proposal",
+                "source_class": "agent-proposed-learning",
+                "authority_state": "agent-proposed",
+                "relevant": True,
+                "owner": "memory",
+                "summary": "A future route may benefit from this advisory lesson.",
+                "disposition": {
+                    "outcome": "unresolved",
+                    "owner": "memory",
+                    "next_action": "admit or dismiss through the Memory owner",
+                },
+            }
+        ],
+    }
+    buckets = installer_mod._closeout_distillation_buckets(record=record, explicit={})
+    assert buckets["unresolved"][0]["next_action"] == "admit or dismiss through the Memory owner"
+    assert buckets["discard"] == []
+    warning = installer_mod._invalid_closeout_distillation_message(
+        target_root=tmp_path,
+        record=record,
+        durable_residue={},
+    )
+    assert warning["warning_class"] == "archive_unresolved_future_context"
+
+    quiet = installer_mod._closeout_distillation_buckets(
+        record={"execution_summary": {"knowledge promoted (Memory/Docs/Config)": "none"}},
+        explicit={},
+    )
+    assert quiet["unresolved"] == []
+    assert quiet["discard"][0]["source"] == "execution_summary.knowledge promoted (Memory/Docs/Config)"
+
+
 def test_planning_cli_new_plan_activate_refuses_implicit_active_switch(tmp_path: Path, capsys) -> None:
     install_bootstrap(target=tmp_path)
     _write(

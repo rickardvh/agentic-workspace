@@ -103,6 +103,117 @@ def test_source_owned_future_context_blocks_terminal_claim_with_one_typed_owner_
     assert result["next_action"]["required_decision"] == "admit-or-dismiss"
 
 
+def test_known_future_context_has_one_explicit_disposition_and_not_evaluated_is_not_none() -> None:
+    base = {
+        "kind": "agentic-workspace/future-context-signal/v1",
+        "source_class": "planning-scope-effect",
+        "authority_state": "agent-proposed",
+        "relevant": True,
+    }
+    cases = [
+        ("capture", "memory", "Reusable advisory guidance was admitted.", "disposed", True),
+        ("update-existing", "docs", "Existing durable guidance was updated.", "disposed", True),
+        ("route-stronger", "proof/code/test", "Maintained proof already enforces the invariant.", "disposed", False),
+        ("already-absorbed", "config", "Current config is the canonical owner.", "disposed", False),
+        ("dismiss", "none", "The observation is one-off and non-recurring.", "disposed", False),
+        ("unresolved", "planning", "", "unresolved", True),
+    ]
+    signals = []
+    for index, (outcome, owner, rationale, _, _) in enumerate(cases):
+        disposition = {"outcome": outcome, "owner": owner, "rationale": rationale}
+        if outcome == "unresolved":
+            disposition["next_action"] = "select the smallest canonical owner"
+        signals.append({**base, "signal_id": f"signal-{index}", "disposition": disposition})
+
+    result = compile_reconciliation(
+        {
+            "result": {"status": "succeeded"},
+            "intent": {"status": "satisfied"},
+            "proof": {"status": "passed"},
+            "future_context_capture": {"status": "not_evaluated"},
+            "future_context_signals": signals,
+        }
+    )
+    reconciliation = result["future_context_reconciliation"]
+
+    assert reconciliation["status"] == "unresolved"
+    assert reconciliation["none_found_allowed"] is False
+    assert reconciliation["capture_input_status"] == "not_evaluated"
+    assert [item["status"] for item in reconciliation["dispositions"]] == [item[3] for item in cases]
+    assert [item["duplicate_memory_record_required"] for item in reconciliation["dispositions"]] == [item[4] for item in cases]
+    assert result["claim"]["reasons"] == ["future-context-unresolved"]
+
+
+def test_future_context_custody_survives_partial_waiting_handoff_and_full_closeout() -> None:
+    signal = {
+        "signal_id": "agent:durable-lesson",
+        "source_class": "agent-proposed-learning",
+        "authority_state": "agent-proposed",
+        "relevant": True,
+        "disposition": {
+            "outcome": "unresolved",
+            "owner": "memory",
+            "next_action": "admit or dismiss the advisory candidate",
+        },
+    }
+    for status in ("partial", "waiting", "succeeded"):
+        result = compile_reconciliation(
+            {
+                "result": {"status": status},
+                "intent": {"status": "satisfied" if status == "succeeded" else "partial"},
+                "future_context_signals": [signal],
+                "continuation": {"status": "handoff", "owner": "next-session"},
+            }
+        )
+        disposition = result["future_context_reconciliation"]["dispositions"][0]
+        assert disposition["source_authority_state"] == "agent-proposed"
+        assert disposition["authority_effect"] == "none"
+        assert disposition["next_action"] == "admit or dismiss the advisory candidate"
+        assert result["future_context_reconciliation"]["custody_transfer_safe"] is False
+
+
+def test_admitted_memory_disposition_can_contribute_to_a_later_decision_without_authority_upgrade() -> None:
+    contribution = {
+        "kind": "agentic-memory/decision-contribution/v1",
+        "status": "projected",
+        "fact_id": "future-proof-guidance",
+        "fact_revision": "sha256:fact",
+        "source_revision": "sha256:memory",
+        "freshness": "current",
+        "owner": "memory",
+        "authority_class": "advisory",
+        "applicability_basis": ["explicit-owner-admission"],
+        "affected_decisions": ["proof-route"],
+        "guidance": "Keep proof publication observational.",
+        "evidence_refs": ["planning-effect:proof-fixed-point"],
+    }
+    decision = compile_operating_decision(
+        inputs={
+            "revisions": {"planning": "r1"},
+            "future_context_signals": [
+                {
+                    "signal_id": "planning-effect:proof-fixed-point",
+                    "source_class": "planning-scope-effect",
+                    "authority_state": "owner-admitted",
+                    "relevant": True,
+                    "status": "captured",
+                    "disposition": {
+                        "outcome": "capture",
+                        "owner": "memory",
+                        "rationale": "No stronger owner covers this advisory routing lesson.",
+                    },
+                    "decision_contribution": contribution,
+                }
+            ],
+        }
+    )
+
+    projected = decision["memory_effectiveness"]["projected_contributions"][0]
+    assert projected["fact_id"] == "future-proof-guidance"
+    assert projected["authority_class"] == "advisory"
+    assert decision["context_effects"]["status"] == "quiet"
+
+
 def test_no_future_context_signal_keeps_reconciliation_quiet_and_agent_candidate_stays_advisory() -> None:
     quiet = compile_operating_decision(inputs={"revisions": {"planning": "r1"}})
     candidate = compile_operating_decision(

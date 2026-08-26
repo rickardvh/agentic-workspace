@@ -5,7 +5,7 @@
   "owner_level": "epic",
   "lifecycle": "live",
   "phase": "implementation",
-  "revision": 3,
+  "revision": 6,
   "intent": {
     "outcome": "Starting from current master, implement GitHub issues #2722, #2740, #2748, #2749, #2750, #2752, #2753, #2754, and #2755 as dependency-ordered stacked pull requests grouped by coherent lane.",
     "non_goals": [
@@ -68,7 +68,7 @@
     "https://github.com/rickardvh/agentic-workspace/issues/2754",
     "https://github.com/rickardvh/agentic-workspace/issues/2755"
   ],
-  "next_action": "Implement and publish lane 2 for #2748 and #2750 on PR #2756, then continue lane 3 from the lane 2 head.",
+  "next_action": "Publish lane 3 for #2752 and #2754 stacked on PR #2757, then implement lane 4 for #2749 from the lane 3 head.",
   "blockers": [
     "None. Escalate if an issue requires changing an authority boundary or cannot satisfy its maintained replay without redesign beyond this stack."
   ],
@@ -87,7 +87,11 @@
     "refs": [
       "Lane 1 commit 5b4d7f98a",
       "Lane 1 PR https://github.com/rickardvh/agentic-workspace/pull/2756",
-      "Lane 1 focused config/correction tests and generated Python/TypeScript adapter conformance passed"
+      "Lane 1 focused config/correction tests and generated Python/TypeScript adapter conformance passed",
+      "Lane 2 commit d86b20642",
+      "Lane 2 PR https://github.com/rickardvh/agentic-workspace/pull/2757",
+      "Lane 2 proof subject, selected proof execution, full proof CLI, workspace CLI, lint, typecheck, and routed contract checks passed",
+      "Lane 3 future-context reconciliation, bounded external-effect routing, planning promotion/archive, full workspace CLI, generated adapter, lint, typecheck, contract tooling, structured inventory, and focused proof-route checks passed"
     ]
   },
   "continuation": {
