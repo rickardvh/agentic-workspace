@@ -113,8 +113,10 @@ def test_makefile_allocates_fresh_top_level_run_and_preserves_admitted_child_joi
         '\t@echo "$(VALIDATION_RUN_ID)|$(VALIDATION_JOIN_TOKEN)|$(VALIDATION_RUN_PROVENANCE)"\n',
         encoding="utf-8",
     )
-    stale_environment = {**os.environ, "VALIDATION_RUN_ID": "stale-run"}
-    stale_environment.pop("VALIDATION_JOIN_TOKEN", None)
+    clean_environment = os.environ.copy()
+    for key in ("VALIDATION_RUN_ID", "VALIDATION_JOIN_TOKEN", "VALIDATION_RUN_PROVENANCE"):
+        clean_environment.pop(key, None)
+    stale_environment = {**clean_environment, "VALIDATION_RUN_ID": "stale-run"}
 
     allocated = (
         subprocess.run(
@@ -137,7 +139,7 @@ def test_makefile_allocates_fresh_top_level_run_and_preserves_admitted_child_joi
         subprocess.run(
             ["make", "-f", str(fixture), "print-validation-context"],
             cwd=WORKSPACE_ROOT,
-            env={**os.environ, "VALIDATION_RUN_ID": allocated_run, "VALIDATION_JOIN_TOKEN": allocated_token},
+            env={**clean_environment, "VALIDATION_RUN_ID": allocated_run, "VALIDATION_JOIN_TOKEN": allocated_token},
             capture_output=True,
             text=True,
             check=True,

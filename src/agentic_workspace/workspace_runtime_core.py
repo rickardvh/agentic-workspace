@@ -49920,6 +49920,24 @@ def _write_proof_reuse_cache_from_receipt(
     }
 
 
+def _proof_receipt_failure_context(
+    *, target_root: Path, command: str, result: str, changed_paths: list[str], receipt_log: str
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    """Resolve optional retry and log-derived failure context for a receipt."""
+    retry_ladder = _proof_receipt_retry_ladder(command=command, result=result, changed_paths=changed_paths)
+    log_source = _proof_receipt_log_source(target_root=target_root, receipt_log=receipt_log)
+    if log_source is None:
+        return retry_ladder, None
+    log_text, log_source_payload = log_source
+    return retry_ladder, _proof_failure_summary(
+        command=command,
+        result=result,
+        changed_paths=changed_paths,
+        log_text=log_text,
+        log_source=log_source_payload,
+    )
+
+
 def _record_proof_receipt_payload(
     *,
     target_root: Path,
@@ -50080,20 +50098,15 @@ def _record_proof_receipt_payload(
             "claim_sufficiency_source": "proof_receipt_admission.proof_sufficient",
             "rule": "Route-health retirement requires a matching guarded apply receipt, current authority revision, complete passed guarded validation, and AW-owned sufficient proof admission.",
         }
-    repair_retry_ladder = _proof_receipt_retry_ladder(command=command, result=result, changed_paths=changed_paths)
+    repair_retry_ladder, failure_summary = _proof_receipt_failure_context(
+        target_root=target_root,
+        command=command,
+        result=result,
+        changed_paths=changed_paths,
+        receipt_log=receipt_log,
+    )
     if repair_retry_ladder is not None:
         receipt["repair_retry_ladder"] = repair_retry_ladder
-    log_source = _proof_receipt_log_source(target_root=target_root, receipt_log=receipt_log)
-    failure_summary = None
-    if log_source is not None:
-        log_text, log_source_payload = log_source
-        failure_summary = _proof_failure_summary(
-            command=command,
-            result=result,
-            changed_paths=changed_paths,
-            log_text=log_text,
-            log_source=log_source_payload,
-        )
     if failure_summary is not None:
         receipt["failure_summary"] = failure_summary
     assignment_context = _proof_receipt_assignment_context(target_root=target_root)

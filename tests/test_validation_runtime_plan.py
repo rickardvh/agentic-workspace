@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
@@ -166,9 +167,13 @@ def test_make_materializes_one_automatic_run_id_per_process(tmp_path: Path) -> N
     )
 
     def invoke() -> list[str]:
+        fresh_environment = os.environ.copy()
+        for key in ("VALIDATION_RUN_ID", "VALIDATION_JOIN_TOKEN", "VALIDATION_RUN_PROVENANCE"):
+            fresh_environment.pop(key, None)
         result = subprocess.run(
             ["make", "--no-print-directory", "-f", str(root / "Makefile"), "-f", str(probe), "validation-id-probe"],
             cwd=root,
+            env=fresh_environment,
             check=True,
             capture_output=True,
             text=True,

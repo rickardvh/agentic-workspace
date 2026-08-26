@@ -3219,6 +3219,100 @@ def planning_reconcile(
     return payload
 
 
+def _write_planning_reconciliation_transaction(
+    *,
+    target_root: Path,
+    cleanup_targets: list[dict[str, Any]],
+    sync_targets: list[dict[str, Any]],
+    owner_transitions: list[dict[str, Any]],
+    selected_owner: dict[str, Any] | None,
+    receipt_path: Path,
+    computed_id: str,
+    planning_revision_id: str,
+    operations: list[dict[str, Any]],
+    owner_observations: list[dict[str, Any]],
+    proof_revision: str,
+    semantic_delta: dict[str, Any],
+    proposal_payload: dict[str, Any],
+    apply_box: dict[str, Any],
+) -> None:
+    """Apply the reconciliation body while its caller owns atomic rollback."""
+    apply_box.update(
+        _apply_reconcile_safe_prune(
+            target_root=target_root,
+            cleanup_targets=cleanup_targets,
+            projection_sync_targets=sync_targets,
+            dry_run=False,
+        )
+    )
+    closed_owner_ids: list[str] = []
+    for transition in owner_transitions:
+        if transition["transition"] != "close-slice":
+            continue
+        owner_path = target_root / transition["path"]
+        owner = _load_execplan_record(owner_path)
+        if owner is None:
+            raise OSError(f"reconciliation owner disappeared: {transition['path']}")
+        owner["lifecycle"] = "closed"
+        owner["phase"] = "complete"
+        if isinstance(owner.get("revision"), int):
+            owner["revision"] = int(owner["revision"]) + 1
+        _write_execplan_record(record_path=owner_path, record=owner, render_markdown=False)
+        closed_owner_ids.append(transition["owner_id"])
+    selection_changed: list[str] = []
+    state = _read_state_from_toml(target_root) or {}
+    todo = state.get("todo", {}) if isinstance(state, dict) else {}
+    state_changed = False
+    closed_paths = {item["path"] for item in owner_transitions if item["transition"] == "close-slice"}
+    for todo_field in ("active_items", "queued_items"):
+        raw_items = todo.get(todo_field, []) if isinstance(todo, dict) else []
+        if not isinstance(raw_items, list):
+            continue
+        retained = [
+            item
+            for item in raw_items
+            if not (
+                isinstance(item, dict)
+                and (
+                    str(item.get("id") or "") in closed_owner_ids or str(item.get("surface") or item.get("execplan") or "") in closed_paths
+                )
+            )
+        ]
+        if retained != raw_items:
+            todo[todo_field] = retained
+            selection_changed.append(f"todo.{todo_field}")
+            state_changed = True
+    if selected_owner is not None:
+        selected_path = target_root / selected_owner["path"]
+        selected_record = _load_execplan_record(selected_path)
+        if selected_record is None:
+            raise OSError(f"selected reconciliation owner disappeared: {selected_owner['path']}")
+        state, selection_changed = _owner_selection_state_patch(target_root, state, owner_path=selected_path, owner_record=selected_record)
+        state_changed = state_changed or bool(selection_changed)
+    if state_changed:
+        _write_state_to_toml(target_root, state)
+    receipt_path.parent.mkdir(parents=True, exist_ok=True)
+    receipt = {
+        "kind": "agentic-planning/reconciliation-receipt/v1",
+        "proposal_id": computed_id,
+        "planning_revision_before": planning_revision_id,
+        "operations": operations,
+        "changed_fields": sorted({field for operation in operations for field in operation["owned_fields"] if field}),
+        "closed_owner_ids": closed_owner_ids,
+        "selected_owner": selected_owner,
+        "owner_observations": [
+            {key: item.get(key) for key in ("observation_id", "external_revision", "admission", "planning_relationship")}
+            for item in owner_observations
+        ],
+        "claims_authorized": [f"slice:{owner_id}" for owner_id in closed_owner_ids],
+        "proof": {"revision": proof_revision, "reused_for": closed_owner_ids},
+        "semantic_delta": semantic_delta,
+        "preserved_invariants": proposal_payload["preserved_invariants"],
+        "apply_result": apply_box,
+    }
+    receipt_path.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8", newline="\n")
+
+
 def _planning_reconciliation_transaction(
     *,
     target_root: Path,
@@ -3435,84 +3529,22 @@ def _planning_reconciliation_transaction(
     apply_box: dict[str, Any] = {}
 
     def write_transaction() -> None:
-        apply_box.update(
-            _apply_reconcile_safe_prune(
-                target_root=target_root,
-                cleanup_targets=cleanup_targets,
-                projection_sync_targets=sync_targets,
-                dry_run=False,
-            )
+        _write_planning_reconciliation_transaction(
+            target_root=target_root,
+            cleanup_targets=cleanup_targets,
+            sync_targets=sync_targets,
+            owner_transitions=owner_transitions,
+            selected_owner=selected_owner,
+            receipt_path=receipt_path,
+            computed_id=computed_id,
+            planning_revision_id=planning_revision_id,
+            operations=operations,
+            owner_observations=owner_observations,
+            proof_revision=proof_revision,
+            semantic_delta=semantic_delta,
+            proposal_payload=proposal_payload,
+            apply_box=apply_box,
         )
-        closed_owner_ids: list[str] = []
-        for transition in owner_transitions:
-            if transition["transition"] != "close-slice":
-                continue
-            owner_path = target_root / transition["path"]
-            owner = _load_execplan_record(owner_path)
-            if owner is None:
-                raise OSError(f"reconciliation owner disappeared: {transition['path']}")
-            owner["lifecycle"] = "closed"
-            owner["phase"] = "complete"
-            if isinstance(owner.get("revision"), int):
-                owner["revision"] = int(owner["revision"]) + 1
-            _write_execplan_record(record_path=owner_path, record=owner, render_markdown=False)
-            closed_owner_ids.append(transition["owner_id"])
-        selection_changed: list[str] = []
-        state = _read_state_from_toml(target_root) or {}
-        todo = state.get("todo", {}) if isinstance(state, dict) else {}
-        state_changed = False
-        closed_paths = {item["path"] for item in owner_transitions if item["transition"] == "close-slice"}
-        for todo_field in ("active_items", "queued_items"):
-            raw_items = todo.get(todo_field, []) if isinstance(todo, dict) else []
-            if not isinstance(raw_items, list):
-                continue
-            retained = [
-                item
-                for item in raw_items
-                if not (
-                    isinstance(item, dict)
-                    and (
-                        str(item.get("id") or "") in closed_owner_ids
-                        or str(item.get("surface") or item.get("execplan") or "") in closed_paths
-                    )
-                )
-            ]
-            if retained != raw_items:
-                todo[todo_field] = retained
-                selection_changed.append(f"todo.{todo_field}")
-                state_changed = True
-        if selected_owner is not None:
-            selected_path = target_root / selected_owner["path"]
-            selected_record = _load_execplan_record(selected_path)
-            if selected_record is None:
-                raise OSError(f"selected reconciliation owner disappeared: {selected_owner['path']}")
-            selected_state, selection_changed = _owner_selection_state_patch(
-                target_root, state, owner_path=selected_path, owner_record=selected_record
-            )
-            state = selected_state
-            state_changed = state_changed or bool(selection_changed)
-        if state_changed:
-            _write_state_to_toml(target_root, state)
-        receipt_path.parent.mkdir(parents=True, exist_ok=True)
-        receipt = {
-            "kind": "agentic-planning/reconciliation-receipt/v1",
-            "proposal_id": computed_id,
-            "planning_revision_before": planning_revision_id,
-            "operations": operations,
-            "changed_fields": sorted({field for operation in operations for field in operation["owned_fields"] if field}),
-            "closed_owner_ids": closed_owner_ids,
-            "selected_owner": selected_owner,
-            "owner_observations": [
-                {key: item.get(key) for key in ("observation_id", "external_revision", "admission", "planning_relationship")}
-                for item in owner_observations
-            ],
-            "claims_authorized": [f"slice:{owner_id}" for owner_id in closed_owner_ids],
-            "proof": {"revision": proof_revision, "reused_for": closed_owner_ids},
-            "semantic_delta": semantic_delta,
-            "preserved_invariants": proposal_payload["preserved_invariants"],
-            "apply_result": apply_box,
-        }
-        receipt_path.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8", newline="\n")
 
     if dry_run:
         preview = _apply_reconcile_safe_prune(
@@ -17137,6 +17169,36 @@ def _parse_targeted_execplan_patch(patch: Mapping[str, Any] | str) -> Mapping[st
     return parsed if isinstance(parsed, dict) else None
 
 
+def _targeted_write_replay_result(
+    *, target_root: Path, receipt_path: Path, request: dict[str, Any], record: dict[str, Any]
+) -> dict[str, Any] | None:
+    """Return an admitted idempotent result for a matching prior receipt."""
+    try:
+        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        receipt = {}
+    if receipt.get("request") != request:
+        return None
+    postcondition = _targeted_write_receipt_postcondition(
+        target_root=target_root, receipt=receipt, record=record, owner_ref=request["owner"]
+    )
+    if postcondition["status"] == "current":
+        return {
+            "kind": "agentic-planning/targeted-execplan-write/v1",
+            "status": "already-applied",
+            "receipt_path": _planning_surface_relative(target_root, receipt_path),
+            "receipt": receipt,
+            "postcondition_admission": postcondition,
+        }
+    return {
+        "kind": "agentic-planning/targeted-execplan-write/v1",
+        "status": "stale-applied-receipt",
+        "receipt_path": _planning_surface_relative(target_root, receipt_path),
+        "postcondition_admission": postcondition,
+        "repair": "The recorded result is no longer current; rerun targeted-write preview with live revisions.",
+    }
+
+
 def targeted_execplan_write(
     *,
     target: str | Path | None = None,
@@ -17194,32 +17256,9 @@ def targeted_execplan_write(
     receipt_id = hashlib.sha256(json.dumps(request, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:20]
     receipt_path = target_root / ".agentic-workspace/local/planning/targeted-execplan-receipts" / f"{receipt_id}.json"
     if apply and receipt_path.is_file():
-        try:
-            receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            receipt = {}
-        if receipt.get("request") == request:
-            postcondition = _targeted_write_receipt_postcondition(
-                target_root=target_root,
-                receipt=receipt,
-                record=record,
-                owner_ref=request["owner"],
-            )
-            if postcondition["status"] == "current":
-                return {
-                    "kind": "agentic-planning/targeted-execplan-write/v1",
-                    "status": "already-applied",
-                    "receipt_path": _planning_surface_relative(target_root, receipt_path),
-                    "receipt": receipt,
-                    "postcondition_admission": postcondition,
-                }
-            return {
-                "kind": "agentic-planning/targeted-execplan-write/v1",
-                "status": "stale-applied-receipt",
-                "receipt_path": _planning_surface_relative(target_root, receipt_path),
-                "postcondition_admission": postcondition,
-                "repair": "The recorded result is no longer current; rerun targeted-write preview with live revisions.",
-            }
+        replay_result = _targeted_write_replay_result(target_root=target_root, receipt_path=receipt_path, request=request, record=record)
+        if replay_result is not None:
+            return replay_result
     if _execplan_lifecycle(record) != "live":
         return {
             "kind": "agentic-planning/targeted-execplan-write/v1",
