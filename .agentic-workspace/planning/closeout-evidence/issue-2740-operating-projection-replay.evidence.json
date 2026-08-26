@@ -48,6 +48,36 @@
       "projection_input_revision_preserved": true
     }
   },
+  "merged_master_review_replay": {
+    "captured_at": "2026-08-26",
+    "master_head": "f12025f324c71592e5347d01d79c9569fa72f277",
+    "branch": "master",
+    "task": "issue #2740 merged-master replay f12025f32 review-blocker",
+    "command": "uv run --frozen --active --no-sync python scripts/run_agentic_workspace.py report --target . --section operating_projection_receipt --task <task> --changed src/agentic_workspace/operating_projection_receipt.py src/agentic_workspace/workspace_runtime_core.py tests/test_operating_projection_receipt.py --format json",
+    "cold": {
+      "wall_ms": 12056,
+      "projection_status": "decision+enrichment-rebuilt",
+      "decision_id": "operating-decision:f1d395529dc82659",
+      "projection_input_revision": "sha256:6bd1b86b5770a1c6b782e293c68b6e642e977bfe88ab5ff4da5a05c068790ecb",
+      "owner_result_construction_count": 5,
+      "owner_result_reuse_count": 0
+    },
+    "warm": {
+      "wall_ms": 954,
+      "projection_status": "decision+enrichment-reused",
+      "decision_id": "operating-decision:f1d395529dc82659",
+      "projection_input_revision": "sha256:6bd1b86b5770a1c6b782e293c68b6e642e977bfe88ab5ff4da5a05c068790ecb",
+      "new_projection_constructions": 0,
+      "new_projection_managed_state_reads": 0
+    },
+    "comparison": {
+      "wall_speedup_ratio": 12.64,
+      "wall_ms_removed": 11102,
+      "decision_identity_preserved": true,
+      "projection_input_revision_preserved": true
+    },
+    "claim_boundary": "This is the fresh ordinary replay on merged master requested by the issue owner. It proves unchanged inspection reuse; it does not convert attention from unrelated Planning/proof state into a completion verdict."
+  },
   "semantic_dependency_audit": {
     "route": [
       ".agentic-workspace/config.toml",
