@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Replay packed npm artifact semantics locally through the same maintained validation authority used by CI and release workflows."
