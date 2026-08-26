@@ -1151,11 +1151,30 @@ def test_archive_prepare_closeout_routes_improvement_signal_review_states(tmp_pa
 
 
 def test_closeout_distillation_preserves_future_context_dispositions_without_forcing_memory() -> None:
-    plan = json.loads(
-        (_Path(__file__).parents[3] / ".agentic-workspace/planning/execplans/issue-2740-proof-template-fixed-point.plan.json").read_text(
-            encoding="utf-8"
-        )
-    )
+    plan = {
+        "future_context_signals": [
+            {
+                "kind": "agentic-workspace/future-context-signal/v1",
+                "signal_id": "planning-effect:proof-publication-fixed-point",
+                "source_class": "planning-scope-effect",
+                "authority_state": "owner-admitted",
+                "status": "resolved",
+                "relevant": True,
+                "owner": "proof/code/test",
+                "summary": (
+                    "Proof-owned receipt and index publication must reach a fixed point while real proof-subject changes remain stale."
+                ),
+                "disposition": {
+                    "outcome": "already-absorbed",
+                    "owner": "proof/code/test",
+                    "rationale": (
+                        "The deterministic invariant is enforced by the proof runtime and maintained regression tests, so a "
+                        "duplicate Memory note would be weaker than the canonical owner."
+                    ),
+                },
+            }
+        ]
+    }
     buckets = installer_mod._closeout_distillation_buckets(record=plan, explicit={})
     assert buckets["stronger_owner"] == [
         {
