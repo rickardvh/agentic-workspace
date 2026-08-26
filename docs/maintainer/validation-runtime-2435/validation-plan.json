@@ -711,7 +711,7 @@
       "proof_purpose": "regenerate generated JSON Schema reference documentation"
     },
     "render contract catalogues": {
-      "id": "render-schema-reference",
+      "id": "render-schema-reference.catalogues",
       "dependencies": [
         "sync.all"
       ],
@@ -746,7 +746,7 @@
       ]
     },
     "contract catalogues": {
-      "id": "schema-reference-docs",
+      "id": "schema-reference-docs.catalogues",
       "dependencies": [
         "sync.all"
       ],
@@ -1481,6 +1481,16 @@
       "owner_boundary": "maintainer generated docs"
     },
     {
+      "id": "render-schema-reference.catalogues",
+      "command": "uv run python scripts/generate/generate_contract_catalogues.py",
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "regenerate current-value contract catalogues",
+      "execution_posture": "serial generated-surface check",
+      "owner_boundary": "maintainer contract catalogue authority"
+    },
+    {
       "id": "render-command-packages",
       "make_target": "render-command-packages",
       "command": "make render-command-packages",
@@ -1501,6 +1511,16 @@
       "proof_purpose": "check generated JSON Schema reference documentation and annotations",
       "execution_posture": "serial structural gate",
       "owner_boundary": "maintainer generated docs"
+    },
+    {
+      "id": "schema-reference-docs.catalogues",
+      "command": "uv run python scripts/generate/generate_contract_catalogues.py --check",
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "check generated current-value contract catalogues",
+      "execution_posture": "serial structural gate",
+      "owner_boundary": "maintainer contract catalogue authority"
     },
     {
       "id": "source-payload-boundary",
@@ -1598,6 +1618,7 @@
         "sync.all",
         "render-agent-docs",
         "schema-reference-docs",
+        "schema-reference-docs.catalogues",
         "planning-surfaces",
         "source-payload-boundary",
         "verify.memory",
@@ -1615,6 +1636,7 @@
         "sync.all",
         "render-agent-docs",
         "schema-reference-docs",
+        "schema-reference-docs.catalogues",
         "planning-surfaces.strict",
         "source-payload-boundary.strict",
         "verify.memory",
@@ -1835,6 +1857,10 @@
         },
         {
           "constituent_id": "schema-reference-docs",
+          "outcome": "passed"
+        },
+        {
+          "constituent_id": "schema-reference-docs.catalogues",
           "outcome": "passed"
         },
         {

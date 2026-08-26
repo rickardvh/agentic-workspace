@@ -183,6 +183,13 @@ def test_bounded_trace_records_distinct_measurement_constituents_and_posture() -
         assert constituent["execution_posture"] == "bounded measurement with explicit checked-in-manifest freshness deferral"
         assert "measurement" in constituent["owner_boundary"]
 
+    label_map = plan["compact_label_map"]
+    assert label_map["render schema reference"]["id"] == "render-schema-reference"
+    assert label_map["render contract catalogues"]["id"] == "render-schema-reference.catalogues"
+    assert label_map["schema reference docs"]["id"] == "schema-reference-docs"
+    assert label_map["contract catalogues"]["id"] == "schema-reference-docs.catalogues"
+    assert "schema-reference-docs.catalogues" in trace_ids
+
 
 def test_validation_runtime_plan_declares_run_attempt_and_proof_receipt_contracts() -> None:
     checker = _load_checker()
