@@ -49926,6 +49926,7 @@ def _record_proof_receipt_payload(
     command: str,
     result: str,
     changed_paths: list[str],
+    task_text: str | None = None,
     plan_id: str = "",
     receipt_log: str = "",
     receipt_route_id: str = "",
@@ -49991,6 +49992,7 @@ def _record_proof_receipt_payload(
             changed_paths=receipt["changed_paths"],
             target_root=target_root,
             include_durable_intent=False,
+            task_text=task_text,
         )
         selected = _selected_proof_command_for_receipt(selection=selection, command=command)
         if isinstance(selected, dict):
@@ -50032,7 +50034,11 @@ def _record_proof_receipt_payload(
     )
     from agentic_workspace.workspace_runtime_proof import _proof_template_binding_for_recorded_receipt
 
-    template_binding = _proof_template_binding_for_recorded_receipt(target_root=target_root, receipt=receipt)
+    template_binding = _proof_template_binding_for_recorded_receipt(
+        target_root=target_root,
+        receipt=receipt,
+        task_text=task_text,
+    )
     if template_binding.get("status") == "rejected":
         raise WorkspaceUsageError(
             f"Proof receipt template binding rejected ({template_binding['reason']}): "
@@ -50687,6 +50693,7 @@ def _emit_proof(
             command=receipt_command,
             result=receipt_result,
             changed_paths=normalized_paths,
+            task_text=task_text,
             plan_id=receipt_plan,
             receipt_log=receipt_log,
             receipt_route_id=receipt_route_id,

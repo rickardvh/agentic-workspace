@@ -670,6 +670,41 @@ owner = "workspace-cli-runtime"
     )
 
 
+def _append_task_selected_broad_proof_lane(target: Path) -> None:
+    makefile = target / "Makefile"
+    makefile.write_text(
+        makefile.read_text(encoding="utf-8")
+        + """
+
+test-workspace-proof:
+\tpython -c "print('workspace proof')"
+
+test-workspace-session-review:
+\tpython -c "print('workspace session review')"
+""",
+        encoding="utf-8",
+    )
+    config = target / ".agentic-workspace" / "config.toml"
+    config.write_text(
+        config.read_text(encoding="utf-8")
+        + """
+
+[assurance.domain_proof_lanes.workspace_broad_suite]
+purpose = "Explicit broad workspace validation route."
+applies_to_task_markers = ["broad workspace proof"]
+commands = ["make test-workspace-proof", "make test-workspace-session-review"]
+proof_profiles = ["workspace_behavior"]
+escalation_conditions = ["explicit-request"]
+claim_boundary = "explicit-broad-escalation-required"
+owner = "workspace-cli-runtime"
+route_role = "broad"
+precedence = "10"
+allowed_composition = ["behavior"]
+""",
+        encoding="utf-8",
+    )
+
+
 def _replace_workspace_subsystem_proof(target: Path, command: str) -> None:
     ownership = target / ".agentic-workspace" / "OWNERSHIP.toml"
     text = ownership.read_text(encoding="utf-8")
@@ -2038,6 +2073,88 @@ def test_proof_receipt_resolves_selected_route_identity_when_caller_omits_it(tmp
     assert execution["route_id"] == "domain:proof_runtime"
     assert execution["command_id"] == execution["command_identity"]
     assert execution["route_identity_source"] == "proof_selection.selected_commands"
+
+
+def test_task_selected_broad_commands_can_be_selected_and_recorded_with_identical_context(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    _append_focused_proof_runtime_lane(tmp_path)
+    _append_task_selected_broad_proof_lane(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_proof.py", "VALUE = 1\n")
+    _write(tmp_path / "tests" / "test_workspace_proof_cli.py", "def test_changed_selector():\n    assert True\n")
+    task = "Run broad workspace proof for this change."
+    changed = "src/agentic_workspace/workspace_runtime_proof.py"
+    expected_commands = ["make test-workspace-proof", "make test-workspace-session-review"]
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--task",
+                task,
+                "--changed",
+                changed,
+                "--select",
+                "required_commands",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    required_commands = json.loads(capsys.readouterr().out)["values"]["required_commands"]
+    for command in expected_commands:
+        assert command in required_commands
+
+    for command in expected_commands:
+        assert (
+            cli.main(
+                [
+                    "proof",
+                    "--target",
+                    str(tmp_path),
+                    "--task",
+                    task,
+                    "--changed",
+                    changed,
+                    "--record-receipt",
+                    "--receipt-command",
+                    command,
+                    "--receipt-result",
+                    "passed",
+                    "--format",
+                    "json",
+                ]
+            )
+            == 0
+        )
+        capsys.readouterr()
+        receipt = json.loads((tmp_path / ".agentic-workspace" / "local" / "proof-receipts" / "last.json").read_text(encoding="utf-8"))
+        assert receipt["command"] == command
+        assert receipt["execution"]["route_id"] == "domain:workspace_broad_suite"
+        assert receipt["execution"]["route_identity_source"] == "proof_selection.selected_commands"
+
+
+@pytest.mark.parametrize("command", ["make test-workspace", "make test-workspace-contracts"])
+def test_task_selected_broad_receipt_rejects_stale_or_unselected_command(tmp_path: Path, command: str) -> None:
+    from agentic_workspace.config import WorkspaceUsageError
+    from agentic_workspace.workspace_runtime_primitives import _record_proof_receipt_payload
+
+    _write_repo_local_proof_target(tmp_path)
+    _append_focused_proof_runtime_lane(tmp_path)
+    _append_task_selected_broad_proof_lane(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_proof.py", "VALUE = 1\n")
+    _write(tmp_path / "tests" / "test_workspace_proof_cli.py", "def test_changed_selector():\n    assert True\n")
+
+    with pytest.raises(WorkspaceUsageError, match="does not resolve to a current selected proof command"):
+        _record_proof_receipt_payload(
+            target_root=tmp_path,
+            command=command,
+            result="passed",
+            changed_paths=["src/agentic_workspace/workspace_runtime_proof.py"],
+            task_text="Run broad workspace proof for this change.",
+        )
 
 
 def test_proof_receipt_rejects_unmatched_wrapper_command(tmp_path: Path) -> None:

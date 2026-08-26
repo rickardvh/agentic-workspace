@@ -1317,7 +1317,12 @@ def _proof_template_binding_from_resolved_obligation(
     }
 
 
-def _proof_template_binding_for_recorded_receipt(*, target_root: Path, receipt: dict[str, Any]) -> dict[str, Any]:
+def _proof_template_binding_for_recorded_receipt(
+    *,
+    target_root: Path,
+    receipt: dict[str, Any],
+    task_text: str | None = None,
+) -> dict[str, Any]:
     changed_paths = [str(path).strip().replace("\\", "/") for path in _list_payload(receipt.get("changed_paths")) if str(path).strip()]
     if not changed_paths:
         return {"status": "not-applicable", "reason": "missing-changed-paths"}
@@ -1325,6 +1330,7 @@ def _proof_template_binding_for_recorded_receipt(*, target_root: Path, receipt: 
         changed_paths=changed_paths,
         target_root=target_root,
         include_durable_intent=False,
+        task_text=task_text,
     )
     receipt_command = str(receipt.get("command") or "").strip()
     for selected_command in _list_payload(selection.get("selected_commands")):
