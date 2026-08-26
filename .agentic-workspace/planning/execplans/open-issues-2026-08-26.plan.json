@@ -5,7 +5,7 @@
   "owner_level": "epic",
   "lifecycle": "live",
   "phase": "validation",
-  "revision": 11,
+  "revision": 12,
   "intent": {
     "outcome": "Starting from current master, implement GitHub issues #2722, #2740, #2748, #2749, #2750, #2752, #2753, #2754, and #2755 as dependency-ordered stacked pull requests grouped by coherent lane.",
     "non_goals": [
@@ -68,7 +68,7 @@
     "https://github.com/rickardvh/agentic-workspace/issues/2754",
     "https://github.com/rickardvh/agentic-workspace/issues/2755"
   ],
-  "next_action": "Address the current blocking review comments on the five published PRs, refresh exact-head intake, and return the stack for independent re-review without merging.",
+  "next_action": "Await independent re-review of all five repaired exact heads; do not merge or claim merge-readiness from the implementation session.",
   "blockers": [
     "None. Escalate if an issue requires changing an authority boundary or cannot satisfy its maintained replay without redesign beyond this stack."
   ],
