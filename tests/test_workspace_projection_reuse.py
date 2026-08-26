@@ -306,6 +306,166 @@ def test_invalidation_reasons_cover_each_admitted_authority_input_exactly() -> N
         assert _invalidation_reasons(previous, current) == [reason]
 
 
+def _standard_constituent_revisions() -> dict[str, str]:
+    return {
+        "branch": "codex/stack-child",
+        "head": "head-a",
+        "base": "base-a",
+        "task": "task-a",
+        "selected_owner": "owner-a",
+        "planning": "planning-a",
+        "changed_paths": "paths-a",
+        "proof_subject": "proof-a",
+        "runtime_compatibility": "runtime-a",
+        "route_inputs": "route-a",
+        "verification_inputs": "verification-a",
+        "proof_inputs": "proof-inputs-a",
+        "closeout_inputs": "closeout-a",
+        "runtime_mirror_inputs": "mirror-a",
+    }
+
+
+def test_constituent_identity_keeps_stack_position_observational_by_default() -> None:
+    from agentic_workspace.projection_reuse import (
+        ProjectionConstituentSpec,
+        build_projection_constituent_identity,
+        compare_projection_constituent_identity,
+    )
+
+    spec = ProjectionConstituentSpec("runtime_mirror", ("runtime_mirror_inputs",))
+    previous = build_projection_constituent_identity(
+        spec=spec,
+        input_revisions={
+            "branch": "codex/parent",
+            "head": "head-a",
+            "base": "base-a",
+            "runtime_mirror_inputs": "mirror-a",
+        },
+    )
+    current = build_projection_constituent_identity(
+        spec=spec,
+        input_revisions={
+            "branch": "codex/child",
+            "head": "head-b",
+            "base": "base-b",
+            "runtime_mirror_inputs": "mirror-a",
+        },
+    )
+
+    assert previous["input_revision"] == current["input_revision"]
+    assert previous["observed_context_revision"] != current["observed_context_revision"]
+    comparison = compare_projection_constituent_identity(previous=previous, current=current)
+    assert comparison["status"] == "reused"
+    assert comparison["freshness"] == "current"
+    assert [item["reason"] for item in comparison["context_delta"]] == ["base-changed", "branch-changed", "head-changed"]
+    assert all(item["invalidates_constituent"] is False for item in comparison["context_delta"])
+
+
+def test_constituent_must_explicitly_declare_head_before_stack_movement_invalidates_it() -> None:
+    from agentic_workspace.projection_reuse import (
+        ProjectionConstituentSpec,
+        build_projection_constituent_identity,
+        compare_projection_constituent_identity,
+    )
+
+    spec = ProjectionConstituentSpec("exact_head_owner", ("head", "owner_inputs"))
+    previous = build_projection_constituent_identity(
+        spec=spec,
+        input_revisions={"head": "head-a", "owner_inputs": "inputs-a"},
+    )
+    current = build_projection_constituent_identity(
+        spec=spec,
+        input_revisions={"head": "head-b", "owner_inputs": "inputs-a"},
+    )
+
+    comparison = compare_projection_constituent_identity(previous=previous, current=current)
+    assert comparison["status"] == "invalidated"
+    assert comparison["changed_dependency_fields"] == ["head"]
+    assert comparison["invalidation_reasons"] == ["head-changed"]
+    assert comparison["context_delta"] == [{"field": "head", "reason": "head-changed", "invalidates_constituent": True}]
+
+
+def test_standard_constituents_invalidate_only_declared_semantic_dependents() -> None:
+    from agentic_workspace.projection_reuse import (
+        build_standard_projection_constituent_identities,
+        compare_projection_constituent_sets,
+    )
+
+    previous_revisions = _standard_constituent_revisions()
+    previous = build_standard_projection_constituent_identities(input_revisions=previous_revisions)
+    expected_by_change = {
+        "planning": ["closeout_trust", "route"],
+        "proof_subject": ["closeout_trust", "selected_proof"],
+        "runtime_mirror_inputs": ["runtime_mirror"],
+        "changed_paths": ["closeout_trust", "route", "selected_proof", "verification"],
+    }
+    for field, expected_invalidated in expected_by_change.items():
+        current_revisions = {**previous_revisions, field: f"{field}-b", "head": f"head-for-{field}"}
+        current = build_standard_projection_constituent_identities(input_revisions=current_revisions)
+        delta = compare_projection_constituent_sets(previous=previous, current=current)
+
+        assert delta["status"] == "partially-invalidated"
+        assert delta["invalidated_constituents"] == expected_invalidated
+        assert delta["focused_rebuild_constituents"] == expected_invalidated
+        assert delta["broad_rebuild_required"] is False
+        for constituent_id, comparison in delta["constituents"].items():
+            if constituent_id in expected_invalidated:
+                assert comparison["status"] == "invalidated"
+                assert comparison["required_action"] == "build-constituent"
+            else:
+                assert comparison["status"] == "reused"
+                assert comparison["required_action"] == "reuse-owner-result"
+                assert comparison["context_delta"] == [{"field": "head", "reason": "head-changed", "invalidates_constituent": False}]
+
+
+def test_constituent_identity_degrades_conservatively_when_required_evidence_is_ambiguous() -> None:
+    from agentic_workspace.projection_reuse import (
+        ProjectionConstituentSpec,
+        build_projection_constituent_identity,
+        compare_projection_constituent_sets,
+    )
+
+    spec = ProjectionConstituentSpec("verification", ("changed_paths", "verification_inputs"))
+    previous = build_projection_constituent_identity(
+        spec=spec,
+        input_revisions={"changed_paths": "paths-a", "verification_inputs": "verification-a"},
+    )
+    current = build_projection_constituent_identity(
+        spec=spec,
+        input_revisions={"changed_paths": "paths-a", "verification_inputs": "unavailable"},
+    )
+    delta = compare_projection_constituent_sets(
+        previous={"verification": previous},
+        current={"verification": current},
+    )
+
+    assert current["status"] == "unavailable"
+    assert current["identity_id"] == ""
+    assert current["unavailable_dependency_fields"] == ["verification_inputs"]
+    assert delta["status"] == "unknown"
+    assert delta["unknown_constituents"] == ["verification"]
+    assert delta["focused_rebuild_constituents"] == ["verification"]
+    assert delta["broad_rebuild_required"] is False
+    assert delta["constituents"]["verification"]["invalidation_reasons"] == ["unavailable:verification_inputs"]
+
+
+def test_constituent_set_marks_only_unrecorded_owner_for_initial_build() -> None:
+    from agentic_workspace.projection_reuse import (
+        build_standard_projection_constituent_identities,
+        compare_projection_constituent_sets,
+    )
+
+    current = build_standard_projection_constituent_identities(input_revisions=_standard_constituent_revisions())
+    previous = {key: value for key, value in current.items() if key != "runtime_mirror"}
+    delta = compare_projection_constituent_sets(previous=previous, current=current)
+
+    assert delta["status"] == "partially-invalidated"
+    assert delta["invalidated_constituents"] == ["runtime_mirror"]
+    assert delta["focused_rebuild_constituents"] == ["runtime_mirror"]
+    assert delta["constituents"]["runtime_mirror"]["status"] == "not-recorded"
+    assert delta["constituents"]["runtime_mirror"]["invalidation_reasons"] == ["prior-identity-missing"]
+
+
 def test_cache_record_consumes_surface_decision_without_a_compiler_dependency(tmp_path: Path) -> None:
     from agentic_workspace import projection_reuse
     from agentic_workspace.operating_decision import (
