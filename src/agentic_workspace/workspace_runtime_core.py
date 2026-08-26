@@ -177,7 +177,7 @@ from agentic_workspace.projection_reuse import (
     projection_cancellation_checkpoint,
     record_projection_reuse,
 )
-from agentic_workspace.proof_receipt_admission import proof_receipt_admission
+from agentic_workspace.proof_receipt_admission import proof_command_admission, proof_receipt_admission
 from agentic_workspace.proof_subject import build_proof_subject
 from agentic_workspace.repo_improvement_effectiveness import compile_repo_improvement_effectiveness
 from agentic_workspace.reporting_support import (
@@ -50280,6 +50280,80 @@ def _validated_proof_receipt_inputs(*, command: str, result: str) -> tuple[str, 
     return command, result
 
 
+def _selected_proof_preexecution_admission(
+    *,
+    target_root: Path,
+    changed_paths: list[str],
+    command: str,
+    selection: dict[str, Any],
+) -> dict[str, Any]:
+    """Prove that the canonical receipt writer can bind a command before launch."""
+
+    from agentic_workspace.workspace_runtime_proof import _selected_proof_command_for_receipt
+
+    command_decision = proof_command_admission(command)
+    base = {
+        "kind": "agentic-workspace/proof-preexecution-admission/v1",
+        "command": command,
+        "command_identity": hashlib.sha256(command.encode("utf-8")).hexdigest()[:16],
+        "process_launched": False,
+        "authority": "canonical-proof-receipt-selection-binding",
+    }
+    if not command_decision["admitted"]:
+        return {
+            **base,
+            "status": "rejected",
+            "reason": command_decision["reason"],
+            "recovery": command_decision["safe_recovery"],
+        }
+    try:
+        selected = _selected_proof_command_for_receipt(selection=selection, command=command)
+    except WorkspaceUsageError as exc:
+        return {
+            **base,
+            "status": "rejected",
+            "reason": "current-selected-command-binding-rejected",
+            "recovery": str(exc),
+        }
+    if not selected:
+        return {
+            **base,
+            "status": "rejected",
+            "reason": "missing-current-selected-command-binding",
+            "recovery": "Rerun proof selection with the current task and execute only its typed selected command.",
+        }
+    subject = build_proof_subject(target_root=target_root, changed_paths=changed_paths, command=command)
+    provisional = {
+        "kind": "agentic-workspace/proof-receipt/v1",
+        "command": command,
+        "result": "passed",
+        "recorded_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        "changed_paths": _normalize_changed_paths(changed_paths),
+        "proof_subject": subject,
+    }
+    receipt_decision = proof_receipt_admission(provisional)
+    if not receipt_decision["admitted"]:
+        return {
+            **base,
+            "status": "rejected",
+            "reason": receipt_decision["reason"],
+            "recovery": receipt_decision["safe_recovery"],
+        }
+    return {
+        **base,
+        "status": "admitted",
+        "reason": "current-selection-and-receipt-binding-admitted",
+        "recovery": "none",
+        "selected_command": {
+            "lane": str(selected.get("lane") or selected.get("lane_id") or ""),
+            "route_id": str(selected.get("route_id") or ""),
+            "command_identity": str(selected.get("command_identity") or base["command_identity"]),
+        },
+        "proof_subject_revision": subject["fingerprint"],
+        "receipt_admission": receipt_decision,
+    }
+
+
 def _proof_execution_subject(*, target_root: Path, changed_paths: list[str], required_commands: list[str]) -> dict[str, Any]:
     normalized_paths = _normalize_changed_paths(changed_paths)
     machine_local = bool(normalized_paths) and all(path == WORKSPACE_LOCAL_CONFIG_PATH.as_posix() for path in normalized_paths)
@@ -50328,7 +50402,7 @@ def _proof_execution_result_payload(
             }
         )
     passed_count = sum(record_by_command.get(command, {}).get("status") == "passed" for command in required_commands)
-    failure_records = [item for item in command_records if item.get("status") in {"failed", "timeout", "cancelled"}]
+    failure_records = [item for item in command_records if item.get("status") in {"failed", "timeout", "cancelled", "admission-rejected"}]
     commands_complete = bool(required_commands) and passed_count == len(required_commands)
     selection_blockers: list[str] = []
     if _as_dict(selection.get("route_refinement_required")).get("status") == "required":
@@ -50404,6 +50478,23 @@ def _proof_execution_result_payload(
             "owners": owner_coverage,
             "selection_obligations": selection_blockers,
         },
+        "preexecution_admission": {
+            "status": "admitted",
+            "command_count": len(_list_payload(run.get("preexecution_admission"))),
+            "process_launch_count": sum(1 for item in command_records if item.get("status") != "cancelled"),
+            "authority": "canonical-proof-receipt-selection-binding",
+        },
+        "canonical_receipt_admission": {
+            "recorded_count": sum(
+                1 for item in command_records if _as_dict(item.get("canonical_receipt")).get("status") in {"written", "dry-run"}
+            ),
+            "rejected_count": sum(
+                1
+                for item in command_records
+                if _as_dict(item.get("canonical_receipt")).get("status") == "rejected-after-runtime-state-change"
+            ),
+            "authority": "proof_receipt_admission",
+        },
         "failures": [
             {"command_id": item.get("command_id"), "status": item.get("status"), "exit_code": item.get("exit_code")}
             for item in failure_records
@@ -50450,6 +50541,40 @@ def _execute_selected_proof_payload(
                 "action": "repair-proof-route",
                 "command": "agentic-workspace proof --target . --changed <paths> --format json",
             },
+        }
+    preexecution_admissions = [
+        _selected_proof_preexecution_admission(
+            target_root=target_root,
+            changed_paths=changed_paths,
+            command=command,
+            selection=selection,
+        )
+        for command in required_commands
+    ]
+    rejected_admissions = [item for item in preexecution_admissions if item.get("status") != "admitted"]
+    if rejected_admissions:
+        rejected = rejected_admissions[0]
+        return {
+            "kind": "agentic-workspace/proof-execution-result/v1",
+            "status": "admission-blocked-before-execution",
+            "outcome": "blocked",
+            "preexecution_admission": {
+                "status": "rejected",
+                "commands": preexecution_admissions,
+                "rejected_command_count": len(rejected_admissions),
+                "process_launch_count": 0,
+            },
+            "claim_boundary": {
+                "status": "blocked",
+                "completion_claim_allowed": False,
+                "rule": "A selected proof action must bind through canonical receipt admission before process launch.",
+            },
+            "next_action": {
+                "action": "repair-proof-admission-binding",
+                "command": str(rejected.get("recovery") or "agentic-workspace proof --target . --changed <paths> --format json"),
+                "reason": str(rejected.get("reason") or "canonical-admission-rejected"),
+            },
+            "persistence": {"repository_residue": False, "local_run_receipt_written": False},
         }
     try:
         timeout = float(timeout_seconds or 600)
@@ -50499,6 +50624,7 @@ def _execute_selected_proof_payload(
         "required_commands": required_commands,
         "commands": [],
         "attempt": 0,
+        "preexecution_admission": preexecution_admissions,
         "created_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
     }
     records = [item for item in _list_payload(run.get("commands")) if isinstance(item, dict)]
@@ -50569,6 +50695,32 @@ def _execute_selected_proof_payload(
             "stderr_tail": stderr[-2000:],
             "receipt_ref": receipt_ref.as_posix(),
         }
+        canonical_write: dict[str, Any] | None = None
+        if status in {"passed", "failed"}:
+            try:
+                canonical_write = _record_proof_receipt_payload(
+                    target_root=target_root,
+                    command=command,
+                    result=status,
+                    changed_paths=changed_paths,
+                    task_text=task_text,
+                    receipt_duration_seconds=str(receipt["duration_seconds"]),
+                    receipt_exit_state=status,
+                    dry_run=False,
+                )
+                receipt["canonical_receipt"] = {
+                    "status": canonical_write.get("status", "written"),
+                    "path": canonical_write.get("path", PROOF_RECEIPT_RELATIVE_PATH.as_posix()),
+                    "admission": _as_dict(_as_dict(canonical_write.get("receipt")).get("admission")),
+                }
+            except WorkspaceUsageError as exc:
+                receipt["canonical_receipt"] = {
+                    "status": "rejected-after-runtime-state-change",
+                    "path": PROOF_RECEIPT_RELATIVE_PATH.as_posix(),
+                    "reason": str(exc),
+                }
+                status = "admission-rejected"
+                receipt["status"] = status
         _write_json_file(destination=target_root / receipt_ref, payload=receipt, dry_run=False)
         records = [item for item in records if str(item.get("command") or "") != command]
         records.append({key: value for key, value in receipt.items() if key not in {"stdout_tail", "stderr_tail"}})
