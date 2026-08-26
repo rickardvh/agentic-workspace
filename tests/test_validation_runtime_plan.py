@@ -134,6 +134,56 @@ def test_validation_runtime_plan_matches_makefile_ci_and_evidence() -> None:
     assert checker.validation_findings() == []
 
 
+def test_measurement_phase_defers_only_checked_in_manifest_freshness(tmp_path: Path, monkeypatch) -> None:
+    checker = _load_checker()
+    plan, evidence, manifest = _load_payloads(checker)
+    _write_fixture(checker, tmp_path, monkeypatch, plan, evidence, manifest)
+    manifest["plan_identity"]["graph_sha256"] = "stale"
+    for result in manifest["results"]:
+        result["plan_identity"]["graph_sha256"] = "stale"
+    checker.MANIFEST_PATH.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+
+    assert checker.validation_findings(measurement_phase=True) == []
+    assert any("stale" in finding.message for finding in checker.validation_findings())
+
+
+def test_measurement_phase_retains_plan_make_ci_and_evidence_budget_checks(tmp_path: Path, monkeypatch) -> None:
+    checker = _load_checker()
+    plan, evidence, manifest = _load_payloads(checker)
+    plan["constituents"][0].pop("proof_purpose")
+    _runtime_record(evidence, phase="after", metric="structured_file_inventory.full")["duration_seconds"] = 31.0
+    _write_fixture(checker, tmp_path, monkeypatch, plan, evidence, manifest)
+    makefile_path = tmp_path / "Makefile"
+    makefile_path.write_text("check-bounded-parallel:\n\t@echo incomplete\n", encoding="utf-8")
+    ci_path = tmp_path / "ci.yml"
+    ci_path.write_text("name: incomplete\n", encoding="utf-8")
+    monkeypatch.setattr(checker, "MAKEFILE_PATH", makefile_path)
+    monkeypatch.setattr(checker, "CI_PATH", ci_path)
+
+    messages = [finding.message for finding in checker.validation_findings(measurement_phase=True)]
+    assert any("proof_purpose" in message for message in messages)
+    assert any("Makefile" in finding.path for finding in checker.validation_findings(measurement_phase=True))
+    assert any("ci.yml" in finding.path for finding in checker.validation_findings(measurement_phase=True))
+    assert "full structured inventory must complete within 30 seconds" in messages
+
+
+def test_bounded_trace_records_distinct_measurement_constituents_and_posture() -> None:
+    checker = _load_checker()
+    plan = json.loads(checker.PLAN_PATH.read_text(encoding="utf-8"))
+    constituents = {item["id"]: item for item in plan["constituents"]}
+    expected_ids = {"test.workspace-contracts-measurement", "validation-runtime.plan-measurement"}
+    broad_trace = next(item for item in plan["trace_fixtures"] if item["command"] == checker.BROAD_TRACE_COMMAND)
+    trace_ids = {item["constituent_id"] for item in broad_trace["events"]}
+
+    assert expected_ids.issubset(trace_ids)
+    assert {"test.workspace-contracts", "validation-runtime.plan"}.isdisjoint(trace_ids)
+    for constituent_id in expected_ids:
+        constituent = constituents[constituent_id]
+        assert "checked-in manifest freshness" in constituent["proof_purpose"]
+        assert constituent["execution_posture"] == "bounded measurement with explicit checked-in-manifest freshness deferral"
+        assert "measurement" in constituent["owner_boundary"]
+
+
 def test_validation_runtime_plan_declares_run_attempt_and_proof_receipt_contracts() -> None:
     checker = _load_checker()
     plan = json.loads(checker.PLAN_PATH.read_text(encoding="utf-8"))

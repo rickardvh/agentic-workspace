@@ -44,6 +44,11 @@ class Finding:
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Validate the repository validation-runtime plan and evidence.")
     parser.add_argument("--quiet-success", action="store_true", help="Emit a compact success message.")
+    parser.add_argument(
+        "--measurement-phase",
+        action="store_true",
+        help="Validate the measurement graph while deferring only its self-referential checked-in manifest freshness proof.",
+    )
     return parser.parse_args(argv)
 
 
@@ -552,7 +557,9 @@ def _validate_manifest(plan: dict[str, Any], evidence: dict[str, Any]) -> list[F
         expected_command = metadata.get("command")
         if constituent_id in expected_broad:
             if not isinstance(expected_command, list):
-                findings.append(Finding(path=PLAN_PATH.as_posix(), message=f"missing expected command for broad constituent: {constituent_id}"))
+                findings.append(
+                    Finding(path=PLAN_PATH.as_posix(), message=f"missing expected command for broad constituent: {constituent_id}")
+                )
             elif result.get("command") != expected_command:
                 findings.append(Finding(path=location, message="command does not match validation plan"))
         if not result.get("proof_purpose"):
@@ -593,21 +600,39 @@ def _validate_manifest(plan: dict[str, Any], evidence: dict[str, Any]) -> list[F
             if not isinstance(broad_after.get(field), str) or not broad_after.get(field):
                 findings.append(Finding(path=EVIDENCE_PATH.as_posix(), message=f"broad validation must include {field}"))
         if broad_after.get("measured_head") != repository.get("head"):
-            findings.append(Finding(path=EVIDENCE_PATH.as_posix(), message="broad validation measured_head must match manifest repository head"))
+            findings.append(
+                Finding(path=EVIDENCE_PATH.as_posix(), message="broad validation measured_head must match manifest repository head")
+            )
         if broad_after.get("measured_tree") != repository.get("tree"):
-            findings.append(Finding(path=EVIDENCE_PATH.as_posix(), message="broad validation measured_tree must match manifest repository tree"))
+            findings.append(
+                Finding(path=EVIDENCE_PATH.as_posix(), message="broad validation measured_tree must match manifest repository tree")
+            )
         if broad_after.get("plan_graph_sha256") != expected_plan_identity["graph_sha256"]:
-            findings.append(Finding(path=EVIDENCE_PATH.as_posix(), message="broad validation plan_graph_sha256 must match current plan graph"))
-    after_reference = evidence.get("pinned_revisions", {}).get("after_reference", {}) if isinstance(evidence.get("pinned_revisions"), dict) else {}
+            findings.append(
+                Finding(path=EVIDENCE_PATH.as_posix(), message="broad validation plan_graph_sha256 must match current plan graph")
+            )
+    after_reference = (
+        evidence.get("pinned_revisions", {}).get("after_reference", {}) if isinstance(evidence.get("pinned_revisions"), dict) else {}
+    )
     if isinstance(after_reference, dict):
         if after_reference.get("measured_head") != repository.get("head"):
-            findings.append(Finding(path=EVIDENCE_PATH.as_posix(), message="after_reference measured_head must match manifest repository head"))
+            findings.append(
+                Finding(path=EVIDENCE_PATH.as_posix(), message="after_reference measured_head must match manifest repository head")
+            )
         if after_reference.get("measured_tree") != repository.get("tree"):
-            findings.append(Finding(path=EVIDENCE_PATH.as_posix(), message="after_reference measured_tree must match manifest repository tree"))
+            findings.append(
+                Finding(path=EVIDENCE_PATH.as_posix(), message="after_reference measured_tree must match manifest repository tree")
+            )
         if after_reference.get("plan_graph_sha256") != expected_plan_identity["graph_sha256"]:
-            findings.append(Finding(path=EVIDENCE_PATH.as_posix(), message="after_reference plan_graph_sha256 must match current plan graph"))
+            findings.append(
+                Finding(path=EVIDENCE_PATH.as_posix(), message="after_reference plan_graph_sha256 must match current plan graph")
+            )
         if "after this evidence file is committed" in str(after_reference.get("tree_identity", "")):
-            findings.append(Finding(path=EVIDENCE_PATH.as_posix(), message="after_reference must not use a future/self-referential revision placeholder"))
+            findings.append(
+                Finding(
+                    path=EVIDENCE_PATH.as_posix(), message="after_reference must not use a future/self-referential revision placeholder"
+                )
+            )
     after_reports = [
         report
         for report in evidence.get("critical_path_reports", [])
@@ -641,7 +666,7 @@ def _validate_manifest(plan: dict[str, Any], evidence: dict[str, Any]) -> list[F
     return findings
 
 
-def validation_findings() -> list[Finding]:
+def validation_findings(*, measurement_phase: bool = False) -> list[Finding]:
     plan, plan_error = _load_json(PLAN_PATH)
     evidence, evidence_error = _load_json(EVIDENCE_PATH)
     findings: list[Finding] = []
@@ -660,20 +685,22 @@ def validation_findings() -> list[Finding]:
     findings.extend(_validate_ci(CI_PATH.read_text(encoding="utf-8")))
     findings.extend(_validate_traces(plan))
     findings.extend(_validate_evidence(evidence))
-    findings.extend(_validate_manifest(plan, evidence))
+    if not measurement_phase:
+        findings.extend(_validate_manifest(plan, evidence))
     return findings
 
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
-    findings = validation_findings()
+    findings = validation_findings(measurement_phase=args.measurement_phase)
     if findings:
         print("Validation runtime plan check failed:", file=sys.stderr)
         for finding in findings:
             print(f"- {finding.path}: {finding.message}", file=sys.stderr)
         return 1
     if args.quiet_success:
-        print("Validation runtime plan check passed.")
+        posture = " measurement phase" if args.measurement_phase else ""
+        print(f"Validation runtime plan{posture} check passed.")
     return 0
 
 

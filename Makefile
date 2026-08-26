@@ -131,13 +131,13 @@ WORKSPACE_TEST_INTEGRATION = \
 
 .PHONY: help sync-all sync-memory sync-planning sync-verification \
 	setup install-hooks pre-commit \
-	test test-nosync test-workspace test-workspace-cli test-workspace-proof test-workspace-session-review test-workspace-contracts test-workspace-generated-release test-workspace-integration test-memory test-planning test-verification \
+	test test-nosync test-workspace test-workspace-cli test-workspace-proof test-workspace-session-review test-workspace-contracts test-workspace-contracts-measurement test-workspace-generated-release test-workspace-integration test-memory test-planning test-verification \
 	lint lint-nosync lint-workspace lint-memory lint-planning lint-verification markdownlint markdownlint-memory \
 	typecheck typecheck-nosync typecheck-workspace typecheck-memory typecheck-planning typecheck-verification \
 	format format-nosync format-workspace format-memory format-planning format-verification \
 	format-check format-check-nosync format-check-workspace format-check-memory format-check-planning format-check-verification \
 	verify verify-nosync verify-workspace verify-memory verify-planning verify-verification composed-operation-scenarios \
-	memory-freshness memory-freshness-strict recurring-friction-ledger planning-surfaces planning-surfaces-strict validation-runtime-plan structured-file-inventory structured-file-inventory-changed runtime-implementation-ownership security-supply-chain package-artifact-duplicates agent-aids source-payload-operational-install source-payload-operational-install-strict maintainer-surfaces maintainer-surfaces-strict render-agent-docs render-schema-reference render-command-packages schema-reference-docs absolute-paths \
+	memory-freshness memory-freshness-strict recurring-friction-ledger planning-surfaces planning-surfaces-strict validation-runtime-plan validation-runtime-plan-measurement structured-file-inventory structured-file-inventory-changed runtime-implementation-ownership security-supply-chain package-artifact-duplicates agent-aids source-payload-operational-install source-payload-operational-install-strict maintainer-surfaces maintainer-surfaces-strict render-agent-docs render-schema-reference render-command-packages schema-reference-docs absolute-paths \
 	generated-command-packages generated-command-packages-docker output-profile-budgets external-consumer-readiness \
 	check check-nosync check-bounded-parallel check-memory check-memory-nosync check-planning check-planning-nosync check-verification check-verification-nosync check-all start-review-poller
 
@@ -236,6 +236,9 @@ test-workspace-session-review:
 
 test-workspace-contracts:
 	@$(COMPACT_RUN) --label "workspace contract tests" -- uv run pytest $(WORKSPACE_PYTEST_PARALLEL_ARGS) $(WORKSPACE_TEST_CONTRACTS)
+
+test-workspace-contracts-measurement:
+	@$(COMPACT_RUN) --label "workspace contract measurement tests" -- uv run pytest $(WORKSPACE_PYTEST_PARALLEL_ARGS) $(WORKSPACE_TEST_CONTRACTS) -k "not test_validation_runtime_plan_matches_makefile_ci_and_evidence"
 
 test-workspace-generated-release:
 	@$(COMPACT_RUN) --label "workspace generated and release tests" -- uv run pytest $(WORKSPACE_PYTEST_PARALLEL_ARGS) $(WORKSPACE_TEST_GENERATED_RELEASE)
@@ -361,6 +364,9 @@ planning-surfaces-strict:
 validation-runtime-plan:
 	@$(COMPACT_RUN) --label "validation runtime plan" -- uv run python scripts/check/check_validation_runtime_plan.py
 
+validation-runtime-plan-measurement:
+	@$(COMPACT_RUN) --label "validation runtime plan measurement" -- uv run python scripts/check/check_validation_runtime_plan.py --measurement-phase
+
 structured-file-inventory:
 	@$(COMPACT_RUN) --label "structured file inventory" -- uv run python scripts/check/check_structured_file_inventory.py
 
@@ -437,6 +443,6 @@ check: sync-all check-nosync
 check-bounded-parallel:
 	@$(MAKE) sync-all
 	@$(MAKE) test-workspace-cli WORKSPACE_PYTEST_PARALLEL_ARGS='-n 16'
-	@$(MAKE) -j 4 test-workspace-proof test-workspace-session-review test-workspace-contracts test-workspace-generated-release test-workspace-integration test-memory test-planning test-verification lint-nosync typecheck-nosync format-check-nosync verify-nosync memory-freshness-strict maintainer-surfaces validation-runtime-plan structured-file-inventory package-artifact-duplicates agent-aids absolute-paths composed-operation-scenarios WORKSPACE_PYTEST_PARALLEL_ARGS='-n 16' WORKSPACE_PROOF_PYTEST_PARALLEL_ARGS='-n 8' MEMORY_PYTEST_PARALLEL_ARGS='-n 8' PLANNING_PYTEST_PARALLEL_ARGS='' VERIFICATION_PYTEST_PARALLEL_ARGS='-n 8'
+	@$(MAKE) -j 4 test-workspace-proof test-workspace-session-review test-workspace-contracts-measurement test-workspace-generated-release test-workspace-integration test-memory test-planning test-verification lint-nosync typecheck-nosync format-check-nosync verify-nosync memory-freshness-strict maintainer-surfaces validation-runtime-plan-measurement structured-file-inventory package-artifact-duplicates agent-aids absolute-paths composed-operation-scenarios WORKSPACE_PYTEST_PARALLEL_ARGS='-n 16' WORKSPACE_PROOF_PYTEST_PARALLEL_ARGS='-n 8' MEMORY_PYTEST_PARALLEL_ARGS='-n 8' PLANNING_PYTEST_PARALLEL_ARGS='' VERIFICATION_PYTEST_PARALLEL_ARGS='-n 8'
 
 check-all: check-memory check-planning check-verification
