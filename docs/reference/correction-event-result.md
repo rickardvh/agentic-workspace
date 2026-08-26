@@ -11,10 +11,13 @@ Result envelope emitted by generated correction-event lifecycle operations.
 | Field | Type | Required | Default | Description | Examples | Annotations |
 | --- | --- | --- | --- | --- | --- | --- |
 | (root) | object | yes |  | Result envelope emitted by generated correction-event lifecycle operations. |  | x-agentic-workspace-doc-role: "contract-reference" |
-| `kind` | const `"agentic-workspace/correction-event-operation-result/v1"` | yes |  | Stable result envelope discriminator. |  |  |
+| `kind` | enum `"agentic-workspace/correction-event-operation-result/v1"`, `"agentic-workspace/target-identity-initialization/v1"` | yes |  | Stable result envelope discriminator. |  |  |
 | `operation_id` | string | yes |  | Correction-event operation identifier that produced the result. |  |  |
 | `status` | string | yes |  | Operation outcome status. |  |  |
 | `mutation_applied` | boolean | yes |  | Whether local correction-event storage was changed. |  |  |
 | `store_ref` | string | no |  | Repository-relative correction-event store path, when available. |  |  |
 | `receipt_ref` | string | no |  | Repository-relative operation receipt path, when available. |  |  |
 | `admission` | object | no |  | Admission, rejection, low-authority, retention, and routing details. |  |  |
+| `target_profile` | string | no |  | Uniquely resolved configured profile whose stable identity was initialized. |  |  |
+| `target_id` | string | no |  | Persisted or proposed stable local target identity. |  |  |
+| `config_path` | string | no |  | Ignored local configuration path that owns the stable target identity. |  |  |
