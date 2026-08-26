@@ -1,0 +1,52 @@
+{
+  "kind": "agentic-workspace/session-log-default-route-replay-evidence/v1",
+  "issue": "#2722",
+  "status": "current",
+  "captured_at": "2026-08-26",
+  "command": "uv run --frozen --active --no-sync python scripts/run_agentic_workspace.py session-log --target . analyze --origin agent --format json",
+  "fixture": {
+    "logical_session": "current Codex dogfooding logical session",
+    "scope": "more than 100 live-agent commands in the same ignored logical-session artifact set",
+    "rule": "The same logical session was replayed on merged master and the implementation branch; only the sequential measurement and replay commands were appended between captures."
+  },
+  "before": {
+    "branch": "master",
+    "head": "f12025f324c71592e5347d01d79c9569fa72f277",
+    "wall_ms": 1235,
+    "result_bytes": 81398,
+    "recursive_field_count": 1688,
+    "shape": "broad summary containing repeated entry samples, diagnostic classes, segments, episodes, and candidates"
+  },
+  "after": {
+    "branch": "codex/open-issues-projection-identity",
+    "head": "fec7e9573c2b7a07cea14f7a97e7cbf771d5161c",
+    "wall_ms": 1238,
+    "result_bytes": 14476,
+    "recursive_field_count": 277,
+    "shape": "compact counts plus material current findings and exact paged detail routes"
+  },
+  "comparison": {
+    "bytes_removed": 66922,
+    "byte_reduction_percent": 82.2,
+    "recursive_fields_removed": 1411,
+    "recursive_field_reduction_percent": 83.6
+  },
+  "construction_boundary": {
+    "fixture": "test_session_log_default_analysis_stays_bounded_for_long_multitask_session",
+    "default_entry_brief_construction_limit": 1,
+    "detail_routes": [
+      "entries",
+      "segments",
+      "episodes",
+      "contexts",
+      "candidates"
+    ],
+    "rule": "The default route no longer constructs collection-wide entry briefs; the selected detail route pages before constructing entry projections."
+  },
+  "proof": [
+    "tests/test_workspace_session_logging.py: 88 passed",
+    "default long-session fixture asserts result size below 16384 bytes",
+    "default long-session fixture asserts at most one entry brief is constructed",
+    "four 25-entry detail pages reconstruct the complete 80-entry fixture"
+  ]
+}
