@@ -3560,8 +3560,6 @@ def analyze_session_log(
         physical_session_id=effective_session["session_id"] if path or session_id else "",
     )
     all_entries = canonical_entries or (_entries_from_index(index) if index is not None else markdown_entries)
-    segment_summaries = _segment_summaries(all_entries)
-    episode_summaries = _episode_summaries(all_entries)
     selected_entries = [
         entry
         for entry in all_entries
@@ -3575,6 +3573,8 @@ def analyze_session_log(
         "all": {"agent", "pytest", "validation", "nested-aw", "unknown"},
     }
     origin_scope = origin_scope if origin_scope in origin_groups else "agent"
+    supported_details = {"summary", "entries", "segments", "episodes", "contexts", "candidates"}
+    selected_detail = detail if detail in supported_details else "summary"
     entries = [entry for entry in selected_entries if _origin_name(entry) in origin_groups[origin_scope]]
     notes = index.get("notes", []) if isinstance(index, dict) and isinstance(index.get("notes"), list) else []
     command_counter = Counter(str(entry.get("command", "")) for entry in entries if entry.get("command"))
@@ -3653,7 +3653,9 @@ def analyze_session_log(
             "origins": sorted(origins),
             "command_count": len(members),
             "failure_count": len(partition_failures),
-            "entries": [_entry_brief(entry) for entry in members[:DEFAULT_ANALYSIS_ENTRY_SAMPLE_LIMIT]],
+            "detail_route": (
+                f"agentic-workspace session-log analyze --origin {partition} --detail entries --page 1 --page-size 25 --format json"
+            ),
         }
     analyzer_overhead = [entry for entry in selected_entries if _is_session_log_analyzer_entry(entry)]
     product_entries = [entry for entry in entries if not _is_session_log_analyzer_entry(entry)]
@@ -3666,24 +3668,53 @@ def analyze_session_log(
         duplicates=[{"sha256": digest, "count": count} for digest, count in product_digests.most_common() if count > 1],
         index_present=index is not None,
     )
-    index_records = index.get("records", {}) if isinstance(index, dict) and isinstance(index.get("records"), dict) else {}
-    context_records = index_records.get("contexts", {}) if isinstance(index_records.get("contexts"), dict) else {}
-    detail_collections: dict[str, list[Any]] = {
-        "entries": [_entry_brief(entry) for entry in entries],
-        "segments": segment_summaries,
-        "episodes": episode_summaries,
-        "contexts": [{"id": identity, **value} for identity, value in context_records.items() if isinstance(value, dict)],
-        "candidates": friction_candidates,
+    summary_payload = {
+        "command_count": len(entries),
+        "note_count": len(notes),
+        "failure_count": len(live_failures) if origin_scope == "agent" else len(unexpected_failures),
+        "failed_count": len(live_failures) if origin_scope == "agent" else len(unexpected_failures),
+        "observed_nonzero_exit_count": len(failures),
+        "live_agent_failure_count": len(live_failures),
+        "expected_failure_count": sum(1 for entry in failures if bool(entry.get("expected_failure", False))),
+        "matched_expectation_count": len(matched_expectations),
+        "unmatched_expectation_count": len(unmatched_expectations),
+        "expected_success_failure_count": len(expected_success_failures),
+        "expected_failure_success_count": len(expected_failure_successes),
+        "unknown_expectation_count": len(unknown_expectations),
+        "unexpected_failure_count": len(unexpected_failures),
+        "usage_mistake_count": len(usage_mistakes),
+        "repeated_command_count": len(repeated),
+        "repeated_failure_count": len(repeated_failures),
+        "duplicate_output_count": len(duplicates),
+        "artifact_count": sum(1 for entry in entries if entry.get("artifact")),
     }
-    selected_detail = detail if detail in {*detail_collections, "summary"} else "summary"
-    detail_payload = (
-        _paged_detail(
-            values=detail_collections[selected_detail], page=max(1, page), page_size=max(1, min(MAX_ANALYSIS_PAGE_SIZE, page_size))
-        )
-        if selected_detail != "summary"
-        else None
-    )
-    analysis_payload = {
+    analysis_scope = {
+        "origin": origin_scope,
+        "default": "agent",
+        "included_origins": sorted(origin_groups[origin_scope]),
+        "detail_route": (
+            "agentic-workspace session-log analyze "
+            "--detail <entries|segments|episodes|contexts|candidates> --page 1 --page-size 25 --format json"
+        ),
+        "rule": "The ordinary packet is live-agent-first; other origins remain available through explicit origin scope.",
+    }
+    bounded_collections = {
+        "sample_limit": LARGE_OUTPUT_SUMMARY_LIMIT,
+        "entry_sample_limit": DEFAULT_ANALYSIS_ENTRY_SAMPLE_LIMIT,
+        "candidate_limit": FRICTION_CANDIDATE_LIMIT,
+        "default_serialization_budget_bytes": DEFAULT_ANALYSIS_SERIALIZATION_BUDGET_BYTES,
+        "full_detail_requires_selector": True,
+        "available": sorted(supported_details - {"summary"}),
+    }
+    export_routing = {
+        "download_or_share": "agentic-workspace session-log export --target ./repo --format json",
+        "artifact_class": "normalized-share-safe",
+        "raw_local_route": "Keep the source session directory local; it is not the share artifact.",
+        "authority": "session-log export is the sole share/download route for session evidence",
+        "transfer_approval": "not-granted",
+        "review_required": "Review the normalized archive for secrets and external-transfer policy before sharing.",
+    }
+    common_payload = {
         "kind": "agentic-workspace/session-log-analysis/v1",
         "status": "analyzed",
         "enabled": state.enabled,
@@ -3696,122 +3727,81 @@ def analyze_session_log(
         "session_scope": session_scope,
         "coverage": coverage,
         "index_path": str(index.get("path", "")) if isinstance(index, dict) else "",
-        "summary": {
-            "command_count": len(entries),
-            "note_count": len(notes),
-            "failure_count": len(live_failures) if origin_scope == "agent" else len(unexpected_failures),
-            "failed_count": len(live_failures) if origin_scope == "agent" else len(unexpected_failures),
-            "observed_nonzero_exit_count": len(failures),
-            "live_agent_failure_count": len(live_failures),
-            "expected_failure_count": sum(1 for entry in failures if bool(entry.get("expected_failure", False))),
-            "matched_expectation_count": len(matched_expectations),
-            "unmatched_expectation_count": len(unmatched_expectations),
-            "expected_success_failure_count": len(expected_success_failures),
-            "expected_failure_success_count": len(expected_failure_successes),
-            "unknown_expectation_count": len(unknown_expectations),
-            "unexpected_failure_count": len(unexpected_failures),
-            "usage_mistake_count": len(usage_mistakes),
-            "repeated_command_count": len(repeated),
-            "repeated_failure_count": len(repeated_failures),
-            "duplicate_output_count": len(duplicates),
-            "artifact_count": sum(1 for entry in entries if entry.get("artifact")),
-        },
-        "analysis_scope": {
-            "origin": origin_scope,
-            "default": "agent",
-            "included_origins": sorted(origin_groups[origin_scope]),
-            "detail_route": "agentic-workspace session-log analyze --detail <entries|segments|episodes|contexts|candidates> --page 1 --page-size 25 --format json",
-            "rule": "The ordinary packet is live-agent-first; other origins remain available through explicit origin scope.",
-        },
+        "summary": summary_payload,
+        "analysis_scope": analysis_scope,
         "origin_breakdown": dict(sorted(origin_breakdown.items())),
         "origin_partitions": origin_partitions,
         "analyzer_overhead": {
             "command_count": len(analyzer_overhead),
-            "entries": [_entry_brief(entry) for entry in analyzer_overhead[:1]],
+            "detail_route": "agentic-workspace session-log analyze --detail entries --format json",
             "rule": "session-log analyze traffic is classified separately and cannot become default product-friction evidence.",
         },
-        "failed_commands": [
-            _entry_brief(entry)
-            for entry in (live_failures if origin_scope == "agent" else unexpected_failures)[:DEFAULT_ANALYSIS_ENTRY_SAMPLE_LIMIT]
-        ],
-        "observed_nonzero_exits": [_entry_brief(entry) for entry in failures[:DEFAULT_ANALYSIS_ENTRY_SAMPLE_LIMIT]],
-        "unexpected_failed_commands": [_entry_brief(entry) for entry in unexpected_failures[:DEFAULT_ANALYSIS_ENTRY_SAMPLE_LIMIT]],
-        "matched_invocations": [_entry_brief(entry) for entry in matched_expectations[:DEFAULT_ANALYSIS_ENTRY_SAMPLE_LIMIT]],
-        "unmatched_invocations": [_entry_brief(entry) for entry in unmatched_expectations[:DEFAULT_ANALYSIS_ENTRY_SAMPLE_LIMIT]],
-        "expected_success_failed_invocations": [
-            _entry_brief(entry) for entry in expected_success_failures[:DEFAULT_ANALYSIS_ENTRY_SAMPLE_LIMIT]
-        ],
-        "expected_failure_succeeded_invocations": [
-            _entry_brief(entry) for entry in expected_failure_successes[:DEFAULT_ANALYSIS_ENTRY_SAMPLE_LIMIT]
-        ],
-        "unknown_invocations": [_entry_brief(entry) for entry in unknown_expectations[:DEFAULT_ANALYSIS_ENTRY_SAMPLE_LIMIT]],
-        "unknown_expectation_effect": "inconclusive; raw exit remains observed and a non-zero exit remains in the primary unexpected-failure set",
-        "live_failed_commands": [_entry_brief(entry) for entry in live_failures[:DEFAULT_ANALYSIS_ENTRY_SAMPLE_LIMIT]],
         "failures_by_origin": _bounded_counter(failures_by_origin),
-        "repeated_failures_by_origin": {
-            origin: [_bounded_value(value) for value in values[:LARGE_OUTPUT_SUMMARY_LIMIT]]
-            for origin, values in repeated_failures_by_origin.items()
-        },
-        "usage_mistakes": [_entry_brief(entry) for entry in usage_mistakes[:DEFAULT_ANALYSIS_ENTRY_SAMPLE_LIMIT]],
+        "repeated_failures_by_origin": repeated_failures_by_origin,
         "repeated_commands": [_bounded_value(value) for value in repeated[:LARGE_OUTPUT_SUMMARY_LIMIT]],
         "repeated_failures": [_bounded_value(value) for value in repeated_failures[:LARGE_OUTPUT_SUMMARY_LIMIT]],
-        "largest_outputs": [_entry_brief(entry) for entry in largest[:DEFAULT_ANALYSIS_ENTRY_SAMPLE_LIMIT]],
         "duplicate_outputs": duplicates[:LARGE_OUTPUT_SUMMARY_LIMIT],
         "packet_kinds": _bounded_counter(packet_kinds),
         "parsed_packet_kinds": _bounded_counter(packet_kinds),
         "top_level_kinds": _bounded_counter(top_level_kinds),
         "domain_kinds": _bounded_counter(domain_kinds),
-        "segments": segment_summaries[:LARGE_OUTPUT_SUMMARY_LIMIT],
-        "episodes": episode_summaries[:LARGE_OUTPUT_SUMMARY_LIMIT],
         "detail": selected_detail,
-        "detail_page": detail_payload,
-        "bounded_collections": {
-            "sample_limit": LARGE_OUTPUT_SUMMARY_LIMIT,
-            "entry_sample_limit": DEFAULT_ANALYSIS_ENTRY_SAMPLE_LIMIT,
-            "candidate_limit": FRICTION_CANDIDATE_LIMIT,
-            "default_serialization_budget_bytes": DEFAULT_ANALYSIS_SERIALIZATION_BUDGET_BYTES,
-            "full_detail_requires_selector": True,
-            "available": sorted(detail_collections),
-        },
+        "bounded_collections": bounded_collections,
         "selected_segment": segment_id,
-        "friction_candidates": [_bounded_value(value) for value in friction_candidates[:FRICTION_CANDIDATE_LIMIT]],
-        "export_routing": {
-            "download_or_share": "agentic-workspace session-log export --target ./repo --format json",
-            "artifact_class": "normalized-share-safe",
-            "raw_local_route": "Keep the source session directory local; it is not the share artifact.",
-            "authority": "session-log export is the sole share/download route for session evidence",
-            "transfer_approval": "not-granted",
-            "review_required": "Review the normalized archive for secrets and external-transfer policy before sharing.",
-        },
+        "export_routing": export_routing,
         "local_diagnostic_boundary": _session_log_local_boundary(),
         "local_only": True,
         "authoritative": False,
         "rule": SESSION_LOG_LOCAL_BOUNDARY["rule"],
     }
-    if selected_detail != "summary":
+    if selected_detail == "summary":
         return {
-            "kind": "agentic-workspace/session-log-analysis-detail/v1",
-            "status": "analyzed",
-            "enabled": state.enabled,
-            "path": analysis_payload["path"],
-            "index_path": analysis_payload["index_path"],
-            "index_status": analysis_payload["index_status"],
-            "session_scope": session_scope,
-            "detail": selected_detail,
-            "detail_page": detail_payload,
-            "summary": analysis_payload["summary"],
-            "bounded_collections": analysis_payload["bounded_collections"],
-            "full_analysis": {
-                "status": "omitted",
-                "command": "agentic-workspace session-log analyze --detail summary --format json",
-                "rule": "A detail selector returns only its bounded page and compact session counts; broad analysis requires the explicit summary route.",
+            **common_payload,
+            "detail_page": None,
+            "current_findings": {
+                "largest_output": _entry_brief(largest[0]) if largest else None,
+                "friction_candidates": [_bounded_value(value) for value in friction_candidates[:DEFAULT_ANALYSIS_ENTRY_SAMPLE_LIMIT]],
+                "rule": "The default route includes only the most material current findings; use a detail route for pages.",
             },
-            "export_routing": analysis_payload["export_routing"],
-            "local_diagnostic_boundary": analysis_payload["local_diagnostic_boundary"],
-            "local_only": True,
-            "authoritative": False,
         }
-    return analysis_payload
+
+    page_number = max(1, page)
+    bounded_page_size = max(1, min(MAX_ANALYSIS_PAGE_SIZE, page_size))
+    if selected_detail == "entries":
+        start = (page_number - 1) * bounded_page_size
+        detail_values = [_entry_brief(entry) for entry in entries[start : start + bounded_page_size]]
+        detail_payload = {
+            "page": page_number,
+            "page_size": bounded_page_size,
+            "total_count": len(entries),
+            "has_more": start + bounded_page_size < len(entries),
+            "items": detail_values,
+        }
+    elif selected_detail == "segments":
+        detail_payload = _paged_detail(values=_segment_summaries(all_entries), page=page_number, page_size=bounded_page_size)
+    elif selected_detail == "episodes":
+        detail_payload = _paged_detail(values=_episode_summaries(all_entries), page=page_number, page_size=bounded_page_size)
+    elif selected_detail == "contexts":
+        index_records = index.get("records", {}) if isinstance(index, dict) and isinstance(index.get("records"), dict) else {}
+        context_records = index_records.get("contexts", {}) if isinstance(index_records.get("contexts"), dict) else {}
+        detail_payload = _paged_detail(
+            values=[{"id": identity, **value} for identity, value in context_records.items() if isinstance(value, dict)],
+            page=page_number,
+            page_size=bounded_page_size,
+        )
+    else:
+        detail_payload = _paged_detail(values=friction_candidates, page=page_number, page_size=bounded_page_size)
+
+    return {
+        **common_payload,
+        "kind": "agentic-workspace/session-log-analysis-detail/v1",
+        "detail_page": detail_payload,
+        "full_analysis": {
+            "status": "omitted",
+            "command": "agentic-workspace session-log analyze --detail summary --format json",
+            "rule": "A detail selector returns only its bounded page and compact session counts; broad analysis requires the explicit summary route.",
+        },
+    }
 
 
 def _system_exit_code(exc: SystemExit) -> int:
