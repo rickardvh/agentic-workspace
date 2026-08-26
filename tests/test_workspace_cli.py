@@ -1043,6 +1043,7 @@ def test_config_advertised_target_selectors_round_trip_through_the_emitting_surf
 
 
 def test_generated_workspace_operations_prevalidate_before_payload_producers(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[1]))
     from generated.workspace.python.commands import config_report, defaults_report
 
     _init_git_repo(tmp_path)
