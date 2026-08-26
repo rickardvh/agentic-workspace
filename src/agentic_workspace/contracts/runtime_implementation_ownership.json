@@ -75,8 +75,8 @@
       }
     ],
     "file_ratchets": [
-      {"path": "src/agentic_workspace/workspace_runtime_core.py", "max_lines": 63061, "max_top_level_symbols": 1302, "max_direct_policy_fan_out": 1490},
-      {"path": "packages/planning/src/repo_planning_bootstrap/installer.py", "max_lines": 25733, "max_top_level_symbols": 570, "max_direct_policy_fan_out": 687},
+      {"path": "src/agentic_workspace/workspace_runtime_core.py", "max_lines": 63061, "max_top_level_symbols": 1302, "max_direct_policy_fan_out": 1491},
+      {"path": "packages/planning/src/repo_planning_bootstrap/installer.py", "max_lines": 25733, "max_top_level_symbols": 570, "max_direct_policy_fan_out": 688},
       {"path": "tests/test_workspace_cli.py", "max_lines": 17803, "max_top_level_symbols": 382, "max_direct_policy_fan_out": 253}
     ],
     "representative_working_set": {

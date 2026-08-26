@@ -4,10 +4,12 @@ import argparse
 import copy
 import hashlib
 import importlib.util
+import io
 import json
 import re
 import subprocess
 import sys
+import tarfile
 import tomllib
 from pathlib import Path
 
@@ -415,6 +417,38 @@ def test_packed_conformance_exercises_exact_generated_tarballs(tmp_path: Path) -
     }
     assert receipt["subject"]["artifacts"]
     assert all(item["conformance_status"] in {"passed", "not-required-not-runnable"} for item in receipt["subject"]["artifacts"])
+    assert receipt["subject"]["runtime_identity"] == {"kind": "node", "version": receipt["subject"]["node_version"]}
+    assert receipt["subject"]["validation_identity"] == {
+        "mode": "exact-packed-typescript-semantic-conformance",
+        "registry_fingerprint": receipt["subject"]["registry_fingerprint"],
+        "runner": "scripts/check/run_generated_command_package_proof.py",
+    }
+    assert receipt["subject"]["execution_context"] == "local"
+    assert receipt["environment_boundary"]["claim"] == "local semantic replay only; does not establish a hosted CI pass"
+    assert receipt["environment_boundary"]["host_only_not_reproduced"]
+
+
+def test_pr2746_regression_source_static_pass_does_not_substitute_for_packed_semantics(tmp_path: Path) -> None:
+    runner = _load_runner()
+    source_check = subprocess.run([sys.executable, str(CHECK_SCRIPT_PATH)], cwd=REPO_ROOT, capture_output=True, text=True, check=False)
+    assert source_check.returncode == 0, source_check.stdout + source_check.stderr
+
+    artifact_dir = tmp_path / "dist"
+    runner._pack_packages(artifact_dir)
+    tarball = runner._tarball_for_package(artifact_dir, "@agentic-workspace/workspace-cli")
+    with tarfile.open(tarball, "r:gz") as archive:
+        members = []
+        for member in archive.getmembers():
+            source = archive.extractfile(member) if member.isfile() else None
+            members.append((copy.copy(member), source.read() if source is not None else None))
+    with tarfile.open(tarball, "w:gz") as archive:
+        for member, data in members:
+            if member.name == "package/src/cli.mjs":
+                data = b"process.stdout.write(JSON.stringify({kind: 'packed-semantic-omission'}));\n"
+                member.size = len(data)
+            archive.addfile(member, io.BytesIO(data) if data is not None else None)
+
+    assert runner._run_packed_conformance(artifact_dir=artifact_dir, receipt_out=None) != 0
 
 
 @pytest.mark.parametrize(

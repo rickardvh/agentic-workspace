@@ -54,6 +54,7 @@ from agentic_workspace.workspace_runtime_core import (
     _rewrite_module_cli_commands,
     _validate_target_root,
     _work_shape_guidance_payload,
+    _workflow_sufficiency_payload,
 )
 from agentic_workspace.workspace_runtime_generated_surface import (
     _as_dict,
@@ -543,22 +544,48 @@ def _bounded_external_issue_effect_payload(
         "active_planning_present": active_planning_present,
     }
     if admitted:
-        return {
+        required_safety_checks = [
+            "duplicate-search",
+            "issue-shaping-and-template-compliance",
+            "explicit-external-write-authority",
+            "truthful-post-create-reconciliation",
+        ]
+        route: dict[str, Any] = {
             "kind": "agentic-workspace/bounded-external-effect-route/v1",
             "status": "direct-route-admitted",
             "effect_class": "external-issue-filing",
             "planning_custody_required": False,
             "observed_facts": observed,
-            "required_safety_checks": [
-                "duplicate-search",
-                "issue-shaping-and-template-compliance",
-                "explicit-external-write-authority",
-                "truthful-post-create-reconciliation",
-            ],
+            "required_safety_checks": required_safety_checks,
             "residue_policy": "External tracker receipts remain coordination evidence; create no checked-in Planning owner solely for permission.",
             "provider_boundary": "The effect class is a bounded external tracker write; no GitHub-specific planning bypass is granted.",
             "rule": "A positively bounded external tracker effect may use its existing intake/write owner without checked-in Planning custody.",
         }
+        route["start_projection"] = {
+            "bounded_external_effect": {**route},
+            "workflow_sufficiency": _workflow_sufficiency_payload(
+                surface="start",
+                decision="bounded-external-effect-direct",
+                reason="Bounded external tracker effect is ready for its write owner.",
+                required_next_action="perform-bounded-external-issue-filing",
+                evidence_required=required_safety_checks,
+            ),
+            "immediate_next_allowed_action": {
+                "action": "perform-bounded-external-issue-filing",
+                "summary": "Use the existing external issue intake/write owner without creating checked-in Planning custody.",
+                "command": "",
+                "run": None,
+                "risk": "bounded-external-write",
+                "required_inputs": required_safety_checks,
+                "next_proof": "Reconcile created tracker identities, duplicate decisions, and failed writes against the requested bounded set.",
+                "read_first": [],
+                "open_execplan_only_when": (
+                    "The task expands into repository implementation, unresolved decomposition, multi-session continuation, "
+                    "or an active-owner conflict."
+                ),
+            },
+        }
+        return route
     reason_codes = [key for key, value in observed.items() if value is False]
     if durable_shape:
         reason_codes.append("durable-execution-shape-detected")

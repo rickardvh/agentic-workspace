@@ -3,9 +3,9 @@
 
 Exact current command values generated from `cli_commands.json` and `cli_option_groups.json`. The schema-shape references remain at `cli-commands.md` and `cli-option-groups.md`.
 
-- Contract digest: `sha256:81c5e9760461ae323b32057e2dc86d05103ccdd05de086a7f3cc1f6b369ac3e7`
+- Contract digest: `sha256:496bcda635648d0326bfd8ad518c151c38f4a57abe0ef07a6e1ae7149974f9ac`
 - Program: `agentic-workspace`
-- Command/subcommand count: 123
+- Command/subcommand count: 124
 
 Shared-state mutability and ignored local diagnostics are separate. A `no` below means the command contract does not mutate shared workspace state. When local session logging is enabled, any command may still write ignored machine-local diagnostics:
 
@@ -135,6 +135,7 @@ Shared-state mutability and ignored local diagnostics are separate. A `no` below
 | `agentic-workspace assignment reject` | `core_context_router` | `advanced_host_repo` | no | 6 | Run assignment.reject. |
 | `agentic-workspace assignment repair` | `core_context_router` | `advanced_host_repo` | no | 6 | Run assignment.repair. |
 | `agentic-workspace correction-event` | `reusable_host_repo_diagnostics` | `ordinary_host_repo` | no | 0 | Submit, query, and compact local correction events through generated operations. |
+| `agentic-workspace correction-event identity-init` | `reusable_host_repo_diagnostics` | `ordinary_host_repo` | yes | 6 | Initialize one stable configured target identity in ignored local config. |
 | `agentic-workspace correction-event submit` | `reusable_host_repo_diagnostics` | `ordinary_host_repo` | yes | 28 | Submit a correction event through the public local operation boundary. |
 | `agentic-workspace correction-event query` | `reusable_host_repo_diagnostics` | `ordinary_host_repo` | no | 25 | Query admitted and low-authority correction events from bounded local storage. |
 | `agentic-workspace correction-event correct-dispute` | `reusable_host_repo_diagnostics` | `ordinary_host_repo` | yes | 25 | Record a dispute/correction transition for a prior correction event. |
@@ -1794,6 +1795,19 @@ local correction-event lifecycle and bounded storage diagnostic front door
 | Flags | Required | Default | Choices | Action / nargs | Description |
 | --- | --- | --- | --- | --- | --- |
 | — | — | — | — | — | No declared options. |
+
+## `agentic-workspace correction-event identity-init`
+
+local target identity lifecycle subcommand
+
+| Flags | Required | Default | Choices | Action / nargs | Description |
+| --- | --- | --- | --- | --- | --- |
+| `--format` | no | `text` | text, json | `value` | Output format. |
+| `--target` | no | `—` | — | `value` | Target repository path. Defaults to current directory. |
+| `--target-profile` | no | `—` | — | `value` | Configured profile name; defaults to the current target. |
+| `--target-id` | no | `—` | — | `value` | Optional caller-selected stable local id; the generated collision-checked id is used by default. |
+| `--expected-config-digest` | no | `—` | — | `value` | Optional config digest from a dry run for compare-and-swap admission. |
+| `--dry-run` | no | `—` | — | `store_true` | Return the exact identity/config mutation without writing local config. |
 
 ## `agentic-workspace correction-event submit`
 

@@ -11,6 +11,8 @@ and TypeScript CLI distributions treated as first-class release artifacts.
 
 Both release workflows begin with read-only admission jobs. They query GitHub check runs for the exact source commit through `scripts/release/support_bearing_promotion.py`; only a downstream job receives tag, release, pull-request, or dispatch write permissions. Publication additionally composes `support-bearing-promotion.json` from exact-commit server and runtime receipts plus the existing packed-artifact semantic, install, distribution/license, and security receipts. Missing, stale, mismatched, failed, or unsupported evidence fails closed.
 
+Contributors can replay the exact packed npm-artifact semantic lane with `make packed-artifact-conformance`. The Make target and hosted CI invoke the same `run_generated_command_package_proof.py --packed-conformance` authority; its receipt identifies every tarball digest, the Node runtime, the conformance registry, and whether the execution was local or hosted. A local pass proves that semantic lane only. Hosted runner provisioning, permissions, services, artifact upload, other jobs, and required-check aggregation remain host-only evidence, so local replay never claims a hosted CI pass.
+
 The authoritative required check, runtime matrix, Node semantic majors, and receipt names live in `.github/support-bearing-promotion.json`. Domain checkers remain authoritative for their own evidence.
 
 ## Release Goal

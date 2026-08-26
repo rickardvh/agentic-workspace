@@ -93,7 +93,7 @@ jobs:
           uv run pytest tests/test_workspace_packaging.py::test_installed_workspace_wheel_imports_cli_module tests/test_workspace_packaging.py::test_installed_workspace_stack_runs_fresh_repo_cli_sequence tests/test_workspace_packaging.py::test_release_root_wheel_installs_workspace_stack_from_same_release_assets -q
           uv run python scripts/check/run_external_consumer_readiness.py --dist-dir dist --require-node
       - name: Prove exact npm artifacts
-        run: uv run python scripts/check/run_generated_command_package_proof.py --packed-conformance --artifact-dir dist --receipt-out dist/generated-command-conformance-ci.json
+        run: make packed-artifact-conformance PACKED_ARTIFACT_DIR=dist PACKED_ARTIFACT_RECEIPT=dist/generated-command-conformance-ci.json PACKED_ARTIFACT_CONTEXT=hosted-ci
       - name: Upload coordinated package artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

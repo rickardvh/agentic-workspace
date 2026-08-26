@@ -310,14 +310,25 @@ def test_semantic_receipt_verification_fails_closed_for_stale_or_mismatched_subj
                 "conformance_status": "passed",
             }
         ],
+        "runtime_identity": {"kind": "node", "version": "v24.0.0"},
+        "validation_identity": {
+            "runner": "scripts/check/run_generated_command_package_proof.py",
+            "mode": "exact-packed-typescript-semantic-conformance",
+            "registry_fingerprint": "sha256:stale",
+        },
         "registry_fingerprint": "sha256:stale",
         "node_version": "v24.0.0",
+        "execution_context": "hosted-ci",
     }
     receipt = {
         "kind": "agentic-workspace/generated-command-semantic-conformance-receipt/v1",
         "status": "passed",
         "receipt_id": "sha256:" + hashlib.sha256(json.dumps(subject, sort_keys=True, separators=(",", ":")).encode()).hexdigest(),
         "subject": subject,
+        "environment_boundary": {
+            "claim": "hosted semantic-lane evidence; the complete hosted workflow remains authoritative",
+            "host_only_not_reproduced": ["hosted runner provisioning and image"],
+        },
     }
     receipt_path = tmp_path / "receipt.json"
     receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
@@ -325,13 +336,16 @@ def test_semantic_receipt_verification_fails_closed_for_stale_or_mismatched_subj
     assert module._verify_receipt(receipt_path, artifact_dir=tmp_path, expected_node_major=24) == 1
 
     receipt["subject"]["registry_fingerprint"] = "sha256:current"
+    receipt["subject"]["validation_identity"]["registry_fingerprint"] = "sha256:current"
     receipt["receipt_id"] = (
         "sha256:" + hashlib.sha256(json.dumps(receipt["subject"], sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     )
     receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
-    assert module._verify_receipt(receipt_path, artifact_dir=tmp_path, expected_node_major=24) == 0
+    assert module._verify_receipt(receipt_path, artifact_dir=tmp_path, expected_node_major=24, expected_execution_context="hosted-ci") == 0
+    assert module._verify_receipt(receipt_path, artifact_dir=tmp_path, expected_node_major=24, expected_execution_context="local") == 1
 
     receipt["subject"]["node_version"] = "v25.0.0"
+    receipt["subject"]["runtime_identity"]["version"] = "v25.0.0"
     receipt["receipt_id"] = (
         "sha256:" + hashlib.sha256(json.dumps(receipt["subject"], sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     )
@@ -339,6 +353,7 @@ def test_semantic_receipt_verification_fails_closed_for_stale_or_mismatched_subj
     assert module._verify_receipt(receipt_path, artifact_dir=tmp_path, expected_node_major=20) == 1
 
     receipt["subject"]["node_version"] = "24"
+    receipt["subject"]["runtime_identity"]["version"] = "24"
     receipt["receipt_id"] = (
         "sha256:" + hashlib.sha256(json.dumps(receipt["subject"], sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     )
@@ -346,6 +361,7 @@ def test_semantic_receipt_verification_fails_closed_for_stale_or_mismatched_subj
     assert module._verify_receipt(receipt_path, artifact_dir=tmp_path, expected_node_major=24) == 1
 
     receipt["subject"]["node_version"] = "v24.0.0"
+    receipt["subject"]["runtime_identity"]["version"] = "v24.0.0"
     receipt["receipt_id"] = (
         "sha256:" + hashlib.sha256(json.dumps(receipt["subject"], sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     )
@@ -361,8 +377,11 @@ def test_release_workflow_requires_exact_artifact_semantic_receipts() -> None:
 
     assert ownership["semantic_conformance"]["required_for_support_bearing_typescript_release"] is True
     assert ownership["semantic_conformance"]["runtime_majors"] == [20, 24, 25]
-    assert workflow.count("--packed-conformance --artifact-dir dist --receipt-out") == 3
-    assert '--verify-receipt "$receipt" --artifact-dir dist --expected-node-major "$runtime_major"' in workflow
+    assert workflow.count("make packed-artifact-conformance PACKED_ARTIFACT_DIR=dist") == 3
+    assert workflow.count("PACKED_ARTIFACT_CONTEXT=hosted-ci") == 3
+    assert (
+        '--verify-receipt "$receipt" --artifact-dir dist --expected-node-major "$runtime_major" --expected-execution-context hosted-ci'
+    ) in workflow
     assert 'runtime_match.group("major")' in workflow
     assert '"semantic_conformance": {' in workflow
     assert "dist/generated-command-conformance-node*.json" in workflow

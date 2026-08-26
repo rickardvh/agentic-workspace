@@ -110,6 +110,18 @@ def test_makefile_exposes_setup_free_aggregate_targets() -> None:
     assert "check: sync-all check-nosync" in text
 
 
+def test_makefile_exposes_local_packed_artifact_semantic_replay() -> None:
+    text = _makefile_text()
+
+    assert "packed-artifact-conformance:" in text
+    assert "PACKED_ARTIFACT_DIR ?= $(CURDIR)/.agentic-workspace/local/packed-artifact-conformance" in text
+    assert "PACKED_ARTIFACT_CONTEXT ?= local" in text
+    assert (
+        'run_generated_command_package_proof.py --packed-conformance --artifact-dir "$(PACKED_ARTIFACT_DIR)" '
+        '--receipt-out "$(PACKED_ARTIFACT_RECEIPT)" --execution-context "$(PACKED_ARTIFACT_CONTEXT)"'
+    ) in text
+
+
 def test_makefile_allocates_fresh_top_level_run_and_preserves_admitted_child_join(tmp_path: Path) -> None:
     fixture = tmp_path / "validation-context.mk"
     fixture.write_text(

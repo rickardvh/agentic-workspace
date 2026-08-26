@@ -25,8 +25,12 @@ MEMORY_PYTEST_PARALLEL_ARGS ?= $(PACKAGE_PYTEST_PARALLEL_ARGS)
 PLANNING_PYTEST_PARALLEL_ARGS ?= $(PACKAGE_PYTEST_PARALLEL_ARGS)
 VERIFICATION_PYTEST_PARALLEL_ARGS ?= $(PACKAGE_PYTEST_PARALLEL_ARGS)
 COMPACT_RUN = uv run python scripts/check/run_compact_command.py
+PACKED_ARTIFACT_DIR ?= $(CURDIR)/.agentic-workspace/local/packed-artifact-conformance
+PACKED_ARTIFACT_RECEIPT ?= $(PACKED_ARTIFACT_DIR)/generated-command-conformance-local.json
+PACKED_ARTIFACT_CONTEXT ?= local
 
 WORKSPACE_TEST_CLI = \
+	tests/test_bounded_external_issue_route.py \
 	tests/test_dynamic_instruction_projection.py \
 	tests/test_operating_projection_receipt.py \
 	tests/test_workspace_cli.py \
@@ -138,7 +142,7 @@ WORKSPACE_TEST_INTEGRATION = \
 	format-check format-check-nosync format-check-workspace format-check-memory format-check-planning format-check-verification \
 	verify verify-nosync verify-workspace verify-memory verify-planning verify-verification composed-operation-scenarios \
 	memory-freshness memory-freshness-strict recurring-friction-ledger planning-surfaces planning-surfaces-strict validation-runtime-plan validation-runtime-plan-measurement structured-file-inventory structured-file-inventory-changed runtime-implementation-ownership security-supply-chain package-artifact-duplicates agent-aids source-payload-operational-install source-payload-operational-install-strict maintainer-surfaces maintainer-surfaces-strict render-agent-docs render-schema-reference render-command-packages schema-reference-docs absolute-paths \
-	generated-command-packages generated-command-packages-docker output-profile-budgets external-consumer-readiness \
+	generated-command-packages generated-command-packages-docker packed-artifact-conformance output-profile-budgets external-consumer-readiness \
 	check check-nosync check-bounded-parallel check-memory check-memory-nosync check-planning check-planning-nosync check-verification check-verification-nosync check-all start-review-poller
 
 help:
@@ -166,6 +170,7 @@ help:
 	@echo "  markdownlint         Run Markdown lint checks for the memory package surfaces."
 	@echo "  typecheck            Run ty type checks across workspace and packages."
 	@echo "  typecheck-nosync     Run type checks after caller-provided dependency sync."
+	@echo "  packed-artifact-conformance  Replay CI's exact npm-artifact semantic lane locally."
 	@echo "  format               Apply Ruff formatting across workspace and packages."
 	@echo "  format-check         Run formatting checks across workspace and packages."
 	@echo "  format-check-nosync  Run formatting checks after caller-provided dependency sync."
@@ -422,6 +427,9 @@ generated-command-packages:
 
 generated-command-packages-docker:
 	@uv run python scripts/check/run_generated_command_package_proof.py
+
+packed-artifact-conformance:
+	@uv run python scripts/check/run_generated_command_package_proof.py --packed-conformance --artifact-dir "$(PACKED_ARTIFACT_DIR)" --receipt-out "$(PACKED_ARTIFACT_RECEIPT)" --execution-context "$(PACKED_ARTIFACT_CONTEXT)"
 
 check-memory-nosync: test-memory lint-memory typecheck-memory verify-memory memory-freshness-strict recurring-friction-ledger
 

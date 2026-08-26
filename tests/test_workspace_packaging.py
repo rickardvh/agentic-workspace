@@ -165,7 +165,10 @@ def test_ci_builds_and_uploads_root_package_artifacts() -> None:
     assert "uv build --wheel --sdist --out-dir dist packages/verification" in ci_text
     assert "test_installed_workspace_stack_runs_fresh_repo_cli_sequence" in ci_text
     assert "test_release_root_wheel_installs_workspace_stack_from_same_release_assets" in ci_text
-    assert "run_generated_command_package_proof.py --packed-conformance --artifact-dir dist" in ci_text
+    assert (
+        "make packed-artifact-conformance PACKED_ARTIFACT_DIR=dist "
+        "PACKED_ARTIFACT_RECEIPT=dist/generated-command-conformance-ci.json PACKED_ARTIFACT_CONTEXT=hosted-ci"
+    ) in ci_text
     assert "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1" in ci_text
 
 

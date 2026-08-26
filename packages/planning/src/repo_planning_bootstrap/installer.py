@@ -31,6 +31,7 @@ from repo_planning_bootstrap._source import (
     render_upgrade_source,
     resolve_upgrade_source,
 )
+from repo_planning_bootstrap.future_context_distillation import CLOSEOUT_DISTILLATION_BUCKETS, future_context_distillation_buckets
 
 PLANNING_MANAGED_ROOT = module_root("planning")
 WORKSPACE_WORKFLOW_PATH = Path(".agentic-workspace") / "WORKFLOW.md"
@@ -12556,16 +12557,7 @@ def _canonical_execution_summary(execution_summary: Mapping[str, Any]) -> dict[s
 
 
 def _closeout_distillation_buckets(*, record: dict[str, Any], explicit: dict[str, str]) -> dict[str, list[dict[str, str]]]:
-    buckets = {
-        "discard": [],
-        "continuation": [],
-        "memory": [],
-        "config_check": [],
-        "docs": [],
-        "issue_follow_up": [],
-        "stronger_owner": [],
-        "unresolved": [],
-    }
+    buckets = future_context_distillation_buckets([])
     explicit_buckets = record.get("closeout_distillation", {}) if isinstance(record, dict) else {}
     if isinstance(explicit_buckets, dict):
         raw_buckets = explicit_buckets.get("buckets", {})
@@ -12620,37 +12612,8 @@ def _closeout_distillation_buckets(*, record: dict[str, Any], explicit: dict[str
             buckets[bucket].append(item)
 
     future_context_signals = record.get("future_context_signals", []) if isinstance(record, dict) else []
-    if isinstance(future_context_signals, list):
-        for raw_signal in future_context_signals:
-            if not isinstance(raw_signal, dict) or raw_signal.get("relevant") is False:
-                continue
-            disposition = raw_signal.get("disposition", {})
-            disposition = disposition if isinstance(disposition, dict) else {}
-            outcome = str(disposition.get("outcome", "unresolved")).strip().lower().replace("_", "-")
-            owner = str(disposition.get("owner") or raw_signal.get("owner") or "").strip()
-            rationale = str(disposition.get("rationale") or raw_signal.get("rationale") or "").strip()
-            summary = str(raw_signal.get("summary") or raw_signal.get("signal_id") or "known future-context signal").strip()
-            source = f"future_context_signals.{str(raw_signal.get('signal_id') or 'unknown')}"
-            item = {"summary": summary, "owner": owner, "source": source, "rationale": rationale}
-            if outcome in {"capture", "update-existing"}:
-                owner_text = owner.lower()
-                bucket = (
-                    "memory"
-                    if "memory" in owner_text
-                    else "docs"
-                    if "doc" in owner_text
-                    else "config_check"
-                    if any(term in owner_text for term in ("config", "check", "test", "contract", "proof", "code"))
-                    else "unresolved"
-                )
-            elif outcome in {"route-stronger", "already-absorbed"}:
-                bucket = "stronger_owner" if owner and rationale else "unresolved"
-            elif outcome == "dismiss":
-                bucket = "discard" if rationale else "unresolved"
-            else:
-                bucket = "unresolved"
-                item["next_action"] = str(disposition.get("next_action") or raw_signal.get("required_decision") or "").strip()
-            buckets[bucket].append(item)
+    for bucket, items in future_context_distillation_buckets(future_context_signals).items():
+        buckets[bucket].extend(items)
 
     for ref in [] if buckets["issue_follow_up"] else (_record_section_references(record, "references") or []):
         role = str(ref.get("role", "")).lower()
@@ -19109,16 +19072,7 @@ def _prepare_execplan_closeout(
     patch["improvement_signal_review"] = _prepared_improvement_signal_review(record)
 
     buckets = _closeout_distillation_buckets(record=record, explicit={})
-    for bucket in (
-        "discard",
-        "continuation",
-        "memory",
-        "config_check",
-        "docs",
-        "issue_follow_up",
-        "stronger_owner",
-        "unresolved",
-    ):
+    for bucket in CLOSEOUT_DISTILLATION_BUCKETS:
         buckets.setdefault(bucket, [])
     if not buckets["discard"]:
         buckets["discard"].append(
@@ -19571,16 +19525,7 @@ def archive_parent_lane_closeout(
             "durable_residue": _parent_lane_durable_residue(item),
         }
     )
-    buckets = {
-        "discard": [],
-        "continuation": [],
-        "memory": [],
-        "config_check": [],
-        "docs": [],
-        "issue_follow_up": [],
-        "stronger_owner": [],
-        "unresolved": [],
-    }
+    buckets = future_context_distillation_buckets([])
     buckets["discard"].append(
         {
             "summary": discard_summary or "Historical parent-lane bookkeeping is reconstructable from the archive record and child refs.",
@@ -24048,18 +23993,7 @@ def _build_legacy_execplan_record_from_todo_item(
             "signals dismissed": [],
             "next owner": "",
         },
-        "closeout_distillation": {
-            "buckets": {
-                "discard": [],
-                "continuation": [],
-                "memory": [],
-                "config_check": [],
-                "docs": [],
-                "issue_follow_up": [],
-                "stronger_owner": [],
-                "unresolved": [],
-            }
-        },
+        "closeout_distillation": {"buckets": future_context_distillation_buckets([])},
         "drift_log": [f"{date.today().isoformat()}: Promoted from TODO direct-task shape into an execplan."],
     }
 
@@ -24209,18 +24143,7 @@ def _build_execplan_record_from_todo_item(
             "signals dismissed": [],
             "next owner": "",
         },
-        "closeout_distillation": {
-            "buckets": {
-                "discard": [],
-                "continuation": [],
-                "memory": [],
-                "config_check": [],
-                "docs": [],
-                "issue_follow_up": [],
-                "stronger_owner": [],
-                "unresolved": [],
-            }
-        },
+        "closeout_distillation": {"buckets": future_context_distillation_buckets([])},
         "drift_log": [],
     }
     universal_fields = (

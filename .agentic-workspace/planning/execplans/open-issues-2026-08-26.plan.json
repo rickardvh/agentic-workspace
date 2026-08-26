@@ -5,7 +5,7 @@
   "owner_level": "epic",
   "lifecycle": "live",
   "phase": "implementation",
-  "revision": 6,
+  "revision": 8,
   "intent": {
     "outcome": "Starting from current master, implement GitHub issues #2722, #2740, #2748, #2749, #2750, #2752, #2753, #2754, and #2755 as dependency-ordered stacked pull requests grouped by coherent lane.",
     "non_goals": [
@@ -68,7 +68,7 @@
     "https://github.com/rickardvh/agentic-workspace/issues/2754",
     "https://github.com/rickardvh/agentic-workspace/issues/2755"
   ],
-  "next_action": "Publish lane 3 for #2752 and #2754 stacked on PR #2757, then implement lane 4 for #2749 from the lane 3 head.",
+  "next_action": "Publish lane 4 for #2749 stacked on PR #2758, then implement and publish lane 5 for #2755 from the lane 4 head.",
   "blockers": [
     "None. Escalate if an issue requires changing an authority boundary or cannot satisfy its maintained replay without redesign beyond this stack."
   ],
@@ -91,7 +91,14 @@
       "Lane 2 commit d86b20642",
       "Lane 2 PR https://github.com/rickardvh/agentic-workspace/pull/2757",
       "Lane 2 proof subject, selected proof execution, full proof CLI, workspace CLI, lint, typecheck, and routed contract checks passed",
-      "Lane 3 future-context reconciliation, bounded external-effect routing, planning promotion/archive, full workspace CLI, generated adapter, lint, typecheck, contract tooling, structured inventory, and focused proof-route checks passed"
+      "Lane 3 future-context reconciliation, bounded external-effect routing, planning promotion/archive, full workspace CLI, generated adapter, lint, typecheck, contract tooling, structured inventory, and focused proof-route checks passed",
+      "Lane 3 commit de217fbb3",
+      "Lane 3 PR https://github.com/rickardvh/agentic-workspace/pull/2758",
+      "Lane 4 exact local packed-artifact semantic replay passed with an honest local-versus-hosted boundary",
+      "Lane 4 regression proves source static validation cannot substitute for packed-artifact semantics",
+      "Lane 4 workspace generated/release and integration suites passed; contract suite passed after restoring the maintained split-suite inventory",
+      "Lane 4 external consumer readiness passed for Python and TypeScript after refreshing runner/profile-bound conformance receipts",
+      "Lane 4 runtime ownership checker passed after extracting proof execution projection and future-context distillation owners"
     ]
   },
   "continuation": {
