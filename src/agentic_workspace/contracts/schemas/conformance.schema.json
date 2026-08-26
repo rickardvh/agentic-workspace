@@ -200,6 +200,14 @@
                 "description": "One entry in the field assertions list."
               },
               "description": "Field-level stdout assertions evaluated after parsing."
+            },
+            "typescript_field_assertions": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/field_assertion",
+                "description": "One entry in the TypeScript field assertions list."
+              },
+              "description": "TypeScript-specific stdout assertions used when the native compact projection intentionally differs from the canonical runtime projection."
             }
           },
           "additionalProperties": false,

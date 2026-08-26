@@ -46,6 +46,22 @@
           ],
           "equals": "agentic-workspace/ordinary-start-decision/v1"
         }
+      ],
+      "typescript_field_assertions": [
+        {
+          "path": [
+            "kind"
+          ],
+          "equals": "startup-context/v1"
+        },
+        {
+          "path": [
+            "context",
+            "proof",
+            "kind"
+          ],
+          "equals": "proof-selection/v1"
+        }
       ]
     },
     "stderr": {

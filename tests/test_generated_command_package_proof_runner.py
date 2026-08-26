@@ -398,6 +398,25 @@ def test_pack_packages_fills_a_partial_artifact_set(tmp_path: Path, monkeypatch:
     assert calls[0][:2] == ["npm", "pack"]
 
 
+def test_packed_conformance_exercises_exact_generated_tarballs(tmp_path: Path) -> None:
+    runner = _load_runner()
+    artifact_dir = tmp_path / "dist"
+    receipt_path = artifact_dir / "generated-command-conformance-ci.json"
+
+    assert runner._run_packed_conformance(artifact_dir=artifact_dir, receipt_out=receipt_path) == 0
+
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    assert receipt["kind"] == "agentic-workspace/generated-command-semantic-conformance-receipt/v1"
+    assert receipt["status"] == "passed"
+    assert receipt["proof"] == {
+        "command": "scripts/check/run_generated_command_package_proof.py --packed-conformance",
+        "complete_registry": True,
+        "exact_packed_artifacts": True,
+    }
+    assert receipt["subject"]["artifacts"]
+    assert all(item["conformance_status"] in {"passed", "not-required-not-runnable"} for item in receipt["subject"]["artifacts"])
+
+
 @pytest.mark.parametrize(
     ("failure_class", "rejected_token"),
     [

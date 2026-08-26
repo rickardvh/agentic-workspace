@@ -47,6 +47,21 @@
           ],
           "equals": "agentic-workspace/ordinary-implement-decision/v1"
         }
+      ],
+      "typescript_field_assertions": [
+        {
+          "path": [
+            "kind"
+          ],
+          "equals": "implementer-context-tiny/v1"
+        },
+        {
+          "path": [
+            "proof",
+            "kind"
+          ],
+          "equals": "proof-selection/v1"
+        }
       ]
     },
     "stderr": {

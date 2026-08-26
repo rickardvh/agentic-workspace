@@ -1088,14 +1088,30 @@ def _validate_generated_operation_cli_inputs(ir: dict[str, object]) -> list[str]
     return errors
 
 
-def _case_from_conformance_contract(*, contract: dict[str, object], package_id: str) -> AdapterConformanceCase:
+def _case_from_conformance_contract(
+    *, contract: dict[str, object], package_id: str, target_kind: str = "python"
+) -> AdapterConformanceCase:
+    projected_contract = contract
+    if target_kind == "typescript":
+        expectations = contract.get("expectations", {})
+        stdout = expectations.get("stdout", {}) if isinstance(expectations, dict) else {}
+        assertions = stdout.get("typescript_field_assertions") if isinstance(stdout, dict) else None
+        if isinstance(assertions, list):
+            projected_contract = copy.deepcopy(contract)
+            projected_expectations = projected_contract["expectations"]
+            assert isinstance(projected_expectations, dict)
+            projected_stdout = projected_expectations["stdout"]
+            assert isinstance(projected_stdout, dict)
+            projected_stdout["field_assertions"] = assertions
     return process_case_from_contract(
-        contract=contract,
+        contract=projected_contract,
         command_placeholder=CONFORMANCE_PLACEHOLDER_BY_PACKAGE[package_id],
     )
 
 
-def _adapter_conformance_cases_by_package() -> tuple[dict[str, dict[str, AdapterConformanceCase]], list[str]]:
+def _adapter_conformance_cases_by_package(
+    *, target_kind: str = "python"
+) -> tuple[dict[str, dict[str, AdapterConformanceCase]], list[str]]:
     registry = _load_json("conformance_contracts.json")
     contracts_by_id: dict[str, dict[str, object]] = {}
     errors: list[str] = []
@@ -1130,6 +1146,7 @@ def _adapter_conformance_cases_by_package() -> tuple[dict[str, dict[str, Adapter
                     package_cases[str(conformance_ref)] = _case_from_conformance_contract(
                         contract=contract,
                         package_id=package_id,
+                        target_kind=target_kind,
                     )
                 except ValueError as exc:
                     errors.append(str(exc))
@@ -1258,7 +1275,7 @@ def _runnable_typescript_conformance_cases(
         if isinstance(level, dict) and "id" in level
     }
 
-    registries, registry_errors = _adapter_conformance_cases_by_package()
+    registries, registry_errors = _adapter_conformance_cases_by_package(target_kind="typescript")
     if registry_errors:
         return [], registry_errors
     selected: list[RunnableTypescriptConformanceCase] = []

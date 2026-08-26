@@ -53,6 +53,27 @@
           ],
           "equals": "agentic-workspace proof --target . --changed <paths> --verbose --format json"
         }
+      ],
+      "typescript_field_assertions": [
+        {
+          "path": [
+            "kind"
+          ],
+          "equals": "proof-next-decision/v1"
+        },
+        {
+          "path": [
+            "next",
+            "action"
+          ],
+          "equals": "manual-verification"
+        },
+        {
+          "path": [
+            "detail_command"
+          ],
+          "equals": "agentic-workspace proof --verbose --changed <paths> --format json"
+        }
       ]
     },
     "stderr": {
