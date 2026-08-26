@@ -28,6 +28,7 @@ REQUIRED_REVIEW_SURFACES = (
     "inline_review_threads",
     "hosted_checks",
     "current_head_ordering",
+    "ordinary_comment_currentness",
 )
 CATEGORIES = (
     "actionable_code_doc_body_change",
@@ -169,7 +170,8 @@ def _normalize_graphql(payload: dict[str, Any]) -> dict[str, Any]:
                 }
             )
     checks: list[dict[str, Any]] = []
-    rollup = ((pr.get("commits") or {}).get("nodes") or [{}])[-1].get("commit", {}).get("statusCheckRollup")
+    head_commit = ((pr.get("commits") or {}).get("nodes") or [{}])[-1].get("commit", {})
+    rollup = head_commit.get("statusCheckRollup")
     if isinstance(rollup, dict):
         contexts = rollup.get("contexts", {})
         if _page_info(contexts).get("hasNextPage") is True:
@@ -191,6 +193,7 @@ def _normalize_graphql(payload: dict[str, Any]) -> dict[str, Any]:
         "pr_number": payload.get("pr_number") or payload.get("number"),
         "pr_url": pr.get("url") or payload.get("pr_url"),
         "pr_head_sha": pr.get("headRefOid") or payload.get("pr_head_sha") or payload.get("head_sha"),
+        "pr_head_committed_at": head_commit.get("committedDate") or payload.get("pr_head_committed_at"),
         "pr_updated_at": pr.get("updatedAt") or payload.get("pr_updated_at"),
         "comments": comments if comments else payload.get("comments", []),
         "checks": checks if isinstance(rollup, dict) else payload.get("checks"),
@@ -439,12 +442,47 @@ def _marker_head(body: str) -> str:
     return match.group(1).lower() if match else ""
 
 
-def _implementation_posture(item: dict[str, Any], *, current_head: str) -> str:
+def _comment_currentness(
+    item: dict[str, Any],
+    *,
+    current_head: str,
+    head_committed_at: datetime | None,
+    current_head_evidence: list[dict[str, Any]],
+) -> tuple[str, str]:
+    body = _text(item.get("body"))
+    item_head = _text(item.get("head_sha")) or _marker_head(body)
+    if item_head and current_head:
+        if item_head.lower() == current_head.lower():
+            return "current", "comment or review is explicitly bound to the observed PR head"
+        return "stale", "comment or review is explicitly bound to a prior PR head"
+    if _text(item.get("kind")) != "issue_comment":
+        return "currentness_unresolved", "review item has no commit or structured head binding"
+
+    created_at = _timestamp_value(item)
+    if not current_head or head_committed_at is None or created_at is None:
+        return "currentness_unresolved", "ordinary top-level comment lacks enough head/timestamp evidence"
+    if created_at >= head_committed_at:
+        return "current", "ordinary top-level comment was created after the observed head commit"
+
+    later_current_head_evidence = any(
+        (_timestamp_value(evidence) or datetime.min.replace(tzinfo=timezone.utc)) > created_at
+        for evidence in current_head_evidence
+    )
+    if later_current_head_evidence:
+        return "stale", "ordinary top-level comment predates the head and later review evidence is bound to the current head"
+    return (
+        "currentness_unresolved",
+        "ordinary top-level comment predates the head, but no later review response is bound to the current head",
+    )
+
+
+def _implementation_posture(item: dict[str, Any], *, currentness: str) -> str:
     body = _text(item.get("body"))
     lower = body.lower()
-    item_head = _text(item.get("head_sha")) or _marker_head(body)
-    if item_head and current_head and item_head.lower() != current_head.lower():
+    if currentness == "stale":
         return "stale_superseded_comment"
+    if currentness == "currentness_unresolved" and item.get("addressing_status") in {"unresolved_action", "reply_only"}:
+        return "currentness_unresolved"
     if (
         "no further implementation" in lower
         or "no further patch" in lower
@@ -474,6 +512,7 @@ def _review_intake(
         "inline_review_threads": "complete" if complete_graphql_comments else "unavailable",
         "hosted_checks": "complete" if isinstance(checks, list) else "unavailable",
         "current_head_ordering": "complete" if current_head else "unavailable",
+        "ordinary_comment_currentness": "complete",
     }
     for surface in pagination.get("truncated_surfaces", []):
         if surface == "comments":
@@ -484,7 +523,6 @@ def _review_intake(
             surface_status["inline_review_threads"] = "truncated"
         elif surface.startswith("statusCheckRollup"):
             surface_status["hosted_checks"] = "truncated"
-    incomplete = [surface for surface in REQUIRED_REVIEW_SURFACES if surface_status[surface] != "complete"]
     referenced = []
     found_ids: set[str] = set()
     for item in items:
@@ -493,6 +531,15 @@ def _review_intake(
             found_ids.add(database_id)
             referenced.append(item)
     missing_referenced = sorted(referenced_comment_ids - found_ids)
+    unresolved_currentness = [
+        item
+        for item in items
+        if item.get("implementation_posture") == "currentness_unresolved"
+        and (item.get("action_required") is True or _text(item.get("database_id")) in referenced_comment_ids)
+    ]
+    if unresolved_currentness:
+        surface_status["ordinary_comment_currentness"] = "unresolved"
+    incomplete = [surface for surface in REQUIRED_REVIEW_SURFACES if surface_status[surface] != "complete"]
     failed_checks = [
         {
             "name": _text(check.get("name")),
@@ -506,7 +553,9 @@ def _review_intake(
     ]
     postures = [item["implementation_posture"] for item in items]
     referenced_postures = [item["implementation_posture"] for item in referenced]
-    if incomplete:
+    if unresolved_currentness:
+        classification = "currentness_unresolved"
+    elif incomplete:
         classification = "intake_incomplete"
     elif missing_referenced:
         classification = "referenced_blocker_not_found"
@@ -535,6 +584,7 @@ def _review_intake(
         "referenced_comment_ids": sorted(referenced_comment_ids),
         "found_referenced_comment_ids": sorted(found_ids),
         "missing_referenced_comment_ids": missing_referenced,
+        "currentness_unresolved_items": unresolved_currentness,
         "referenced_items": referenced,
         "hosted_check_failures": failed_checks,
         "independent_review_authority": {
@@ -564,7 +614,15 @@ def build_packet(
     items: list[dict[str, Any]] = []
     skipped_old = 0
     skipped_seen = 0
-    for raw in normalized.get("comments", []) or []:
+    raw_comments = [raw for raw in normalized.get("comments", []) or [] if isinstance(raw, dict)]
+    current_head = _text(normalized.get("pr_head_sha"))
+    head_committed_at = _parse_timestamp(_text(normalized.get("pr_head_committed_at")))
+    current_head_evidence = [
+        raw
+        for raw in raw_comments
+        if (_text(raw.get("head_sha")) or _marker_head(_text(raw.get("body")))).lower() == current_head.lower()
+    ]
+    for raw in raw_comments:
         if not isinstance(raw, dict):
             continue
         created = _timestamp_value(raw)
@@ -577,6 +635,12 @@ def build_packet(
             continue
         category, reason, proof_hint = _classify(raw)
         addressing_status = _addressing_status(raw, category)
+        currentness, currentness_reason = _comment_currentness(
+            raw,
+            current_head=current_head,
+            head_committed_at=head_committed_at,
+            current_head_evidence=current_head_evidence,
+        )
         item = {
             "id": _item_identity(raw),
             "kind": _text(raw.get("kind") or "comment"),
@@ -590,9 +654,11 @@ def build_packet(
             "created_at": created.isoformat().replace("+00:00", "Z") if created else "",
             "body_excerpt": _excerpt(_text(raw.get("body"))),
             "database_id": _database_id(raw),
+            "currentness": currentness,
+            "currentness_reason": currentness_reason,
             "implementation_posture": _implementation_posture(
                 {**raw, "addressing_status": addressing_status, "category": category},
-                current_head=_text(normalized.get("pr_head_sha")),
+                currentness=currentness,
             ),
         }
         for key in ("path", "line", "is_resolved", "is_outdated"):
@@ -728,6 +794,7 @@ query($owner: String!, $name: String!, $number: Int!) {
       commits(last: 1) {
         nodes {
           commit {
+            committedDate
             statusCheckRollup {
               contexts(first: 100) {
                 pageInfo { hasNextPage endCursor }

@@ -102,7 +102,12 @@ def _complete_review_payload(*, comments=None, reviews=None, threads=None, check
                     "reviewThreads": {"pageInfo": {"hasNextPage": False}, "nodes": threads or []},
                     "commits": {
                         "nodes": [
-                            {"commit": {"statusCheckRollup": {"contexts": {"pageInfo": {"hasNextPage": False}, "nodes": checks or []}}}}
+                            {
+                                "commit": {
+                                    "committedDate": "2026-08-26T10:00:00Z",
+                                    "statusCheckRollup": {"contexts": {"pageInfo": {"hasNextPage": False}, "nodes": checks or []}},
+                                }
+                            }
                         ]
                     },
                 }
@@ -591,6 +596,79 @@ def test_complete_intake_distinguishes_stale_blocker_hosted_failure_and_clean_st
     clean = module.build_packet(_complete_review_payload())
     assert clean["review_intake"]["classification"] == "no_current_blocker"
     assert clean["review_intake"]["status"] == "complete"
+
+
+def test_complete_intake_treats_markerless_top_level_blocker_after_head_as_current() -> None:
+    module = _load_module()
+    packet = module.build_packet(
+        _complete_review_payload(
+            comments=[
+                {
+                    "databaseId": 10,
+                    "url": "https://example.test/comment/10",
+                    "body": "Please update src/app.py and add a regression test.",
+                    "createdAt": "2026-08-26T11:00:00Z",
+                    "author": {"login": "reviewer"},
+                }
+            ]
+        )
+    )
+
+    assert packet["review_intake"]["classification"] == "patch_changes_requested"
+    assert packet["items"][0]["currentness"] == "current"
+
+
+def test_complete_intake_treats_markerless_prior_head_blocker_as_stale_with_later_review_evidence() -> None:
+    module = _load_module()
+    packet = module.build_packet(
+        _complete_review_payload(
+            comments=[
+                {
+                    "databaseId": 11,
+                    "url": "https://example.test/comment/11",
+                    "body": "Please update src/app.py and add a regression test.",
+                    "createdAt": "2026-08-26T09:00:00Z",
+                    "author": {"login": "reviewer"},
+                }
+            ],
+            reviews=[
+                {
+                    "databaseId": 12,
+                    "url": "https://example.test/review/12",
+                    "body": "Recheck result: ready; no remaining review blocker.",
+                    "state": "APPROVED",
+                    "submittedAt": "2026-08-26T11:00:00Z",
+                    "author": {"login": "independent-reviewer"},
+                    "commit": {"oid": REVIEW_HEAD},
+                }
+            ],
+        )
+    )
+
+    assert packet["review_intake"]["classification"] == "stale_superseded_comment"
+    assert packet["items"][0]["currentness"] == "stale"
+
+
+def test_referenced_markerless_comment_with_unknown_head_fails_closed() -> None:
+    module = _load_module()
+    payload = _complete_review_payload(
+        comments=[
+            {
+                "databaseId": 13,
+                "url": "https://example.test/comment/13",
+                "body": "Please update src/app.py and add a regression test.",
+                "createdAt": "2026-08-26T09:00:00Z",
+                "author": {"login": "reviewer"},
+            }
+        ]
+    )
+    del payload["data"]["repository"]["pullRequest"]["commits"]["nodes"][0]["commit"]["committedDate"]
+    packet = module.build_packet(payload, referenced_comment_ids={"13"})
+
+    assert packet["review_intake"]["status"] == "incomplete"
+    assert packet["review_intake"]["classification"] == "currentness_unresolved"
+    assert packet["review_intake"]["incomplete_surfaces"] == ["ordinary_comment_currentness"]
+    assert packet["review_intake"]["currentness_unresolved_items"][0]["database_id"] == "13"
 
 
 def test_missing_referenced_blocker_fails_closed_when_any_surface_is_incomplete() -> None:
