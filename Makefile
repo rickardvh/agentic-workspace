@@ -1,12 +1,14 @@
 -include .env.local
 
+MAKEFLAGS += --no-print-directory
+
 UV_CACHE_DIR ?= $(CURDIR)/.uv-cache-root
 REVIEW_MAX_CYCLES ?= 3
 export UV_CACHE_DIR
 ifeq ($(VALIDATION_JOIN_TOKEN),join:$(VALIDATION_RUN_ID))
 VALIDATION_RUN_PROVENANCE ?= transported-child
 else
-VALIDATION_RUN_ID := $(shell python scripts/check/allocate_validation_run_id.py)
+VALIDATION_RUN_ID := $(shell uv run --no-project python scripts/check/allocate_validation_run_id.py)
 VALIDATION_JOIN_TOKEN := join:$(VALIDATION_RUN_ID)
 VALIDATION_RUN_PROVENANCE := allocated-here
 endif
@@ -25,6 +27,8 @@ VERIFICATION_PYTEST_PARALLEL_ARGS ?= $(PACKAGE_PYTEST_PARALLEL_ARGS)
 COMPACT_RUN = uv run python scripts/check/run_compact_command.py
 
 WORKSPACE_TEST_CLI = \
+	tests/test_dynamic_instruction_projection.py \
+	tests/test_operating_projection_receipt.py \
 	tests/test_workspace_cli.py \
 	tests/test_workspace_cli_blackbox.py \
 	tests/test_workspace_config_cli.py \
@@ -43,6 +47,7 @@ WORKSPACE_TEST_CLI = \
 	tests/test_workspace_summary_cli.py
 
 WORKSPACE_TEST_PROOF = \
+	tests/test_assurance_authority.py \
 	tests/test_generated_command_package_proof_runner.py \
 	tests/test_output_profile_budgets.py \
 	tests/test_proof_subject.py \
@@ -55,26 +60,36 @@ WORKSPACE_TEST_SESSION_REVIEW = \
 	tests/test_github_check_inspection.py \
 	tests/test_pr_comment_delta.py \
 	tests/test_review_merge_gate.py \
+	tests/test_review_stack_ops.py \
+	tests/test_review_stack_transitions.py \
 	tests/test_start_chatgpt_review_poller.py \
 	tests/test_workspace_session_logging.py
 
 WORKSPACE_TEST_CONTRACTS = \
 	tests/test_agent_aids.py \
 	tests/test_command_surface_bundle_check.py \
+	tests/test_contract_catalogues.py \
 	tests/test_contract_tooling_surfaces.py \
 	tests/test_github_issue_body_agent_aid.py \
+	tests/test_instruction_clause_ir.py \
+	tests/test_intent_feedback.py \
+	tests/test_module_contract.py \
 	tests/test_no_absolute_paths.py \
 	tests/test_package_artifact_duplicates.py \
 	tests/test_prompt_semantic_markers.py \
+	tests/test_review_scale_extracted_boundaries.py \
+	tests/test_runtime_compatibility.py \
 	tests/test_runtime_implementation_ownership.py \
 	tests/test_schema_reference_docs.py \
 	tests/test_security_supply_chain.py \
+	tests/test_scoped_instructions.py \
 	tests/test_structured_file_inventory.py \
 	tests/test_trusted_execution.py \
 	tests/test_validation_runtime_plan.py \
 	tests/test_workspace_makefile_targets.py
 
 WORKSPACE_TEST_GENERATED_RELEASE = \
+	tests/test_branch_carried_package_state.py \
 	tests/test_command_generation_integration.py \
 	tests/test_command_generation_release_promotion.py \
 	tests/test_coordinated_release.py \
@@ -86,6 +101,7 @@ WORKSPACE_TEST_GENERATED_RELEASE = \
 	tests/test_workspace_packaging.py
 
 WORKSPACE_TEST_INTEGRATION = \
+	tests/test_adaptation.py \
 	tests/test_agentic_workspace_launcher.py \
 	tests/test_compact_command_runner.py \
 	tests/test_composed_operation_scenarios.py \
@@ -104,7 +120,13 @@ WORKSPACE_TEST_INTEGRATION = \
 	tests/test_lifecycle_smoke.py \
 	tests/test_long_horizon_episode.py \
 	tests/test_maintainer_surfaces.py \
+	tests/test_memory_effectiveness.py \
+	tests/test_module_extension_scenario_matrix.py \
+	tests/test_planning_delegation.py \
+	tests/test_reconciliation.py \
 	tests/test_repository_scanning.py \
+	tests/test_repo_evolution_scenario.py \
+	tests/test_repo_improvement_effectiveness.py \
 	tests/test_source_payload_operational_install.py
 
 .PHONY: help sync-all sync-memory sync-planning sync-verification \

@@ -64,7 +64,7 @@ candidates = [
     payload = json.loads(capsys.readouterr().out)
 
     assert exit_code == 0
-    assert set(payload) == {"kind", "target_root", "continuation_view"}
+    assert set(payload) == {"kind", "target_root", "continuation_view", "projection_reuse"}
     continuation = payload["continuation_view"]
     assert continuation["owner"]["status"] == "no-active-owner"
     assert continuation["owner"]["ref"] is None
@@ -109,7 +109,7 @@ candidates = []
     assert cli.main(["summary", "--target", str(tmp_path), "--format", "json"]) == 0
     payload = json.loads(capsys.readouterr().out)
 
-    assert set(payload) == {"kind", "target_root", "continuation_view"}
+    assert set(payload) == {"kind", "target_root", "continuation_view", "projection_reuse"}
     continuation = payload["continuation_view"]
     assert continuation["owner"]["status"] == "active"
     assert continuation["owner"]["ref"].endswith("plan-alpha.plan.json")
@@ -434,19 +434,11 @@ candidates = []
     closeout = payload["answer"]
     packet = closeout["memory_decision_packet"]
 
-    assert packet["kind"] == "agentic-workspace/memory-decision-packet/v1"
-    assert packet["stage"] == "closeout"
-    assert packet["force"] == "not_applicable"
-    assert packet["capture"]["status"] == "none_found"
-    assert "planning" in packet["capture"]["candidate_owner_surfaces"]
-    assert "repo_memory" in packet["capture"]["candidate_owner_surfaces"]
-    assert "local_memory" in packet["capture"]["candidate_owner_surfaces"]
-    assert packet["capture"]["agent_decision_required"] is False
+    assert packet["status"] == "omitted"
+    assert "closeout_trust --verbose" in packet["selectors"]
+    assert packet["rule"] == "Optional closeout evidence is hydrated only through an explicit detail selector."
     loop = closeout["operating_loop"]
-    assert loop["kind"] == "agentic-workspace/operating-loop-decision/v1"
-    assert loop["memory"]["state"] in {"dismissed", "not_applicable", "candidate", "projected", "unavailable"}
-    assert loop["verification"]["state"] in {"proof_not_required", "proof_passed"}
-    assert loop["safe_claim"] in {"full", "partial", "blocked", "none"}
+    assert loop == packet
 
 
 def _closeout_report_with_installed_state(

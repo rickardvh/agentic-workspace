@@ -47,6 +47,7 @@ def run_process_conformance(
     before_fixture = _snapshot_tree(fixture_root)
 
     previous_stdout: str | None = None
+    idempotency_expectations = _mapping(expectations["idempotency"])
     for run_index in range(runs):
         result = subprocess.run(
             _expand_command_template(_strings(adapter["command_template"]), command_overrides=command_overrides),
@@ -56,9 +57,10 @@ def run_process_conformance(
             check=False,
         )
         _assert_process_result(result=result, expectations=expectations)
-        if previous_stdout is not None and result.stdout != previous_stdout:
+        comparable_stdout = _idempotency_stdout(result.stdout, idempotency_expectations)
+        if previous_stdout is not None and comparable_stdout != previous_stdout:
             raise AssertionError(f"stdout changed between conformance runs for {contract['id']}")
-        previous_stdout = result.stdout
+        previous_stdout = comparable_stdout
         after_fixture = _snapshot_tree(fixture_root)
         _assert_filesystem_effects(
             before=before_fixture,
@@ -69,6 +71,27 @@ def run_process_conformance(
         )
         if _mapping(expectations["safety"]).get("no_writes_outside_repo_root") is True and _file_hash(outside_sentinel) != outside_hash:
             raise AssertionError(f"{contract['id']} changed a file outside the fixture root on run {run_index + 1}")
+
+
+def _idempotency_stdout(stdout: str, expectations: Mapping[str, Any]) -> str:
+    ignored_paths = expectations.get("ignored_stdout_json_paths", [])
+    try:
+        payload = json.loads(stdout)
+    except json.JSONDecodeError as exc:
+        if ignored_paths:
+            raise AssertionError("ignored_stdout_json_paths requires JSON stdout") from exc
+        return stdout
+    for raw_path in ignored_paths:
+        path = _strings(raw_path)
+        current = payload
+        for part in path[:-1]:
+            if not isinstance(current, dict) or part not in current:
+                current = None
+                break
+            current = current[part]
+        if isinstance(current, dict) and path:
+            current.pop(path[-1], None)
+    return json.dumps(payload, sort_keys=True, separators=(",", ":"))
 
 
 def materialize_fixture(*, fixture: Mapping[str, Any], fixture_root: Path) -> None:

@@ -459,7 +459,9 @@ def test_long_horizon_episode_bootstraps_aw_mode_for_pinned_repo_dry_run(tmp_pat
 
     assert not (baseline_repo / ".agentic-workspace").exists()
     assert (aw_repo / ".agentic-workspace" / "WORKFLOW.md").exists()
-    assert "uv run agentic-workspace start" in (aw_repo / "AGENTS.md").read_text(encoding="utf-8")
+    assert 'Run exactly `<configured AW invocation> start --target . --task "<task>" --format json`' in (aw_repo / "AGENTS.md").read_text(
+        encoding="utf-8"
+    )
     assert 'cli_invoke = "uv run agentic-workspace"' in (aw_repo / ".agentic-workspace" / "config.local.toml").read_text(encoding="utf-8")
     setup_summary = payload["modes"][1]["setup_mutation_summary"]
     assert setup_summary["status"] == "clean"

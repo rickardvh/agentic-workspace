@@ -45,9 +45,7 @@ def _scenario_payload(scenario: dict[str, Any], tmp_path: Path, capsys) -> tuple
         )
         capsys.readouterr()
         assert (
-            cli.main(
-                ["start", "--target", str(target), "--task", "Continue Matrix plan", "--select", "planning_safety_gate", "--format", "json"]
-            )
+            cli.main(["start", "--target", str(target), "--task", "Matrix plan", "--select", "planning_safety_gate", "--format", "json"])
             == 0
         )
         selected = json.loads(capsys.readouterr().out)
@@ -84,8 +82,23 @@ def _scenario_payload(scenario: dict[str, Any], tmp_path: Path, capsys) -> tuple
             + f"minimum_reader_epoch = {READER_CONTRACT_EPOCH + int(inputs['minimum_reader_epoch_delta'])}\n",
             encoding="utf-8",
         )
-        assert cli.main(["start", "--target", str(target), "--task", "inspect runtime compatibility", "--format", "json"]) == 0
-        return json.loads(capsys.readouterr().out), 2
+        assert (
+            cli.main(
+                [
+                    "start",
+                    "--target",
+                    str(target),
+                    "--task",
+                    "inspect runtime compatibility",
+                    "--select",
+                    "installed_state_drift_triage,action_signals",
+                    "--format",
+                    "json",
+                ]
+            )
+            == 0
+        )
+        return json.loads(capsys.readouterr().out)["values"], 2
     if runner == "causal-block":
         target = _public_target(tmp_path, capsys)
         config = target / ".agentic-workspace" / "config.toml"
@@ -93,7 +106,9 @@ def _scenario_payload(scenario: dict[str, Any], tmp_path: Path, capsys) -> tuple
             config.read_text(encoding="utf-8") + "\n[cli_compatibility]\n" + f"minimum_reader_epoch = {READER_CONTRACT_EPOCH + 1}\n",
             encoding="utf-8",
         )
-        assert cli.main(["implement", "--target", str(target), "--task", "implement runtime contract", "--format", "json"]) == 0
+        assert (
+            cli.main(["implement", "--target", str(target), "--task", "implement runtime contract", "--verbose", "--format", "json"]) == 0
+        )
         return json.loads(capsys.readouterr().out), 2
     if runner == "coherence":
         target = _public_target(tmp_path, capsys)
@@ -116,7 +131,7 @@ def _scenario_payload(scenario: dict[str, Any], tmp_path: Path, capsys) -> tuple
             == 0
         )
         capsys.readouterr()
-        common = ["--target", str(target), "--task", "Continue Coherence plan", "--format", "json"]
+        common = ["--target", str(target), "--task", "Coherence plan", "--select", "planning_safety_gate", "--format", "json"]
         assert cli.main(["start", *common]) == 0
         first = _find_planning_route(json.loads(capsys.readouterr().out))
         assert cli.main(["implement", *common]) == 0
@@ -177,8 +192,9 @@ def _assert_expected(scenario: dict[str, Any], payload: dict[str, Any]) -> None:
         assert len(payload["source_guidance"]["contributions"]) == expected["source_guidance_count"]
         assert len(payload["memory_effectiveness"]["projected_contributions"]) == expected["memory_contribution_count"]
     elif runner == "incompatible-runtime":
-        assert payload["cli_compatibility"]["status"] == expected["status"]
-        assert payload["context"]["installed_state_drift_triage"]["status"] == expected["triage_status"]
+        triage = payload["installed_state_drift_triage"]
+        assert triage["installed_state_status"] == expected["status"]
+        assert triage["status"] == expected["triage_status"]
         assert expected["changed_signal"] in payload["action_signals"]["changed_signals"]
     elif runner == "causal-block":
         effect = _find_claim_effect_boundary(payload)
@@ -222,9 +238,10 @@ def _first_line_projection(scenario: dict[str, Any], payload: dict[str, Any]) ->
             "claim_effect_boundary": effect,
         }
     if runner == "incompatible-runtime":
+        triage = payload.get("installed_state_drift_triage", {})
         return {
-            "cli_compatibility": payload.get("cli_compatibility"),
-            "installed_state_drift_triage": payload.get("context", {}).get("installed_state_drift_triage"),
+            "cli_compatibility": {"status": triage.get("installed_state_status")},
+            "installed_state_drift_triage": triage,
             "changed_signals": payload.get("action_signals", {}).get("changed_signals"),
         }
     if runner == "memory-boundary":
@@ -338,7 +355,7 @@ def test_generic_operating_loop_reaches_terminal_state_without_stale_continuatio
         "--target",
         str(target),
         "--task",
-        "Continue Generic loop",
+        "Generic loop",
         "--changed",
         "src/bounded.py",
         "tests/test_bounded.py",
@@ -347,7 +364,8 @@ def test_generic_operating_loop_reaches_terminal_state_without_stale_continuatio
     ]
     phases: dict[str, dict[str, Any]] = {}
     for phase in ("start", "implement", "proof"):
-        assert cli.main([phase, *common]) == 0
+        selector = ["--select", "planning_safety_gate"] if phase in {"start", "implement"} else []
+        assert cli.main([phase, *common, *selector]) == 0
         phases[phase] = json.loads(capsys.readouterr().out)
         assert phases[phase]["projection_reuse"]["decision_id"]
         route = _find_planning_route(phases[phase])
@@ -438,7 +456,23 @@ def test_generic_operating_loop_reaches_terminal_state_without_stale_continuatio
     summary = json.loads(capsys.readouterr().out)
     assert summary["values"]["planning_record"]["status"] == "unavailable"
 
-    assert cli.main(["start", "--target", str(target), "--task", "Begin unrelated follow-up", "--format", "json"]) == 0
-    resumed = json.loads(capsys.readouterr().out)
-    assert resumed["context"]["active_state"].get("planning_record", {"status": "unavailable"})["status"] == "unavailable"
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(target),
+                "--task",
+                "Begin unrelated follow-up",
+                "--select",
+                "active_state_summary",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    resumed = json.loads(capsys.readouterr().out)["values"]["active_state_summary"]
+    assert resumed["planning_status"] == "unavailable"
+    assert not resumed["active_execplan"]
     assert "continuation_capsule" not in resumed

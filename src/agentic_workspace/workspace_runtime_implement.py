@@ -2109,11 +2109,21 @@ def _ordinary_implement_decision_payload(*, selected: dict[str, Any], source_pay
             "raw_workspace_files": "not-required-for-ordinary-action",
         },
     }
-    return {
+    projected = {
         "kind": selected.get("kind", "implementer-context-tiny/v1"),
         "target": selected.get("target", "."),
         "decision_packet": decision,
     }
+    projection_context = _as_dict(source_payload.get("context"))
+    revalidation = _as_dict(projection_context.get("projection_decision_input_revalidation"))
+    if revalidation.get("status") not in {None, "", "current"}:
+        projected["context"] = {
+            "projection_decision_input_consumption": copy.deepcopy(
+                _as_dict(projection_context.get("projection_decision_input_consumption"))
+            ),
+            "projection_decision_input_revalidation": copy.deepcopy(revalidation),
+        }
+    return projected
 
 
 def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:

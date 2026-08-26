@@ -42,10 +42,10 @@
         },
         {
           "path": [
-            "proof",
+            "decision_packet",
             "kind"
           ],
-          "equals": "proof-selection/v1"
+          "equals": "agentic-workspace/ordinary-implement-decision/v1"
         }
       ]
     },

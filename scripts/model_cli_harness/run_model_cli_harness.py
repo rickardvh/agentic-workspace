@@ -1282,6 +1282,8 @@ def _fixture_runtime_environment(env: dict[str, str], *, repo_path: Path) -> dic
     isolated = dict(env)
     isolated.pop("VIRTUAL_ENV", None)
     isolated["UV_PROJECT_ENVIRONMENT"] = str(repo_path / ".venv")
+    isolated["UV_CACHE_DIR"] = str(repo_path / ".uv-cache")
+    isolated["UV_LINK_MODE"] = "copy"
     return isolated
 
 
@@ -1314,6 +1316,14 @@ def _pyproject_retargets_source_checkout(*, pyproject_text: str, repo_path: Path
 
 def _fixture_runtime_provenance(*, repo_path: Path, env: dict[str, str], timeout_seconds: int) -> dict[str, Any]:
     """Black-box the wheel-installed fixture runtime before model execution."""
+    bootstrap_env = dict(env)
+    bootstrap_env.pop("UV_CACHE_DIR", None)
+    fixture_sync = _run_command(
+        ["uv", "sync", "--offline", "--reinstall"],
+        cwd=repo_path,
+        timeout_seconds=timeout_seconds,
+        env=bootstrap_env,
+    )
     identity = _run_command(
         [
             "uv",
@@ -1376,6 +1386,7 @@ def _fixture_runtime_provenance(*, repo_path: Path, env: dict[str, str], timeout
     )
     pyproject_text = (repo_path / "pyproject.toml").read_text(encoding="utf-8")
     checks = {
+        "fixture_sync_succeeded": fixture_sync.get("returncode") == 0,
         "executable_from_fixture_venv": in_fixture(identity_payload.get("executable")),
         "package_from_fixture_venv": in_fixture(identity_payload.get("package")),
         "source_checkout_retarget_absent": not _pyproject_retargets_source_checkout(
@@ -1394,6 +1405,7 @@ def _fixture_runtime_provenance(*, repo_path: Path, env: dict[str, str], timeout
         "checks": checks,
         "identity": identity_payload,
         "commands": {
+            "fixture_sync_returncode": fixture_sync.get("returncode"),
             "identity_returncode": identity.get("returncode"),
             "startup_returncode": startup.get("returncode"),
             "evaluation_returncode": evaluation.get("returncode"),

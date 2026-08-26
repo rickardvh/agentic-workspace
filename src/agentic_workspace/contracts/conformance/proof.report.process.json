@@ -48,9 +48,10 @@
         },
         {
           "path": [
-            "detail_command"
+            "detail_routes",
+            "verbose"
           ],
-          "equals": "agentic-workspace proof --verbose --changed <paths> --format json"
+          "equals": "agentic-workspace proof --target . --changed <paths> --verbose --format json"
         }
       ]
     },
@@ -66,11 +67,18 @@
       ],
       "forbidden_paths": [],
       "allowed_write_directories": [
-        ".agentic-workspace/local/improvement-pressure"
+        ".agentic-workspace/local/improvement-pressure",
+        ".agentic-workspace/local/projection-cache"
       ]
     },
     "idempotency": {
-      "run_twice": true
+      "run_twice": true,
+      "ignored_stdout_json_paths": [
+        [
+          "projection_reuse",
+          "status"
+        ]
+      ]
     },
     "safety": {
       "no_writes_outside_repo_root": true

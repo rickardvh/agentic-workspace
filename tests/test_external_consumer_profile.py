@@ -202,10 +202,15 @@ def test_built_wheel_resolves_profile_outside_checkout(tmp_path: Path) -> None:
         [sys.executable, "-I", "-c", f"import sys; sys.path.insert(0, {str(site)!r}); {code}"], cwd=tmp_path, text=True, capture_output=True
     )
     assert loaded.returncode == 0, loaded.stderr
+    expected_receipt_count = len(
+        json.loads((ROOT / "src/agentic_workspace/contracts/external_operation_conformance_receipts.json").read_text(encoding="utf-8"))[
+            "receipts"
+        ]
+    )
     assert json.loads(loaded.stdout) == [
         "agentic-workspace/external-consumer-profile/v1",
         "agentic-workspace/external-operation-conformance-receipt-store/v1",
-        2,
+        expected_receipt_count,
     ]
 
 

@@ -1082,6 +1082,18 @@ def lookup_projection_reuse(
     }, context
 
 
+def _strip_projection_authority_context(*, payload: dict[str, Any], payload_context: dict[str, Any], revalidation: dict[str, Any]) -> None:
+    """Hide admitted authority internals while retaining evidence for a rejected race."""
+
+    payload_context.pop("projection_decision_input", None)
+    payload_context.pop("projection_decision_authority", None)
+    if revalidation.get("status") in {None, "", "current"}:
+        payload_context.pop("projection_decision_input_consumption", None)
+        payload_context.pop("projection_decision_input_revalidation", None)
+    if not payload_context and isinstance(payload.get("context"), dict):
+        payload.pop("context", None)
+
+
 def record_projection_reuse(
     *,
     root: Path,
@@ -1123,13 +1135,7 @@ def record_projection_reuse(
     )
     cache_disabled = context.get("volatile") or context.get("dependency_status") != "complete" or not (root / ".agentic-workspace").is_dir()
     if cache_disabled:
-        for field in (
-            "projection_decision_input",
-            "projection_decision_input_consumption",
-            "projection_decision_input_revalidation",
-            "projection_decision_authority",
-        ):
-            payload_context.pop(field, None)
+        _strip_projection_authority_context(payload=payload, payload_context=payload_context, revalidation=revalidation)
         return {}
     context["decision_id"] = operating_decision["decision_id"]
     context["canonical_input_revision"] = operating_decision.get("admitted_input_revision", "")
@@ -1192,13 +1198,7 @@ def record_projection_reuse(
         "authority": "agentic_workspace.operating_decision.compile_operating_decision",
         "projection_input_revision": operating_decision.get("projection_input_revision", ""),
     }
-    for field in (
-        "projection_decision_input",
-        "projection_decision_input_consumption",
-        "projection_decision_input_revalidation",
-        "projection_decision_authority",
-    ):
-        payload_context.pop(field, None)
+    _strip_projection_authority_context(payload=payload, payload_context=payload_context, revalidation=revalidation)
     if _expose_projection_reuse_receipt(operation=operation, query=query):
         payload["projection_reuse"] = compact_receipt
     else:

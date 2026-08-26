@@ -17376,7 +17376,7 @@ def test_summary_task_scoped_profile_omits_historical_audit_detail(tmp_path: Pat
     )
 
     payload = json.loads(capsys.readouterr().out)
-    assert set(payload) == {"kind", "target_root", "continuation_view"}
+    assert set(payload) == {"kind", "target_root", "continuation_view", "projection_reuse"}
     assert payload["kind"] == "planning-summary/v1"
     assert "select" in payload["continuation_view"]["detail_routes"]
     assert "verbose" in payload["continuation_view"]["detail_routes"]

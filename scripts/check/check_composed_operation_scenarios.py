@@ -196,6 +196,8 @@ def _run_cli(*args: str) -> tuple[dict[str, object], int, int]:
         raise RuntimeError(f"CLI did not emit one JSON packet: {rendered[:300]}") from exc
     if not isinstance(packet, dict):
         raise RuntimeError("CLI emitted a non-object packet")
+    if packet.get("kind") == "agentic-workspace/selected-output/v1" and isinstance(packet.get("values"), dict):
+        packet = packet["values"]
     return packet, elapsed_ms, len(rendered.encode("utf-8"))
 
 
@@ -839,7 +841,7 @@ def _ordinary_packet_ref_is_contract_authoritative(authority_packet: dict[str, o
         return False
     if ordinary_packet_ref.get("gate_result") != "direct-work-allowed":
         return False
-    if ordinary_packet_ref.get("implementation_allowed") is not True:
+    if ordinary_packet_ref.get("workflow_sufficient") is not True:
         return False
     if ordinary_packet_ref.get("decision_packet_kind") != "agentic-workspace/ordinary-decision-packet/v1":
         return False
@@ -947,6 +949,9 @@ def _ordinary_packet_ref_is_contract_authoritative(authority_packet: dict[str, o
 
 
 def _planning_gate(packet: dict[str, object]) -> dict[str, object]:
+    direct = packet.get("planning_safety_gate")
+    if isinstance(direct, dict):
+        return direct
     context = packet.get("context") if isinstance(packet.get("context"), dict) else {}
     gate = context.get("planning_safety_gate") if isinstance(context, dict) else {}
     return gate if isinstance(gate, dict) else {}
@@ -1145,7 +1150,18 @@ def _execute_composed_workspace_path(*, target: Path, scenario: dict[str, object
     after_fixture = _snapshot(target)
     fixture_changes = _changed_paths(before_fixture, after_fixture)
     commands = [
-        ("start", ["start", "--target", str(target), "--task", str(scenario.get("task") or f"Run composed scenario {scenario_id}")]),
+        (
+            "start",
+            [
+                "start",
+                "--target",
+                str(target),
+                "--task",
+                str(scenario.get("task") or f"Run composed scenario {scenario_id}"),
+                "--select",
+                "decision_packet,next_safe_action",
+            ],
+        ),
         (
             "implement",
             [
@@ -1156,6 +1172,8 @@ def _execute_composed_workspace_path(*, target: Path, scenario: dict[str, object
                 changed_paths,
                 "--task",
                 str(scenario.get("task") or f"Run composed scenario {scenario_id}"),
+                "--select",
+                "decision_packet,context,planning_safety_gate",
             ],
         ),
         ("summary", ["summary", "--target", str(target)]),
@@ -1215,7 +1233,7 @@ def _execute_one_scenario(scenario: dict[str, object], budget: dict[str, object]
             return [f"{scenario_id} black-box execution failed: {exc}"]
         if set(packets) != {"start", "implement", "summary", "proof", "closeout", "_scenario_contract"}:
             errors.append(f"{scenario_id} did not execute every ordinary consumer")
-        if not packets["start"].get("next_safe_action") or not packets["implement"].get("decision_packet"):
+        if not packets["start"].get("decision_packet") or not packets["implement"].get("decision_packet"):
             errors.append(f"{scenario_id} did not return ordinary route and implement packets")
         if metrics["output_bytes"] <= 0:
             errors.append(f"{scenario_id} emitted incomplete execution metrics")

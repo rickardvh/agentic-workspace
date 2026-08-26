@@ -4422,6 +4422,7 @@ def _compact_verification(value: Any) -> dict[str, Any]:
             for item in active[:3]
             if isinstance(item, dict)
         ],
+        "match_evidence": copy.deepcopy(_as_dict(value.get("match_evidence"))),
         "evidence_status": [
             {
                 key: item.get(key)
@@ -17650,6 +17651,7 @@ def _run_lazy_report_section_command(
         payload["assurance_requirements"] = _assurance_requirements_with_verification(assurance_requirements, verification)
         if normalized == "verification":
             payload["verification"] = _verification_report_compact_projection(verification)
+            payload["verification"]["match_evidence"] = copy.deepcopy(_as_dict(verification.get("match_evidence")))
         if normalized == "requirement_grounding":
             payload["requirement_grounding"] = _requirement_grounding_payload(
                 target_root=target_root,
@@ -50836,8 +50838,7 @@ def _emit_proof(
                     full_detail_command=full_detail_command,
                 )
         if not select:
-            for peer_field in ("context", "task_context", "projection_reuse"):
-                payload.pop(peer_field, None)
+            payload.pop("task_context", None)
         tiny_commands = [str(command) for command in _list_payload(payload.get("required_commands"))]
         if tiny_commands and all(command.startswith("git diff --") for command in tiny_commands):
             payload.pop("projection_reuse", None)
@@ -50986,11 +50987,20 @@ def _ordinary_summary_continuation_payload(*, summary: dict[str, Any], target_ro
     }
     for routed_field in ("source_freshness", "omitted_detail", "write_responsibility"):
         view.pop(routed_field, None)
-    return {
+    projected = {
         "kind": "planning-summary/v1",
         "target_root": target_value,
         "continuation_view": view,
     }
+    if isinstance(summary.get("projection_reuse"), dict):
+        projected["projection_reuse"] = copy.deepcopy(summary["projection_reuse"])
+    projection_context = _as_dict(summary.get("context"))
+    revalidation = _as_dict(projection_context.get("projection_decision_input_revalidation"))
+    if revalidation.get("status") not in {None, "", "current"}:
+        projected["context"] = {
+            "projection_decision_input_revalidation": copy.deepcopy(revalidation),
+        }
+    return projected
 
 
 def _print_ordinary_continuation_view(summary: dict[str, Any]) -> None:
@@ -59273,6 +59283,7 @@ def _skills_recommendation_first_payload(payload: dict[str, Any], *, target_root
     startup_default = next((item for item in recommendations if item.get("id") == "workspace-startup"), None)
     task_lower = str(task_text or "").lower()
     specialist_takeover_markers = {
+        "planning-autopilot": ("autopilot", "active milestone", "current active milestone", "execplan"),
         "workspace-intent-discovery": ("vague", "ambiguous", "classify shape", "clarify intent"),
         "workspace-proof-selection": ("select proof", "proof before completion", "passed with warning"),
         "workspace-setup-jumpstart": ("newly installed", "populate surfaces", "setup jumpstart"),

@@ -247,7 +247,14 @@ def test_proof_changed_paths_include_subsystem_proof_hints(tmp_path: Path, monke
     payload = json.loads(capsys.readouterr().out)
     assert payload["selector"] == {"changed": ["generated/workspace/python/cli.py"]}
     answer = payload["answer"]
-    assert "uv run pytest tests/test_workspace_cli.py -q" in answer["required_commands"]
+    subsystem = next(lane for lane in answer["selected_lanes"] if lane["id"] == "subsystem:workspace-cli")
+    assert subsystem["subsystem"]["matched_paths"] == ["generated/workspace/python/cli.py"]
+    assert subsystem["required_commands"] == []
+    reduction = subsystem["focused_route_reduction"]
+    assert reduction["status"] == "broad-proof-withheld-for-explicit-escalation"
+    assert reduction["withheld_commands"] == ["uv run pytest tests/test_workspace_cli.py -q"]
+    assert answer["proof_route_strategy_decision"]["outcome"] == "broad-escalation-required"
+    assert "uv run pytest tests/test_workspace_cli.py -q" not in answer["required_commands"]
     subsystem_lanes = [lane for lane in answer["selected_lanes"] if lane["id"] == "subsystem:workspace-cli"]
     assert subsystem_lanes
     assert subsystem_lanes[0]["subsystem"]["does_not_own"] == ["planning state semantics"]

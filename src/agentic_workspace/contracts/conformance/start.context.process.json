@@ -41,18 +41,10 @@
         },
         {
           "path": [
-            "drill_down",
-            "rule"
-          ],
-          "equals": "Compact default omits selector inventory/schemas; use --select or --verbose for detail."
-        },
-        {
-          "path": [
-            "context",
-            "proof",
+            "decision_packet",
             "kind"
           ],
-          "equals": "proof-selection/v1"
+          "equals": "agentic-workspace/ordinary-start-decision/v1"
         }
       ]
     },
@@ -67,7 +59,8 @@
       ],
       "forbidden_paths": [],
       "allowed_write_directories": [
-        ".agentic-workspace/local/improvement-pressure"
+        ".agentic-workspace/local/improvement-pressure",
+        ".agentic-workspace/local/projection-cache"
       ]
     },
     "idempotency": {

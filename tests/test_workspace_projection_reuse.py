@@ -665,6 +665,7 @@ def test_each_ordinary_surface_rejects_selected_owner_race_after_builder(tmp_pat
             scoped.setattr(runtime_module, "prepare_projection_reuse", racing_prepare)
             assert cli.main(command) == 0
         payload = json.loads(capsys.readouterr().out)
+        assert "context" in payload, operation
         context = payload["context"]
         assert context["projection_decision_input_revalidation"]["status"] == "stale"
         assert context["projection_decision_input_revalidation"]["changed_fields"] == ["selected_owner"]
