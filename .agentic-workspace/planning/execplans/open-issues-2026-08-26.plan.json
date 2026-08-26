@@ -4,8 +4,8 @@
   "title": "Implement all open issues by lane in stacked PRs",
   "owner_level": "epic",
   "lifecycle": "live",
-  "phase": "implementation",
-  "revision": 9,
+  "phase": "review",
+  "revision": 10,
   "intent": {
     "outcome": "Starting from current master, implement GitHub issues #2722, #2740, #2748, #2749, #2750, #2752, #2753, #2754, and #2755 as dependency-ordered stacked pull requests grouped by coherent lane.",
     "non_goals": [
@@ -68,7 +68,7 @@
     "https://github.com/rickardvh/agentic-workspace/issues/2754",
     "https://github.com/rickardvh/agentic-workspace/issues/2755"
   ],
-  "next_action": "Validate and publish lane 5 for #2755 stacked on PR #2759, then inspect the complete hosted stack without merging.",
+  "next_action": "Obtain independent review on the five published PRs and merge only in stack order; implementation is complete and no merge is authorized in this task.",
   "blockers": [
     "None. Escalate if an issue requires changing an authority boundary or cannot satisfy its maintained replay without redesign beyond this stack."
   ],
@@ -102,7 +102,10 @@
       "Lane 4 commit 699c5490f",
       "Lane 4 PR https://github.com/rickardvh/agentic-workspace/pull/2759",
       "Lane 5 maintained PR #2746 replay finds issue comment 5425598890 in one complete intake and classifies ready-for-re-review/distinct-authority-required",
-      "Lane 5 counterexamples cover submitted review, inline thread, stale prior head, hosted failure without review blocker, incomplete required surface, and clean complete intake"
+      "Lane 5 counterexamples cover submitted review, inline thread, stale prior head, hosted failure without review blocker, incomplete required surface, and clean complete intake",
+      "Lane 5 commit 44afb836e",
+      "Lane 5 PR https://github.com/rickardvh/agentic-workspace/pull/2760",
+      "PRs #2758, #2759, and #2760 passed all automated hosted checks after release changeset and generated-evidence follow-through; only the distinct Review approval authority remains unsatisfied"
     ]
   },
   "continuation": {
