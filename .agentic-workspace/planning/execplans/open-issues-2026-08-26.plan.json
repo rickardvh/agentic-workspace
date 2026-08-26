@@ -4,8 +4,8 @@
   "title": "Implement all open issues by lane in stacked PRs",
   "owner_level": "epic",
   "lifecycle": "live",
-  "phase": "implementation",
-  "revision": 3,
+  "phase": "review",
+  "revision": 11,
   "intent": {
     "outcome": "Starting from current master, implement GitHub issues #2722, #2740, #2748, #2749, #2750, #2752, #2753, #2754, and #2755 as dependency-ordered stacked pull requests grouped by coherent lane.",
     "non_goals": [
@@ -68,7 +68,7 @@
     "https://github.com/rickardvh/agentic-workspace/issues/2754",
     "https://github.com/rickardvh/agentic-workspace/issues/2755"
   ],
-  "next_action": "Implement and publish lane 2 for #2748 and #2750 on PR #2756, then continue lane 3 from the lane 2 head.",
+  "next_action": "Address the current blocking review comments on the five published PRs, refresh exact-head intake, and return the stack for independent re-review without merging.",
   "blockers": [
     "None. Escalate if an issue requires changing an authority boundary or cannot satisfy its maintained replay without redesign beyond this stack."
   ],
@@ -85,9 +85,13 @@
       "Inspect hosted checks and all review surfaces before claiming the stack ready for review."
     ],
     "refs": [
-      "Lane 1 commit 5b4d7f98a",
       "Lane 1 PR https://github.com/rickardvh/agentic-workspace/pull/2756",
-      "Lane 1 focused config/correction tests and generated Python/TypeScript adapter conformance passed"
+      "Lane 2 PR https://github.com/rickardvh/agentic-workspace/pull/2757",
+      "Lane 3 PR https://github.com/rickardvh/agentic-workspace/pull/2758",
+      "Lane 4 PR https://github.com/rickardvh/agentic-workspace/pull/2759",
+      "Lane 5 PR https://github.com/rickardvh/agentic-workspace/pull/2760",
+      "PR #2756 review repair bounds ordinary session-log analysis and records fresh #2722/#2740 replay evidence",
+      "Independent review remains external to the implementation agent"
     ]
   },
   "continuation": {
