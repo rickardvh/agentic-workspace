@@ -1729,6 +1729,13 @@ def test_session_log_segments_can_be_summarized_and_selected(tmp_path: Path, mon
     assert selected["summary"]["command_count"] == 1
 
 
+def test_context_record_identity_excludes_observation_time() -> None:
+    first = {"kind": "agentic-workspace/current-work-context/v1", "freshness": {"resolved_at": "2026-01-01T00:00:00Z"}}
+    second = {"kind": "agentic-workspace/current-work-context/v1", "freshness": {"resolved_at": "2026-01-01T00:00:03Z"}}
+
+    assert session_logging._record_identity("context", first) == session_logging._record_identity("context", second)
+
+
 def test_session_log_index_deduplicates_metadata_and_analysis_pages_episodes(tmp_path: Path, capsys, monkeypatch) -> None:
     target = _target(tmp_path)
     _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
