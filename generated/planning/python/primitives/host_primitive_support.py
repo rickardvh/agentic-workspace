@@ -1250,7 +1250,10 @@ def _assignment_identity(current_authorities: Mapping[str, Any]) -> dict[str, An
         "stop_conditions": _assignment_list(assignment_gate.get("stop_conditions") or next_step.get("stop_conditions")),
         "mutation_baseline": assignment_gate.get("mutation_baseline") or next_step.get("mutation_baseline"),
         "return_admission_owner": "delegated-return.admit",
-        "human_intent": assignment_gate.get("human_intent") or next_step.get("human_intent") or assignment_gate.get("task") or assignment_gate.get("task_class"),
+        "human_intent": assignment_gate.get("human_intent")
+        or next_step.get("human_intent")
+        or assignment_gate.get("task")
+        or assignment_gate.get("task_class"),
         "required_inputs": _assignment_list(assignment_gate.get("required_inputs") or next_step.get("required_inputs")),
         "prohibited_effects": _assignment_list(assignment_gate.get("prohibited_effects") or next_step.get("prohibited_effects"))
         or ["scope-widening", "merge", "closeout", "proof-authority", "human-authority"],
