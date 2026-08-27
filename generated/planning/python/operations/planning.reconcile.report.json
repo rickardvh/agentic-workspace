@@ -18,7 +18,8 @@
     "--apply requires the exact proposal id and expected Planning revision returned by preview.",
     "--apply-issue-relation-reconcile requires the current relation revision for semantic edits.",
     "--apply-issue-relation-migration preserves membership, priority, dependencies, rationale, and maturity before demoting duplicate legacy fields.",
-    "--apply-pending-integrations requires each pending proposal's target-authority revision and applies owner/proposal/receipt writes atomically on an admitted target branch.",
+    "--apply-pending-integrations applies the eligible disjoint owner set atomically on an admitted target branch, preserves stale unrelated proposals as explicit skips, and fails closed for same-owner overlap.",
+    "Fresh external completion may refresh an obsolete owner action to the exact semantic proof/intent blocker, but cannot itself satisfy proof, intent, or closeout authority.",
     "--apply-lane-current-slice-reconcile must guard the exact owner surface, relation identity, subject, lane revision, transition, and execplan source, and must not fabricate a missing execplan."
   ],
   "id": "planning.reconcile.report",
@@ -205,7 +206,8 @@
     "safe-prune tests cover exact roadmap/decomposition cleanup and dry-run behavior",
     "proposal/apply tests cover revision guards, idempotence, and transaction rollback",
     "issue-relation tests cover supported conflict repair and legacy authority migration",
-    "pending integration tests cover one-invocation target apply for disjoint merged proposals",
+    "pending integration tests cover one-invocation target apply, stale disjoint skips, same-owner failure, and transaction rollback",
+    "provider-neutral external-observation tests cover stale action refresh plus ambiguous-completion non-authority",
     "workspace CLI tests cover missing-source block and exact source restore through the root planning reconcile front door"
   ],
   "reads": [
@@ -258,6 +260,11 @@
       "required": false,
       "surface": ".agentic-workspace/planning/{state.toml,decompositions,lanes}/",
       "when": "--apply-issue-relation-migration demotes duplicate legacy strategic authority to derived references"
+    },
+    {
+      "required": false,
+      "surface": ".agentic-workspace/planning/execplans/<owner>.plan.json",
+      "when": "a fresh admitted completed external observation makes the selected owner's observation-dependent next action obsolete; only the exact proof/intent blocker is refreshed"
     },
     {
       "required": false,

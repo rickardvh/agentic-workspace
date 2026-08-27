@@ -255,6 +255,7 @@ Cheap implementer context for a bounded changed-path scope.
 | `execution_posture.delegated_run_lifecycle` | object | no |  | Delegated-run lifecycle projection for assignment handoff, execution, return, and admission. |  |  |
 | `execution_posture.decomposition_delegation` | object | no |  | Delegation candidates discovered from active planning decompositions, when active decomposed work is visible. |  |  |
 | `execution_posture.assignment_action` | object | no |  | Revision-bound typed action or terminal state compiled from the canonical assignment and current run lifecycle. |  |  |
+| `execution_posture.assignment_materialization` | object | no |  | Idempotent result of persisting a live ordinary handoff decision as checked-in assignment authority. |  |  |
 | `execution_posture.inference_limits` | array of string | yes |  | Limits that prevent the posture recommendation from becoming hidden execution authority. |  |  |
 | `effective_orchestration` | object | no |  | Derived current orchestration posture separating assignment policy from transport availability and human override. |  |  |
 | `target_evidence` | object | no |  | Provenance-aware target suitability evidence for the current changed-path scope. |  |  |

@@ -40,6 +40,7 @@ from agentic_workspace.generated_operations import (
     agent_guidance_suppress,
     agent_guidance_weaken,
     assignment_admit,
+    assignment_close,
     assignment_export,
     assignment_import,
     assignment_integrate,
@@ -948,7 +949,6 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
         "selected_target": "planner",
         "required_next_action": "prepare-assigned-handoff",
         "target_identity_ref": "target:planner@2026-07-21",
-        "target_revision": "target-rev-1",
         "task_class": "mechanical-follow-through",
         "scope_class": "narrow-code-change",
         "plan_ref": ".agentic-workspace/planning/execplans/plan.plan.json",
@@ -1015,11 +1015,28 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
         target=tmp_path,
         invocation=invocation,
     )
-    imported = assignment_import(
+    malformed = assignment_import(
         {
             "run_id": "run-1",
             "return_json": json.dumps(
                 {"assignment_revision": identity["revision"], "target": "planner", "changed_paths": ["src/feature.py"]}
+            ),
+        },
+        target=tmp_path,
+        invocation=invocation,
+    )
+    imported = assignment_import(
+        {
+            "run_id": "run-1",
+            "return_json": json.dumps(
+                {
+                    "assignment_revision": identity["revision"],
+                    "run_id": "run-1",
+                    "target": "planner",
+                    "changed_paths": ["src/feature.py"],
+                    "summary": "Implemented the bounded feature change.",
+                    "stop_conditions_hit": [],
+                }
             ),
         },
         target=tmp_path,
@@ -1040,6 +1057,11 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
         target=tmp_path,
         invocation=invocation,
     )
+    closed = assignment_close(
+        {"run_id": "run-1"},
+        target=tmp_path,
+        invocation=invocation,
+    )
     override = assignment_override(
         {"assignment_id": "assign-1", "reason": "maintainer approved", "scope": "src/feature.py", "expires_at": "2026-07-23T00:00:00Z"},
         target=tmp_path,
@@ -1047,10 +1069,16 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
     )
 
     assert export["status"] == "handoff-prepared"
+    assert malformed["status"] == "blocked"
+    assert malformed["reason_code"] == "malformed-return"
     assert imported["status"] == "awaiting-admission"
     assert blocked["reason_code"] == "return-not-admitted"
     assert admitted["status"] == "admitted"
     assert integrated["status"] == "integrated"
+    assert closed["status"] == "closed"
+    closed_assignment = json.loads((assignment_dir / "assign-1.assignment.json").read_text(encoding="utf-8"))
+    assert closed_assignment["status"] == "closed"
+    assert closed_assignment["current_attempt"]["status"] == "closed"
     assert override["status"] == "override-recorded"
     assert (tmp_path / ".agentic-workspace/local/assignment-runs/run-1/received/awaiting-admission").is_dir()
     override_ref = next(ref for ref in override["artifact_refs"] if ref.endswith("override/override.json"))
@@ -1059,6 +1087,10 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
     packet_ref = next(ref for ref in export["artifact_refs"] if ref.endswith("export/packet.json"))
     packet = json.loads((tmp_path / packet_ref).read_text())
     assert packet["authority_refs"]["planning_assignment"] == ".agentic-workspace/planning/assignments/assign-1.assignment.json"
+    assert packet["dispatch_contract"]["semantic_authority"] == "assignment_identity"
+    assert packet["dispatch_contract"]["silent_local_fallback_allowed"] is False
+    assert packet["return_contract"]["worker_completion_authority"] is False
+    assert packet["assignment_identity"]["claim_authority"]["completion"] == "orchestrator-owned"
     assert "current_authorities" not in export["state"]
 
 

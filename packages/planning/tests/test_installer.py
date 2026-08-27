@@ -813,6 +813,96 @@ queued_items = [
     assert state["todo"]["queued_items"][0]["id"] == "unrelated"
 
 
+def test_provider_neutral_completion_refreshes_obsolete_action_without_claiming_semantic_closeout(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    execplans = tmp_path / ".agentic-workspace/planning/execplans"
+    owner_id = "synthetic-completed-owner"
+    ambiguous_id = "synthetic-ambiguous-owner"
+    for item_id in (owner_id, ambiguous_id):
+        record = installer_mod._build_execplan_record_from_todo_item(
+            title=item_id,
+            item_id=item_id,
+            status="active",
+            why_now="Wait for external delivery.",
+            next_action="Await external review and delivery.",
+            done_when="External delivery is reconciled without claiming semantic closeout.",
+        )
+        record["lifecycle"] = "live"
+        record["phase"] = "implementation"
+        record.setdefault("relationships", {})["proof_posture"] = {"state": "pending", "refs": []}
+        _write(execplans / f"{item_id}.plan.json", json.dumps(record, indent=2))
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        f'''[todo]
+active_items = [{{ id = "{owner_id}", status = "active", surface = ".agentic-workspace/planning/execplans/{owner_id}.plan.json" }}]
+queued_items = []
+''',
+    )
+    observed_at = datetime.now(UTC).replace(microsecond=0)
+
+    def observation(item_id: str, binding: str) -> dict:
+        return {
+            "system": "synthetic-delivery",
+            "id": f"delivery-{item_id}",
+            "status": "completed",
+            "status_class": "completed",
+            "kind": "delivery",
+            "observation_id": f"synthetic:{item_id}:complete",
+            "planning_relationship": {
+                "binding": binding,
+                "owner_id": item_id,
+                "owner_ref": f".agentic-workspace/planning/execplans/{item_id}.plan.json",
+                "work_context_id": "default",
+                "evidence_refs": [f"delivery-{item_id}"],
+            },
+            "external_revision": f"revision-{item_id}",
+            "observed_at": observed_at.isoformat(),
+            "freshness": {
+                "status": "current",
+                "observed_at": observed_at.isoformat(),
+                "expires_at": (observed_at + timedelta(hours=24)).isoformat(),
+                "max_age_seconds": 86400,
+            },
+            "availability": "available",
+            "provenance": {
+                "provider_class": "synthetic-delivery",
+                "resolver_id": "fixture",
+                "source_ref": item_id,
+                "refresh_id": "fixture-refresh",
+            },
+        }
+
+    _write_external_intent_evidence(
+        tmp_path / ".agentic-workspace/planning/external-intent-evidence.json",
+        items=[observation(owner_id, "explicit"), observation(ambiguous_id, "ambiguous")],
+    )
+
+    preview = planning_reconcile(target=tmp_path, preview=True)["proposal"]
+    transitions = {item["owner_id"]: item for item in preview["owner_transitions"]}
+    assert transitions[owner_id]["transition"] == "refresh-owner-action"
+    assert transitions[owner_id]["reason"] == "proof-admission-required"
+    assert transitions[ambiguous_id]["transition"] == "blocked"
+
+    applied = planning_reconcile(
+        target=tmp_path,
+        apply=True,
+        proposal=preview["proposal_id"],
+        expected_planning_revision=preview["source"]["planning_revision"],
+    )
+
+    assert applied["status"] == "applied"
+    refreshed = json.loads((execplans / f"{owner_id}.plan.json").read_text())
+    ambiguous = json.loads((execplans / f"{ambiguous_id}.plan.json").read_text())
+    assert refreshed["lifecycle"] == "live"
+    assert refreshed["next_action"] == (
+        "Admit subject proof and decide semantic intent satisfaction before closing this externally completed owner."
+    )
+    assert refreshed["relationships"]["proof_posture"]["state"] == "pending"
+    assert ambiguous["next_action"] == "Await external review and delivery."
+    assert applied["receipt"]["semantic_delta"]["refreshed_owner_action_ids"] == [owner_id]
+    assert applied["receipt"]["claims_authorized"] == []
+
+
 def test_reconciliation_transaction_is_safe_and_useful_without_external_provider(tmp_path: Path) -> None:
     """Local owner/proof facts can restore selection without inferring completion."""
     install_bootstrap(target=tmp_path)

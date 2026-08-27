@@ -541,7 +541,7 @@ def test_completed_child_reconciliation_is_cross_consumer_idempotent_and_fails_c
     assert route["owner_admission"]["repair_route"]["status"] == "available"
 
 
-@pytest.mark.parametrize(("proof_state", "expected_status"), [("satisfied", "applied"), ("pending", "blocked")])
+@pytest.mark.parametrize(("proof_state", "expected_status"), [("satisfied", "applied"), ("pending", "applied-with-semantic-blockers")])
 def test_refreshed_external_owner_reconciliation_applies_only_with_semantic_authority(
     tmp_path: Path, proof_state: str, expected_status: str
 ) -> None:
@@ -609,7 +609,13 @@ def test_refreshed_external_owner_reconciliation_applies_only_with_semantic_auth
         assert result["receipt"]["closed_owner_ids"] == ["merged-child.plan"]
     else:
         assert "merged-child" in active_ids
-        assert result["reason"] == "semantic-completion-authority-required"
+        retained = planning_installer._load_execplan_record(owner_path)
+        assert retained is not None and planning_installer._execplan_lifecycle(retained) == "live"
+        assert retained["next_action"] == (
+            "Admit subject proof and decide semantic intent satisfaction before closing this externally completed owner."
+        )
+        assert result["blocked_owners"][0]["reason"] == "proof-admission-required"
+        assert "did not satisfy" in result["claim_boundary"]
 
 
 @pytest.mark.parametrize(
@@ -2127,6 +2133,59 @@ def test_active_planning_record_helpers_route_through_planning_owner(tmp_path: P
 def test_reconcile_report_adapter_routes_through_planning_owner() -> None:
     assert workspace_runtime_primitives._run_reconcile_report_adapter is workspace_runtime_planning._run_reconcile_report_adapter
     assert workspace_runtime_core._run_reconcile_report_adapter is workspace_runtime_planning._run_reconcile_report_adapter
+
+
+def test_workspace_planning_reconcile_interface_projects_canonical_planning_options() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    manifest = json.loads((repo_root / "src/agentic_workspace/contracts/command_package_ir.json").read_text(encoding="utf-8"))
+    packages = {package["id"]: package for package in manifest["packages"]}
+    front_door = next(command for command in packages["root-workspace"]["commands"] if command["adapter_id"] == "planning.front-door.cli")
+    source_projection = next(item for item in front_door["interface"]["subcommands"] if item["name"] == "reconcile")
+    canonical = next(
+        command for command in packages["planning-bootstrap"]["commands"] if command["adapter_id"] == "planning.reconcile.cli"
+    )["interface"]
+    generated = json.loads((repo_root / "generated/workspace/python/adapter_commands.json").read_text(encoding="utf-8"))
+    generated_front_door = next(command["interface"] for command in generated if command["adapter_id"] == "planning.front-door.cli")
+    projected = next(item for item in generated_front_door["subcommands"] if item["name"] == "reconcile")
+
+    assert front_door["command"]["manifest_ref"] == "package:planning:cli#projected:reconcile"
+    assert source_projection["options"] == []
+    assert projected["options"] == canonical["options"]
+    assert "--apply-pending-integrations" in {flag for option in projected["options"] for flag in option["flags"]}
+    assert projected["usage_error_hints"] == source_projection["usage_error_hints"]
+
+
+def test_workspace_planning_reconcile_accepts_projected_option_and_forwards_semantics(monkeypatch, capsys) -> None:
+    from repo_planning_bootstrap import installer as planning_installer
+
+    captured: dict[str, Any] = {}
+
+    def fake_reconcile(**kwargs):
+        captured.update(kwargs)
+        return {"kind": "planning-reconcile/v1", "status": "dry-run"}
+
+    monkeypatch.setattr(planning_installer, "planning_reconcile", fake_reconcile)
+    monkeypatch.setattr(workspace_runtime_planning, "_ensure_external_intent_cache_if_available", lambda **_kwargs: None)
+
+    repo_root = Path(__file__).resolve().parents[1]
+    assert (
+        cli.main(["planning", "reconcile", "--apply-pending-integrations", "--dry-run", "--target", str(repo_root), "--format", "json"])
+        == 0
+    )
+
+    assert json.loads(capsys.readouterr().out)["status"] == "dry-run"
+    assert captured["apply_pending_integrations"] is True
+    assert captured["dry_run"] is True
+
+
+def test_workspace_planning_reconcile_unknown_option_reports_exact_supported_route(capsys) -> None:
+    with pytest.raises(SystemExit) as exc_info:
+        cli.main(["planning", "reconcile", "--not-projected"])
+
+    assert exc_info.value.code == 2
+    error = capsys.readouterr().err
+    assert "unrecognized arguments: --not-projected" in error
+    assert error.endswith("Supported route: agentic-workspace planning reconcile --help\n")
 
 
 def test_upgrade_preserves_host_owned_ownership_subsystems(tmp_path: Path, capsys) -> None:
@@ -5549,7 +5608,11 @@ candidates = []
 
     target = tmp_path / "admitted"
     owner_ref = arrange(target)
-    applied = propose_and_apply(target, owner_ref, proof="sha256:admitted-subject-proof")
+    owner_path = target / owner_ref
+    owner_record = json.loads(owner_path.read_text(encoding="utf-8"))
+    owner_record["proof"] = {"refs": ["sha256:admitted-subject-proof"]}
+    planning_installer._write_execplan_record(record_path=owner_path, record=owner_record)
+    applied = propose_and_apply(target, owner_ref, proof="")
     assert applied["operation_receipt"]["proof_refs"] == ["sha256:admitted-subject-proof"]
     closeout_args = [
         "planning",

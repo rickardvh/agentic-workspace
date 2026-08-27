@@ -1703,6 +1703,57 @@ def test_config_command_target_identity_ambiguous_alias_fails_closed(tmp_path: P
     assert payload["mixed_agent"]["correction_feedback"]["status"] == "fail-closed"
 
 
+def test_identity_init_preserves_explicit_noncurrent_target_profile_option(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    local_config = target / ".agentic-workspace/config.local.toml"
+    local_config.parent.mkdir(parents=True)
+    local_config.write_text(
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[delegation]",
+                'current_target = "codex_sol"',
+                "",
+                "[delegation_targets.codex_sol]",
+                'strength = "strong"',
+                'execution_methods = ["internal"]',
+                "",
+                "[delegation_targets.codex_luna]",
+                'strength = "weak"',
+                'execution_methods = ["cli"]',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    assert (
+        cli.main(
+            [
+                "correction-event",
+                "identity-init",
+                "--target",
+                str(target),
+                "--target-profile",
+                "codex_luna",
+                "--target-id",
+                "user-local:codex-luna-explicit",
+                "--dry-run",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    preview = json.loads(capsys.readouterr().out)
+    assert preview["target_profile"] == "codex_luna"
+    assert preview["target_id"] == "user-local:codex-luna-explicit"
+    assert preview["mutation_applied"] is False
+
+
 def test_current_profile_without_id_exposes_and_applies_exact_local_identity_repair(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
@@ -4516,6 +4567,54 @@ def test_assignment_decision_derives_best_fit_from_candidates_and_contextual_evi
     assert fast["ranking_components"]["declared_fit"] == 7
     assert fast["ranking_components"]["contextual_evidence"] == 15
     assert fast["permitted_continuation"] == "delegated-implementation"
+
+
+def test_required_best_fit_honors_current_target_downroute_action() -> None:
+    from agentic_workspace.target_evidence import assignment_decision_from_policy
+
+    decision = assignment_decision_from_policy(
+        assignment_policy={
+            "assignment_policy": {"value": "required-best-fit"},
+            "current_target": {"value": "strong_worker"},
+            "binding": {"enforceable": True, "claim_boundary": "assignment policy resolved"},
+        },
+        runtime_resolution={
+            "recommendation": "stay-local",
+            "capability_context": {
+                "task_class": "mechanical-follow-through",
+                "scope_class": "mechanical-follow-through",
+            },
+            "profile_recommendations": [
+                {
+                    "name": "strong_worker",
+                    "target_id": "target:strong",
+                    "recommendation": "recommended",
+                    "score": 8,
+                    "capability_mismatch": False,
+                    "required_action": "delegate-down-when-safe",
+                    "execution_methods": ["internal"],
+                    "human_control_modes": ["auto"],
+                },
+                {
+                    "name": "bounded_worker",
+                    "target_id": "target:bounded",
+                    "recommendation": "recommended",
+                    "score": 9,
+                    "capability_mismatch": False,
+                    "required_action": "execute-with-normal-proof",
+                    "execution_methods": ["cli"],
+                    "human_control_modes": ["auto"],
+                },
+            ],
+        },
+        target_evidence={"status": "no-local-evidence", "record_count": 0, "suitability": []},
+    )
+
+    assert decision["decision"] == "assign-best-fit"
+    assert decision["selected_target"] == "bounded_worker"
+    assert decision["selected_target_identity_ref"] == "target:bounded"
+    assert decision["selection_basis"]["downroute_required"] is True
+    assert decision["selection_basis"]["downroute_applied"] is True
 
 
 def test_assignment_decision_fails_closed_when_no_candidate_is_eligible() -> None:

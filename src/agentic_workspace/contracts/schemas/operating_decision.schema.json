@@ -4,7 +4,7 @@
   "title": "Agentic Workspace Operating Decision",
   "description": "Derived internal decision composed from admitted AW authority surfaces. It emits exactly one primary action or one typed blocker.",
   "type": "object",
-  "required": ["kind", "decision_id", "status", "input_revisions", "primary_action", "external_blocker", "replacement_map", "rule"],
+  "required": ["kind", "decision_id", "status", "input_revisions", "cross_owner_enforcement", "primary_action", "external_blocker", "replacement_map", "rule"],
   "properties": {
     "kind": {"const": "agentic-workspace/operating-decision/v1", "description": "Schema discriminator for the composed operating decision."},
     "producer_module": {"type": "string", "description": "Canonical module that produced the operating decision."},
@@ -124,6 +124,26 @@
     "assurance": {
       "type": "object",
       "description": "Admission of a repository-owned assurance classification, quiet when no external classifier is configured."
+    },
+    "cross_owner_enforcement": {
+      "type": "object",
+      "description": "Registry-derived join identities, peer-surface dispositions, and fail-closed findings bound to this decision identity.",
+      "required": ["kind", "status", "decision_id", "admitted_input_revision", "dimensions", "peer_surface_dispositions", "invariants", "findings", "surface_growth_rule", "rule"],
+      "properties": {
+        "kind": {"const": "agentic-workspace/cross-owner-enforcement-projection/v1", "description": "Schema discriminator for the decision-bound enforcement projection."},
+        "status": {"enum": ["admitted", "blocked"], "description": "Whether registry and peer identities satisfy the cross-owner gate."},
+        "decision_id": {"type": "string", "pattern": "^operating-decision:[0-9a-f]{16}$", "description": "Canonical decision identity carried by this projection."},
+        "admitted_input_revision": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$", "description": "Revision of the complete admitted specialist input set."},
+        "canonical_decision_input_revision": {"type": "string", "description": "Live typed-action input revision when an executable action exists."},
+        "dimensions": {"type": "array", "items": {"type": "object"}, "description": "Registry-owned source owner and join-identity map."},
+        "peer_surface_dispositions": {"type": "array", "items": {"type": "object"}, "description": "Registered authority disposition for ordinary peer surfaces."},
+        "observed_peer_projections": {"type": "array", "items": {"type": "object"}, "description": "Optional peers checked against this canonical decision identity."},
+        "invariants": {"type": "array", "items": {"type": "string"}, "minItems": 1, "uniqueItems": true, "description": "Release-gating impossibility invariants applied by the projection."},
+        "findings": {"type": "array", "items": {"type": "string"}, "uniqueItems": true, "description": "Fail-closed identity, authority, or scope violations."},
+        "surface_growth_rule": {"type": "string", "minLength": 1, "description": "Registry ratchet for new decision-shaped surfaces."},
+        "rule": {"type": "string", "minLength": 1, "description": "Authority boundary for specialist facts and peer projections."}
+      },
+      "additionalProperties": false
     },
     "current_work": {"type": "object", "description": "Current-work identity admitted into the composed decision."},
     "selected_owner": {"type": "object", "description": "Selected owner identity admitted into the composed decision."},

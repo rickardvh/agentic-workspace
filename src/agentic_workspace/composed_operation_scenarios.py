@@ -8,9 +8,14 @@ operation. Rows without that evidence remain declared but are not certified.
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any
 
-ACTIVE_RELEASE_GATE_SCENARIOS = frozenset({"fresh-direct-work"})
+from agentic_workspace.operating_decision import cross_owner_enforcement_projection
+from agentic_workspace.operation_authority_admissions import normalize_owner_decision_packet
+
+ACTIVE_RELEASE_GATE_SCENARIOS = frozenset({"fresh-direct-work", "handoff-return-admission"})
 
 CONTRACT_FIELDS = (
     "owner",
@@ -21,6 +26,109 @@ CONTRACT_FIELDS = (
     "proof_claim_boundary",
     "next_transition",
 )
+
+CROSS_OWNER_INVARIANT_CASES = frozenset(
+    {
+        "target-identity-constructible",
+        "proof-binding-before-execution",
+        "proof-publication-fixed-point",
+        "bounded-effect-custody",
+        "future-residue-disposition",
+        "peer-decision-identity",
+        "nonlocal-delegation-lifecycle",
+    }
+)
+
+
+def evaluate_cross_owner_invariant_case(case: dict[str, Any]) -> dict[str, Any]:
+    """Evaluate one release-gating counterexample without becoming runtime authority."""
+
+    invariant = str(case.get("invariant") or "")
+    observation = _as_dict(case.get("observation"))
+    violations: list[str] = []
+    if invariant not in CROSS_OWNER_INVARIANT_CASES:
+        violations.append("unregistered-cross-owner-invariant")
+    elif invariant == "target-identity-constructible":
+        target_identity = str(observation.get("target_identity_ref") or "")
+        blocker = _as_dict(observation.get("blocker"))
+        recoveries = [str(item) for item in _as_list(blocker.get("recoveries")) if str(item)]
+        if not target_identity and not (blocker.get("kind") == "typed-blocker" and len(recoveries) == 1):
+            violations.append("offered-action-target-identity-is-not-constructible")
+    elif invariant == "proof-binding-before-execution":
+        if observation.get("deterministic_binding_mismatch") is True and observation.get("process_launched") is True:
+            violations.append("deterministic-proof-mismatch-reached-process-launch")
+    elif invariant == "proof-publication-fixed-point":
+        semantic_changed = observation.get("semantic_dependency_changed") is True
+        if not semantic_changed and observation.get("result_identity_before") != observation.get("result_identity_after"):
+            violations.append("non-semantic-publication-invalidated-its-result")
+        if observation.get("replay_count", 0) and observation.get("replay_result_identity") != observation.get("result_identity_after"):
+            violations.append("proof-publication-replay-is-not-idempotent")
+    elif invariant == "bounded-effect-custody":
+        bounded = all(
+            observation.get(field) is True
+            for field in (
+                "external_tracker_write",
+                "bounded_candidate_set",
+                "duplicate_check_complete",
+                "repository_effects_excluded",
+                "merge_close_effects_excluded",
+            )
+        )
+        genuine_continuation = any(
+            observation.get(field) is True for field in ("multi_session", "implementation_required", "owner_conflict")
+        )
+        if bounded and not genuine_continuation and observation.get("planning_custody_required") is True:
+            violations.append("bounded-effect-acquired-custody-only-planning")
+        if genuine_continuation and observation.get("planning_custody_required") is not True:
+            violations.append("genuine-continuation-bypassed-planning-custody")
+    elif invariant == "future-residue-disposition":
+        if observation.get("future_relevant") is True:
+            disposition = str(observation.get("disposition") or "")
+            owner = str(observation.get("owner") or "")
+            if disposition in {"", "none", "none_found", "not_evaluated"} or not owner:
+                violations.append("future-relevant-residue-lacks-owner-backed-disposition")
+    elif invariant == "peer-decision-identity":
+        projection = cross_owner_enforcement_projection(
+            decision=_as_dict(observation.get("decision")),
+            peer_projections=[item for item in observation.get("peers", []) if isinstance(item, dict)],
+        )
+        violations.extend(str(item) for item in projection.get("findings", []) if str(item))
+    elif invariant == "nonlocal-delegation-lifecycle":
+        phase = str(observation.get("phase") or "")
+        if phase == "assignment":
+            if observation.get("binding_nonlocal") is not True or observation.get("identity_complete") is not True:
+                violations.append("binding-nonlocal-assignment-is-not-current-and-complete")
+            if observation.get("silent_local_fallback_allowed") is not False:
+                violations.append("binding-nonlocal-assignment-allows-silent-local-fallback")
+            if observation.get("executable_transport") is not True and observation.get("typed_manual_blocker") is not True:
+                violations.append("binding-nonlocal-assignment-lacks-executable-or-manual-route")
+        elif phase == "transport-parity":
+            if observation.get("automatic_assignment_revision") != observation.get("manual_assignment_revision"):
+                violations.append("transport-adapters-diverge-on-assignment-identity")
+            if observation.get("semantic_contract_equal") is not True or observation.get("adapter_redefined_authority") is True:
+                violations.append("transport-adapter-redefined-assignment-semantics")
+        elif phase == "return-admission":
+            expected = str(observation.get("expected") or "")
+            actual = str(observation.get("actual") or "")
+            if expected != actual:
+                violations.append("returned-result-admission-did-not-fail-closed")
+            if observation.get("worker_completion_authority") is not False:
+                violations.append("worker-return-acquired-completion-authority")
+            if actual == "admitted" and observation.get("next_action") != "orchestrator-integration-proof-closeout":
+                violations.append("admitted-return-lacks-orchestrator-owned-continuation")
+        elif phase == "direct-local-control":
+            if observation.get("local_selected") is not True or observation.get("delegation_artifacts_created") is not False:
+                violations.append("direct-local-control-acquired-delegation-custody")
+        else:
+            violations.append("unknown-nonlocal-delegation-phase")
+    return {
+        "kind": "agentic-workspace/cross-owner-invariant-result/v1",
+        "case_id": str(case.get("id") or ""),
+        "invariant": invariant,
+        "status": "blocked" if violations else "admitted",
+        "violations": violations,
+        "rule": "This result is release-gating evidence; canonical runtime owners and the operating decision remain authoritative.",
+    }
 
 
 def observe_composed_operation_authority(
@@ -41,9 +149,11 @@ def observe_composed_operation_authority(
     checker call site stable across future owner-backed rows.
     """
 
-    del target, active_planning, start, summary, closeout, task, changed_paths
+    del active_planning, start, summary, closeout, task, changed_paths
     if scenario_id not in ACTIVE_RELEASE_GATE_SCENARIOS:
         return {}
+    if scenario_id == "handoff-return-admission":
+        return _delegated_return_authority_packet(target=Path(str(target)), scenario_id=scenario_id)
     gate = _planning_gate(implement)
     if gate.get("gate_result") != "direct-work-allowed" or gate.get("workflow_sufficient") is not True:
         return {}
@@ -89,6 +199,59 @@ def observe_composed_operation_authority(
             "proof_authority": operation_authority.get("proof_authority", {}),
         },
     )
+
+
+def _delegated_return_authority_packet(*, target: Path, scenario_id: str) -> dict[str, Any]:
+    admission_root = target / ".agentic-workspace" / "local" / "assignment-runs"
+    receipts = sorted(admission_root.glob("*/admission/*.admit.json")) if admission_root.exists() else []
+    if not receipts:
+        return {}
+    try:
+        receipt = json.loads(receipts[-1].read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    raw_owner_packet = receipt.get("owner_packet") if isinstance(receipt, dict) else None
+    if not isinstance(raw_owner_packet, dict):
+        return {}
+    try:
+        owner_packet = normalize_owner_decision_packet(raw_owner_packet)
+    except ValueError:
+        return {}
+    typed_operation = _as_dict(owner_packet.get("typed_operation"))
+    repair_operation = _as_dict(owner_packet.get("repair_operation"))
+    admission = _as_dict(owner_packet.get("admission"))
+    admitted = admission.get("admitted") is True
+    return {
+        "kind": "agentic-workspace/composed-operation-authority-observation/v1",
+        "producer_module": "agentic_workspace.composed_operation_scenarios",
+        "scenario_id": scenario_id,
+        "source": "assignment.admit.owner_packet",
+        "evidence_sources": [
+            receipts[-1].relative_to(target).as_posix(),
+            "assignment_identity.revision",
+            "assignment.admit.current_authority",
+        ],
+        "observed": True,
+        "rejection_observed": not admitted,
+        "recovery_observed": not admitted,
+        "repair_revalidation": {"status": "not-required"},
+        "protected_action": {
+            "attempted": True,
+            "accepted": admitted,
+            "repair": str(repair_operation.get("id") or ""),
+        },
+        "owner_packet": owner_packet,
+        "decision": {
+            "owner": str(owner_packet.get("owner") or ""),
+            "terminal_state": str(owner_packet.get("terminal_state") or ""),
+            "typed_action": str(typed_operation.get("action") or ""),
+            "effect_scope": str(owner_packet.get("effect_scope") or ""),
+            "mutation_precondition": str(admission.get("stable_reason") or ""),
+            "proof_claim_boundary": str(owner_packet.get("proof_claim_boundary") or ""),
+            "next_transition": str(typed_operation.get("expected_transition") or ""),
+        },
+        "rule": "The release-gated decision is projected from the assignment owner's persisted admission packet.",
+    }
 
 
 def _authority_packet(
@@ -222,3 +385,7 @@ def _typed_invocation_supports_contract(invocation: dict[str, Any], operating_de
 
 def _as_dict(value: Any) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
+
+
+def _as_list(value: Any) -> list[Any]:
+    return value if isinstance(value, list) else []

@@ -17,10 +17,20 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 from agentic_workspace.authority_envelope import mutation_baseline_payload  # noqa: E402
 from agentic_workspace.composed_operation_scenarios import (  # noqa: E402
     ACTIVE_RELEASE_GATE_SCENARIOS,
+    CROSS_OWNER_INVARIANT_CASES,
+    evaluate_cross_owner_invariant_case,
     observe_composed_operation_authority,
 )
+from agentic_workspace.workspace_runtime_core import _assignment_identity_payload  # noqa: E402
 
 MATRIX_PATH = REPO_ROOT / "tools" / "model-cli-harness" / "external-agent-evaluation" / "composed-operation-scenario-matrix.json"
+DOGFOOD_PATH = (
+    REPO_ROOT
+    / "tools"
+    / "model-cli-harness"
+    / "external-agent-evaluation"
+    / "nonlocal-delegation-dogfood-2026-08-27.json"
+)
 REQUIRED_SCENARIOS = {
     "fresh-direct-work",
     "explicit-bounded-work",
@@ -151,6 +161,46 @@ def validate_matrix(matrix: dict[str, object]) -> list[str]:
         errors.append("scenario assertion contract is incomplete")
     if not REQUIRED_METRICS.issubset(set(matrix.get("cost_metrics", []))):
         errors.append("cost metrics do not cover total successful-completion cost")
+    invariant_cases = matrix.get("cross_owner_invariant_cases", [])
+    if not isinstance(invariant_cases, list):
+        errors.append("cross-owner invariant cases must be a list")
+    else:
+        invariant_ids = {str(item.get("invariant") or "") for item in invariant_cases if isinstance(item, dict)}
+        missing_invariants = set(CROSS_OWNER_INVARIANT_CASES) - invariant_ids
+        if missing_invariants:
+            errors.append(f"missing cross-owner invariants: {', '.join(sorted(missing_invariants))}")
+        case_ids = [str(item.get("id") or "") for item in invariant_cases if isinstance(item, dict)]
+        if len(case_ids) != len(set(case_ids)) or any(not item for item in case_ids):
+            errors.append("cross-owner invariant case ids must be unique and non-empty")
+        for case in invariant_cases:
+            if not isinstance(case, dict) or case.get("expected_status") not in {"admitted", "blocked"} or not isinstance(
+                case.get("observation"), dict
+            ):
+                errors.append("every cross-owner invariant case needs an expected status and observation")
+                break
+    evidence_refs = matrix.get("cross_owner_evidence_refs", [])
+    if not isinstance(evidence_refs, list) or len(evidence_refs) < 6:
+        errors.append("cross-owner invariant evidence refs are incomplete")
+    else:
+        for ref in evidence_refs:
+            path_text, separator, node = str(ref).partition("::")
+            path = REPO_ROOT / path_text
+            if not separator or not node or not path.exists() or f"def {node}(" not in path.read_text(encoding="utf-8"):
+                errors.append(f"cross-owner invariant evidence ref is missing or stale: {ref}")
+    return errors
+
+
+def _execute_cross_owner_invariants(matrix: dict[str, object]) -> list[str]:
+    errors: list[str] = []
+    for case in matrix.get("cross_owner_invariant_cases", []):
+        if not isinstance(case, dict):
+            continue
+        result = evaluate_cross_owner_invariant_case(case)
+        if result.get("status") != case.get("expected_status"):
+            errors.append(
+                f"{case.get('id')} expected {case.get('expected_status')}, observed {result.get('status')}: "
+                f"{result.get('violations')}"
+            )
     return errors
 
 
@@ -361,7 +411,7 @@ def _prepare_scenario_fixture(*, target: Path, scenario: dict[str, object]) -> d
             {"status": "compacted", "resume_owner": scenario_id},
         )
     elif fixture == "handoff_return":
-        _write_json(target / ".agentic-workspace" / "local" / "delegation" / "returned-result.json", {"status": "unadmitted"})
+        setup_commands += _prepare_handoff_return_assignment(target=target, scenario_id=scenario_id)
     elif fixture == "runtime_unavailable":
         _write_json(target / ".agentic-workspace" / "local" / "runtime" / "availability.json", {"status": "unavailable"})
     elif fixture == "runtime_restored":
@@ -389,6 +439,121 @@ def _prepare_scenario_fixture(*, target: Path, scenario: dict[str, object]) -> d
         "setup_aw_command_count": setup_commands,
         "receipt_path": receipt_path,
     }
+
+
+def _prepare_handoff_return_assignment(*, target: Path, scenario_id: str) -> int:
+    """Run the provider-neutral assignment owner through an admitted return."""
+
+    head = subprocess.run(
+        ["git", "-C", str(target), "rev-parse", "HEAD"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    assignment_id = f"{scenario_id}-assignment"
+    run_id = f"{scenario_id}-run"
+    proof_ref = f".agentic-workspace/proof/receipts/{scenario_id}.json"
+    _write_json(
+        target / proof_ref,
+        {
+            "kind": "agentic-workspace/proof-receipt/v1",
+            "result": "passed",
+            "verified_by": "aw",
+            "revision": f"{scenario_id}:proof:1",
+        },
+    )
+    assignment_gate = {
+        "status": "handoff-required",
+        "assignment_policy": "required-best-fit",
+        "selected_target": "planner",
+        "required_next_action": "prepare-assigned-handoff",
+        "target_identity_ref": "target:planner@1",
+        "target_revision": "target-rev-1",
+        "task_class": "bounded-validation",
+        "scope_class": "single-file-read-only",
+        "plan_ref": f".agentic-workspace/planning/execplans/{scenario_id}.plan.json",
+        "plan_revision": f"{scenario_id}:plan:1",
+        "slice_id": scenario_id,
+        "slice_revision": f"{scenario_id}:slice:1",
+        "assignment_decision_revision": f"{scenario_id}:decision:1",
+        "role": "bounded-worker",
+        "human_intent": "Inspect the bounded README return path without widening scope or authority.",
+        "required_inputs": ["README.md", "current assignment packet"],
+        "allowed_effects": ["read-repo"],
+        "prohibited_effects": ["repo-write", "scope-widening", "proof-authority", "merge", "closeout"],
+        "allowed_paths": ["README.md"],
+        "proof_obligation": {"id": "proof:handoff-return", "revision": f"{scenario_id}:proof:1"},
+        "stop_conditions": ["scope-expanded", "required-input-missing"],
+        "mutation_baseline": head,
+    }
+    assignment_policy = {"manual_transport_policy": {"value": "allowed"}}
+    delegation_decision = {
+        "decision": "assignment-handoff-required",
+        "delegation_next_step": {
+            "execution_methods": ["cli", "manual"],
+            "handoff_run_id": run_id,
+            "role": "bounded-worker",
+            "return_schema": "delegated-return/v1",
+        },
+    }
+    identity = _assignment_identity_payload(
+        assignment_gate=assignment_gate,
+        assignment_policy=assignment_policy,
+        delegation_decision=delegation_decision,
+    )
+    _write_json(
+        target / ".agentic-workspace" / "planning" / "assignments" / f"{assignment_id}.assignment.json",
+        {
+            "kind": "agentic-workspace/planning-assignment/v1",
+            "assignment_id": assignment_id,
+            "current_revision": identity["revision"],
+            "status": "current",
+            "target_name": "planner",
+            "assignment_gate": assignment_gate,
+            "assignment_policy": assignment_policy,
+            "delegation_decision": delegation_decision,
+            "aw_proof_receipt_ref": proof_ref,
+            "current_attempt": {"run_id": run_id, "owner": "planner", "status": "selected"},
+        },
+    )
+    exported, _, _ = _run_cli(
+        "assignment",
+        "export",
+        "--target",
+        str(target),
+        "--assignment-id",
+        assignment_id,
+        "--assignment-revision",
+        str(identity["revision"]),
+        "--run-id",
+        run_id,
+        "--target-name",
+        "planner",
+        "--transport",
+        "cli",
+    )
+    packet_ref = next(str(ref) for ref in exported.get("artifact_refs", []) if str(ref).endswith("export/packet.json"))
+    packet = _read_json_if_present(target / packet_ref)
+    assignment_revision = str(packet.get("assignment_revision") or "")
+    returned = {
+        "kind": "agentic-workspace/delegated-return/v1",
+        "assignment_revision": assignment_revision,
+        "run_id": run_id,
+        "target": "planner",
+        "changed_paths": ["README.md"],
+        "summary": "Inspected the bounded README path; no mutation authority was used.",
+        "stop_conditions_hit": [],
+        "worker_reported_proof": {"result": "passed", "verified_by": "worker"},
+        "worker_claimed_completion": True,
+    }
+    _run_cli("assignment", "import", "--target", str(target), "--run-id", run_id, "--return-json", json.dumps(returned))
+    admitted, _, _ = _run_cli("assignment", "admit", "--target", str(target), "--run-id", run_id)
+    if admitted.get("status") != "admitted":
+        raise RuntimeError(f"{scenario_id} return was not admitted: {admitted.get('failures')}")
+    integrated, _, _ = _run_cli("assignment", "integrate", "--target", str(target), "--run-id", run_id)
+    if integrated.get("status") != "integrated":
+        raise RuntimeError(f"{scenario_id} return was not integrated: {integrated.get('failures')}")
+    return 4
 
 
 def _scenario_contract_observation(
@@ -617,6 +782,10 @@ def _packet_semantic_summary(packet: dict[str, object]) -> dict[str, object]:
     gate = _planning_gate(packet)
     next_packet = packet.get("next_safe_action") if isinstance(packet.get("next_safe_action"), dict) else packet.get("next")
     operating = packet.get("operating_loop") if isinstance(packet.get("operating_loop"), dict) else {}
+    decision_packet = packet.get("decision_packet") if isinstance(packet.get("decision_packet"), dict) else {}
+    identity = decision_packet.get("identity") if isinstance(decision_packet.get("identity"), dict) else {}
+    projection_reuse = packet.get("projection_reuse") if isinstance(packet.get("projection_reuse"), dict) else {}
+    decision_id = str(identity.get("decision_id") or projection_reuse.get("decision_id") or "")
     return {
         "kind": packet.get("kind") or packet.get("profile"),
         "gate_result": gate.get("gate_result"),
@@ -629,6 +798,7 @@ def _packet_semantic_summary(packet: dict[str, object]) -> dict[str, object]:
         if isinstance(next_packet, dict)
         else None,
         "safe_claim": operating.get("safe_claim") if isinstance(operating, dict) else None,
+        "canonical_decision_identity_present": decision_id.startswith("operating-decision:") or decision_id == "not-admitted",
     }
 
 
@@ -1257,7 +1427,7 @@ def execute_matrix(matrix: dict[str, object]) -> list[str]:
     if not active_scenarios:
         return ["no active release-gate scenarios have canonical evidence"]
     max_workers = min(4, max(1, len(active_scenarios)))
-    errors: list[str] = []
+    errors: list[str] = _execute_cross_owner_invariants(matrix)
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = [executor.submit(_execute_one_scenario, scenario, budget) for scenario in active_scenarios]
         for future in as_completed(futures):
@@ -1265,9 +1435,48 @@ def execute_matrix(matrix: dict[str, object]) -> list[str]:
     return errors
 
 
+def validate_nonlocal_dogfood() -> list[str]:
+    try:
+        evidence = json.loads(DOGFOOD_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return [f"non-local delegation dogfood evidence is unreadable: {exc}"]
+    errors: list[str] = []
+    if evidence.get("kind") != "agentic-workspace/nonlocal-delegation-dogfood/v1":
+        errors.append("non-local delegation dogfood kind is invalid")
+    selection = evidence.get("selection", {})
+    assignment = evidence.get("assignment", {})
+    returned = evidence.get("return", {})
+    if not isinstance(selection, dict) or selection.get("selected_target") != "codex_luna":
+        errors.append("non-local delegation dogfood does not identify the real selected target")
+    if not isinstance(assignment, dict) or not all(
+        assignment.get(field) for field in ("assignment_id", "assignment_revision", "run_id", "mutation_baseline")
+    ):
+        errors.append("non-local delegation dogfood assignment lineage is incomplete")
+    if not isinstance(returned, dict) or returned.get("worker_claims_trusted") is not False:
+        errors.append("non-local delegation dogfood must keep worker claims non-authoritative")
+    lifecycle = evidence.get("lifecycle", [])
+    required_transitions = {
+        "assignment.export:handoff-prepared",
+        "assignment.import:awaiting-admission",
+        "assignment.admit:admitted",
+        "assignment.integrate:integrated",
+        "assignment.close:closed",
+        "implement:reconcile-next-operating-decision",
+    }
+    if not isinstance(lifecycle, list) or not required_transitions.issubset(set(lifecycle)):
+        errors.append("non-local delegation dogfood lifecycle is incomplete")
+    before_after = evidence.get("before_after", {})
+    if not isinstance(before_after, dict) or not isinstance(before_after.get("before"), dict) or not isinstance(before_after.get("after"), dict):
+        errors.append("non-local delegation dogfood lacks an honest before/after comparison")
+    serialized = json.dumps(evidence, sort_keys=True).lower()
+    if "raw_transcript" in serialized and '"raw_transcript_checked_in": false' not in serialized:
+        errors.append("non-local delegation dogfood must not check in a raw transcript")
+    return errors
+
+
 def main() -> int:
     matrix = load_matrix()
-    errors = [*validate_matrix(matrix), *execute_matrix(matrix)]
+    errors = [*validate_matrix(matrix), *validate_nonlocal_dogfood(), *execute_matrix(matrix)]
     if errors:
         print("[fail] " + "; ".join(errors))
         return 1

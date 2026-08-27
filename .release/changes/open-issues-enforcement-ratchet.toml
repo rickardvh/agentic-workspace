@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Ratchet ordinary cross-owner authority joins and peer decision surfaces through the canonical operating decision."
+issues = [2762]

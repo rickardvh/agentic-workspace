@@ -2556,7 +2556,6 @@ def test_implement_verification_surfaces_proof_governance_and_decision_status(tm
             }
         ),
     )
-
     assert (
         cli.main(
             [
@@ -8933,7 +8932,31 @@ def test_implement_required_best_fit_blocks_unknown_current_target(tmp_path: Pat
 
 
 def test_implement_required_best_fit_requires_assigned_handoff(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.name", "Test User"], cwd=tmp_path, check=True)
+    _write(tmp_path / "README.md", "baseline\n")
+    subprocess.run(["git", "add", "README.md"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "commit", "-m", "baseline"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    plan_ref = ".agentic-workspace/planning/execplans/delegated-config.plan.json"
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        f'''kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [{{ id = "delegated-config", title = "Delegated config", status = "active", surface = "{plan_ref}" }}]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+''',
+    )
+    _write_json(
+        tmp_path / plan_ref,
+        {"kind": "planning-execplan/v1", "id": "delegated-config", "title": "Delegated config", "revision": 2},
+    )
     _write(
         tmp_path / ".agentic-workspace" / "config.local.toml",
         "\n".join(
@@ -8964,7 +8987,6 @@ def test_implement_required_best_fit_requires_assigned_handoff(tmp_path: Path, c
             ]
         ),
     )
-
     assert (
         cli.main(
             [
@@ -8995,6 +9017,15 @@ def test_implement_required_best_fit_requires_assigned_handoff(tmp_path: Path, c
     assert decision["required_next_action"] == "prepare-assigned-handoff"
     assert decision["delegation_next_step"]["assignment_gate"]["selected_target"] == "planner"
     assert decision["handoff_command"] == "agentic-workspace planning handoff --target . --format json"
+    materialization = posture["assignment_materialization"]
+    assert materialization["status"] == "materialized", materialization
+    assert materialization["assignment_ref"].startswith(".agentic-workspace/planning/assignments/ordinary-")
+    assert posture["assignment_action"]["action"] == "export-assigned-handoff"
+    assert posture["assignment_action"]["operation_invocation"]["operation_id"] == "assignment.export"
+    assignment = json.loads((tmp_path / materialization["assignment_ref"]).read_text(encoding="utf-8"))
+    assert assignment["authority"] == "ordinary-implement-live-assignment-decision"
+    assert assignment["assignment_gate"]["plan_ref"] == plan_ref
+    assert assignment["assignment_gate"]["target_revision"] is None
     lifecycle = posture["delegated_run_lifecycle"]
     assert lifecycle["status"] == "waiting-for-handoff"
     assert lifecycle["assignment"]["target"] == "planner"
@@ -9126,6 +9157,35 @@ def test_configured_orchestrator_compiles_current_nonlocal_and_returned_assignme
     assert returned["action"] == "admit-returned-assignment"
     assert returned["operation_invocation"]["operation_id"] == "assignment.admit"
     assert returned["operation_invocation"]["preconditions"]["run_state"] == "awaiting-admission"
+
+    _write_json(state_path, {"current_state": "integrated", "run_id": "run-1"})
+    integrated = workspace_runtime_core._assignment_primary_action_payload(
+        target_root=tmp_path,
+        assignment_policy=policy,
+        assignment_decision=decision,
+        assignment_gate=gate,
+        selected_target={"name": "worker", "execution_methods": ["cli"]},
+        delegation_control={"execution_permitted": True},
+        cli_invoke="agentic-workspace",
+    )
+    assert integrated["action"] == "close-integrated-assignment"
+    assert integrated["operation_invocation"]["operation_id"] == "assignment.close"
+
+    _write_json(state_path, {"current_state": "closed", "run_id": "run-1"})
+    closed = workspace_runtime_core._assignment_primary_action_payload(
+        target_root=tmp_path,
+        assignment_policy=policy,
+        assignment_decision=decision,
+        assignment_gate=gate,
+        selected_target={"name": "worker", "execution_methods": ["cli"]},
+        delegation_control={"execution_permitted": True},
+        cli_invoke="agentic-workspace",
+    )
+    assert closed["status"] == "assignment-complete"
+    assert closed["action"] == "reconcile-next-operating-decision"
+    assert closed["implementation_allowed"] is False
+    assert closed["continuation"]["preserved_assignment_decision_revision"] == "decision-rev-1"
+    assert "operation_invocation" not in closed
 
 
 def test_configured_orchestrator_uses_manual_export_when_automatic_transport_is_unavailable(tmp_path: Path) -> None:

@@ -88,6 +88,75 @@
     "status": ["planning", "assignment", "proof", "evaluation", "terminal-outcome"],
     "summary": ["planning", "memory", "terminal-outcome"]
   },
+  "ordinary_decision_enforcement": {
+    "kind": "agentic-workspace/ordinary-decision-enforcement/v1",
+    "canonical_decision_owner": "agentic_workspace.operating_decision.compile_operating_decision",
+    "canonical_decision_identity_fields": ["decision_id", "admitted_input_revision", "canonical_decision_input_revision"],
+    "dimensions": [
+      {
+        "dimension": "current-work",
+        "canonical_surface": "planning",
+        "canonical_owner": "planning package",
+        "join_identity_fields": ["owner_ref", "owner_revision", "slice_revision"],
+        "decision_fields": ["selected_owner", "current_work"]
+      },
+      {
+        "dimension": "current-target",
+        "canonical_surface": "assignment",
+        "canonical_owner": "workspace assignment gate",
+        "join_identity_fields": ["target_identity_ref", "assignment_revision"],
+        "decision_fields": ["action_identity.operation_invocation.target_identity_ref", "input_revisions.assignment"]
+      },
+      {
+        "dimension": "proof-requirement-subject",
+        "canonical_surface": "proof",
+        "canonical_owner": "verification and proof runtime",
+        "join_identity_fields": ["proof_obligation_id", "proof_subject_fingerprint", "receipt_revision"],
+        "decision_fields": ["action_identity.operation_invocation.proof_requirements", "input_revisions.proof"]
+      },
+      {
+        "dimension": "mutation-permission",
+        "canonical_surface": "mutation-baseline",
+        "canonical_owner": "authority envelope",
+        "join_identity_fields": ["baseline_id", "head", "scope", "assignment"],
+        "decision_fields": ["action_identity.requested_mutation_boundary", "input_revisions.mutation_baseline"]
+      },
+      {
+        "dimension": "claim-boundary",
+        "canonical_surface": "proof",
+        "canonical_owner": "verification and proof runtime",
+        "join_identity_fields": ["proof_obligation_id", "proof_subject_fingerprint", "receipt_revision"],
+        "decision_fields": ["blocked_claim_classes", "terminal_state"]
+      },
+      {
+        "dimension": "future-relevant-residue",
+        "canonical_surface": "terminal-outcome",
+        "canonical_owner": "final-response admission runtime",
+        "join_identity_fields": ["terminal_state", "custody_owner", "continuation_revision"],
+        "decision_fields": ["reconciliation", "future_context_capture", "terminal_state"]
+      }
+    ],
+    "peer_surfaces": [
+      {"surface": "operating-decision", "disposition": "canonical", "decision_identity_field": "decision_id"},
+      {"surface": "start", "disposition": "derived", "decision_identity_field": "decision_packet.identity.decision_id"},
+      {"surface": "summary", "disposition": "derived", "decision_identity_field": "projection_reuse.decision_id"},
+      {"surface": "implement", "disposition": "derived", "decision_identity_field": "decision_packet.identity.decision_id"},
+      {"surface": "proof", "disposition": "derived", "decision_identity_field": "projection_reuse.decision_id"},
+      {"surface": "closeout", "disposition": "derived", "decision_identity_field": "operating_decision.decision_id"},
+      {"surface": "generated", "disposition": "derived", "decision_identity_field": "payload.projection_reuse.decision_id"},
+      {"surface": "adapter", "disposition": "selector-only", "decision_identity_field": "payload.projection_reuse.decision_id"}
+    ],
+    "allowed_peer_dispositions": ["canonical", "derived", "selector-only", "removed"],
+    "invariants": [
+      "one-admitted-snapshot-one-decision-identity",
+      "lower-authority-cannot-widen-effects-or-claims",
+      "deterministic-prerequisites-before-execution",
+      "proof-publication-fixed-point-unless-semantic-dependency-changes",
+      "bounded-effects-do-not-create-planning-custody",
+      "future-relevant-residue-requires-owner-backed-disposition"
+    ],
+    "surface_growth_rule": "Exactly one peer surface is canonical. Every added decision-shaped surface must replace, demote, or mechanically derive an existing equivalent and carry the canonical decision identity."
+  },
   "surfaces": [
     {
       "surface": "system-intent",

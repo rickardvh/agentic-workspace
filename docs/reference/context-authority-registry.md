@@ -33,4 +33,13 @@ Versioned source of truth for ordinary operating-decision authority surfaces and
 | `ordinary_decision_consumers` | array of string | yes |  | Ordinary AW consumers that must have measured authority coverage. |  |  |
 | `consumer_requirements` | object | yes |  | Required authority surfaces for each ordinary decision consumer. |  |  |
 | `consumer_requirements.<name>` | array of string | no |  | Authority surfaces required by this consumer. |  |  |
+| `ordinary_decision_enforcement` | object | yes |  | Release-gating join identities, peer dispositions, and impossibility invariants for the ordinary operating loop. |  |  |
+| `ordinary_decision_enforcement.kind` | const `"agentic-workspace/ordinary-decision-enforcement/v1"` | yes |  | Schema discriminator for the ordinary-decision enforcement contract. |  |  |
+| `ordinary_decision_enforcement.canonical_decision_owner` | string | yes |  | Sole compiler allowed to author the first-line ordinary decision. |  |  |
+| `ordinary_decision_enforcement.canonical_decision_identity_fields` | array | yes |  | Closed identity tuple every derived ordinary surface must carry. |  |  |
+| `ordinary_decision_enforcement.dimensions` | array of object | yes |  | Decision-relevant facts with one canonical source owner and join identity. |  |  |
+| `ordinary_decision_enforcement.peer_surfaces` | array of object | yes |  | Ordinary consumer surfaces and their canonical, derived, selector-only, or removed disposition. |  |  |
+| `ordinary_decision_enforcement.allowed_peer_dispositions` | array | yes |  | Closed vocabulary for decision-surface authority disposition. |  |  |
+| `ordinary_decision_enforcement.invariants` | array of string | yes |  | Release-gating cross-owner impossibility invariants. |  |  |
+| `ordinary_decision_enforcement.surface_growth_rule` | string | yes |  | Ratchet applied when decision-shaped peer surfaces are added or changed. |  |  |
 | `surfaces` | array of object | yes |  | Declared authority surfaces available to ordinary operating decisions. |  |  |

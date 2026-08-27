@@ -76,8 +76,8 @@
     ],
     "file_ratchets": [
       {"path": "src/agentic_workspace/workspace_runtime_core.py", "max_lines": 63061, "max_top_level_symbols": 1302, "max_direct_policy_fan_out": 1491},
-      {"path": "packages/planning/src/repo_planning_bootstrap/installer.py", "max_lines": 25733, "max_top_level_symbols": 570, "max_direct_policy_fan_out": 688},
-      {"path": "tests/test_workspace_cli.py", "max_lines": 17803, "max_top_level_symbols": 382, "max_direct_policy_fan_out": 253}
+      {"path": "packages/planning/src/repo_planning_bootstrap/installer.py", "max_lines": 25850, "max_top_level_symbols": 574, "max_direct_policy_fan_out": 693},
+      {"path": "tests/test_workspace_cli.py", "max_lines": 17866, "max_top_level_symbols": 385, "max_direct_policy_fan_out": 254}
     ],
     "representative_working_set": {
       "before": {"runtime_owner_files": 2, "shared_symbols": 1046, "largest_audited_segment_lines": 998},
@@ -119,7 +119,7 @@
       {"path": "src/agentic_workspace/workspace_runtime_core.py", "symbol": "_run_lazy_report_section_command", "max_lines": 479, "max_branch_nodes": 100, "expires": "2026-12-31", "tracking_issue": "#2455"},
       {"path": "src/agentic_workspace/workspace_runtime_core.py", "symbol": "_routine_work_context_payload", "max_lines": 363, "max_branch_nodes": 100, "expires": "2026-12-31", "tracking_issue": "#2455"},
       {"path": "src/agentic_workspace/workspace_runtime_core.py", "symbol": "_report_closeout_trust_payload", "max_lines": 1086, "max_branch_nodes": 128, "expires": "2026-12-31", "tracking_issue": "#2559"},
-      {"path": "src/agentic_workspace/workspace_runtime_core.py", "symbol": "_start_tiny_payload_fast", "max_lines": 732, "max_branch_nodes": 124, "expires": "2026-12-31", "tracking_issue": "#2559"},
+      {"path": "src/agentic_workspace/workspace_runtime_core.py", "symbol": "_start_tiny_payload_fast", "max_lines": 733, "max_branch_nodes": 124, "expires": "2026-12-31", "tracking_issue": "#2559"},
       {"path": "src/agentic_workspace/workspace_runtime_core.py", "symbol": "_run_summary_report_adapter", "max_lines": 313, "max_branch_nodes": 57, "expires": "2026-12-31", "tracking_issue": "#2559"},
       {"path": "src/agentic_workspace/workspace_runtime_core.py", "symbol": "_requirement_grounding_payload", "max_lines": 403, "max_branch_nodes": 104, "expires": "2026-12-31", "tracking_issue": "#2455"},
       {"path": "src/agentic_workspace/workspace_runtime_core.py", "symbol": "_delegation_next_action_decision", "max_lines": 487, "max_branch_nodes": 135, "expires": "2026-12-31", "tracking_issue": "#2455"},
