@@ -1,0 +1,49 @@
+{
+  "kind": "planning-lane/v1",
+  "id": "open-issues-verifier-authority",
+  "title": "Keep implementation actors outside verifier decision authority",
+  "status": "active",
+  "parent_decomposition_ref": ".agentic-workspace/planning/decompositions/open-issues-2026-08-27.decomposition.json",
+  "lane_outcome": "Issue #2725 is satisfied generically and in the repository adapter: shared credentials or marker syntax cannot let an implementer occupy, suppress, satisfy, or fail an independent verifier decision cycle.",
+  "purpose_for_parent": "Restores the protected reviewer boundary required before later enforcement and delegation claims can be trusted.",
+  "subsystems": [],
+  "technical_strategy": "Tighten the lane strategy before the first slice starts.",
+  "technology_choices": [],
+  "slice_sequence": [
+    {
+      "id": "open-issues-verifier-authority",
+      "title": "Open Issues Verifier Authority",
+      "status": "active",
+      "execplan_ref": ".agentic-workspace/planning/execplans/open-issues-verifier-authority.plan.json",
+      "depends_on": [],
+      "purpose_for_lane": "Restores the protected reviewer boundary required before later enforcement and delegation claims can be trusted."
+    }
+  ],
+  "current_slice": "open-issues-verifier-authority",
+  "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
+  "proof_strategy": "Generic shared-transport role fixture, repository review-marker admission regression, implementation handoff posture, negative merge-ready and blocked-marker cases, focused tests, and hosted checks.",
+  "proof_aggregation": {
+    "status": "not-started",
+    "evidence": [],
+    "known_gaps": []
+  },
+  "residual_lane_work": "Lifecycle composition, generic cross-owner enforcement, non-local delegation, and parent closure remain.",
+  "lane_to_epic_contribution": "Restores the protected reviewer boundary required before later enforcement and delegation claims can be trusted.",
+  "parent_close_permission": "do-not-close-parent",
+  "closeout_state": {
+    "status": "open",
+    "summary": "",
+    "residual_work": "",
+    "next_owner": ""
+  },
+  "references": [
+    {
+      "kind": "decomposition",
+      "target": ".agentic-workspace/planning/decompositions/open-issues-2026-08-27.decomposition.json",
+      "label": "open-issues-verifier-authority",
+      "role": "parent",
+      "locator": "candidate_lanes[1]"
+    }
+  ],
+  "notes": ""
+}
