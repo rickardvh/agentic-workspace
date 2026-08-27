@@ -49653,6 +49653,399 @@ def _host_repo_orientation_payload(*, target_root: Path) -> dict[str, Any]:
     }
 
 
+def _setup_configuration_concerns_payload(*, target_root: Path, config: WorkspaceConfig, selected_modules: list[str]) -> dict[str, Any]:
+    """Project bounded setup judgments from strong repo-owned evidence.
+
+    This is intentionally a concern classifier, not a repository analyzer or
+    config writer.  It reads a fixed, small source set and routes inferred
+    actions or human-owned choices to their existing owners.
+    """
+
+    inspected: list[str] = []
+    concerns: list[dict[str, Any]] = []
+    zero_interaction_actions: list[dict[str, Any]] = []
+    human_questions: list[dict[str, Any]] = []
+
+    def existing(relative: str) -> bool:
+        present = (target_root / relative).is_file()
+        if present:
+            _append_unique(inspected, relative)
+        return present
+
+    def evidence(*sources: str, authority: str, strength: str = "strong") -> dict[str, Any]:
+        return {
+            "strength": strength,
+            "sources": [source for source in sources if source],
+            "authority": authority,
+        }
+
+    config_path = target_root / WORKSPACE_CONFIG_PATH
+    raw_config: dict[str, Any] = {}
+    if config_path.is_file():
+        _append_unique(inspected, WORKSPACE_CONFIG_PATH.as_posix())
+        try:
+            loaded_config = tomllib.loads(config_path.read_text(encoding="utf-8"))
+        except (OSError, tomllib.TOMLDecodeError):
+            loaded_config = {}
+        raw_config = loaded_config if isinstance(loaded_config, dict) else {}
+
+    startup_surface = config.agent_instructions_file
+    startup_present = existing(startup_surface)
+    concerns.append(
+        {
+            "id": "startup-entrypoint",
+            "owner": "workspace.init",
+            "status": "satisfied" if startup_present else "inference-ready",
+            "materiality": "required-for-ordinary-startup",
+            "dependency": "none",
+            "evidence": evidence(
+                WORKSPACE_CONFIG_PATH.as_posix() if raw_config else "",
+                startup_surface if startup_present else "",
+                authority="repo-owned-config-and-adapter",
+            ),
+            "inference": f"Use {startup_surface} as the repository startup adapter.",
+            "apply_route": {
+                "owner": "workspace.init",
+                "command": _command_with_cli_invoke(
+                    command="agentic-workspace init --target . --format json",
+                    cli_invoke=config.cli_invoke,
+                ),
+                "status": "not-required" if startup_present else "owner-route-required",
+            },
+            "detail_selector": "config.workspace.agent_instructions_file",
+        }
+    )
+
+    intent_sources = [
+        path for path in ("SYSTEM_INTENT.md", "docs/system-intent.md", "docs/product-direction.md", "README.md") if existing(path)
+    ]
+    intent_current = existing(".agentic-workspace/system-intent/intent.toml")
+    if intent_current:
+        intent_status = "satisfied"
+        intent_inference = "A current workspace system-intent surface already exists."
+    elif intent_sources:
+        intent_status = "inference-ready"
+        intent_inference = f"Sync interpreted system intent from the strongest available repo source: {intent_sources[0]}."
+        zero_interaction_actions.append(
+            {
+                "concern_id": "system-intent-source",
+                "owner": "system-intent.sync",
+                "status": "ready-for-owner",
+                "command": _command_with_cli_invoke(
+                    command="agentic-workspace system-intent --target . --sync --format json",
+                    cli_invoke=config.cli_invoke,
+                ),
+                "claim_boundary": "The owner may sync interpreted fields; confirmed human intent remains human-owned.",
+            }
+        )
+    else:
+        intent_status = "not-applicable"
+        intent_inference = "No strong durable product-intent source was found; do not manufacture one from filenames."
+    concerns.append(
+        {
+            "id": "system-intent-source",
+            "owner": "system-intent.sync",
+            "status": intent_status,
+            "materiality": "useful-when-a-durable-intent-source-exists",
+            "dependency": "startup-entrypoint",
+            "evidence": evidence(*intent_sources, authority="repo-owned-intent-source"),
+            "inference": intent_inference,
+            "apply_route": {
+                "owner": "system-intent.sync",
+                "status": "ready-for-owner" if intent_status == "inference-ready" else "not-required",
+            },
+            "detail_selector": "system_intent",
+        }
+    )
+
+    explicit_test_commands: list[dict[str, str]] = []
+    package_json_path = target_root / "package.json"
+    if package_json_path.is_file():
+        _append_unique(inspected, "package.json")
+        try:
+            package_payload = json.loads(package_json_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            package_payload = {}
+        scripts = package_payload.get("scripts") if isinstance(package_payload, dict) else {}
+        if isinstance(scripts, dict) and isinstance(scripts.get("test"), str) and scripts["test"].strip():
+            explicit_test_commands.append({"command": "npm test", "source": "package.json#scripts.test"})
+    pyproject_path = target_root / "pyproject.toml"
+    if pyproject_path.is_file():
+        _append_unique(inspected, "pyproject.toml")
+        try:
+            pyproject = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
+        except (OSError, tomllib.TOMLDecodeError):
+            pyproject = {}
+        tool = pyproject.get("tool") if isinstance(pyproject, dict) else {}
+        if isinstance(tool, dict) and isinstance(tool.get("pytest"), dict):
+            explicit_test_commands.append({"command": "pytest", "source": "pyproject.toml#tool.pytest"})
+    workflow_sources: list[str] = []
+    workflows_root = target_root / ".github" / "workflows"
+    if workflows_root.is_dir():
+        workflow_sources = [path.relative_to(target_root).as_posix() for path in sorted(workflows_root.glob("*.y*ml"))[:4]]
+        for source in workflow_sources:
+            _append_unique(inspected, source)
+    proof_status = "inference-ready" if explicit_test_commands else "not-applicable"
+    if explicit_test_commands:
+        zero_interaction_actions.append(
+            {
+                "concern_id": "proof-route",
+                "owner": "proof.selection",
+                "status": "inferred-no-mutation-required",
+                "inferred_value": explicit_test_commands[0]["command"],
+                "claim_boundary": "Live changed-path proof still selects and confirms the command before a proof claim.",
+            }
+        )
+    concerns.append(
+        {
+            "id": "proof-route",
+            "owner": "proof.selection",
+            "status": proof_status,
+            "materiality": "required-before-proof-claims",
+            "dependency": "none",
+            "evidence": evidence(
+                *[item["source"] for item in explicit_test_commands],
+                *workflow_sources,
+                authority="explicit-toolchain-or-ci-command",
+            ),
+            "inference": (
+                f"Use the explicit repository test route {explicit_test_commands[0]['command']!r} as a proof candidate."
+                if explicit_test_commands
+                else "No explicit repeatable test command was found; generic test-like filenames are insufficient."
+            ),
+            "apply_route": {
+                "owner": "proof.selection",
+                "status": "ready-for-owner" if explicit_test_commands else "not-required",
+                "command": _command_with_cli_invoke(
+                    command="agentic-workspace proof --target . --changed <paths> --format json",
+                    cli_invoke=config.cli_invoke,
+                )
+                if explicit_test_commands
+                else "",
+            },
+            "detail_selector": "proof_route_hints",
+        }
+    )
+
+    codeowners = next(
+        (path for path in (".github/CODEOWNERS", "CODEOWNERS", "docs/CODEOWNERS") if existing(path)),
+        "",
+    )
+    if codeowners:
+        zero_interaction_actions.append(
+            {
+                "concern_id": "ownership-boundaries",
+                "owner": "ownership.report",
+                "status": "ready-for-owner",
+                "command": _command_with_cli_invoke(
+                    command="agentic-workspace ownership --target . --format json",
+                    cli_invoke=config.cli_invoke,
+                ),
+                "claim_boundary": "CODEOWNERS is evidence for a proposal; the ownership owner decides the shared mapping.",
+            }
+        )
+    concerns.append(
+        {
+            "id": "ownership-boundaries",
+            "owner": "ownership.report",
+            "status": "inference-ready" if codeowners else "not-applicable",
+            "materiality": "required-only-for-shared-ownership-policy",
+            "dependency": "none",
+            "evidence": evidence(codeowners, authority="explicit-repository-ownership-map"),
+            "inference": (
+                f"Use {codeowners} as evidence when proposing host ownership boundaries."
+                if codeowners
+                else "Directory names alone do not authorize shared ownership policy."
+            ),
+            "apply_route": {
+                "owner": "ownership.report",
+                "status": "ready-for-owner" if codeowners else "not-required",
+                "command": _command_with_cli_invoke(
+                    command="agentic-workspace ownership --target . --format json",
+                    cli_invoke=config.cli_invoke,
+                )
+                if codeowners
+                else "",
+            },
+            "detail_selector": "ownership",
+        }
+    )
+
+    raw_mixed_agent = raw_config.get("mixed_agent")
+    mixed_agent: dict[str, Any] = raw_mixed_agent if isinstance(raw_mixed_agent, dict) else {}
+    orchestration_declared = mixed_agent.get("execution_role") == "orchestrator"
+    assignment_explicit = "assignment_policy" in mixed_agent
+    if orchestration_declared and not assignment_explicit:
+        question = {
+            "concern_id": "orchestration-posture",
+            "why_required": (
+                "The repository explicitly selects orchestration, but it does not say whether work may automatically "
+                "move to another agent. Repository evidence cannot decide that human-owned authority boundary."
+            ),
+            "already_inferred": "Multi-agent orchestration is intended; the transfer policy is unresolved.",
+            "question": "Should suitable work move automatically to the best available agent, or stay here unless you explicitly delegate it?",
+            "alternatives": [
+                {
+                    "id": "automatic-best-fit",
+                    "label": "Move suitable work automatically",
+                    "consequence": "AW may assign bounded work to a better-fit configured target when its safety contract permits it.",
+                },
+                {
+                    "id": "explicit-delegation-only",
+                    "label": "Keep work local by default",
+                    "consequence": "AW will suggest delegation when useful but waits for an explicit choice before transfer.",
+                },
+            ],
+            "answer_owner": "config.mutation",
+            "detail_selector": "config.mixed_agent.assignment_policy",
+        }
+        human_questions.append(question)
+        orchestration_status = "human-decision-required"
+    else:
+        question = None
+        orchestration_status = "satisfied" if orchestration_declared else "not-applicable"
+    concerns.append(
+        {
+            "id": "orchestration-posture",
+            "owner": "config.mutation",
+            "status": orchestration_status,
+            "materiality": "shared-execution-authority",
+            "dependency": "configured-targets",
+            "evidence": evidence(
+                f"{WORKSPACE_CONFIG_PATH.as_posix()}#mixed_agent.execution_role" if orchestration_declared else "",
+                authority="explicit-workspace-config",
+            ),
+            "inference": (
+                "Orchestration is explicitly selected, but automatic transfer policy cannot be inferred."
+                if question
+                else "No unresolved orchestration policy is active."
+            ),
+            "human_decision": question or {},
+            "apply_route": {"owner": "config.mutation", "status": "awaiting-human" if question else "not-required"},
+            "detail_selector": "config.mixed_agent",
+        }
+    )
+
+    if "verification" in selected_modules:
+        verification_status = "satisfied"
+        verification_inference = "Verification is already enabled."
+    elif explicit_test_commands and workflow_sources:
+        verification_status = "inference-ready"
+        verification_inference = (
+            "Explicit test and CI routes support recommending repeatable Verification without a module-choice question."
+        )
+        zero_interaction_actions.append(
+            {
+                "concern_id": "verification-capability",
+                "owner": "modules.reconcile",
+                "status": "ready-for-owner",
+                "desired_outcome": "Preserve repeatable CI-backed proof routes for future claims.",
+                "detail_command": _command_with_cli_invoke(
+                    command="agentic-workspace modules --target . --format json",
+                    cli_invoke=config.cli_invoke,
+                ),
+            }
+        )
+    else:
+        verification_status = "not-applicable"
+        verification_inference = "Do not ask about Verification merely because the capability exists."
+    concerns.append(
+        {
+            "id": "verification-capability",
+            "owner": "modules.reconcile",
+            "status": verification_status,
+            "materiality": "repeatable-proof-lifecycle",
+            "dependency": "proof-route",
+            "evidence": evidence(
+                *[item["source"] for item in explicit_test_commands],
+                *workflow_sources,
+                authority="explicit-repeatable-proof-routes",
+            ),
+            "inference": verification_inference,
+            "apply_route": {
+                "owner": "modules.reconcile",
+                "status": "ready-for-owner" if verification_status == "inference-ready" else "not-required",
+            },
+            "detail_selector": "modules",
+        }
+    )
+
+    ecosystem_sources = [source for source in ("pyproject.toml", "package.json", "Cargo.toml", "go.mod") if existing(source)]
+    broad_work = len(ecosystem_sources) > 1 and not codeowners
+    if broad_work:
+        concerns.append(
+            {
+                "id": "cross-ecosystem-boundaries",
+                "owner": "planning",
+                "status": "bounded-route-required",
+                "materiality": "broad-active-work",
+                "dependency": "human-or-planning-boundary",
+                "evidence": evidence(*ecosystem_sources, authority="multiple-explicit-toolchain-manifests"),
+                "inference": "Multiple explicit ecosystems are present without an authoritative ownership map; setup must not analyze the whole repository.",
+                "apply_route": {
+                    "owner": "planning",
+                    "status": "bounded-route-required",
+                    "command": _command_with_cli_invoke(
+                        command="agentic-workspace planning new-plan --id <id> --title <title> --target . --format json",
+                        cli_invoke=config.cli_invoke,
+                    ),
+                },
+                "detail_selector": "host_orientation",
+            }
+        )
+
+    status_counts = {
+        status: sum(1 for concern in concerns if concern.get("status") == status)
+        for status in ("satisfied", "inference-ready", "human-decision-required", "not-applicable", "bounded-route-required")
+    }
+    status = "human-decision-required" if human_questions else "bounded-route-required" if broad_work else "zero-question-ready"
+    return {
+        "kind": "agentic-workspace/setup-concerns/v1",
+        "status": status,
+        "concerns": concerns,
+        "status_counts": status_counts,
+        "inferred_configuration": {
+            "startup_adapter": startup_surface if startup_present else "owner-route-required",
+            "intent_source": intent_sources[0] if intent_sources else "not-inferred",
+            "proof_command_candidates": [item["command"] for item in explicit_test_commands],
+            "ownership_source": codeowners or "not-inferred",
+            "capability_outcomes": [
+                action["desired_outcome"]
+                for action in zero_interaction_actions
+                if isinstance(action, dict) and action.get("desired_outcome")
+            ],
+            "authority": "projection-only; each change remains owned by its apply_route",
+        },
+        "zero_interaction_actions": zero_interaction_actions,
+        "human_questions": human_questions,
+        "inspection_budget": {
+            "inspected_sources": inspected,
+            "source_count": len(inspected),
+            "excluded_as_independent_authority": [
+                "generic filenames or keywords",
+                "scratch and local artifacts",
+                "package-source-repository policy",
+                "broad docs, backlog, or source-tree scans",
+            ],
+            "rule": "Inspect only fixed strong sources needed by active concerns; exact selectors own further detail.",
+        },
+        "transient_findings": {
+            "status": "kept-transient",
+            "rule": "Advisory orientation and weak setup findings do not become configuration pressure without stronger authority.",
+        },
+        "next": {
+            "action": "ask-smallest-semantic-question"
+            if human_questions
+            else "route-bounded-work"
+            if broad_work
+            else "apply-zero-interaction-owner-routes",
+            "question_count": len(human_questions),
+            "auto_action_count": len(zero_interaction_actions),
+            "rule": "After each owner action or human answer, re-resolve setup concerns; do not maintain a separate wizard state.",
+        },
+    }
+
+
 def _setup_payload(
     *,
     target_root: Path,
@@ -49720,6 +50113,11 @@ def _setup_payload(
     assurance_onboarding = _assurance_onboarding_payload(assurance=config.assurance)
     verification_guidance = _verification_enablement_guidance(target_root=target_root, config=config)
     target_arg = _command_target_arg(target_root)
+    configuration_concerns = _setup_configuration_concerns_payload(
+        target_root=target_root,
+        config=config,
+        selected_modules=selected_modules,
+    )
 
     def command_with_target(command: str) -> str:
         return str(_command_with_cli_invoke(command=command, cli_invoke=config.cli_invoke, target_arg=target_arg))
@@ -49793,6 +50191,38 @@ def _setup_payload(
                     command_with_target("agentic-workspace report --target ./repo --format json"),
                 ],
             }
+    if configuration_concerns.get("status") == "human-decision-required":
+        next_action = {
+            "summary": "Ask only the first unresolved human-owned semantic question, then route its answer to the named owner",
+            "commands": [],
+            "question": configuration_concerns["human_questions"][0],
+        }
+    elif configuration_concerns.get("status") == "bounded-route-required":
+        bounded = next(
+            (
+                concern
+                for concern in configuration_concerns.get("concerns", [])
+                if isinstance(concern, dict) and concern.get("status") == "bounded-route-required"
+            ),
+            {},
+        )
+        raw_route = bounded.get("apply_route")
+        route: dict[str, Any] = raw_route if isinstance(raw_route, dict) else {}
+        command = str(route.get("command") or "")
+        next_action = {
+            "summary": "Route broad cross-ecosystem analysis to bounded Planning instead of expanding setup",
+            "commands": [command] if command else [],
+        }
+    elif configuration_concerns.get("zero_interaction_actions"):
+        commands = [
+            str(action.get("command") or action.get("detail_command") or "")
+            for action in configuration_concerns["zero_interaction_actions"]
+            if isinstance(action, dict)
+        ]
+        next_action = {
+            "summary": "Apply the zero-interaction setup work through each concern's owning route, then re-resolve",
+            "commands": [command for command in commands if command],
+        }
     if installed_state_attention is not None:
         commands = [
             str(installed_state_attention.get("dry_run_command") or "").strip(),
@@ -49820,6 +50250,7 @@ def _setup_payload(
         },
         "analysis_input": findings_input,
         "host_orientation": host_orientation,
+        "configuration_concerns": configuration_concerns,
         **({"installed_state_compatibility": installed_state_compatibility} if installed_state_attention is not None else {}),
         **({"installed_state_attention": installed_state_attention} if installed_state_attention is not None else {}),
         "proof_route_hints": {
@@ -49870,6 +50301,12 @@ def _emit_setup(
         print("Host orientation candidates:")
         for item in payload["host_orientation"]["candidates"]:
             print(f"- {item['surface']}: {item['reason']}")
+    configuration_concerns = payload.get("configuration_concerns", {})
+    if isinstance(configuration_concerns, dict):
+        print(f"- configuration concerns: {configuration_concerns.get('status', 'unknown')}")
+        questions = configuration_concerns.get("human_questions", [])
+        if isinstance(questions, list) and questions:
+            print(f"- question: {questions[0].get('question', '')}")
     print(f"- next action: {payload['next_action']['summary']}")
     for command in payload["next_action"]["commands"]:
         print(f"  - {command}")

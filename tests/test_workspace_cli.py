@@ -2158,7 +2158,88 @@ def test_setup_surfaces_host_orientation_candidates_for_jumpstarted_repo(tmp_pat
     assert payload["analysis_input"]["status"] == "not-found"
     assert "must not seed Memory, Planning, assurance, or verification state" in host_orientation["rule"]
     assert not any("--target ./repo" in command for command in payload["next_action"]["commands"])
-    assert any("report --target " in command for command in payload["next_action"]["commands"])
+    assert payload["configuration_concerns"]["status"] == "zero-question-ready"
+    assert any("system-intent --target . --sync" in command for command in payload["next_action"]["commands"])
+
+
+def test_setup_infers_mature_repo_configuration_without_human_questions(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "README.md", "# Orders service\n\nProcesses customer orders.\n")
+    _write(
+        tmp_path / "pyproject.toml", "[project]\nname = 'orders'\nversion = '0.1.0'\n\n[tool.pytest.ini_options]\ntestpaths = ['tests']\n"
+    )
+    _write(tmp_path / ".github" / "CODEOWNERS", "/src/orders/ @orders-team\n")
+    _write(tmp_path / ".github" / "workflows" / "ci.yml", "name: CI\non: [push]\njobs: {}\n")
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    concerns = json.loads(capsys.readouterr().out)["configuration_concerns"]
+    by_id = {concern["id"]: concern for concern in concerns["concerns"]}
+    assert concerns["status"] == "zero-question-ready"
+    assert concerns["human_questions"] == []
+    assert by_id["system-intent-source"]["status"] == "inference-ready"
+    assert by_id["proof-route"]["status"] == "inference-ready"
+    assert by_id["ownership-boundaries"]["status"] == "inference-ready"
+    assert by_id["verification-capability"]["status"] == "inference-ready"
+    inferred = concerns["inferred_configuration"]
+    assert inferred["startup_adapter"] == "AGENTS.md"
+    assert inferred["intent_source"] == "README.md"
+    assert inferred["proof_command_candidates"] == ["pytest"]
+    assert inferred["ownership_source"] == ".github/CODEOWNERS"
+    assert inferred["capability_outcomes"] == ["Preserve repeatable CI-backed proof routes for future claims."]
+    assert {action["owner"] for action in concerns["zero_interaction_actions"]} == {
+        "system-intent.sync",
+        "proof.selection",
+        "ownership.report",
+        "modules.reconcile",
+    }
+    assert all("verification" not in question["question"].lower() for question in concerns["human_questions"])
+
+
+def test_setup_asks_plain_language_question_for_unresolved_human_policy(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--format", "json"]) == 0
+    capsys.readouterr()
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        "schema_version = 1\n\n[modules]\nenabled = ['planning', 'memory']\n\n[mixed_agent]\nexecution_role = 'orchestrator'\n",
+    )
+
+    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    concerns = json.loads(capsys.readouterr().out)["configuration_concerns"]
+    question = concerns["human_questions"][0]
+    assert concerns["status"] == "human-decision-required"
+    assert question["answer_owner"] == "config.mutation"
+    assert question["already_inferred"] == "Multi-agent orchestration is intended; the transfer policy is unresolved."
+    assert "automatically" in question["question"]
+    assert "assignment_policy" not in question["question"]
+    assert all(choice["consequence"] for choice in question["alternatives"])
+
+
+def test_setup_rejects_weak_policy_signals_and_bounds_broad_repo_analysis(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "SECURITY.md", "# Security\nBe secure.\n")
+    _write(tmp_path / "scratch" / "high-assurance-notes.md", "Enable everything.\n")
+    _write(tmp_path / "pyproject.toml", "[project]\nname = 'multi'\nversion = '0.1.0'\n")
+    _write(tmp_path / "package.json", '{"name":"multi-web","scripts":{"build":"vite build"}}\n')
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    concerns = json.loads(capsys.readouterr().out)["configuration_concerns"]
+    by_id = {concern["id"]: concern for concern in concerns["concerns"]}
+    inspected = concerns["inspection_budget"]["inspected_sources"]
+    assert concerns["status"] == "bounded-route-required"
+    assert by_id["ownership-boundaries"]["status"] == "not-applicable"
+    assert by_id["proof-route"]["status"] == "not-applicable"
+    assert by_id["cross-ecosystem-boundaries"]["owner"] == "planning"
+    assert "SECURITY.md" not in inspected
+    assert not any(source.startswith("scratch/") for source in inspected)
+    assert concerns["human_questions"] == []
 
 
 def test_setup_does_not_claim_an_idle_planning_queue_is_current_work(tmp_path: Path, capsys) -> None:

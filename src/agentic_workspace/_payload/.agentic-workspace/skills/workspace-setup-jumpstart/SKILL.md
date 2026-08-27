@@ -12,14 +12,20 @@ This subskill assumes the main AW operating skill or compact router has already 
 
 1. Run the configured invocation with `setup --target . --format json` for bounded post-bootstrap setup guidance.
    When ordinary startup routed here from `configuration_readiness`, preserve that receipt identity and claim boundary: configured-workflow implementation waits, while unrelated read-only inspection remains allowed.
-2. Treat setup as pre-write and pre-seed discovery. Do not bulk-import docs, backlog, or prose.
-3. Inspect only surfaces named by setup output, by the task, or by a durable mature-repo jumpstart memory note.
-4. Promote only:
+2. Begin with `configuration_concerns`. Inspect only the strong repo-owned sources and exact selectors named by active concerns; do not scan the workspace tree, docs, backlog, scratch, or source merely to look for configuration ideas.
+3. Resolve concerns in this order:
+   - accept `satisfied` and `not-applicable` without questions;
+   - send `inference-ready` work through its `apply_route` owner, then rerun setup;
+   - ask only the first `human-decision-required` question, in its outcome/consequence wording, send the answer to `answer_owner`, then rerun setup;
+   - send `bounded-route-required` analysis to its named Planning/human owner instead of expanding setup.
+4. Prefer the zero-question path. Explicit config, commands, CI, durable intent sources, and ownership maps may support technical inference. Generic filenames, keywords, directory names, scratch artifacts, and package-source-repo policy cannot independently authorize assurance, proof, ownership, capability, or other shared policy.
+5. Treat setup as pre-write and pre-seed discovery. This skill does not write shared config directly or maintain a separate wizard state.
+6. Promote only:
    - durable operating knowledge to Memory;
    - bounded follow-up to Planning;
    - evidence-backed friction to repo-friction or improvement intake;
    - low-confidence or generic findings to transient report only.
-5. Before writing seed surfaces, check promotion criteria in `.agentic-workspace/docs/setup-findings-contract.md` and the durable candidate rule in `.agentic-workspace/docs/jumpstart-contract.md`.
+7. Before writing seed surfaces, check promotion criteria in `.agentic-workspace/docs/setup-findings-contract.md` and the durable candidate rule in `.agentic-workspace/docs/jumpstart-contract.md`.
 
 ## Required Seed Surfaces
 

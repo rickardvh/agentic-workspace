@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Add bounded self-configuration inference and its runtime contract surfaces."
+issues = [2769]

@@ -1045,6 +1045,9 @@ def test_model_cli_harness_includes_setup_jumpstart_discovery_scenario(tmp_path:
     assert "workspace-setup-jumpstart" in scenario["required_command_mentions"]
     assert scenario["forbidden_write_patterns"] == ["**/*"]
     assert any("pre-write and pre-seed discovery" in note for note in scenario["expected_signals"])
+    assert any("structured configuration concerns" in note for note in scenario["expected_signals"])
+    assert any("zero-interaction" in note for note in scenario["expected_signals"])
+    assert "choose a module" in scenario["forbidden_response_phrases"]
 
     payload = module.run_suite(
         suite_path=suite_path,
@@ -1059,6 +1062,7 @@ def test_model_cli_harness_includes_setup_jumpstart_discovery_scenario(tmp_path:
     result = payload["results"][0]
     assert result["scenario_id"] == "setup-jumpstart-discovery"
     assert "uses setup as pre-write and pre-seed discovery" in result["expected_signals"]
+    assert "starts from structured configuration concerns and bounded strong evidence" in result["expected_signals"]
     assert result["mutation_summary"]["status"] == "not-run"
 
 

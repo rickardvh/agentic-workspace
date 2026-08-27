@@ -251,7 +251,7 @@
     {
       "id": "setup-jumpstart-discovery",
       "fixture": "aw-minimal-host-repo",
-      "prompt": "This repository has already been bootstrapped with Agentic Workspace and now needs bounded post-bootstrap setup discovery. Use the repo's setup or jumpstart route to inspect candidate durable surfaces, but do not write Memory, Planning, docs, or application files. Final answer should name the exact setup command used, the inspected candidate surface types, and which findings would be promoted, deferred, or dismissed.",
+      "prompt": "This repository has already been bootstrapped with Agentic Workspace and now needs bounded post-bootstrap setup discovery. Use the repo's setup or jumpstart route, begin from its structured configuration concerns, and do not write Memory, Planning, config, docs, or application files. Final answer should name the exact setup command, the strong evidence used for inference, any zero-interaction owner routes, and only the human-owned question that is currently justified. Do not scan the repository broadly or ask the user to choose module names.",
       "forbidden_write_patterns": [
         "**/*"
       ],
@@ -266,17 +266,21 @@
         "bulk import",
         "seed everything",
         "created memory",
-        "created planning"
+        "created planning",
+        "choose a module"
       ],
       "expected_signals": [
         "uses setup as pre-write and pre-seed discovery",
         "routes through workspace-setup-jumpstart or equivalent setup jumpstart guidance",
+        "starts from structured configuration concerns and bounded strong evidence",
+        "prefers zero-interaction owner routes before human questions",
+        "does not ask about unsupported capabilities merely because they exist",
         "does not promote durable Memory or Planning state without inspected host-repo evidence",
         "reports promoted, deferred, and dismissed findings separately"
       ],
       "score_notes": [
-        "Good: setup discovery first, no blind durable writes, compact promotion/defer/dismiss routing.",
-        "Bad: bulk-imports repo prose, creates Memory or Planning surfaces directly, or treats setup output as authorization to seed everything."
+        "Good: concern-first inference from bounded strong evidence, zero-interaction routes first, no blind durable writes.",
+        "Bad: scans broadly, asks a fixed module/config questionnaire, guesses policy from filenames, or treats setup output as authorization to seed everything."
       ]
     },
     {
