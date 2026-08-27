@@ -8,7 +8,13 @@
   },
   "closure_routes": [
     {"issues": [2345, 2590, 2729, 2765], "pull_request": 2766, "group": "planning-lifecycle-composition"},
-    {"issues": [2725], "pull_request": 2776, "group": "verifier-authority"},
+    {
+      "issues": [2725],
+      "pull_request": 2776,
+      "group": "repository-memory-review-anti-trap",
+      "disposition": "repository-local-operational-guidance",
+      "portable_aw_contract": false
+    },
     {"issues": [2762], "pull_request": 2777, "group": "cross-owner-enforcement"},
     {"issues": [2763], "pull_request": 2778, "group": "ordinary-nonlocal-delegation"},
     {"issues": [2562, 2721, 2752, 2754], "pull_request": "this-pr", "group": "integrated-parent-and-landed-residue-closure"}
@@ -44,7 +50,7 @@
     {
       "capability": "explicit-human-correction",
       "status": "observed",
-      "evidence": "The user narrowed intake after later issues appeared; the uncommitted expansion was removed without changing the original stack."
+      "evidence": "The user excluded later issues and reclassified #2725 as repository-local Memory guidance; withdrawn verifier-policy product changes and Planning machinery were removed."
     },
     {
       "capability": "real-nonlocal-delegation-and-return-admission",
@@ -80,7 +86,10 @@
   "subtraction_and_disposition": [
     {"surface": "parallel owner/action/permission/proof/claim answers", "disposition": "mechanically derived from one admitted operating-decision identity"},
     {"surface": "Workspace Planning reconcile option reconstruction", "disposition": "deleted in favor of generated canonical option projection"},
-    {"surface": "implementation-agent merge-ready authority", "disposition": "blocked; independent human review remains authoritative"},
+    {
+      "surface": "repository implementation-agent reviewer-comment anti-trap",
+      "disposition": "repo Memory guidance only: implementation agents report fixes and leave reviewer comments and decisions to this repository's distinct reviewer; no portable AW review control is added"
+    },
     {"surface": "deterministically invalid proof process launches", "disposition": "rejected before execution"},
     {"surface": "proof publication freshness churn", "disposition": "fixed point unless a declared semantic dependency changes"},
     {"surface": "bounded external-effect Planning custody", "disposition": "removed; durable continuation still routes to Planning"},
@@ -94,5 +103,5 @@
     "proposal": ".agentic-workspace/planning/integration-proposals/open-issues-nonlocal-delegation-implementation-archive-owner.integration-proposal.json",
     "apply_authority": "admitted target or merge-queue branch after the stack merges"
   },
-  "claim_boundary": "The stack is implementation- and evidence-complete when its hosted checks pass. Merge and merge-ready approval remain external human authority; later issues are not claimed."
+  "claim_boundary": "The stack is implementation- and evidence-complete when its hosted checks pass. Merge and review decisions remain governed by repository policy; later issues are not claimed."
 }

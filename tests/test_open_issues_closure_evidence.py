@@ -5,6 +5,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 EVIDENCE_PATH = REPO_ROOT / "tools" / "model-cli-harness" / "external-agent-evaluation" / "open-issues-closure-2026-08-27.json"
+CLOSURE_REVIEW_PATH = REPO_ROOT / "docs" / "reviews" / "open-issues-closure-2026-08-27.md"
 
 
 def _evidence() -> dict[str, object]:
@@ -46,6 +47,25 @@ def test_parent_closure_replay_names_every_required_integrated_capability() -> N
     assert all(row["status"] not in {"missing", "not-checked", "unevaluated"} for row in replay if isinstance(row, dict))
 
 
+def test_issue_2725_is_repository_memory_not_product_review_authority() -> None:
+    payload = _evidence()
+    routes = payload["closure_routes"]
+    assert isinstance(routes, list)
+    route = next(row for row in routes if isinstance(row, dict) and row["issues"] == [2725])
+    assert route == {
+        "issues": [2725],
+        "pull_request": 2776,
+        "group": "repository-memory-review-anti-trap",
+        "disposition": "repository-local-operational-guidance",
+        "portable_aw_contract": False,
+    }
+
+    closure_review = CLOSURE_REVIEW_PATH.read_text(encoding="utf-8")
+    assert "three product-semantic layers, one repository-local Memory correction" in closure_review
+    assert "| Repository-local review anti-trap | #2776 | #2725 |" in closure_review
+    assert "| Verifier authority | #2776 | #2725 |" not in closure_review
+
+
 def test_checked_in_closure_evidence_refs_exist_and_supported_host_trace_is_bounded() -> None:
     payload = _evidence()
     rows = [
@@ -81,4 +101,4 @@ def test_closure_review_contains_a_subtraction_disposition_for_each_peer_surface
     assert isinstance(residue, dict)
     assert residue["status"] == "integration-proposed"
     assert (REPO_ROOT / str(residue["proposal"])).is_file()
-    assert "Merge and merge-ready approval remain external human authority" in str(payload["claim_boundary"])
+    assert "Merge and review decisions remain governed by repository policy" in str(payload["claim_boundary"])
