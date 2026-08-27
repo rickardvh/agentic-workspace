@@ -5,7 +5,7 @@
   "owner_level": "slice",
   "lifecycle": "live",
   "phase": "validation",
-  "revision": 3,
+  "revision": 4,
   "intent": {
     "outcome": "Satisfy #2762 by extending the existing context-authority registry and #2300 composed-operation release gate so one admitted revision-bound operating decision remains the sole ordinary authority for owner, action, permission, proof/claim, and continuation across source, installed, generated, and adapter consumers.",
     "non_goals": [
@@ -45,18 +45,60 @@
     ]
   },
   "relationships": {
-    "selection": {"state": "selected", "owner": "open-issues-enforcement-ratchet"},
-    "proof_posture": {"state": "accepted", "refs": ["147 operating-decision and composed-scenario tests passed", "25 dogfooding counterexample and safe-control tests passed", "299 operation conformance cases passed", "external consumer readiness passed", "workspace lint, typecheck, contract tooling, and generated package checks passed"]},
-    "external_posture": {"state": "observed", "refs": ["GitHub issue #2762", "merged fixes #2756-#2758"]},
-    "delegation": {"state": "recorded", "route": "keep-local", "reason": "No sub-agent delegation was requested; this release-gate layer is a bounded continuation of the exact stacked head."}
+    "selection": {
+      "state": "selected",
+      "owner": "open-issues-enforcement-ratchet"
+    },
+    "proof_posture": {
+      "state": "accepted",
+      "refs": [
+        "147 operating-decision and composed-scenario tests passed",
+        "25 dogfooding counterexample and safe-control tests passed",
+        "299 operation conformance cases passed",
+        "external consumer readiness passed",
+        "workspace lint, typecheck, contract tooling, and generated package checks passed"
+      ]
+    },
+    "external_posture": {
+      "state": "observed",
+      "refs": [
+        "GitHub issue #2762",
+        "merged fixes #2756-#2758"
+      ]
+    },
+    "delegation": {
+      "state": "recorded",
+      "route": "keep-local",
+      "reason": "No sub-agent delegation was requested; this release-gate layer is a bounded continuation of the exact stacked head."
+    }
   },
   "references": [
-    {"kind": "github-issue", "target": "#2762", "label": "Cross-owner enforcement ratchet", "role": "owned intent", "locator": "https://github.com/rickardvh/agentic-workspace/issues/2762"},
-    {"kind": "github-issue", "target": "#2562", "label": "Operating-decision parent", "role": "parent", "locator": "https://github.com/rickardvh/agentic-workspace/issues/2562"},
-    {"kind": "planning-decomposition", "target": "open-issues-2026-08-27", "label": "All-open-issues epic", "role": "parent", "locator": ".agentic-workspace/planning/decompositions/open-issues-2026-08-27.decomposition.json"}
+    {
+      "kind": "github-issue",
+      "target": "#2762",
+      "label": "Cross-owner enforcement ratchet",
+      "role": "owned intent",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/2762"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#2562",
+      "label": "Operating-decision parent",
+      "role": "parent",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/2562"
+    },
+    {
+      "kind": "planning-decomposition",
+      "target": "open-issues-2026-08-27",
+      "label": "All-open-issues epic",
+      "role": "parent",
+      "locator": ".agentic-workspace/planning/decompositions/open-issues-2026-08-27.decomposition.json"
+    }
   ],
-  "next_action": "Commit the validated enforcement ratchet, open the third stacked PR on PR #2776 exact head, and observe hosted checks without claiming review authority.",
-  "blockers": ["None."],
+  "next_action": "Obtain a current-head independent review for PR #2777, then merge it after PR #2776.",
+  "blockers": [
+    "None."
+  ],
   "proof": {
     "claims": [
       "One admitted input snapshot cannot yield divergent authoritative owner, action, permission, proof/claim, or continuation answers.",
@@ -79,7 +121,8 @@
       "make lint-workspace",
       "make typecheck",
       "make schema-reference-docs"
-    ]
+    ],
+    "summary": "Implementation is published in PR #2777; hosted CI, Security, and Semver checks passed; lower marker-authority repair is restacked; independent review is pending."
   },
   "continuation": {
     "owner": ".agentic-workspace/planning/decompositions/open-issues-2026-08-27.decomposition.json",
@@ -91,6 +134,10 @@
     "stop_conditions": "Stop if an invariant cannot be derived from the existing registry and operating decision, or if a child defect is not already fixed at its canonical source."
   },
   "specialist_contracts": [
-    {"kind": "planning-delegation/v1", "target": "planning://delegation/keep-local", "revision": 1}
+    {
+      "kind": "planning-delegation/v1",
+      "target": "planning://delegation/keep-local",
+      "revision": 1
+    }
   ]
 }

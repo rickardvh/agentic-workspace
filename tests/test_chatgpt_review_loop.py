@@ -367,6 +367,33 @@ def test_marker_parser_accepts_only_exact_pr_and_full_sha() -> None:
     assert {item["reason"] for item in rejected} == {"stale-head", "malformed-or-multiple-markers", "pr-mismatch"}
 
 
+def test_marker_parser_rejects_implementation_authored_decision_but_accepts_independent_control() -> None:
+    comments = [
+        {
+            "id": "IC_implementation",
+            "author": {"login": "shared-owner-login"},
+            "body": f"Implementation status posing as review\n{marker(decision='blocked')}",
+            "url": "u1",
+        },
+        {
+            "id": "IC_reviewer",
+            "author": {"login": "independent-reviewer"},
+            "body": f"Independent findings\n{marker(decision='blocked')}",
+            "url": "u2",
+        },
+    ]
+
+    matches, rejected = loop.parse_reviews(
+        comments,
+        expected_pr=12,
+        expected_head=HEAD_A,
+        implementation_principals=["shared-owner-login"],
+    )
+
+    assert [(item.comment_id, item.findings) for item in matches] == [("IC_reviewer", "Independent findings")]
+    assert rejected == [{"comment_id": "IC_implementation", "reason": "implementation-authored-marker"}]
+
+
 def test_system_trigger_reports_failed_ci_and_merge_conflict_for_exact_head() -> None:
     trigger = loop._system_trigger(
         {
@@ -2027,6 +2054,37 @@ def test_stale_review_is_a_visible_noop(tmp_path: Path) -> None:
 
     assert result["reason"] == "stale-review-rejected"
     assert result["rejected"][0]["reviewed_head"] == HEAD_B
+    assert not any("resume" in command for command in runner.commands)
+
+
+def test_implementation_authored_blocked_marker_does_not_suppress_independent_review_wait(tmp_path: Path) -> None:
+    runner = FakeRunner(
+        tmp_path,
+        comments=[
+            {
+                "databaseId": 96,
+                "author": {"login": "shared-owner-login"},
+                "body": f"Implementation status\n{marker(decision='blocked')}",
+                "url": "u",
+            }
+        ],
+    )
+    original_run = runner.run
+
+    def run(command, *, cwd, env=None):
+        completed = original_run(command, cwd=cwd, env=env)
+        if list(command)[:3] != ["gh", "pr", "view"]:
+            return completed
+        payload = json.loads(completed.stdout)
+        payload["author"] = {"login": "shared-owner-login"}
+        return subprocess.CompletedProcess(command, completed.returncode, json.dumps(payload), completed.stderr)
+
+    runner.run = run
+
+    result = loop.poll_one(tmp_path, state(tmp_path), runner=runner, codex_command="codex")
+
+    assert result["reason"] == "implementation-review-rejected"
+    assert result["rejected"] == [{"comment_id": "96", "reason": "implementation-authored-marker"}]
     assert not any("resume" in command for command in runner.commands)
 
 

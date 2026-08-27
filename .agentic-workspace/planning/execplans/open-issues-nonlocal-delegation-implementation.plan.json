@@ -4,8 +4,8 @@
   "title": "Implement ordinary non-local delegation lifecycle",
   "owner_level": "slice",
   "lifecycle": "live",
-  "phase": "implementation",
-  "revision": 4,
+  "phase": "validation",
+  "revision": 5,
   "intent": {
     "outcome": "Satisfy #2763 by proving one transport-neutral, revision-bound non-local assignment through selection, export/dispatch, returned-result admission, integration/proof, reconciliation, and next decision, including one real supported-host episode and automatic/manual parity.",
     "non_goals": [
@@ -81,7 +81,7 @@
       "locator": ".agentic-workspace/planning/decompositions/open-issues-2026-08-27.decomposition.json"
     }
   ],
-  "next_action": "Audit the existing assignment lifecycle and composed-scenario infrastructure, add only the missing dispatch/continuation and conformance semantics, then run one bounded supported-host dogfood episode through the canonical packet.",
+  "next_action": "Obtain a current-head independent review for PR #2778, then merge it after PR #2777 and apply its pending target-branch integration proposal.",
   "blockers": [
     "None."
   ],
@@ -97,7 +97,8 @@
       "Run operation conformance, external consumer readiness, generated package parity, lint, typecheck, contract tooling, and runtime ownership checks.",
       "Record a compact supported-host dogfood trace whose identities and receipts can be checked without raw transcript storage."
     ],
-    "refs": []
+    "refs": [],
+    "summary": "Implementation and supported-host dogfood evidence are published in PR #2778; lower marker-authority repair is restacked; independent review and target-branch integration remain pending."
   },
   "continuation": {
     "owner": ".agentic-workspace/planning/decompositions/open-issues-2026-08-27.decomposition.json",
