@@ -1703,6 +1703,57 @@ def test_config_command_target_identity_ambiguous_alias_fails_closed(tmp_path: P
     assert payload["mixed_agent"]["correction_feedback"]["status"] == "fail-closed"
 
 
+def test_identity_init_preserves_explicit_noncurrent_target_profile_option(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    local_config = target / ".agentic-workspace/config.local.toml"
+    local_config.parent.mkdir(parents=True)
+    local_config.write_text(
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[delegation]",
+                'current_target = "codex_sol"',
+                "",
+                "[delegation_targets.codex_sol]",
+                'strength = "strong"',
+                'execution_methods = ["internal"]',
+                "",
+                "[delegation_targets.codex_luna]",
+                'strength = "weak"',
+                'execution_methods = ["cli"]',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    assert (
+        cli.main(
+            [
+                "correction-event",
+                "identity-init",
+                "--target",
+                str(target),
+                "--target-profile",
+                "codex_luna",
+                "--target-id",
+                "user-local:codex-luna-explicit",
+                "--dry-run",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    preview = json.loads(capsys.readouterr().out)
+    assert preview["target_profile"] == "codex_luna"
+    assert preview["target_id"] == "user-local:codex-luna-explicit"
+    assert preview["mutation_applied"] is False
+
+
 def test_current_profile_without_id_exposes_and_applies_exact_local_identity_repair(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
