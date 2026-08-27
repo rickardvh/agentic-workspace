@@ -1,0 +1,41 @@
+{
+  "kind": "planning-integration-proposal/v1",
+  "id": "pr-2766-consume-candidate-2345",
+  "status": "pending",
+  "phase": "integration-pending",
+  "requested_transition": "keep-open",
+  "owner": {
+    "id": "github-2345-workspace-make-checked-in-planning-lifecycle-tra",
+    "ref": ".agentic-workspace/planning/state.toml"
+  },
+  "external_ref": "2345",
+  "proof_refs": [
+    "https://github.com/rickardvh/agentic-workspace/pull/2766"
+  ],
+  "parent_boundary": "Issue remains open until PR integration; remove only duplicate roadmap intake after target-branch admission.",
+  "preserved_invariants": [
+    "feature-branch-does-not-rewrite-aggregate-planning-truth",
+    "active-execplan-remains-canonical-owner",
+    "unrelated-queue-order-is-preserved"
+  ],
+  "expected_subject_revision": "d670a1175c1bd77a",
+  "expected_planning_revision": "de3c6036867b4be4",
+  "created_at": "2026-08-27T12:45:28.338258Z",
+  "updated_at": "2026-08-27T12:45:28.338258Z",
+  "authority_boundary": {
+    "proposal": "feature-branch declaration",
+    "integrated_truth": "integration receipt after apply",
+    "non_authority": [
+      "current selection",
+      "aggregate indexes",
+      "unrelated owners",
+      "terminal parent truth"
+    ],
+    "branch_admission": {
+      "status": "inside-git",
+      "branch": "codex/open-issues-lifecycle-composition-v2",
+      "phase": "feature"
+    }
+  },
+  "proposal_revision": "0757cef371e7a8c2"
+}

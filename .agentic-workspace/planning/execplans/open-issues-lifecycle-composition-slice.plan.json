@@ -5,7 +5,7 @@
   "owner_level": "slice",
   "lifecycle": "live",
   "phase": "validation",
-  "revision": 5,
+  "revision": 7,
   "intent": {
     "outcome": "Implement #2345, #2590, #2729, and #2765 as one independently reviewable Planning lifecycle-composition PR: disjoint owner integration makes progress without weakening same-owner conflicts, archive-owner integration carries canonical subject proof directly into atomic closeout, admitted material external observations reconcile stale selected-owner actions, and the Workspace reconcile facade cannot drift from the canonical Planning operation it projects.",
     "non_goals": [
@@ -116,7 +116,7 @@
       "locator": ".agentic-workspace/planning/decompositions/open-issues-2026-08-27.decomposition.json"
     }
   ],
-  "next_action": "Publish the first independently reviewable PR in the stack and observe hosted CI without claiming independent review authority.",
+  "next_action": "Address blocking review feedback, obtain a current-head independent review, then merge PR #2766 before integrating the next stacked layer.",
   "blockers": [
     "None."
   ],
@@ -145,7 +145,8 @@
       "uv run --active python scripts/check/check_generated_command_packages.py --conformance --require-node",
       "uv run --active python scripts/check/check_generated_command_packages.py --docker --require-docker",
       "uv run --active python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker"
-    ]
+    ],
+    "summary": "Implementation is published in PR #2766; hosted CI, Security, and Semver checks passed; independent review is pending after blocker remediation."
   },
   "continuation": {
     "owner": ".agentic-workspace/planning/decompositions/open-issues-2026-08-27.decomposition.json",
