@@ -64,6 +64,66 @@ from agentic_workspace.workspace_runtime_proof import (
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_assignment_cli_transport_invokes_allow_listed_adapter_and_returns_untrusted_evidence(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from agentic_workspace.contracts import python_primitive_support
+
+    returned = {
+        "assignment_revision": "assignment-rev-1",
+        "run_id": "run-1",
+        "target": "planner",
+        "changed_paths": ["src/feature.py"],
+        "summary": "Implemented the bounded change.",
+        "stop_conditions_hit": [],
+        "patch": "--- a/src/feature.py\n+++ b/src/feature.py\n@@ -1 +1 @@\n-old\n+new\n",
+    }
+    observed: dict[str, object] = {}
+
+    def fake_run(command: list[str], **kwargs: object) -> SimpleNamespace:
+        observed["command"] = command
+        observed["kwargs"] = kwargs
+        return SimpleNamespace(returncode=0, stdout=json.dumps(returned), stderr="")
+
+    monkeypatch.setattr(python_primitive_support.subprocess, "run", fake_run)
+    receipt = python_primitive_support._dispatch_assignment_packet(
+        packet={
+            "assignment_identity": {
+                "role": "implementer",
+                "dispatch_adapter": {
+                    "provider": "codex",
+                    "model": "gpt-5.6-terra",
+                    "execution_methods": ["cli"],
+                },
+            }
+        },
+        prompt="sealed packet",
+        target_root=tmp_path,
+        transport="cli",
+    )
+
+    assert receipt["status"] == "returned"
+    assert receipt["returned_work"] == returned
+    assert receipt["claim_boundary"].startswith("transport-only")
+    assert observed["command"] == [
+        "codex",
+        "exec",
+        "--ephemeral",
+        "--sandbox",
+        "read-only",
+        "--cd",
+        str(tmp_path),
+        "--model",
+        "gpt-5.6-terra",
+        "-",
+    ]
+    assert observed["kwargs"]["input"] == "sealed packet"  # type: ignore[index]
+    assert python_primitive_support._assignment_patch_paths("--- a/outside.txt\n+++ /dev/null\n") == ["outside.txt"]
+    assert python_primitive_support._assignment_patch_paths(
+        "diff --git a/src/feature.py b/outside.py\nsimilarity index 100%\nrename from src/feature.py\nrename to outside.py\n"
+    ) == ["outside.py", "src/feature.py"]
+
+
 def _guidance_host_signature(payload: dict[str, object]) -> dict[str, object]:
     script = r"""
 import base64
@@ -959,7 +1019,12 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
         "role": "implementer",
         "allowed_effects": ["repo-write"],
         "allowed_paths": ["src/feature.py"],
-        "proof_obligation": {"id": "proof:feature", "revision": "proof-rev-1"},
+        "proof_obligation": {
+            "kind": "agentic-workspace/assignment-task-proof-obligation/v1",
+            "id": "proof:feature",
+            "revision": "proof-rev-1",
+            "subject": {"assignment_id": "assign-1", "run_id": "run-1"},
+        },
         "stop_conditions": ["scope-expanded"],
         "mutation_baseline": "baseline-1",
     }
@@ -972,7 +1037,6 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
             "return_schema": "delegated-return/v1",
         },
     }
-    proof_receipt = {"result": "passed", "verified_by": "aw", "revision": "proof-rev-1"}
     identity = workspace_runtime_core._assignment_identity_payload(
         assignment_gate=assignment_gate,
         assignment_policy=assignment_policy,
@@ -984,8 +1048,17 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
     proof_dir.mkdir(parents=True)
     baseline_file = tmp_path / ".agentic-workspace/planning/mutation-baseline.json"
     baseline_file.parent.mkdir(parents=True, exist_ok=True)
+    feature_path = tmp_path / "src/feature.py"
+    feature_path.parent.mkdir(parents=True, exist_ok=True)
+    feature_path.write_text("old\n", encoding="utf-8")
     proof_ref = ".agentic-workspace/proof/receipts/proof-feature.json"
-    (tmp_path / proof_ref).write_text(json.dumps(proof_receipt), encoding="utf-8")
+    structural_proof_receipt = {
+        "kind": "agentic-workspace/assignment-structural-proof-receipt/v1",
+        "result": "passed",
+        "verified_by": "aw",
+        "assignment_revision": identity["revision"],
+    }
+    (tmp_path / proof_ref).write_text(json.dumps(structural_proof_receipt), encoding="utf-8")
     baseline_file.write_text(json.dumps({"current_baseline": "baseline-1"}), encoding="utf-8")
     (assignment_dir / "assign-1.assignment.json").write_text(
         json.dumps(
@@ -998,7 +1071,7 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
                 "assignment_gate": assignment_gate,
                 "assignment_policy": assignment_policy,
                 "delegation_decision": delegation_decision,
-                "aw_proof_receipt_ref": proof_ref,
+                "structural_proof_receipt_ref": proof_ref,
                 "current_attempt": {"run_id": "run-1", "owner": "planner", "status": "handoff-prepared"},
                 "accepted_result_refs": [],
             }
@@ -1025,6 +1098,24 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
         target=tmp_path,
         invocation=invocation,
     )
+    missing_patch = assignment_import(
+        {
+            "run_id": "run-1",
+            "return_json": json.dumps(
+                {
+                    "assignment_revision": identity["revision"],
+                    "run_id": "run-1",
+                    "target": "planner",
+                    "changed_paths": ["src/feature.py"],
+                    "summary": "Claimed implementation without a patch.",
+                    "stop_conditions_hit": [],
+                    "patch": " \n",
+                }
+            ),
+        },
+        target=tmp_path,
+        invocation=invocation,
+    )
     imported = assignment_import(
         {
             "run_id": "run-1",
@@ -1036,12 +1127,34 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
                     "changed_paths": ["src/feature.py"],
                     "summary": "Implemented the bounded feature change.",
                     "stop_conditions_hit": [],
+                    "patch": "diff --git a/src/feature.py b/src/feature.py\n--- a/src/feature.py\n+++ b/src/feature.py\n@@ -1 +1 @@\n-old\n+new\n",
                 }
             ),
         },
         target=tmp_path,
         invocation=invocation,
     )
+    unrelated_proof_ref = ".agentic-workspace/proof/receipts/unrelated-proof.json"
+    (tmp_path / unrelated_proof_ref).write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/proof-receipt/v1",
+                "command": "pytest tests/test_feature.py",
+                "result": "passed",
+                "recorded_at": "2026-08-27T12:00:00+00:00",
+                "changed_paths": ["src/feature.py"],
+            }
+        ),
+        encoding="utf-8",
+    )
+    premature_close = assignment_close(
+        {"run_id": "run-1", "task_proof_receipt_ref": unrelated_proof_ref},
+        target=tmp_path,
+        invocation=invocation,
+    )
+    assert premature_close["status"] == "blocked"
+    still_current = json.loads((assignment_dir / "assign-1.assignment.json").read_text(encoding="utf-8"))
+    assert still_current["status"] == "current"
     blocked = assignment_integrate(
         {"run_id": "run-1"},
         target=tmp_path,
@@ -1057,11 +1170,107 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
         target=tmp_path,
         invocation=invocation,
     )
-    closed = assignment_close(
-        {"run_id": "run-1"},
+    assert integrated["status"] == "integrated", integrated["failures"]
+    proof_command = "python -c \"print('assignment proof passed')\""
+    proof_result = workspace_runtime_core._record_proof_receipt_payload(
+        target_root=tmp_path,
+        command=proof_command,
+        result="passed",
+        changed_paths=["src/feature.py"],
+        task_text="Implement the bounded feature change",
+    )
+    task_proof_ref = proof_result["trusted_producer_receipt_ref"]
+    close_action = workspace_runtime_core._assignment_primary_action_payload(
+        target_root=tmp_path,
+        assignment_policy={
+            "execution_role": {"value": "orchestrator"},
+            "assignment_policy": {"value": "required-best-fit"},
+        },
+        assignment_decision={"decision": "assign-best-fit", "assignment_decision_revision": "assignment-rev-1"},
+        assignment_gate={
+            "status": "handoff-required",
+            "implementation_allowed": False,
+            "selected_target": "planner",
+            "target_identity_ref": "target:planner@2026-07-21",
+        },
+        selected_target={"name": "planner", "execution_methods": ["manual"]},
+        delegation_control={"execution_permitted": False},
+        cli_invoke="agentic-workspace",
+    )
+    assert close_action["operation_invocation"]["operation_id"] == "assignment.close"
+    assert close_action["operation_invocation"]["arguments"]["task_proof_receipt_ref"] == task_proof_ref
+    wrong_task_proof_ref = ".agentic-workspace/proof/receipts/wrong-task-proof.json"
+    indexed_task_proof_path = proof_dir / f"{task_proof_ref.rsplit('/', 1)[-1]}.json"
+    wrong_task_proof = json.loads(indexed_task_proof_path.read_text(encoding="utf-8"))
+    wrong_task_proof["assignment_proof_obligation"] = {
+        **assignment_gate["proof_obligation"],
+        "revision": "stale-proof-revision",
+    }
+    (tmp_path / wrong_task_proof_ref).write_text(json.dumps(wrong_task_proof), encoding="utf-8")
+    typescript_wrong_close = subprocess.run(
+        [
+            "node",
+            str(ROOT / "generated/workspace/typescript/src/cli.mjs"),
+            "assignment",
+            "close",
+            "--target",
+            str(tmp_path),
+            "--run-id",
+            "run-1",
+            "--task-proof-receipt-ref",
+            wrong_task_proof_ref,
+            "--format",
+            "json",
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert typescript_wrong_close.returncode == 0, typescript_wrong_close.stderr
+    assert json.loads(typescript_wrong_close.stdout)["status"] == "blocked"
+    wrong_proof_close = assignment_close(
+        {"run_id": "run-1", "task_proof_receipt_ref": wrong_task_proof_ref},
         target=tmp_path,
         invocation=invocation,
     )
+    assert wrong_proof_close["status"] == "blocked"
+    closed = assignment_close(
+        {"run_id": "run-1", "task_proof_receipt_ref": task_proof_ref},
+        target=tmp_path,
+        invocation=invocation,
+    )
+    assert closed["status"] == "closed"
+    reopened_assignment = json.loads((assignment_dir / "assign-1.assignment.json").read_text(encoding="utf-8"))
+    reopened_assignment["status"] = "current"
+    reopened_assignment["current_attempt"]["status"] = "integrated"
+    (assignment_dir / "assign-1.assignment.json").write_text(json.dumps(reopened_assignment), encoding="utf-8")
+    state_path = tmp_path / ".agentic-workspace/local/assignment-runs/run-1/state.json"
+    reopened_state = json.loads(state_path.read_text(encoding="utf-8"))
+    reopened_state["current_state"] = "integrated"
+    state_path.write_text(json.dumps(reopened_state), encoding="utf-8")
+    typescript_closed = subprocess.run(
+        [
+            "node",
+            str(ROOT / "generated/workspace/typescript/src/cli.mjs"),
+            "assignment",
+            "close",
+            "--target",
+            str(tmp_path),
+            "--run-id",
+            "run-1",
+            "--task-proof-receipt-ref",
+            task_proof_ref,
+            "--format",
+            "json",
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert typescript_closed.returncode == 0, typescript_closed.stderr
+    assert json.loads(typescript_closed.stdout)["status"] == "closed"
     override = assignment_override(
         {"assignment_id": "assign-1", "reason": "maintainer approved", "scope": "src/feature.py", "expires_at": "2026-07-23T00:00:00Z"},
         target=tmp_path,
@@ -1071,11 +1280,12 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
     assert export["status"] == "handoff-prepared"
     assert malformed["status"] == "blocked"
     assert malformed["reason_code"] == "malformed-return"
+    assert missing_patch["status"] == "blocked"
+    assert missing_patch["reason_code"] == "malformed-return"
     assert imported["status"] == "awaiting-admission"
     assert blocked["reason_code"] == "return-not-admitted"
     assert admitted["status"] == "admitted"
     assert integrated["status"] == "integrated"
-    assert closed["status"] == "closed"
     closed_assignment = json.loads((assignment_dir / "assign-1.assignment.json").read_text(encoding="utf-8"))
     assert closed_assignment["status"] == "closed"
     assert closed_assignment["current_attempt"]["status"] == "closed"

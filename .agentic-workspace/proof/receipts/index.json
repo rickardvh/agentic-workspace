@@ -715,6 +715,13 @@
       "source_ref": "proof://receipts/7c519a87974a2933",
       "status": "current"
     },
+    "80aebf68078d6b99": {
+      "path": "80aebf68078d6b99.json",
+      "producer_class": "aw-proof",
+      "revision": "2026-08-27T21:53:30+00:00",
+      "source_ref": "proof://receipts/80aebf68078d6b99",
+      "status": "current"
+    },
     "80f41ff4ae57570e": {
       "path": "80f41ff4ae57570e.json",
       "producer_class": "aw-proof",

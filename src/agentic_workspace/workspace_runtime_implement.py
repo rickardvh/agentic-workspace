@@ -496,7 +496,7 @@ def _implement_next_selected_payload(
         changed_paths=normalized_paths,
         task_text=task_text,
         target_root=target_root,
-        materialize_assignment=True,
+        materialize_assignment=False,
     )
     planning_safety_gate = _planning_safety_gate_payload(
         target_root=target_root,
@@ -1054,7 +1054,7 @@ def _implement_payload(
         changed_paths=normalized_paths,
         task_text=task_text,
         target_root=target_root,
-        materialize_assignment=True,
+        materialize_assignment=False,
     )
     planning_safety_gate = _planning_safety_gate_payload(
         target_root=target_root, config=config, changed_paths=normalized_paths, task_text=task_text, execution_posture=execution_posture
