@@ -96,7 +96,7 @@ uv run python tools/chatgpt_review_loop.py poll --watch --interval 60 --max-poll
 
 For the serial all-open controller, use `make start-review-poller REVIEW_MAX_CYCLES=10`. It starts at most one job at a time, stores the cycle budget per PR, and is idempotent while its recorded process is alive.
 
-Polling uses `gh` only. A review is eligible only when the REST issue-comment record identifies the separately configured ChatGPT review automation's Codex Connector as its producing app and the comment contains exactly one well-formed marker whose PR number and 40-character lowercase SHA equal the recorded handoff. GitHub login and author association are transport metadata: an owner-authored marker without that configured dispatcher provenance is non-authoritative, while a connector-produced independent review remains authoritative when it shares the owner's login. Ordinary implementation agents use the repository CLI, may publish only fixes-applied / ready-for-re-review status, and must never invoke the independent-review skill or emit this marker. This repository boundary is deliberately operational; it does not add signing keys or consumer-facing attestation machinery for the hypothetical case where an implementation actor is deliberately given the reviewer automation itself.
+Polling uses `gh` only. A review is eligible only when its comment contains exactly one well-formed marker whose PR number and 40-character lowercase SHA equal the recorded handoff:
 
 ```text
 <!-- aw-chatgpt-review pr=<number> head=<full-sha> policy=pr-review-recheck-v1 decision=<blocked|merge-ready> -->

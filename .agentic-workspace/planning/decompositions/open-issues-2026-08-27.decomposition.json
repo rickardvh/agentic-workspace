@@ -25,35 +25,17 @@
       "owner_surface": ".agentic-workspace/planning/lanes/open-issues-lifecycle-composition.lane.json",
       "proof": "Workspace/Planning option conformance, synthetic disjoint-owner integration, proof-bearing integration-to-closeout, provider-neutral external-observation currentness, captured dogfood replays, generated parity, focused tests, and workspace-wide validation.",
       "slice_contribution_to_parent": "Removes the lifecycle and command-adapter failures that block reliable implementation, integration, and closeout of later lanes.",
-      "residual_parent_intent": "Independent verifier authority, generic cross-owner enforcement, non-local delegation, and parent closure remain.",
+      "residual_parent_intent": "Generic cross-owner enforcement, non-local delegation, and parent closure remain.",
       "parent_proof_boundary": "slice-only",
       "human_confirmation_needed": [],
       "depends_on": [],
-      "parallel_with": [
-        "open-issues-verifier-authority"
-      ]
-    },
-    {
-      "id": "open-issues-verifier-authority",
-      "title": "Keep implementation agents from self-approving repository PRs",
-      "readiness": "promoted",
-      "outcome": "Issue #2725 is satisfied in this repository without changing portable AW review procedures: implementation agents never approve their own PRs and only the configured review automation owns authoritative markers.",
-      "owner_surface": ".agentic-workspace/planning/lanes/open-issues-verifier-authority.lane.json",
-      "proof": "Repository review-marker admission regression, implementation handoff posture, negative merge-ready and blocked-marker cases, focused tests, and hosted checks.",
-      "slice_contribution_to_parent": "Restores the protected reviewer boundary required before later enforcement and delegation claims can be trusted.",
-      "residual_parent_intent": "Lifecycle composition, generic cross-owner enforcement, non-local delegation, and parent closure remain.",
-      "parent_proof_boundary": "slice-only",
-      "human_confirmation_needed": [],
-      "depends_on": [],
-      "parallel_with": [
-        "open-issues-lifecycle-composition"
-      ]
+      "parallel_with": []
     },
     {
       "id": "open-issues-enforcement-ratchet",
       "title": "Ratchet generic cross-owner enforcement invariants",
       "readiness": "promoted",
-      "outcome": "Issue #2762 makes target identity, proof admission/publication, bounded external effects, residue disposition, verifier authority, and external-observation currentness release-gating invariants over replaceable synthetic owners rather than repository vocabulary.",
+      "outcome": "Issue #2762 makes target identity, proof admission/publication, bounded external effects, residue disposition, and external-observation currentness release-gating invariants over replaceable synthetic owners rather than repository vocabulary.",
       "owner_surface": ".agentic-workspace/planning/lanes/open-issues-enforcement-ratchet.lane.json",
       "proof": "Provider-neutral composed conformance, negative split-authority mutations, authority-surface inventory delta, no-new-parallel-owner check, direct-work quiet-path measurements, and workspace-wide validation.",
       "slice_contribution_to_parent": "Turns the landed and repaired counterexamples into generic impossibility properties required by parent #2562.",
@@ -61,8 +43,7 @@
       "parent_proof_boundary": "slice-only",
       "human_confirmation_needed": [],
       "depends_on": [
-        "open-issues-lifecycle-composition",
-        "open-issues-verifier-authority"
+        "open-issues-lifecycle-composition"
       ],
       "parallel_with": []
     },
@@ -95,7 +76,6 @@
       "human_confirmation_needed": [],
       "depends_on": [
         "open-issues-lifecycle-composition",
-        "open-issues-verifier-authority",
         "open-issues-enforcement-ratchet",
         "open-issues-nonlocal-delegation"
       ],
@@ -103,14 +83,13 @@
     }
   ],
   "dependency_assumptions": [
-    "#2762 consumes the repaired lifecycle and verifier boundaries instead of duplicating their owners.",
+    "#2762 consumes the repaired lifecycle boundary instead of duplicating its owner.",
     "#2763 consumes the #2762 enforcement kernel and merged #2753 target identity contract.",
     "#2562 and #2721 close only after all child lanes land and the composed merged-master replay passes.",
     "Merged PR #2758 remains the implementation authority for #2752 and #2754; the final lane only reconciles proof and tracker state."
   ],
   "parallelization_assumptions": [
-    "Lifecycle composition and verifier authority are semantically independent, but PRs remain linearly stacked per the user request.",
-    "All later lanes are dependency-ordered and must be restacked on the exact predecessor head before review."
+    "All lanes are dependency-ordered and must be restacked on the exact predecessor head before review."
   ],
   "proof_expectations": [
     "Each promoted lane records failing-before and passing-after fixtures for every issue reproduction and portability counterexample.",
@@ -143,12 +122,6 @@
       "target": "#2590",
       "label": "Proof-bearing closeout handoff",
       "role": "lifecycle lane"
-    },
-    {
-      "kind": "github-issue",
-      "target": "#2725",
-      "label": "Independent verifier authority",
-      "role": "verifier lane"
     },
     {
       "kind": "github-issue",
