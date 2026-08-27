@@ -4,7 +4,7 @@
   "title": "Ratchet generic cross-owner enforcement invariants",
   "status": "active",
   "parent_decomposition_ref": ".agentic-workspace/planning/decompositions/open-issues-2026-08-27.decomposition.json",
-  "lane_outcome": "Issue #2762 makes target identity, proof admission/publication, bounded external effects, residue disposition, verifier authority, and external-observation currentness release-gating invariants over replaceable synthetic owners rather than repository vocabulary.",
+  "lane_outcome": "Issue #2762 makes target identity, proof admission/publication, bounded external effects, residue disposition, and external-observation currentness release-gating invariants over replaceable synthetic owners rather than repository vocabulary.",
   "purpose_for_parent": "Turns the landed and repaired counterexamples into generic impossibility properties required by parent #2562.",
   "subsystems": [],
   "technical_strategy": "Extend the canonical context-authority registry with one source-owner/join-identity map and peer-surface ratchet, project that contract from the operating-decision compiler, and reuse the #2300 composed-operation matrix for dogfooding counterexamples, safe controls, weak-agent forks, and generated-consumer parity.",
