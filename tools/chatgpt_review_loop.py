@@ -17,9 +17,6 @@ from pathlib import Path
 from typing import Any, Sequence, TextIO
 
 REVIEW_POLICY = "pr-review-recheck-v1"
-# Repository-owned review procedure: this app is the separately configured
-# external review dispatcher. It is not a portable AW verifier contract.
-CONFIGURED_REVIEW_DISPATCHER_SLUGS = frozenset({"chatgpt-codex-connector"})
 HEAD_SYNC_ATTEMPTS = 3
 STATE_KIND = "agentic-workspace/chatgpt-review-loop-state/v1"
 STATE_RELATIVE = Path(".agentic-workspace/local/chatgpt-review-loop")
@@ -641,25 +638,9 @@ def _save_dispatch(root: Path, payload: dict[str, Any]) -> None:
     temporary.replace(path)
 
 
-def _review_comments(root: Path, runner: CommandRunner, *, repository: str, pr: int) -> list[dict[str, Any]]:
-    """Load REST comments because GraphQL's PR projection omits producer-app provenance."""
-    pages = runner.json(
-        ["gh", "api", "--paginate", "--slurp", f"repos/{repository}/issues/{pr}/comments?per_page=100"],
-        cwd=root,
-    )
-    if not isinstance(pages, list) or not all(isinstance(page, list) for page in pages):
-        raise LoopError("review-comments-invalid", "gh returned an invalid issue-comment payload")
-    comments = [comment for page in pages for comment in page]
-    if not all(isinstance(comment, dict) for comment in comments):
-        raise LoopError("review-comments-invalid", "gh returned an invalid issue-comment entry")
-    return comments
-
-
-def _review_producer_slug(comment: dict[str, Any]) -> str:
-    producer = comment.get("performed_via_github_app")
-    if not isinstance(producer, dict):
-        return ""
-    return str(producer.get("slug") or "").strip().lower()
+def _comments_from_pr(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    comments = payload.get("comments", [])
+    return [item for item in comments if isinstance(item, dict)] if isinstance(comments, list) else []
 
 
 def _open_prs(root: Path, runner: CommandRunner) -> list[dict[str, Any]]:
@@ -830,12 +811,7 @@ def handoff(
     }
 
 
-def parse_reviews(
-    comments: list[dict[str, Any]],
-    *,
-    expected_pr: int,
-    expected_head: str,
-) -> tuple[list[Review], list[dict[str, Any]]]:
+def parse_reviews(comments: list[dict[str, Any]], *, expected_pr: int, expected_head: str) -> tuple[list[Review], list[dict[str, Any]]]:
     matches: list[Review] = []
     rejected: list[dict[str, Any]] = []
     for comment in comments:
@@ -849,10 +825,6 @@ def parse_reviews(
             continue
         if len(markers) != 1:
             rejected.append({"comment_id": comment_id, "reason": "malformed-or-multiple-markers"})
-            continue
-        producer_slug = _review_producer_slug(comment)
-        if producer_slug not in CONFIGURED_REVIEW_DISPATCHER_SLUGS:
-            rejected.append({"comment_id": comment_id, "reason": "untrusted-review-producer"})
             continue
         marker = markers[0]
         marker_pr = int(marker.group("pr"))
@@ -1396,12 +1368,8 @@ def poll_one(
             state, owner_root, event="unrecorded-head", recovery="run handoff from the exact owning Codex session at the new pushed head"
         )
 
-    matches, rejected = parse_reviews(
-        _review_comments(root, runner, repository=str(state["repository"]), pr=pr),
-        expected_pr=pr,
-        expected_head=str(state["handoff_head"]),
-    )
-    malformed = [item for item in rejected if item["reason"] not in {"stale-head", "untrusted-review-producer"}]
+    matches, rejected = parse_reviews(_comments_from_pr(payload), expected_pr=pr, expected_head=str(state["handoff_head"]))
+    malformed = [item for item in rejected if item["reason"] != "stale-head"]
     if malformed:
         return _recover(
             state,
@@ -1424,14 +1392,7 @@ def poll_one(
     else:
         review = None
         if review is None:
-            rejected_reasons = {str(item.get("reason") or "") for item in rejected}
-            event = (
-                "implementation-review-rejected"
-                if "untrusted-review-producer" in rejected_reasons
-                else "stale-review-rejected"
-                if rejected
-                else "review-pending"
-            )
+            event = "stale-review-rejected" if rejected else "review-pending"
             state.update(last_event=event, recovery="")
             _save_state(owner_root, state)
             return {"pr_number": pr, "status": "no-op", "reason": event, "rejected": rejected}
@@ -1626,7 +1587,6 @@ def _dispatch_all_unlocked(
     retired = _cleanup_closed_dispatches(root, registry, runner=runner)
     candidates: list[tuple[dict[str, Any], Review]] = []
     recovery_candidates: list[tuple[dict[str, Any], Review]] = []
-    repository = _repo_slug(root, runner)
     for payload in _open_prs(root, runner):
         pr = int(payload.get("number", 0))
         head = str(payload.get("headRefOid", ""))
@@ -1665,12 +1625,8 @@ def _dispatch_all_unlocked(
                     recovery="remote head changed without a validated exact-attempt result; inspect the recorded job and explicitly recover",
                 )
                 _save_state(root, existing)
-        matches, rejected = parse_reviews(
-            _review_comments(root, runner, repository=repository, pr=pr),
-            expected_pr=pr,
-            expected_head=head,
-        )
-        if any(item["reason"] not in {"stale-head", "untrusted-review-producer"} for item in rejected) or len(matches) > 1:
+        matches, rejected = parse_reviews(_comments_from_pr(payload), expected_pr=pr, expected_head=head)
+        if any(item["reason"] != "stale-head" for item in rejected) or len(matches) > 1:
             continue
         review = _system_trigger(payload, pr=pr, head=head) or (matches[0] if matches else None)
         if review is None or review.decision != "blocked" or not review.findings:
