@@ -20,8 +20,6 @@ from agentic_workspace.current_work_context import startup_route_identity
 from agentic_workspace.operating_decision import (
     admit_projection_surface_decision_input,
     attach_projection_surface_decision_input_consumption,
-    compact_review_authority_projection,
-    configured_review_authority_projection,
     finalize_projection_surface_operating_decision,
     materialize_projection_under_decision_input,
     project_startup_claim_effect_authority,
@@ -3556,13 +3554,6 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
     payload, operating_decision = finalize_projection_surface_operating_decision(
         payload=payload, admitted_input=admitted_input, consumer="start"
     )
-    review_authority = _as_dict(operating_decision.get("review_authority")) or configured_review_authority_projection(
-        target_root=str(target_root), consumer="start"
-    )
-    if review_authority.get("status") != "not-applicable" and isinstance(payload.get("decision_packet"), dict):
-        payload["decision_packet"]["review_authority"] = compact_review_authority_projection(review_authority)
-    if review_authority.get("status") != "not-applicable" and _selector_requests(selected_fields, "context"):
-        payload.setdefault("values", {}).setdefault("context", {})["review_authority"] = review_authority
     if payload.get("context") == {}:
         payload.pop("context")
     if _selector_requests(selected_fields, "source_guidance"):
