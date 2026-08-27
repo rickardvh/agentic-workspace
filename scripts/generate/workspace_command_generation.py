@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import copy
 import json
 import re
 from pathlib import Path
@@ -269,7 +270,71 @@ def workspace_command_generation_host_manifest(*, repo_root: Path = REPO_ROOT) -
 
 
 def load_workspace_command_package_ir(*, repo_root: Path = REPO_ROOT) -> dict[str, object]:
-    return load_command_package_ir(repo_root / SOURCE_PATH, command_package_schema_path())
+    manifest = load_command_package_ir(repo_root / SOURCE_PATH, command_package_schema_path())
+    return _resolve_interface_projections(manifest)
+
+
+def _resolve_interface_projections(manifest: dict[str, object]) -> dict[str, object]:
+    """Expand module front doors from their canonical package command interfaces.
+
+    A front door opts in by suffixing the module manifest reference with
+    ``#projected:<command>[,<command>]``. Named nested commands then inherit
+    the complete canonical interface, so option additions and removals cannot
+    drift while unrelated front-door commands retain their target-specific UI.
+    """
+
+    resolved = copy.deepcopy(manifest)
+    commands_by_ref: dict[tuple[str, str], list[dict[str, object]]] = {}
+    for package in resolved.get("packages", []):
+        if not isinstance(package, dict):
+            continue
+        for command in package.get("commands", []):
+            if not isinstance(command, dict):
+                continue
+            command_ref = command.get("command")
+            if not isinstance(command_ref, dict):
+                continue
+            manifest_ref = str(command_ref.get("manifest_ref") or "")
+            name = str(command_ref.get("name") or "")
+            if manifest_ref.startswith("package:") and name:
+                commands_by_ref.setdefault((manifest_ref, name), []).append(command)
+
+    for package in resolved.get("packages", []):
+        if not isinstance(package, dict):
+            continue
+        for command in package.get("commands", []):
+            if not isinstance(command, dict) or not isinstance(command.get("interface"), dict):
+                continue
+            command_ref = command.get("command")
+            if not isinstance(command_ref, dict):
+                continue
+            projection_ref = str(command_ref.get("manifest_ref") or "")
+            interface = command["interface"]
+            subcommands = interface.get("subcommands")
+            marker = "#projected:"
+            if marker not in projection_ref or not isinstance(subcommands, list):
+                continue
+            manifest_ref, projected_names_text = projection_ref.rsplit(marker, 1)
+            projected_names = {item.strip() for item in projected_names_text.split(",") if item.strip()}
+            projected: list[object] = []
+            for subcommand in subcommands:
+                name = str(subcommand.get("name") or "") if isinstance(subcommand, dict) else ""
+                if name not in projected_names:
+                    projected.append(subcommand)
+                    continue
+                authorities = [candidate for candidate in commands_by_ref.get((manifest_ref, name), []) if candidate is not command]
+                if len(authorities) > 1:
+                    raise ValueError(f"ambiguous command interface projection: {manifest_ref}:{name}")
+                authority = authorities[0] if authorities else None
+                if authority and isinstance(authority.get("interface"), dict):
+                    projected_interface = copy.deepcopy(authority["interface"])
+                    if isinstance(subcommand, dict) and isinstance(subcommand.get("usage_error_hints"), list):
+                        projected_interface["usage_error_hints"] = copy.deepcopy(subcommand["usage_error_hints"])
+                    projected.append(projected_interface)
+                else:
+                    projected.append(subcommand)
+            interface["subcommands"] = projected
+    return resolved
 
 
 def _typescript_release_package_metadata(*, repo_root: Path) -> dict[str, dict[str, object]]:
@@ -994,7 +1059,9 @@ def render_workspace_command_package_outputs(
     *,
     repo_root: Path = REPO_ROOT,
 ) -> list[GeneratedOutput]:
-    effective_manifest = manifest if manifest is not None else load_workspace_command_package_ir(repo_root=repo_root)
+    effective_manifest = (
+        _resolve_interface_projections(manifest) if manifest is not None else load_workspace_command_package_ir(repo_root=repo_root)
+    )
     outputs = render_outputs(
         effective_manifest,
         repo_root=repo_root,

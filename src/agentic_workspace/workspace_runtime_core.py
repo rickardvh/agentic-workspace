@@ -27978,7 +27978,7 @@ def _reconcile_external_active_owners_after_refresh(*, target_root: Path, reques
     preview = planning_reconcile(target=target_root, preview=True, dry_run=dry_run)
     proposal = _as_dict(preview.get("proposal"))
     transitions = [item for item in _list_payload(proposal.get("owner_transitions")) if isinstance(item, dict)]
-    relevant = [item for item in transitions if str(item.get("transition") or "") in {"close-slice", "blocked"}]
+    relevant = [item for item in transitions if str(item.get("transition") or "") in {"close-slice", "refresh-owner-action", "blocked"}]
     if not relevant:
         return {
             "status": "not-applicable",
@@ -27986,7 +27986,8 @@ def _reconcile_external_active_owners_after_refresh(*, target_root: Path, reques
             "owner_transition_count": 0,
         }
     blocked = [item for item in relevant if str(item.get("transition") or "") == "blocked"]
-    if blocked:
+    actionable = [item for item in relevant if str(item.get("transition") or "") in {"close-slice", "refresh-owner-action"}]
+    if blocked and not actionable:
         return {
             "status": "blocked",
             "reason": "semantic-completion-authority-required",
@@ -28008,11 +28009,19 @@ def _reconcile_external_active_owners_after_refresh(*, target_root: Path, reques
         proposal=proposal_id,
         expected_planning_revision=planning_revision,
     )
+    applied_status = str(applied.get("status") or "blocked")
+    semantic_blockers = [item for item in relevant if str(item.get("transition") or "") == "refresh-owner-action"]
     return {
-        "status": str(applied.get("status") or "blocked"),
+        "status": "applied-with-semantic-blockers" if applied_status == "applied" and semantic_blockers else applied_status,
         "proposal_id": proposal_id,
         "planning_revision": planning_revision,
         "owner_transitions": relevant,
+        "blocked_owners": semantic_blockers,
+        "claim_boundary": (
+            "External completion refreshed obsolete owner actions but did not satisfy missing Planning proof or intent authority."
+            if semantic_blockers
+            else ""
+        ),
         "receipt": _as_dict(applied.get("receipt")),
     }
 

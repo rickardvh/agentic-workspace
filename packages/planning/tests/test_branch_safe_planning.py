@@ -827,6 +827,69 @@ def test_stacked_child_proposal_applies_with_parent_in_one_target_reconcile(tmp_
         assert owner["relationships"]["integration"]["status"] == "integrated"
 
 
+def test_stale_disjoint_proposal_is_skipped_while_current_owner_applies(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    stale_owner_ref = _write_owner(tmp_path, "issue-stale-owner")
+    current_owner_ref = _write_owner(tmp_path, "issue-current-owner")
+    propose_integration_transition(
+        proposal_id="issue-stale-owner-integrated",
+        owner="issue-stale-owner",
+        owner_ref=stale_owner_ref,
+        requested_transition="mark-integrated",
+        target=tmp_path,
+    )
+    propose_integration_transition(
+        proposal_id="issue-current-owner-integrated",
+        owner="issue-current-owner",
+        owner_ref=current_owner_ref,
+        requested_transition="mark-integrated",
+        target=tmp_path,
+    )
+    stale_owner_path = tmp_path / stale_owner_ref
+    stale_owner = json.loads(stale_owner_path.read_text(encoding="utf-8"))
+    stale_owner["next_action"] = "changed independently after proposal"
+    stale_owner_path.write_text(json.dumps(stale_owner, indent=2) + "\n", encoding="utf-8")
+
+    applied = planning_reconcile(target=tmp_path, apply_pending_integrations=True)["pending_integration_apply"]
+
+    assert applied["status"] == "applied"
+    assert applied["applied_count"] == 1
+    assert applied["receipts"] == ["issue-current-owner-integrated"]
+    assert applied["skipped_proposals"] == [
+        {
+            "proposal_id": "issue-stale-owner-integrated",
+            "owner_ref": stale_owner_ref,
+            "reason_code": "stale-integration-subject-revision",
+            "detail": applied["skipped_proposals"][0]["detail"],
+        }
+    ]
+    assert _proposal_record(tmp_path, "issue-stale-owner-integrated")["status"] == "pending"
+    assert _proposal_record(tmp_path, "issue-current-owner-integrated")["status"] == "integrated"
+    assert json.loads((tmp_path / current_owner_ref).read_text(encoding="utf-8"))["relationships"]["integration"]["status"] == "integrated"
+
+
+def test_same_owner_pending_proposals_fail_closed_before_disjoint_apply(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    owner_ref = _write_owner(tmp_path, "issue-overlap")
+    for proposal_id in ("issue-overlap-first", "issue-overlap-second"):
+        propose_integration_transition(
+            proposal_id=proposal_id,
+            owner="issue-overlap",
+            owner_ref=owner_ref,
+            requested_transition="mark-integrated",
+            target=tmp_path,
+        )
+
+    blocked = planning_reconcile(target=tmp_path, apply_pending_integrations=True)["pending_integration_apply"]
+
+    assert blocked["status"] == "blocked"
+    assert blocked["reason_code"] == "overlapping-integration-proposals-require-reconcile"
+    assert blocked["overlapping_owners"] == [owner_ref]
+    assert all(
+        _proposal_record(tmp_path, proposal_id)["status"] == "pending" for proposal_id in ("issue-overlap-first", "issue-overlap-second")
+    )
+
+
 def test_pending_integration_batch_rolls_back_owner_proposal_and_receipt_on_write_failure(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
