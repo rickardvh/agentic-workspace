@@ -125,10 +125,6 @@
       "type": "object",
       "description": "Admission of a repository-owned assurance classification, quiet when no external classifier is configured."
     },
-    "review_authority": {
-      "type": "object",
-      "description": "Configured verifier class, subject revision, separation result, and implementation-side protected review effect boundary."
-    },
     "cross_owner_enforcement": {
       "type": "object",
       "description": "Registry-derived join identities, peer-surface dispositions, and fail-closed findings bound to this decision identity.",

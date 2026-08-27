@@ -1,16 +1,16 @@
 {
   "kind": "planning-lane/v1",
   "id": "open-issues-verifier-authority",
-  "title": "Keep implementation actors outside verifier decision authority",
+  "title": "Keep implementation agents from self-approving repository PRs",
   "status": "active",
   "parent_decomposition_ref": ".agentic-workspace/planning/decompositions/open-issues-2026-08-27.decomposition.json",
-  "lane_outcome": "Issue #2725 is satisfied generically and in the repository adapter: shared credentials or marker syntax cannot let an implementer occupy, suppress, satisfy, or fail an independent verifier decision cycle.",
+  "lane_outcome": "Issue #2725 is satisfied in this repository without controlling AW consumers: implementation agents never approve their own PRs, and only the separately configured review automation owns authoritative markers.",
   "purpose_for_parent": "Restores the protected reviewer boundary required before later enforcement and delegation claims can be trusted.",
   "subsystems": [],
-  "technical_strategy": "Reuse the portable separation-of-duty projection and bind this repository's marker intake to provider-controlled producer-app metadata, never GitHub login, association, or caller-authored marker fields.",
+  "technical_strategy": "Keep the boundary in repo-owned maintainer guidance, marker intake, and the exact-head merge gate; remove portable AW review-procedure machinery.",
   "technology_choices": [
-    "Treat REST performed_via_github_app metadata as the repo adapter's trusted producer identity.",
-    "Keep implementation status marker-free and preserve the existing exact-head review policy."
+    "Treat the separately configured ChatGPT review automation's REST performed_via_github_app metadata as this repo's dispatcher identity.",
+    "Keep implementation status marker-free and preserve the existing exact-head review policy without signatures or consumer-facing attestations."
   ],
   "slice_sequence": [
     {
@@ -24,13 +24,14 @@
   ],
   "current_slice": "open-issues-verifier-authority",
   "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
-  "proof_strategy": "Generic shared-transport role fixture, repository review-marker admission regression, implementation handoff posture, negative merge-ready and blocked-marker cases, focused tests, and hosted checks.",
+  "proof_strategy": "Repository review-marker admission regression, implementation handoff posture, negative merge-ready and blocked-marker cases, maintainer-surface checks, and hosted checks.",
   "proof_aggregation": {
     "status": "partial",
     "evidence": [
       "112 review-loop, stack, and merge-gate tests passed.",
       "Same-login implementation and connector-review marker matrix passed.",
-      "Workspace lint, typecheck, contract tooling, structured inventory, Planning doctor, and maintainer surfaces passed."
+      "Ruff and maintainer surfaces passed.",
+      "Portable AW review-procedure changes and the package changeset were removed per the issue-owner clarification."
     ],
     "known_gaps": [
       "Publish and restack the repaired heads, then obtain current-head independent review before ordered integration."

@@ -1878,149 +1878,6 @@ def context_consequence_effects(consequences: list[dict[str, Any]]) -> dict[str,
     }
 
 
-def separation_of_duty_gate(*, required_mode: str, implementer: dict[str, Any], reviewer: dict[str, Any] | None) -> dict[str, Any]:
-    """Resolve the configured verifier separation without trusting claim text."""
-    if required_mode in {"", "none", "not-applicable"}:
-        return {"kind": "agentic-workspace/separation-of-duty-gate/v1", "status": "not-applicable"}
-    reviewer = reviewer or {}
-    if not reviewer:
-        return {
-            "kind": "agentic-workspace/separation-of-duty-gate/v1",
-            "status": "required",
-            "required_mode": required_mode,
-        }
-    same_actor = bool(implementer.get("actor_id")) and implementer.get("actor_id") == reviewer.get("actor_id")
-    fresh_context = bool(reviewer.get("fresh_context"))
-    distinct_provider = bool(implementer.get("provider")) and implementer.get("provider") != reviewer.get("provider")
-    human = reviewer.get("role") == "human-approver"
-    accepted = (
-        (required_mode == "fresh-context" and fresh_context)
-        or (required_mode == "separate-actor" and not same_actor)
-        or (required_mode == "distinct-provider" and not same_actor and distinct_provider)
-        or (required_mode == "human" and human and not same_actor)
-    )
-    return {
-        "kind": "agentic-workspace/separation-of-duty-gate/v1",
-        "status": "satisfied" if accepted else "blocked",
-        "required_mode": required_mode,
-        "reviewer_role": reviewer.get("role", ""),
-        "independence": {
-            "same_actor": same_actor,
-            "fresh_context": fresh_context,
-            "distinct_provider": distinct_provider,
-            "human": human,
-        },
-        "rule": "Implementer assertions, same-context self-review, and proof reruns never satisfy an independent-review requirement.",
-    }
-
-
-def _configured_review_authority_context(*, target_root: str, consumer: str) -> dict[str, Any]:
-    if not target_root or consumer not in {"start", "implement", "proof", "closeout"}:
-        return {}
-    root = Path(target_root)
-    try:
-        from agentic_workspace.config import load_workspace_config
-
-        config = load_workspace_config(target_root=root)
-    except (OSError, ValueError):
-        return {}
-    local = config.local_override
-    target_name = str(local.current_target or "")
-    profile = next((item for item in local.delegation_targets if item.name == target_name), None)
-    return {
-        "applicable": local.requires_human_verification_on_pr is True,
-        "required_mode": "human" if local.requires_human_verification_on_pr is True else "none",
-        "execution_role": "implementation" if consumer in {"start", "implement"} else consumer,
-        "configured_execution_role": str(local.execution_role or ""),
-        "implementer": {
-            "actor_id": target_name or "current-implementation-actor",
-            "provider": str(profile.provider or "") if profile is not None else "",
-        },
-        "subject": {
-            "kind": "pull-request-or-change-head",
-            "head_revision": _git_head(root),
-            "source": "repository-head",
-        },
-        "source": ".agentic-workspace/config.local.toml safety.requires_human_verification_on_pr",
-    }
-
-
-def review_authority_projection(*, context: dict[str, Any], consumer: str) -> dict[str, Any]:
-    """Project one verifier decision into ordinary route and claim effects."""
-    if not context or context.get("applicable") is False:
-        return {
-            "kind": "agentic-workspace/review-authority-projection/v1",
-            "status": "not-applicable",
-            "configured_semantics": "unchanged",
-        }
-    required_mode = str(context.get("required_mode") or "none")
-    implementer = _as_dict(context.get("implementer"))
-    reviewer = _as_dict(context.get("reviewer"))
-    gate = separation_of_duty_gate(required_mode=required_mode, implementer=implementer, reviewer=reviewer or None)
-    implementation_route = str(context.get("execution_role") or consumer) == "implementation" or consumer in {"start", "implement"}
-    independent_required = gate.get("status") != "not-applicable"
-    requested_effect = str(context.get("requested_effect") or "")
-    protected_effects = {"self-approve", "approve", "merge-ready", "review-approved"}
-    protected_requested = requested_effect in protected_effects
-    protected_allowed = not (implementation_route and independent_required)
-    return {
-        "kind": "agentic-workspace/review-authority-projection/v1",
-        "status": "protected" if independent_required else "policy-permissive",
-        "consumer": consumer,
-        "execution_role": str(context.get("execution_role") or consumer),
-        "configured_execution_role": str(context.get("configured_execution_role") or ""),
-        "subject": _as_dict(context.get("subject")),
-        "verifier_class": required_mode,
-        "separation_gate": gate,
-        "implementation_effects": {
-            "allowed_status": ["fixes-applied", "ready-for-re-review"],
-            "protected_review_decisions": sorted(protected_effects),
-            "protected_review_authorized": protected_allowed,
-            "requested_effect": requested_effect,
-            "requested_effect_authorized": not protected_requested or protected_allowed,
-        },
-        "explicit_status_text": {
-            "communication_allowed": bool(context.get("explicit_status_text_instruction")),
-            "authority_upgrade": False,
-            "gate_satisfied": gate.get("status") == "satisfied",
-        },
-        "admission_authority": "assignment.admit independent-review receipt and configured repository gate",
-        "source": str(context.get("source") or "configured-review-policy"),
-        "rule": (
-            "Permission to communicate status never changes actor provenance or verifier eligibility; "
-            "implementation may request re-review but cannot authoritatively approve itself."
-        ),
-    }
-
-
-def configured_review_authority_projection(*, target_root: str, consumer: str) -> dict[str, Any]:
-    """Resolve the configured ordinary-route projection through the canonical gate."""
-    return review_authority_projection(
-        context=_configured_review_authority_context(target_root=target_root, consumer=consumer),
-        consumer=consumer,
-    )
-
-
-def compact_review_authority_projection(projection: dict[str, Any]) -> dict[str, Any]:
-    """Keep the ordinary packet decision-sized while retaining the authority boundary."""
-    if not projection:
-        return {}
-    effects = _as_dict(projection.get("implementation_effects"))
-    explicit_status = _as_dict(projection.get("explicit_status_text"))
-    return {
-        "kind": str(projection.get("kind") or "agentic-workspace/review-authority-projection/v1"),
-        "status": str(projection.get("status") or "not-applicable"),
-        "execution_role": str(projection.get("execution_role") or ""),
-        "subject": _as_dict(projection.get("subject")),
-        "verifier_class": str(projection.get("verifier_class") or ""),
-        "separation_status": str(_as_dict(projection.get("separation_gate")).get("status") or "not-applicable"),
-        "allowed_status": [str(item) for item in _as_list(effects.get("allowed_status"))],
-        "protected_review_authorized": bool(effects.get("protected_review_authorized")),
-        "status_text_authority_upgrade": bool(explicit_status.get("authority_upgrade")),
-        "detail": "context.projection_decision_authority.review_authority",
-    }
-
-
 def future_context_findings(signals: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Adapt source-owned post-action signals to the existing consequence compiler."""
 
@@ -2659,7 +2516,6 @@ def compile_projection_surface_operating_decision(
             "future_context_capture": _as_dict(payload.get("future_context_capture"))
             or _as_dict(payload_context.get("future_context_capture")),
             "reconciliation": _as_dict(payload.get("reconciliation")) or _as_dict(payload_context.get("reconciliation")),
-            "review_context": _as_dict(material_inputs.get("review_context")),
         }
     )
     surface_input_revision = str(decision.get("admitted_input_revision") or "")
@@ -2723,7 +2579,6 @@ def bind_projection_surface_operating_decision(
             for item in _as_list(_as_dict(operating_decision.get("intent_feedback")).get("applicable_expectations"))
             if isinstance(item, dict) and str(item.get("expectation_revision") or "")
         ],
-        "review_authority": copy.deepcopy(_as_dict(operating_decision.get("review_authority"))),
         "mismatch_reason": "" if valid else "decision posture or admitted projection input does not match the materialized payload",
         "rule": "The final decision is authoritative only when it derives from this pre-admitted input and the materialized purpose posture.",
     }
@@ -3440,13 +3295,6 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
     """Return one primary typed action or one typed external blocker."""
 
     future_context_signals = [_as_dict(item) for item in _as_list(inputs.get("future_context_signals")) if isinstance(item, dict)]
-    requested_consumer = str(inputs.get("consumer") or "operating-decision")
-    review_context = _as_dict(inputs.get("review_context"))
-    review_authority = (
-        review_authority_projection(context=review_context, consumer=requested_consumer)
-        if review_context
-        else configured_review_authority_projection(target_root=str(inputs.get("target_root") or ""), consumer=requested_consumer)
-    )
     intent_feedback = compile_intent_feedback(
         expectations=[item for item in _as_list(inputs.get("intent_expectations")) if isinstance(item, dict)],
         evidence=[item for item in _as_list(inputs.get("intent_evidence")) if isinstance(item, dict)],
@@ -3529,6 +3377,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         instruction_targets.append(f"operation:{instruction_invocation['operation_id']}")
     instruction_targets.extend(f"claim:{item}" for item in _as_list(inputs.get("requested_claim_classes")) if str(item))
     instruction_clause_projection = compile_instruction_program(instruction_program, current_targets=instruction_targets)
+    requested_consumer = str(inputs.get("consumer") or "operating-decision")
     context_authority_projection = resolve_context_authority_projection(
         consumer=requested_consumer,
         task=str(inputs.get("task") or ""),
@@ -3604,8 +3453,6 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
             "assurance_source_revision": str(inputs.get("assurance_source_revision") or ""),
             "assurance_input_revision": str(inputs.get("assurance_input_revision") or ""),
         }
-    if review_authority.get("status") != "not-applicable":
-        revisions = {**revisions, "review_authority_revision": "sha256:" + _digest(review_authority)}
     authorities = _as_dict(inputs.get("authorities"))
     actionability = _as_dict(inputs.get("actionability"))
     owner_repair_action = context_authority_repair_action(context_authority_projection)
@@ -3868,7 +3715,6 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         "reconciliation": reconciliation,
         "control_inputs": control_inputs,
         "assurance": assurance,
-        "review_authority": review_authority,
         "highest_impact_context_consequence": context_consequences[0] if context_consequences else {},
         "current_work": _as_dict(inputs.get("current_work")),
         "selected_owner": _as_dict(inputs.get("selected_owner")),
