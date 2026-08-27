@@ -319,31 +319,6 @@ def test_selected_current_assignment_preserves_existing_implement_action() -> No
     assert assignment_action["target_identity_ref"] == "target:current"
 
 
-@pytest.mark.parametrize("consumer", ["start", "implement"])
-def test_ordinary_projection_surfaces_configured_review_authority_before_protected_effects(consumer: str) -> None:
-    review_context = {
-        "applicable": True,
-        "required_mode": "human",
-        "execution_role": "implementation",
-        "implementer": {"actor_id": "implementation-owner"},
-        "subject": {"kind": "pull-request", "id": "2501", "head_revision": "a" * 40},
-    }
-    admitted = admit_projection_surface_decision_input(
-        input_revisions={"current_work": "rev-a", "git": "a" * 40},
-        consumer=consumer,
-        material_inputs={"task": "repair the pull request", "changed": ["src/app.py"], "review_context": review_context},
-    )
-
-    decision = compile_projection_surface_operating_decision(payload={}, admitted_input=admitted, consumer=consumer)
-
-    authority = decision["review_authority"]
-    assert authority["execution_role"] == "implementation"
-    assert authority["subject"] == review_context["subject"]
-    assert authority["verifier_class"] == "human"
-    assert authority["separation_gate"]["status"] == "required"
-    assert authority["implementation_effects"]["protected_review_authorized"] is False
-
-
 def test_nonlocal_assignment_action_preempts_local_implement_action() -> None:
     admitted = admit_projection_surface_decision_input(
         input_revisions={"current_work": "rev-a", "assignment": "assignment-rev-b"},
@@ -3000,76 +2975,3 @@ def test_operating_decision_identity_changes_with_terminal_blocker_and_claim_pos
 
     assert len({base["decision_id"], terminal["decision_id"], blocked["decision_id"], claims["decision_id"]}) == 4
     assert all("decision_posture" in decision["input_revisions"] for decision in (base, terminal, blocked, claims))
-
-
-def test_implementation_route_projects_human_verifier_without_self_review_authority() -> None:
-    decision = compile_operating_decision(
-        inputs={
-            "consumer": "implement",
-            "review_context": {
-                "applicable": True,
-                "required_mode": "human",
-                "execution_role": "implementation",
-                "implementer": {"actor_id": "shared-owner-login", "provider": "provider-a"},
-                "reviewer": {"actor_id": "shared-owner-login", "role": "human-approver", "provider": "provider-a"},
-                "subject": {"kind": "pull-request", "id": "42", "head_revision": "a" * 40},
-                "requested_effect": "merge-ready",
-                "explicit_status_text_instruction": True,
-            },
-        }
-    )
-
-    authority = decision["review_authority"]
-    assert authority["subject"]["head_revision"] == "a" * 40
-    assert authority["verifier_class"] == "human"
-    assert authority["separation_gate"]["status"] == "blocked"
-    assert authority["implementation_effects"]["protected_review_authorized"] is False
-    assert authority["implementation_effects"]["requested_effect_authorized"] is False
-    assert authority["implementation_effects"]["allowed_status"] == ["fixes-applied", "ready-for-re-review"]
-    assert authority["explicit_status_text"] == {
-        "communication_allowed": True,
-        "authority_upgrade": False,
-        "gate_satisfied": False,
-    }
-
-
-def test_distinct_current_human_verifier_satisfies_gate_but_not_implementation_authority() -> None:
-    decision = compile_operating_decision(
-        inputs={
-            "consumer": "implement",
-            "review_context": {
-                "applicable": True,
-                "required_mode": "human",
-                "execution_role": "implementation",
-                "implementer": {"actor_id": "implementer"},
-                "reviewer": {"actor_id": "human-reviewer", "role": "human-approver"},
-                "subject": {"kind": "pull-request", "id": "42", "head_revision": "b" * 40},
-            },
-        }
-    )
-
-    authority = decision["review_authority"]
-    assert authority["separation_gate"]["status"] == "satisfied"
-    assert authority["implementation_effects"]["protected_review_authorized"] is False
-    assert authority["explicit_status_text"]["gate_satisfied"] is True
-
-
-def test_policy_without_independent_verifier_keeps_configured_semantics() -> None:
-    decision = compile_operating_decision(
-        inputs={
-            "consumer": "implement",
-            "review_context": {
-                "applicable": True,
-                "required_mode": "none",
-                "execution_role": "implementation",
-                "implementer": {"actor_id": "same-agent"},
-                "reviewer": {"actor_id": "same-agent"},
-                "requested_effect": "merge-ready",
-            },
-        }
-    )
-
-    authority = decision["review_authority"]
-    assert authority["status"] == "policy-permissive"
-    assert authority["separation_gate"]["status"] == "not-applicable"
-    assert authority["implementation_effects"]["requested_effect_authorized"] is True

@@ -43,7 +43,6 @@ from agentic_workspace.improvement_consequence import (
     read_consequence_history,
     record_consequence_event,
 )
-from agentic_workspace.operating_decision import separation_of_duty_gate
 from agentic_workspace.projection_reuse import projection_cancellation_checkpoint
 from agentic_workspace.proof_receipt_admission import (
     PROOF_RECEIPT_RESULT_OPTIONS,
@@ -7384,6 +7383,33 @@ def _host_closeout_posture_packet(
     }
 
 
+def _separation_of_duty_gate(*, required_mode: str, implementer: dict[str, Any], reviewer: dict[str, Any] | None) -> dict[str, Any]:
+    """Resolve the minimum review separation without treating proof reruns as review."""
+    if required_mode in {"", "none", "not-applicable"}:
+        return {"kind": "agentic-workspace/separation-of-duty-gate/v1", "status": "not-applicable"}
+    reviewer = reviewer or {}
+    if not reviewer:
+        return {"kind": "agentic-workspace/separation-of-duty-gate/v1", "status": "required", "required_mode": required_mode}
+    same_actor = bool(implementer.get("actor_id")) and implementer.get("actor_id") == reviewer.get("actor_id")
+    fresh_context = bool(reviewer.get("fresh_context"))
+    distinct_provider = bool(implementer.get("provider")) and implementer.get("provider") != reviewer.get("provider")
+    human = reviewer.get("role") == "human-approver"
+    accepted = (
+        (required_mode == "fresh-context" and fresh_context)
+        or (required_mode == "separate-actor" and not same_actor)
+        or (required_mode == "distinct-provider" and not same_actor and distinct_provider)
+        or (required_mode == "human" and human and not same_actor)
+    )
+    return {
+        "kind": "agentic-workspace/separation-of-duty-gate/v1",
+        "status": "satisfied" if accepted else "blocked",
+        "required_mode": required_mode,
+        "reviewer_role": reviewer.get("role", ""),
+        "independence": {"same_actor": same_actor, "fresh_context": fresh_context, "distinct_provider": distinct_provider, "human": human},
+        "rule": "Implementer assertions, same-context self-review, and proof reruns never satisfy an independent-review requirement.",
+    }
+
+
 def _stable_review_json_digest(value: Any) -> str:
     return hashlib.sha256(_stable_review_json_bytes(value)).hexdigest()
 
@@ -8383,7 +8409,7 @@ def _proof_decision_packet(
         required_mode=required_review_mode,
         changed_paths=changed_paths,
     )
-    separation_gate = separation_of_duty_gate(
+    separation_gate = _separation_of_duty_gate(
         required_mode=required_review_mode,
         implementer=_as_dict(admitted_review_receipt.get("implementer")),
         reviewer=_as_dict(admitted_review_receipt.get("reviewer")) or None,
