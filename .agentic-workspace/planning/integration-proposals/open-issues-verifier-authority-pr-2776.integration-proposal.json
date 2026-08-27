@@ -1,0 +1,52 @@
+{
+  "kind": "planning-integration-proposal/v1",
+  "id": "open-issues-verifier-authority-pr-2776",
+  "status": "pending",
+  "phase": "integration-pending",
+  "requested_transition": "archive-owner",
+  "owner": {
+    "id": "open-issues-verifier-authority",
+    "ref": ".agentic-workspace/planning/execplans/open-issues-verifier-authority.plan.json"
+  },
+  "external_ref": "https://github.com/rickardvh/agentic-workspace/pull/2776",
+  "proof_refs": [
+    "uv run --active pytest tests/test_operating_decision.py tests/test_review_merge_gate.py tests/test_pr_comment_delta.py tests/test_workspace_cli.py::test_start_and_implement_project_human_review_boundary_before_protected_effects -q",
+    "uv run --active pytest tests/test_workspace_proof_cli.py -k \"independent_review or high_assurance_closeout_posture\" -q",
+    "uv run --active pytest tests/test_external_operation_clients.py -k \"self_review or correction_event\" -q",
+    "uv run --active python scripts/check/run_operation_conformance_tests.py --target all --require-node --format text",
+    "uv run --active python scripts/check/run_external_consumer_readiness.py --require-node",
+    "uv run --active python scripts/check/check_runtime_implementation_ownership.py",
+    "make lint-workspace",
+    "make typecheck",
+    "205 verifier-focused tests passed",
+    "299 operation conformance cases passed",
+    "external consumer readiness passed",
+    "workspace lint and typecheck passed"
+  ],
+  "parent_boundary": "PR #2776 may close #2725 after merge; #2562, #2721, and the all-open-issues decomposition remain live.",
+  "preserved_invariants": [
+    "independent review remains external",
+    "lower stack PR #2766 remains independently reviewable",
+    "parent closure remains separate"
+  ],
+  "expected_subject_revision": "b86f8c401dbc9dc3",
+  "expected_planning_revision": "287405a14412b986",
+  "created_at": "2026-08-27T09:29:50.238984Z",
+  "updated_at": "2026-08-27T09:29:50.238984Z",
+  "authority_boundary": {
+    "proposal": "feature-branch declaration",
+    "integrated_truth": "integration receipt after apply",
+    "non_authority": [
+      "current selection",
+      "aggregate indexes",
+      "unrelated owners",
+      "terminal parent truth"
+    ],
+    "branch_admission": {
+      "status": "inside-git",
+      "branch": "codex/open-issues-verifier-authority",
+      "phase": "feature"
+    }
+  },
+  "proposal_revision": "5ec9d701bd31fddf"
+}
