@@ -122,14 +122,14 @@
       "make typecheck",
       "make schema-reference-docs"
     ],
-    "summary": "Implementation is published in PR #2777; hosted CI, Security, and Semver checks passed; lower marker-authority repair is restacked; independent review is pending."
+    "summary": "Implementation is published in PR #2777; hosted CI, Security, and Semver checks passed; the lower stack is restacked; independent review is pending."
   },
   "continuation": {
     "owner": ".agentic-workspace/planning/decompositions/open-issues-2026-08-27.decomposition.json",
     "residual_intent": "After this lane, implement #2763 and then reconcile parent closure."
   },
   "execution_bounds": {
-    "branch_order": "codex/open-issues-enforcement-ratchet bases on codex/open-issues-verifier-authority exact head.",
+    "branch_order": "codex/open-issues-enforcement-ratchet bases on PR #2776's memory-only exact head.",
     "ask_before": "Adding a new root command, authority store, policy language, or weakening a canonical source-owner boundary.",
     "stop_conditions": "Stop if an invariant cannot be derived from the existing registry and operating decision, or if a child defect is not already fixed at its canonical source."
   },
