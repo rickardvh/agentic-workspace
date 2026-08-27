@@ -21,9 +21,9 @@
     "integration-apply-is-target-branch-authoritative"
   ],
   "expected_subject_revision": "9d1d0599ac38b2b2",
-  "expected_planning_revision": "d223c4200b11098c",
+  "expected_planning_revision": "8052670225e644d1",
   "created_at": "2026-08-27T12:56:50.108949Z",
-  "updated_at": "2026-08-27T14:42:18.6392805Z",
+  "updated_at": "2026-08-27T17:12:09.7222800Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -39,5 +39,5 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "9a0bec55a86fd7dd"
+  "proposal_revision": "e82a451b87cdf417"
 }
