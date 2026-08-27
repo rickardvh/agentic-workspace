@@ -14499,11 +14499,7 @@ def _integration_apply_recovery_command(target_root: Path) -> str:
     return f"{_workspace_cli_invoke(target_root)} planning reconcile --apply-pending-integrations --target . --format json"
 
 
-def _apply_pending_integration_proposals(
-    *, target_root: Path, expected_planning_revision: str = "", dry_run: bool = False
-) -> dict[str, Any]:
-    result = InstallResult(target_root=target_root, message="Apply pending Planning integration proposals", dry_run=dry_run)
-    admission = _git_branch_admission(target_root)
+def _pending_integration_proposal_paths(target_root: Path) -> tuple[Path, list[Path]]:
     proposal_dir = target_root / PLANNING_INTEGRATION_PROPOSAL_ROOT
     pending_paths: list[Path] = []
     if proposal_dir.exists():
@@ -14511,14 +14507,42 @@ def _apply_pending_integration_proposals(
             record = _load_integration_proposal(path)
             if isinstance(record, dict) and str(record.get("status", "")).strip() == "pending":
                 pending_paths.append(path)
+    return proposal_dir, pending_paths
+
+
+def _overlapping_pending_integration_owners(target_root: Path, pending_paths: list[Path]) -> dict[str, list[Path]]:
+    pending_owner_paths: dict[str, list[Path]] = {}
+    for proposal_path in pending_paths:
+        record = _load_integration_proposal(proposal_path)
+        if not isinstance(record, dict) or str(record.get("requested_transition", "")).strip() == "keep-open":
+            continue
+        owner = record.get("owner", {}) if isinstance(record.get("owner"), dict) else {}
+        owner_path, owner_path_error = _integration_owner_path(target_root, str(owner.get("ref", "")).strip())
+        if owner_path_error or owner_path is None:
+            continue
+        normalized_owner_ref = _planning_surface_relative(target_root, owner_path)
+        pending_owner_paths.setdefault(normalized_owner_ref, []).append(proposal_path)
+    return {owner_ref: paths for owner_ref, paths in pending_owner_paths.items() if len(paths) > 1}
+
+
+def _no_pending_integration_payload(result: InstallResult, proposal_dir: Path) -> dict[str, Any]:
+    result.mutation_expected = False
+    result.add("no-op", proposal_dir, "no pending integration proposals were found")
+    payload = result.to_dict()
+    payload["kind"] = "planning-pending-integration-apply/v1"
+    payload["status"] = "no-op"
+    payload["applied_count"] = 0
+    return payload
+
+
+def _apply_pending_integration_proposals(
+    *, target_root: Path, expected_planning_revision: str = "", dry_run: bool = False
+) -> dict[str, Any]:
+    result = InstallResult(target_root=target_root, message="Apply pending Planning integration proposals", dry_run=dry_run)
+    admission = _git_branch_admission(target_root)
+    proposal_dir, pending_paths = _pending_integration_proposal_paths(target_root)
     if not pending_paths:
-        result.mutation_expected = False
-        result.add("no-op", proposal_dir, "no pending integration proposals were found")
-        payload = result.to_dict()
-        payload["kind"] = "planning-pending-integration-apply/v1"
-        payload["status"] = "no-op"
-        payload["applied_count"] = 0
-        return payload
+        return _no_pending_integration_payload(result, proposal_dir)
     if admission.get("phase") == "feature":
         result.add(
             "manual review",
@@ -14549,19 +14573,7 @@ def _apply_pending_integration_proposals(
 
     now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     owner_refs_seen: set[str] = set()
-    pending_owner_paths: dict[str, list[Path]] = {}
-    for proposal_path in pending_paths:
-        record = _load_integration_proposal(proposal_path)
-        if not isinstance(record, dict) or str(record.get("requested_transition", "")).strip() == "keep-open":
-            continue
-        owner = record.get("owner", {}) if isinstance(record.get("owner"), dict) else {}
-        owner_ref = str(owner.get("ref", "")).strip()
-        owner_path, owner_path_error = _integration_owner_path(target_root, owner_ref)
-        if owner_path_error or owner_path is None:
-            continue
-        normalized_owner_ref = _planning_surface_relative(target_root, owner_path)
-        pending_owner_paths.setdefault(normalized_owner_ref, []).append(proposal_path)
-    overlapping = {owner_ref: paths for owner_ref, paths in pending_owner_paths.items() if len(paths) > 1}
+    overlapping = _overlapping_pending_integration_owners(target_root, pending_paths)
     if overlapping:
         for owner_ref, paths in sorted(overlapping.items()):
             result.add(
