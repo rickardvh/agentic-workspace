@@ -41,6 +41,7 @@ from agentic_workspace._schema import ModuleDescriptor, ModuleResultContract, Ro
 from agentic_workspace.actionability import derive_actionability, operation_invocation, proposed_action_input_revision
 from agentic_workspace.adaptation import bounded_adaptation_projection
 from agentic_workspace.agent_guidance import correction_feedback_contract, target_identity_posture
+from agentic_workspace.assignment_lifecycle import materialize_canonical_assignment
 from agentic_workspace.assurance_authority import build_assurance_application, evaluate_assurance_disposition
 from agentic_workspace.authority_envelope import admit_live_mutation_boundary, revalidate_mutation_baseline
 from agentic_workspace.config import (
@@ -42751,11 +42752,24 @@ def _assignment_identity_payload(
         "stop_conditions": stop_conditions if isinstance(stop_conditions, list) else [],
         "mutation_baseline": assignment_gate.get("mutation_baseline") or next_step.get("mutation_baseline"),
         "return_admission_owner": "delegated-return.admit",
+        "human_intent": assignment_gate.get("human_intent")
+        or next_step.get("human_intent")
+        or assignment_gate.get("task")
+        or assignment_gate.get("task_class"),
+        "required_inputs": assignment_gate.get("required_inputs") or next_step.get("required_inputs") or [],
+        "prohibited_effects": assignment_gate.get("prohibited_effects")
+        or next_step.get("prohibited_effects")
+        or ["scope-widening", "merge", "closeout", "proof-authority", "human-authority"],
+        "claim_authority": {
+            "worker_result": "evidence-only",
+            "proof": "orchestrator-owned",
+            "integration": "orchestrator-owned",
+            "completion": "orchestrator-owned",
+        },
     }
     required_fields = [
         "target",
         "target_identity_ref",
-        "target_revision",
         "task_class",
         "scope_class",
         "plan_ref",
@@ -43936,6 +43950,7 @@ def _delegated_run_lifecycle_payload(
                 "assignment.mutation_baseline",
                 "assignment.revision",
             ],
+            "optional_identity_fields": ["assignment.target_revision when the stable target identity uses revision_policy=revalidate"],
             "required_evidence": [
                 "received/awaiting-admission return artifact",
                 "changed paths or no-change statement",
@@ -44086,6 +44101,7 @@ def _assignment_primary_action_payload(
     lifecycle_action = {
         "awaiting-admission": ("assignment.admit", "admit-returned-assignment", "admitted-or-repair-requested"),
         "admitted": ("assignment.integrate", "integrate-admitted-assignment", "integrated"),
+        "integrated": ("assignment.close", "close-integrated-assignment", "closed"),
         "rejected": ("assignment.repair", "repair-rejected-assignment", "repair-requested"),
         "repair-requested": ("assignment.reassign", "reassign-blocked-assignment", "superseded-and-reassigned"),
     }.get(local_state_name)
@@ -44114,6 +44130,23 @@ def _assignment_primary_action_payload(
             "expected_transition": transition,
             "operation_invocation": invocation,
             "command": command,
+        }
+    if local_state_name in {"closed", "archived"}:
+        return {
+            **base,
+            "status": "assignment-complete",
+            "action": "reconcile-next-operating-decision",
+            "expected_transition": "next-decision-from-preserved-intent",
+            "implementation_allowed": False,
+            "claim_authority": "orchestrator-after-current-proof-and-closeout",
+            "continuation": {
+                "assignment_id": assignment_id,
+                "assignment_revision": assignment_revision,
+                "run_id": run_id,
+                "run_state": local_state_name,
+                "preserved_assignment_decision_revision": decision_revision,
+                "rule": "Closed delegated work returns to the orchestrator for a fresh decision; it never re-enters export or grants worker completion authority.",
+            },
         }
 
     methods = [str(method) for method in _list_payload((selected_target or {}).get("execution_methods")) if str(method)]
@@ -44159,7 +44192,12 @@ def _assignment_primary_action_payload(
 
 
 def _execution_posture_payload(
-    *, config: WorkspaceConfig, changed_paths: list[str], task_text: str | None, target_root: Path | None = None
+    *,
+    config: WorkspaceConfig,
+    changed_paths: list[str],
+    task_text: str | None,
+    target_root: Path | None = None,
+    materialize_assignment: bool = False,
 ) -> dict[str, Any]:
     posture = _capability_posture_for_implementation(changed_paths=changed_paths, task_text=task_text)
     runtime_resolution = _runtime_resolution_payload(config=config, capability_posture=posture["posture"])
@@ -44282,6 +44320,117 @@ def _execution_posture_payload(
         task_text=task_text,
         changed_paths=changed_paths,
     )
+    assignment_materialization: dict[str, Any] = {}
+    if materialize_assignment and target_root is not None and assignment_gate.get("status") == "handoff-required":
+        current_work = resolve_current_work_context(root=target_root, task=str(task_text or ""), relation_hint="plan-continuation")
+        plan_id = str(current_work.get("selected_plan_id") or current_work.get("plan_id") or "").strip()
+        plan_ref = f".agentic-workspace/planning/execplans/{plan_id}.plan.json" if plan_id else ""
+        plan_path = target_root / plan_ref if plan_ref else None
+        plan_record: dict[str, Any] = {}
+        if plan_path is not None:
+            try:
+                loaded_plan = json.loads(plan_path.read_text(encoding="utf-8-sig"))
+                plan_record = loaded_plan if isinstance(loaded_plan, dict) else {}
+            except (OSError, json.JSONDecodeError):
+                plan_record = {}
+        decision_revision = str(assignment_gate.get("assignment_decision_revision") or "").strip()
+        digest_fragment = hashlib.sha256(decision_revision.encode("utf-8")).hexdigest()[:16]
+        assignment_id = f"ordinary-{digest_fragment}"
+        run_id = f"run-{digest_fragment}"
+        baseline = ""
+        try:
+            baseline_result = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                cwd=target_root,
+                text=True,
+                capture_output=True,
+                check=False,
+                timeout=10,
+            )
+            baseline = baseline_result.stdout.strip() if baseline_result.returncode == 0 else ""
+        except (OSError, subprocess.SubprocessError):
+            baseline = ""
+        enhanced_gate = {
+            **assignment_gate,
+            "plan_ref": plan_ref,
+            "plan_revision": plan_record.get("revision") or decision_revision,
+            "slice_id": f"slice-{digest_fragment}",
+            "slice_revision": decision_revision,
+            "role": "validator" if "validat" in str(task_text or "").lower() else "implementer",
+            "human_intent": str(task_text or "").strip(),
+            "required_inputs": list(changed_paths),
+            "allowed_effects": ["read-only"] if "validat" in str(task_text or "").lower() else ["repo-write"],
+            "allowed_paths": list(changed_paths),
+            "proof_obligation": {
+                "id": f"proof:{assignment_id}",
+                "revision": decision_revision,
+            },
+            "stop_conditions": [
+                "scope-expands-beyond-allowed-paths",
+                "required-input-missing",
+                "prohibited-effect-required",
+            ],
+            "mutation_baseline": baseline,
+        }
+        next_step = {
+            **_as_dict(delegation_decision.get("delegation_next_step")),
+            "handoff_run_id": run_id,
+            "run_id": run_id,
+            "role": enhanced_gate["role"],
+            "return_schema": "delegated-return/v1",
+        }
+        enhanced_delegation = {**delegation_decision, "delegation_next_step": next_step}
+        identity = _assignment_identity_payload(
+            assignment_gate=enhanced_gate,
+            assignment_policy=assignment_policy,
+            delegation_decision=enhanced_delegation,
+        )
+        if identity.get("complete"):
+            proof_ref = f".agentic-workspace/proof/receipts/{assignment_id}.assignment-proof.json"
+            now = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+            assignment_materialization = materialize_canonical_assignment(
+                target_root=target_root,
+                assignment={
+                    "kind": "agentic-workspace/planning-assignment/v1",
+                    "assignment_id": assignment_id,
+                    "current_revision": identity["revision"],
+                    "status": "current",
+                    "target_name": enhanced_gate.get("selected_target"),
+                    "assignment_gate": enhanced_gate,
+                    "assignment_policy": assignment_policy,
+                    "delegation_decision": enhanced_delegation,
+                    "aw_proof_receipt_ref": proof_ref,
+                    "current_attempt": {
+                        "run_id": run_id,
+                        "owner": enhanced_gate.get("selected_target"),
+                        "status": "selected",
+                        "updated_at": now,
+                    },
+                    "accepted_result_refs": [],
+                    "created_at": now,
+                    "updated_at": now,
+                    "authority": "ordinary-implement-live-assignment-decision",
+                },
+                proof_receipt={
+                    "kind": "agentic-workspace/assignment-structural-proof-receipt/v1",
+                    "result": "passed",
+                    "verified_by": "aw",
+                    "assignment_id": assignment_id,
+                    "assignment_decision_revision": decision_revision,
+                    "assignment_revision": identity["revision"],
+                    "mutation_baseline": baseline,
+                    "recorded_at": now,
+                    "claim_boundary": "assignment-identity-and-routing-only; task implementation and completion remain unproved",
+                },
+            )
+            assignment_gate = enhanced_gate
+            delegation_decision = enhanced_delegation
+        else:
+            assignment_materialization = {
+                "kind": "agentic-workspace/assignment-materialization/v1",
+                "status": "blocked-incomplete-identity",
+                "missing_required_fields": identity.get("missing_required_fields", []),
+            }
     assignment_action = _assignment_primary_action_payload(
         target_root=target_root,
         assignment_policy=assignment_policy,
@@ -44308,6 +44457,7 @@ def _execution_posture_payload(
         "assignment_decision": assignment_decision,
         "assignment_gate": assignment_gate,
         "assignment_action": assignment_action,
+        "assignment_materialization": assignment_materialization,
         "task_assignment_disposition": task_assignment_disposition,
         "implementation_allowed": assignment_gate["implementation_allowed"],
         "selected_target": target,

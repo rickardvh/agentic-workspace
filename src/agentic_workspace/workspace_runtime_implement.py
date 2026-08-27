@@ -501,7 +501,11 @@ def _implement_next_selected_payload(
     ]
     attention_paths = [item["path"] for item in path_boundaries if item["requires_attention"]]
     execution_posture = _execution_posture_payload(
-        config=config, changed_paths=normalized_paths, task_text=task_text, target_root=target_root
+        config=config,
+        changed_paths=normalized_paths,
+        task_text=task_text,
+        target_root=target_root,
+        materialize_assignment=True,
     )
     planning_safety_gate = _planning_safety_gate_payload(
         target_root=target_root,
@@ -1055,7 +1059,11 @@ def _implement_payload(
     attention_paths = [item["path"] for item in path_boundaries if item["requires_attention"]]
     inspect_files = normalized_paths or list(implementer_template["default_inspect_files"])
     execution_posture = _execution_posture_payload(
-        config=config, changed_paths=normalized_paths, task_text=task_text, target_root=target_root
+        config=config,
+        changed_paths=normalized_paths,
+        task_text=task_text,
+        target_root=target_root,
+        materialize_assignment=True,
     )
     planning_safety_gate = _planning_safety_gate_payload(
         target_root=target_root, config=config, changed_paths=normalized_paths, task_text=task_text, execution_posture=execution_posture

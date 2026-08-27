@@ -1,7 +1,7 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:87dbdafc63b76f726fa8c34bd48b5b9ffcf38d03be6e5982490d991d5f924a91",
+  "profile_fingerprint": "sha256:888e11bc07423fa1784b22956040faf1890d2050022d9f0d298cee9395e74139",
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",
@@ -6720,8 +6720,8 @@
     "assignment.close": {
       "identity": "assignment.close",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:f87ddb22f51d2ed7cfe32667ebad23e5faa564c2711082ae4b17d303680b5344",
-      "compatibility_fingerprint": "sha256:06748a242e6be1a16702e2b4fa7c7ed464a506c112d8685d2383eb14449b14d6",
+      "fingerprint": "sha256:8ebc340ad103c98c2ae756fd5c6a57586272afc3d1e844468cfb27840632e78d",
+      "compatibility_fingerprint": "sha256:c8af64feb3321734529db300a8e4bb2d2aace04d34be6d3f0b77f4e72aa5eb62",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -6734,10 +6734,10 @@
           "idempotent": true,
           "read_only": false,
           "requires_preflight_gate": false,
-          "writes_repo_state": false
+          "writes_repo_state": true
         },
         "guards": [
-          "Write only under .agentic-workspace/local/assignment-runs/.",
+          "Write local run artifacts under .agentic-workspace/local/assignment-runs/ and atomically mark the matching checked-in Planning assignment closed.",
           "Import places returned work in received/awaiting-admission only; it does not prove, admit, integrate, or close.",
           "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
           "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade."
@@ -6901,13 +6901,19 @@
             "uses": "output.emit"
           }
         ],
-        "summary": "Close an integrated or intentionally rejected assignment run with a local receipt.",
+        "summary": "Close an integrated or intentionally rejected assignment run and retire its checked-in Planning authority.",
         "writes": [
           {
             "description": "transition records local disposable assignment/run artifacts derived from checked-in Planning authority",
             "required": true,
             "surface": ".agentic-workspace/local/assignment-runs/<run-id>/",
             "when": "transition records local disposable assignment/run state"
+          },
+          {
+            "description": "close marks the exact run-bound checked-in Planning assignment closed",
+            "required": true,
+            "surface": ".agentic-workspace/planning/assignments/<assignment-id>.assignment.json",
+            "when": "the current assignment run reaches close"
           }
         ]
       },
@@ -7086,10 +7092,10 @@
             "idempotent": true,
             "read_only": false,
             "requires_preflight_gate": false,
-            "writes_repo_state": false
+            "writes_repo_state": true
           },
           "guards": [
-            "Write only under .agentic-workspace/local/assignment-runs/.",
+            "Write local run artifacts under .agentic-workspace/local/assignment-runs/ and atomically mark the matching checked-in Planning assignment closed.",
             "Import places returned work in received/awaiting-admission only; it does not prove, admit, integrate, or close.",
             "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
             "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade."

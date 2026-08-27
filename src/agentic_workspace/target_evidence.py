@@ -699,6 +699,18 @@ def assignment_decision_from_policy(
         None,
     )
     current_is_eligible = bool(current_candidate and current_candidate["eligible"])
+    downroute_required = bool(current_candidate and current_candidate.get("required_action") == "delegate-down-when-safe")
+    downroute_candidates = [
+        item
+        for item in eligible_candidates
+        if current_target
+        not in (
+            {str(item.get("target") or ""), str(item.get("target_identity_ref") or "")} | {str(alias) for alias in item.get("aliases", [])}
+        )
+    ]
+    if downroute_required and downroute_candidates:
+        eligible_candidates = downroute_candidates
+        selected_target = eligible_candidates[0]["target"]
     tied_candidates: list[dict[str, Any]] = []
     if eligible_candidates:
         top_score = int(eligible_candidates[0]["score"])
@@ -820,6 +832,8 @@ def assignment_decision_from_policy(
             "requested_context_key": requested_context_key or None,
             "tie_breaker": "ties are surfaced as a non-executable tie outcome; no lexical tie-break selects an executor",
             "current_target_eligible": current_is_eligible,
+            "downroute_required": downroute_required,
+            "downroute_applied": downroute_required and bool(downroute_candidates),
             "manual_transport_policy": manual_transport_policy,
             "component_order": [
                 "task_requirements",

@@ -20,6 +20,8 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any, cast
 
+from agentic_workspace.assignment_lifecycle import delegated_return_owner_packet
+
 
 class PrimitiveExecutionError(RuntimeError):
     pass
@@ -705,7 +707,28 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
                 "proof_receipt": current_authorities.get("proof_receipt_ref"),
                 "mutation_baseline": "host-resolved:git-or-aw-baseline",
             },
-            "return_contract": "assignment import places results in received/awaiting-admission before admission or integration",
+            "dispatch_contract": {
+                "transport": _optional_text(values.get("transport")) or "manual",
+                "adapter_authority": "execution-only",
+                "semantic_authority": "assignment_identity",
+                "dispatch_input": "this exact packet",
+                "silent_local_fallback_allowed": False,
+            },
+            "return_contract": {
+                "kind": "agentic-workspace/delegated-return/v1",
+                "required_fields": [
+                    "assignment_revision",
+                    "run_id",
+                    "target",
+                    "changed_paths",
+                    "summary",
+                    "stop_conditions_hit",
+                ],
+                "admission_operation": "assignment.import then assignment.admit",
+                "worker_proof_authority": False,
+                "worker_completion_authority": False,
+                "rule": "Import records evidence in received/awaiting-admission; AW-owned admission, integration, proof, and closeout remain pending.",
+            },
         }
         packet_path = artifact("export/packet.json")
         prompt_path = artifact("export/prompt.md")
@@ -734,6 +757,41 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
     elif transition == "import":
         require("run_id")
         returned = _assignment_json_value(require("return_json"), field="return_json")
+        if not isinstance(returned, dict):
+            failures.append(
+                {
+                    "reason": "malformed-return",
+                    "field": "return_json",
+                    "recovery": "Return one JSON object matching the exported return contract.",
+                }
+            )
+            returned = {}
+        required_return_fields = ("assignment_revision", "run_id", "target", "changed_paths", "summary", "stop_conditions_hit")
+        missing_return_fields = [field for field in required_return_fields if field not in returned]
+        if missing_return_fields:
+            failures.append(
+                {
+                    "reason": "malformed-return",
+                    "field": "return_json." + ",".join(missing_return_fields),
+                    "recovery": "Return every required field from the exported return contract.",
+                }
+            )
+        if returned.get("run_id") != run_id:
+            failures.append(
+                {
+                    "reason": "return-run-mismatch",
+                    "field": "return_json.run_id",
+                    "recovery": "Return work for the exported assignment run only.",
+                }
+            )
+        if not isinstance(returned.get("changed_paths"), list) or not isinstance(returned.get("stop_conditions_hit"), list):
+            failures.append(
+                {
+                    "reason": "malformed-return",
+                    "field": "return_json.changed_paths|stop_conditions_hit",
+                    "recovery": "Return changed_paths and stop_conditions_hit as JSON arrays.",
+                }
+            )
         return_id = _optional_text(values.get("return_id")) or _assignment_digest(returned).removeprefix("sha256:")[:16]
         assignment = state.get("assignment") if isinstance(state.get("assignment"), dict) else {}
         if assignment:
@@ -788,6 +846,7 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             if transition == "admit"
             else {"admitted": False, "status": {"reject": "rejected", "repair": "repair-requested"}[transition], "failures": []}
         )
+        owner_packet = delegated_return_owner_packet(admission=admission)
         if transition == "admit" and not admission.get("admitted"):
             failures.extend(_assignment_failures_from_admission(admission))
         admission_status = (
@@ -802,6 +861,7 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             "return_id": return_id,
             "status": admission_status,
             "admission": admission,
+            "owner_packet": owner_packet,
             "current_authority_ref": _optional_text(admission.get("assignment_revision")),
             "live_mutation_baseline": _optional_text(
                 (admission.get("current_authority") or {}).get("mutation_baseline")
@@ -819,6 +879,7 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
                 "current_state": admission_status,
                 "last_admission_status": admission_status,
                 "last_admission": admission,
+                "last_owner_packet": owner_packet,
                 "last_return_id": return_id,
             }
         )
@@ -908,6 +969,35 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
         artifact_paths.append(receipt_path)
         state.update({"current_state": receipt["status"]})
         writes = {receipt_path: receipt}
+        if transition == "close":
+            close_assignment_id = assignment_id or _optional_text(state.get("assignment_id"))
+            planning_ref = _assignment_planning_ref(values=values, assignment_id=close_assignment_id)
+            planning_assignment = _read_assignment_json_ref(
+                target_root=target_root,
+                ref=planning_ref,
+                field="planning_assignment_ref",
+                failures=failures,
+            )
+            current_attempt = _assignment_mapping(planning_assignment.get("current_attempt"))
+            if current_attempt and _optional_text(current_attempt.get("run_id")) not in {"", run_id}:
+                failures.append(
+                    {
+                        "reason": "return-run-mismatch",
+                        "field": "planning_assignment_ref.current_attempt.run_id",
+                        "recovery": "Close only the current assignment run.",
+                    }
+                )
+            if planning_assignment and not failures:
+                planning_path = _resolve_inside(target_root, planning_ref)
+                planning_assignment["status"] = "closed"
+                planning_assignment["current_attempt"] = {**current_attempt, "status": "closed"}
+                planning_assignment["closeout"] = {
+                    "run_id": run_id,
+                    "receipt_ref": _assignment_relative(receipt_path, root=target_root),
+                    "claim_authority": "orchestrator-after-current-proof-and-closeout",
+                }
+                writes[planning_path] = planning_assignment
+                artifact_paths.append(planning_path)
 
     transition_receipt = {
         "transition": transition,
@@ -1160,11 +1250,20 @@ def _assignment_identity(current_authorities: Mapping[str, Any]) -> dict[str, An
         "stop_conditions": _assignment_list(assignment_gate.get("stop_conditions") or next_step.get("stop_conditions")),
         "mutation_baseline": assignment_gate.get("mutation_baseline") or next_step.get("mutation_baseline"),
         "return_admission_owner": "delegated-return.admit",
+        "human_intent": assignment_gate.get("human_intent") or next_step.get("human_intent") or assignment_gate.get("task") or assignment_gate.get("task_class"),
+        "required_inputs": _assignment_list(assignment_gate.get("required_inputs") or next_step.get("required_inputs")),
+        "prohibited_effects": _assignment_list(assignment_gate.get("prohibited_effects") or next_step.get("prohibited_effects"))
+        or ["scope-widening", "merge", "closeout", "proof-authority", "human-authority"],
+        "claim_authority": {
+            "worker_result": "evidence-only",
+            "proof": "orchestrator-owned",
+            "integration": "orchestrator-owned",
+            "completion": "orchestrator-owned",
+        },
     }
     required_fields = [
         "target",
         "target_identity_ref",
-        "target_revision",
         "task_class",
         "scope_class",
         "plan_ref",
@@ -1257,14 +1356,29 @@ def _assignment_admit_with_current_authority(*, current_authorities: Mapping[str
                 "recovery": "Refresh the handoff and resubmit against the current assignment revision.",
             }
         )
-    if _optional_text(returned_work.get("target")) and _optional_text(returned_work.get("target")) != _optional_text(
-        identity.get("target")
-    ):
+    if _optional_text(returned_work.get("target")) != _optional_text(identity.get("target")):
         failures.append(
             {
                 "reason": "target-mismatch",
                 "field": "target",
                 "recovery": "Return work from the selected assignment target only.",
+            }
+        )
+    if _optional_text(returned_work.get("run_id")) != _optional_text(run_state.get("run_id")):
+        failures.append(
+            {
+                "reason": "return-run-mismatch",
+                "field": "run_id",
+                "recovery": "Return work for the current assignment run only.",
+            }
+        )
+    stop_conditions_hit = _assignment_list(returned_work.get("stop_conditions_hit"))
+    if stop_conditions_hit:
+        failures.append(
+            {
+                "reason": "stop-condition-hit",
+                "field": "stop_conditions_hit",
+                "recovery": "Route the reported stop condition before integration.",
             }
         )
     if mutation_baseline and mutation_baseline != _optional_text(identity.get("mutation_baseline")):

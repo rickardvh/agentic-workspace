@@ -4569,6 +4569,54 @@ def test_assignment_decision_derives_best_fit_from_candidates_and_contextual_evi
     assert fast["permitted_continuation"] == "delegated-implementation"
 
 
+def test_required_best_fit_honors_current_target_downroute_action() -> None:
+    from agentic_workspace.target_evidence import assignment_decision_from_policy
+
+    decision = assignment_decision_from_policy(
+        assignment_policy={
+            "assignment_policy": {"value": "required-best-fit"},
+            "current_target": {"value": "strong_worker"},
+            "binding": {"enforceable": True, "claim_boundary": "assignment policy resolved"},
+        },
+        runtime_resolution={
+            "recommendation": "stay-local",
+            "capability_context": {
+                "task_class": "mechanical-follow-through",
+                "scope_class": "mechanical-follow-through",
+            },
+            "profile_recommendations": [
+                {
+                    "name": "strong_worker",
+                    "target_id": "target:strong",
+                    "recommendation": "recommended",
+                    "score": 8,
+                    "capability_mismatch": False,
+                    "required_action": "delegate-down-when-safe",
+                    "execution_methods": ["internal"],
+                    "human_control_modes": ["auto"],
+                },
+                {
+                    "name": "bounded_worker",
+                    "target_id": "target:bounded",
+                    "recommendation": "recommended",
+                    "score": 9,
+                    "capability_mismatch": False,
+                    "required_action": "execute-with-normal-proof",
+                    "execution_methods": ["cli"],
+                    "human_control_modes": ["auto"],
+                },
+            ],
+        },
+        target_evidence={"status": "no-local-evidence", "record_count": 0, "suitability": []},
+    )
+
+    assert decision["decision"] == "assign-best-fit"
+    assert decision["selected_target"] == "bounded_worker"
+    assert decision["selected_target_identity_ref"] == "target:bounded"
+    assert decision["selection_basis"]["downroute_required"] is True
+    assert decision["selection_basis"]["downroute_applied"] is True
+
+
 def test_assignment_decision_fails_closed_when_no_candidate_is_eligible() -> None:
     from agentic_workspace.target_evidence import assignment_decision_from_policy
 

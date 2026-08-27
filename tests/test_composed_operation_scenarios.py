@@ -31,6 +31,10 @@ def test_cross_owner_invariant_gate_contains_weak_agent_semantic_forks() -> None
     assert evaluate_cross_owner_invariant_case(cases["2748-weak-agent-launches-stale-proof"])["status"] == "blocked"
     assert evaluate_cross_owner_invariant_case(cases["weak-agent-stale-scope-widening"])["status"] == "blocked"
     assert evaluate_cross_owner_invariant_case(cases["2754-genuine-continuation-needs-planning"])["status"] == "admitted"
+    assert evaluate_cross_owner_invariant_case(cases["2763-weak-agent-silent-local-fallback"])["status"] == "blocked"
+    assert evaluate_cross_owner_invariant_case(cases["2763-provider-adapter-redefines-scope"])["status"] == "blocked"
+    assert evaluate_cross_owner_invariant_case(cases["2763-weak-worker-self-closes"])["status"] == "blocked"
+    assert evaluate_cross_owner_invariant_case(cases["2763-direct-local-quiet-control"])["status"] == "admitted"
 
 
 def _checker_module():

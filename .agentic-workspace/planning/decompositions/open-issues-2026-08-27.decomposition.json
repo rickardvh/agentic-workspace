@@ -69,9 +69,9 @@
     {
       "id": "open-issues-nonlocal-delegation",
       "title": "Prove ordinary non-local delegation through the enforcement kernel",
-      "readiness": "blocked",
+      "readiness": "promoted",
       "outcome": "Issue #2763 is satisfied through transport-neutral assignment, dispatch, return admission, integration, proof, and continuation semantics plus one real supported-host dogfood episode, without giving the worker scope or closure authority.",
-      "owner_surface": "proposed: .agentic-workspace/planning/execplans/open-issues-nonlocal-delegation.plan.json",
+      "owner_surface": ".agentic-workspace/planning/lanes/open-issues-nonlocal-delegation.lane.json",
       "proof": "Deterministic automatic/manual transport parity, weak/stale/wrong-target returns, no-safe-transport failure, real supported-host dispatch and return, lineage preservation, cost comparison, and direct-local quiet path.",
       "slice_contribution_to_parent": "Completes the delegation-specific composed scenario required by #2562.",
       "residual_parent_intent": "Final generic composed replay and parent issue closure remain.",
