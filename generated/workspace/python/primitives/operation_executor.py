@@ -131,6 +131,7 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'evidence_ref': getattr(args, 'evidence_ref', None),
                 'predecessor_event_id': getattr(args, 'predecessor_event_id', None),
                 'lifecycle_action': getattr(args, 'lifecycle_action', None),
+                **{name: value for name, value in vars(args).items() if not name.startswith('_')},
         },
     )
     emitted = values.get('emitted')
@@ -245,6 +246,7 @@ def run_operation_callable(operation: dict[str, Any], values: Mapping[str, Any])
                 'evidence_ref': values.get('evidence_ref', None),
                 'predecessor_event_id': values.get('predecessor_event_id', None),
                 'lifecycle_action': values.get('lifecycle_action', None),
+                **dict(values),
             },
         ).get('result')
     return result
