@@ -15,7 +15,7 @@ TOOLS_ROOT = REPO_ROOT / "tools"
 if str(TOOLS_ROOT) not in sys.path:
     sys.path.insert(0, str(TOOLS_ROOT))
 
-from chatgpt_review_loop import REVIEW_POLICY, TRUSTED_REVIEW_PRODUCER_SLUGS, parse_reviews  # noqa: E402
+from chatgpt_review_loop import CONFIGURED_REVIEW_DISPATCHER_SLUGS, REVIEW_POLICY, parse_reviews  # noqa: E402
 
 CHECK_NAME = "Review approval"
 TRUSTED_ASSOCIATIONS = frozenset({"OWNER", "MEMBER", "COLLABORATOR"})
@@ -62,8 +62,8 @@ def review_gate_decision(
         if "aw-chatgpt-review" in str(comment.get("body", ""))
         and str(comment.get("author_association", "")).upper() in TRUSTED_ASSOCIATIONS
     ]
-    untrusted = [comment for comment in associated if _producer_slug(comment) not in TRUSTED_REVIEW_PRODUCER_SLUGS]
-    candidates = [comment for comment in associated if _producer_slug(comment) in TRUSTED_REVIEW_PRODUCER_SLUGS]
+    untrusted = [comment for comment in associated if _producer_slug(comment) not in CONFIGURED_REVIEW_DISPATCHER_SLUGS]
+    candidates = [comment for comment in associated if _producer_slug(comment) in CONFIGURED_REVIEW_DISPATCHER_SLUGS]
     if not candidates:
         if untrusted:
             latest = max(untrusted, key=_comment_order)

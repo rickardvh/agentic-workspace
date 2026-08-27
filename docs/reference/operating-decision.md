@@ -48,7 +48,6 @@ Derived internal decision composed from admitted AW authority surfaces. It emits
 | `reconciliation` | object | no |  | Generic post-action result, bounded claim, residue, continuation, and constructible next-action composition supplied by domain owners. |  |  |
 | `control_inputs` | object | no |  | Applicable host, local-runtime, module, and task-derived inputs reduced to their material effects on the current contract. |  |  |
 | `assurance` | object | no |  | Admission of a repository-owned assurance classification, quiet when no external classifier is configured. |  |  |
-| `review_authority` | object | no |  | Configured verifier class, subject revision, separation result, and implementation-side protected review effect boundary. |  |  |
 | `cross_owner_enforcement` | object | yes |  | Registry-derived join identities, peer-surface dispositions, and fail-closed findings bound to this decision identity. |  |  |
 | `cross_owner_enforcement.kind` | const `"agentic-workspace/cross-owner-enforcement-projection/v1"` | yes |  | Schema discriminator for the decision-bound enforcement projection. |  |  |
 | `cross_owner_enforcement.status` | enum `"admitted"`, `"blocked"` | yes |  | Whether registry and peer identities satisfy the cross-owner gate. |  |  |

@@ -17,7 +17,9 @@ from pathlib import Path
 from typing import Any, Sequence, TextIO
 
 REVIEW_POLICY = "pr-review-recheck-v1"
-TRUSTED_REVIEW_PRODUCER_SLUGS = frozenset({"chatgpt-codex-connector"})
+# Repository-owned review procedure: this app is the separately configured
+# external review dispatcher. It is not a portable AW verifier contract.
+CONFIGURED_REVIEW_DISPATCHER_SLUGS = frozenset({"chatgpt-codex-connector"})
 HEAD_SYNC_ATTEMPTS = 3
 STATE_KIND = "agentic-workspace/chatgpt-review-loop-state/v1"
 STATE_RELATIVE = Path(".agentic-workspace/local/chatgpt-review-loop")
@@ -849,7 +851,7 @@ def parse_reviews(
             rejected.append({"comment_id": comment_id, "reason": "malformed-or-multiple-markers"})
             continue
         producer_slug = _review_producer_slug(comment)
-        if producer_slug not in TRUSTED_REVIEW_PRODUCER_SLUGS:
+        if producer_slug not in CONFIGURED_REVIEW_DISPATCHER_SLUGS:
             rejected.append({"comment_id": comment_id, "reason": "untrusted-review-producer"})
             continue
         marker = markers[0]

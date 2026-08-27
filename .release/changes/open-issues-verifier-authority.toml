@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Project configured verifier separation into ordinary implementation routing and reuse it in proof admission."
