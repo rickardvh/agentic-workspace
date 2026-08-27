@@ -22,7 +22,9 @@ from agentic_workspace.current_work_context import startup_route_fingerprint_che
 from agentic_workspace.operating_decision import (
     admit_projection_surface_decision_input,
     attach_projection_surface_decision_input_consumption,
+    compact_review_authority_projection,
     compile_implement_context_operating_decision,
+    configured_review_authority_projection,
     finalize_projection_surface_operating_decision,
     materialize_projection_under_decision_input,
     projection_surface_builder_inputs,
@@ -432,6 +434,13 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
     payload, operating_decision = finalize_projection_surface_operating_decision(
         payload=payload, admitted_input=admitted_input, consumer="implement"
     )
+    review_authority = _as_dict(operating_decision.get("review_authority")) or configured_review_authority_projection(
+        target_root=str(target_root), consumer="implement"
+    )
+    if review_authority.get("status") != "not-applicable" and isinstance(payload.get("decision_packet"), dict):
+        payload["decision_packet"]["review_authority"] = compact_review_authority_projection(review_authority)
+    if review_authority.get("status") != "not-applicable" and _selector_requests(selected_fields, "context"):
+        payload.setdefault("values", {}).setdefault("context", {})["review_authority"] = review_authority
     if _selector_requests(selected_fields, "source_guidance"):
         payload.setdefault("values", {})["source_guidance"] = _as_dict(operating_decision.get("source_guidance"))
         payload["missing"] = [item for item in payload.get("missing", []) if item != "source_guidance"]

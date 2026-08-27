@@ -1,0 +1,96 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "open-issues-verifier-authority",
+  "title": "Keep implementation actors outside verifier decision authority",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "validation",
+  "revision": 3,
+  "intent": {
+    "outcome": "Satisfy #2725 by making the existing separation-of-duty decision visible and binding across ordinary start/implement routing, proof admission, and the repository exact-head review gate, while preserving non-authoritative fixes-applied/ready-for-re-review communication.",
+    "non_goals": [
+      "Do not intercept arbitrary out-of-band provider actions.",
+      "Do not create a second review framework or trust caller-supplied reviewer provenance.",
+      "Do not hard-code human verification for hosts whose configured policy does not require it.",
+      "Do not grant this implementation session independent review or merge authority."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "Makes the verifier boundary trustworthy before the cross-owner enforcement and delegation lanes consume it.",
+    "closure_boundary": "This slice may close only #2725; #2562, #2721, and the all-open-issues decomposition remain live."
+  },
+  "scope": {
+    "owned": [
+      "src/agentic_workspace/operating_decision.py",
+      "src/agentic_workspace/contracts/schemas/operating_decision.schema.json",
+      "src/agentic_workspace/contracts/runtime_implementation_ownership.json",
+      "src/agentic_workspace/contracts/external_operation_conformance_receipts.json",
+      "generated/workspace/python/external_operation_conformance_receipts.json",
+      "generated/workspace/typescript/external_operation_conformance_receipts.json",
+      "src/agentic_workspace/workspace_runtime_proof.py",
+      "src/agentic_workspace/workspace_runtime_startup.py",
+      "src/agentic_workspace/workspace_runtime_implement.py",
+      "scripts/github/review_merge_gate.py",
+      "tests/test_operating_decision.py",
+      "tests/test_workspace_cli.py",
+      "tests/test_workspace_implement_cli.py",
+      "tests/test_workspace_proof_cli.py",
+      "tests/test_review_merge_gate.py",
+      "focused contract/generated surfaces, release changeset, and planning evidence required by #2725"
+    ],
+    "effects": [
+      "Ordinary start/implement decisions expose the configured verifier class and keep protected review effects outside implementation authority.",
+      "Proof admission and ordinary routing consume one separation-of-duty gate.",
+      "The repository exact-head gate continues to reject implementation-authored markers regardless of trusted GitHub association."
+    ]
+  },
+  "relationships": {
+    "selection": {"state": "selected", "owner": "open-issues-verifier-authority"},
+    "proof_posture": {"state": "accepted", "refs": ["205 verifier-focused tests passed", "299 operation conformance cases passed", "external consumer readiness passed", "workspace lint and typecheck passed"]},
+    "external_posture": {"state": "observed", "refs": ["GitHub issue #2725", "merged PR #2732"]},
+    "delegation": {"state": "recorded", "route": "keep-local", "reason": "No sub-agent delegation was requested; independent review authority must remain outside this implementation session."}
+  },
+  "references": [
+    {"kind": "github-issue", "target": "#2725", "label": "Independent verifier authority", "role": "owned intent", "locator": "https://github.com/rickardvh/agentic-workspace/issues/2725"},
+    {"kind": "github-pr", "target": "#2732", "label": "Existing self-authored marker gate", "role": "landed foundation", "locator": "https://github.com/rickardvh/agentic-workspace/pull/2732"},
+    {"kind": "planning-decomposition", "target": "open-issues-2026-08-27", "label": "All-open-issues epic", "role": "parent", "locator": ".agentic-workspace/planning/decompositions/open-issues-2026-08-27.decomposition.json"}
+  ],
+  "next_action": "Publish the lower-stack conformance receipt repair to PR #2766, rebase this slice on its exact head, then open the verifier-authority PR and observe hosted checks without claiming review authority.",
+  "blockers": ["None."],
+  "proof": {
+    "claims": [
+      "An implementation route under human/independent policy cannot authorize self-approval or merge-ready and explicitly supports ready-for-re-review status.",
+      "Explicit status-text permission never changes actor provenance or satisfies the verifier gate.",
+      "Self-authored OWNER/MEMBER/COLLABORATOR markers remain non-authoritative while a current-head distinct configured review is accepted.",
+      "Policies without an independent verifier requirement retain their configured semantics."
+    ],
+    "requirements": [
+      "Run operating-decision, startup, implement, proof-admission, PR-intake, and merge-gate fixtures.",
+      "Run routed changed-path proof, lint, typecheck, generated parity, and workspace-wide validation.",
+      "Publish a stacked PR based on the exact head of PR #2766; hosted checks and independent review remain external authority."
+    ],
+    "refs": [
+      "uv run --active pytest tests/test_operating_decision.py tests/test_review_merge_gate.py tests/test_pr_comment_delta.py tests/test_workspace_cli.py::test_start_and_implement_project_human_review_boundary_before_protected_effects -q",
+      "uv run --active pytest tests/test_workspace_proof_cli.py -k \"independent_review or high_assurance_closeout_posture\" -q",
+      "uv run --active pytest tests/test_external_operation_clients.py -k \"self_review or correction_event\" -q",
+      "uv run --active python scripts/check/run_operation_conformance_tests.py --target all --require-node --format text",
+      "uv run --active python scripts/check/run_external_consumer_readiness.py --require-node",
+      "uv run --active python scripts/check/check_runtime_implementation_ownership.py",
+      "make lint-workspace",
+      "make typecheck"
+    ]
+  },
+  "continuation": {
+    "owner": ".agentic-workspace/planning/decompositions/open-issues-2026-08-27.decomposition.json",
+    "residual_intent": "After this lane, implement #2762, then #2763, then reconcile parent closure."
+  },
+  "execution_bounds": {
+    "branch_order": "codex/open-issues-verifier-authority bases on codex/open-issues-lifecycle-composition-v2 exact head.",
+    "ask_before": "Adding a new review command, changing repository merge authority, merging a PR, or weakening configured verifier modes.",
+    "stop_conditions": "Stop if ordinary routing cannot reuse the canonical proof separation gate, or if shared credentials cannot be distinguished without a trusted actor identity."
+  },
+  "specialist_contracts": [
+    {"kind": "planning-delegation/v1", "target": "planning://delegation/keep-local", "revision": 1}
+  ]
+}

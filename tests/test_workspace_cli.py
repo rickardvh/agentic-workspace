@@ -8650,6 +8650,54 @@ def test_start_default_stays_under_tiny_output_budget_for_docs_task(tmp_path: Pa
     assert payload["decision_packet"]["effects"]["workflow_required"] is True
 
 
+def test_start_and_implement_project_human_review_boundary_before_protected_effects(tmp_path: Path, capsys) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "test@example.test"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.name", "Test"], cwd=tmp_path, check=True)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write(tmp_path / "src" / "app.py", "VALUE = 1\n")
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "commit", "-m", "baseline"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=tmp_path, check=True, capture_output=True, text=True).stdout.strip()
+    _write(
+        tmp_path / ".agentic-workspace" / "config.local.toml",
+        "schema_version = 1\n\n[safety]\nrequires_human_verification_on_pr = true\n",
+    )
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Repair the implementation", "--format", "json"]) == 0
+    start = json.loads(capsys.readouterr().out)["decision_packet"]["review_authority"]
+    assert start["execution_role"] == "implementation"
+    assert start["subject"]["head_revision"] == head
+    assert start["verifier_class"] == "human"
+    assert start["separation_status"] == "required"
+    assert start["allowed_status"] == ["fixes-applied", "ready-for-re-review"]
+    assert start["protected_review_authorized"] is False
+    assert start["status_text_authority_upgrade"] is False
+
+    _write(tmp_path / "src" / "app.py", "VALUE = 2\n")
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/app.py",
+                "--task",
+                "Repair the implementation",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    implement = json.loads(capsys.readouterr().out)["decision_packet"]["review_authority"]
+    assert implement["subject"]["head_revision"] == head
+    assert implement["verifier_class"] == "human"
+    assert implement["protected_review_authorized"] is False
+
+
 def _recursive_json_field_count(value: object) -> int:
     if isinstance(value, dict):
         return len(value) + sum(_recursive_json_field_count(item) for item in value.values())
