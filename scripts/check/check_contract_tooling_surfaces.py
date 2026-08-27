@@ -52,7 +52,11 @@ from agentic_workspace.contract_tooling import (
     workspace_runtime_primitive_families_manifest,
     workspace_surfaces_manifest,
 )
-from agentic_workspace.operating_decision import resolve_context_authority_projection
+from agentic_workspace.operating_decision import (
+    ordinary_decision_enforcement_contract,
+    ordinary_decision_enforcement_findings,
+    resolve_context_authority_projection,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -2745,6 +2749,21 @@ def _validate_workspace_runtime_core_boundary(payload: dict[str, object]) -> lis
 
 def _validate_context_authority_changed_path_enforcement() -> list[str]:
     errors: list[str] = []
+    enforcement = ordinary_decision_enforcement_contract()
+    errors.extend(f"ordinary decision enforcement: {finding}" for finding in ordinary_decision_enforcement_findings(enforcement))
+    required_dimensions = {
+        "current-work",
+        "current-target",
+        "proof-requirement-subject",
+        "mutation-permission",
+        "claim-boundary",
+        "future-relevant-residue",
+    }
+    observed_dimensions = {
+        str(item.get("dimension") or "") for item in enforcement.get("dimensions", []) if isinstance(item, dict)
+    }
+    if observed_dimensions != required_dimensions:
+        errors.append("ordinary decision enforcement must cover the complete cross-owner join-identity set")
     operating_decision_source = (REPO_ROOT / "src/agentic_workspace/operating_decision.py").read_text(encoding="utf-8")
     resolver_body = operating_decision_source.partition("def _resolve_context_authority_source(")[2]
     if "def _context_owner_result(" in operating_decision_source:

@@ -92,10 +92,98 @@ ORDINARY_DECISION_CONSUMER_REQUIREMENTS = {
     str(consumer): [str(surface) for surface in _as_list(surfaces)]
     for consumer, surfaces in _as_dict(_CONTEXT_AUTHORITY_REGISTRY_CONTRACT.get("consumer_requirements")).items()
 }
+ORDINARY_DECISION_ENFORCEMENT = _as_dict(_CONTEXT_AUTHORITY_REGISTRY_CONTRACT.get("ordinary_decision_enforcement"))
 CONTEXT_AUTHORITY_REGISTRY = [
     dict(item) for item in _as_list(_CONTEXT_AUTHORITY_REGISTRY_CONTRACT.get("surfaces")) if isinstance(item, dict)
 ]
 CONTEXT_AUTHORITY_REGISTRY_REVISION = "sha256:" + _digest(_CONTEXT_AUTHORITY_REGISTRY_CONTRACT)
+
+
+def ordinary_decision_enforcement_contract() -> dict[str, Any]:
+    """Return the registry-owned ordinary-loop enforcement contract."""
+
+    return copy.deepcopy(ORDINARY_DECISION_ENFORCEMENT)
+
+
+def ordinary_decision_enforcement_findings(contract: dict[str, Any] | None = None) -> list[str]:
+    """Reject split authority, incomplete join identities, and peer-surface growth."""
+
+    declared = _as_dict(contract) if contract is not None else ORDINARY_DECISION_ENFORCEMENT
+    findings: list[str] = []
+    registry = {str(item.get("surface") or ""): item for item in CONTEXT_AUTHORITY_REGISTRY}
+    dimensions = [item for item in _as_list(declared.get("dimensions")) if isinstance(item, dict)]
+    dimension_ids = [str(item.get("dimension") or "") for item in dimensions]
+    if len(dimension_ids) != len(set(dimension_ids)) or any(not item for item in dimension_ids):
+        findings.append("decision dimensions must have unique non-empty identities")
+    for item in dimensions:
+        surface = str(item.get("canonical_surface") or "")
+        owner = str(item.get("canonical_owner") or "")
+        registered = _as_dict(registry.get(surface))
+        if not registered or registered.get("owner") != owner:
+            findings.append(f"{item.get('dimension')} canonical owner does not match registered surface {surface}")
+        if not _as_list(item.get("join_identity_fields")) or not _as_list(item.get("decision_fields")):
+            findings.append(f"{item.get('dimension')} is missing its join identity or decision projection")
+    peers = [item for item in _as_list(declared.get("peer_surfaces")) if isinstance(item, dict)]
+    peer_ids = [str(item.get("surface") or "") for item in peers]
+    if len(peer_ids) != len(set(peer_ids)) or any(not item for item in peer_ids):
+        findings.append("peer decision surfaces must have unique non-empty identities")
+    expected_peer_ids = {"operating-decision", "start", "summary", "implement", "proof", "closeout", "generated", "adapter"}
+    if set(peer_ids) != expected_peer_ids:
+        findings.append("peer decision surface inventory changed without an explicit replacement, demotion, or derivation")
+    canonical = [item for item in peers if item.get("disposition") == "canonical"]
+    if len(canonical) != 1 or canonical[0].get("surface") != "operating-decision":
+        findings.append("operating-decision must be the only canonical peer decision surface")
+    allowed = {str(item) for item in _as_list(declared.get("allowed_peer_dispositions"))}
+    for item in peers:
+        if str(item.get("disposition") or "") not in allowed:
+            findings.append(f"{item.get('surface')} has an unsupported peer disposition")
+        if item.get("disposition") != "removed" and not str(item.get("decision_identity_field") or ""):
+            findings.append(f"{item.get('surface')} does not carry the canonical decision identity")
+    return findings
+
+
+def cross_owner_enforcement_projection(*, decision: dict[str, Any], peer_projections: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    """Bind peer projections to one decision identity and fail closed on forks."""
+
+    contract = ordinary_decision_enforcement_contract()
+    findings = ordinary_decision_enforcement_findings(contract)
+    decision_id = str(decision.get("decision_id") or "")
+    admitted_revision = str(decision.get("admitted_input_revision") or "")
+    if not decision_id.startswith("operating-decision:") or not admitted_revision.startswith("sha256:"):
+        findings.append("canonical operating-decision identity is missing or unadmitted")
+    declared_peers = {str(item.get("surface") or ""): item for item in _as_list(contract.get("peer_surfaces")) if isinstance(item, dict)}
+    observed: list[dict[str, Any]] = []
+    for peer in peer_projections or []:
+        surface = str(peer.get("surface") or "")
+        declared_peer = _as_dict(declared_peers.get(surface))
+        disposition = str(peer.get("disposition") or declared_peer.get("disposition") or "")
+        peer_decision_id = str(peer.get("decision_id") or "")
+        if not declared_peer:
+            findings.append(f"unregistered peer decision surface: {surface or '<missing>'}")
+        elif disposition != declared_peer.get("disposition"):
+            findings.append(f"{surface} attempted to change its registered peer disposition")
+        elif disposition in {"derived", "selector-only"} and peer_decision_id != decision_id:
+            findings.append(f"{surface} carries a conflicting or stale decision identity")
+        if peer.get("widens_effects") is True or peer.get("widens_claims") is True:
+            findings.append(f"{surface or '<missing>'} lower-authority projection widens effects or claims")
+        observed.append({"surface": surface, "disposition": disposition, "decision_id": peer_decision_id})
+    projection = {
+        "kind": "agentic-workspace/cross-owner-enforcement-projection/v1",
+        "status": "blocked" if findings else "admitted",
+        "decision_id": decision_id,
+        "admitted_input_revision": admitted_revision,
+        "canonical_decision_input_revision": str(decision.get("canonical_decision_input_revision") or ""),
+        "dimensions": copy.deepcopy(_as_list(contract.get("dimensions"))),
+        "peer_surface_dispositions": copy.deepcopy(_as_list(contract.get("peer_surfaces"))),
+        "observed_peer_projections": observed,
+        "invariants": copy.deepcopy(_as_list(contract.get("invariants"))),
+        "findings": findings,
+        "surface_growth_rule": str(contract.get("surface_growth_rule") or ""),
+        "rule": "Specialist facts join through the admitted operating decision; peers may only derive or select that identity.",
+    }
+    return projection
+
+
 CONTEXT_AUTHORITY_SOURCE_SPECS: dict[str, dict[str, Any]] = {
     "system-intent": {
         "source": "SYSTEM_INTENT.md",
@@ -3752,7 +3840,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         blocked_claim_classes=blocked_claim_classes,
     )
     admitted_input_revision, decision_id = canonical_operating_decision_identity(input_revisions)
-    return {
+    decision = {
         "kind": "agentic-workspace/operating-decision/v1",
         "producer_module": "agentic_workspace.operating_decision",
         "producer_function": "compile_operating_decision",
@@ -3808,3 +3896,5 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         },
         "rule": "This compiler composes admitted specialist outputs and preserves their ownership; it does not infer authority from rendered text.",
     }
+    decision["cross_owner_enforcement"] = cross_owner_enforcement_projection(decision=decision)
+    return decision

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import copy
 import hashlib
 import json
 import os
@@ -35,10 +36,13 @@ from agentic_workspace.operating_decision import (
     context_authority_repair_action,
     context_consequence_effects,
     context_surface_admission,
+    cross_owner_enforcement_projection,
     derive_context_consequences,
     derive_context_gaps,
     derive_operating_blockers_from_authorities,
     live_decision_input_revision,
+    ordinary_decision_enforcement_contract,
+    ordinary_decision_enforcement_findings,
     resolve_context_authority_projection,
 )
 
@@ -47,6 +51,57 @@ SCHEMA_ROOT = Path("src/agentic_workspace/contracts/schemas")
 
 def _schema(name: str) -> dict:
     return json.loads((SCHEMA_ROOT / name).read_text(encoding="utf-8"))
+
+
+def test_ordinary_decision_enforcement_has_one_owner_per_join_identity_and_peer_ratchet() -> None:
+    contract = ordinary_decision_enforcement_contract()
+    assert ordinary_decision_enforcement_findings(contract) == []
+    assert {item["dimension"] for item in contract["dimensions"]} == {
+        "current-work",
+        "current-target",
+        "proof-requirement-subject",
+        "mutation-permission",
+        "claim-boundary",
+        "future-relevant-residue",
+    }
+    assert [item["surface"] for item in contract["peer_surfaces"] if item["disposition"] == "canonical"] == ["operating-decision"]
+
+    forked = copy.deepcopy(contract)
+    forked["peer_surfaces"].append(
+        {"surface": "new-first-line-authority", "disposition": "canonical", "decision_identity_field": "decision_id"}
+    )
+    assert "operating-decision must be the only canonical peer decision surface" in ordinary_decision_enforcement_findings(forked)
+
+
+def test_cross_owner_enforcement_rejects_stale_or_scope_widening_peer() -> None:
+    decision = {
+        "decision_id": "operating-decision:0123456789abcdef",
+        "admitted_input_revision": "sha256:" + "a" * 64,
+        "canonical_decision_input_revision": "sha256:current",
+    }
+    admitted = cross_owner_enforcement_projection(
+        decision=decision,
+        peer_projections=[
+            {"surface": "start", "disposition": "derived", "decision_id": decision["decision_id"]},
+            {"surface": "proof", "disposition": "derived", "decision_id": decision["decision_id"]},
+        ],
+    )
+    assert admitted["status"] == "admitted"
+
+    blocked = cross_owner_enforcement_projection(
+        decision=decision,
+        peer_projections=[
+            {
+                "surface": "implement",
+                "disposition": "derived",
+                "decision_id": "operating-decision:fedcba9876543210",
+                "widens_effects": True,
+            }
+        ],
+    )
+    assert blocked["status"] == "blocked"
+    assert any("stale decision identity" in finding for finding in blocked["findings"])
+    assert any("widens effects or claims" in finding for finding in blocked["findings"])
 
 
 def _fixture_source_revision(path: Path) -> str:

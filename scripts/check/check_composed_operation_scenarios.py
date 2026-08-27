@@ -17,6 +17,8 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 from agentic_workspace.authority_envelope import mutation_baseline_payload  # noqa: E402
 from agentic_workspace.composed_operation_scenarios import (  # noqa: E402
     ACTIVE_RELEASE_GATE_SCENARIOS,
+    CROSS_OWNER_INVARIANT_CASES,
+    evaluate_cross_owner_invariant_case,
     observe_composed_operation_authority,
 )
 
@@ -151,6 +153,46 @@ def validate_matrix(matrix: dict[str, object]) -> list[str]:
         errors.append("scenario assertion contract is incomplete")
     if not REQUIRED_METRICS.issubset(set(matrix.get("cost_metrics", []))):
         errors.append("cost metrics do not cover total successful-completion cost")
+    invariant_cases = matrix.get("cross_owner_invariant_cases", [])
+    if not isinstance(invariant_cases, list):
+        errors.append("cross-owner invariant cases must be a list")
+    else:
+        invariant_ids = {str(item.get("invariant") or "") for item in invariant_cases if isinstance(item, dict)}
+        missing_invariants = set(CROSS_OWNER_INVARIANT_CASES) - invariant_ids
+        if missing_invariants:
+            errors.append(f"missing cross-owner invariants: {', '.join(sorted(missing_invariants))}")
+        case_ids = [str(item.get("id") or "") for item in invariant_cases if isinstance(item, dict)]
+        if len(case_ids) != len(set(case_ids)) or any(not item for item in case_ids):
+            errors.append("cross-owner invariant case ids must be unique and non-empty")
+        for case in invariant_cases:
+            if not isinstance(case, dict) or case.get("expected_status") not in {"admitted", "blocked"} or not isinstance(
+                case.get("observation"), dict
+            ):
+                errors.append("every cross-owner invariant case needs an expected status and observation")
+                break
+    evidence_refs = matrix.get("cross_owner_evidence_refs", [])
+    if not isinstance(evidence_refs, list) or len(evidence_refs) < 6:
+        errors.append("cross-owner invariant evidence refs are incomplete")
+    else:
+        for ref in evidence_refs:
+            path_text, separator, node = str(ref).partition("::")
+            path = REPO_ROOT / path_text
+            if not separator or not node or not path.exists() or f"def {node}(" not in path.read_text(encoding="utf-8"):
+                errors.append(f"cross-owner invariant evidence ref is missing or stale: {ref}")
+    return errors
+
+
+def _execute_cross_owner_invariants(matrix: dict[str, object]) -> list[str]:
+    errors: list[str] = []
+    for case in matrix.get("cross_owner_invariant_cases", []):
+        if not isinstance(case, dict):
+            continue
+        result = evaluate_cross_owner_invariant_case(case)
+        if result.get("status") != case.get("expected_status"):
+            errors.append(
+                f"{case.get('id')} expected {case.get('expected_status')}, observed {result.get('status')}: "
+                f"{result.get('violations')}"
+            )
     return errors
 
 
@@ -617,6 +659,10 @@ def _packet_semantic_summary(packet: dict[str, object]) -> dict[str, object]:
     gate = _planning_gate(packet)
     next_packet = packet.get("next_safe_action") if isinstance(packet.get("next_safe_action"), dict) else packet.get("next")
     operating = packet.get("operating_loop") if isinstance(packet.get("operating_loop"), dict) else {}
+    decision_packet = packet.get("decision_packet") if isinstance(packet.get("decision_packet"), dict) else {}
+    identity = decision_packet.get("identity") if isinstance(decision_packet.get("identity"), dict) else {}
+    projection_reuse = packet.get("projection_reuse") if isinstance(packet.get("projection_reuse"), dict) else {}
+    decision_id = str(identity.get("decision_id") or projection_reuse.get("decision_id") or "")
     return {
         "kind": packet.get("kind") or packet.get("profile"),
         "gate_result": gate.get("gate_result"),
@@ -629,6 +675,7 @@ def _packet_semantic_summary(packet: dict[str, object]) -> dict[str, object]:
         if isinstance(next_packet, dict)
         else None,
         "safe_claim": operating.get("safe_claim") if isinstance(operating, dict) else None,
+        "canonical_decision_identity_present": decision_id.startswith("operating-decision:") or decision_id == "not-admitted",
     }
 
 
@@ -1257,7 +1304,7 @@ def execute_matrix(matrix: dict[str, object]) -> list[str]:
     if not active_scenarios:
         return ["no active release-gate scenarios have canonical evidence"]
     max_workers = min(4, max(1, len(active_scenarios)))
-    errors: list[str] = []
+    errors: list[str] = _execute_cross_owner_invariants(matrix)
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = [executor.submit(_execute_one_scenario, scenario, budget) for scenario in active_scenarios]
         for future in as_completed(futures):

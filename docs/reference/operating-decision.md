@@ -48,6 +48,20 @@ Derived internal decision composed from admitted AW authority surfaces. It emits
 | `reconciliation` | object | no |  | Generic post-action result, bounded claim, residue, continuation, and constructible next-action composition supplied by domain owners. |  |  |
 | `control_inputs` | object | no |  | Applicable host, local-runtime, module, and task-derived inputs reduced to their material effects on the current contract. |  |  |
 | `assurance` | object | no |  | Admission of a repository-owned assurance classification, quiet when no external classifier is configured. |  |  |
+| `review_authority` | object | no |  | Configured verifier class, subject revision, separation result, and implementation-side protected review effect boundary. |  |  |
+| `cross_owner_enforcement` | object | yes |  | Registry-derived join identities, peer-surface dispositions, and fail-closed findings bound to this decision identity. |  |  |
+| `cross_owner_enforcement.kind` | const `"agentic-workspace/cross-owner-enforcement-projection/v1"` | yes |  | Schema discriminator for the decision-bound enforcement projection. |  |  |
+| `cross_owner_enforcement.status` | enum `"admitted"`, `"blocked"` | yes |  | Whether registry and peer identities satisfy the cross-owner gate. |  |  |
+| `cross_owner_enforcement.decision_id` | string | yes |  | Canonical decision identity carried by this projection. |  |  |
+| `cross_owner_enforcement.admitted_input_revision` | string | yes |  | Revision of the complete admitted specialist input set. |  |  |
+| `cross_owner_enforcement.canonical_decision_input_revision` | string | no |  | Live typed-action input revision when an executable action exists. |  |  |
+| `cross_owner_enforcement.dimensions` | array of object | yes |  | Registry-owned source owner and join-identity map. |  |  |
+| `cross_owner_enforcement.peer_surface_dispositions` | array of object | yes |  | Registered authority disposition for ordinary peer surfaces. |  |  |
+| `cross_owner_enforcement.observed_peer_projections` | array of object | no |  | Optional peers checked against this canonical decision identity. |  |  |
+| `cross_owner_enforcement.invariants` | array of string | yes |  | Release-gating impossibility invariants applied by the projection. |  |  |
+| `cross_owner_enforcement.findings` | array of string | yes |  | Fail-closed identity, authority, or scope violations. |  |  |
+| `cross_owner_enforcement.surface_growth_rule` | string | yes |  | Registry ratchet for new decision-shaped surfaces. |  |  |
+| `cross_owner_enforcement.rule` | string | yes |  | Authority boundary for specialist facts and peer projections. |  |  |
 | `current_work` | object | no |  | Current-work identity admitted into the composed decision. |  |  |
 | `selected_owner` | object | no |  | Selected owner identity admitted into the composed decision. |  |  |
 | `terminal_state` | string | no |  | Terminal outcome state used for continuation or finalization claims. |  |  |

@@ -4,7 +4,7 @@
   "title": "Agentic Workspace Context Authority Registry",
   "description": "Versioned source of truth for ordinary operating-decision authority surfaces and consumer requirements.",
   "type": "object",
-  "required": ["kind", "schema_version", "rule", "currentness_contract", "ordinary_decision_consumers", "consumer_requirements", "surfaces"],
+  "required": ["kind", "schema_version", "rule", "currentness_contract", "ordinary_decision_consumers", "consumer_requirements", "ordinary_decision_enforcement", "surfaces"],
   "properties": {
     "kind": {
       "const": "agentic-workspace/context-authority-registry/v1",
@@ -119,6 +119,80 @@
         "uniqueItems": true,
         "description": "Authority surfaces required by this consumer."
       }
+    },
+    "ordinary_decision_enforcement": {
+      "type": "object",
+      "description": "Release-gating join identities, peer dispositions, and impossibility invariants for the ordinary operating loop.",
+      "required": [
+        "kind",
+        "canonical_decision_owner",
+        "canonical_decision_identity_fields",
+        "dimensions",
+        "peer_surfaces",
+        "allowed_peer_dispositions",
+        "invariants",
+        "surface_growth_rule"
+      ],
+      "properties": {
+        "kind": {"const": "agentic-workspace/ordinary-decision-enforcement/v1", "description": "Schema discriminator for the ordinary-decision enforcement contract."},
+        "canonical_decision_owner": {"type": "string", "minLength": 1, "description": "Sole compiler allowed to author the first-line ordinary decision."},
+        "canonical_decision_identity_fields": {
+          "type": "array",
+          "description": "Closed identity tuple every derived ordinary surface must carry.",
+          "prefixItems": [
+            {"const": "decision_id"},
+            {"const": "admitted_input_revision"},
+            {"const": "canonical_decision_input_revision"}
+          ],
+          "items": false
+        },
+        "dimensions": {
+          "type": "array",
+          "description": "Decision-relevant facts with one canonical source owner and join identity.",
+          "minItems": 6,
+          "items": {
+            "type": "object",
+            "required": ["dimension", "canonical_surface", "canonical_owner", "join_identity_fields", "decision_fields"],
+            "properties": {
+              "dimension": {"type": "string", "minLength": 1},
+              "canonical_surface": {"type": "string", "minLength": 1},
+              "canonical_owner": {"type": "string", "minLength": 1},
+              "join_identity_fields": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1, "uniqueItems": true},
+              "decision_fields": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1, "uniqueItems": true}
+            },
+            "additionalProperties": false
+          }
+        },
+        "peer_surfaces": {
+          "type": "array",
+          "description": "Ordinary consumer surfaces and their canonical, derived, selector-only, or removed disposition.",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["surface", "disposition", "decision_identity_field"],
+            "properties": {
+              "surface": {"type": "string", "minLength": 1},
+              "disposition": {"enum": ["canonical", "derived", "selector-only", "removed"]},
+              "decision_identity_field": {"type": "string", "minLength": 1}
+            },
+            "additionalProperties": false
+          }
+        },
+        "allowed_peer_dispositions": {
+          "type": "array",
+          "description": "Closed vocabulary for decision-surface authority disposition.",
+          "prefixItems": [
+            {"const": "canonical"},
+            {"const": "derived"},
+            {"const": "selector-only"},
+            {"const": "removed"}
+          ],
+          "items": false
+        },
+        "invariants": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 6, "uniqueItems": true, "description": "Release-gating cross-owner impossibility invariants."},
+        "surface_growth_rule": {"type": "string", "minLength": 1, "description": "Ratchet applied when decision-shaped peer surfaces are added or changed."}
+      },
+      "additionalProperties": false
     },
     "surfaces": {
       "type": "array",

@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from agentic_workspace.operating_decision import cross_owner_enforcement_projection
+
 ACTIVE_RELEASE_GATE_SCENARIOS = frozenset({"fresh-direct-work"})
 
 CONTRACT_FIELDS = (
@@ -21,6 +23,80 @@ CONTRACT_FIELDS = (
     "proof_claim_boundary",
     "next_transition",
 )
+
+CROSS_OWNER_INVARIANT_CASES = frozenset(
+    {
+        "target-identity-constructible",
+        "proof-binding-before-execution",
+        "proof-publication-fixed-point",
+        "bounded-effect-custody",
+        "future-residue-disposition",
+        "peer-decision-identity",
+    }
+)
+
+
+def evaluate_cross_owner_invariant_case(case: dict[str, Any]) -> dict[str, Any]:
+    """Evaluate one release-gating counterexample without becoming runtime authority."""
+
+    invariant = str(case.get("invariant") or "")
+    observation = _as_dict(case.get("observation"))
+    violations: list[str] = []
+    if invariant not in CROSS_OWNER_INVARIANT_CASES:
+        violations.append("unregistered-cross-owner-invariant")
+    elif invariant == "target-identity-constructible":
+        target_identity = str(observation.get("target_identity_ref") or "")
+        blocker = _as_dict(observation.get("blocker"))
+        recoveries = [str(item) for item in _as_list(blocker.get("recoveries")) if str(item)]
+        if not target_identity and not (blocker.get("kind") == "typed-blocker" and len(recoveries) == 1):
+            violations.append("offered-action-target-identity-is-not-constructible")
+    elif invariant == "proof-binding-before-execution":
+        if observation.get("deterministic_binding_mismatch") is True and observation.get("process_launched") is True:
+            violations.append("deterministic-proof-mismatch-reached-process-launch")
+    elif invariant == "proof-publication-fixed-point":
+        semantic_changed = observation.get("semantic_dependency_changed") is True
+        if not semantic_changed and observation.get("result_identity_before") != observation.get("result_identity_after"):
+            violations.append("non-semantic-publication-invalidated-its-result")
+        if observation.get("replay_count", 0) and observation.get("replay_result_identity") != observation.get("result_identity_after"):
+            violations.append("proof-publication-replay-is-not-idempotent")
+    elif invariant == "bounded-effect-custody":
+        bounded = all(
+            observation.get(field) is True
+            for field in (
+                "external_tracker_write",
+                "bounded_candidate_set",
+                "duplicate_check_complete",
+                "repository_effects_excluded",
+                "merge_close_effects_excluded",
+            )
+        )
+        genuine_continuation = any(
+            observation.get(field) is True for field in ("multi_session", "implementation_required", "owner_conflict")
+        )
+        if bounded and not genuine_continuation and observation.get("planning_custody_required") is True:
+            violations.append("bounded-effect-acquired-custody-only-planning")
+        if genuine_continuation and observation.get("planning_custody_required") is not True:
+            violations.append("genuine-continuation-bypassed-planning-custody")
+    elif invariant == "future-residue-disposition":
+        if observation.get("future_relevant") is True:
+            disposition = str(observation.get("disposition") or "")
+            owner = str(observation.get("owner") or "")
+            if disposition in {"", "none", "none_found", "not_evaluated"} or not owner:
+                violations.append("future-relevant-residue-lacks-owner-backed-disposition")
+    elif invariant == "peer-decision-identity":
+        projection = cross_owner_enforcement_projection(
+            decision=_as_dict(observation.get("decision")),
+            peer_projections=[item for item in observation.get("peers", []) if isinstance(item, dict)],
+        )
+        violations.extend(str(item) for item in projection.get("findings", []) if str(item))
+    return {
+        "kind": "agentic-workspace/cross-owner-invariant-result/v1",
+        "case_id": str(case.get("id") or ""),
+        "invariant": invariant,
+        "status": "blocked" if violations else "admitted",
+        "violations": violations,
+        "rule": "This result is release-gating evidence; canonical runtime owners and the operating decision remain authoritative.",
+    }
 
 
 def observe_composed_operation_authority(
@@ -222,3 +298,7 @@ def _typed_invocation_supports_contract(invocation: dict[str, Any], operating_de
 
 def _as_dict(value: Any) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
+
+
+def _as_list(value: Any) -> list[Any]:
+    return value if isinstance(value, list) else []

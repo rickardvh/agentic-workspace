@@ -8,8 +8,29 @@ from pathlib import Path
 
 from agentic_workspace.composed_operation_scenarios import (
     ACTIVE_RELEASE_GATE_SCENARIOS,
+    CROSS_OWNER_INVARIANT_CASES,
+    evaluate_cross_owner_invariant_case,
     observe_composed_operation_authority,
 )
+
+
+def test_cross_owner_counterexamples_and_safe_controls_are_release_gated() -> None:
+    module = _checker_module()
+    matrix = module.load_matrix()
+    cases = matrix["cross_owner_invariant_cases"]
+    assert {case["invariant"] for case in cases} == CROSS_OWNER_INVARIANT_CASES
+    assert {case["expected_status"] for case in cases} == {"admitted", "blocked"}
+    for case in cases:
+        assert evaluate_cross_owner_invariant_case(case)["status"] == case["expected_status"]
+
+
+def test_cross_owner_invariant_gate_contains_weak_agent_semantic_forks() -> None:
+    module = _checker_module()
+    matrix = module.load_matrix()
+    cases = {case["id"]: copy.deepcopy(case) for case in matrix["cross_owner_invariant_cases"]}
+    assert evaluate_cross_owner_invariant_case(cases["2748-weak-agent-launches-stale-proof"])["status"] == "blocked"
+    assert evaluate_cross_owner_invariant_case(cases["weak-agent-stale-scope-widening"])["status"] == "blocked"
+    assert evaluate_cross_owner_invariant_case(cases["2754-genuine-continuation-needs-planning"])["status"] == "admitted"
 
 
 def _checker_module():

@@ -52,9 +52,9 @@
     {
       "id": "open-issues-enforcement-ratchet",
       "title": "Ratchet generic cross-owner enforcement invariants",
-      "readiness": "blocked",
+      "readiness": "promoted",
       "outcome": "Issue #2762 makes target identity, proof admission/publication, bounded external effects, residue disposition, verifier authority, and external-observation currentness release-gating invariants over replaceable synthetic owners rather than repository vocabulary.",
-      "owner_surface": "proposed: .agentic-workspace/planning/execplans/open-issues-enforcement-ratchet.plan.json",
+      "owner_surface": ".agentic-workspace/planning/lanes/open-issues-enforcement-ratchet.lane.json",
       "proof": "Provider-neutral composed conformance, negative split-authority mutations, authority-surface inventory delta, no-new-parallel-owner check, direct-work quiet-path measurements, and workspace-wide validation.",
       "slice_contribution_to_parent": "Turns the landed and repaired counterexamples into generic impossibility properties required by parent #2562.",
       "residual_parent_intent": "Non-local delegation and final parent composed closure remain.",
