@@ -20,6 +20,7 @@ _SPEC.loader.exec_module(loop)
 HEAD_A = "a" * 40
 HEAD_B = "b" * 40
 SESSION = "11111111-1111-1111-1111-111111111111"
+TRUSTED_PRODUCER = {"slug": "chatgpt-codex-connector"}
 
 
 def marker(*, pr: int = 12, head: str = HEAD_A, decision: str = "blocked") -> str:
@@ -143,6 +144,9 @@ class FakeRunner(loop.CommandRunner):
         self.pr_branch = self.branch
         self.pr_state = "OPEN"
         self.comments = comments or []
+        for comment in self.comments:
+            if "aw-chatgpt-review" in str(comment.get("body", "")) and "performed_via_github_app" not in comment:
+                comment["performed_via_github_app"] = TRUSTED_PRODUCER
         self.commands: list[list[str]] = []
         self.codex_exit = 0
         self.next_handoff_head = ""
@@ -195,6 +199,8 @@ class FakeRunner(loop.CommandRunner):
             return subprocess.CompletedProcess(command, 0, "", "")
         if command[:3] == ["gh", "repo", "view"]:
             return subprocess.CompletedProcess(command, 0, json.dumps({"nameWithOwner": "owner/repo"}), "")
+        if command[:4] == ["gh", "api", "--paginate", "--slurp"]:
+            return subprocess.CompletedProcess(command, 0, json.dumps([self.comments]), "")
         if command[:3] == ["gh", "pr", "view"]:
             pr_head = self.pr_heads.pop(0) if self.pr_heads else self.pr_head
             payload = {
@@ -234,6 +240,7 @@ class FakeRunner(loop.CommandRunner):
                             "id": "IC_next_head",
                             "body": marker(head=self.next_handoff_head, decision=self.next_review_decision),
                             "url": "https://example.test/c/next",
+                            "performed_via_github_app": TRUSTED_PRODUCER,
                         }
                     ]
             return subprocess.CompletedProcess(command, self.codex_exit, "", "failed" if self.codex_exit else "")
@@ -346,6 +353,11 @@ class RealGitPrRunner(loop.CommandRunner):
         command = list(command)
         if command[:3] == ["gh", "pr", "list"]:
             return subprocess.CompletedProcess(command, 0, json.dumps(self.pr_payloads), "")
+        if command[:4] == ["gh", "api", "--paginate", "--slurp"]:
+            comments = [comment for payload in self.pr_payloads for comment in payload.get("comments", [])]
+            for comment in comments:
+                comment.setdefault("performed_via_github_app", TRUSTED_PRODUCER)
+            return subprocess.CompletedProcess(command, 0, json.dumps([comments]), "")
         if command[:3] == ["gh", "pr", "view"]:
             return subprocess.CompletedProcess(command, 0, json.dumps({"number": 12, "state": self.pr_state}), "")
         if command[:3] == ["gh", "repo", "view"]:
@@ -355,10 +367,10 @@ class RealGitPrRunner(loop.CommandRunner):
 
 def test_marker_parser_accepts_only_exact_pr_and_full_sha() -> None:
     comments = [
-        {"id": "IC_exact", "body": f"Fix A\n{marker()}", "url": "u1"},
-        {"databaseId": 2, "body": f"Old\n{marker(head=HEAD_B)}", "url": "u2"},
+        {"id": "IC_exact", "body": f"Fix A\n{marker()}", "url": "u1", "performed_via_github_app": TRUSTED_PRODUCER},
+        {"databaseId": 2, "body": f"Old\n{marker(head=HEAD_B)}", "url": "u2", "performed_via_github_app": TRUSTED_PRODUCER},
         {"databaseId": 3, "body": "<!-- aw-chatgpt-review pr=12 head=abc decision=blocked -->", "url": "u3"},
-        {"databaseId": 4, "body": f"Wrong PR\n{marker(pr=13)}", "url": "u4"},
+        {"databaseId": 4, "body": f"Wrong PR\n{marker(pr=13)}", "url": "u4", "performed_via_github_app": TRUSTED_PRODUCER},
     ]
 
     matches, rejected = loop.parse_reviews(comments, expected_pr=12, expected_head=HEAD_A)
@@ -367,17 +379,19 @@ def test_marker_parser_accepts_only_exact_pr_and_full_sha() -> None:
     assert {item["reason"] for item in rejected} == {"stale-head", "malformed-or-multiple-markers", "pr-mismatch"}
 
 
-def test_marker_parser_rejects_implementation_authored_decision_but_accepts_independent_control() -> None:
+def test_marker_parser_uses_producer_provenance_when_roles_share_one_login() -> None:
     comments = [
         {
             "id": "IC_implementation",
             "author": {"login": "shared-owner-login"},
+            "performed_via_github_app": None,
             "body": f"Implementation status posing as review\n{marker(decision='blocked')}",
             "url": "u1",
         },
         {
             "id": "IC_reviewer",
-            "author": {"login": "independent-reviewer"},
+            "author": {"login": "shared-owner-login"},
+            "performed_via_github_app": TRUSTED_PRODUCER,
             "body": f"Independent findings\n{marker(decision='blocked')}",
             "url": "u2",
         },
@@ -387,11 +401,10 @@ def test_marker_parser_rejects_implementation_authored_decision_but_accepts_inde
         comments,
         expected_pr=12,
         expected_head=HEAD_A,
-        implementation_principals=["shared-owner-login"],
     )
 
     assert [(item.comment_id, item.findings) for item in matches] == [("IC_reviewer", "Independent findings")]
-    assert rejected == [{"comment_id": "IC_implementation", "reason": "implementation-authored-marker"}]
+    assert rejected == [{"comment_id": "IC_implementation", "reason": "untrusted-review-producer"}]
 
 
 def test_system_trigger_reports_failed_ci_and_merge_conflict_for_exact_head() -> None:
@@ -1094,6 +1107,10 @@ def test_global_scan_consumes_recovery_only_for_selected_pr(tmp_path: Path, monk
                 ),
                 "",
             )
+        if list(command)[:4] == ["gh", "api", "--paginate", "--slurp"]:
+            selected_review = review_13 if "/13/" in str(command[-1]) else review_12
+            selected_review.setdefault("performed_via_github_app", TRUSTED_PRODUCER)
+            return subprocess.CompletedProcess(command, 0, json.dumps([[selected_review]]), "")
         return original_run(command, cwd=cwd, env=env)
 
     runner.run = run
@@ -1479,7 +1496,14 @@ def test_global_dispatch_uses_serial_checkout_through_resume_then_retires_state_
     assert loop._load_state(tmp_path, 12)["terminal_result"]["disposition"] == "handoff-recorded"
     assert tmp_path == Path(loop._load_dispatch(tmp_path)["prs"]["12"]["checkout"])
 
-    runner.comments = [{"id": "resume", "body": f"Fix the follow-up\n{marker(head=HEAD_B)}", "url": "u"}]
+    runner.comments = [
+        {
+            "id": "resume",
+            "body": f"Fix the follow-up\n{marker(head=HEAD_B)}",
+            "url": "u",
+            "performed_via_github_app": TRUSTED_PRODUCER,
+        }
+    ]
     resumed = loop.dispatch_all(
         tmp_path, runner=runner, codex_command="codex", worktree_root=worktree_root, max_cycles=3, max_repeated_blockers=2
     )
@@ -1580,6 +1604,7 @@ def test_unbound_fresh_job_with_remote_movement_retires_stale_state_then_accepts
     assert not loop._state_path(tmp_path, 12).exists()
     assert loop._load_dispatch(tmp_path)["retired_attempts"][0]["old_head"] == HEAD_A
 
+    new_review["performed_via_github_app"] = TRUSTED_PRODUCER
     runner.comments = [new_review]
     second = loop.dispatch_all(
         tmp_path, runner=runner, codex_command="codex", worktree_root=worktree_root, max_cycles=3, max_repeated_blockers=2
@@ -2064,27 +2089,16 @@ def test_implementation_authored_blocked_marker_does_not_suppress_independent_re
             {
                 "databaseId": 96,
                 "author": {"login": "shared-owner-login"},
+                "performed_via_github_app": None,
                 "body": f"Implementation status\n{marker(decision='blocked')}",
                 "url": "u",
             }
         ],
     )
-    original_run = runner.run
-
-    def run(command, *, cwd, env=None):
-        completed = original_run(command, cwd=cwd, env=env)
-        if list(command)[:3] != ["gh", "pr", "view"]:
-            return completed
-        payload = json.loads(completed.stdout)
-        payload["author"] = {"login": "shared-owner-login"}
-        return subprocess.CompletedProcess(command, completed.returncode, json.dumps(payload), completed.stderr)
-
-    runner.run = run
-
     result = loop.poll_one(tmp_path, state(tmp_path), runner=runner, codex_command="codex")
 
     assert result["reason"] == "implementation-review-rejected"
-    assert result["rejected"] == [{"comment_id": "96", "reason": "implementation-authored-marker"}]
+    assert result["rejected"] == [{"comment_id": "96", "reason": "untrusted-review-producer"}]
     assert not any("resume" in command for command in runner.commands)
 
 

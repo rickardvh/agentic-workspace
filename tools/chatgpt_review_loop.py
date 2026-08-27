@@ -14,9 +14,10 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable, Sequence, TextIO
+from typing import Any, Sequence, TextIO
 
 REVIEW_POLICY = "pr-review-recheck-v1"
+TRUSTED_REVIEW_PRODUCER_SLUGS = frozenset({"chatgpt-codex-connector"})
 HEAD_SYNC_ATTEMPTS = 3
 STATE_KIND = "agentic-workspace/chatgpt-review-loop-state/v1"
 STATE_RELATIVE = Path(".agentic-workspace/local/chatgpt-review-loop")
@@ -358,7 +359,7 @@ def _pr_view(root: Path, runner: CommandRunner, *, pr: int | None = None, repo: 
         *([str(pr)] if pr else []),
         *(["--repo", repo] if repo else []),
         "--json",
-        "number,state,headRefName,headRefOid,author,body,comments,url,mergeable,mergeStateStatus,statusCheckRollup",
+        "number,state,headRefName,headRefOid,body,comments,url,mergeable,mergeStateStatus,statusCheckRollup",
     ]
     payload = runner.json(command, cwd=root)
     if not isinstance(payload, dict):
@@ -638,17 +639,25 @@ def _save_dispatch(root: Path, payload: dict[str, Any]) -> None:
     temporary.replace(path)
 
 
-def _comments_from_pr(payload: dict[str, Any]) -> list[dict[str, Any]]:
-    comments = payload.get("comments", [])
-    return [item for item in comments if isinstance(item, dict)] if isinstance(comments, list) else []
+def _review_comments(root: Path, runner: CommandRunner, *, repository: str, pr: int) -> list[dict[str, Any]]:
+    """Load REST comments because GraphQL's PR projection omits producer-app provenance."""
+    pages = runner.json(
+        ["gh", "api", "--paginate", "--slurp", f"repos/{repository}/issues/{pr}/comments?per_page=100"],
+        cwd=root,
+    )
+    if not isinstance(pages, list) or not all(isinstance(page, list) for page in pages):
+        raise LoopError("review-comments-invalid", "gh returned an invalid issue-comment payload")
+    comments = [comment for page in pages for comment in page]
+    if not all(isinstance(comment, dict) for comment in comments):
+        raise LoopError("review-comments-invalid", "gh returned an invalid issue-comment entry")
+    return comments
 
 
-def _implementation_principals_from_pr(payload: dict[str, Any]) -> tuple[str, ...]:
-    author = payload.get("author")
-    if not isinstance(author, dict):
-        return ()
-    login = str(author.get("login") or "").strip().lower()
-    return (login,) if login else ()
+def _review_producer_slug(comment: dict[str, Any]) -> str:
+    producer = comment.get("performed_via_github_app")
+    if not isinstance(producer, dict):
+        return ""
+    return str(producer.get("slug") or "").strip().lower()
 
 
 def _open_prs(root: Path, runner: CommandRunner) -> list[dict[str, Any]]:
@@ -662,7 +671,7 @@ def _open_prs(root: Path, runner: CommandRunner) -> list[dict[str, Any]]:
             "--limit",
             "100",
             "--json",
-            "number,state,headRefName,headRefOid,author,body,comments,url,mergeable,mergeStateStatus,statusCheckRollup",
+            "number,state,headRefName,headRefOid,body,comments,url,mergeable,mergeStateStatus,statusCheckRollup",
         ],
         cwd=root,
     )
@@ -824,11 +833,9 @@ def parse_reviews(
     *,
     expected_pr: int,
     expected_head: str,
-    implementation_principals: Iterable[str] = (),
 ) -> tuple[list[Review], list[dict[str, Any]]]:
     matches: list[Review] = []
     rejected: list[dict[str, Any]] = []
-    implementers = {str(principal).strip().lower() for principal in implementation_principals if str(principal).strip()}
     for comment in comments:
         body = str(comment.get("body", ""))
         if "aw-chatgpt-review" not in body:
@@ -841,10 +848,9 @@ def parse_reviews(
         if len(markers) != 1:
             rejected.append({"comment_id": comment_id, "reason": "malformed-or-multiple-markers"})
             continue
-        author = comment.get("author")
-        author_login = str(author.get("login") or "").strip().lower() if isinstance(author, dict) else ""
-        if author_login and author_login in implementers:
-            rejected.append({"comment_id": comment_id, "reason": "implementation-authored-marker"})
+        producer_slug = _review_producer_slug(comment)
+        if producer_slug not in TRUSTED_REVIEW_PRODUCER_SLUGS:
+            rejected.append({"comment_id": comment_id, "reason": "untrusted-review-producer"})
             continue
         marker = markers[0]
         marker_pr = int(marker.group("pr"))
@@ -1389,12 +1395,11 @@ def poll_one(
         )
 
     matches, rejected = parse_reviews(
-        _comments_from_pr(payload),
+        _review_comments(root, runner, repository=str(state["repository"]), pr=pr),
         expected_pr=pr,
         expected_head=str(state["handoff_head"]),
-        implementation_principals=_implementation_principals_from_pr(payload),
     )
-    malformed = [item for item in rejected if item["reason"] not in {"stale-head", "implementation-authored-marker"}]
+    malformed = [item for item in rejected if item["reason"] not in {"stale-head", "untrusted-review-producer"}]
     if malformed:
         return _recover(
             state,
@@ -1420,7 +1425,7 @@ def poll_one(
             rejected_reasons = {str(item.get("reason") or "") for item in rejected}
             event = (
                 "implementation-review-rejected"
-                if "implementation-authored-marker" in rejected_reasons
+                if "untrusted-review-producer" in rejected_reasons
                 else "stale-review-rejected"
                 if rejected
                 else "review-pending"
@@ -1619,6 +1624,7 @@ def _dispatch_all_unlocked(
     retired = _cleanup_closed_dispatches(root, registry, runner=runner)
     candidates: list[tuple[dict[str, Any], Review]] = []
     recovery_candidates: list[tuple[dict[str, Any], Review]] = []
+    repository = _repo_slug(root, runner)
     for payload in _open_prs(root, runner):
         pr = int(payload.get("number", 0))
         head = str(payload.get("headRefOid", ""))
@@ -1658,12 +1664,11 @@ def _dispatch_all_unlocked(
                 )
                 _save_state(root, existing)
         matches, rejected = parse_reviews(
-            _comments_from_pr(payload),
+            _review_comments(root, runner, repository=repository, pr=pr),
             expected_pr=pr,
             expected_head=head,
-            implementation_principals=_implementation_principals_from_pr(payload),
         )
-        if any(item["reason"] not in {"stale-head", "implementation-authored-marker"} for item in rejected) or len(matches) > 1:
+        if any(item["reason"] not in {"stale-head", "untrusted-review-producer"} for item in rejected) or len(matches) > 1:
             continue
         review = _system_trigger(payload, pr=pr, head=head) or (matches[0] if matches else None)
         if review is None or review.decision != "blocked" or not review.findings:
