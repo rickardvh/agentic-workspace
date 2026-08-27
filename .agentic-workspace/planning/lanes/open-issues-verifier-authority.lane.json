@@ -7,8 +7,11 @@
   "lane_outcome": "Issue #2725 is satisfied generically and in the repository adapter: shared credentials or marker syntax cannot let an implementer occupy, suppress, satisfy, or fail an independent verifier decision cycle.",
   "purpose_for_parent": "Restores the protected reviewer boundary required before later enforcement and delegation claims can be trusted.",
   "subsystems": [],
-  "technical_strategy": "Tighten the lane strategy before the first slice starts.",
-  "technology_choices": [],
+  "technical_strategy": "Reuse the portable separation-of-duty projection and bind this repository's marker intake to provider-controlled producer-app metadata, never GitHub login, association, or caller-authored marker fields.",
+  "technology_choices": [
+    "Treat REST performed_via_github_app metadata as the repo adapter's trusted producer identity.",
+    "Keep implementation status marker-free and preserve the existing exact-head review policy."
+  ],
   "slice_sequence": [
     {
       "id": "open-issues-verifier-authority",
@@ -23,9 +26,15 @@
   "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
   "proof_strategy": "Generic shared-transport role fixture, repository review-marker admission regression, implementation handoff posture, negative merge-ready and blocked-marker cases, focused tests, and hosted checks.",
   "proof_aggregation": {
-    "status": "not-started",
-    "evidence": [],
-    "known_gaps": []
+    "status": "partial",
+    "evidence": [
+      "112 review-loop, stack, and merge-gate tests passed.",
+      "Same-login implementation and connector-review marker matrix passed.",
+      "Workspace lint, typecheck, contract tooling, structured inventory, Planning doctor, and maintainer surfaces passed."
+    ],
+    "known_gaps": [
+      "Publish and restack the repaired heads, then obtain current-head independent review before ordered integration."
+    ]
   },
   "residual_lane_work": "Lifecycle composition, generic cross-owner enforcement, non-local delegation, and parent closure remain.",
   "lane_to_epic_contribution": "Restores the protected reviewer boundary required before later enforcement and delegation claims can be trusted.",
@@ -45,5 +54,5 @@
       "locator": "candidate_lanes[1]"
     }
   ],
-  "notes": ""
+  "notes": "PR #2776 carries the repository-adapter repair; protected review authority remains external to the implementation session."
 }
