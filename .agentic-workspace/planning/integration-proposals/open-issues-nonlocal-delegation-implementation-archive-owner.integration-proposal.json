@@ -8,19 +8,22 @@
     "id": "open-issues-nonlocal-delegation-implementation",
     "ref": ".agentic-workspace/planning/execplans/open-issues-nonlocal-delegation-implementation.plan.json"
   },
-  "external_ref": "",
-  "proof_refs": [],
-  "parent_boundary": "parent and lane remain open unless an independent boundary is satisfied",
-  "preserved_invariants": [
-    "feature branch does not select current work",
-    "feature branch does not rewrite aggregate Planning indexes",
-    "feature branch does not close parent/lane lifecycle truth",
-    "integration apply is target-branch authoritative"
+  "external_ref": "2763",
+  "proof_refs": [
+    "https://github.com/rickardvh/agentic-workspace/pull/2778",
+    "tools/model-cli-harness/external-agent-evaluation/nonlocal-delegation-dogfood-2026-08-27.json"
   ],
-  "expected_subject_revision": "c019f21d0539f4e3",
-  "expected_planning_revision": "bf53b7cc374aa7fb",
-  "created_at": "2026-08-27T11:42:38.220106Z",
-  "updated_at": "2026-08-27T11:42:38.220106Z",
+  "parent_boundary": "Parent and lane remain open until target integration and independent review satisfy their own boundaries.",
+  "preserved_invariants": [
+    "feature-branch-does-not-select-current-work",
+    "feature-branch-does-not-rewrite-aggregate-planning-indexes",
+    "feature-branch-does-not-close-parent-lane-lifecycle-truth",
+    "integration-apply-is-target-branch-authoritative"
+  ],
+  "expected_subject_revision": "9d1d0599ac38b2b2",
+  "expected_planning_revision": "96673144e5389b8a",
+  "created_at": "2026-08-27T12:56:50.108949Z",
+  "updated_at": "2026-08-27T12:56:50.108949Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -36,5 +39,5 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "a14d4be7061df783"
+  "proposal_revision": "647eeff9a8c4eb99"
 }
