@@ -861,6 +861,29 @@ def _patch_python_operation_exit_status(output: GeneratedOutput, *, repo_root: P
     return GeneratedOutput(output.path, output.content.replace(old_return, new_return, 1))
 
 
+def _patch_workspace_python_operation_inputs(output: GeneratedOutput, *, repo_root: Path) -> GeneratedOutput:
+    """Preserve every parser/callable input instead of a generated allowlist.
+
+    The command and operation contracts already own the accepted interface. A
+    second hand-maintained projection in the Python executor may not silently
+    discard a newly supported option.
+    """
+
+    path = output.path if output.path.is_absolute() else repo_root / output.path
+    if path.relative_to(repo_root).as_posix() != "generated/workspace/python/primitives/operation_executor.py":
+        return output
+    content = output.content
+    args_anchor = "                'lifecycle_action': getattr(args, 'lifecycle_action', None),\n"
+    args_insert = args_anchor + "                **{name: value for name, value in vars(args).items() if not name.startswith('_')},\n"
+    if args_anchor in content and "value in vars(args).items()" not in content:
+        content = content.replace(args_anchor, args_insert, 1)
+    values_anchor = "                'lifecycle_action': values.get('lifecycle_action', None),\n"
+    values_insert = values_anchor + "                **dict(values),\n"
+    if values_anchor in content and "                **dict(values),\n" not in content:
+        content = content.replace(values_anchor, values_insert, 1)
+    return GeneratedOutput(output.path, content)
+
+
 def _patch_planning_python_runtime_values(output: GeneratedOutput, *, repo_root: Path) -> GeneratedOutput:
     path = output.path if output.path.is_absolute() else repo_root / output.path
     relative = path.relative_to(repo_root).as_posix()
@@ -1078,7 +1101,8 @@ def render_workspace_command_package_outputs(
                         _patch_typescript_strict_preflight_gate(
                             _patch_workspace_typescript_sample_command_test(
                                 _patch_python_operation_exit_status(
-                                    _patch_python_structured_usage_errors(
+                                    _patch_workspace_python_operation_inputs(
+                                        _patch_python_structured_usage_errors(
                                         _patch_planning_python_runtime_values(
                                             _patch_typescript_structured_usage_errors(
                                                 _normalize_releaseable_typescript_package_json(
@@ -1087,6 +1111,8 @@ def render_workspace_command_package_outputs(
                                                 repo_root=repo_root,
                                             ),
                                             repo_root=repo_root,
+                                        ),
+                                        repo_root=repo_root,
                                         ),
                                         repo_root=repo_root,
                                     ),
