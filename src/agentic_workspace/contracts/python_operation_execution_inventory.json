@@ -2825,6 +2825,29 @@
     },
     {
       "command": "correction-event",
+      "conformance_ref": "correction-event.identity-init.process",
+      "domain_runtime_primitive_refs": [
+        "workspace.target-root.resolve",
+        "correction.event.apply",
+        "output.emit"
+      ],
+      "generated_transport": "generated/workspace/python/cli.py",
+      "generic_behavior_audit": "Generated parser, operation IR, client negotiation, and output emission own the command shape; correction.event.apply owns collision-checked stable-id construction and compare-and-swap local config mutation.",
+      "hand_owned_runtime_code": [
+        "workspace target identity initialization",
+        "local config compare-and-swap mutation"
+      ],
+      "operation_contract": "operations/correction-event.identity-init.json",
+      "operation_id": "correction-event.identity-init",
+      "primitive_executor": "command_generation/primitive_executor.py",
+      "program": "agentic-workspace",
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "The operation persists one local-only identity through workspace-specific profile and continuity admission.",
+      "status": "domain-runtime-primitive-via-ir",
+      "what_would_make_portable_later": "Extract TOML-preserving local config mutation after target identity lifecycle semantics stabilize."
+    },
+    {
+      "command": "correction-event",
       "conformance_ref": "correction-event.submit.process",
       "domain_runtime_primitive_refs": [
         "workspace.target-root.resolve",

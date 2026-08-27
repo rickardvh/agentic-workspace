@@ -40,7 +40,9 @@ Each item also carries an `addressing_status` so AW report/startup can derive a 
 - `outdated` was superseded by later diff state;
 - `informational` does not require local action.
 
-The packet includes `comment_surfaces` so closeout can distinguish complete GraphQL comment/thread reads from normalized fixtures or legacy caches with incomplete thread-surface proof.
+The packet includes `comment_surfaces` and `review_intake` so closeout can distinguish complete GraphQL reads from incomplete fixtures or caches. A complete implementation-side intake covers top-level issue comments, submitted reviews, inline review threads, hosted checks, and current-head ordering. If any required surface is unavailable or truncated, `review_intake.status` is `incomplete`; consumers must not conclude that a referenced blocker is absent.
+
+Use `--referenced-comment <database-id>` when the user names a particular blocker. The bounded result reports whether that comment was found and classifies the current implementation posture as patch changes requested, ready for re-review/distinct authority required, hosted-check failure, stale/superseded, incomplete, or clean. Hosted failures remain visible but do not replace a referenced review comment. Complete intake never grants the implementation agent self-approval or `merge-ready` authority; that remains owned by `tools/skills/pr-review-recheck/SKILL.md` and a distinct configured reviewer.
 
 Live read-only use:
 
@@ -48,6 +50,7 @@ Live read-only use:
 uv run python scripts/github/pr_comment_delta.py `
   --repo rickardvh/agentic-workspace `
   --pr 1713 `
+  --referenced-comment 123456789 `
   --format json
 ```
 

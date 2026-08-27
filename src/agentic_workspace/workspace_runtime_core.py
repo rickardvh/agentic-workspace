@@ -177,6 +177,12 @@ from agentic_workspace.projection_reuse import (
     projection_cancellation_checkpoint,
     record_projection_reuse,
 )
+from agentic_workspace.proof_execution_projection import (
+    proof_execution_result_payload as _proof_execution_result_payload,
+)
+from agentic_workspace.proof_execution_projection import (
+    selected_proof_preexecution_admission as _selected_proof_preexecution_admission,
+)
 from agentic_workspace.proof_receipt_admission import proof_receipt_admission
 from agentic_workspace.proof_subject import build_proof_subject
 from agentic_workspace.repo_improvement_effectiveness import compile_repo_improvement_effectiveness
@@ -29862,6 +29868,8 @@ def _apply_lane_shaping_gate_to_start_payload(
     changed_paths: list[str],
     startup_template: dict[str, Any],
 ) -> None:
+    if _as_dict(planning_safety_gate.get("bounded_external_effect")).get("status") == "direct-route-admitted":
+        return
     lane_gate = _lane_shaping_gate_payload(
         config=config,
         planning_safety_gate=planning_safety_gate,
@@ -33990,6 +33998,7 @@ def _start_tiny_payload_fast(
         planning_safety_gate["status"] not in {"satisfied", "clear"} or custody_applies or task_switch_visible_by_default
     ) and route_transition != "inspect-current-task-scope":
         payload["planning_safety_gate"] = planning_safety_gate
+    payload.update(_as_dict(_as_dict(planning_safety_gate.get("bounded_external_effect")).get("start_projection")))
     if route_applies and (route_transition != "none" or route_relation == "bounded-independent"):
         next_packet = route_decision.get("next_safe_action", {})
         if isinstance(next_packet, dict):
@@ -50302,127 +50311,6 @@ def _proof_execution_subject(*, target_root: Path, changed_paths: list[str], req
     return payload
 
 
-def _proof_execution_result_payload(
-    *,
-    run: dict[str, Any],
-    selection: dict[str, Any],
-    status: str,
-) -> dict[str, Any]:
-    run_receipt_ref = (PROOF_RUNS_RELATIVE_PATH / str(run["run_id"]) / "run.json").as_posix()
-    command_records = [item for item in _list_payload(run.get("commands")) if isinstance(item, dict)]
-    record_by_command = {str(item.get("command") or ""): item for item in command_records}
-    required_commands = [str(item) for item in _list_payload(run.get("required_commands"))]
-    selected_lanes = [item for item in _list_payload(selection.get("selected_lanes")) if isinstance(item, dict)]
-    owner_coverage = []
-    for lane in selected_lanes:
-        lane_commands = [str(item) for item in _list_payload(lane.get("required_commands")) if str(item).strip()]
-        if not lane_commands:
-            continue
-        passed = [command for command in lane_commands if record_by_command.get(command, {}).get("status") == "passed"]
-        owner_coverage.append(
-            {
-                "owner": str(lane.get("id") or "unknown"),
-                "status": "satisfied" if len(passed) == len(lane_commands) else "incomplete",
-                "required_count": len(lane_commands),
-                "passed_count": len(passed),
-            }
-        )
-    passed_count = sum(record_by_command.get(command, {}).get("status") == "passed" for command in required_commands)
-    failure_records = [item for item in command_records if item.get("status") in {"failed", "timeout", "cancelled"}]
-    commands_complete = bool(required_commands) and passed_count == len(required_commands)
-    selection_blockers: list[str] = []
-    if _as_dict(selection.get("route_refinement_required")).get("status") == "required":
-        selection_blockers.append("route-refinement-required")
-    satisfied_owners = {str(item.get("owner") or "") for item in owner_coverage if item.get("status") == "satisfied"}
-    unresolved_manual_obligations = [
-        item
-        for item in _list_payload(selection.get("manual_proof_obligations"))
-        if isinstance(item, dict) and str(item.get("id") or "") not in satisfied_owners
-    ]
-    if unresolved_manual_obligations:
-        selection_blockers.append("manual-proof-obligations")
-    complete = commands_complete and not selection_blockers
-    local_scope = _as_dict(run.get("subject")).get("claim_scope") == "machine-local-effective-config"
-    if complete and local_scope:
-        claim_boundary = {
-            "status": "effective-local-configuration-verified",
-            "scope": "machine-local",
-            "completion_claim_allowed": True,
-            "shared_repository_claim_allowed": False,
-            "pr_release_or_parent_claim_allowed": False,
-            "rule": "Current local evidence verifies only the effective machine-local configuration; it cannot satisfy shared repository, PR, release, or parent claims.",
-        }
-    elif complete:
-        claim_boundary = {
-            "status": "selected-proof-executed",
-            "scope": "repository-selected-proof",
-            "completion_claim_allowed": False,
-            "shared_repository_claim_allowed": True,
-            "rule": "Selected proof execution is current evidence; completion still requires intent and closeout reconciliation.",
-        }
-    else:
-        claim_boundary = {
-            "status": "blocked",
-            "scope": "machine-local" if local_scope else "repository-selected-proof",
-            "completion_claim_allowed": False,
-            "shared_repository_claim_allowed": False,
-            "rule": "Failed, timed-out, cancelled, or incomplete selected proof cannot authorize a completion claim.",
-        }
-    next_action = (
-        {"action": "reconcile-closeout", "command": "agentic-workspace planning closeout --target . --proof-from last --format json"}
-        if complete and not local_scope
-        else {"action": "continue-with-verified-local-config", "command": None}
-        if complete
-        else {
-            "action": "repair-proof-route",
-            "command": "agentic-workspace proof --target . --changed <paths> --select route_refinement_required,manual_proof_obligations --format json",
-        }
-        if commands_complete and selection_blockers
-        else {
-            "action": "resume-selected-proof",
-            "command": f"agentic-workspace proof --target . --changed <paths> --execute-selected --proof-run-id {run['run_id']} --format json",
-        }
-    )
-    return {
-        "kind": "agentic-workspace/proof-execution-result/v1",
-        "status": "completed-with-unresolved-obligations" if commands_complete and selection_blockers else status,
-        "outcome": "passed"
-        if complete
-        else "blocked"
-        if commands_complete
-        else str(failure_records[-1].get("status") if failure_records else "incomplete"),
-        "run": {
-            "id": run["run_id"],
-            "attempt": run.get("attempt", 1),
-            "subject_revision": _as_dict(run.get("subject")).get("revision"),
-            "receipt_ref": run_receipt_ref,
-        },
-        "coverage": {
-            "required_count": len(required_commands),
-            "passed_count": passed_count,
-            "remaining_count": max(0, len(required_commands) - passed_count),
-            "owners": owner_coverage,
-            "selection_obligations": selection_blockers,
-        },
-        "failures": [
-            {"command_id": item.get("command_id"), "status": item.get("status"), "exit_code": item.get("exit_code")}
-            for item in failure_records
-        ],
-        "claim_boundary": claim_boundary,
-        "next_action": next_action,
-        "detail_routes": {
-            "run_receipt": run_receipt_ref,
-            "command_receipts": [str(item.get("receipt_ref") or "") for item in command_records],
-            "resume": next_action.get("command"),
-        },
-        "persistence": {
-            "owner": ".agentic-workspace/local/proof-receipts/runs",
-            "repository_residue": False,
-            "delta_shape": "one bounded run receipt plus individually addressable local command receipts",
-        },
-    }
-
-
 def _execute_selected_proof_payload(
     *,
     target_root: Path,
@@ -50450,6 +50338,43 @@ def _execute_selected_proof_payload(
                 "action": "repair-proof-route",
                 "command": "agentic-workspace proof --target . --changed <paths> --format json",
             },
+        }
+    from agentic_workspace.workspace_runtime_proof import _selected_proof_command_for_receipt
+
+    preexecution_admissions = [
+        _selected_proof_preexecution_admission(
+            target_root=target_root,
+            changed_paths=changed_paths,
+            command=command,
+            selection=selection,
+            selected_command_resolver=_selected_proof_command_for_receipt,
+        )
+        for command in required_commands
+    ]
+    rejected_admissions = [item for item in preexecution_admissions if item.get("status") != "admitted"]
+    if rejected_admissions:
+        rejected = rejected_admissions[0]
+        return {
+            "kind": "agentic-workspace/proof-execution-result/v1",
+            "status": "admission-blocked-before-execution",
+            "outcome": "blocked",
+            "preexecution_admission": {
+                "status": "rejected",
+                "commands": preexecution_admissions,
+                "rejected_command_count": len(rejected_admissions),
+                "process_launch_count": 0,
+            },
+            "claim_boundary": {
+                "status": "blocked",
+                "completion_claim_allowed": False,
+                "rule": "A selected proof action must bind through canonical receipt admission before process launch.",
+            },
+            "next_action": {
+                "action": "repair-proof-admission-binding",
+                "command": str(rejected.get("recovery") or "agentic-workspace proof --target . --changed <paths> --format json"),
+                "reason": str(rejected.get("reason") or "canonical-admission-rejected"),
+            },
+            "persistence": {"repository_residue": False, "local_run_receipt_written": False},
         }
     try:
         timeout = float(timeout_seconds or 600)
@@ -50499,6 +50424,7 @@ def _execute_selected_proof_payload(
         "required_commands": required_commands,
         "commands": [],
         "attempt": 0,
+        "preexecution_admission": preexecution_admissions,
         "created_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
     }
     records = [item for item in _list_payload(run.get("commands")) if isinstance(item, dict)]
@@ -50569,6 +50495,32 @@ def _execute_selected_proof_payload(
             "stderr_tail": stderr[-2000:],
             "receipt_ref": receipt_ref.as_posix(),
         }
+        canonical_write: dict[str, Any] | None = None
+        if status in {"passed", "failed"}:
+            try:
+                canonical_write = _record_proof_receipt_payload(
+                    target_root=target_root,
+                    command=command,
+                    result=status,
+                    changed_paths=changed_paths,
+                    task_text=task_text,
+                    receipt_duration_seconds=str(receipt["duration_seconds"]),
+                    receipt_exit_state=status,
+                    dry_run=False,
+                )
+                receipt["canonical_receipt"] = {
+                    "status": canonical_write.get("status", "written"),
+                    "path": canonical_write.get("path", PROOF_RECEIPT_RELATIVE_PATH.as_posix()),
+                    "admission": _as_dict(_as_dict(canonical_write.get("receipt")).get("admission")),
+                }
+            except WorkspaceUsageError as exc:
+                receipt["canonical_receipt"] = {
+                    "status": "rejected-after-runtime-state-change",
+                    "path": PROOF_RECEIPT_RELATIVE_PATH.as_posix(),
+                    "reason": str(exc),
+                }
+                status = "admission-rejected"
+                receipt["status"] = status
         _write_json_file(destination=target_root / receipt_ref, payload=receipt, dry_run=False)
         records = [item for item in records if str(item.get("command") or "") != command]
         records.append({key: value for key, value in receipt.items() if key not in {"stdout_tail", "stderr_tail"}})

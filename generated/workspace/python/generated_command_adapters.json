@@ -239,6 +239,7 @@
         "option_group_manifest": "cli_option_groups.json",
         "program": "agentic-workspace",
         "subcommands": [
+          "identity-init",
           "submit",
           "query",
           "correct-dispute",
@@ -247,6 +248,7 @@
         ]
       },
       "conformance_refs": [
+        "correction-event.identity-init.process",
         "correction-event.submit.process",
         "correction-event.submit-host-observation.process",
         "correction-event.query.process",

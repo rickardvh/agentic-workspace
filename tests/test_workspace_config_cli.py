@@ -1699,7 +1699,118 @@ def test_config_command_target_identity_ambiguous_alias_fails_closed(tmp_path: P
     assert identity["current_target_identity"]["status"] == "ambiguous"
     assert identity["current_target_identity"]["fail_closed"] is True
     assert "stable target_id" in identity["current_target_identity"]["recovery"]
+    assert identity["current_target_identity"]["identity_repair"]["status"] == "unavailable"
     assert payload["mixed_agent"]["correction_feedback"]["status"] == "fail-closed"
+
+
+def test_current_profile_without_id_exposes_and_applies_exact_local_identity_repair(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    local_config = target / ".agentic-workspace/config.local.toml"
+    local_config.parent.mkdir(parents=True)
+    local_config.write_text(
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[delegation]",
+                'current_target = "codex_sol"',
+                "",
+                "[delegation_targets.codex_sol]",
+                'strength = "strong"',
+                'execution_methods = ["internal"]',
+                'model_family = "gpt-5.6-sol"',
+                'provider = "codex"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    before = local_config.read_text(encoding="utf-8")
+
+    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
+    posture = json.loads(capsys.readouterr().out)["mixed_agent"]["target_identity"]["current_target_identity"]
+    assert posture["status"] == "ambiguous"
+    assert posture["capability_posture"] == {
+        "assignment": "available",
+        "correction_events": "identity-required",
+        "target_guidance": "identity-required",
+        "suitability_evidence": "identity-required",
+    }
+    repair = posture["identity_repair"]
+    assert repair["status"] == "ready"
+    assert repair["operation_id"] == "correction-event.identity-init"
+    assert repair["target_profile"] == "codex_sol"
+    assert repair["checked_in"] is False
+
+    command = [
+        "correction-event",
+        "identity-init",
+        "--target",
+        str(target),
+        "--target-profile",
+        "codex_sol",
+        "--dry-run",
+        "--format",
+        "json",
+    ]
+    assert cli.main(command) == 0
+    preview = json.loads(capsys.readouterr().out)
+    assert preview["status"] == "planned"
+    assert preview["mutation_applied"] is False
+    assert local_config.read_text(encoding="utf-8") == before
+
+    command.remove("--dry-run")
+    command[command.index("--format") : command.index("--format")] = [
+        "--expected-config-digest",
+        preview["config_digest_before"],
+    ]
+    assert cli.main(command) == 0
+    applied = json.loads(capsys.readouterr().out)
+    assert applied["status"] == "initialized"
+    assert applied["mutation_applied"] is True
+    assert f'target_id = "{applied["target_id"]}"' in local_config.read_text(encoding="utf-8")
+
+    assert cli.main(command) == 0
+    replay = json.loads(capsys.readouterr().out)
+    assert replay["status"] == "already-initialized"
+    assert replay["mutation_applied"] is False
+
+    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
+    current = json.loads(capsys.readouterr().out)["mixed_agent"]["target_identity"]["current_target_identity"]
+    assert current["status"] == "known"
+    assert current["subject"]["stable_target_id"] == applied["target_id"]
+
+    event = _correction_event(
+        target_identity_ref=applied["target_id"],
+        target_revision=None,
+        source="explicit-user-correction",
+        authority="human",
+        source_ref="cmd-20260826132448-dae4079b",
+        evidence_hash="sha256:d46b84c6c446204b9860",
+    )
+    assert (
+        cli.main(
+            [
+                "correction-event",
+                "submit",
+                "--target",
+                str(target),
+                "--event-json",
+                json.dumps(event),
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    submitted = json.loads(capsys.readouterr().out)
+    assert submitted["status"] == "stored"
+    routed = [*submitted["admission"]["admitted_events"], *submitted["admission"]["low_authority_events"]]
+    assert routed[0]["target_identity_ref"] == applied["target_id"]
+    assert routed[0]["profile_name"] == "codex_sol"
+    assert submitted["checked_in_repo_effect"] == "none"
 
 
 def _correction_event(**overrides: object) -> dict[str, object]:

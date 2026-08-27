@@ -204,6 +204,10 @@
         "next owner": { "type": "string" }
       }
     },
+    "future_context_signals": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
     "closeout_distillation": {
       "type": "object",
       "additionalProperties": false,
@@ -217,7 +221,9 @@
             "memory": { "$ref": "#/$defs/distillation_items" },
             "config_check": { "$ref": "#/$defs/distillation_items" },
             "docs": { "$ref": "#/$defs/distillation_items" },
-            "issue_follow_up": { "$ref": "#/$defs/distillation_items" }
+            "issue_follow_up": { "$ref": "#/$defs/distillation_items" },
+            "stronger_owner": { "$ref": "#/$defs/distillation_items" },
+            "unresolved": { "$ref": "#/$defs/distillation_items" }
           }
         }
       }

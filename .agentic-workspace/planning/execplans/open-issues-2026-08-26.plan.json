@@ -1,0 +1,126 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "open-issues-2026-08-26",
+  "title": "Implement all open issues by lane in stacked PRs",
+  "owner_level": "epic",
+  "lifecycle": "live",
+  "phase": "validation",
+  "revision": 12,
+  "intent": {
+    "outcome": "Starting from current master, implement GitHub issues #2722, #2740, #2748, #2749, #2750, #2752, #2753, #2754, and #2755 as dependency-ordered stacked pull requests grouped by coherent lane.",
+    "non_goals": [
+      "Do not merge the pull requests or weaken independent review authority.",
+      "Do not add parallel caches, ledgers, proof registries, or GitHub-specific authority to provider-neutral core.",
+      "Do not absorb adjacent closed issues except where their existing contracts are reused by the open issue acceptance criteria."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "Close the entire current open backlog through one reviewable stack.",
+    "closure_boundary": "All nine issues have implemented, validated, pushed PR lanes with correct stack bases and truthful closeout."
+  },
+  "scope": {
+    "owned": [
+      "Lane 1: #2722, #2740, and #2753 bounded output, projection reuse, and configured target identity.",
+      "Lane 2: #2748 and #2750 proof admission binding and proof-evidence fixed-point freshness.",
+      "Lane 3: #2752 and #2754 residue reconciliation and bounded external-effect Planning routing.",
+      "Lane 4: #2749 locally reproducible packed-artifact validation using existing conformance authority.",
+      "Lane 5: #2755 complete freshness-bounded PR review intake without independent-review authority.",
+      "Focused fixtures, generated projections, documentation, workflow wiring, and maintained dogfooding evidence required by those issues."
+    ],
+    "effects": [
+      "Modify repository source, tests, contracts, generated surfaces, workflows, and planning evidence required by the nine issues.",
+      "Create and push one branch and pull request per lane, with each PR based on the previous lane branch.",
+      "Reference and close the owned issues from the appropriate PR bodies while leaving PR merge to reviewers."
+    ]
+  },
+  "relationships": {
+    "selection": {"state": "selected", "owner": "current-work context"},
+    "proof_posture": {
+      "state": "required-per-lane-and-final-stack",
+      "refs": [
+        "Focused regression tests named by each issue",
+        "agentic-workspace implement/proof changed-path selection",
+        "make lint-workspace",
+        "make typecheck",
+        "make test-workspace",
+        "git diff --check",
+        "Hosted checks on every pushed PR head"
+      ]
+    },
+    "external_posture": {
+      "state": "observed",
+      "refs": [
+        "GitHub open issues #2722, #2740, #2748, #2749, #2750, #2752, #2753, #2754, #2755",
+        "No open PRs at task start",
+        "origin/master f12025f324c71592e5347d01d79c9569fa72f277"
+      ]
+    }
+  },
+  "references": [
+    "https://github.com/rickardvh/agentic-workspace/issues/2722",
+    "https://github.com/rickardvh/agentic-workspace/issues/2740",
+    "https://github.com/rickardvh/agentic-workspace/issues/2748",
+    "https://github.com/rickardvh/agentic-workspace/issues/2749",
+    "https://github.com/rickardvh/agentic-workspace/issues/2750",
+    "https://github.com/rickardvh/agentic-workspace/issues/2752",
+    "https://github.com/rickardvh/agentic-workspace/issues/2753",
+    "https://github.com/rickardvh/agentic-workspace/issues/2754",
+    "https://github.com/rickardvh/agentic-workspace/issues/2755"
+  ],
+  "next_action": "Await independent re-review of all five repaired exact heads; do not merge or claim merge-readiness from the implementation session.",
+  "blockers": [
+    "None. Escalate if an issue requires changing an authority boundary or cannot satisfy its maintained replay without redesign beyond this stack."
+  ],
+  "proof": {
+    "claims": [
+      "Each issue's ordinary-path intended outcome and acceptance criteria are implemented rather than documented around.",
+      "Each lane is independently reviewable and its PR base expresses the actual stack dependency.",
+      "The final stack preserves fail-closed authority, proof freshness, bounded output, and low-residue behavior."
+    ],
+    "requirements": [
+      "Add failing-before/passing-after fixtures for every issue reproduction and named counterexample.",
+      "Run the routed implement/proof command with the exact changed paths for each lane.",
+      "Run focused tests before each commit and workspace-wide lint, typecheck, and tests before final handoff.",
+      "Inspect hosted checks and all review surfaces before claiming the stack ready for review."
+    ],
+    "refs": [
+      "Lane 1 PR https://github.com/rickardvh/agentic-workspace/pull/2756",
+      "Lane 2 PR https://github.com/rickardvh/agentic-workspace/pull/2757",
+      "Lane 3 PR https://github.com/rickardvh/agentic-workspace/pull/2758",
+      "Lane 4 PR https://github.com/rickardvh/agentic-workspace/pull/2759",
+      "Lane 5 PR https://github.com/rickardvh/agentic-workspace/pull/2760",
+      "PR #2756 review repair bounds ordinary session-log analysis and records fresh #2722/#2740 replay evidence",
+      "PR #2757 review repair records the current-master proof admission and evidence-publication gaps",
+      "Lane 3 future-context reconciliation and bounded external-effect routing passed focused validation",
+      "Lane 4 packed-artifact conformance passed local and hosted validation",
+      "Lane 5 maintained PR #2746 replay finds the referenced top-level comment in one complete intake",
+      "Independent review remains external to the implementation agent"
+    ]
+  },
+  "continuation": {
+    "owner": "Codex until all lane PRs are published and checked; reviewer/maintainer afterward",
+    "residual_intent": "PR review and merge in stack order only"
+  },
+  "execution_bounds": {
+    "branch_order": [
+      "codex/open-issues-projection-identity",
+      "codex/open-issues-proof-fixed-point",
+      "codex/open-issues-planning-effects",
+      "codex/open-issues-packed-validation",
+      "codex/open-issues-review-intake"
+    ],
+    "ask_before": [
+      "Changing public issue scope",
+      "Adding a new top-level command or durable authority surface",
+      "Merging or force-pushing a PR branch",
+      "Changing independent review eligibility"
+    ],
+    "stop_conditions": [
+      "A maintained reproduction contradicts an issue's stated intended outcome",
+      "A lane cannot be kept independently testable or safely stacked",
+      "Hosted authentication or permissions prevent branch/PR publication"
+    ]
+  },
+  "specialist_contracts": []
+}

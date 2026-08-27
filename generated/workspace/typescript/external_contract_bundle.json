@@ -1,19 +1,19 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:1729384f12c95d0b91ddd62bb33f65ccba70687954d6a2e7be6b5d76ebf1f08b",
+  "profile_fingerprint": "sha256:df2e7b5ed66ff192d43a3ed9e657f07684be980e2eeedc963e6ac0d6b5033012",
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",
-    "client_package": "0.46.1",
+    "client_package": "0.47.0",
     "runtime_protocol": "1.0.0",
     "python_package": {
       "name": "agentic-workspace",
-      "version": "0.46.1"
+      "version": "0.47.0"
     },
     "typescript_package": {
       "name": "@agentic-workspace/workspace-cli",
-      "version": "0.46.1"
+      "version": "0.47.0"
     }
   },
   "operations": {
@@ -12053,8 +12053,8 @@
     "correction-event.correct-dispute": {
       "identity": "correction-event.correct-dispute",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:97ecd41409c8c973542bc3d3dd7e1086c6900deedfde5d0d83a4d1f036f3ea38",
-      "compatibility_fingerprint": "sha256:c2f24c79085745af80180662b9772c56c89757bbda2dc2af6d796c3b61b87380",
+      "fingerprint": "sha256:c6e1e17da47a18ea5d35012cc13c995932107bc061cccd582c81267c44651a79",
+      "compatibility_fingerprint": "sha256:47b71d5315722486fa7068b042a27d3d251237fccff9c9d68501af136a05976b",
       "contract": {
         "classification": "local-record-append",
         "command_surface": {
@@ -12636,7 +12636,10 @@
               "additionalProperties": true,
               "properties": {
                 "kind": {
-                  "const": "agentic-workspace/correction-event-operation-result/v1"
+                  "enum": [
+                    "agentic-workspace/correction-event-operation-result/v1",
+                    "agentic-workspace/target-identity-initialization/v1"
+                  ]
                 },
                 "operation_id": {
                   "type": "string"
@@ -12655,6 +12658,491 @@
                 },
                 "admission": {
                   "type": "object"
+                },
+                "target_profile": {
+                  "type": "string"
+                },
+                "target_id": {
+                  "type": "string"
+                },
+                "config_path": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "operation_id",
+                "status",
+                "mutation_applied"
+              ],
+              "x-agentic-workspace-doc-role": "contract-reference"
+            }
+          },
+          "failure": {
+            "operation_failure.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "rejected",
+                    "failed",
+                    "retryable"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        }
+      }
+    },
+    "correction-event.identity-init": {
+      "identity": "correction-event.identity-init",
+      "version": "agentic-workspace/operation/v1",
+      "fingerprint": "sha256:b7ea2b93b469c1c653be91f86fd32929bacc79258e57245f8026b8a4b37bccc5",
+      "compatibility_fingerprint": "sha256:402008683df3ddef3e6b16424c069a9dc15129b0994e7a4e539e44e3c65f0313",
+      "contract": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "id": "correction-event.identity-init",
+        "summary": "Initialize one stable configured target identity in ignored local config.",
+        "intent": "Make correction-event, target-guidance, and suitability identity constructible without inventing a target id or adding checked-in target residue.",
+        "classification": "lifecycle-mutation",
+        "command_surface": {
+          "command": "correction-event",
+          "subcommand": "identity-init",
+          "format_option": "format"
+        },
+        "inputs": [
+          {
+            "name": "target",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "format",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "target_profile",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "target_id",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "expected_config_digest",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "dry_run",
+            "required": false,
+            "source": "cli-option"
+          }
+        ],
+        "output": {
+          "kind": "text-or-json",
+          "schema_ref": "schemas/correction_event_result.schema.json"
+        },
+        "effects": {
+          "read_only": false,
+          "writes_repo_state": false,
+          "destructive": false,
+          "idempotent": true,
+          "requires_preflight_gate": false
+        },
+        "locality": {
+          "requires_repo": true,
+          "network": "forbidden",
+          "outside_repo_writes": "forbidden"
+        },
+        "reads": [
+          {
+            "surface": ".agentic-workspace/config.local.toml",
+            "required": false,
+            "description": "Configured target profiles and current target."
+          }
+        ],
+        "writes": [
+          {
+            "surface": ".agentic-workspace/config.local.toml",
+            "required": false,
+            "description": "One stable target_id in ignored local configuration.",
+            "when": "not a dry run and the profile has no stable id"
+          }
+        ],
+        "guards": [
+          "The target profile must resolve uniquely before a target id is proposed.",
+          "Generated ids are collision-checked against every configured stable target id.",
+          "An optional config digest provides compare-and-swap admission.",
+          "The operation never writes checked-in target identity residue."
+        ],
+        "steps": [
+          {
+            "id": "resolve_root",
+            "uses": "workspace.target-root.resolve",
+            "description": "Resolve target root."
+          },
+          {
+            "id": "initialize_identity",
+            "uses": "correction.event.apply",
+            "description": "Plan or apply the local target identity initialization."
+          },
+          {
+            "id": "emit_output",
+            "uses": "output.emit",
+            "description": "Emit result."
+          }
+        ],
+        "ir_plan": {
+          "status": "complete",
+          "steps": [
+            {
+              "id": "resolve_root",
+              "uses": "workspace.target-root.resolve",
+              "description": "resolve_root",
+              "outputs": [
+                "target_root"
+              ]
+            },
+            {
+              "id": "initialize_identity",
+              "uses": "correction.event.apply",
+              "description": "initialize_identity",
+              "outputs": [
+                "result"
+              ]
+            },
+            {
+              "id": "emit_output",
+              "uses": "output.emit",
+              "description": "emit_output",
+              "outputs": [
+                "emitted"
+              ]
+            }
+          ]
+        },
+        "proof": [
+          "Generated Python and TypeScript clients exercise dry-run, apply, idempotency, collision, and rename-continuity behavior.",
+          "Config projection exposes the same repair operation before correction submission."
+        ],
+        "migration_status": "runtime-consumed"
+      },
+      "schemas": [
+        "correction_event_input.schema.json",
+        "correction_event_result.schema.json",
+        "operation_failure.schema.json"
+      ],
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.identity-init.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local correction-event store writes",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.identity-init.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "trusted authority receipt validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.identity-init.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.identity-init.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      },
+      "schema_roles": {
+        "input": [
+          "correction_event_input.schema.json"
+        ],
+        "output": [
+          "correction_event_result.schema.json"
+        ],
+        "failure": [
+          "operation_failure.schema.json"
+        ]
+      },
+      "compatibility_surface": {
+        "contract": {
+          "schema_version": "agentic-workspace/operation/v1",
+          "id": "correction-event.identity-init",
+          "classification": "lifecycle-mutation",
+          "inputs": [
+            {
+              "name": "target",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "format",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "target_profile",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "target_id",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "expected_config_digest",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "dry_run",
+              "required": false,
+              "source": "cli-option"
+            }
+          ],
+          "output": {
+            "kind": "text-or-json",
+            "schema_ref": "schemas/correction_event_result.schema.json"
+          },
+          "effects": {
+            "read_only": false,
+            "writes_repo_state": false,
+            "destructive": false,
+            "idempotent": true,
+            "requires_preflight_gate": false
+          },
+          "guards": [
+            "The target profile must resolve uniquely before a target id is proposed.",
+            "Generated ids are collision-checked against every configured stable target id.",
+            "An optional config digest provides compare-and-swap admission.",
+            "The operation never writes checked-in target identity residue."
+          ]
+        },
+        "schemas": {
+          "input": {
+            "correction_event_input.schema.json": {
+              "additionalProperties": true,
+              "properties": {
+                "authority": {
+                  "type": "string"
+                },
+                "behavior_class": {
+                  "type": "string"
+                },
+                "canonical_owner_evidence_ref": {
+                  "type": "string"
+                },
+                "canonical_owner_ref": {
+                  "type": "string"
+                },
+                "delivery_id": {
+                  "type": "string"
+                },
+                "desired_behavior": {
+                  "type": "string"
+                },
+                "dry_run": {
+                  "type": "boolean"
+                },
+                "event_json": {
+                  "type": "string"
+                },
+                "evidence_hash": {
+                  "type": "string"
+                },
+                "evidence_ref": {
+                  "type": "string"
+                },
+                "format": {
+                  "enum": [
+                    "text",
+                    "json"
+                  ],
+                  "type": "string"
+                },
+                "idempotency_key": {
+                  "type": "string"
+                },
+                "invariant_id": {
+                  "type": "string"
+                },
+                "lifecycle_action": {
+                  "enum": [
+                    "withdraw",
+                    "supersede"
+                  ],
+                  "type": "string"
+                },
+                "predecessor_event_id": {
+                  "type": "string"
+                },
+                "producer_class": {
+                  "type": "string"
+                },
+                "producer_id": {
+                  "type": "string"
+                },
+                "replaced_behavior": {
+                  "type": "string"
+                },
+                "route_decisions": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "scope_class": {
+                  "type": "string"
+                },
+                "phase": {
+                  "type": "string"
+                },
+                "subsystem": {
+                  "type": "string"
+                },
+                "surface": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "source_ref": {
+                  "type": "string"
+                },
+                "target": {
+                  "type": "string"
+                },
+                "target_identity_ref": {
+                  "type": "string"
+                },
+                "target_revision": {
+                  "type": "string"
+                },
+                "task_class": {
+                  "type": "string"
+                },
+                "trusted_authority_receipt_ref": {
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "schema_version": "agentic-workspace/schema/v1",
+              "type": "object",
+              "x-agentic-workspace-doc-role": "contract-reference"
+            }
+          },
+          "output": {
+            "correction_event_result.schema.json": {
+              "schema_version": "agentic-workspace/schema/v1",
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "agentic-workspace/correction-event-operation-result/v1",
+                    "agentic-workspace/target-identity-initialization/v1"
+                  ]
+                },
+                "operation_id": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "mutation_applied": {
+                  "type": "boolean"
+                },
+                "store_ref": {
+                  "type": "string"
+                },
+                "receipt_ref": {
+                  "type": "string"
+                },
+                "admission": {
+                  "type": "object"
+                },
+                "target_profile": {
+                  "type": "string"
+                },
+                "target_id": {
+                  "type": "string"
+                },
+                "config_path": {
+                  "type": "string"
                 }
               },
               "required": [
@@ -12707,8 +13195,8 @@
     "correction-event.prune-compact": {
       "identity": "correction-event.prune-compact",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:0ae82de49a3ffe5bf358494f6234f54aac4f3154c1f3040c5144ffb280cd9adf",
-      "compatibility_fingerprint": "sha256:a9bcbe57075c8b97ab057a9b0b5343be47c0e92a49c0f6180666602f312dbec9",
+      "fingerprint": "sha256:fe79c1fab12dd0b7b05e448b36f95bf2d36a0b2553ebfbad7cdf72ec77525cbf",
+      "compatibility_fingerprint": "sha256:5883d86c25941707cc007ac3b8b84e46448ab9aeece99b819afeeeaebbf8f0d3",
       "contract": {
         "classification": "local-record-append",
         "command_surface": {
@@ -13290,7 +13778,10 @@
               "additionalProperties": true,
               "properties": {
                 "kind": {
-                  "const": "agentic-workspace/correction-event-operation-result/v1"
+                  "enum": [
+                    "agentic-workspace/correction-event-operation-result/v1",
+                    "agentic-workspace/target-identity-initialization/v1"
+                  ]
                 },
                 "operation_id": {
                   "type": "string"
@@ -13309,6 +13800,15 @@
                 },
                 "admission": {
                   "type": "object"
+                },
+                "target_profile": {
+                  "type": "string"
+                },
+                "target_id": {
+                  "type": "string"
+                },
+                "config_path": {
+                  "type": "string"
                 }
               },
               "required": [
@@ -13361,8 +13861,8 @@
     "correction-event.query": {
       "identity": "correction-event.query",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:4168a7b27339ad965747f23f8ab28abcad7692a9b102bf789edcdf62a65b1064",
-      "compatibility_fingerprint": "sha256:dd8c6f7ee5a6038c888a21dc3f8fd1fff4a007b0be8512cf04f5f498ca907876",
+      "fingerprint": "sha256:acea8d8788aa7f6308261a3c9783857e906a3f970b4c06e71e8d16247613be6e",
+      "compatibility_fingerprint": "sha256:8ad03b6dd6e06f3d138fc4148d7685c740bb4260829a91ae714b1f7dc75c7165",
       "contract": {
         "classification": "read-only-report",
         "command_surface": {
@@ -13974,7 +14474,10 @@
               "additionalProperties": true,
               "properties": {
                 "kind": {
-                  "const": "agentic-workspace/correction-event-operation-result/v1"
+                  "enum": [
+                    "agentic-workspace/correction-event-operation-result/v1",
+                    "agentic-workspace/target-identity-initialization/v1"
+                  ]
                 },
                 "operation_id": {
                   "type": "string"
@@ -13993,6 +14496,15 @@
                 },
                 "admission": {
                   "type": "object"
+                },
+                "target_profile": {
+                  "type": "string"
+                },
+                "target_id": {
+                  "type": "string"
+                },
+                "config_path": {
+                  "type": "string"
                 }
               },
               "required": [
@@ -14045,8 +14557,8 @@
     "correction-event.submit": {
       "identity": "correction-event.submit",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:077e7152351470396aa5aa766f46295d1cf39f76234b7181bb7acf83b487fac2",
-      "compatibility_fingerprint": "sha256:0029e1e25117d7e371391d7ad2fd0f9e1c56a5ba0e6fbd38010163cc8f465469",
+      "fingerprint": "sha256:f41d786bb2de69a56187f101929e02f8f4604384dd74bb59e67cdbaa34d7e387",
+      "compatibility_fingerprint": "sha256:11b5cbdfb3b7c608bef6dd878327e4a7bcdfa2b52725213f79dee0cc621a094f",
       "contract": {
         "classification": "local-record-append",
         "command_surface": {
@@ -14734,7 +15246,10 @@
               "additionalProperties": true,
               "properties": {
                 "kind": {
-                  "const": "agentic-workspace/correction-event-operation-result/v1"
+                  "enum": [
+                    "agentic-workspace/correction-event-operation-result/v1",
+                    "agentic-workspace/target-identity-initialization/v1"
+                  ]
                 },
                 "operation_id": {
                   "type": "string"
@@ -14753,6 +15268,15 @@
                 },
                 "admission": {
                   "type": "object"
+                },
+                "target_profile": {
+                  "type": "string"
+                },
+                "target_id": {
+                  "type": "string"
+                },
+                "config_path": {
+                  "type": "string"
                 }
               },
               "required": [
@@ -14805,8 +15329,8 @@
     "correction-event.withdraw-supersede": {
       "identity": "correction-event.withdraw-supersede",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:9da2a9f769badcf008c7a44d920235f0bf6f9f05927d9c891e0156701a908714",
-      "compatibility_fingerprint": "sha256:3b319b3dfea5ad498138dee5023ab0c7351b11be1c598725dca622db7e24c5d2",
+      "fingerprint": "sha256:c96afa87fadadb67e02442fa19b295bac81a026f3e8daa14981671a47fc22f0a",
+      "compatibility_fingerprint": "sha256:3de737b501c66d9b0a4baf3823cc02a9cffd7b64c79541c6d62a086b70f0f27d",
       "contract": {
         "classification": "local-record-append",
         "command_surface": {
@@ -15388,7 +15912,10 @@
               "additionalProperties": true,
               "properties": {
                 "kind": {
-                  "const": "agentic-workspace/correction-event-operation-result/v1"
+                  "enum": [
+                    "agentic-workspace/correction-event-operation-result/v1",
+                    "agentic-workspace/target-identity-initialization/v1"
+                  ]
                 },
                 "operation_id": {
                   "type": "string"
@@ -15407,6 +15934,15 @@
                 },
                 "admission": {
                   "type": "object"
+                },
+                "target_profile": {
+                  "type": "string"
+                },
+                "target_id": {
+                  "type": "string"
+                },
+                "config_path": {
+                  "type": "string"
                 }
               },
               "required": [
@@ -22618,7 +23154,10 @@
         "additionalProperties": true,
         "properties": {
           "kind": {
-            "const": "agentic-workspace/correction-event-operation-result/v1",
+            "enum": [
+              "agentic-workspace/correction-event-operation-result/v1",
+              "agentic-workspace/target-identity-initialization/v1"
+            ],
             "description": "Stable result envelope discriminator."
           },
           "operation_id": {
@@ -22644,6 +23183,18 @@
           "admission": {
             "type": "object",
             "description": "Admission, rejection, low-authority, retention, and routing details."
+          },
+          "target_profile": {
+            "type": "string",
+            "description": "Uniquely resolved configured profile whose stable identity was initialized."
+          },
+          "target_id": {
+            "type": "string",
+            "description": "Persisted or proposed stable local target identity."
+          },
+          "config_path": {
+            "type": "string",
+            "description": "Ignored local configuration path that owns the stable target identity."
           }
         },
         "required": [

@@ -6510,6 +6510,64 @@
       "subcommands": [
         {
           "audience": "ordinary_host_repo",
+          "classification_note": "local target identity lifecycle subcommand",
+          "help": "Initialize one stable configured target identity in ignored local config.",
+          "mutates_state": true,
+          "name": "identity-init",
+          "options": [
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to current directory.",
+              "name": "target"
+            },
+            {
+              "flags": [
+                "--target-profile"
+              ],
+              "help": "Configured profile name; defaults to the current target.",
+              "name": "target_profile"
+            },
+            {
+              "flags": [
+                "--target-id"
+              ],
+              "help": "Optional caller-selected stable local id; the generated collision-checked id is used by default.",
+              "name": "target_id"
+            },
+            {
+              "flags": [
+                "--expected-config-digest"
+              ],
+              "help": "Optional config digest from a dry run for compare-and-swap admission.",
+              "name": "expected_config_digest"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--dry-run"
+              ],
+              "help": "Return the exact identity/config mutation without writing local config.",
+              "name": "dry_run"
+            }
+          ],
+          "role": "reusable_host_repo_diagnostics"
+        },
+        {
+          "audience": "ordinary_host_repo",
           "classification_note": "correction event lifecycle subcommand",
           "help": "Submit a correction event through the public local operation boundary.",
           "mutates_state": true,

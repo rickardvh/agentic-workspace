@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Preflight selected proof through canonical admission and keep proof-owned evidence publication at a dependency-scoped freshness fixed point."

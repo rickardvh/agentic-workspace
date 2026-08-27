@@ -219,7 +219,7 @@ jobs:
           upload-artifact: false
 
       - name: Prove exact npm artifacts on Node 24
-        run: uv run python scripts/check/run_generated_command_package_proof.py --packed-conformance --artifact-dir dist --receipt-out dist/generated-command-conformance-node24.json
+        run: make packed-artifact-conformance PACKED_ARTIFACT_DIR=dist PACKED_ARTIFACT_RECEIPT=dist/generated-command-conformance-node24.json PACKED_ARTIFACT_CONTEXT=hosted-ci
 
       - name: Set up minimum Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -227,7 +227,7 @@ jobs:
           node-version: "20"
 
       - name: Prove exact npm artifacts on Node 20
-        run: uv run python scripts/check/run_generated_command_package_proof.py --packed-conformance --artifact-dir dist --receipt-out dist/generated-command-conformance-node20.json
+        run: make packed-artifact-conformance PACKED_ARTIFACT_DIR=dist PACKED_ARTIFACT_RECEIPT=dist/generated-command-conformance-node20.json PACKED_ARTIFACT_CONTEXT=hosted-ci
 
       - name: Set up current Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -235,13 +235,13 @@ jobs:
           node-version: "25"
 
       - name: Prove exact npm artifacts on Node 25
-        run: uv run python scripts/check/run_generated_command_package_proof.py --packed-conformance --artifact-dir dist --receipt-out dist/generated-command-conformance-node25.json
+        run: make packed-artifact-conformance PACKED_ARTIFACT_DIR=dist PACKED_ARTIFACT_RECEIPT=dist/generated-command-conformance-node25.json PACKED_ARTIFACT_CONTEXT=hosted-ci
 
       - name: Verify semantic-conformance promotion receipts
         run: |
           for runtime_major in 20 24 25; do
             receipt="dist/generated-command-conformance-node${runtime_major}.json"
-            uv run python scripts/check/run_generated_command_package_proof.py --verify-receipt "$receipt" --artifact-dir dist --expected-node-major "$runtime_major"
+            uv run python scripts/check/run_generated_command_package_proof.py --verify-receipt "$receipt" --artifact-dir dist --expected-node-major "$runtime_major" --expected-execution-context hosted-ci
           done
 
       - name: Generate checksums and release manifest

@@ -1794,9 +1794,21 @@ def future_context_findings(signals: list[dict[str, Any]]) -> list[dict[str, Any
     """Adapt source-owned post-action signals to the existing consequence compiler."""
 
     findings: list[dict[str, Any]] = []
-    terminal = {"resolved", "routed", "dismissed", "superseded", "retired"}
+    terminal = {"resolved", "routed", "dismissed", "superseded", "retired", "captured", "updated", "absorbed", "already-absorbed"}
     for signal in signals:
-        if signal.get("relevant") is False or str(signal.get("status") or "") in terminal:
+        disposition_outcome = str(_as_dict(signal.get("disposition")).get("outcome") or "").replace("_", "-")
+        if (
+            signal.get("relevant") is False
+            or str(signal.get("status") or "") in terminal
+            or disposition_outcome
+            in {
+                "capture",
+                "update-existing",
+                "route-stronger",
+                "already-absorbed",
+                "dismiss",
+            }
+        ):
             continue
         authority_state = str(signal.get("authority_state") or "candidate")
         findings.append(
@@ -3194,13 +3206,24 @@ def compile_repo_improvement_execution(
 def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
     """Return one primary typed action or one typed external blocker."""
 
+    future_context_signals = [_as_dict(item) for item in _as_list(inputs.get("future_context_signals")) if isinstance(item, dict)]
     intent_feedback = compile_intent_feedback(
         expectations=[item for item in _as_list(inputs.get("intent_expectations")) if isinstance(item, dict)],
         evidence=[item for item in _as_list(inputs.get("intent_evidence")) if isinstance(item, dict)],
         resolutions=[item for item in _as_list(inputs.get("intent_resolutions")) if isinstance(item, dict)],
     )
+    admitted_future_contributions = [
+        _as_dict(signal.get("decision_contribution"))
+        for signal in future_context_signals
+        if str(_as_dict(signal.get("disposition")).get("outcome") or "") in {"capture", "update-existing"}
+        and str(signal.get("authority_state") or "") in {"owner-admitted", "admitted-owner-event"}
+        and _as_dict(signal.get("decision_contribution"))
+    ]
     memory_effectiveness = compile_memory_effectiveness(
-        contributions=[item for item in _as_list(inputs.get("memory_contributions")) if isinstance(item, dict)],
+        contributions=[
+            *[item for item in _as_list(inputs.get("memory_contributions")) if isinstance(item, dict)],
+            *admitted_future_contributions,
+        ],
         outcomes=[item for item in _as_list(inputs.get("memory_outcomes")) if isinstance(item, dict)],
     )
     adaptation_signals = [item for item in _as_list(inputs.get("adaptation_signals")) if isinstance(item, dict)]
@@ -3211,7 +3234,6 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         coverage_signal_from_observation(item) for item in _as_list(inputs.get("coverage_observations")) if isinstance(item, dict)
     )
     bounded_adaptations = bounded_adaptation_projection(adaptation_signals)
-    future_context_signals = [_as_dict(item) for item in _as_list(inputs.get("future_context_signals")) if isinstance(item, dict)]
     future_context_capture = _as_dict(inputs.get("future_context_capture"))
     if inputs.get("target_root"):
         future_context_signals.extend(
@@ -3222,7 +3244,11 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         )
     reconciliation_inputs = _as_dict(inputs.get("reconciliation"))
     if reconciliation_inputs:
-        reconciliation_inputs = {**reconciliation_inputs, "future_context_signals": future_context_signals}
+        reconciliation_inputs = {
+            **reconciliation_inputs,
+            "future_context_signals": future_context_signals,
+            "future_context_capture": future_context_capture,
+        }
     reconciliation = compile_reconciliation(reconciliation_inputs)
     control_inputs = compile_control_inputs([item for item in _as_list(inputs.get("control_inputs")) if isinstance(item, dict)])
     assurance_requested = "assurance_decision" in inputs

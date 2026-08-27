@@ -28,6 +28,50 @@ def _registered_operation_action(action: dict[str, Any]) -> bool:
     return bool(operation_id and operation_path.endswith(f"/{operation_id}.json") and authority)
 
 
+def _future_context_disposition(signal: dict[str, Any]) -> dict[str, Any]:
+    declared = _as_dict(signal.get("disposition"))
+    status = str(signal.get("status") or "unresolved").strip().lower()
+    outcome = str(declared.get("outcome") or "").strip().lower().replace("_", "-")
+    status_defaults = {
+        "captured": "capture",
+        "updated": "update-existing",
+        "routed": "route-stronger",
+        "already-absorbed": "already-absorbed",
+        "absorbed": "already-absorbed",
+        "dismissed": "dismiss",
+        "resolved": "already-absorbed",
+    }
+    outcome = outcome or status_defaults.get(status, "unresolved")
+    allowed = {"capture", "update-existing", "route-stronger", "already-absorbed", "dismiss", "unresolved"}
+    if outcome not in allowed:
+        outcome = "unresolved"
+    owner = str(declared.get("owner") or signal.get("owner") or "").strip()
+    rationale = str(declared.get("rationale") or signal.get("rationale") or "").strip()
+    next_action = str(declared.get("next_action") or signal.get("required_decision") or "").strip()
+    complete = (
+        bool(owner) and bool(rationale)
+        if outcome in {"capture", "update-existing", "route-stronger", "already-absorbed"}
+        else bool(rationale)
+        if outcome == "dismiss"
+        else bool(owner) and bool(next_action)
+    )
+    effective_outcome = outcome if complete else "unresolved"
+    return {
+        "kind": "agentic-workspace/future-context-disposition/v1",
+        "signal_id": str(signal.get("signal_id") or ""),
+        "source_class": str(signal.get("source_class") or ""),
+        "source_authority_state": str(signal.get("authority_state") or "candidate"),
+        "outcome": effective_outcome,
+        "owner": owner or "unassigned",
+        "rationale": rationale,
+        "next_action": next_action if effective_outcome == "unresolved" else "",
+        "duplicate_memory_record_required": effective_outcome not in {"route-stronger", "already-absorbed", "dismiss"},
+        "status": "disposed" if effective_outcome != "unresolved" else "unresolved",
+        "authority_effect": "none",
+        "rule": "Disposition transfers custody without upgrading source authority; stronger canonical owners avoid duplicate Memory residue.",
+    }
+
+
 def compile_reconciliation(inputs: dict[str, Any] | None) -> dict[str, Any]:
     """Compose owner facts into one claim, residue, continuation, and next action.
 
@@ -59,6 +103,8 @@ def compile_reconciliation(inputs: dict[str, Any] | None) -> dict[str, Any]:
         for item in _as_list(inputs.get("future_context_signals"))
         if isinstance(item, dict) and item.get("relevant") is not False
     ]
+    future_context_capture = _as_dict(inputs.get("future_context_capture"))
+    future_context_dispositions = [_future_context_disposition(signal) for signal in future_context_signals]
 
     result_status = str(result.get("status") or "unknown")
     intent_status = str(intent.get("status") or "unknown")
@@ -121,8 +167,8 @@ def compile_reconciliation(inputs: dict[str, Any] | None) -> dict[str, Any]:
         )
     unresolved_future_context = [
         signal
-        for signal in future_context_signals
-        if str(signal.get("status") or "") not in {"resolved", "routed", "dismissed", "superseded", "retired"}
+        for signal, disposition in zip(future_context_signals, future_context_dispositions, strict=True)
+        if disposition["status"] == "unresolved"
     ]
     if unresolved_future_context:
         signal = unresolved_future_context[0]
@@ -183,6 +229,7 @@ def compile_reconciliation(inputs: dict[str, Any] | None) -> dict[str, Any]:
         "continuation": continuation_input,
         "module_contributions": module_facts,
         "future_context_signals": future_context_signals,
+        "future_context_capture": future_context_capture,
     }
     return {
         "kind": "agentic-workspace/reconciliation/v1",
@@ -204,5 +251,14 @@ def compile_reconciliation(inputs: dict[str, Any] | None) -> dict[str, Any]:
         "blockers": blockers,
         "module_contributions": module_facts,
         "future_context_signals": future_context_signals,
+        "future_context_reconciliation": {
+            "kind": "agentic-workspace/future-context-reconciliation/v1",
+            "status": ("none-found" if not future_context_signals else "unresolved" if unresolved_future_context else "disposed"),
+            "capture_input_status": str(future_context_capture.get("status") or "not-provided"),
+            "dispositions": future_context_dispositions,
+            "none_found_allowed": not future_context_signals,
+            "custody_transfer_safe": not unresolved_future_context,
+            "rule": "none-found is available only when no explicit relevant candidate remains; skipped evaluation cannot erase a known signal.",
+        },
         "rule": "Proof may support only the affected owner-level claim; semantic intent, parent completion, residue ownership, and continuation remain independently owned facts.",
     }

@@ -864,6 +864,12 @@
     },
     {
       "command": "correction-event",
+      "id": "correction-event.identity-init",
+      "migration_status": "runtime-consumed",
+      "path": "operations/correction-event.identity-init.json"
+    },
+    {
+      "command": "correction-event",
       "id": "correction-event.prune-compact",
       "migration_status": "runtime-consumed",
       "path": "operations/correction-event.prune-compact.json"

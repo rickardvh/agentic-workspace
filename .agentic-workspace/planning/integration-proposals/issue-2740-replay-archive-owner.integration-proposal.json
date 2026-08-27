@@ -1,8 +1,8 @@
 {
   "kind": "planning-integration-proposal/v1",
   "id": "issue-2740-replay-archive-owner",
-  "status": "pending",
-  "phase": "integration-pending",
+  "status": "integrated",
+  "phase": "integrated-lifecycle-truth",
   "requested_transition": "archive-owner",
   "owner": {
     "id": "issue-2740-replay",
@@ -17,10 +17,10 @@
     "feature branch does not close parent/lane lifecycle truth",
     "integration apply is target-branch authoritative"
   ],
-  "expected_subject_revision": "fcca7f4b82fb0eac",
-  "expected_planning_revision": "cc6c1b81fc6c0875",
-  "created_at": "2026-08-25T20:26:25.997510Z",
-  "updated_at": "2026-08-25T20:26:25.997510Z",
+  "expected_subject_revision": "71151d08da85ce20",
+  "expected_planning_revision": "61196491496df0dd",
+  "created_at": "2026-08-26T20:42:17.829980Z",
+  "updated_at": "2026-08-26T20:42:22.266666Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -32,9 +32,11 @@
     ],
     "branch_admission": {
       "status": "inside-git",
-      "branch": "codex/2740-replay-proof",
-      "phase": "feature"
+      "branch": "merge-queue/open-issues-review-repair",
+      "phase": "target"
     }
   },
-  "proposal_revision": "129350084d1e3908"
+  "proposal_revision": "1f84c49eff65413b",
+  "integrated_at": "2026-08-26T20:42:22.266666Z",
+  "integration_receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2740-replay-archive-owner.integration-receipt.json"
 }

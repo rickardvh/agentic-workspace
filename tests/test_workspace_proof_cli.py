@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import os
 import sys
 import tomllib
@@ -10357,6 +10358,15 @@ review_owner = "security"
 def _selected_execution_fixture(commands: list[str], *, local: bool = True) -> dict[str, object]:
     return {
         "required_commands": commands,
+        "changed_paths": [".agentic-workspace/config.local.toml" if local else "changed.py"],
+        "selected_commands": [
+            {
+                "command": command,
+                "lane": "domain:machine_local_config" if local else "domain:shared_config",
+                "command_identity": hashlib.sha256(command.encode("utf-8")).hexdigest()[:16],
+            }
+            for command in commands
+        ],
         "selected_lanes": [
             {
                 "id": "domain:machine_local_config" if local else "domain:shared_config",
@@ -10379,6 +10389,11 @@ def test_selected_proof_execution_reconciles_and_reuses_local_receipts(tmp_path:
         "_proof_selection_for_changed_paths",
         lambda **_: _selected_execution_fixture(commands),
     )
+    monkeypatch.setattr(
+        workspace_runtime_proof,
+        "_proof_selection_for_changed_paths",
+        lambda **_: _selected_execution_fixture(commands),
+    )
 
     def run(command: str, **_: object) -> subprocess.CompletedProcess[str]:
         calls.append(command)
@@ -10398,10 +10413,28 @@ def test_selected_proof_execution_reconciles_and_reuses_local_receipts(tmp_path:
     after = subprocess.run(["git", "status", "--short"], cwd=tmp_path, capture_output=True, text=True, check=True).stdout
     assert first["status"] == "completed"
     assert first["coverage"]["passed_count"] == 4
+    assert first["preexecution_admission"]["status"] == "admitted"
+    assert first["preexecution_admission"]["process_launch_count"] == 4
+    assert first["canonical_receipt_admission"] == {
+        "recorded_count": 4,
+        "rejected_count": 0,
+        "authority": "proof_receipt_admission",
+    }
     assert first["claim_boundary"]["status"] == "effective-local-configuration-verified"
     assert first["claim_boundary"]["shared_repository_claim_allowed"] is False
     assert len(json.dumps(first).encode("utf-8")) < 16_384
     assert before == after
+    canonical = json.loads((tmp_path / ".agentic-workspace/local/proof-receipts/last.json").read_text(encoding="utf-8"))
+    assert canonical["command"] == "check-four"
+    assert canonical["admission"]["proof_sufficient"] is True
+    reconciliation = workspace_runtime_proof._proof_receipt_reconciliation_payload(
+        target_root=tmp_path,
+        required_commands=commands,
+        changed_paths=[".agentic-workspace/config.local.toml"],
+        selected_commands=_selected_execution_fixture(commands)["selected_commands"],
+    )
+    assert reconciliation["status"] == "accepted"
+    assert {item["evidence_state"] for item in reconciliation["commands"]} == {"accepted"}
 
     _write(tmp_path / "README.md", "unrelated repository edit\n")
     reused = workspace_runtime_core._execute_selected_proof_payload(
@@ -10417,6 +10450,39 @@ def test_selected_proof_execution_reconciles_and_reuses_local_receipts(tmp_path:
     assert calls == commands
 
 
+def test_selected_proof_rejects_known_unrecordable_broad_command_before_launch(tmp_path: Path, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "changed.py", "VALUE = 1\n")
+    selection = _selected_execution_fixture(["make test-workspace"], local=False)
+    selection["selected_commands"] = [
+        {
+            "command": "make test-workspace --task-context corrected",
+            "lane": "domain:workspace_broad_suite",
+        }
+    ]
+    monkeypatch.setattr(workspace_runtime_core, "_proof_selection_for_changed_paths", lambda **_: selection)
+
+    def forbidden_launch(*_: object, **__: object) -> subprocess.CompletedProcess[str]:
+        raise AssertionError("deterministically unrecordable proof must not launch")
+
+    monkeypatch.setattr(workspace_runtime_core, "run_trusted_shell", forbidden_launch)
+    result = workspace_runtime_core._execute_selected_proof_payload(
+        target_root=tmp_path,
+        changed_paths=["changed.py"],
+        task_text="PR #2746 broad acceptance repair",
+        run_id="",
+        timeout_seconds="30",
+        cancel_file="",
+        dry_run=False,
+    )
+
+    assert result["status"] == "admission-blocked-before-execution"
+    assert result["preexecution_admission"]["process_launch_count"] == 0
+    assert result["preexecution_admission"]["commands"][0]["reason"] == "current-selected-command-binding-rejected"
+    assert "rerun proof selection" in result["next_action"]["command"].lower()
+    assert result["persistence"]["local_run_receipt_written"] is False
+
+
 def test_selected_proof_execution_resumes_failure_and_blocks_stale_subject(tmp_path: Path, monkeypatch) -> None:
     _init_git_repo(tmp_path)
     _write(tmp_path / ".agentic-workspace/config.toml", "schema_version = 1\n")
@@ -10427,6 +10493,11 @@ def test_selected_proof_execution_resumes_failure_and_blocks_stale_subject(tmp_p
     fail_second = True
     monkeypatch.setattr(
         workspace_runtime_core,
+        "_proof_selection_for_changed_paths",
+        lambda **_: _selected_execution_fixture(commands),
+    )
+    monkeypatch.setattr(
+        workspace_runtime_proof,
         "_proof_selection_for_changed_paths",
         lambda **_: _selected_execution_fixture(commands),
     )
@@ -10485,6 +10556,11 @@ def test_selected_proof_execution_records_cancel_and_timeout_outcomes(tmp_path: 
         "_proof_selection_for_changed_paths",
         lambda **_: _selected_execution_fixture(["slow-check"]),
     )
+    monkeypatch.setattr(
+        workspace_runtime_proof,
+        "_proof_selection_for_changed_paths",
+        lambda **_: _selected_execution_fixture(["slow-check"]),
+    )
     cancel = tmp_path / ".agentic-workspace/local/cancel"
     _write(cancel, "cancel\n")
     cancelled = workspace_runtime_core._execute_selected_proof_payload(
@@ -10521,6 +10597,7 @@ def test_selected_proof_execution_keeps_route_refinement_claim_blocked(tmp_path:
     selection = _selected_execution_fixture(["focused-check"], local=False)
     selection["route_refinement_required"] = {"status": "required"}
     monkeypatch.setattr(workspace_runtime_core, "_proof_selection_for_changed_paths", lambda **_: selection)
+    monkeypatch.setattr(workspace_runtime_proof, "_proof_selection_for_changed_paths", lambda **_: selection)
     monkeypatch.setattr(
         workspace_runtime_core,
         "run_trusted_shell",

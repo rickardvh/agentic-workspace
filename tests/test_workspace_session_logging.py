@@ -129,10 +129,11 @@ def test_session_logging_pytest_origin_full_capture_requires_explicit_opt_in(tmp
     payload = session_logging.analyze_session_log(
         state=session_logging.load_state_for_argv(["--target", str(target)]),
         origin_scope="test",
+        detail="entries",
     )
     assert payload["summary"]["command_count"] == 1
     assert payload["origin_breakdown"] == {"pytest": 1}
-    entry = payload["origin_partitions"]["test"]["entries"][0]
+    entry = payload["detail_page"]["items"][0]
     assert entry["origin"]["classification"] == "pytest"
     assert entry["parent"]["context"].startswith("tests/test_workspace_session_logging.py::test_captured")
 
@@ -949,12 +950,15 @@ def test_session_log_analyze_reports_counts_repeats_failures_artifacts_and_packe
     assert payload["packet_kinds"]["agentic-workspace/example-packet/v1"] == 2
     assert payload["parsed_packet_kinds"]["agentic-workspace/example-packet/v1"] == 2
     assert payload["repeated_failures"][0]["count"] == 2
-    assert {candidate["id"] for candidate in payload["friction_candidates"]} >= {
+    candidates = session_logging.analyze_session_log(
+        state=session_logging.load_state_for_argv(["--target", str(target)]), detail="candidates"
+    )["detail_page"]["items"]
+    assert {candidate["id"] for candidate in candidates} >= {
         "failed-command",
         "repeated-command",
         "duplicate-output",
     }
-    repeated_signal = next(item["improvement_signal"] for item in payload["friction_candidates"] if item["id"] == "repeated-command")
+    repeated_signal = next(item["improvement_signal"] for item in candidates if item["id"] == "repeated-command")
     assert repeated_signal["kind"] == "workflow_cost"
     assert repeated_signal["evidence_classes"] == ["machine_observed"]
     assert repeated_signal["recurrence"] == "repeated"
@@ -1090,10 +1094,22 @@ stderr:
     assert payload["summary"]["repeated_command_count"] == 1
     assert payload["summary"]["duplicate_output_count"] == 1
     assert payload["packet_kinds"]["agentic-workspace/modules-report/v1"] == 2
-    assert payload["usage_mistakes"][0]["failure_class"] == "invalid-command"
-    assert payload["usage_mistakes"][1]["failure_class"] == "selector-conflict"
-    assert any(entry["command"] == "agentic-workspace modules --verbose --format json" for entry in payload["largest_outputs"])
-    assert {candidate["id"] for candidate in payload["friction_candidates"]} >= {
+    entries = session_logging.analyze_session_log(
+        state=session_logging.load_state_for_argv(["--target", str(target)]),
+        path=log_path.relative_to(target).as_posix(),
+        origin_scope="all",
+        detail="entries",
+    )["detail_page"]["items"]
+    failure_classes = {entry["failure_class"] for entry in entries if entry["failure_class"]}
+    assert {"invalid-command", "selector-conflict"} <= failure_classes
+    assert any(entry["command"] == "agentic-workspace modules --verbose --format json" for entry in entries)
+    candidates = session_logging.analyze_session_log(
+        state=session_logging.load_state_for_argv(["--target", str(target)]),
+        path=log_path.relative_to(target).as_posix(),
+        origin_scope="all",
+        detail="candidates",
+    )["detail_page"]["items"]
+    assert {candidate["id"] for candidate in candidates} >= {
         "missing-index",
         "repeated-command",
         "duplicate-output",
@@ -1318,20 +1334,24 @@ def test_session_log_analysis_is_live_agent_first_for_mixed_pr_2166_bundle(tmp_p
     assert default["origin_breakdown"] == {"agent": 68, "pytest": 35}
     assert default["origin_partitions"]["test"]["command_count"] == 35
     assert default["origin_partitions"]["test"]["failure_count"] == 15
-    assert default["origin_partitions"]["test"]["entries"][0]["parent"]["entry_id"] == "fixture-owner"
+    test_entries = session_logging.analyze_session_log(state=state, origin_scope="test", detail="entries")["detail_page"]["items"]
+    assert test_entries[0]["parent"]["entry_id"] == "fixture-owner"
     assert default["analyzer_overhead"]["command_count"] == 1
-    assert any("1233722 bytes" in item["summary"] for item in default["friction_candidates"])
-    assert not any("summry" in item["summary"] or "session-log analyze" in item["summary"] for item in default["friction_candidates"])
+    default_candidates = session_logging.analyze_session_log(state=state, detail="candidates")["detail_page"]["items"]
+    assert any("1233722 bytes" in item["summary"] for item in default_candidates)
+    assert not any("summry" in item["summary"] or "session-log analyze" in item["summary"] for item in default_candidates)
 
     test_scope = session_logging.analyze_session_log(state=state, origin_scope="test")
     assert test_scope["summary"]["command_count"] == 35
     assert test_scope["summary"]["failure_count"] == 15
-    assert any("summry" in item["summary"] for item in test_scope["friction_candidates"])
+    test_candidates = session_logging.analyze_session_log(state=state, origin_scope="test", detail="candidates")["detail_page"]["items"]
+    assert any("summry" in item["summary"] for item in test_candidates)
     all_scope = session_logging.analyze_session_log(state=state, origin_scope="all")
     assert all_scope["summary"]["command_count"] == 103
     assert all_scope["summary"]["failure_count"] == 15
-    assert any("summry" in item["summary"] for item in all_scope["friction_candidates"])
-    assert not any("summry" in item["summary"] for item in default["friction_candidates"])
+    all_candidates = session_logging.analyze_session_log(state=state, origin_scope="all", detail="candidates")["detail_page"]["items"]
+    assert any("summry" in item["summary"] for item in all_candidates)
+    assert not any("summry" in item["summary"] for item in default_candidates)
 
 
 def test_session_log_projects_parent_context_written_by_logger(tmp_path: Path, capsys, monkeypatch) -> None:
@@ -1343,9 +1363,11 @@ def test_session_log_projects_parent_context_written_by_logger(tmp_path: Path, c
     assert session_logging.run_with_session_logging(["status", "--target", str(target)], lambda _argv: 0) == 0
     capsys.readouterr()
 
-    payload = session_logging.analyze_session_log(state=session_logging.load_state_for_argv(["--target", str(target)]), origin_scope="test")
+    payload = session_logging.analyze_session_log(
+        state=session_logging.load_state_for_argv(["--target", str(target)]), origin_scope="test", detail="entries"
+    )
 
-    assert payload["origin_partitions"]["test"]["entries"][0]["parent"] == {
+    assert payload["detail_page"]["items"][0]["parent"] == {
         "entry_id": "parent-entry",
         "command": "pytest parent_test.py",
         "context": "fixture-parent",
@@ -1407,19 +1429,24 @@ def test_session_log_preserves_producer_invocation_intent_and_matches_observed_o
     assert analysis["summary"]["unknown_expectation_count"] == 0
     assert analysis["summary"]["unexpected_failure_count"] == 1
     assert analysis["summary"]["live_agent_failure_count"] == 1
-    assert analysis["matched_invocations"][0]["invocation_intent"]["invocation_class"] == "negative-fixture"
-    assert analysis["unmatched_invocations"][0]["invocation_outcome"]["observed"]["exit_class"] == "failure"
-    assert analysis["unknown_invocations"] == []
+    entries = session_logging.analyze_session_log(state=state, origin_scope="all", detail="entries")["detail_page"]["items"]
+    matched = [entry for entry in entries if entry["invocation_outcome"].get("match") == "matched"]
+    unmatched = [entry for entry in entries if entry["invocation_outcome"].get("match") == "unmatched"]
+    assert matched[0]["invocation_intent"]["invocation_class"] == "negative-fixture"
+    assert unmatched[0]["invocation_outcome"]["observed"]["exit_class"] == "failure"
+    assert not [entry for entry in entries if entry["invocation_outcome"].get("match") in {None, "", "unknown"}]
     assert analysis["summary"]["failed_count"] == 1
-    assert len(analysis["failed_commands"]) == 1
-    assert len(analysis["observed_nonzero_exits"]) == 2
-    assert analysis["matched_invocations"][0] not in analysis["failed_commands"]
+    observed_nonzero = [entry for entry in entries if entry["exit_status"] != 0]
+    failed = [entry for entry in observed_nonzero if entry["invocation_outcome"].get("match") != "matched"]
+    assert len(failed) == 1
+    assert len(observed_nonzero) == 2
+    assert matched[0] not in failed
 
-    test_analysis = session_logging.analyze_session_log(state=state, origin_scope="test")
+    test_analysis = session_logging.analyze_session_log(state=state, origin_scope="test", detail="entries")
     assert test_analysis["summary"]["failed_count"] == 0
-    assert test_analysis["failed_commands"] == []
-    assert len(test_analysis["observed_nonzero_exits"]) == 1
-    assert len(test_analysis["matched_invocations"]) == 1
+    test_entries = test_analysis["detail_page"]["items"]
+    assert len([entry for entry in test_entries if entry["exit_status"] != 0]) == 1
+    assert len([entry for entry in test_entries if entry["invocation_outcome"].get("match") == "matched"]) == 1
 
     index = json.loads(_current_index(target).read_text(encoding="utf-8"))
     negative = session_logging._entries_from_index(index)[0]
@@ -1478,24 +1505,24 @@ def test_consequential_session_replay_emits_stable_material_candidates(tmp_path:
     capsys.readouterr()
 
     state = session_logging.load_state_for_argv(["--target", str(target)])
-    first = session_logging.analyze_session_log(state=state)
-    second = session_logging.analyze_session_log(state=state)
+    first = session_logging.analyze_session_log(state=state, detail="candidates")
+    second = session_logging.analyze_session_log(state=state, detail="candidates")
     assert first["summary"]["command_count"] == 14
     assert first["summary"]["failure_count"] == 0
     assert first["summary"]["unknown_expectation_count"] == 0
     assert first["summary"]["matched_expectation_count"] == 14
-    candidates = {item["id"]: item for item in first["friction_candidates"]}
+    candidates = {item["id"]: item for item in first["detail_page"]["items"]}
     assert {"repeated-command", "duplicate-output", "receipt-choreography"} <= candidates.keys()
     assert candidates["receipt-choreography"]["improvement_signal"]["occurrence_count"] == 4
     assert candidates["receipt-choreography"]["improvement_signal"]["confidence"] == "high"
     first_fingerprints = {
         item["id"]: item["improvement_signal"]["evidence_fingerprint"]
-        for item in first["friction_candidates"]
+        for item in first["detail_page"]["items"]
         if item.get("improvement_signal")
     }
     second_fingerprints = {
         item["id"]: item["improvement_signal"]["evidence_fingerprint"]
-        for item in second["friction_candidates"]
+        for item in second["detail_page"]["items"]
         if item.get("improvement_signal")
     }
     assert first_fingerprints == second_fingerprints
@@ -1589,34 +1616,43 @@ def test_pytest_subprocess_helper_combines_producer_and_generated_invocation_int
     assert analysis["summary"]["expected_failure_success_count"] == 1
     assert analysis["summary"]["unknown_expectation_count"] == 0
     assert analysis["summary"]["unexpected_failure_count"] == 1
-    assert len(analysis["observed_nonzero_exits"]) == 2
-    assert len(analysis["failed_commands"]) == 1
+    entries = session_logging.analyze_session_log(state=state, origin_scope="all", detail="entries")["detail_page"]["items"]
+    observed_nonzero = [entry for entry in entries if entry["exit_status"] != 0]
+    failed_commands = [entry for entry in observed_nonzero if entry["invocation_outcome"].get("match") != "matched"]
+    assert len(observed_nonzero) == 2
+    assert len(failed_commands) == 1
 
-    expected_success_failure = analysis["expected_success_failed_invocations"][0]
+    expected_success_failure = next(
+        entry
+        for entry in entries
+        if entry["invocation_outcome"].get("match") == "unmatched" and entry["invocation_outcome"]["expected"]["exit_class"] == "success"
+    )
     assert expected_success_failure["invocation_intent"]["scenario_id"] == "probe-failed"
     assert expected_success_failure["invocation_intent"]["invocation_class"] == "probe"
     assert expected_success_failure["invocation_outcome"]["expected"]["exit_class"] == "success"
     assert expected_success_failure["invocation_outcome"]["observed"]["exit_class"] == "failure"
     assert expected_success_failure["parent"]["entry_id"] == "pytest-parent-entry"
-    assert expected_success_failure in analysis["failed_commands"]
+    assert expected_success_failure in failed_commands
 
-    product_operation = [
-        entry for entry in analysis["origin_partitions"]["test"]["entries"] if entry["invocation_intent"]["scenario_id"] == "status-success"
-    ][0]
+    product_operation = [entry for entry in entries if entry["invocation_intent"]["scenario_id"] == "status-success"][0]
     assert product_operation["origin"]["classification"] == "pytest"
     assert product_operation["invocation_intent"]["invocation_class"] == "product-operation"
     assert product_operation["invocation_outcome"]["match"] == "matched"
     assert product_operation["parent"]["context"] == parent["parent_context"]
 
-    expected_failure_success = analysis["expected_failure_succeeded_invocations"][0]
+    expected_failure_success = next(
+        entry
+        for entry in entries
+        if entry["invocation_outcome"].get("match") == "unmatched" and entry["invocation_outcome"]["expected"]["exit_class"] == "failure"
+    )
     assert expected_failure_success["invocation_intent"]["scenario_id"] == "synthetic-succeeded"
     assert expected_failure_success["invocation_intent"]["invocation_class"] == "synthetic-check"
     assert expected_failure_success["invocation_outcome"]["expected"]["exit_class"] == "failure"
     assert expected_failure_success["invocation_outcome"]["observed"]["exit_class"] == "success"
-    assert expected_failure_success not in analysis["failed_commands"]
+    assert expected_failure_success not in failed_commands
 
-    assert analysis["unknown_invocations"] == []
-    generated = [entry for entry in analysis["matched_invocations"] if entry["invocation_intent"]["operation_id"] == "config.report"][0]
+    assert not [entry for entry in entries if entry["invocation_outcome"].get("match") in {None, "", "unknown"}]
+    generated = [entry for entry in entries if entry["invocation_intent"]["operation_id"] == "config.report"][0]
     assert generated["invocation_intent"]["status"] == "declared"
     assert generated["invocation_intent"]["operation_id"] == "config.report"
     assert generated["invocation_outcome"]["match"] == "matched"
@@ -1719,11 +1755,11 @@ def test_session_log_segments_can_be_summarized_and_selected(tmp_path: Path, mon
         == 0
     )
     state = session_logging.load_state_for_argv(["--target", str(target)])
-    payload = session_logging.analyze_session_log(state=state)
-    assert len(payload["segments"]) == 3
-    assert {segment["task"] for segment in payload["segments"]} == {"Implement issue #2144", "Implement issue #2145"}
-    assert any(segment["closeout_status"] == "closed" for segment in payload["segments"])
-    selected_id = payload["segments"][0]["id"]
+    segments = session_logging.analyze_session_log(state=state, detail="segments")["detail_page"]["items"]
+    assert len(segments) == 3
+    assert {segment["task"] for segment in segments} == {"Implement issue #2144", "Implement issue #2145"}
+    assert any(segment["closeout_status"] == "closed" for segment in segments)
+    selected_id = segments[0]["id"]
     selected = session_logging.analyze_session_log(state=state, segment_id=selected_id)
     assert selected["selected_segment"] == selected_id
     assert selected["summary"]["command_count"] == 1
@@ -1763,8 +1799,9 @@ def test_session_log_index_deduplicates_metadata_and_analysis_pages_episodes(tmp
 
     state = session_logging.load_state_for_argv(["--target", str(target)])
     summary = session_logging.analyze_session_log(state=state)
-    assert summary["episodes"][0]["purpose_id"] == "implement-lane"
-    assert summary["episodes"][0]["scenario_id"] == "focused-proof"
+    episodes = session_logging.analyze_session_log(state=state, detail="episodes")["detail_page"]["items"]
+    assert episodes[0]["purpose_id"] == "implement-lane"
+    assert episodes[0]["scenario_id"] == "focused-proof"
     assert summary["detail"] == "summary"
     assert summary["detail_page"] is None
     page = session_logging.analyze_session_log(state=state, detail="entries", page=2, page_size=2)
@@ -1809,7 +1846,17 @@ def test_session_log_default_analysis_stays_bounded_for_long_multitask_session(t
             == 0
         )
 
+    brief_calls = 0
+    real_entry_brief = session_logging._entry_brief
+
+    def counted_entry_brief(entry: dict[str, object]) -> dict[str, object]:
+        nonlocal brief_calls
+        brief_calls += 1
+        return real_entry_brief(entry)
+
+    monkeypatch.setattr(session_logging, "_entry_brief", counted_entry_brief)
     payload = session_logging.analyze_session_log(state=session_logging.load_state_for_argv(["--target", str(target)]))
+    default_brief_calls = brief_calls
     index = json.loads(_current_index(target).read_text(encoding="utf-8"))
     hydrated_entries = session_logging._entries_from_index(index)
     hydrated_index = {**index, "records": {}, "entries": hydrated_entries}
@@ -1817,9 +1864,12 @@ def test_session_log_default_analysis_stays_bounded_for_long_multitask_session(t
     assert len(index["records"]["provenance"]) < len(index["entries"])
     assert len(index["records"]["contexts"]) < len(index["entries"])
     assert len(json.dumps(index).encode("utf-8")) < len(json.dumps(hydrated_index).encode("utf-8"))
-    assert len(payload["segments"]) <= session_logging.LARGE_OUTPUT_SUMMARY_LIMIT
-    assert len(payload["episodes"]) <= session_logging.LARGE_OUTPUT_SUMMARY_LIMIT
-    assert len(payload["friction_candidates"]) <= session_logging.FRICTION_CANDIDATE_LIMIT
+    assert "segments" not in payload
+    assert "episodes" not in payload
+    assert "friction_candidates" not in payload
+    assert payload["bounded_collections"]["full_detail_requires_selector"] is True
+    assert default_brief_calls <= 1
+    assert len(json.dumps(payload).encode("utf-8")) < 16_384
     assert len(json.dumps(payload).encode("utf-8")) <= session_logging.DEFAULT_ANALYSIS_SERIALIZATION_BUDGET_BYTES
     reconstructed = []
     state = session_logging.load_state_for_argv(["--target", str(target)])
@@ -2487,8 +2537,8 @@ def test_session_log_slow_commands_surface_proof_route_friction(tmp_path: Path, 
     monkeypatch.setattr(session_logging.time, "monotonic", real_monotonic)
     capsys.readouterr()
 
-    payload = session_logging.analyze_session_log(state=session_logging.load_state_for_argv(["--target", str(target)]))
-    slow = next(candidate for candidate in payload["friction_candidates"] if candidate["id"].startswith("slow-command:"))
+    payload = session_logging.analyze_session_log(state=session_logging.load_state_for_argv(["--target", str(target)]), detail="candidates")
+    slow = next(candidate for candidate in payload["detail_page"]["items"] if candidate["id"].startswith("slow-command:"))
     assert slow["owner"] == "proof-route-maintenance"
     assert slow["duration_ms"] == 125000
     assert slow["duration_ms_max"] == 125000

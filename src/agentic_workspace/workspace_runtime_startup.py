@@ -663,6 +663,8 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         projected["issue_reference_intent"] = payload["issue_reference_intent"]
     if "open_issue_intake" in payload:
         projected["open_issue_intake"] = payload["open_issue_intake"]
+    if "bounded_external_effect" in payload:
+        projected["bounded_external_effect"] = payload["bounded_external_effect"]
     if isinstance(task_intent, dict) and task_intent.get("status") == "present":
         acceptance = task_intent.get("acceptance", {})
         read_only_response = payload.get("read_only_response", {})
@@ -1440,6 +1442,29 @@ def _start_payload(
                 "read_first": [command],
                 "open_execplan_only_when": startup_template["open_execplan_only_when"],
             }
+    bounded_external_effect = _as_dict(planning_safety_gate.get("bounded_external_effect"))
+    if bounded_external_effect.get("status") == "direct-route-admitted":
+        payload["bounded_external_effect"] = bounded_external_effect
+        payload["workflow_sufficiency"] = _workflow_sufficiency_payload(
+            surface="start",
+            decision="bounded-external-effect-direct",
+            reason=str(planning_safety_gate.get("reason") or "Bounded external tracker effect is ready for its write owner."),
+            required_next_action="perform-bounded-external-issue-filing",
+            evidence_required=list(bounded_external_effect.get("required_safety_checks") or []),
+        )
+        payload["immediate_next_allowed_action"] = {
+            "action": "perform-bounded-external-issue-filing",
+            "summary": "Use the existing external issue intake/write owner without creating checked-in Planning custody.",
+            "command": "",
+            "run": None,
+            "risk": "bounded-external-write",
+            "required_inputs": list(bounded_external_effect.get("required_safety_checks") or []),
+            "next_proof": "Reconcile created tracker identities, duplicate decisions, and failed writes against the requested bounded set.",
+            "read_first": [],
+            "open_execplan_only_when": (
+                "The task expands into repository implementation, unresolved decomposition, multi-session continuation, or an active-owner conflict."
+            ),
+        }
     intent_acknowledgement = _intent_acknowledgement_payload(
         task_text=task_text, execution_posture=execution_posture, vague_orientation=vague_orientation
     )
@@ -2316,6 +2341,7 @@ def _ordinary_start_decision_payload(
     protected_scope = _as_dict(non_interference.get("protected_scope"))
     raw_immediate = _as_dict(source_payload.get("immediate_next_allowed_action"))
     immediate = _compact_start_route_action(raw_immediate)
+    bounded_external_effect = _as_dict(source_payload.get("bounded_external_effect"))
     memory_packet = _as_dict(source_payload.get("memory_decision_packet"))
     memory_pull = _as_dict(memory_packet.get("pull"))
     memory_routes = [
@@ -2376,8 +2402,10 @@ def _ordinary_start_decision_payload(
         action["read_first"] = list(dict.fromkeys(memory_routes))[:3]
 
     effects = {
-        "workflow_required": True,
-        "implementation_allowed": bool(next_action.get("implementation_allowed")),
+        "workflow_required": bounded_external_effect.get("status") != "direct-route-admitted",
+        "implementation_allowed": bool(next_action.get("implementation_allowed"))
+        or bounded_external_effect.get("status") == "direct-route-admitted",
+        **({"external_write_allowed": True} if bounded_external_effect.get("status") == "direct-route-admitted" else {}),
         "read_only_allowed": bool(next_action.get("read_only_allowed")),
         "exploration_allowed": bool(next_action.get("exploration_allowed")),
         "proof_required": bool(next_action.get("proof_required")),
@@ -2479,6 +2507,7 @@ def _ordinary_start_decision_payload(
         **({"owner": owner} if owner else {}),
         **({"attention": attention} if attention else {}),
         "detail_routes": detail_routes,
+        **({"bounded_external_effect": bounded_external_effect} if bounded_external_effect else {}),
     }
     projected = {
         "kind": selected.get("kind", "startup-context/v1"),

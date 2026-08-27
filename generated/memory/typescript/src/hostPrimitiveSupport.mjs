@@ -2158,6 +2158,113 @@ function assignmentLifecycleApply(values, operationId) {
   return { kind: 'agentic-workspace/assignment-lifecycle-result/v1', operation_id: operationId, transition, status: failures.length ? 'blocked' : state.current_state, outcome: failures.length ? 'blocked' : Boolean(values.dry_run) ? 'noop' : 'applied', mutation_applied: !failures.length && !Boolean(values.dry_run), target_root: targetRoot, run_id: runId, artifact_refs: refs, state, failures, reason_code: failures[0]?.reason ?? null, recovery_command: failures[0]?.recovery ?? null, message: `assignment ${transition}: ${failures.length ? 'blocked' : state.current_state}`, actions: refs.map((path) => ({ kind: 'write', path })) };
 }
 
+function correctionIdentityInit(values, targetRoot, operationId) {
+  const configRef = '.agentic-workspace/config.local.toml';
+  const configPath = resolveInside(targetRoot, configRef);
+  const before = existsSync(configPath) ? readText(configPath) : 'schema_version = 1\n';
+  const beforeDigest = `sha256:${createHash('sha256').update(before).digest('hex')}`;
+  const targets = parseTomlTables(before, 'delegation_targets');
+  const delegation = parseTomlTables(before, 'delegation');
+  const profileName = String(values.target_profile ?? delegation.current_target ?? '').trim();
+  const matches = Object.entries(targets).filter(([name, profile]) => {
+    if (!isObject(profile)) return false;
+    return name === profileName || (Array.isArray(profile.aliases) && profile.aliases.includes(profileName));
+  });
+  const known = matches.filter(([, profile]) => String(profile.target_id ?? '').trim());
+  if (known.length === 1) {
+    return {
+      kind: 'agentic-workspace/target-identity-initialization/v1',
+      operation_id: operationId,
+      status: 'already-initialized',
+      mutation_applied: false,
+      target_profile: profileName,
+      target_id: String(known[0][1].target_id),
+      reason: 'idempotent-replay',
+      checked_in_repo_effect: 'none',
+    };
+  }
+  if (matches.length !== 1) {
+    return {
+      kind: 'agentic-workspace/target-identity-initialization/v1',
+      operation_id: operationId,
+      status: 'blocked',
+      mutation_applied: false,
+      repair: {
+        status: 'unavailable',
+        reason: 'target-profile-not-uniquely-resolvable',
+        operation: 'correction-event identity-init',
+      },
+    };
+  }
+  const [resolvedName, profile] = matches[0];
+  const slug = resolvedName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'target';
+  const seed = stableJson({
+    model_family: profile.model_family ?? null,
+    profile_name: resolvedName,
+    provider: profile.provider ?? null,
+    role_identity: resolvedName,
+  });
+  const proposedId = `user-local:${slug}-${createHash('sha256').update(seed).digest('hex').slice(0, 10)}`;
+  const targetId = String(values.target_id ?? proposedId).trim();
+  const owner = Object.entries(targets).find(([name, candidate]) => name !== resolvedName && isObject(candidate) && candidate.target_id === targetId);
+  if (owner) {
+    return {
+      kind: 'agentic-workspace/target-identity-initialization/v1',
+      operation_id: operationId,
+      status: 'blocked',
+      mutation_applied: false,
+      reason: 'target-id-already-owned-by-another-profile',
+      target_id: targetId,
+    };
+  }
+  const expectedDigest = String(values.expected_config_digest ?? '').trim();
+  if (expectedDigest && expectedDigest !== beforeDigest) {
+    return {
+      kind: 'agentic-workspace/target-identity-initialization/v1',
+      operation_id: operationId,
+      status: 'blocked',
+      mutation_applied: false,
+      reason: 'local-config-revision-mismatch',
+      expected_config_digest: expectedDigest,
+      current_config_digest: beforeDigest,
+      recovery: 'Rerun identity-init --dry-run and apply the refreshed operation.',
+    };
+  }
+  const header = `[delegation_targets.${resolvedName}]`;
+  const lines = before.split(/\r?\n/);
+  const tableIndex = lines.findIndex((line) => line.trim() === header);
+  if (tableIndex < 0) {
+    return {
+      kind: 'agentic-workspace/target-identity-initialization/v1',
+      operation_id: operationId,
+      status: 'blocked',
+      mutation_applied: false,
+      reason: 'target-profile-config-table-not-found',
+    };
+  }
+  lines.splice(tableIndex + 1, 0, `target_id = "${targetId.replaceAll('"', '\\"')}"`);
+  const after = `${lines.join('\n').trimEnd()}\n`;
+  const afterDigest = `sha256:${createHash('sha256').update(after).digest('hex')}`;
+  if (!Boolean(values.dry_run)) {
+    mkdirSync(dirname(configPath), { recursive: true });
+    writeFileSync(configPath, after, 'utf8');
+  }
+  return {
+    kind: 'agentic-workspace/target-identity-initialization/v1',
+    operation_id: operationId,
+    status: Boolean(values.dry_run) ? 'planned' : 'initialized',
+    mutation_applied: !Boolean(values.dry_run),
+    target_profile: resolvedName,
+    target_id: targetId,
+    config_path: configRef,
+    checked_in_repo_effect: 'none',
+    config_digest_before: beforeDigest,
+    config_digest_after: afterDigest,
+    recheck_command: 'agentic-workspace config --target . --select mixed_agent.target_identity --format json',
+    continuity_rule: 'The persisted stable target id survives profile rename; aliases remain migration hints only.',
+  };
+}
+
 function correctionEventApply(values, operationId) {
   const targetRoot = resolve(String(values.target_root ?? values.target ?? '.'));
   const scriptPath = resolve(process.cwd(), 'scripts/run_agentic_workspace.py');
@@ -2185,6 +2292,7 @@ function correctionEventApply(values, operationId) {
     );
   }
   if (!existsSync(scriptPath)) {
+    if (operation === 'identity-init') return correctionIdentityInit(values, targetRoot, operationId);
     const status = operation === 'query' ? 'queried' : operation === 'prune-compact' ? 'compacted' : 'stored';
     const storeRef = '.agentic-workspace/local/correction-events.json';
     const storePath = resolveInside(targetRoot, storeRef);

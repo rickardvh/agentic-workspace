@@ -136,7 +136,7 @@ def _extract_tarball(tarball: Path, destination: Path) -> None:
             target.write_bytes(source.read())
 
 
-def _run_packed_conformance(*, artifact_dir: Path, receipt_out: Path | None) -> int:
+def _run_packed_conformance(*, artifact_dir: Path, receipt_out: Path | None, execution_context: str = "local") -> int:
     packages = _typescript_packages()
     _pack_packages(artifact_dir)
     with tempfile.TemporaryDirectory(prefix="aw-packed-typescript-conformance-") as tmp:
@@ -168,7 +168,18 @@ def _run_packed_conformance(*, artifact_dir: Path, receipt_out: Path | None) -> 
             return completed.returncode
     node_version = subprocess.run(["node", "--version"], check=True, text=True, capture_output=True).stdout.strip()
     registry_fingerprint = _registry_fingerprint()
-    subject = {"artifacts": artifact_records, "registry_fingerprint": registry_fingerprint, "node_version": node_version}
+    subject = {
+        "artifacts": artifact_records,
+        "runtime_identity": {"kind": "node", "version": node_version},
+        "validation_identity": {
+            "runner": "scripts/check/run_generated_command_package_proof.py",
+            "mode": "exact-packed-typescript-semantic-conformance",
+            "registry_fingerprint": registry_fingerprint,
+        },
+        "registry_fingerprint": registry_fingerprint,
+        "node_version": node_version,
+        "execution_context": execution_context,
+    }
     receipt_id = f"sha256:{hashlib.sha256(json.dumps(subject, sort_keys=True, separators=(',', ':')).encode()).hexdigest()}"
     receipt = {
         "kind": "agentic-workspace/generated-command-semantic-conformance-receipt/v1",
@@ -179,6 +190,19 @@ def _run_packed_conformance(*, artifact_dir: Path, receipt_out: Path | None) -> 
             "command": "scripts/check/run_generated_command_package_proof.py --packed-conformance",
             "exact_packed_artifacts": True,
             "complete_registry": True,
+        },
+        "environment_boundary": {
+            "semantic_scope": "exact npm tarballs executed against the complete maintained conformance registry",
+            "host_only_not_reproduced": [
+                "hosted runner provisioning and image",
+                "workflow permissions, services, and artifact upload",
+                "other hosted jobs and required-check aggregation",
+            ],
+            "claim": (
+                "hosted semantic-lane evidence; the complete hosted workflow remains authoritative"
+                if execution_context == "hosted-ci"
+                else "local semantic replay only; does not establish a hosted CI pass"
+            ),
         },
     }
     if receipt_out is not None:
@@ -193,7 +217,7 @@ def _node_major(version: object) -> int | None:
     return int(match.group("major")) if match else None
 
 
-def _verify_receipt(path: Path, *, artifact_dir: Path, expected_node_major: int) -> int:
+def _verify_receipt(path: Path, *, artifact_dir: Path, expected_node_major: int, expected_execution_context: str | None = None) -> int:
     if not path.is_file():
         print(f"missing semantic-conformance receipt: {path}", file=sys.stderr)
         return 1
@@ -208,6 +232,33 @@ def _verify_receipt(path: Path, *, artifact_dir: Path, expected_node_major: int)
         return 1
     if subject.get("registry_fingerprint") != _registry_fingerprint():
         print(f"stale semantic-conformance registry fingerprint: {path}", file=sys.stderr)
+        return 1
+    execution_context = str(subject.get("execution_context") or "")
+    if execution_context not in {"local", "hosted-ci"} or (
+        expected_execution_context is not None and execution_context != expected_execution_context
+    ):
+        print(f"semantic-conformance execution context mismatch: {path}", file=sys.stderr)
+        return 1
+    runtime_identity = subject.get("runtime_identity", {})
+    validation_identity = subject.get("validation_identity", {})
+    if runtime_identity != {"kind": "node", "version": subject.get("node_version")}:
+        print(f"semantic-conformance runtime identity mismatch: {path}", file=sys.stderr)
+        return 1
+    if validation_identity != {
+        "runner": "scripts/check/run_generated_command_package_proof.py",
+        "mode": "exact-packed-typescript-semantic-conformance",
+        "registry_fingerprint": subject.get("registry_fingerprint"),
+    }:
+        print(f"semantic-conformance validation identity mismatch: {path}", file=sys.stderr)
+        return 1
+    boundary = receipt.get("environment_boundary", {})
+    expected_claim = (
+        "hosted semantic-lane evidence; the complete hosted workflow remains authoritative"
+        if execution_context == "hosted-ci"
+        else "local semantic replay only; does not establish a hosted CI pass"
+    )
+    if boundary.get("claim") != expected_claim or not boundary.get("host_only_not_reproduced"):
+        print(f"semantic-conformance environment boundary mismatch: {path}", file=sys.stderr)
         return 1
     actual_node_major = _node_major(subject.get("node_version"))
     if actual_node_major != expected_node_major:
@@ -340,12 +391,23 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--artifact-dir", type=Path, help="Directory containing or receiving exact npm tarballs.")
     parser.add_argument("--receipt-out", type=Path, help="Write the packed-artifact conformance receipt to this path.")
     parser.add_argument(
+        "--execution-context",
+        choices=["local", "hosted-ci"],
+        default="local",
+        help="Identify whether packed conformance is a local replay or hosted-CI execution. Defaults to local.",
+    )
+    parser.add_argument(
         "--verify-receipt", type=Path, help="Fail closed unless this receipt matches the current registry and exact artifacts."
     )
     parser.add_argument(
         "--expected-node-major",
         type=_positive_int,
         help="Required Node major that a verified semantic-conformance receipt must prove.",
+    )
+    parser.add_argument(
+        "--expected-execution-context",
+        choices=["local", "hosted-ci"],
+        help="Required local or hosted-CI execution context for a verified receipt.",
     )
     parser.add_argument(
         "--timeout-seconds",
@@ -373,17 +435,20 @@ def main(argv: list[str] | None = None) -> int:
             args.verify_receipt.resolve(),
             artifact_dir=args.artifact_dir.resolve(),
             expected_node_major=args.expected_node_major,
+            expected_execution_context=args.expected_execution_context,
         )
     if args.packed_conformance:
         if args.artifact_dir is not None:
             return _run_packed_conformance(
                 artifact_dir=args.artifact_dir.resolve(),
                 receipt_out=args.receipt_out.resolve() if args.receipt_out else None,
+                execution_context=args.execution_context,
             )
         with tempfile.TemporaryDirectory(prefix="aw-command-package-artifacts-") as tmp:
             return _run_packed_conformance(
                 artifact_dir=Path(tmp),
                 receipt_out=args.receipt_out.resolve() if args.receipt_out else None,
+                execution_context=args.execution_context,
             )
     started = time.perf_counter()
     steps = _proof_steps(args)

@@ -12135,6 +12135,7 @@
         "name": "correction-event"
       },
       "conformance_refs": [
+        "correction-event.identity-init.process",
         "correction-event.submit.process",
         "correction-event.submit-host-observation.process",
         "correction-event.query.process",
@@ -12155,6 +12156,64 @@
         "options": [],
         "subcommand_dest": "correction_event_command",
         "subcommands": [
+          {
+            "help": "Initialize a collision-checked stable identity for one configured target profile in local config.",
+            "name": "identity-init",
+            "operation_ref": {
+              "id": "correction-event.identity-init",
+              "path": "operations/correction-event.identity-init.json"
+            },
+            "options": [
+              {
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "flags": [
+                  "--format"
+                ],
+                "help": "Output format.",
+                "name": "format"
+              },
+              {
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to current directory.",
+                "name": "target"
+              },
+              {
+                "flags": [
+                  "--target-profile"
+                ],
+                "help": "Configured target profile name. Defaults to delegation.current_target.",
+                "name": "target_profile"
+              },
+              {
+                "flags": [
+                  "--target-id"
+                ],
+                "help": "Optional explicit stable id; omission uses the collision-checked generated proposal.",
+                "name": "target_id"
+              },
+              {
+                "flags": [
+                  "--expected-config-digest"
+                ],
+                "help": "Optional config digest from a dry run for compare-and-swap admission.",
+                "name": "expected_config_digest"
+              },
+              {
+                "action": "store_true",
+                "flags": [
+                  "--dry-run"
+                ],
+                "help": "Return the exact identity/config mutation without writing local config.",
+                "name": "dry_run"
+              }
+            ]
+          },
           {
             "help": "Submit a correction event through the public local operation boundary.",
             "name": "submit",
