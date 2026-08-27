@@ -15,8 +15,6 @@ Before using this procedure, establish that the current agent did not implement,
 - A request to address blockers, fix CI, update a PR, or check whether comments were addressed does not assign independent review authority.
 - Human approval to continue implementation does not make the implementation agent independent. Route the completed head to a distinct external review agent or leave `Review approval` pending.
 - A reviewer may share the GitHub account that opened the PR; that is only an account/API limitation and does not permit the agent that implemented the patch to approve itself.
-- In this repository, the separately configured ChatGPT review automation is the external reviewer dispatcher. Its connector-produced marker is authoritative even when it shares the repository owner's GitHub login; ordinary implementation agents use the repository CLI and must not invoke this skill or emit the marker.
-- This is an operational separation-of-duty boundary, not a cryptographic impersonation boundary. Do not add signing keys, per-attempt attestations, or consumer-facing verifier infrastructure to defend against deliberately giving an implementation actor the configured reviewer automation itself.
 - If authorship or role separation is unclear, stop before applying this skill and request an independent review.
 
 ## Procedure
@@ -101,4 +99,4 @@ Report in this shape:
 - Prefer evidence from the current PR head over stale prior comments.
 - Do not infer merge readiness from passing CI alone.
 - Keep comments focused on actionable blockers or durable suggestions.
-- If GitHub disallows a formal review action because the reviewer shares the PR author's account, a top-level marker produced by the separately configured external review automation may carry that configured authority. A normal implementation-authored comment remains non-authoritative, regardless of its vocabulary, GitHub login, or association. Report implementation work only as fixes applied / ready for re-review and obtain the current-head verdict from the distinct configured reviewer.
+- If GitHub disallows a formal review action because the reviewer shares the PR author's account, a top-level comment may communicate findings but cannot satisfy the repository's human/independent review gate. This fallback does not authorize implementation-agent self-review. Report the patch as ready for re-review and obtain a current-head verdict from a distinct configured authority; shared credential association never manufactures separation of duty.

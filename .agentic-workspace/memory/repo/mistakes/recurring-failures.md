@@ -90,6 +90,32 @@ Failure signals
 Last confirmed
 2026-08-11 while reproducing issue #2277.
 
+### Failure: implementation agent occupies the review decision namespace
+
+Symptom
+- An agent posts a review comment or `aw-chatgpt-review` decision marker on a PR whose patch it implemented, causing the distinct reviewer to treat that head as already reviewed.
+
+Likely cause
+- The implementation agent confuses reporting remediation status with exercising independent review authority.
+
+Verify
+- Check whether the agent that implemented or pushed the PR also authored reviewer-formatted findings or a `blocked` / `merge-ready` marker for that head.
+
+Fix
+- Implementation agents report only `fixes applied` / `ready for re-review`. They do not post review comments or decision markers on their own PRs; the distinct reviewer owns those comments and decisions.
+
+Load when
+- Addressing PR feedback, publishing a corrective head, or handing work back for review in this repository.
+
+Review when
+- This repository changes its maintainer review automation or marker procedure.
+
+Failure signals
+- An implementation-side comment contains `aw-chatgpt-review`, `decision: blocked`, or `decision: merge-ready`.
+
+Last confirmed
+2026-08-27 during the grouped stacked-PR dogfood cycle for issue #2725.
+
 ## Entry format
 
 ### Failure: <short symptom-first label>
