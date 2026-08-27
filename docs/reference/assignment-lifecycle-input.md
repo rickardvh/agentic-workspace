@@ -35,4 +35,4 @@ Input accepted by public assignment lifecycle operations that prepare handoff pa
 | `task` | string | no |  | Full human intent bound into the canonical assignment identity. |  |  |
 | `target_name` | string | no |  | Named target or worker lane that receives the assignment packet. |  |  |
 | `task_proof_receipt_ref` | string | no |  | Repo-relative AW proof receipt whose assignment obligation must match the run being closed. |  |  |
-| `transport` | enum `"manual"`, `"internal"`, `"cli"`, `"api"` | no |  | Transport channel used for the assignment packet or returned result. |  |  |
+| `transport` | enum `"manual"`, `"internal"`, `"cli"`, `"api"` | no |  | Transport channel used for the assignment packet or returned result; manual prepares a handoff, while a configuration-authorized internal or CLI route executes the sealed packet through its target adapter. |  |  |

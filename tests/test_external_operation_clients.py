@@ -104,24 +104,123 @@ def test_assignment_cli_transport_invokes_allow_listed_adapter_and_returns_untru
 
     assert receipt["status"] == "returned"
     assert receipt["returned_work"] == returned
+    assert receipt["stdout_tail"] == json.dumps(returned)
     assert receipt["claim_boundary"].startswith("transport-only")
-    assert observed["command"] == [
+    command = observed["command"]
+    assert isinstance(command, list)
+    assert command[:10] == [
         "codex",
         "exec",
         "--ephemeral",
+        "--ignore-rules",
         "--sandbox",
         "read-only",
         "--cd",
         str(tmp_path),
         "--model",
         "gpt-5.6-terra",
-        "-",
     ]
+    assert command[10] == "--output-schema"
+    assert Path(command[11]).name == "delegated-return.schema.json"
+    assert command[12] == "--output-last-message"
+    assert Path(command[13]).name == "last-message.json"
+    assert command[14] == "-"
     assert observed["kwargs"]["input"] == "sealed packet"  # type: ignore[index]
+    assert observed["kwargs"]["encoding"] == "utf-8"  # type: ignore[index]
+    assert observed["kwargs"]["errors"] == "replace"  # type: ignore[index]
     assert python_primitive_support._assignment_patch_paths("--- a/outside.txt\n+++ /dev/null\n") == ["outside.txt"]
     assert python_primitive_support._assignment_patch_paths(
         "diff --git a/src/feature.py b/outside.py\nsimilarity index 100%\nrename from src/feature.py\nrename to outside.py\n"
     ) == ["outside.py", "src/feature.py"]
+
+
+def test_assignment_cli_transport_accepts_explicit_no_change_implementer_return(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentic_workspace.contracts import python_primitive_support
+
+    returned = {
+        "assignment_revision": "sha256:assignment",
+        "run_id": "run-no-change",
+        "target": "worker",
+        "changed_paths": [],
+        "summary": "The scoped reference is already accurate.",
+        "stop_conditions_hit": [],
+        "patch": "",
+    }
+
+    def fake_run(command: list[str], **kwargs: object) -> SimpleNamespace:
+        last_message_path = Path(command[command.index("--output-last-message") + 1])
+        last_message_path.write_text(json.dumps(returned), encoding="utf-8")
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(python_primitive_support.subprocess, "run", fake_run)
+    receipt = python_primitive_support._dispatch_assignment_packet(
+        packet={
+            "assignment_identity": {
+                "role": "implementer",
+                "dispatch_adapter": {
+                    "provider": "codex",
+                    "model": "gpt-5.6-luna",
+                    "execution_methods": ["internal"],
+                },
+            }
+        },
+        prompt="sealed packet",
+        target_root=tmp_path,
+        transport="internal",
+    )
+
+    assert receipt["status"] == "returned"
+    assert receipt["returned_work"] == returned
+
+
+def test_assignment_admission_accepts_no_change_but_rejects_changed_paths_without_patch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from agentic_workspace.contracts import python_primitive_support
+
+    identity = {
+        "complete": True,
+        "revision": "sha256:assignment",
+        "target": "worker",
+        "role": "implementer",
+        "mutation_baseline": "baseline-1",
+        "allowed_paths": ["docs/reference.md"],
+    }
+    monkeypatch.setattr(python_primitive_support, "_assignment_identity", lambda _authorities: identity)
+    authorities = {
+        "assignment_gate": {"status": "handoff-required"},
+        "assignment_policy": {"assignment_policy": "required-best-fit"},
+        "delegation_decision": {"decision": "assign-best-fit"},
+        "structural_proof_receipt": {
+            "kind": "agentic-workspace/assignment-structural-proof-receipt/v1",
+            "result": "passed",
+            "verified_by": "aw",
+            "assignment_revision": "sha256:assignment",
+        },
+        "run_state": {"run_id": "run-1", "status": "awaiting-admission"},
+        "live_mutation_baseline": "baseline-1",
+    }
+    no_change = {
+        "assignment_revision": "sha256:assignment",
+        "run_id": "run-1",
+        "target": "worker",
+        "changed_paths": [],
+        "stop_conditions_hit": [],
+        "patch": "",
+    }
+
+    admitted = python_primitive_support._assignment_admit_with_current_authority(
+        current_authorities=authorities,
+        returned_work=no_change,
+    )
+    rejected = python_primitive_support._assignment_admit_with_current_authority(
+        current_authorities=authorities,
+        returned_work={**no_change, "changed_paths": ["docs/reference.md"]},
+    )
+
+    assert admitted["status"] == "admitted"
+    assert rejected["status"] == "rejected"
+    assert [failure["reason"] for failure in rejected["failures"]] == ["missing-implementation-patch"]
 
 
 def _guidance_host_signature(payload: dict[str, object]) -> dict[str, object]:

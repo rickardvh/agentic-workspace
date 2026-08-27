@@ -44054,6 +44054,10 @@ def _assignment_primary_action_payload(
     attempt = _as_dict(assignment.get("current_attempt"))
     run_id = str(attempt.get("run_id") or "")
     assignment_decision_ref = str(_as_dict(assignment.get("assignment_gate")).get("assignment_decision_revision") or "")
+    methods = [str(method) for method in _list_payload((selected_target or {}).get("execution_methods")) if str(method)]
+    provider = str((selected_target or {}).get("provider") or "")
+    automatic = [method for method in methods if provider == "codex" and method in {"internal", "cli"}]
+    transport = automatic[0] if automatic and delegation_control.get("execution_permitted") is True else "manual"
     assignment_current = (
         str(assignment.get("status") or "") == "current"
         and bool(assignment_id and assignment_revision and run_id)
@@ -44067,7 +44071,7 @@ def _assignment_primary_action_payload(
                 "agentic-workspace assignment export --target . "
                 f"--task {_shell_quote(task_text)} "
                 + " ".join(f"--changed {_shell_quote(path)}" for path in prepare_paths)
-                + " --format json"
+                + f" --transport {_shell_quote(transport)} --format json"
             ),
             cli_invoke=cli_invoke,
         )
@@ -44077,6 +44081,7 @@ def _assignment_primary_action_payload(
                 "target": ".",
                 "task": task_text,
                 "changed": prepare_paths,
+                "transport": transport,
                 "format": "json",
             },
             effect_class="planning-state-mutation",
@@ -44190,10 +44195,6 @@ def _assignment_primary_action_payload(
             },
         }
 
-    methods = [str(method) for method in _list_payload((selected_target or {}).get("execution_methods")) if str(method)]
-    provider = str((selected_target or {}).get("provider") or "")
-    automatic = [method for method in methods if provider == "codex" and method in {"internal", "cli"}]
-    transport = automatic[0] if automatic and delegation_control.get("execution_permitted") is True else "manual"
     command = _command_with_cli_invoke(
         command=(
             "agentic-workspace assignment export --target . "

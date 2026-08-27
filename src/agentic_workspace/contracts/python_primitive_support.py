@@ -5,6 +5,7 @@ import json
 import re
 import shlex
 import subprocess
+import tempfile
 import tomllib
 from collections.abc import Mapping, Sequence
 from pathlib import Path
@@ -803,6 +804,7 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
                         "reason": str(dispatch.get("reason") or "automatic-dispatch-failed"),
                         "field": "transport",
                         "recovery": "Repair the configured target adapter or export the same packet through an admitted manual transport.",
+                        "detail": _optional_text(dispatch.get("stderr")) or _optional_text(dispatch.get("stdout_tail")),
                     }
                 )
             else:
@@ -1362,6 +1364,8 @@ def _assignment_live_mutation_baseline(*, target_root: Path) -> str:
             ["git", "rev-parse", "HEAD"],
             cwd=target_root,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             capture_output=True,
             check=False,
             timeout=10,
@@ -1573,7 +1577,8 @@ def _assignment_admit_with_current_authority(*, current_authorities: Mapping[str
             }
         )
     patch_text = str(returned_work.get("patch") or "")
-    if identity.get("role") == "implementer" and not patch_text.strip():
+    changed_paths = _assignment_list(returned_work.get("changed_paths"))
+    if identity.get("role") == "implementer" and changed_paths and not patch_text.strip():
         failures.append(
             {
                 "reason": "missing-implementation-patch",
@@ -1592,7 +1597,6 @@ def _assignment_admit_with_current_authority(*, current_authorities: Mapping[str
             }
         )
     allowed_paths = set(_assignment_list(identity.get("allowed_paths")))
-    changed_paths = _assignment_list(returned_work.get("changed_paths"))
     if not allowed_paths:
         failures.append(
             {
@@ -1792,21 +1796,65 @@ def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, targe
         }
     role = _optional_text(identity.get("role"))
     sandbox = "read-only"
-    command = ["codex", "exec", "--ephemeral", "--sandbox", sandbox, "--cd", str(target_root)]
+    command = ["codex", "exec", "--ephemeral", "--ignore-rules", "--sandbox", sandbox, "--cd", str(target_root)]
     model = _optional_text(adapter.get("model"))
     if model:
         command.extend(["--model", model])
-    command.append("-")
     try:
-        completed = subprocess.run(
-            command,
-            input=prompt,
-            cwd=target_root,
-            text=True,
-            capture_output=True,
-            check=False,
-            timeout=1800,
-        )
+        with tempfile.TemporaryDirectory(prefix="aw-assignment-dispatch-") as temporary_directory:
+            last_message_path = Path(temporary_directory) / "last-message.json"
+            output_schema_path = Path(temporary_directory) / "delegated-return.schema.json"
+            output_schema_path.write_text(
+                json.dumps(
+                    {
+                        "type": "object",
+                        "properties": {
+                            "assignment_revision": {"type": "string"},
+                            "run_id": {"type": "string"},
+                            "target": {"type": "string"},
+                            "changed_paths": {"type": "array", "items": {"type": "string"}},
+                            "summary": {"type": "string"},
+                            "stop_conditions_hit": {"type": "array", "items": {"type": "string"}},
+                            "patch": {"type": "string"},
+                        },
+                        "required": [
+                            "assignment_revision",
+                            "run_id",
+                            "target",
+                            "changed_paths",
+                            "summary",
+                            "stop_conditions_hit",
+                            "patch",
+                        ],
+                        "additionalProperties": False,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            dispatch_command = [
+                *command,
+                "--output-schema",
+                str(output_schema_path),
+                "--output-last-message",
+                str(last_message_path),
+                "-",
+            ]
+            completed = subprocess.run(
+                dispatch_command,
+                input=prompt,
+                cwd=target_root,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                capture_output=True,
+                check=False,
+                timeout=1800,
+            )
+            output = (
+                last_message_path.read_text(encoding="utf-8", errors="replace").strip()
+                if last_message_path.is_file()
+                else completed.stdout.strip()
+            )
     except (OSError, subprocess.SubprocessError) as exc:
         return {
             "kind": "agentic-workspace/assignment-dispatch-receipt/v1",
@@ -1816,7 +1864,6 @@ def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, targe
             "provider": provider,
             "detail": str(exc),
         }
-    output = completed.stdout.strip()
     if output.startswith("```json") and output.endswith("```"):
         output = output[7:-3].strip()
     try:
@@ -1825,8 +1872,10 @@ def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, targe
         returned = {}
     if completed.returncode != 0 or not isinstance(returned, dict):
         returned = {}
-    if role == "implementer" and not _optional_text(returned.get("patch")):
-        returned = {}
+    if role == "implementer":
+        reported_paths = _assignment_list(returned.get("changed_paths"))
+        if reported_paths and not _optional_text(returned.get("patch")):
+            returned = {}
     return {
         "kind": "agentic-workspace/assignment-dispatch-receipt/v1",
         "status": "returned" if returned else "blocked",
@@ -1836,6 +1885,7 @@ def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, targe
         "model": model or None,
         "exit_code": completed.returncode,
         "returned_work": returned,
+        "stdout_tail": completed.stdout[-4000:] if completed.stdout else "",
         "stderr": completed.stderr[-4000:] if completed.stderr else "",
         "claim_boundary": "transport-only; return still requires AW admission, integration, proof, and closeout",
     }
