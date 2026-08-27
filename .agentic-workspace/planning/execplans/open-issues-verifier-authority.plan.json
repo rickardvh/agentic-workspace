@@ -5,7 +5,7 @@
   "owner_level": "slice",
   "lifecycle": "live",
   "phase": "validation",
-  "revision": 3,
+  "revision": 4,
   "intent": {
     "outcome": "Satisfy #2725 by making the existing separation-of-duty decision visible and binding across ordinary start/implement routing, proof admission, and the repository exact-head review gate, while preserving non-authoritative fixes-applied/ready-for-re-review communication.",
     "non_goals": [
@@ -46,18 +46,59 @@
     ]
   },
   "relationships": {
-    "selection": {"state": "selected", "owner": "open-issues-verifier-authority"},
-    "proof_posture": {"state": "accepted", "refs": ["205 verifier-focused tests passed", "299 operation conformance cases passed", "external consumer readiness passed", "workspace lint and typecheck passed"]},
-    "external_posture": {"state": "observed", "refs": ["GitHub issue #2725", "merged PR #2732"]},
-    "delegation": {"state": "recorded", "route": "keep-local", "reason": "No sub-agent delegation was requested; independent review authority must remain outside this implementation session."}
+    "selection": {
+      "state": "selected",
+      "owner": "open-issues-verifier-authority"
+    },
+    "proof_posture": {
+      "state": "accepted",
+      "refs": [
+        "205 verifier-focused tests passed",
+        "299 operation conformance cases passed",
+        "external consumer readiness passed",
+        "workspace lint and typecheck passed"
+      ]
+    },
+    "external_posture": {
+      "state": "observed",
+      "refs": [
+        "GitHub issue #2725",
+        "merged PR #2732"
+      ]
+    },
+    "delegation": {
+      "state": "recorded",
+      "route": "keep-local",
+      "reason": "No sub-agent delegation was requested; independent review authority must remain outside this implementation session."
+    }
   },
   "references": [
-    {"kind": "github-issue", "target": "#2725", "label": "Independent verifier authority", "role": "owned intent", "locator": "https://github.com/rickardvh/agentic-workspace/issues/2725"},
-    {"kind": "github-pr", "target": "#2732", "label": "Existing self-authored marker gate", "role": "landed foundation", "locator": "https://github.com/rickardvh/agentic-workspace/pull/2732"},
-    {"kind": "planning-decomposition", "target": "open-issues-2026-08-27", "label": "All-open-issues epic", "role": "parent", "locator": ".agentic-workspace/planning/decompositions/open-issues-2026-08-27.decomposition.json"}
+    {
+      "kind": "github-issue",
+      "target": "#2725",
+      "label": "Independent verifier authority",
+      "role": "owned intent",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/2725"
+    },
+    {
+      "kind": "github-pr",
+      "target": "#2732",
+      "label": "Existing self-authored marker gate",
+      "role": "landed foundation",
+      "locator": "https://github.com/rickardvh/agentic-workspace/pull/2732"
+    },
+    {
+      "kind": "planning-decomposition",
+      "target": "open-issues-2026-08-27",
+      "label": "All-open-issues epic",
+      "role": "parent",
+      "locator": ".agentic-workspace/planning/decompositions/open-issues-2026-08-27.decomposition.json"
+    }
   ],
-  "next_action": "Publish the lower-stack conformance receipt repair to PR #2766, rebase this slice on its exact head, then open the verifier-authority PR and observe hosted checks without claiming review authority.",
-  "blockers": ["None."],
+  "next_action": "Address blocking review feedback, obtain a current-head independent review for PR #2776, then merge it after PR #2766.",
+  "blockers": [
+    "None."
+  ],
   "proof": {
     "claims": [
       "An implementation route under human/independent policy cannot authorize self-approval or merge-ready and explicitly supports ready-for-re-review status.",
@@ -79,7 +120,8 @@
       "uv run --active python scripts/check/check_runtime_implementation_ownership.py",
       "make lint-workspace",
       "make typecheck"
-    ]
+    ],
+    "summary": "Implementation and review-marker admission repair are published in PR #2776; independent review is pending after blocker remediation."
   },
   "continuation": {
     "owner": ".agentic-workspace/planning/decompositions/open-issues-2026-08-27.decomposition.json",
@@ -91,6 +133,10 @@
     "stop_conditions": "Stop if ordinary routing cannot reuse the canonical proof separation gate, or if shared credentials cannot be distinguished without a trusted actor identity."
   },
   "specialist_contracts": [
-    {"kind": "planning-delegation/v1", "target": "planning://delegation/keep-local", "revision": 1}
+    {
+      "kind": "planning-delegation/v1",
+      "target": "planning://delegation/keep-local",
+      "revision": 1
+    }
   ]
 }
