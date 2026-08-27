@@ -98,7 +98,7 @@
       "Record a compact supported-host dogfood trace whose identities and receipts can be checked without raw transcript storage."
     ],
     "refs": [],
-    "summary": "Implementation and supported-host dogfood evidence are published in PR #2778; lower marker-authority repair is restacked; independent review and target-branch integration remain pending."
+    "summary": "Implementation and supported-host dogfood evidence are published in PR #2778; the lower stack is restacked; independent review and target-branch integration remain pending."
   },
   "continuation": {
     "owner": ".agentic-workspace/planning/decompositions/open-issues-2026-08-27.decomposition.json",
