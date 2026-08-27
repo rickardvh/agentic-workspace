@@ -39,3 +39,5 @@ The user’s scope correction during this run was honored without turning discar
 ## Claim boundary
 
 The stack is ready for independent review when hosted checks pass. The issues close only as their PRs merge through repository policy. This review does not claim the excluded later issues, generalized delegation cost savings, or authority over independent review.
+
+The feature branch records `open-issues-nonlocal-delegation-implementation-archive-owner.integration-proposal.json`; target-branch integration must apply that proposal after the stack merges. The proposal deliberately does not rewrite current selection, aggregate indexes, unrelated owners, or parent truth from a feature branch.

@@ -88,5 +88,11 @@
     {"surface": "transport-specific delegation semantics", "disposition": "mechanically subordinate to the canonical assignment revision"},
     {"surface": "worker proof or completion authority", "disposition": "removed; orchestrator retains integration, proof, and closeout"}
   ],
+  "planning_residue": {
+    "status": "integration-proposed",
+    "owner": "open-issues-nonlocal-delegation-implementation",
+    "proposal": ".agentic-workspace/planning/integration-proposals/open-issues-nonlocal-delegation-implementation-archive-owner.integration-proposal.json",
+    "apply_authority": "admitted target or merge-queue branch after the stack merges"
+  },
   "claim_boundary": "The stack is implementation- and evidence-complete when its hosted checks pass. Merge and merge-ready approval remain external human authority; later issues are not claimed."
 }

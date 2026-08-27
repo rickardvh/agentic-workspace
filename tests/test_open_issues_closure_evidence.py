@@ -77,4 +77,8 @@ def test_closure_review_contains_a_subtraction_disposition_for_each_peer_surface
     assert isinstance(dispositions, list)
     assert len(dispositions) >= 9
     assert all(row.get("surface") and row.get("disposition") for row in dispositions if isinstance(row, dict))
+    residue = payload["planning_residue"]
+    assert isinstance(residue, dict)
+    assert residue["status"] == "integration-proposed"
+    assert (REPO_ROOT / str(residue["proposal"])).is_file()
     assert "Merge and merge-ready approval remain external human authority" in str(payload["claim_boundary"])
