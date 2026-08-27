@@ -11,6 +11,8 @@ agentic-workspace start --target . --task "<task>" --format json
 agentic-workspace setup --target . --format json
 ```
 
+A fresh necessary-surfaces bootstrap records a versioned `configuration_readiness` identity in `.agentic-workspace/adoption-receipt.json`. Ordinary startup uses that durable receipt, not setup-shaped task wording, to route one exact `reconcile-repository-configuration` action to `workspace-setup-jumpstart` and the configured `setup` command. A current identity stays quiet. Missing readiness metadata in a legacy receipt is not, by itself, evidence that setup is incomplete; an explicit stale identity blocks only configured-workflow claims and effects while leaving unrelated read-only inspection available.
+
 Use `setup` as a pre-write and pre-seed discovery report. It may point at candidate surfaces, promotion rules, and follow-up routes, but it does not authorize bulk imports or automatic planning/memory writes by itself.
 
 ## Promote

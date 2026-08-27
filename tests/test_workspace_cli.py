@@ -21,6 +21,13 @@ from agentic_workspace import session_logging
 from agentic_workspace.config import workspace_pointer_block
 
 
+def _mark_configuration_readiness_current(target_root: Path) -> None:
+    receipt_path = target_root / ".agentic-workspace" / "adoption-receipt.json"
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    receipt["configuration_readiness"]["status"] = "current"
+    _write(receipt_path, json.dumps(receipt, indent=2, sort_keys=True) + "\n")
+
+
 def test_active_external_backed_owner_routes_refresh_then_reconciliation(tmp_path: Path) -> None:
     cache = tmp_path / ".agentic-workspace/local/cache/external-intent-evidence.json"
     active_summary = {
@@ -1917,6 +1924,9 @@ def test_init_ordinary_footprint_omits_package_payload_and_writes_receipt(tmp_pa
     assert receipt["kind"] == "agentic-workspace/adoption-receipt/v1"
     assert receipt["checked_in_rule"] == "necessary-surfaces-only"
     assert receipt["payload_mirror"] is False
+    assert receipt["configuration_readiness"]["kind"] == "agentic-workspace/configuration-readiness/v1"
+    assert receipt["configuration_readiness"]["status"] == "reconciliation-required"
+    assert receipt["configuration_readiness"]["required_skill"] == "workspace-setup-jumpstart"
     assert "absolute-path provenance" in receipt["local_only"]
     assert not (tmp_path / ".agentic-workspace" / "payload-provenance.json").exists()
     assert not (tmp_path / ".agentic-workspace" / "AGENTS.md").exists()
@@ -1926,6 +1936,71 @@ def test_init_ordinary_footprint_omits_package_payload_and_writes_receipt(tmp_pa
     assert (tmp_path / ".agentic-workspace" / "memory" / "skills" / "memory-router" / "SKILL.md").exists()
     assert ".agentic-workspace/package-payload" in payload["bootstrap_footprint"]["omitted_package_payload_paths"]
     assert payload["validation"] == ["agentic-workspace doctor --target .", "agentic-workspace status --target ."]
+
+
+def test_fresh_bootstrap_routes_ordinary_start_to_exact_setup_continuation(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Implement the requested change.", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    decision = payload["decision_packet"]
+    readiness = decision["configuration_readiness"]
+    action = decision["action"]
+    assert readiness["status"] == "reconciliation-required"
+    assert readiness["owner"] == "setup.guidance"
+    assert readiness["required_skill"] == "workspace-setup-jumpstart"
+    assert action["id"] == "reconcile-repository-configuration"
+    assert action["command"].endswith("setup --target . --format json")
+    assert action["skill"] == "workspace-setup-jumpstart"
+    assert decision["effects"]["implementation_allowed"] is False
+    assert "configured-workflow implementation" in " ".join(decision["effects"]["forbidden_actions"])
+
+
+def test_current_or_legacy_adoption_receipt_keeps_ordinary_start_quiet(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--format", "json"]) == 0
+    capsys.readouterr()
+    receipt_path = tmp_path / ".agentic-workspace" / "adoption-receipt.json"
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    receipt["configuration_readiness"]["status"] = "current"
+    _write(receipt_path, json.dumps(receipt, indent=2, sort_keys=True) + "\n")
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Inspect README.md.", "--format", "json"]) == 0
+    current = json.loads(capsys.readouterr().out)
+    assert "configuration_readiness" not in current["decision_packet"]
+    assert current["decision_packet"]["action"]["id"] != "reconcile-repository-configuration"
+
+    receipt.pop("configuration_readiness")
+    _write(receipt_path, json.dumps(receipt, indent=2, sort_keys=True) + "\n")
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Inspect README.md.", "--format", "json"]) == 0
+    legacy = json.loads(capsys.readouterr().out)
+    assert "configuration_readiness" not in legacy["decision_packet"]
+    assert legacy["decision_packet"]["action"]["id"] != "reconcile-repository-configuration"
+
+
+def test_stale_configuration_readiness_identity_routes_only_the_affected_claim(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--format", "json"]) == 0
+    capsys.readouterr()
+    receipt_path = tmp_path / ".agentic-workspace" / "adoption-receipt.json"
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    receipt["configuration_readiness"]["status"] = "current"
+    receipt["configuration_readiness"]["identity"] = "obsolete-bootstrap-identity"
+    _write(receipt_path, json.dumps(receipt, indent=2, sort_keys=True) + "\n")
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Implement the requested change.", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    decision = payload["decision_packet"]
+    readiness = decision["configuration_readiness"]
+    assert readiness["status"] == "stale"
+    assert readiness["identity"] == "obsolete-bootstrap-identity"
+    assert decision["action"]["id"] == "reconcile-repository-configuration"
+    assert decision["effects"]["read_only_allowed"] is True
+    assert decision["effects"]["implementation_allowed"] is False
 
 
 def test_init_adopts_local_state_and_uses_local_scratch_handoff(tmp_path: Path, capsys) -> None:
@@ -8624,6 +8699,7 @@ def test_start_default_stays_under_tiny_output_budget_for_docs_task(tmp_path: Pa
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
     capsys.readouterr()
+    _mark_configuration_readiness_current(tmp_path)
 
     assert (
         cli.main(
@@ -9149,6 +9225,7 @@ def test_start_routes_high_assurance_milestone_to_planning_before_implementation
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
     capsys.readouterr()
+    _mark_configuration_readiness_current(tmp_path)
 
     assert (
         cli.main(
@@ -14240,6 +14317,7 @@ def test_start_required_skill_projection_survives_compact_catalog(tmp_path: Path
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
     capsys.readouterr()
+    _mark_configuration_readiness_current(tmp_path)
 
     assert (
         cli.main(

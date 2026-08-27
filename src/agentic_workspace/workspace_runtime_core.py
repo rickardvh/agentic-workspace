@@ -724,6 +724,7 @@ def _installed_package_source_class(*, package: str) -> str:
 
 
 ADOPTION_RECEIPT_KIND = "agentic-workspace/adoption-receipt/v1"
+CONFIGURATION_READINESS_KIND = "agentic-workspace/configuration-readiness/v1"
 
 
 def _resolve_bootstrap_footprint_profile(*, target_root: Path, requested_profile: str | None = None, mirror_payload: bool = False) -> str:
@@ -940,6 +941,12 @@ def _adoption_receipt_payload(*, selected_modules: list[str], reports: list[dict
             ]
         )
     )
+    readiness_basis = {
+        "selected_modules": sorted(_dedupe(selected_modules)),
+        "payload_mirror": payload_mirror,
+        "checked_in_rule": "necessary-surfaces-only",
+    }
+    readiness_identity = hashlib.sha256(json.dumps(readiness_basis, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:24]
     return {
         "kind": ADOPTION_RECEIPT_KIND,
         "checked_in_rule": "necessary-surfaces-only",
@@ -951,6 +958,18 @@ def _adoption_receipt_payload(*, selected_modules: list[str], reports: list[dict
             "absolute-path provenance",
         ],
         "payload_mirror": payload_mirror,
+        "configuration_readiness": {
+            "kind": CONFIGURATION_READINESS_KIND,
+            "status": "reconciliation-required",
+            "identity": readiness_identity,
+            "basis": readiness_basis,
+            "owner": "setup.guidance",
+            "required_skill": "workspace-setup-jumpstart",
+            "rule": (
+                "Fresh bootstrap requires one repository-configuration reconciliation before configured-workflow claims. "
+                "The setup owner may later replace this status with current after applying the same identity."
+            ),
+        },
         "recheck_command": "agentic-workspace doctor --target . --format json",
         "rule": (
             "This receipt is the durable authority that ordinary bootstrap intentionally omitted generic package payload. "
@@ -966,6 +985,18 @@ def _write_adoption_receipt_action(
     path = target_root / relative
     existing_text = path.read_text(encoding="utf-8") if path.exists() else None
     payload = _adoption_receipt_payload(selected_modules=selected_modules, reports=reports, payload_mirror=payload_mirror)
+    if existing_text is not None:
+        try:
+            existing_payload = json.loads(existing_text)
+        except json.JSONDecodeError:
+            existing_payload = {}
+        existing_readiness = existing_payload.get("configuration_readiness") if isinstance(existing_payload, dict) else None
+        if isinstance(existing_readiness, dict) and existing_readiness.get("kind") == CONFIGURATION_READINESS_KIND:
+            payload["configuration_readiness"] = existing_readiness
+        elif isinstance(existing_payload, dict) and existing_payload.get("kind") == ADOPTION_RECEIPT_KIND:
+            # A receipt written before readiness identity existed is evidence of
+            # an established adoption, not evidence that setup is incomplete.
+            payload.pop("configuration_readiness", None)
     rendered_text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
     if existing_text == rendered_text:
         return {"kind": "current", "path": relative.as_posix(), "detail": "adoption receipt already current"}
@@ -994,6 +1025,69 @@ def _read_adoption_receipt(*, target_root: Path) -> dict[str, Any]:
             "error": "adoption receipt kind is missing or unsupported",
         }
     return {"status": "present", "path": WORKSPACE_ADOPTION_RECEIPT_PATH.as_posix(), "payload": payload}
+
+
+def _configuration_readiness_startup_payload(*, target_root: Path, config: WorkspaceConfig, selected_modules: list[str]) -> dict[str, Any]:
+    receipt_status = _read_adoption_receipt(target_root=target_root)
+    raw_receipt = receipt_status.get("payload") if receipt_status.get("status") == "present" else {}
+    receipt: dict[str, Any] = raw_receipt if isinstance(raw_receipt, dict) else {}
+    readiness = receipt.get("configuration_readiness")
+    if not isinstance(readiness, dict):
+        return {
+            "status": "legacy-compatible",
+            "surface": WORKSPACE_ADOPTION_RECEIPT_PATH.as_posix(),
+            "rule": "Missing readiness metadata does not prove that an established repository needs setup.",
+        }
+    if readiness.get("kind") != CONFIGURATION_READINESS_KIND:
+        return {
+            "status": "unavailable",
+            "surface": WORKSPACE_ADOPTION_RECEIPT_PATH.as_posix(),
+            "reason": "configuration readiness kind is unsupported",
+        }
+    basis = readiness.get("basis") if isinstance(readiness.get("basis"), dict) else {}
+    observed_basis = {
+        "selected_modules": sorted(_dedupe(selected_modules)),
+        "payload_mirror": bool(receipt.get("payload_mirror")),
+        "checked_in_rule": str(receipt.get("checked_in_rule") or ""),
+    }
+    observed_identity = hashlib.sha256(json.dumps(observed_basis, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:24]
+    recorded_identity = str(readiness.get("identity") or "")
+    recorded_status = str(readiness.get("status") or "")
+    current = recorded_status == "current" and recorded_identity == observed_identity and basis == observed_basis
+    if current:
+        return {
+            "kind": CONFIGURATION_READINESS_KIND,
+            "status": "current",
+            "identity": observed_identity,
+            "surface": WORKSPACE_ADOPTION_RECEIPT_PATH.as_posix(),
+        }
+    command = _command_with_cli_invoke(
+        command="agentic-workspace setup --target . --format json",
+        cli_invoke=config.cli_invoke,
+    )
+    return {
+        "kind": CONFIGURATION_READINESS_KIND,
+        "status": "reconciliation-required" if recorded_status == "reconciliation-required" else "stale",
+        "identity": recorded_identity or "missing",
+        "observed_identity": observed_identity,
+        "surface": WORKSPACE_ADOPTION_RECEIPT_PATH.as_posix(),
+        "owner": "setup.guidance",
+        "required_skill": "workspace-setup-jumpstart",
+        "exact_continuation": {
+            "action": "reconcile-repository-configuration",
+            "command": command,
+            "run": command,
+        },
+        "claim_boundary": (
+            "Configured-workflow claims and effects wait for repository setup reconciliation; "
+            "unrelated read-only inspection remains allowed."
+        ),
+        "reason": (
+            "Fresh bootstrap has not reconciled repository configuration."
+            if recorded_status == "reconciliation-required"
+            else "The recorded setup identity no longer matches the effective bootstrap authority."
+        ),
+    }
 
 
 NECESSARY_SURFACE_DURABLE_PREFIXES = (
@@ -29283,12 +29377,12 @@ def _next_safe_action_packet(
     proof_hint = str(immediate.get("next_proof", "") or "")
     decision = str((workflow_sufficiency or {}).get("sufficiency_result") or (workflow_sufficiency or {}).get("decision") or "")
     preferred_routes = (skill_routing or {}).get("preferred_routes", [])
-    skill = ""
-    if action in {"ask-intent-discovery-question", "ask-work-shape-clarification"}:
+    skill = str(immediate.get("required_skill") or "")
+    if not skill and action in {"ask-intent-discovery-question", "ask-work-shape-clarification"}:
         skill = "workspace-intent-discovery"
-    elif action == "present-lane-shaping-prompt":
+    elif not skill and action == "present-lane-shaping-prompt":
         skill = "planning-decompose"
-    elif action in {
+    elif not skill and action in {
         "export-assigned-handoff",
         "dispatch-assigned-target",
         "admit-returned-assignment",
@@ -29297,9 +29391,9 @@ def _next_safe_action_packet(
         "reassign-blocked-assignment",
     }:
         skill = "planning-orchestrator-workflow"
-    elif action in {"produce-bounded-reflection-report", "archive-or-retire-completed-plan", "inspect-current-task"}:
+    elif not skill and action in {"produce-bounded-reflection-report", "archive-or-retire-completed-plan", "inspect-current-task"}:
         skill = ""
-    elif action != "choose-smallest-workflow-shape" and isinstance(preferred_routes, list):
+    elif not skill and action != "choose-smallest-workflow-shape" and isinstance(preferred_routes, list):
         for route in preferred_routes:
             if isinstance(route, dict) and route.get("skill"):
                 skill = str(route.get("skill"))
@@ -29330,6 +29424,13 @@ def _next_safe_action_packet(
             [
                 "begin ordinary workspace work before installed payload target is satisfied",
                 "claim installed payload target satisfied before recheck passes",
+            ]
+        )
+    if action == "reconcile-repository-configuration":
+        forbidden_actions.extend(
+            [
+                "begin configured-workflow implementation before repository setup reconciliation",
+                "claim repository configuration is current before startup observes a current readiness identity",
             ]
         )
     if action in {"export-assigned-handoff", "dispatch-assigned-target"}:
@@ -34381,6 +34482,55 @@ def _start_tiny_payload_fast(
             "selected_target": assignment_action.get("selected_target"),
             "target_identity_ref": assignment_action.get("target_identity_ref"),
             "implementation_allowed": assignment_action.get("implementation_allowed"),
+        }
+    configuration_readiness = _configuration_readiness_startup_payload(
+        target_root=target_root,
+        config=config,
+        selected_modules=selected_modules,
+    )
+    current_action = str(_as_dict(payload.get("immediate_next_allowed_action")).get("action") or "")
+    setup_independent_actions = {
+        "continue-read-only-source-evidence-review",
+        "inspect-closeout-trust-before-completion-answer",
+        "inspect-known-task-paths",
+        "refresh-external-issue-intent",
+        "refresh-open-issue-intake",
+        "run-installed-payload-target-upgrade",
+        "select-changed-path-proof",
+    }
+    configuration_gate_applies = (
+        configuration_readiness.get("status") in {"reconciliation-required", "stale"}
+        and installed_state_compatibility.get("status") == "compatible"
+        and not active_planning_present
+        and not normalized_paths
+        and read_only_response.get("status") != "read-only-reporting"
+        and current_action not in setup_independent_actions
+    )
+    if configuration_gate_applies:
+        payload["configuration_readiness"] = configuration_readiness
+        continuation = _as_dict(configuration_readiness.get("exact_continuation"))
+        command = str(continuation.get("command") or "")
+        payload["workflow_sufficiency"] = _workflow_sufficiency_payload(
+            surface="start",
+            decision="repository-configuration-reconciliation-required",
+            reason=str(configuration_readiness.get("reason") or "Repository configuration needs reconciliation."),
+            required_next_action="reconcile-repository-configuration",
+            evidence_required=["current receipt-bound configuration readiness identity"],
+            hard_gate=True,
+        )
+        payload["immediate_next_allowed_action"] = {
+            "action": "reconcile-repository-configuration",
+            "summary": str(configuration_readiness.get("reason") or "Reconcile repository configuration before configured work."),
+            "command": command or None,
+            "run": command or None,
+            "risk": "configuration-authority-reconciliation",
+            "required_inputs": ["target repository", "adoption receipt readiness identity"],
+            "next_proof": "Rerun ordinary startup after setup records a current readiness identity.",
+            "read_first": [command] if command else [],
+            "required_skill": "workspace-setup-jumpstart",
+            "implementation_allowed": False,
+            "claim_boundary": configuration_readiness.get("claim_boundary"),
+            "open_execplan_only_when": startup_template["open_execplan_only_when"],
         }
     payload["routine_work_context"] = _routine_work_context_payload(
         source_payload=payload,

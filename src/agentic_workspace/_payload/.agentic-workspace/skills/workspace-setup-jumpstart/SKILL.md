@@ -11,6 +11,7 @@ This subskill assumes the main AW operating skill or compact router has already 
 ## Route
 
 1. Run the configured invocation with `setup --target . --format json` for bounded post-bootstrap setup guidance.
+   When ordinary startup routed here from `configuration_readiness`, preserve that receipt identity and claim boundary: configured-workflow implementation waits, while unrelated read-only inspection remains allowed.
 2. Treat setup as pre-write and pre-seed discovery. Do not bulk-import docs, backlog, or prose.
 3. Inspect only surfaces named by setup output, by the task, or by a durable mature-repo jumpstart memory note.
 4. Promote only:
@@ -46,3 +47,4 @@ Stop and ask or create bounded Planning state if setup output points at broad re
 ## Output
 
 Report setup mode, strongest candidate surfaces, what will be seeded, promoted, or dismissed, and the proof command.
+Until a typed setup owner records the same readiness identity as current, do not claim repository configuration reconciliation is complete.
