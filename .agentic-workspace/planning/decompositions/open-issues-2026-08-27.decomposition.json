@@ -36,9 +36,9 @@
     {
       "id": "open-issues-verifier-authority",
       "title": "Keep implementation actors outside verifier decision authority",
-      "readiness": "ready",
+      "readiness": "promoted",
       "outcome": "Issue #2725 is satisfied generically and in the repository adapter: shared credentials or marker syntax cannot let an implementer occupy, suppress, satisfy, or fail an independent verifier decision cycle.",
-      "owner_surface": "proposed: .agentic-workspace/planning/execplans/open-issues-verifier-authority.plan.json",
+      "owner_surface": ".agentic-workspace/planning/lanes/open-issues-verifier-authority.lane.json",
       "proof": "Generic shared-transport role fixture, repository review-marker admission regression, implementation handoff posture, negative merge-ready and blocked-marker cases, focused tests, and hosted checks.",
       "slice_contribution_to_parent": "Restores the protected reviewer boundary required before later enforcement and delegation claims can be trusted.",
       "residual_parent_intent": "Lifecycle composition, generic cross-owner enforcement, non-local delegation, and parent closure remain.",
