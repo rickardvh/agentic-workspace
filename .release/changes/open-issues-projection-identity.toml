@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Add configured correction-event identity initialization and keep ordinary session-log analysis bounded with paged detail projections."
