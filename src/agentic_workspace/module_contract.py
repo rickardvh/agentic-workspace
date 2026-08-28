@@ -40,6 +40,9 @@ FACT_TYPES = frozenset({"boolean", "string", "string-set", "identity"})
 SETUP_CONCERN_STATUSES = frozenset({"satisfied", "inference-ready", "human-decision-required", "not-applicable"})
 SETUP_CONCERN_MATERIALITIES = frozenset({"recommended", "action-required"})
 SETUP_CONCERN_ROUTE_KINDS = frozenset({"detail", "skill", "operation", "human-decision"})
+SOURCE_OBLIGATION_STATUSES = frozenset(
+    {"satisfied", "candidate-existing", "missing", "ambiguous", "stale-or-incompatible", "insufficient-authority"}
+)
 
 
 def _string_list(value: Any, *, field: str) -> list[str]:
@@ -111,7 +114,40 @@ def _validate_setup_concern(concern: Mapping[str, Any], *, module: str, field: s
     route = _mapping(normalized.get("route"), field=f"{field}.route")
     if route.get("kind") not in SETUP_CONCERN_ROUTE_KINDS or not str(route.get("id", "")).strip():
         raise ModuleContractError(f"{field}.route requires a supported kind and non-empty id")
-    return {
+    raw_obligation = normalized.get("source_obligation")
+    source_obligation: dict[str, Any] | None = None
+    if raw_obligation is not None:
+        obligation = _mapping(raw_obligation, field=f"{field}.source_obligation")
+        semantic_need = str(obligation.get("semantic_need", "")).strip()
+        source_class = str(obligation.get("source_class", "")).strip()
+        source_owner = str(obligation.get("owner", "")).strip()
+        source_status = str(obligation.get("status", "")).strip()
+        candidates = _string_list(obligation.get("candidates", []), field=f"{field}.source_obligation.candidates")
+        affected_claims = _string_list(obligation.get("affected_claims", []), field=f"{field}.source_obligation.affected_claims")
+        auto_bind_safe = obligation.get("auto_bind_safe", False)
+        continuation = _mapping(obligation.get("continuation"), field=f"{field}.source_obligation.continuation")
+        if not semantic_need or not source_class or not source_owner:
+            raise ModuleContractError(f"{field}.source_obligation requires semantic_need, source_class, and owner")
+        if source_status not in SOURCE_OBLIGATION_STATUSES:
+            raise ModuleContractError(f"{field}.source_obligation.status must be one of: {', '.join(sorted(SOURCE_OBLIGATION_STATUSES))}")
+        if not isinstance(auto_bind_safe, bool):
+            raise ModuleContractError(f"{field}.source_obligation.auto_bind_safe must be a boolean")
+        if not str(continuation.get("kind", "")).strip() or not str(continuation.get("id", "")).strip():
+            raise ModuleContractError(f"{field}.source_obligation.continuation requires kind and id")
+        current_source = str(obligation.get("current_source", "")).strip()
+        source_obligation = {
+            **obligation,
+            "semantic_need": semantic_need,
+            "source_class": source_class,
+            "owner": source_owner,
+            "status": source_status,
+            "candidates": candidates,
+            "current_source": current_source,
+            "auto_bind_safe": auto_bind_safe,
+            "affected_claims": affected_claims,
+            "continuation": dict(continuation),
+        }
+    result = {
         **normalized,
         "id": concern_id,
         "semantic_revision": semantic_revision,
@@ -123,6 +159,9 @@ def _validate_setup_concern(concern: Mapping[str, Any], *, module: str, field: s
         "route": dict(route),
         "source": {"owner": module, "contract": MODULE_CONTRACT_VERSION},
     }
+    if source_obligation is not None:
+        result["source_obligation"] = source_obligation
+    return result
 
 
 def validate_module_contract(payload: Mapping[str, Any]) -> dict[str, Any]:

@@ -2672,6 +2672,8 @@ function applyWorkspaceConfigPolicy(values) {
     const readiness = readinessReceipt?.configuration_readiness;
     if (!isObject(readiness) || readiness.kind !== 'agentic-workspace/configuration-readiness/v1') throw new RuntimeError('config-policy cannot complete missing or unsupported readiness metadata');
     if (!isObject(decision.readiness_basis) || !isObject(decision.concern_receipts)) throw new RuntimeError('config-policy readiness completion requires exact readiness_basis and concern_receipts from setup');
+    const unresolvedSources = Object.values(decision.concern_receipts).filter((receipt) => isObject(receipt) && receipt.materiality !== 'recommended' && typeof receipt.source_obligation_status === 'string' && receipt.source_obligation_status.length > 0 && receipt.source_obligation_status !== 'satisfied');
+    if (unresolvedSources.length > 0) throw new RuntimeError('config-policy readiness cannot be completed while required repo-source obligations remain unresolved');
     effects.push({ owner: 'setup.guidance', field: 'configuration_readiness.status', value: 'current' });
   }
   if (values.dry_run !== true && rendered !== source) { mkdirSync(dirname(configPath), { recursive: true }); writeFileSync(configPath, rendered, 'utf8'); }

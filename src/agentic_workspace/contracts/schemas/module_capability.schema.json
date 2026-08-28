@@ -301,7 +301,31 @@
           "additionalProperties": true
         },
         "question": {"type": "string", "minLength": 1},
-        "inference": {"type": "string", "minLength": 1}
+        "inference": {"type": "string", "minLength": 1},
+        "source_obligation": {
+          "type": "object",
+          "required": ["semantic_need", "source_class", "owner", "status", "candidates", "auto_bind_safe", "affected_claims", "continuation"],
+          "properties": {
+            "semantic_need": {"type": "string", "minLength": 1},
+            "source_class": {"type": "string", "minLength": 1},
+            "owner": {"type": "string", "minLength": 1},
+            "status": {"enum": ["satisfied", "candidate-existing", "missing", "ambiguous", "stale-or-incompatible", "insufficient-authority"]},
+            "candidates": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+            "current_source": {"type": "string"},
+            "auto_bind_safe": {"type": "boolean"},
+            "affected_claims": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+            "continuation": {
+              "type": "object",
+              "required": ["kind", "id"],
+              "properties": {
+                "kind": {"enum": ["bind-existing", "create-source", "enrich-source", "human-decision", "disable-or-narrow", "defer"]},
+                "id": {"type": "string", "minLength": 1}
+              },
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": true
+        }
       },
       "additionalProperties": true
     },

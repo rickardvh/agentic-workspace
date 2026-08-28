@@ -54,6 +54,8 @@ Independent modules can publish an `agentic_workspace.modules` entry point whose
 
 An enabled independent module may also declare `module-setup-concerns-v1` concerns. Workspace handles them generically by stable identity plus semantic/source revision; core does not branch on module names. Only a new or changed applicable concern enters setup, while unchanged, disabled, irrelevant, or cosmetically changed capability descriptions stay out of ordinary startup pressure. Selecting or upgrading the module remains an explicit external owner action.
 
+Those concerns may carry a bounded `source_obligation` for host-repository knowledge required by the capability. This adds setup/currentness pressure and proportional claim limits, but it does not grant modules authority to invent, copy, or silently satisfy repository policy.
+
 The public contribution contract remains narrower than the full internal registry/runtime vocabulary. Independent authors should not assume that lifecycle hooks, posture fragments, workflow phases, renderer packets, report slots, callbacks, or internal descriptor fields are stable API.
 
 See [Module capability contract](module-capability-contract.md) for the exact authoring and compatibility boundary.

@@ -2590,6 +2590,17 @@ def test_setup_reconciles_only_current_enabled_module_concern_delta(tmp_path: Pa
                             "applicability": {"kind": "module-enabled"},
                             "route": {"kind": "human-decision", "id": "signals.retention-policy"},
                             "question": "How long should imported build signals be retained?",
+                            "source_obligation": {
+                                "semantic_need": "the repository-approved retention schedule",
+                                "source_class": "retention policy",
+                                "owner": "signals.retention-policy",
+                                "status": "missing" if status == "human-decision-required" else "satisfied",
+                                "candidates": [] if status == "human-decision-required" else ["docs/retention.md"],
+                                "current_source": "" if status == "human-decision-required" else "docs/retention.md",
+                                "auto_bind_safe": False,
+                                "affected_claims": ["signals-retention-ready"],
+                                "continuation": {"kind": "create-source", "id": "signals.retention-policy"},
+                            },
                         }
                     ],
                 },
@@ -2629,6 +2640,7 @@ def test_setup_reconciles_only_current_enabled_module_concern_delta(tmp_path: Pa
     assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
     enabled = json.loads(capsys.readouterr().out)["configuration_concerns"]
     assert [question["concern_id"] for question in enabled["human_questions"]] == ["module:signals:retention-policy"]
+    assert enabled["source_obligations"][0]["source_class"] == "retention policy"
     assert enabled["delta"]["counts"]["newly-applicable"] == 1
     assert all(not concern["setup_pressure"] for concern in enabled["concerns"] if not concern["id"].startswith("module:"))
 
@@ -2674,6 +2686,160 @@ def test_setup_reconciles_only_current_enabled_module_concern_delta(tmp_path: Pa
     assert cli.main(["start", "--target", str(tmp_path), "--task", "Inspect README.md.", "--format", "json"]) == 0
     disabled = json.loads(capsys.readouterr().out)["decision_packet"]
     assert "configuration_readiness" not in disabled
+
+
+def test_setup_surfaces_config_derived_repo_source_obligations_with_selective_consequences(tmp_path: Path, capsys) -> None:
+    scenario = json.loads((Path(__file__).parent / "fixtures" / "source_obligation_lifecycle_v1.json").read_text(encoding="utf-8"))
+    assert scenario["version"] == 1
+    assert [stage["id"] for stage in scenario["stages"]] == [
+        "config-creates-obligation",
+        "domain-wording-and-routing",
+        "defer",
+        "resolve",
+        "quiet-subsequent-startup",
+    ]
+
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--format", "json"]) == 0
+    capsys.readouterr()
+    _write(tmp_path / "docs" / "intent-a.md", "# Intent A\n")
+    _write(tmp_path / "docs" / "intent-b.md", "# Intent B\n")
+    _write(tmp_path / "scratch" / "classifier.md", "# Weak local note\n")
+    _write(tmp_path / "RISK_NOTES.md", "# Filename-only weak match\n")
+
+    config_path = tmp_path / ".agentic-workspace" / "config.toml"
+    config_text = config_path.read_text(encoding="utf-8")
+    config_text += (
+        '\n[assurance]\nclassification_owner = "repository-owned"\nclassification_source = "scratch/classifier.md"\n'
+        'invariant_registry = "docs/invariants.md"\n'
+        '\n[system_intent]\nsources = ["docs/intent-a.md"]\n'
+    )
+    _write(config_path, config_text)
+
+    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
+    auto_bind = json.loads(capsys.readouterr().out)["configuration_concerns"]
+    auto_by_id = {item["id"]: item for item in auto_bind["concerns"]}
+    assert auto_by_id["source:system-intent"]["source_obligation"]["status"] == "candidate-existing"
+    assert auto_by_id["source:system-intent"]["source_obligation"]["auto_bind_safe"] is True
+    assert auto_by_id["source:assurance-classifier"]["source_obligation"]["status"] == "insufficient-authority"
+    assert auto_by_id["source:invariant-registry"]["source_obligation"]["status"] == "missing"
+    assert auto_by_id["source:invariant-registry"]["source_obligation"]["candidates"] == []
+    assert auto_by_id["source:invariant-registry"]["source_obligation"]["scaffold"] == {
+        "allowed": True,
+        "content_boundary": "Create headings and ownership metadata only; do not invent substantive policy or domain decisions.",
+    }
+    assert "RISK_NOTES.md" not in auto_bind["inspection_budget"]["inspected_sources"]
+
+    config_text = config_text.replace(
+        'sources = ["docs/intent-a.md"]',
+        'sources = ["docs/intent-a.md", "docs/intent-b.md"]',
+    )
+    _write(config_path, config_text)
+    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
+    unresolved = json.loads(capsys.readouterr().out)["configuration_concerns"]
+    unresolved_by_id = {item["id"]: item for item in unresolved["concerns"]}
+    assert unresolved_by_id["source:system-intent"]["source_obligation"]["status"] == "ambiguous"
+    invariant_obligation = unresolved_by_id["source:invariant-registry"]["source_obligation"]
+    assert invariant_obligation["owner"] == "assurance.config"
+    assert invariant_obligation["continuation"]["kind"] == "create-source"
+    assert "repository-owned invariant registry" in unresolved_by_id["source:invariant-registry"]["human_decision"]["question"]
+    assert unresolved_by_id["source:invariant-registry"]["apply_route"]["status"] == "awaiting-human"
+    assert {item["concern_id"] for item in unresolved["human_questions"]} >= {
+        "source:system-intent",
+        "source:assurance-classifier",
+        "source:invariant-registry",
+    }
+
+    completion = unresolved["mutation_context"]["reconciliation_completion"]["decision"]
+    with pytest.raises(SystemExit) as incomplete_exit:
+        cli.main(
+            [
+                "config-policy",
+                "--target",
+                str(tmp_path),
+                "--decision-json",
+                json.dumps(completion),
+                "--expect-config-revision",
+                unresolved["mutation_context"]["local_config_revision"],
+                "--expect-setup-identity",
+                unresolved["mutation_context"]["setup_identity"],
+                "--format",
+                "json",
+            ]
+        )
+    assert incomplete_exit.value.code == 2
+    assert "required repo-source obligations" in capsys.readouterr().err
+
+    defer = unresolved["continuation"]["actions"]["defer"]["decision"]
+    assert (
+        cli.main(
+            [
+                "config-policy",
+                "--target",
+                str(tmp_path),
+                "--decision-json",
+                json.dumps(defer),
+                "--expect-config-revision",
+                unresolved["mutation_context"]["local_config_revision"],
+                "--expect-setup-identity",
+                unresolved["mutation_context"]["setup_identity"],
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Update README wording.", "--format", "json"]) == 0
+    unrelated = json.loads(capsys.readouterr().out)["decision_packet"]["configuration_readiness"]
+    assert unrelated["status"] == "follow-up-deferred"
+    assert (
+        cli.main(["start", "--target", str(tmp_path), "--task", "Complete the high assurance invariant review.", "--format", "json"]) == 0
+    )
+    affected = json.loads(capsys.readouterr().out)["decision_packet"]["configuration_readiness"]
+    assert affected["status"] == "action-required"
+
+    _write(tmp_path / "tools" / "classify.py", "# Repository-owned classification rules.\n")
+    _write(tmp_path / "docs" / "invariants.md", "# Invariants\n\n- Domain owner supplies these invariants.\n")
+    config_text = config_text.replace('classification_source = "scratch/classifier.md"', 'classification_source = "tools/classify.py"')
+    config_text = config_text.replace(
+        'sources = ["docs/intent-a.md", "docs/intent-b.md"]',
+        'sources = ["docs/intent-a.md", "docs/intent-b.md"]\npreferred_source = "docs/intent-a.md"',
+    )
+    _write(config_path, config_text)
+    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
+    resolved = json.loads(capsys.readouterr().out)["configuration_concerns"]
+    resolved_sources = {item["id"]: item for item in resolved["concerns"] if item["id"].startswith("source:")}
+    assert {item["source_obligation"]["status"] for item in resolved_sources.values()} == {"satisfied"}
+    completion = resolved["mutation_context"]["reconciliation_completion"]["decision"]
+    assert (
+        cli.main(
+            [
+                "config-policy",
+                "--target",
+                str(tmp_path),
+                "--decision-json",
+                json.dumps(completion),
+                "--expect-config-revision",
+                resolved["mutation_context"]["local_config_revision"],
+                "--expect-setup-identity",
+                resolved["mutation_context"]["setup_identity"],
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Update README wording.", "--format", "json"]) == 0
+    assert "configuration_readiness" not in json.loads(capsys.readouterr().out)["decision_packet"]
+
+    (tmp_path / "docs" / "invariants.md").unlink()
+    assert (
+        cli.main(["start", "--target", str(tmp_path), "--task", "Complete the high assurance invariant review.", "--format", "json"]) == 0
+    )
+    stale = json.loads(capsys.readouterr().out)["decision_packet"]["configuration_readiness"]
+    assert "workspace:source:invariant-registry" in stale["changed_concern_ids"]
 
 
 def test_config_policy_apply_rejects_secret_material_without_writes(tmp_path: Path, capsys) -> None:
