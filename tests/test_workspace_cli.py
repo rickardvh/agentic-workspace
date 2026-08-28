@@ -128,6 +128,43 @@ def test_planning_route_decision_makes_external_owner_recovery_copyable() -> Non
     assert changed["next_safe_action"]["command"] == common["reconciliation_preview_command"]
 
 
+def test_planning_route_decision_surfaces_exact_target_authority_transaction() -> None:
+    preview_command = "aw planning reconcile --target . --preview --expect-planning-revision rev-2 --format json"
+    transaction = {
+        "status": "preview-available",
+        "transaction_class": "target-authority-integration",
+        "proposal_id": "proposal-2",
+        "preview_command": preview_command,
+        "current_target_authority_revision": "target-rev-2",
+        "affected_owner_refs": [".agentic-workspace/planning/execplans/owner-2.plan.json"],
+    }
+
+    decision = workspace_runtime_planning._planning_route_decision_payload(
+        {
+            "status": "target-authority-reconciliation-stale",
+            "task_relation": "continues-selected-owner",
+            "owner_posture": "reconciliation-stale",
+            "required_transition": "reconcile",
+            "active_execplan": ".agentic-workspace/planning/execplans/owner-2.plan.json",
+            "reconciliation_preview_command": preview_command,
+            "reconciliation_transaction": transaction,
+            "route_inputs": {
+                "task_binding": {"mode": "mutation", "identity": "task-2"},
+                "owner": {"ref": ".agentic-workspace/planning/execplans/owner-2.plan.json", "lifecycle": "live"},
+            },
+        },
+        planning_revision={"revision_id": "rev-2"},
+        reconciliation_proposal={"status": "stale", "proposal_id": "old-proposal"},
+    )
+
+    action = decision["next_safe_action"]
+    assert action["action"] == "compile-planning-reconciliation-proposal"
+    assert action["command"] == preview_command
+    assert "affected owner: .agentic-workspace/planning/execplans/owner-2.plan.json" in action["required_inputs"]
+    assert "target authority revision: target-rev-2" in action["required_inputs"]
+    assert decision["reconciliation_transaction"] == transaction
+
+
 def test_successful_completion_cost_discovers_manifest_indexed_custom_output_root(tmp_path: Path) -> None:
     subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True, check=True)
     _write(tmp_path / "README.md", "fixture\n")

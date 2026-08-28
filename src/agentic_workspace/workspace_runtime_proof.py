@@ -3617,6 +3617,18 @@ def _proof_route_revision_guard(
     changed_part = " ".join(_shell_quote(path) for path in changed_paths) or "<paths>"
     field_selector = _proof_route_field_selector(canonical_edit_surface)
     operation_status = "guarded-operation-ready" if field_selector else "invalid-authority-surface"
+    materialized_validation_commands = [
+        materialized
+        for materialized in (
+            _proof_route_materialize_validation_command(
+                command=str(command),
+                changed_paths=changed_paths,
+                cli_invoke=cli_invoke,
+            )
+            for command in validation_commands
+        )
+        if materialized
+    ]
     preview_command = _command_with_cli_invoke(
         command=(
             "agentic-workspace proof --target ."
@@ -3626,7 +3638,7 @@ def _proof_route_revision_guard(
         ),
         cli_invoke=cli_invoke,
     )
-    first_validation = validation_commands[0] if validation_commands else str(preview_command)
+    first_validation = materialized_validation_commands[0] if materialized_validation_commands else str(preview_command)
     apply_command = _command_with_cli_invoke(
         command=(
             "agentic-workspace proof --target ."
@@ -3676,7 +3688,7 @@ def _proof_route_revision_guard(
             "idempotency_key": f"proof-route-health:{finding_id}:{route_authority_revision}",
             "rollback_on_failure": "restore the authority revision that matched expected_authority_revision before retrying",
         },
-        "validation_commands": validation_commands,
+        "validation_commands": materialized_validation_commands,
         "receipt_command": str(receipt_command),
         "retirement_operation": {
             "kind": "agentic-workspace/proof-route-finding-retirement/v1",
@@ -3933,12 +3945,29 @@ def _proof_route_run_validation_commands(*, target_root: Path, commands: list[st
     return results
 
 
-def _proof_route_materialize_validation_command(*, command: str, changed_paths: list[str]) -> str:
+def _proof_route_materialize_validation_command(
+    *,
+    command: str,
+    changed_paths: list[str],
+    cli_invoke: str = "",
+) -> str:
     normalized = str(command or "").strip()
     if not normalized:
         return ""
+    if cli_invoke:
+        for legacy_prefix in (
+            "uv run --active python scripts/run_agentic_workspace.py ",
+            "uv run python scripts/run_agentic_workspace.py ",
+            "python scripts/run_agentic_workspace.py ",
+        ):
+            if normalized.startswith(legacy_prefix):
+                normalized = f"agentic-workspace {normalized.removeprefix(legacy_prefix)}"
+                break
     changed_part = " ".join(_shell_quote(path) for path in changed_paths)
-    return normalized.replace("<paths>", changed_part)
+    materialized = normalized.replace("<paths>", changed_part)
+    if cli_invoke:
+        materialized = str(_command_with_cli_invoke(command=materialized, cli_invoke=cli_invoke))
+    return materialized
 
 
 def _proof_receipt_command_equivalent(left: str, right: str) -> bool:
@@ -3964,17 +3993,29 @@ def _proof_receipt_command_equivalent(left: str, right: str) -> bool:
 
 def _proof_route_independent_validation_commands(
     *,
+    target_root: Path,
     selection: dict[str, Any],
     finding_id: str,
     changed_paths: list[str],
     fallback_selected_commands: list[dict[str, Any]],
 ) -> tuple[list[str], str]:
+    try:
+        cli_invoke = _load_workspace_config(target_root=target_root).cli_invoke
+    except (OSError, WorkspaceUsageError) as exc:
+        raise WorkspaceUsageError(
+            "proof-route repair cannot materialize validation commands because the effective Agentic Workspace invocation is unavailable; "
+            "repair [workspace].cli_invoke before applying the route change."
+        ) from exc
     route_health = _as_dict(_as_dict(selection.get("proof_route_maintenance")).get("route_health"))
     for packet in _list_payload(route_health.get("repair_packets")):
         if not isinstance(packet, dict) or str(packet.get("finding_id") or "") != str(finding_id or "").strip():
             continue
         commands = [
-            _proof_route_materialize_validation_command(command=str(command), changed_paths=changed_paths)
+            _proof_route_materialize_validation_command(
+                command=str(command),
+                changed_paths=changed_paths,
+                cli_invoke=cli_invoke,
+            )
             for command in _list_payload(packet.get("validation_commands"))
         ]
         commands = [command for command in commands if command]
@@ -4481,6 +4522,7 @@ def _proof_route_repair_operation_payload(
         }
     rollback_performed = False
     validation_commands, validation_authority = _proof_route_independent_validation_commands(
+        target_root=target_root,
         selection=selection,
         finding_id=str(finding_id).strip(),
         changed_paths=changed_paths,
@@ -5064,7 +5106,7 @@ def _proof_route_health_payload(
             canonical_edit_surface=".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
             proposed_delta="Add or widen the smallest focused domain proof lane that owns the uncovered changed paths.",
             validation_commands=[
-                "uv run --active python scripts/run_agentic_workspace.py proof --target . --changed <paths> --select focused_route_coverage_audit,route_refinement_required --format json"
+                "agentic-workspace proof --target . --changed <paths> --select focused_route_coverage_audit,route_refinement_required --format json"
             ],
         )
 
@@ -5090,7 +5132,7 @@ def _proof_route_health_payload(
             canonical_edit_surface=".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
             proposed_delta="Repair the command, replace it with an executable focused command, or mark the route manual with explicit evidence.",
             validation_commands=[
-                "uv run --active python scripts/run_agentic_workspace.py proof --target . --changed <paths> --select selected_commands,unavailable_commands,route_refinement_required --format json"
+                "agentic-workspace proof --target . --changed <paths> --select selected_commands,unavailable_commands,route_refinement_required --format json"
             ],
         )
 
@@ -5141,7 +5183,7 @@ def _proof_route_health_payload(
                 "if broad proof is still needed, require structured broad-escalation evidence."
             ),
             validation_commands=[
-                "uv run --active python scripts/run_agentic_workspace.py proof --target . --changed <paths> --select proof_route_maintenance,proof_route_strategy_preservation,proof_route_strategy_claim_gate --format json"
+                "agentic-workspace proof --target . --changed <paths> --select proof_route_maintenance,proof_route_strategy_preservation,proof_route_strategy_claim_gate --format json"
             ],
             execution_evidence=observation,
             stable_identity={
@@ -5217,7 +5259,7 @@ def _proof_route_health_payload(
             canonical_edit_surface=".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
             proposed_delta="Move broad proof behind workspace_broad_suite escalation or replace the subsystem/default hint with focused route-owned proof.",
             validation_commands=[
-                "uv run --active python scripts/run_agentic_workspace.py proof --target . --changed <paths> --select proof_route_strategy_decision,proof_narrowness,required_commands --format json"
+                "agentic-workspace proof --target . --changed <paths> --select proof_route_strategy_decision,proof_narrowness,required_commands --format json"
             ],
             stable_identity={
                 "command_identity": dependency_claim_identity["command_identity"],
@@ -5236,7 +5278,7 @@ def _proof_route_health_payload(
             canonical_edit_surface=".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
             proposed_delta="Add focused route coverage for the changed scope or select workspace_broad_suite only with structured escalation evidence.",
             validation_commands=[
-                "uv run --active python scripts/run_agentic_workspace.py proof --target . --changed <paths> --select proof_route_strategy_decision,proof_narrowness,route_refinement_required --format json"
+                "agentic-workspace proof --target . --changed <paths> --select proof_route_strategy_decision,proof_narrowness,route_refinement_required --format json"
             ],
         )
 
@@ -5250,7 +5292,7 @@ def _proof_route_health_payload(
             canonical_edit_surface=str(hint.get("source_path") or ".agentic-workspace/proof-route-hints.json"),
             proposed_delta="Retire, supersede, or reconfirm the learned route with current executable evidence.",
             validation_commands=[
-                "uv run --active python scripts/run_agentic_workspace.py proof --target . --changed <paths> --select learned_route_hints,proof_route_maintenance --format json"
+                "agentic-workspace proof --target . --changed <paths> --select learned_route_hints,proof_route_maintenance --format json"
             ],
         )
 
@@ -5264,7 +5306,7 @@ def _proof_route_health_payload(
             canonical_edit_surface=str(hint.get("source_path") or ".agentic-workspace/proof-route-hints.json"),
             proposed_delta="Recapture the route with required authority metadata or dismiss it as non-applicable.",
             validation_commands=[
-                "uv run --active python scripts/run_agentic_workspace.py proof --target . --changed <paths> --select learned_route_hints,proof_route_maintenance --format json"
+                "agentic-workspace proof --target . --changed <paths> --select learned_route_hints,proof_route_maintenance --format json"
             ],
         )
 
@@ -6165,7 +6207,7 @@ def _route_refinement_required_payload(
         if status == "required"
         else "No route refinement required for the current changed paths.",
         "repair_surface": ".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
-        "audit_command": "uv run --active python scripts/run_agentic_workspace.py proof --target . --changed <paths> --select focused_route_coverage_audit,route_refinement_required --format json",
+        "audit_command": "agentic-workspace proof --target . --changed <paths> --select focused_route_coverage_audit,route_refinement_required --format json",
         "claim_boundary": "route refinement must be resolved or explicitly escalated before broad proof is treated as the acceptance boundary",
     }
 

@@ -978,6 +978,136 @@ def test_stale_disjoint_proposal_is_skipped_while_current_owner_applies(tmp_path
     assert json.loads((tmp_path / current_owner_ref).read_text(encoding="utf-8"))["relationships"]["integration"]["status"] == "integrated"
 
 
+def test_stale_target_authority_compiles_one_bounded_preview_apply_transaction(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _init_git(tmp_path)
+    completed_owner_refs = [_write_owner(tmp_path, owner_id) for owner_id in ("issue-2793-parent", "issue-2793-child")]
+    unrelated_owner_ref = _write_owner(tmp_path, "unrelated-live-owner")
+    select_existing_owner(owner="unrelated-live-owner", target=tmp_path)
+    shape_issue_relation(issue="2793", lane="closeout", priority="p0.2", maturity="ready-to-promote", target=tmp_path)
+    for index, owner_ref in enumerate(completed_owner_refs):
+        propose_integration_transition(
+            proposal_id=f"issue-2793-{index}-integrated",
+            owner_ref=owner_ref,
+            requested_transition="mark-integrated",
+            proof=f"proof://2793/{index}",
+            target=tmp_path,
+        )
+    # This unrelated target-authority change makes both proposal CAS revisions
+    # stale without changing either proposal's bounded semantic subject.
+    unrelated_path = tmp_path / unrelated_owner_ref
+    unrelated = json.loads(unrelated_path.read_text(encoding="utf-8"))
+    unrelated["next_action"] = "preserve this unrelated human intent"
+    unrelated_path.write_text(json.dumps(unrelated, indent=2) + "\n", encoding="utf-8")
+    unrelated_before = unrelated_path.read_bytes()
+    relation_path = tmp_path / ".agentic-workspace/planning/issue-relations/2793.issue-relation.json"
+    relation_before = relation_path.read_bytes()
+    selection_path = tmp_path / ".agentic-workspace/local/planning/owner-selection.json"
+    selection_before = selection_path.read_bytes()
+    assert not (tmp_path / ".agentic-workspace/planning/state.toml").exists()
+
+    preview = planning_reconcile(target=tmp_path, preview=True)
+
+    assert preview["status"] == "preview"
+    assert preview["transaction_class"] == "target-authority-integration"
+    proposal = preview["proposal"]
+    assert proposal["affected_owner_refs"] == sorted(completed_owner_refs)
+    assert proposal["eligible_proposals"] == ["issue-2793-0-integrated", "issue-2793-1-integrated"]
+    assert proposal["refreshed_proposals"] == proposal["eligible_proposals"]
+    assert [item["operation"] for item in proposal["operations"]] == [
+        "refresh-target-authority-and-apply",
+        "refresh-target-authority-and-apply",
+    ]
+    assert len(json.dumps(preview)) < 20_000
+    assert "--preview" in proposal["preview_command"]
+    assert f"--proposal {proposal['proposal_id']}" in proposal["apply_command"]
+    assert unrelated_path.read_bytes() == unrelated_before
+
+    applied = planning_reconcile(
+        target=tmp_path,
+        apply=True,
+        proposal=proposal["proposal_id"],
+        expected_planning_revision=proposal["source"]["planning_revision"],
+    )
+
+    assert applied["status"] == "applied"
+    assert applied["receipt"]["applied_proposals"] == proposal["eligible_proposals"]
+    assert applied["postcondition"]["repository_views"] == "derived-no-second-reconciliation-required"
+    assert unrelated_path.read_bytes() == unrelated_before
+    assert relation_path.read_bytes() == relation_before
+    assert selection_path.read_bytes() == selection_before
+    assert not (tmp_path / ".agentic-workspace/planning/state.toml").exists()
+    for owner_ref in completed_owner_refs:
+        owner = json.loads((tmp_path / owner_ref).read_text(encoding="utf-8"))
+        assert owner["relationships"]["integration"]["status"] == "integrated"
+
+    replay = planning_reconcile(
+        target=tmp_path,
+        apply=True,
+        proposal=proposal["proposal_id"],
+        expected_planning_revision=proposal["source"]["planning_revision"],
+    )
+    assert replay["status"] == "already-applied"
+    assert replay["receipt"] == applied["receipt"]
+
+
+def test_target_authority_transaction_keeps_stale_subject_conflict_out_of_disjoint_apply(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _init_git(tmp_path)
+    stale_owner_ref = _write_owner(tmp_path, "semantic-conflict")
+    eligible_owner_ref = _write_owner(tmp_path, "disjoint-eligible")
+    for proposal_id, owner_ref in (("semantic-conflict", stale_owner_ref), ("disjoint-eligible", eligible_owner_ref)):
+        propose_integration_transition(proposal_id=proposal_id, owner_ref=owner_ref, target=tmp_path)
+    stale_path = tmp_path / stale_owner_ref
+    stale_owner = json.loads(stale_path.read_text(encoding="utf-8"))
+    stale_owner["next_action"] = "genuine human-authored semantic change"
+    stale_path.write_text(json.dumps(stale_owner, indent=2) + "\n", encoding="utf-8")
+
+    preview = planning_reconcile(target=tmp_path, preview=True)
+
+    assert preview["status"] == "preview"
+    proposal = preview["proposal"]
+    assert proposal["eligible_proposals"] == ["disjoint-eligible"]
+    assert proposal["semantic_conflicts"][0]["proposal_id"] == "semantic-conflict"
+    assert proposal["semantic_conflicts"][0]["reason_code"] == "stale-integration-subject-revision"
+
+    applied = planning_reconcile(
+        target=tmp_path,
+        apply=True,
+        proposal=proposal["proposal_id"],
+        expected_planning_revision=proposal["source"]["planning_revision"],
+    )
+    assert applied["status"] == "applied"
+    assert _proposal_record(tmp_path, "semantic-conflict")["status"] == "pending"
+    assert _proposal_record(tmp_path, "disjoint-eligible")["status"] == "integrated"
+
+
+def test_target_authority_transaction_returns_exact_regeneration_after_preview_cas_drift(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    _init_git(tmp_path)
+    owner_ref = _write_owner(tmp_path, "cas-refresh-owner")
+    propose_integration_transition(proposal_id="cas-refresh-owner", owner_ref=owner_ref, proof="proof://stable", target=tmp_path)
+    preview = planning_reconcile(target=tmp_path, preview=True)
+    prior = preview["proposal"]
+    _write_owner(tmp_path, "unrelated-cas-advance")
+
+    stale_apply = planning_reconcile(
+        target=tmp_path,
+        apply=True,
+        proposal=prior["proposal_id"],
+        expected_planning_revision=prior["source"]["planning_revision"],
+    )
+
+    assert stale_apply["status"] == "blocked"
+    assert stale_apply["reason"] == "proposal-stale-or-mismatched"
+    assert stale_apply["expected_proposal"] != prior["proposal_id"]
+    assert stale_apply["preview_command"].count("planning reconcile") == 1
+    refreshed = planning_reconcile(target=tmp_path, preview=True)
+    assert refreshed["proposal"]["proposal_id"] == stale_apply["expected_proposal"]
+    assert refreshed["proposal"]["eligible_proposals"] == prior["eligible_proposals"]
+    assert refreshed["proposal"]["operations"][0]["operation"] == "refresh-target-authority-and-apply"
+
+
 def test_same_owner_pending_proposals_fail_closed_before_disjoint_apply(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     owner_ref = _write_owner(tmp_path, "issue-overlap")

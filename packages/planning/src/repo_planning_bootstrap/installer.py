@@ -3201,6 +3201,16 @@ def planning_reconcile(
     expected_planning_revision: str = "",
 ) -> dict[str, Any]:
     target_root = resolve_target_root(target)
+    if preview or apply or proposal:
+        integration_transaction = _planning_target_authority_reconciliation_transaction(
+            target_root=target_root,
+            apply=apply,
+            proposal_id=proposal,
+            expected_planning_revision=expected_planning_revision,
+            dry_run=dry_run,
+        )
+        if integration_transaction is not None:
+            return integration_transaction
     payload = _planning_reconcile_payload(target_root)
     if issue.strip() or external_ref.strip() or apply_issue_relation_reconcile:
         payload["issue_relation_reconciliation"] = _reconcile_issue_relation(
@@ -3349,6 +3359,185 @@ def _write_planning_reconciliation_transaction(
         "apply_result": apply_box,
     }
     receipt_path.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8", newline="\n")
+
+
+def _planning_target_authority_reconciliation_transaction(
+    *,
+    target_root: Path,
+    apply: bool,
+    proposal_id: str,
+    expected_planning_revision: str,
+    dry_run: bool,
+) -> dict[str, Any] | None:
+    """Compile stale integration proposals into one bounded preview/apply transaction."""
+    _proposal_dir, pending_paths = _pending_integration_proposal_paths(target_root)
+    requested_id = proposal_id.strip()
+    persisted_proposal_path = target_root / PLANNING_RECONCILIATION_PROPOSAL_ROOT / f"{requested_id}.json"
+    persisted_receipt_path = target_root / PLANNING_RECONCILIATION_RECEIPT_ROOT / f"{requested_id}.json"
+
+    def transaction_class(path: Path) -> str:
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+            return ""
+        return str(payload.get("transaction_class") or "") if isinstance(payload, dict) else ""
+
+    integration_request = bool(pending_paths) or (
+        bool(requested_id)
+        and (
+            transaction_class(persisted_proposal_path) == "target-authority-integration"
+            or transaction_class(persisted_receipt_path) == "target-authority-integration"
+        )
+    )
+    if not integration_request:
+        return None
+    prior_result = _reconciliation_prior_apply_result(target_root=target_root, apply=apply, proposal_id=requested_id)
+    if prior_result is not None:
+        return prior_result
+
+    compiled_batch = _apply_pending_integration_proposals(target_root=target_root, dry_run=True)
+    batch_status = str(compiled_batch.get("status") or "")
+    if batch_status == "blocked":
+        return {
+            "kind": "agentic-planning/reconciliation-transaction/v1",
+            "transaction_class": "target-authority-integration",
+            "status": "blocked",
+            "reason": str(compiled_batch.get("reason_code") or "integration-reconciliation-blocked"),
+            "affected_owner_refs": compiled_batch.get("affected_owner_refs", []),
+            "target_prerequisite": compiled_batch.get("recovery_command", ""),
+            "conflict": compiled_batch,
+        }
+    eligible_proposals = [str(item) for item in compiled_batch.get("eligible_proposals", []) if str(item)]
+    skipped_proposals = [item for item in compiled_batch.get("skipped_proposals", []) if isinstance(item, dict)]
+    if not eligible_proposals:
+        return {
+            "kind": "agentic-planning/reconciliation-transaction/v1",
+            "transaction_class": "target-authority-integration",
+            "status": "blocked",
+            "reason": "semantic-integration-conflict" if skipped_proposals else "no-eligible-integration-proposals",
+            "semantic_conflicts": skipped_proposals,
+        }
+
+    revision = planning_revision(target_root)
+    planning_revision_id = str(revision.get("revision_id") or "")
+    target_authority_revision = str(compiled_batch.get("target_authority_before") or "")
+    affected_owner_refs = [str(item) for item in compiled_batch.get("affected_owner_refs", []) if str(item)]
+    refreshed_proposals = [str(item) for item in compiled_batch.get("refreshed_proposals", []) if str(item)]
+    operations = [item for item in compiled_batch.get("operations", []) if isinstance(item, dict)]
+    source = {
+        "planning_revision": planning_revision_id,
+        "target_authority_revision": target_authority_revision,
+        "eligible_proposals": eligible_proposals,
+        "affected_owner_refs": affected_owner_refs,
+        "refreshed_proposals": refreshed_proposals,
+        "operations": operations,
+        "semantic_conflicts": skipped_proposals,
+    }
+    computed_id = hashlib.sha256(json.dumps(source, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:20]
+    cli = _workspace_cli_invoke(target_root)
+    preview_command = f"{cli} planning reconcile --target . --preview --expect-planning-revision {planning_revision_id} --format json"
+    apply_command = (
+        f"{cli} planning reconcile --target . --apply --proposal {computed_id} "
+        f"--expect-planning-revision {planning_revision_id} --format json"
+    )
+    proposal_payload = {
+        "kind": "agentic-planning/reconciliation-proposal/v1",
+        "transaction_class": "target-authority-integration",
+        "proposal_id": computed_id,
+        "source": source,
+        "operations": operations,
+        "affected_owner_refs": affected_owner_refs,
+        "eligible_proposals": eligible_proposals,
+        "refreshed_proposals": refreshed_proposals,
+        "semantic_conflicts": skipped_proposals,
+        "current_target_authority_revision": target_authority_revision,
+        "preserved_invariants": [
+            "unrelated owner, relation, and integration records",
+            "worktree-local current-owner selection",
+            "human-authored owner intent and proof references",
+            "repository-wide Planning views remain derived",
+            "planning/state.toml remains absent or legacy-only",
+        ],
+        "preview_command": preview_command,
+        "apply_command": apply_command,
+    }
+    proposal_path = target_root / PLANNING_RECONCILIATION_PROPOSAL_ROOT / f"{computed_id}.json"
+    receipt_path = target_root / PLANNING_RECONCILIATION_RECEIPT_ROOT / f"{computed_id}.json"
+    if not apply:
+        if not dry_run:
+            proposal_path.parent.mkdir(parents=True, exist_ok=True)
+            proposal_path.write_text(json.dumps(proposal_payload, indent=2) + "\n", encoding="utf-8", newline="\n")
+        return {
+            "kind": "agentic-planning/reconciliation-transaction/v1",
+            "transaction_class": "target-authority-integration",
+            "status": "preview",
+            "proposal": proposal_payload,
+            "proposal_path": _planning_surface_relative(target_root, proposal_path),
+            "dry_run": dry_run,
+        }
+    if not requested_id:
+        return {
+            "kind": "agentic-planning/reconciliation-transaction/v1",
+            "transaction_class": "target-authority-integration",
+            "status": "blocked",
+            "reason": "proposal-required",
+            "preview_command": preview_command,
+        }
+    if requested_id != computed_id:
+        return {
+            "kind": "agentic-planning/reconciliation-transaction/v1",
+            "transaction_class": "target-authority-integration",
+            "status": "blocked",
+            "reason": "proposal-stale-or-mismatched",
+            "expected_proposal": computed_id,
+            "preview_command": preview_command,
+        }
+    if expected_planning_revision.strip() != planning_revision_id:
+        return {
+            "kind": "agentic-planning/reconciliation-transaction/v1",
+            "transaction_class": "target-authority-integration",
+            "status": "blocked",
+            "reason": "planning-revision-mismatch",
+            "expected_planning_revision": expected_planning_revision.strip(),
+            "actual_planning_revision": planning_revision_id,
+            "preview_command": preview_command,
+        }
+    transaction_receipt = {
+        "kind": "agentic-planning/reconciliation-receipt/v1",
+        "transaction_class": "target-authority-integration",
+        "proposal_id": computed_id,
+        "planning_revision_before": planning_revision_id,
+        "target_authority_before": target_authority_revision,
+        "preserved_invariants": proposal_payload["preserved_invariants"],
+        "semantic_conflicts": skipped_proposals,
+    }
+    applied_batch = _apply_pending_integration_proposals(
+        target_root=target_root,
+        expected_planning_revision=target_authority_revision,
+        dry_run=False,
+        reconciliation_receipt_path=receipt_path,
+        reconciliation_receipt=transaction_receipt,
+    )
+    if applied_batch.get("status") != "applied" or not receipt_path.is_file():
+        return {
+            "kind": "agentic-planning/reconciliation-transaction/v1",
+            "transaction_class": "target-authority-integration",
+            "status": "blocked",
+            "reason": str(applied_batch.get("reason_code") or "integration-reconciliation-apply-failed"),
+            "apply_result": applied_batch,
+        }
+    return {
+        "kind": "agentic-planning/reconciliation-transaction/v1",
+        "transaction_class": "target-authority-integration",
+        "status": "applied",
+        "proposal": proposal_payload,
+        "receipt": json.loads(receipt_path.read_text(encoding="utf-8")),
+        "apply_result": applied_batch,
+        "postcondition": {
+            "integration": "derived-from-owner-records-and-integration-receipts",
+            "repository_views": "derived-no-second-reconciliation-required",
+        },
+    }
 
 
 def _planning_reconciliation_transaction(
@@ -14523,7 +14712,12 @@ def _no_pending_integration_payload(result: InstallResult, proposal_dir: Path) -
 
 
 def _apply_pending_integration_proposals(
-    *, target_root: Path, expected_planning_revision: str = "", dry_run: bool = False
+    *,
+    target_root: Path,
+    expected_planning_revision: str = "",
+    dry_run: bool = False,
+    reconciliation_receipt_path: Path | None = None,
+    reconciliation_receipt: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     result = InstallResult(target_root=target_root, message="Apply pending Planning integration proposals", dry_run=dry_run)
     admission = _git_branch_admission(target_root)
@@ -14821,6 +15015,8 @@ def _apply_pending_integration_proposals(
         proposal_dir=proposal_dir,
         current_target_id=current_target_id,
         dry_run=dry_run,
+        reconciliation_receipt_path=reconciliation_receipt_path,
+        reconciliation_receipt=reconciliation_receipt,
     )
 
 
@@ -14836,6 +15032,8 @@ def _finalize_pending_integration_batch(
     proposal_dir: Path,
     current_target_id: str,
     dry_run: bool,
+    reconciliation_receipt_path: Path | None = None,
+    reconciliation_receipt: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Validate and atomically persist an admitted pending-integration batch."""
 
@@ -14863,6 +15061,29 @@ def _finalize_pending_integration_batch(
         "target_authority_before": current_target_id,
         "target_authority_after": final_target_id,
     }
+    affected_owner_refs = sorted(
+        {
+            str(item.get("owner", {}).get("ref") or "")
+            for item in receipts
+            if isinstance(item.get("owner"), dict) and str(item.get("owner", {}).get("ref") or "")
+        }
+    )
+    refreshed_proposals = sorted(
+        str(item.get("id") or "")
+        for item in receipts
+        if str(item.get("revisions", {}).get("expected_planning_revision") or "") != current_target_id
+    )
+    operation_summary = [
+        {
+            "proposal_id": str(item.get("id") or ""),
+            "owner_ref": str(item.get("owner", {}).get("ref") or "") if isinstance(item.get("owner"), dict) else "",
+            "transition": str(item.get("requested_transition") or ""),
+            "operation": "refresh-target-authority-and-apply"
+            if str(item.get("id") or "") in refreshed_proposals
+            else "apply-current-proposal",
+        }
+        for item in receipts
+    ]
     if dry_run:
         result.add("would update", proposal_dir, f"apply {len(proposals_applied)} pending integration proposal(s)")
         payload = result.to_dict()
@@ -14872,14 +15093,33 @@ def _finalize_pending_integration_batch(
         payload["target_authority_before"] = current_target_id
         payload["target_authority_after"] = final_target_id
         payload["skipped_proposals"] = skipped_proposals
+        payload["eligible_proposals"] = proposals_applied
+        payload["affected_owner_refs"] = affected_owner_refs
+        payload["refreshed_proposals"] = refreshed_proposals
+        payload["operations"] = operation_summary
         return payload
 
     def write_pending_integrations() -> None:
         for path, record, schema_path in finalized_writes:
             _write_schema_backed_planning_record(record_path=path, record=record, schema_path=schema_path)
+        if reconciliation_receipt_path is not None and reconciliation_receipt is not None:
+            transaction_receipt = {
+                **reconciliation_receipt,
+                "target_authority_after": final_target_id,
+                "applied_proposals": proposals_applied,
+                "affected_owner_refs": affected_owner_refs,
+                "refreshed_proposals": refreshed_proposals,
+                "skipped_proposals": skipped_proposals,
+                "operations": operation_summary,
+            }
+            reconciliation_receipt_path.parent.mkdir(parents=True, exist_ok=True)
+            reconciliation_receipt_path.write_text(json.dumps(transaction_receipt, indent=2) + "\n", encoding="utf-8", newline="\n")
 
     try:
-        _apply_planning_writes_atomically([path for path, _record, _schema_path in finalized_writes], write_pending_integrations)
+        touched_paths = [path for path, _record, _schema_path in finalized_writes]
+        if reconciliation_receipt_path is not None and reconciliation_receipt is not None:
+            touched_paths.append(reconciliation_receipt_path)
+        _apply_planning_writes_atomically(touched_paths, write_pending_integrations)
     except OSError as exc:
         result.add("manual review", proposal_dir, f"pending integration apply rolled back after write failure: {exc}")
         result.reason_code = "integration-apply-rolled-back"
@@ -14898,6 +15138,12 @@ def _finalize_pending_integration_batch(
     payload["target_authority_after"] = final_target_id
     payload["receipts"] = [str(item.get("id", "")) for item in receipts]
     payload["skipped_proposals"] = skipped_proposals
+    payload["eligible_proposals"] = proposals_applied
+    payload["affected_owner_refs"] = affected_owner_refs
+    payload["refreshed_proposals"] = refreshed_proposals
+    payload["operations"] = operation_summary
+    if reconciliation_receipt_path is not None and reconciliation_receipt_path.is_file():
+        payload["reconciliation_receipt"] = json.loads(reconciliation_receipt_path.read_text(encoding="utf-8"))
     return payload
 
 

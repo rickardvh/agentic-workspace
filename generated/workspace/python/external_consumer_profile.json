@@ -3,7 +3,7 @@
   "authority": "command_package_ir.json",
   "compatibility": {
     "protocol": "1.0.0",
-    "fingerprint": "sha256:9d8b8afcff8b8af91c997f81377be0916576d4572a254ce8ba6aebffad150e21",
+    "fingerprint": "sha256:655503d37273497c28f89303a780fd772a26f68933963471b980614024c141a4",
     "additive_fields": "allowed"
   },
   "support_rule": "Operations fail closed unless generated status, effects, conformance, and Python/TypeScript target accounting are present.",
@@ -10729,7 +10729,7 @@
       "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.reconcile.report.json",
       "operation_compatibility": {
         "schema_version": "agentic-workspace/operation/v1",
-        "fingerprint": "sha256:a54ac3b5d470df37834db853a30d110c7e4c0e01e409de6d88107ae3f0768ca5"
+        "fingerprint": "sha256:e2e3b5d679479455443865319f5f6f2057846386513ad668ff228a0a788b5a29"
       },
       "operation_resources": {
         "python": {

@@ -8,7 +8,7 @@
   },
   "kind": "agentic-workspace/external-operation-conformance-receipt-store/v1",
   "mirror_publication": {
-    "generation_id": "external-conformance-publication:d26ef8814b2bb4d99b4b6333",
+    "generation_id": "external-conformance-publication:4521d942348dda9323265ef2",
     "kind": "agentic-workspace/external-operation-conformance-mirror-publication/v1",
     "path_count": 3,
     "paths": [
@@ -16,9 +16,9 @@
       "generated/workspace/python/external_operation_conformance_receipts.json",
       "generated/workspace/typescript/external_operation_conformance_receipts.json"
     ],
-    "payload_digest": "sha256:d26ef8814b2bb4d99b4b63336a028577f7e38684206444d09e625f8f43fbf6ad",
-    "previous_digest": "9ee00e8538805ac1cb38c016df81b1a239e6b97a399f8a8892210c4f2ff5b507",
-    "publisher_pid": 2228,
+    "payload_digest": "sha256:4521d942348dda9323265ef2382fa43342502b959933ea7e150f10106df7b3f1",
+    "previous_digest": "71d1ab8550a39b2631d784c4c57a3ae6955f4991b8c5455aac87ac0ffd812f8e",
+    "publisher_pid": 32616,
     "reader_rule": "Readers must verify payload_digest before consuming receipts and reject stores without one published generation.",
     "status": "published"
   },
@@ -469,8 +469,8 @@
       "operation_result_evidence": [
         "operation-results:count=54@sha256:8845f2fecae3613825209d52"
       ],
-      "profile_fingerprint": "sha256:9d8b8afcff8b8af91c997f81377be0916576d4572a254ce8ba6aebffad150e21",
-      "receipt_ref": "external-conformance:config.report:533fbc89029c6c5204aa097b",
+      "profile_fingerprint": "sha256:655503d37273497c28f89303a780fd772a26f68933963471b980614024c141a4",
+      "receipt_ref": "external-conformance:config.report:07c56a957de2130116d36b6c",
       "result_identity": {
         "client_semantics_revision": "sha256:a832c458ff7c47b635f771febd2cc753c601ad89a226f4e2810ed47e6ae346e0",
         "executed_at": "2026-08-28T08:45:24Z",
@@ -806,8 +806,8 @@
       "operation_result_evidence": [
         "operation-results:count=3@sha256:1248707c712c0957e633b9ec"
       ],
-      "profile_fingerprint": "sha256:9d8b8afcff8b8af91c997f81377be0916576d4572a254ce8ba6aebffad150e21",
-      "receipt_ref": "external-conformance:correction-event.submit:798acdfc10c1c1a8743c8169",
+      "profile_fingerprint": "sha256:655503d37273497c28f89303a780fd772a26f68933963471b980614024c141a4",
+      "receipt_ref": "external-conformance:correction-event.submit:697ad23b150b15eb9538badf",
       "result_identity": {
         "client_semantics_revision": "sha256:a832c458ff7c47b635f771febd2cc753c601ad89a226f4e2810ed47e6ae346e0",
         "executed_at": "2026-08-28T08:45:24Z",
@@ -1290,8 +1290,8 @@
       "operation_result_evidence": [
         "operation-results:count=85@sha256:10f42970cbf548b8c62b2911"
       ],
-      "profile_fingerprint": "sha256:9d8b8afcff8b8af91c997f81377be0916576d4572a254ce8ba6aebffad150e21",
-      "receipt_ref": "external-conformance:delegation-outcome.append:8d1a09811e79c5da1153c090",
+      "profile_fingerprint": "sha256:655503d37273497c28f89303a780fd772a26f68933963471b980614024c141a4",
+      "receipt_ref": "external-conformance:delegation-outcome.append:9bac778ddf49f8bcfb74693b",
       "result_identity": {
         "client_semantics_revision": "sha256:a832c458ff7c47b635f771febd2cc753c601ad89a226f4e2810ed47e6ae346e0",
         "executed_at": "2026-08-28T08:45:24Z",
@@ -1780,8 +1780,8 @@
       "operation_result_evidence": [
         "operation-results:count=48@sha256:661f343d998f1166fa80f0b5"
       ],
-      "profile_fingerprint": "sha256:9d8b8afcff8b8af91c997f81377be0916576d4572a254ce8ba6aebffad150e21",
-      "receipt_ref": "external-conformance:external-evidence.query:a8a270b1bf1a6398b5f2d023",
+      "profile_fingerprint": "sha256:655503d37273497c28f89303a780fd772a26f68933963471b980614024c141a4",
+      "receipt_ref": "external-conformance:external-evidence.query:581f5eaa3d8c01bcfc43319a",
       "result_identity": {
         "client_semantics_revision": "sha256:a832c458ff7c47b635f771febd2cc753c601ad89a226f4e2810ed47e6ae346e0",
         "executed_at": "2026-08-28T08:45:24Z",
@@ -2270,8 +2270,8 @@
       "operation_result_evidence": [
         "operation-results:count=48@sha256:fa5905b83f178afe9b2ad2eb"
       ],
-      "profile_fingerprint": "sha256:9d8b8afcff8b8af91c997f81377be0916576d4572a254ce8ba6aebffad150e21",
-      "receipt_ref": "external-conformance:external-evidence.submit:f1754f9924748f64b5ae6a36",
+      "profile_fingerprint": "sha256:655503d37273497c28f89303a780fd772a26f68933963471b980614024c141a4",
+      "receipt_ref": "external-conformance:external-evidence.submit:5b03b8422a1229ec05005430",
       "result_identity": {
         "client_semantics_revision": "sha256:a832c458ff7c47b635f771febd2cc753c601ad89a226f4e2810ed47e6ae346e0",
         "executed_at": "2026-08-28T08:45:24Z",
@@ -2760,8 +2760,8 @@
       "operation_result_evidence": [
         "operation-results:count=51@sha256:58a2f8839cbb66b66adc6e2c"
       ],
-      "profile_fingerprint": "sha256:9d8b8afcff8b8af91c997f81377be0916576d4572a254ce8ba6aebffad150e21",
-      "receipt_ref": "external-conformance:instructions.explain:3c86e637d7bc795bda0376e2",
+      "profile_fingerprint": "sha256:655503d37273497c28f89303a780fd772a26f68933963471b980614024c141a4",
+      "receipt_ref": "external-conformance:instructions.explain:30552e6a908d43e25dd99293",
       "result_identity": {
         "client_semantics_revision": "sha256:a832c458ff7c47b635f771febd2cc753c601ad89a226f4e2810ed47e6ae346e0",
         "executed_at": "2026-08-28T08:45:24Z",
