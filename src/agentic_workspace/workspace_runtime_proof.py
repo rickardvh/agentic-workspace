@@ -3954,14 +3954,15 @@ def _proof_route_materialize_validation_command(
     normalized = str(command or "").strip()
     if not normalized:
         return ""
-    for legacy_prefix in (
-        "uv run --active python scripts/run_agentic_workspace.py ",
-        "uv run python scripts/run_agentic_workspace.py ",
-        "python scripts/run_agentic_workspace.py ",
-    ):
-        if normalized.startswith(legacy_prefix):
-            normalized = f"agentic-workspace {normalized.removeprefix(legacy_prefix)}"
-            break
+    if cli_invoke:
+        for legacy_prefix in (
+            "uv run --active python scripts/run_agentic_workspace.py ",
+            "uv run python scripts/run_agentic_workspace.py ",
+            "python scripts/run_agentic_workspace.py ",
+        ):
+            if normalized.startswith(legacy_prefix):
+                normalized = f"agentic-workspace {normalized.removeprefix(legacy_prefix)}"
+                break
     changed_part = " ".join(_shell_quote(path) for path in changed_paths)
     materialized = normalized.replace("<paths>", changed_part)
     if cli_invoke:
