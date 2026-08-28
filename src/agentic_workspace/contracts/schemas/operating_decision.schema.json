@@ -72,6 +72,10 @@
       "type": "object",
       "description": "Decision-bound Memory contributions, sparse outcome attribution, material findings, and stronger-owner lifecycle review."
     },
+    "learning_effectiveness": {
+      "type": "object",
+      "description": "Sparse cross-owner later-outcome attribution joined through each destination's existing revision identity and the canonical operating-decision identity; omitted when no later outcome applies."
+    },
     "bounded_adaptations": {
       "type": "object",
       "description": "Deduplicated currentness or missing-coverage candidates derived from existing improvement evidence and routed to canonical owner operations or explicit decisions."

@@ -28,6 +28,7 @@ from agentic_workspace.control_inputs import compile_control_inputs
 from agentic_workspace.future_learning import compile_future_learning
 from agentic_workspace.instruction_clause_ir import compile_instruction_program, instruction_program_from_existing_mechanisms
 from agentic_workspace.intent_feedback import compile_intent_feedback, intent_evidence_from_observed_behavior
+from agentic_workspace.learning_effectiveness import compile_learning_effectiveness
 from agentic_workspace.memory_effectiveness import compile_memory_effectiveness
 from agentic_workspace.reconciliation import compile_reconciliation
 from agentic_workspace.repo_improvement_effectiveness import compile_repo_improvement_effectiveness
@@ -3320,6 +3321,10 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         ],
         outcomes=[item for item in _as_list(inputs.get("memory_outcomes")) if isinstance(item, dict)],
     )
+    learning_effectiveness = compile_learning_effectiveness(
+        [item for item in _as_list(inputs.get("learning_projections")) if isinstance(item, dict)],
+        [item for item in _as_list(inputs.get("learning_outcomes")) if isinstance(item, dict)],
+    )
     adaptation_signals = [item for item in _as_list(inputs.get("adaptation_signals")) if isinstance(item, dict)]
     adaptation_signals.extend(
         machine_observed_coverage_signals([item for item in _as_list(inputs.get("structured_coverage_records")) if isinstance(item, dict)])
@@ -3443,6 +3448,8 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         revisions = {**revisions, "intent_feedback_revision": intent_feedback["input_revision"]}
     if memory_effectiveness["projected_contributions"]:
         revisions = {**revisions, "memory_effectiveness_revision": memory_effectiveness["input_revision"]}
+    if learning_effectiveness["later_outcome_count"]:
+        revisions = {**revisions, "learning_effectiveness_revision": learning_effectiveness["input_revision"]}
     if bounded_adaptations["candidate_count"]:
         revisions = {**revisions, "coverage_candidate_revision": "sha256:" + _digest(bounded_adaptations)}
     if source_guidance["contributions"]:
@@ -3542,6 +3549,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
             *_as_list(inputs.get("context_findings")),
             *_as_list(intent_feedback.get("findings")),
             *_as_list(memory_effectiveness.get("findings")),
+            *_as_list(learning_effectiveness.get("findings")),
             *coverage_candidate_findings(bounded_adaptations),
             *future_context_findings(future_context_signals),
         ]
@@ -3716,6 +3724,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         "context_effects": context_effects,
         "intent_feedback": intent_feedback,
         "memory_effectiveness": memory_effectiveness,
+        **({"learning_effectiveness": learning_effectiveness} if learning_effectiveness["later_outcome_count"] else {}),
         "bounded_adaptations": bounded_adaptations,
         "maintenance_decision": maintenance_decision,
         "source_guidance": source_guidance,

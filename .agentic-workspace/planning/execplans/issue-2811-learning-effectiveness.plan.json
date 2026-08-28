@@ -1,0 +1,91 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2811-learning-effectiveness",
+  "title": "Make learned lessons self-correct from later outcomes",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "implementation",
+  "revision": 2,
+  "intent": {
+    "outcome": "Admitted learning from Memory, target guidance, repo improvement, and aids joins later authoritative outcomes through its existing owner revision and the canonical operating-decision identity; material results reuse existing consequence owners while inconclusive and ordinary uses stay quiet.",
+    "non_goals": [
+      "Create a universal learning identifier, analytics database, or per-use compliance ledger.",
+      "Treat absence of recurrence or agent self-report as causal proof.",
+      "Implement stronger-owner promotion mechanics owned by issue #2812."
+    ]
+  },
+  "parent": {
+    "owner_id": "issue-2809-consequential-learning",
+    "contribution": "Provide the sparse later-outcome effectiveness loop required before learning can be promoted safely.",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "src/agentic_workspace/learning_effectiveness.py",
+      "src/agentic_workspace/operating_decision.py",
+      "src/agentic_workspace/contracts/schemas/operating_decision.schema.json",
+      "tests/test_learning_effectiveness.py",
+      "docs/architecture/learning-effectiveness.md",
+      "docs/reviews/consequential-learning-effectiveness-traces-2811.json"
+    ],
+    "effects": [
+      "Operating decisions expose sparse, owner-revision-bound effectiveness only when later evidence exists.",
+      "Material findings flow through the existing context consequence compiler and destination owners."
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected-local",
+      "owner": "issue-2811-learning-effectiveness"
+    },
+    "proof_posture": {
+      "state": "pending",
+      "refs": []
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    },
+    "delegation": {
+      "state": "recorded",
+      "route": "keep-local",
+      "reason": "Session policy explicitly prohibits spawning sub-agents; the sequential stacked slice also shares the canonical operating-decision contract."
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2811",
+      "label": "https://github.com/rickardvh/agentic-workspace/issues/2811",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Implement owner-specific attribution adapters, compose their sparse findings into operating decisions, and validate the reviewed effectiveness matrix and traces.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Make learned lessons self-correct from later outcomes is implemented, validated, and closed out honestly."
+    ],
+    "requirements": [
+      "uv run --active pytest tests/test_learning_effectiveness.py tests/test_future_learning.py tests/test_memory_effectiveness.py tests/test_operating_decision.py -q",
+      "uv run --active ruff check src/agentic_workspace/learning_effectiveness.py src/agentic_workspace/operating_decision.py tests/test_learning_effectiveness.py",
+      "make typecheck",
+      "uv run --frozen --active --no-sync python scripts/run_agentic_workspace.py proof --target . --changed src/agentic_workspace/learning_effectiveness.py src/agentic_workspace/operating_decision.py src/agentic_workspace/contracts/schemas/operating_decision.schema.json tests/test_learning_effectiveness.py docs/architecture/learning-effectiveness.md docs/reviews/consequential-learning-effectiveness-traces-2811.json --format json"
+    ],
+    "refs": []
+  },
+  "continuation": {
+    "owner": "none",
+    "residual_intent": "none"
+  },
+  "specialist_contracts": [
+    {
+      "kind": "planning-delegation/v1",
+      "target": "planning://delegation/keep-local",
+      "revision": 1
+    }
+  ]
+}
