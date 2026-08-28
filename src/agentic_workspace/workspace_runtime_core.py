@@ -51390,6 +51390,32 @@ PROOF_RECEIPT_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "proof-rece
 PROOF_RECEIPT_HISTORY_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "proof-receipts" / "history.jsonl"
 PROOF_REUSE_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "cache" / "proof-reuse.json"
 
+_PROOF_RECEIPT_SENSITIVE_KEY = re.compile(
+    r"(?i)^(?:password|passwd|secret|credential|private[_-]?key|access[_-]?token|api[_-]?key|auth(?:orization)?|"
+    r".+[_-](?:password|passwd|secret|credential|private[_-]?key|access[_-]?token|api[_-]?key))$"
+)
+_PROOF_RECEIPT_SENSITIVE_ASSIGNMENT = re.compile(
+    r"(?i)\b(password|passwd|secret|credential|private[_-]?key|access[_-]?token|api[_-]?key|authorization)"
+    r"(\s*[:=]\s*)([^\s,;]+)"
+)
+_PROOF_RECEIPT_TOKEN_SHAPE = re.compile(r"\b(?:gh[opsu]_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16})\b")
+
+
+def _proof_receipt_redact_sensitive_data(value: Any, *, key: str = "") -> Any:
+    """Remove credential-shaped material before any proof-owned persistence."""
+    if key and _PROOF_RECEIPT_SENSITIVE_KEY.search(key):
+        return "[redacted]"
+    if isinstance(value, dict):
+        return {str(item_key): _proof_receipt_redact_sensitive_data(item, key=str(item_key)) for item_key, item in value.items()}
+    if isinstance(value, list):
+        return [_proof_receipt_redact_sensitive_data(item) for item in value]
+    if isinstance(value, tuple):
+        return [_proof_receipt_redact_sensitive_data(item) for item in value]
+    if not isinstance(value, str):
+        return value
+    redacted = _PROOF_RECEIPT_SENSITIVE_ASSIGNMENT.sub(lambda match: f"{match.group(1)}{match.group(2)}[redacted]", value)
+    return _PROOF_RECEIPT_TOKEN_SHAPE.sub("[redacted]", redacted)
+
 
 def _proof_receipt_publication_paths(*, target_root: Path, producer_receipt_id: str) -> list[Path]:
     """Return every path the ordinary proof receipt publication may mutate."""
@@ -52037,6 +52063,7 @@ def _record_proof_receipt_payload(
             + (f" ({reasons})" if reasons else "")
             + "; rerun the selected proof against the current subject."
         )
+    receipt = _proof_receipt_redact_sensitive_data(receipt)
     producer_receipt_id = hashlib.sha256(
         json.dumps(
             {
@@ -52073,14 +52100,18 @@ def _record_proof_receipt_payload(
         )
         if not dry_run:
             receipt_path.parent.mkdir(parents=True, exist_ok=True)
-            receipt_path.write_text(json.dumps(receipt, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
+            receipt_path.write_text(  # lgtm[py/clear-text-storage-sensitive-data]
+                json.dumps(receipt, indent=2, ensure_ascii=True) + "\n", encoding="utf-8"
+            )
             history_path = target_root / PROOF_RECEIPT_HISTORY_RELATIVE_PATH
             if not _proof_history_contains_publication(
                 history_path=history_path,
                 producer_receipt_id=producer_receipt_id,
             ):
                 with history_path.open("a", encoding="utf-8") as stream:
-                    stream.write(json.dumps(receipt, sort_keys=True, ensure_ascii=True) + "\n")
+                    stream.write(  # lgtm[py/clear-text-storage-sensitive-data]
+                        json.dumps(receipt, sort_keys=True, ensure_ascii=True) + "\n"
+                    )
             _write_trusted_producer_receipt(
                 target_root=target_root,
                 producer_class="aw-proof",

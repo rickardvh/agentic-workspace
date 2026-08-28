@@ -5985,6 +5985,32 @@ def test_reconciliation_rejects_template_receipt_when_current_obligation_identit
     assert state["live_obligation_binding"]["missing_identity"] == ["owner_revision"]
 
 
+def test_proof_receipt_persistence_redacts_sensitive_values() -> None:
+    from agentic_workspace.workspace_runtime_core import _proof_receipt_redact_sensitive_data
+
+    payload = _proof_receipt_redact_sensitive_data(
+        {
+            "command": "TOKEN=ghp_abcdefghijklmnopqrstuvwxyz012345 pytest -q",
+            "execution": {
+                "environment": {
+                    "platform": "windows",
+                    "api_key": "plain-text-value",
+                    "nested": "authorization=Bearer-value",
+                }
+            },
+        }
+    )
+
+    assert payload["command"] == "TOKEN=[redacted] pytest -q"
+    assert payload["execution"]["environment"] == {
+        "platform": "windows",
+        "api_key": "[redacted]",
+        "nested": "authorization=[redacted]",
+    }
+    assert "plain-text-value" not in json.dumps(payload)
+    assert "ghp_" not in json.dumps(payload)
+
+
 def test_proof_record_receipt_builds_template_binding_from_current_obligation(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_proof_planning_state(tmp_path)
