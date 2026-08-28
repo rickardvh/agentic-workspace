@@ -3,9 +3,9 @@
   "id": "open-issues-nonlocal-delegation-implementation",
   "title": "Implement ordinary non-local delegation lifecycle",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "validation",
-  "revision": 5,
+  "lifecycle": "archived",
+  "phase": "complete",
+  "revision": 9,
   "intent": {
     "outcome": "Satisfy #2763 by proving one transport-neutral, revision-bound non-local assignment through selection, export/dispatch, returned-result admission, integration/proof, reconciliation, and next decision, including one real supported-host episode and automatic/manual parity.",
     "non_goals": [
@@ -41,8 +41,13 @@
       "owner": "open-issues-nonlocal-delegation-implementation"
     },
     "proof_posture": {
-      "state": "pending",
-      "refs": []
+      "state": "attention",
+      "refs": [
+        "532 focused implement/external/proof tests passed",
+        "299 operation conformance cells passed with 8 expected unavailable",
+        "final independent fresh-context review: no findings",
+        "changed-path proof execution remains admission-blocked because the selected requirement-grounding command contains the unresolved literal <paths> template even after its concrete form passed and was receipted"
+      ]
     },
     "external_posture": {
       "state": "observed",
@@ -56,6 +61,17 @@
       "state": "recorded",
       "route": "delegate-validation",
       "reason": "Bounded mechanical validation moves to Luna while orchestrator retains proof and closeout."
+    },
+    "integration": {
+      "status": "integrated",
+      "transition": "archive-owner",
+      "applied_at": "2026-08-28T07:35:08.140339Z",
+      "proof_refs": [
+        "generated-conformance:pass",
+        "contract-tooling:pass",
+        "proof-receipt:8552d5853f9d23fe06dd"
+      ],
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/open-issues-nonlocal-delegation-implementation-archive-owner.integration-receipt.json"
     }
   },
   "references": [
@@ -81,9 +97,9 @@
       "locator": ".agentic-workspace/planning/decompositions/open-issues-2026-08-27.decomposition.json"
     }
   ],
-  "next_action": "Obtain a current-head independent review for PR #2778, then merge it after PR #2777 and apply its pending target-branch integration proposal.",
+  "next_action": "Commit and publish the independently re-reviewed delegation lifecycle repair PR; merge it before reconciling #2763 and advancing the parent lane.",
   "blockers": [
-    "None."
+    "The canonical proof executor rejects the route-selected requirement-grounding command before launch because its authority still emits a literal <paths> placeholder; concrete execution passed, but completion remains claim-blocked until that route defect is repaired or explicitly escalated."
   ],
   "proof": {
     "claims": [
@@ -97,8 +113,12 @@
       "Run operation conformance, external consumer readiness, generated package parity, lint, typecheck, contract tooling, and runtime ownership checks.",
       "Record a compact supported-host dogfood trace whose identities and receipts can be checked without raw transcript storage."
     ],
-    "refs": [],
-    "summary": "Implementation and supported-host dogfood evidence are published in PR #2778; the lower stack is restacked; independent review and target-branch integration remain pending."
+    "refs": [
+      "Independent current-head review after PR #2778 merge: structural proof/task-proof confusion; read-only implement mutation; export-only automatic dispatch; premature assignment close; same-class assignment identity collision; keyword-derived mutation authority.",
+      "All first- and second-review findings repaired across canonical Python, native TypeScript, generated mirrors, operation contracts, and lifecycle tests.",
+      "Final narrow independent review reported no findings."
+    ],
+    "summary": "The bounded repair is implementation-complete and independently re-reviewed with no findings. Local validation passed: 532 focused tests, 299 conformance passes with zero failures, generated-package checks, schema docs, lint, and typecheck. Canonical proof execution remains honestly claim-blocked by an unresolved literal <paths> template in the selected requirement-grounding route, so the slice remains open through PR merge, route repair or structured escalation, and #2763 reconciliation."
   },
   "continuation": {
     "owner": ".agentic-workspace/planning/decompositions/open-issues-2026-08-27.decomposition.json",
@@ -120,5 +140,14 @@
       "target": "planning://delegation/delegate-validation",
       "revision": 1
     }
-  ]
+  ],
+  "active_milestone": {
+    "status": "archived",
+    "ready": "ready",
+    "blocked": "none"
+  },
+  "proof_report": {
+    "integration proof": "generated-conformance:pass, contract-tooling:pass, proof-receipt:8552d5853f9d23fe06dd",
+    "integration applied at": "2026-08-28T07:35:08.140339Z"
+  }
 }

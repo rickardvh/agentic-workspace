@@ -8476,16 +8476,14 @@ const commandDefinitions = [
                 "--assignment-id"
               ],
               "help": "Stable Planning assignment id.",
-              "name": "assignment_id",
-              "required": true
+              "name": "assignment_id"
             },
             {
               "flags": [
                 "--assignment-revision"
               ],
               "help": "Current assignment identity revision.",
-              "name": "assignment_revision",
-              "required": true
+              "name": "assignment_revision"
             },
             {
               "flags": [
@@ -8499,8 +8497,22 @@ const commandDefinitions = [
                 "--target-name"
               ],
               "help": "Selected target name.",
-              "name": "target_name",
-              "required": true
+              "name": "target_name"
+            },
+            {
+              "flags": [
+                "--task"
+              ],
+              "help": "Full human intent used when export must materialize the live assignment first.",
+              "name": "task"
+            },
+            {
+              "action": "append",
+              "flags": [
+                "--changed"
+              ],
+              "help": "Changed or allowed path used to bind a newly materialized assignment.",
+              "name": "changed"
             },
             {
               "choices": [
@@ -9876,6 +9888,14 @@ const commandDefinitions = [
               ],
               "help": "Stable assignment run id.",
               "name": "run_id",
+              "required": true
+            },
+            {
+              "flags": [
+                "--task-proof-receipt-ref"
+              ],
+              "help": "Repo-relative admitted AW proof receipt sealed for the exact assignment obligation.",
+              "name": "task_proof_receipt_ref",
               "required": true
             },
             {

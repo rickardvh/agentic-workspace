@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Record and enforce dogfood dispositions for the open-issues delegation workflow."
+issues = [2724]
