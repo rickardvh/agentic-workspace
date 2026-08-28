@@ -8,6 +8,8 @@
       ".",
       "--run-id",
       "run-1",
+      "--task-proof-receipt-ref",
+      ".agentic-workspace/proof/receipts/missing.json",
       "--format",
       "json"
     ],
@@ -44,7 +46,7 @@
           ]
         },
         {
-          "equals": "closed",
+          "equals": "blocked",
           "path": [
             "status"
           ]

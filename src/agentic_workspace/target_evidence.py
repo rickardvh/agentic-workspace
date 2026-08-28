@@ -507,7 +507,11 @@ def target_evidence_posture(
 
 
 def assignment_decision_from_policy(
-    *, assignment_policy: dict[str, Any], runtime_resolution: dict[str, Any], target_evidence: dict[str, Any]
+    *,
+    assignment_policy: dict[str, Any],
+    runtime_resolution: dict[str, Any],
+    target_evidence: dict[str, Any],
+    human_intent: str = "",
 ) -> dict[str, Any]:
     policy_value = str(assignment_policy.get("assignment_policy", {}).get("value") or "local-preferred")
     current_target = str(assignment_policy.get("current_target", {}).get("value") or "")
@@ -803,6 +807,7 @@ def assignment_decision_from_policy(
         "selected_target_identity_ref": selected_candidate.get("target_identity_ref"),
         "selected_target_revision": selected_candidate.get("target_revision"),
         "candidate_scores": candidate_scores,
+        "human_intent": " ".join(human_intent.split()),
     }
     assignment_decision_revision = (
         "sha256:"
