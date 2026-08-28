@@ -25,6 +25,7 @@ from agentic_workspace.context_authority_owner_operations import (
     registered_context_owner_result_status,
 )
 from agentic_workspace.control_inputs import compile_control_inputs
+from agentic_workspace.future_learning import compile_future_learning
 from agentic_workspace.instruction_clause_ir import compile_instruction_program, instruction_program_from_existing_mechanisms
 from agentic_workspace.intent_feedback import compile_intent_feedback, intent_evidence_from_observed_behavior
 from agentic_workspace.memory_effectiveness import compile_memory_effectiveness
@@ -3295,6 +3296,11 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
     """Return one primary typed action or one typed external blocker."""
 
     future_context_signals = [_as_dict(item) for item in _as_list(inputs.get("future_context_signals")) if isinstance(item, dict)]
+    future_learning = compile_future_learning(
+        [item for item in _as_list(inputs.get("outcome_evidence")) if isinstance(item, dict)],
+        existing_signals=future_context_signals,
+    )
+    future_context_signals = [_as_dict(item) for item in _as_list(future_learning.get("signals")) if isinstance(item, dict)]
     intent_feedback = compile_intent_feedback(
         expectations=[item for item in _as_list(inputs.get("intent_expectations")) if isinstance(item, dict)],
         evidence=[item for item in _as_list(inputs.get("intent_evidence")) if isinstance(item, dict)],
@@ -3323,6 +3329,14 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
     )
     bounded_adaptations = bounded_adaptation_projection(adaptation_signals)
     future_context_capture = _as_dict(inputs.get("future_context_capture"))
+    if not future_context_capture and future_learning.get("evidence_count"):
+        future_context_capture = {
+            "status": "not-evaluated" if future_learning.get("unassessed_count") else "assessed",
+            "evidence_count": future_learning.get("evidence_count", 0),
+            "assessed_count": future_learning.get("assessed_count", 0),
+            "owner": "outcome evidence producers",
+            "rule": "Known evidence must be assessed or explicitly reported unavailable before none-found is allowed.",
+        }
     if inputs.get("target_root"):
         future_context_signals.extend(
             unresolved_correction_signals(
@@ -3707,6 +3721,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         "source_guidance": source_guidance,
         **({"future_context_signals": future_context_signals} if future_context_signals else {}),
         **({"future_context_capture": future_context_capture} if future_context_capture else {}),
+        **({"future_learning": future_learning} if future_learning.get("status") != "quiet" else {}),
         "repo_improvement_action": repo_improvement_action,
         "repo_improvement_execution": repo_improvement_execution,
         "repo_improvement_effectiveness": repo_improvement_effectiveness,

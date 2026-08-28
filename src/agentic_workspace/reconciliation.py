@@ -105,6 +105,9 @@ def compile_reconciliation(inputs: dict[str, Any] | None) -> dict[str, Any]:
     ]
     future_context_capture = _as_dict(inputs.get("future_context_capture"))
     future_context_dispositions = [_future_context_disposition(signal) for signal in future_context_signals]
+    capture_status = str(future_context_capture.get("status") or "not-provided").strip().lower()
+    normalized_capture_status = capture_status.replace("_", "-")
+    assessment_required = normalized_capture_status in {"not-evaluated", "skipped"} and bool(future_context_capture.get("evidence_count"))
 
     result_status = str(result.get("status") or "unknown")
     intent_status = str(intent.get("status") or "unknown")
@@ -177,6 +180,14 @@ def compile_reconciliation(inputs: dict[str, Any] | None) -> dict[str, Any]:
                 "reason_code": "future-context-unresolved",
                 "owner": str(signal.get("owner") or "future-context source owner"),
                 "repair": str(signal.get("required_decision") or "route or explicitly dismiss the known future-context signal"),
+            }
+        )
+    elif assessment_required:
+        blockers.append(
+            {
+                "reason_code": "future-context-assessment-required",
+                "owner": str(future_context_capture.get("owner") or "outcome evidence producer"),
+                "repair": "assess known evidence as material, already absorbed, or no-retention; unsupported observation must remain explicit",
             }
         )
 
@@ -253,11 +264,19 @@ def compile_reconciliation(inputs: dict[str, Any] | None) -> dict[str, Any]:
         "future_context_signals": future_context_signals,
         "future_context_reconciliation": {
             "kind": "agentic-workspace/future-context-reconciliation/v1",
-            "status": ("none-found" if not future_context_signals else "unresolved" if unresolved_future_context else "disposed"),
-            "capture_input_status": str(future_context_capture.get("status") or "not-provided"),
+            "status": (
+                "assessment-required"
+                if assessment_required and not unresolved_future_context
+                else "none-found"
+                if not future_context_signals
+                else "unresolved"
+                if unresolved_future_context
+                else "disposed"
+            ),
+            "capture_input_status": capture_status,
             "dispositions": future_context_dispositions,
-            "none_found_allowed": not future_context_signals,
-            "custody_transfer_safe": not unresolved_future_context,
+            "none_found_allowed": not future_context_signals and not assessment_required,
+            "custody_transfer_safe": not unresolved_future_context and not assessment_required,
             "rule": "none-found is available only when no explicit relevant candidate remains; skipped evaluation cannot erase a known signal.",
         },
         "rule": "Proof may support only the affected owner-level claim; semantic intent, parent completion, residue ownership, and continuation remain independently owned facts.",

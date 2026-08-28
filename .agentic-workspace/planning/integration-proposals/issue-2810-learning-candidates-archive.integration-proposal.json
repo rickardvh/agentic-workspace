@@ -1,0 +1,47 @@
+{
+  "kind": "planning-integration-proposal/v1",
+  "id": "issue-2810-learning-candidates-archive",
+  "status": "pending",
+  "phase": "integration-pending",
+  "requested_transition": "archive-owner",
+  "owner": {
+    "id": "issue-2810-learning-candidates",
+    "ref": ".agentic-workspace/planning/execplans/issue-2810-learning-candidates.plan.json"
+  },
+  "external_ref": "https://github.com/rickardvh/agentic-workspace/issues/2810",
+  "proof_refs": [
+    "24 focused tests passed",
+    "502 broad workspace tests passed",
+    "lint passed",
+    "typecheck passed",
+    "contract tooling passed",
+    "structured inventory passed",
+    "schema reference passed"
+  ],
+  "parent_boundary": "Close #2810 only; keep lane #2809 and slices #2811-#2813 open.",
+  "preserved_invariants": [
+    "no parallel learning store",
+    "candidate authority does not exceed source authority",
+    "no-signal path stays quiet"
+  ],
+  "expected_subject_revision": "06d6b364d5b75bb7",
+  "expected_planning_revision": "5a33213decc40e4a",
+  "created_at": "2026-08-28T22:33:16.895149Z",
+  "updated_at": "2026-08-28T22:33:16.895149Z",
+  "authority_boundary": {
+    "proposal": "feature-branch declaration",
+    "integrated_truth": "integration receipt after apply",
+    "non_authority": [
+      "current selection",
+      "aggregate indexes",
+      "unrelated owners",
+      "terminal parent truth"
+    ],
+    "branch_admission": {
+      "status": "inside-git",
+      "branch": "codex/2810-learning-candidates",
+      "phase": "feature"
+    }
+  },
+  "proposal_revision": "f2986994d9f740cb"
+}

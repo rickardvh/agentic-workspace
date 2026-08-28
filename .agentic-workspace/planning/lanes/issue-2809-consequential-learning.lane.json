@@ -71,11 +71,36 @@
     "next_owner": ""
   },
   "references": [
-    "https://github.com/rickardvh/agentic-workspace/issues/2809",
-    "https://github.com/rickardvh/agentic-workspace/issues/2810",
-    "https://github.com/rickardvh/agentic-workspace/issues/2811",
-    "https://github.com/rickardvh/agentic-workspace/issues/2812",
-    "https://github.com/rickardvh/agentic-workspace/issues/2813"
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2809",
+      "label": "#2809",
+      "role": "lane"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2810",
+      "label": "#2810",
+      "role": "slice"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2811",
+      "label": "#2811",
+      "role": "slice"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2812",
+      "label": "#2812",
+      "role": "slice"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2813",
+      "label": "#2813",
+      "role": "integration-gate"
+    }
   ],
   "notes": "Stack order follows the parent issue: candidate production, later-outcome correction, stronger-owner promotion, then integration/evaluation."
 }

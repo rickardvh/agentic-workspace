@@ -93,6 +93,10 @@
       "type": "object",
       "description": "Optional host-owned capability posture; unsupported feedback sources are reported as unavailable rather than claimed captured."
     },
+    "future_learning": {
+      "type": "object",
+      "description": "Ephemeral composition receipt for source-owned outcome evidence assessed into existing future-context and reconciliation custody; never a durable learning-event store."
+    },
     "repo_improvement_action": {
       "type": "object",
       "description": "Mode-constrained initiative consequence for one admitted material repo-improvement candidate; empty when no candidate exists. Mutation still requires an existing owner operation."
