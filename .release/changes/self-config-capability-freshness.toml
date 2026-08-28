@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Bind self-configuration decisions to fresh capability and setup identities."
-issues = [2772]
