@@ -18,7 +18,7 @@ if str(TOOLS_ROOT) not in sys.path:
 from chatgpt_review_loop import REVIEW_POLICY, parse_reviews  # noqa: E402
 
 CHECK_NAME = "Review approval"
-TRUSTED_ASSOCIATIONS = frozenset({"OWNER", "MEMBER", "COLLABORATOR"})
+REVIEWER_APP_SLUG = "chatgpt-codex-connector"
 
 
 @dataclass(frozen=True)
@@ -42,11 +42,11 @@ def _comment_order(comment: dict[str, Any]) -> tuple[str, int]:
     return timestamp, identifier
 
 
-def _actor_login(payload: dict[str, Any]) -> str:
-    user = payload.get("user")
-    if not isinstance(user, dict):
+def _reviewer_app_slug(payload: dict[str, Any]) -> str:
+    app = payload.get("performed_via_github_app")
+    if not isinstance(app, dict):
         return ""
-    return str(user.get("login") or "").strip().lower()
+    return str(app.get("slug") or "").strip().lower()
 
 
 def review_gate_decision(
@@ -55,36 +55,20 @@ def review_gate_decision(
     head_sha: str,
     comments: Sequence[dict[str, Any]],
     carry_forward: Callable[[str, str], CarryForwardVerdict] | None = None,
-    implementation_principals: Sequence[str] = (),
 ) -> GateDecision:
-    associated = [
-        comment
-        for comment in comments
-        if "aw-chatgpt-review" in str(comment.get("body", ""))
-        and str(comment.get("author_association", "")).upper() in TRUSTED_ASSOCIATIONS
-    ]
-    implementers = {str(principal).strip().lower() for principal in implementation_principals if str(principal).strip()}
-    self_authored = [comment for comment in associated if _actor_login(comment) in implementers]
-    candidates = [comment for comment in associated if _actor_login(comment) not in implementers]
+    associated = [comment for comment in comments if "aw-chatgpt-review" in str(comment.get("body", ""))]
+    candidates = [comment for comment in associated if _reviewer_app_slug(comment) == REVIEWER_APP_SLUG]
     if not candidates:
-        if self_authored:
-            latest = max(self_authored, key=_comment_order)
-            return GateDecision(
-                status="review-self-authored",
-                conclusion="failure",
-                title="Implementer review is non-authoritative",
-                summary=(
-                    "The latest structured review was authored by an implementation principal; "
-                    "post fixes-applied/ready-for-re-review status and obtain a current-head review "
-                    "from a distinct configured authority."
-                ),
-                review_url=str(latest.get("html_url") or latest.get("url") or ""),
-            )
+        latest = max(associated, key=_comment_order) if associated else None
         return GateDecision(
             status="review-missing",
             conclusion="failure",
             title="Pull request has no authoritative review",
-            summary=f"Run {REVIEW_POLICY} for head {head_sha}; green CI is not merge authority.",
+            summary=(
+                f"Run {REVIEW_POLICY} for head {head_sha}; green CI is not merge authority. "
+                f"Only review markers produced by the configured {REVIEWER_APP_SLUG} reviewer app are authoritative."
+            ),
+            review_url=str((latest or {}).get("html_url") or (latest or {}).get("url") or ""),
         )
 
     latest = max(candidates, key=_comment_order)
@@ -272,10 +256,6 @@ def main(argv: Sequence[str] | None = None) -> int:
         pr_number=pr_number,
         head_sha=head_sha,
         comments=comments,
-        implementation_principals=[
-            str(pull_request.get("user", {}).get("login") or ""),
-            str(pull_request.get("head", {}).get("repo", {}).get("owner", {}).get("login") or ""),
-        ],
         carry_forward=lambda reviewed, current: _trusted_base_carry_forward(
             pr_number=pr_number,
             reviewed_head=reviewed,
