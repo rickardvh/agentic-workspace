@@ -1,8 +1,8 @@
 {
   "kind": "planning-integration-proposal/v1",
   "id": "issue-2459-actionable-diagnostics-intake-mark-integrated",
-  "status": "pending",
-  "phase": "integration-pending",
+  "status": "integrated",
+  "phase": "integrated-lifecycle-truth",
   "requested_transition": "mark-integrated",
   "owner": {
     "id": "issue-2459-actionable-diagnostics-intake",
@@ -20,7 +20,7 @@
   "expected_subject_revision": "b60576f0eed706e6",
   "expected_planning_revision": "bd4fd1fb7a1f296a",
   "created_at": "2026-08-09T17:38:34.232362Z",
-  "updated_at": "2026-08-09T17:38:34.232362Z",
+  "updated_at": "2026-08-28T21:11:10.616243Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -36,5 +36,7 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "126660eae00d6407"
+  "proposal_revision": "b6a700ace7af7c1b",
+  "integrated_at": "2026-08-28T21:11:10.616243Z",
+  "integration_receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2459-actionable-diagnostics-intake-mark-integrated.integration-receipt.json"
 }

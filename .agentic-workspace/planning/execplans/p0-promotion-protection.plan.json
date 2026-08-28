@@ -3,9 +3,9 @@
   "id": "p0-promotion-protection",
   "title": "P0 promotion protection and support-bearing decision",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "closeout",
-  "revision": 7,
+  "lifecycle": "archived",
+  "phase": "complete",
+  "revision": 8,
   "intent": {
     "outcome": "Make protected master and the release workflows fail closed on one exact-commit, exact-artifact support-bearing promotion result.",
     "non_goals": [
@@ -59,6 +59,16 @@
       "state": "recorded",
       "route": "keep-local",
       "reason": "This session explicitly prohibits spawning sub-agents unless the user requests delegation; the user requested cohesive PR lanes, not sub-agent work."
+    },
+    "integration": {
+      "status": "integrated",
+      "transition": "archive-owner",
+      "applied_at": "2026-08-28T21:11:10.616243Z",
+      "proof_refs": [
+        "GitHub Actions run 31365468814",
+        "uv run pytest tests/test_support_bearing_promotion.py tests/test_release_workflows.py -q"
+      ],
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/p0-promotion-protection-archive-owner.integration-receipt.json"
     }
   },
   "references": [
@@ -102,7 +112,7 @@
     }
   ],
   "active_milestone": {
-    "status": "completed",
+    "status": "archived",
     "ready": "ready",
     "blocked": "none"
   },
@@ -153,7 +163,9 @@
   "proof_report": {
     "validation proof": "GitHub Actions run 31365468814: 2093 passed, 1 skipped; Python minimum/primary/newest 3.11/3.13/3.14 runtime lanes passed; Python 3.12 is explicitly bounded by minimum and primary compatibility lanes",
     "proof achieved now": "yes; planning closeout recorded explicit proof input.",
-    "evidence for \"proof achieved\" state": "GitHub Actions run 31365468814: 2093 passed, 1 skipped; Python minimum/primary/newest 3.11/3.13/3.14 runtime lanes passed; Python 3.12 is explicitly bounded by minimum and primary compatibility lanes"
+    "evidence for \"proof achieved\" state": "GitHub Actions run 31365468814: 2093 passed, 1 skipped; Python minimum/primary/newest 3.11/3.13/3.14 runtime lanes passed; Python 3.12 is explicitly bounded by minimum and primary compatibility lanes",
+    "integration proof": "GitHub Actions run 31365468814, uv run pytest tests/test_support_bearing_promotion.py tests/test_release_workflows.py -q",
+    "integration applied at": "2026-08-28T21:11:10.616243Z"
   },
   "intent_continuity": {
     "this slice completes the larger intended outcome": "no",

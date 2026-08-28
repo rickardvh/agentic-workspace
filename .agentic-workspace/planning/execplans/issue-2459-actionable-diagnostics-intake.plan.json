@@ -5,7 +5,7 @@
   "owner_level": "slice",
   "lifecycle": "closed",
   "phase": "complete",
-  "revision": 4,
+  "revision": 5,
   "intent": {
     "outcome": "Ordinary diagnostics prioritize Git-tracked source, aggregate equivalent evidence, explain intake decisions, and derive full-proof completeness from declared dependency authority.",
     "non_goals": [
@@ -48,6 +48,13 @@
       "state": "recorded",
       "route": "keep-local",
       "reason": "The user requested implementation in this task, and multi-agent delegation is not authorized for this turn."
+    },
+    "integration": {
+      "status": "integrated",
+      "transition": "mark-integrated",
+      "applied_at": "2026-08-28T21:11:10.616243Z",
+      "proof_refs": [],
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2459-actionable-diagnostics-intake-mark-integrated.integration-receipt.json"
     }
   },
   "references": [
@@ -136,6 +143,8 @@
   "proof_report": {
     "validation proof": "3 diagnostic/intake tests, 3 route-classification tests, 44 routed proof tests, typecheck, and runtime mirror report passed",
     "proof achieved now": "yes; planning closeout recorded explicit proof input.",
-    "evidence for \"proof achieved\" state": "3 diagnostic/intake tests, 3 route-classification tests, 44 routed proof tests, typecheck, and runtime mirror report passed"
+    "evidence for \"proof achieved\" state": "3 diagnostic/intake tests, 3 route-classification tests, 44 routed proof tests, typecheck, and runtime mirror report passed",
+    "integration proof": "integration proposal applied",
+    "integration applied at": "2026-08-28T21:11:10.616243Z"
   }
 }

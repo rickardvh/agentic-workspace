@@ -2,7 +2,7 @@
   "kind": "planning-lane/v1",
   "id": "issue-2448-release-promotion",
   "title": "Issue 2448 support-bearing release promotion",
-  "status": "active",
+  "status": "closed",
   "parent_decomposition_ref": "",
   "lane_outcome": "Make support-bearing releases depend on one compact promotion decision over exact current release evidence.",
   "purpose_for_parent": "Coordinate Phase 0 and Phase 1 release-critical child issues from repository-health audit PR #2447 without absorbing their domain ownership.",
@@ -131,7 +131,9 @@
   "proof_aggregation": {
     "status": "partial",
     "evidence": [
-      "Issue #2449 completed in merged PR #2465."
+      "Issue #2449 completed in merged PR #2465.",
+      "docs/maintainer/public-install-rehearsal-v0.40.1.json retains the exact readiness URL/digest, four controlled wheel URL/hash identities, forbidden-identity absence, and separate-process startup result, v0.40.1 support-bearing-promotion.json passed for ddd9812dd6ac455ca546bc38568e8c68a26e6ed4, v0.40.1 distribution-install-readiness.json exact URL and hashes resolved four controlled distributions at 0.40.1, Fresh second process returned startup-context/v1 from the installed v0.40.1 executable, GitHub issues #2449 through #2462 are closed except #2452 which this proposal closes",
+      "integration applied at 2026-08-28T21:11:10.616243Z"
     ],
     "known_gaps": [
       "Phase 0 release inputs #2450-#2454 remain open.",
@@ -142,8 +144,8 @@
   "lane_to_epic_contribution": "Semantic conformance is complete; the composed promotion decision still requires the remaining release-critical receipts and enforcement path.",
   "parent_close_permission": "do-not-close-parent",
   "closeout_state": {
-    "status": "open",
-    "summary": "The first Phase 0 slice #2449 is complete; the parent lane remains open and ready for its next bounded owner.",
+    "status": "closed",
+    "summary": "docs/maintainer/public-install-rehearsal-v0.40.1.json retains the exact readiness URL/digest, four controlled wheel URL/hash identities, forbidden-identity absence, and separate-process startup result, v0.40.1 support-bearing-promotion.json passed for ddd9812dd6ac455ca546bc38568e8c68a26e6ed4, v0.40.1 distribution-install-readiness.json exact URL and hashes resolved four controlled distributions at 0.40.1, Fresh second process returned startup-context/v1 from the installed v0.40.1 executable, GitHub issues #2449 through #2462 are closed except #2452 which this proposal closes",
     "residual_work": "Complete or explicitly supersede #2450-#2462 and compose their authoritative evidence into the release promotion decision.",
     "next_owner": "issue-2450"
   },
