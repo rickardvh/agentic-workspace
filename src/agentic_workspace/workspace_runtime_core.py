@@ -50653,6 +50653,33 @@ def _proof_execution_subject(*, target_root: Path, changed_paths: list[str], req
     return payload
 
 
+def _materialized_proof_execution_selection(
+    *, selection: dict[str, Any], changed_paths: list[str], materialize: Callable[..., str]
+) -> dict[str, Any]:
+    """Bind changed-path templates before proof admission or process launch."""
+
+    resolved = copy.deepcopy(selection)
+    resolved["required_commands"] = [
+        materialize(command=str(command), changed_paths=changed_paths)
+        for command in _list_payload(selection.get("required_commands"))
+        if str(command).strip()
+    ]
+    for selected in _list_payload(resolved.get("selected_commands")):
+        if not isinstance(selected, dict):
+            continue
+        selected["command"] = materialize(command=str(selected.get("command") or ""), changed_paths=changed_paths)
+        selected["command_identity"] = hashlib.sha256(selected["command"].encode("utf-8")).hexdigest()[:16]
+    for lane in _list_payload(resolved.get("selected_lanes")):
+        if not isinstance(lane, dict):
+            continue
+        lane["required_commands"] = [
+            materialize(command=str(command), changed_paths=changed_paths)
+            for command in _list_payload(lane.get("required_commands"))
+            if str(command).strip()
+        ]
+    return resolved
+
+
 def _execute_selected_proof_payload(
     *,
     target_root: Path,
@@ -50669,6 +50696,16 @@ def _execute_selected_proof_payload(
         task_text=task_text,
         include_durable_intent=False,
     )
+    from agentic_workspace.workspace_runtime_proof import (
+        _proof_route_materialize_validation_command,
+        _selected_proof_command_for_receipt,
+    )
+
+    selection = _materialized_proof_execution_selection(
+        selection=selection,
+        changed_paths=changed_paths,
+        materialize=_proof_route_materialize_validation_command,
+    )
     required_commands = [str(item) for item in _list_payload(selection.get("required_commands")) if str(item).strip()]
     if not required_commands:
         return {
@@ -50681,8 +50718,6 @@ def _execute_selected_proof_payload(
                 "command": "agentic-workspace proof --target . --changed <paths> --format json",
             },
         }
-    from agentic_workspace.workspace_runtime_proof import _selected_proof_command_for_receipt
-
     preexecution_admissions = [
         _selected_proof_preexecution_admission(
             target_root=target_root,

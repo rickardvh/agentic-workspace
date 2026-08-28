@@ -2051,7 +2051,39 @@ function assignmentAdmitWithCurrentAuthority(authorities, returned) {
   return { admitted: failures.length === 0, status: failures.length ? 'rejected' : 'admitted', failures, assignment_revision: identity.revision, assignment_identity: identity, current_authority: { planning_assignment: authorities.planning_assignment_ref, structural_proof_receipt: proof, proof_source: authorities.proof_receipt_ref, mutation_baseline: authorities.live_mutation_baseline, baseline_source: 'host-resolved:git-or-aw-baseline' }, rule: 'Returned delegated work is executable only after AW re-resolves current assignment/run identity, transport authority, canonical scope, structural proof, stop conditions, and baseline immediately before admission.' };
 }
 
-function assignmentPatchPaths(patchText) {
+function diffGitPathTokens(line) {
+  const value = String(line ?? '').slice('diff --git '.length);
+  const tokens = [];
+  let offset = 0;
+  while (tokens.length < 2) {
+    while (value[offset] === ' ') offset += 1;
+    if (offset >= value.length) return [];
+    const start = offset;
+    if (value[offset] === '"') {
+      offset += 1;
+      let escaped = false;
+      let closed = false;
+      while (offset < value.length) {
+        const character = value[offset];
+        offset += 1;
+        if (escaped) escaped = false;
+        else if (character === '\\') escaped = true;
+        else if (character === '"') {
+          closed = true;
+          break;
+        }
+      }
+      if (!closed) return [];
+    } else {
+      while (offset < value.length && value[offset] !== ' ') offset += 1;
+    }
+    tokens.push(value.slice(start, offset));
+  }
+  while (value[offset] === ' ') offset += 1;
+  return offset === value.length ? tokens : [];
+}
+
+export function assignmentPatchPaths(patchText) {
   const paths = new Set();
   const addPath = (rawValue) => {
     let value = String(rawValue ?? '').split('\t', 1)[0].trim();
@@ -2065,11 +2097,7 @@ function assignmentPatchPaths(patchText) {
     else if (line.startsWith('rename from ') || line.startsWith('rename to ')) addPath(line.split(' ').slice(2).join(' '));
     else if (line.startsWith('copy from ') || line.startsWith('copy to ')) addPath(line.split(' ').slice(2).join(' '));
     else if (line.startsWith('diff --git ')) {
-      const match = line.match(/^diff --git (?:("(?:\\.|[^"])+")|(\S+)) (?:("(?:\\.|[^"])+")|(\S+))$/);
-      if (match) {
-        addPath(match[1] ?? match[2]);
-        addPath(match[3] ?? match[4]);
-      }
+      for (const path of diffGitPathTokens(line)) addPath(path);
     }
   }
   return [...paths].sort();

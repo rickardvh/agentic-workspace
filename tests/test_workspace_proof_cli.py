@@ -10450,6 +10450,42 @@ def test_selected_proof_execution_reconciles_and_reuses_local_receipts(tmp_path:
     assert calls == commands
 
 
+def test_selected_proof_execution_materializes_changed_path_templates_before_admission(tmp_path: Path, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+    changed_path = "src/feature file.py"
+    _write(tmp_path / changed_path, "VALUE = 1\n")
+    template = "uv run agentic-workspace implement --changed <paths> --format json"
+    selection = _selected_execution_fixture([template], local=False)
+    selection["changed_paths"] = [changed_path]
+    calls: list[str] = []
+    monkeypatch.setattr(workspace_runtime_core, "_proof_selection_for_changed_paths", lambda **_: selection)
+    monkeypatch.setattr(workspace_runtime_proof, "_proof_selection_for_changed_paths", lambda **_: selection)
+
+    def run(command: str, **_: object) -> subprocess.CompletedProcess[str]:
+        calls.append(command)
+        return subprocess.CompletedProcess(command, 0, stdout="passed", stderr="")
+
+    monkeypatch.setattr(workspace_runtime_core, "run_trusted_shell", run)
+    monkeypatch.setattr(
+        workspace_runtime_core,
+        "_record_proof_receipt_payload",
+        lambda **_: {"status": "written", "receipt": {"admission": {"proof_sufficient": True}}},
+    )
+    result = workspace_runtime_core._execute_selected_proof_payload(
+        target_root=tmp_path,
+        changed_paths=[changed_path],
+        task_text="verify a concrete changed-path command",
+        run_id="",
+        timeout_seconds="30",
+        cancel_file="",
+        dry_run=False,
+    )
+
+    assert result["status"] == "completed"
+    assert calls == ['uv run agentic-workspace implement --changed "src/feature file.py" --format json']
+    assert result["preexecution_admission"]["status"] == "admitted"
+
+
 def test_selected_proof_rejects_known_unrecordable_broad_command_before_launch(tmp_path: Path, monkeypatch) -> None:
     _init_git_repo(tmp_path)
     _write(tmp_path / "changed.py", "VALUE = 1\n")

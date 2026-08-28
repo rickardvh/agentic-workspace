@@ -768,6 +768,28 @@ def test_typescript_client_public_export_reads_profile() -> None:
     assert completed.stdout.strip() == "agentic-workspace/external-consumer-profile/v1"
 
 
+def test_typescript_assignment_patch_paths_parse_quoted_headers_without_backtracking() -> None:
+    script = r"""
+import { assignmentPatchPaths } from './src/agentic_workspace/contracts/typescript_primitive_support.mjs';
+const adversarial = 'diff --git "' + '\\!'.repeat(50000) + ' a/unterminated';
+const valid = 'diff --git "a/src/feature file.py" "b/src/feature file.py"';
+console.log(JSON.stringify({adversarial: assignmentPatchPaths(adversarial), valid: assignmentPatchPaths(valid)}));
+"""
+    completed = subprocess.run(
+        ["node", "--input-type=module", "--eval", script],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=5,
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert json.loads(completed.stdout) == {
+        "adversarial": [],
+        "valid": ["src/feature file.py"],
+    }
+
+
 def test_generated_clients_share_fail_closed_readiness_contract() -> None:
     python_report = _python_client().external_readiness_report(["assignment.export", "does.not.exist"])
     script = "import { externalReadinessReport } from './generated/workspace/typescript/src/client.mjs'; console.log(JSON.stringify(externalReadinessReport(['assignment.export', 'does.not.exist'])));"

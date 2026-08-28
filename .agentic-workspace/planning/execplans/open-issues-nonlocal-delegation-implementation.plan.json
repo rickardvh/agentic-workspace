@@ -3,9 +3,9 @@
   "id": "open-issues-nonlocal-delegation-implementation",
   "title": "Implement ordinary non-local delegation lifecycle",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "validation",
-  "revision": 8,
+  "lifecycle": "archived",
+  "phase": "complete",
+  "revision": 9,
   "intent": {
     "outcome": "Satisfy #2763 by proving one transport-neutral, revision-bound non-local assignment through selection, export/dispatch, returned-result admission, integration/proof, reconciliation, and next decision, including one real supported-host episode and automatic/manual parity.",
     "non_goals": [
@@ -61,6 +61,17 @@
       "state": "recorded",
       "route": "delegate-validation",
       "reason": "Bounded mechanical validation moves to Luna while orchestrator retains proof and closeout."
+    },
+    "integration": {
+      "status": "integrated",
+      "transition": "archive-owner",
+      "applied_at": "2026-08-28T07:35:08.140339Z",
+      "proof_refs": [
+        "generated-conformance:pass",
+        "contract-tooling:pass",
+        "proof-receipt:8552d5853f9d23fe06dd"
+      ],
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/open-issues-nonlocal-delegation-implementation-archive-owner.integration-receipt.json"
     }
   },
   "references": [
@@ -129,5 +140,14 @@
       "target": "planning://delegation/delegate-validation",
       "revision": 1
     }
-  ]
+  ],
+  "active_milestone": {
+    "status": "archived",
+    "ready": "ready",
+    "blocked": "none"
+  },
+  "proof_report": {
+    "integration proof": "generated-conformance:pass, contract-tooling:pass, proof-receipt:8552d5853f9d23fe06dd",
+    "integration applied at": "2026-08-28T07:35:08.140339Z"
+  }
 }

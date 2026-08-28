@@ -1028,9 +1028,9 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
                         "reason": "assignment-patch-apply-failed",
                         "field": "returned_work.patch",
                         "recovery": "Repair the returned unified diff against the current mutation baseline and retry integration.",
-                        "detail": _optional_text(
-                            apply_patch.stderr.decode("utf-8", errors="replace") if apply_patch is not None else ""
-                        )[-2000:],
+                        "detail": _optional_text(apply_patch.stderr.decode("utf-8", errors="replace") if apply_patch is not None else "")[
+                            -2000:
+                        ],
                     }
                 )
         receipt_path = artifact("integration/integration.json")
