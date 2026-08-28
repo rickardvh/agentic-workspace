@@ -41,7 +41,11 @@ from agentic_workspace._schema import ModuleDescriptor, ModuleResultContract, Ro
 from agentic_workspace.actionability import derive_actionability, operation_invocation, proposed_action_input_revision
 from agentic_workspace.adaptation import bounded_adaptation_projection
 from agentic_workspace.agent_guidance import correction_feedback_contract, target_identity_posture
-from agentic_workspace.assignment_lifecycle import materialize_canonical_assignment
+from agentic_workspace.assignment_lifecycle import (
+    assignment_task_proof_binding,
+    load_indexed_assignment_task_proof,
+    materialize_canonical_assignment,
+)
 from agentic_workspace.assurance_authority import build_assurance_application, evaluate_assurance_disposition
 from agentic_workspace.authority_envelope import admit_live_mutation_boundary, revalidate_mutation_baseline
 from agentic_workspace.config import (
@@ -12956,7 +12960,7 @@ def _run_report_command(
         target_root=target_root,
         config=config,
         cli_invoke=config.cli_invoke,
-        task_text=task_text,
+        task_text=str(task_text or ""),
         changed_paths=changed_paths,
     )
     decision_pressure = _decision_pressure_payload(
@@ -42879,7 +42883,8 @@ def _effective_orchestration_posture_payload(
         {},
     )
     execution_methods = [str(item) for item in _list_payload(matching_profile.get("execution_methods")) if str(item)]
-    automatic_methods = [item for item in execution_methods if item in {"internal", "cli", "api"}]
+    provider = str(matching_profile.get("provider") or "")
+    automatic_methods = [item for item in execution_methods if provider == "codex" and item in {"internal", "cli"}]
     current_target_ready = target_status == "known-profile"
     binding_requested = policy == "required-best-fit"
     orchestrator_role = role == "orchestrator"
@@ -43058,6 +43063,7 @@ def _assignment_identity_payload(
         "prohibited_effects": assignment_gate.get("prohibited_effects")
         or next_step.get("prohibited_effects")
         or ["scope-widening", "merge", "closeout", "proof-authority", "human-authority"],
+        "dispatch_adapter": _as_dict(assignment_gate.get("dispatch_adapter")),
         "claim_authority": {
             "worker_result": "evidence-only",
             "proof": "orchestrator-owned",
@@ -44275,6 +44281,8 @@ def _assignment_primary_action_payload(
     selected_target: dict[str, Any] | None,
     delegation_control: dict[str, Any],
     cli_invoke: str,
+    task_text: str = "",
+    changed_paths: list[str] | None = None,
 ) -> dict[str, Any]:
     """Compile canonical assignment state into one revision-bound ordinary action."""
 
@@ -44344,6 +44352,10 @@ def _assignment_primary_action_payload(
     attempt = _as_dict(assignment.get("current_attempt"))
     run_id = str(attempt.get("run_id") or "")
     assignment_decision_ref = str(_as_dict(assignment.get("assignment_gate")).get("assignment_decision_revision") or "")
+    methods = [str(method) for method in _list_payload((selected_target or {}).get("execution_methods")) if str(method)]
+    provider = str((selected_target or {}).get("provider") or "")
+    automatic = [method for method in methods if provider == "codex" and method in {"internal", "cli"}]
+    transport = automatic[0] if automatic and delegation_control.get("execution_permitted") is True else "manual"
     assignment_current = (
         str(assignment.get("status") or "") == "current"
         and bool(assignment_id and assignment_revision and run_id)
@@ -44351,19 +44363,28 @@ def _assignment_primary_action_payload(
         and (not assignment_decision_ref or assignment_decision_ref == decision_revision)
     )
     if not assignment_current:
+        prepare_paths = list(changed_paths or [])
+        prepare_command = _command_with_cli_invoke(
+            command=(
+                "agentic-workspace assignment export --target . "
+                f"--task {_shell_quote(task_text)} "
+                + " ".join(f"--changed {_shell_quote(path)}" for path in prepare_paths)
+                + f" --transport {_shell_quote(transport)} --format json"
+            ),
+            cli_invoke=cli_invoke,
+        )
         invocation = operation_invocation(
-            operation_id="planning.front-door",
+            operation_id="assignment.export",
             arguments={
-                "operation_action": "materialize-canonical-assignment",
-                "selected_target": selected_name,
-                "target_identity_ref": assignment_gate.get("target_identity_ref"),
-                "target_revision": assignment_gate.get("target_revision"),
-                "assignment_decision_revision": decision_revision,
-                "task_class": assignment_gate.get("task_class"),
-                "scope_class": assignment_gate.get("scope_class"),
+                "target": ".",
+                "task": task_text,
+                "changed": prepare_paths,
+                "transport": transport,
+                "format": "json",
             },
             effect_class="planning-state-mutation",
             expected_transition="assignment-selected",
+            command_rendering=prepare_command,
             owner_context_revision={"assignment_decision_revision": decision_revision},
             mutation_boundary={"writes_repo_state": True, "implementation_allowed": False},
         )
@@ -44373,6 +44394,7 @@ def _assignment_primary_action_payload(
             "action": "materialize-canonical-assignment",
             "expected_transition": "assignment-selected",
             "operation_invocation": invocation,
+            "command": prepare_command,
             "missing_authority": ["current checked-in Planning assignment bound to the canonical decision revision"],
         }
 
@@ -44396,6 +44418,24 @@ def _assignment_primary_action_payload(
                 "repair": "Import the revision-matched worker return when it arrives; do not implement the assigned slice locally.",
             },
         }
+    task_proof_ref = ""
+    if local_state_name == "integrated":
+        task_proof_ref = _current_assignment_task_proof_ref(target_root=target_root, assignment=assignment)
+        if not task_proof_ref:
+            proof_paths = [str(path) for path in _list_payload(_as_dict(assignment.get("assignment_gate")).get("allowed_paths"))]
+            changed_args = " ".join(f"--changed {_shell_quote(path)}" for path in proof_paths)
+            proof_command = _command_with_cli_invoke(
+                command=f"agentic-workspace proof --target . {changed_args} --format json",
+                cli_invoke=cli_invoke,
+            )
+            return {
+                **base,
+                "status": "proof-required",
+                "action": "prove-integrated-assignment",
+                "expected_transition": "integrated-assignment-proof-recorded",
+                "command": proof_command,
+                "proof_obligation": _as_dict(_as_dict(assignment.get("assignment_gate")).get("proof_obligation")),
+            }
     lifecycle_action = {
         "awaiting-admission": ("assignment.admit", "admit-returned-assignment", "admitted-or-repair-requested"),
         "admitted": ("assignment.integrate", "integrate-admitted-assignment", "integrated"),
@@ -44406,8 +44446,14 @@ def _assignment_primary_action_payload(
     if lifecycle_action:
         operation_id, action, transition = lifecycle_action
         arguments = {"target": ".", "run_id": run_id, "format": "json"}
+        if operation_id == "assignment.close":
+            arguments["task_proof_receipt_ref"] = task_proof_ref
+        proof_arg = f" --task-proof-receipt-ref {_shell_quote(task_proof_ref)}" if operation_id == "assignment.close" else ""
         command = _command_with_cli_invoke(
-            command=f"agentic-workspace assignment {operation_id.rsplit('.', 1)[-1]} --target . --run-id {_shell_quote(run_id)} --format json",
+            command=(
+                f"agentic-workspace assignment {operation_id.rsplit('.', 1)[-1]} --target . "
+                f"--run-id {_shell_quote(run_id)}{proof_arg} --format json"
+            ),
             cli_invoke=cli_invoke,
         )
         invocation = operation_invocation(
@@ -44447,9 +44493,6 @@ def _assignment_primary_action_payload(
             },
         }
 
-    methods = [str(method) for method in _list_payload((selected_target or {}).get("execution_methods")) if str(method)]
-    automatic = [method for method in methods if method in {"internal", "cli", "api"}]
-    transport = automatic[0] if automatic and delegation_control.get("execution_permitted") is True else "manual"
     command = _command_with_cli_invoke(
         command=(
             "agentic-workspace assignment export --target . "
@@ -44475,7 +44518,12 @@ def _assignment_primary_action_payload(
         command_rendering=command,
         preconditions={"assignment_status": "current", "assignment_decision_revision": decision_revision},
         owner_context_revision={"assignment_id": assignment_id, "assignment_revision": assignment_revision},
-        mutation_boundary={"writes_repo_state": False, "writes_local_run_state": True, "transport": transport},
+        mutation_boundary={
+            "writes_repo_state": True,
+            "writes_local_run_state": True,
+            "network": "allowed" if transport != "manual" else "not-required",
+            "transport": transport,
+        },
         proof_requirements=[{"claim": "transport and worker output do not satisfy AW proof or completion authority"}],
     )
     return {
@@ -44519,6 +44567,7 @@ def _execution_posture_payload(
         assignment_policy=assignment_policy,
         runtime_resolution=runtime_resolution,
         target_evidence=target_evidence,
+        human_intent=str(task_text or ""),
     )
     decomposition_delegation = (
         _active_decomposition_delegation_payload(target_root=target_root)
@@ -44632,9 +44681,36 @@ def _execution_posture_payload(
             except (OSError, json.JSONDecodeError):
                 plan_record = {}
         decision_revision = str(assignment_gate.get("assignment_decision_revision") or "").strip()
-        digest_fragment = hashlib.sha256(decision_revision.encode("utf-8")).hexdigest()[:16]
-        assignment_id = f"ordinary-{digest_fragment}"
-        run_id = f"run-{digest_fragment}"
+        assignment_seed = {
+            "assignment_decision_revision": decision_revision,
+            "human_intent": " ".join(str(task_text or "").split()),
+            "changed_paths": sorted(set(changed_paths)),
+            "task_class": assignment_gate.get("task_class"),
+            "scope_class": assignment_gate.get("scope_class"),
+        }
+        assignment_digest = hashlib.sha256(
+            json.dumps(assignment_seed, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
+        ).hexdigest()
+        assignment_id = f"ordinary-{assignment_digest}"
+        existing_assignment: dict[str, Any] = {}
+        try:
+            loaded_assignment = json.loads(
+                (target_root / ".agentic-workspace" / "planning" / "assignments" / f"{assignment_id}.assignment.json").read_text(
+                    encoding="utf-8-sig"
+                )
+            )
+            existing_assignment = loaded_assignment if isinstance(loaded_assignment, dict) else {}
+        except (OSError, json.JSONDecodeError):
+            existing_assignment = {}
+        existing_attempt = _as_dict(existing_assignment.get("current_attempt"))
+        attempt_number = int(existing_attempt.get("attempt") or 1)
+        if existing_assignment and existing_assignment.get("status") != "current":
+            attempt_number += 1
+        run_id = (
+            str(existing_attempt.get("run_id") or "")
+            if existing_assignment.get("status") == "current"
+            else f"run-{assignment_digest}-{attempt_number}"
+        )
         baseline = ""
         try:
             baseline_result = subprocess.run(
@@ -44648,20 +44724,33 @@ def _execution_posture_payload(
             baseline = baseline_result.stdout.strip() if baseline_result.returncode == 0 else ""
         except (OSError, subprocess.SubprocessError):
             baseline = ""
+        task_class = str(assignment_gate.get("task_class") or "")
+        role, allowed_effects = _assignment_role_and_effects(task_class=task_class)
         enhanced_gate = {
             **assignment_gate,
             "plan_ref": plan_ref,
             "plan_revision": plan_record.get("revision") or decision_revision,
-            "slice_id": f"slice-{digest_fragment}",
+            "slice_id": f"slice-{assignment_digest}",
             "slice_revision": decision_revision,
-            "role": "validator" if "validat" in str(task_text or "").lower() else "implementer",
+            "role": role,
             "human_intent": str(task_text or "").strip(),
             "required_inputs": list(changed_paths),
-            "allowed_effects": ["read-only"] if "validat" in str(task_text or "").lower() else ["repo-write"],
+            "allowed_effects": allowed_effects,
             "allowed_paths": list(changed_paths),
+            "dispatch_adapter": {
+                "provider": str((target or {}).get("provider") or ""),
+                "model": str((target or {}).get("model_family") or ""),
+                "execution_methods": list((target or {}).get("execution_methods") or []),
+            },
             "proof_obligation": {
+                "kind": "agentic-workspace/assignment-task-proof-obligation/v1",
                 "id": f"proof:{assignment_id}",
                 "revision": decision_revision,
+                "subject": {
+                    "assignment_id": assignment_id,
+                    "run_id": run_id,
+                    "human_intent_digest": hashlib.sha256(" ".join(str(task_text or "").split()).encode("utf-8")).hexdigest(),
+                },
             },
             "stop_conditions": [
                 "scope-expands-beyond-allowed-paths",
@@ -44697,9 +44786,10 @@ def _execution_posture_payload(
                     "assignment_gate": enhanced_gate,
                     "assignment_policy": assignment_policy,
                     "delegation_decision": enhanced_delegation,
-                    "aw_proof_receipt_ref": proof_ref,
+                    "structural_proof_receipt_ref": proof_ref,
                     "current_attempt": {
                         "run_id": run_id,
+                        "attempt": attempt_number,
                         "owner": enhanced_gate.get("selected_target"),
                         "status": "selected",
                         "updated_at": now,
@@ -44737,6 +44827,8 @@ def _execution_posture_payload(
         selected_target=target,
         delegation_control=delegation_control,
         cli_invoke=config.cli_invoke,
+        task_text=str(task_text or ""),
+        changed_paths=changed_paths,
     )
     task_assignment_disposition = _task_assignment_disposition_payload(
         assignment_decision=assignment_decision,
@@ -44777,6 +44869,47 @@ def _execution_posture_payload(
             "Automatic execution is permitted only when local delegation control resolves to auto.",
         ],
     }
+
+
+def _assignment_role_and_effects(*, task_class: str) -> tuple[str, list[str]]:
+    read_only_task_classes = {
+        "audit",
+        "evaluation",
+        "inspection",
+        "proof",
+        "research",
+        "review",
+        "validation",
+        "verification",
+    }
+    normalized = task_class.strip().lower()
+    if normalized in read_only_task_classes:
+        return "validator", ["read-only"]
+    return "implementer", ["repo-write"]
+
+
+def _current_assignment_task_proof_ref(*, target_root: Path, assignment: dict[str, Any]) -> str:
+    index_path = target_root / ".agentic-workspace" / "proof" / "receipts" / "index.json"
+    try:
+        index = json.loads(index_path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        return ""
+    entries = index.get("receipts") if isinstance(index, dict) else None
+    if not isinstance(entries, dict):
+        return ""
+    expected = _as_dict(_as_dict(assignment.get("assignment_gate")).get("proof_obligation"))
+    for receipt_id, entry in sorted(entries.items(), reverse=True):
+        if not isinstance(entry, dict):
+            continue
+        receipt_ref = str(entry.get("source_ref") or f"proof://receipts/{receipt_id}")
+        receipt = load_indexed_assignment_task_proof(target_root=target_root, receipt_ref=receipt_ref)
+        if _as_dict(receipt.get("assignment_proof_obligation")) != expected:
+            continue
+        if receipt.get("assignment_proof_binding") != assignment_task_proof_binding(receipt):
+            continue
+        if proof_receipt_admission(receipt).get("proof_sufficient"):
+            return receipt_ref
+    return ""
 
 
 def _task_assignment_disposition_payload(
@@ -51331,6 +51464,16 @@ def _record_proof_receipt_payload(
         changed_paths=receipt["changed_paths"],
         command=command,
     )
+    receipt["producer_class"] = "aw-proof"
+    receipt["authority"] = "aw-proof"
+    assignment_obligation = _integrated_assignment_proof_obligation(
+        target_root=target_root,
+        changed_paths=receipt["changed_paths"],
+        task_text=str(task_text or ""),
+    )
+    if assignment_obligation:
+        receipt["assignment_proof_obligation"] = assignment_obligation
+        receipt["assignment_proof_binding"] = assignment_task_proof_binding(receipt)
     from agentic_workspace.workspace_runtime_proof import _proof_template_binding_for_recorded_receipt
 
     template_binding = _proof_template_binding_for_recorded_receipt(
@@ -51516,6 +51659,47 @@ def _record_proof_receipt_payload(
         repair_retry_ladder=repair_retry_ladder,
         failure_summary=failure_summary,
     )
+
+
+def _integrated_assignment_proof_obligation(*, target_root: Path, changed_paths: list[str], task_text: str) -> dict[str, Any]:
+    assignments_root = target_root / ".agentic-workspace" / "planning" / "assignments"
+    changed_scope = set(changed_paths)
+    normalized_task = " ".join(task_text.split())
+    task_digest = hashlib.sha256(normalized_task.encode("utf-8")).hexdigest() if normalized_task else ""
+    candidates: list[tuple[bool, dict[str, Any]]] = []
+    for assignment_path in sorted(assignments_root.glob("*.assignment.json")):
+        try:
+            assignment = json.loads(assignment_path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(assignment, dict) or str(assignment.get("status") or "") != "current":
+            continue
+        gate = _as_dict(assignment.get("assignment_gate"))
+        obligation = _as_dict(gate.get("proof_obligation"))
+        attempt = _as_dict(assignment.get("current_attempt"))
+        run_id = str(attempt.get("run_id") or "")
+        allowed_paths = {str(path) for path in _list_payload(gate.get("allowed_paths")) if str(path)}
+        if not obligation or not run_id or not allowed_paths or not allowed_paths.issubset(changed_scope):
+            continue
+        state_path = target_root / ".agentic-workspace" / "local" / "assignment-runs" / run_id / "state.json"
+        try:
+            state = json.loads(state_path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(state, dict) or state.get("current_state") != "integrated":
+            continue
+        subject = _as_dict(obligation.get("subject"))
+        intent_match = bool(
+            task_digest
+            and (
+                str(subject.get("human_intent_digest") or "") == task_digest
+                or " ".join(str(gate.get("human_intent") or "").split()) == normalized_task
+            )
+        )
+        candidates.append((intent_match, obligation))
+    intent_matches = [obligation for intent_match, obligation in candidates if intent_match]
+    eligible = intent_matches or [obligation for _, obligation in candidates]
+    return eligible[0] if len(eligible) == 1 else {}
 
 
 def _proof_receipt_write_result(

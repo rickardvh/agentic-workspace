@@ -2,12 +2,81 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from pathlib import Path
 from typing import Any, Mapping
 
 PRODUCER_MODULE = "agentic_workspace.assignment_lifecycle"
+
+
+def load_indexed_assignment_task_proof(*, target_root: Path, receipt_ref: str) -> dict[str, Any]:
+    """Resolve an AW task-proof receipt only through its producer-owned index."""
+
+    store_root = (target_root / ".agentic-workspace" / "proof" / "receipts").resolve()
+    ref = str(receipt_ref or "").strip()
+    if not ref:
+        return {}
+    if ref.startswith("proof://receipts/"):
+        receipt_id = ref.rsplit("/", 1)[-1].strip()
+        if not receipt_id or any(
+            character not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_." for character in receipt_id
+        ):
+            return {}
+        receipt_path = store_root / f"{receipt_id}.json"
+    else:
+        candidate = Path(ref)
+        if candidate.is_absolute():
+            return {}
+        receipt_path = (target_root / candidate).resolve()
+        if not receipt_path.is_relative_to(store_root) or receipt_path.suffix != ".json":
+            return {}
+        receipt_id = receipt_path.stem
+    try:
+        receipt = json.loads(receipt_path.read_text(encoding="utf-8-sig"))
+        index = json.loads((store_root / "index.json").read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return {}
+    if not isinstance(receipt, dict) or not isinstance(index, dict):
+        return {}
+    if index.get("kind") != "agentic-workspace/trusted-producer-receipt-index/v1":
+        return {}
+    entries = index.get("receipts")
+    entry = entries.get(receipt_id) if isinstance(entries, dict) else None
+    if not isinstance(entry, dict):
+        return {}
+    indexed_path = (store_root / str(entry.get("path") or "")).resolve()
+    if indexed_path != receipt_path or not indexed_path.is_relative_to(store_root):
+        return {}
+    if str(entry.get("status") or "current") not in {"current", "fresh", "accepted"} or entry.get("superseded_by"):
+        return {}
+    if str(entry.get("producer_class") or "") != "aw-proof" or str(receipt.get("producer_class") or "") != "aw-proof":
+        return {}
+    if str(entry.get("revision") or "") != str(receipt.get("revision") or ""):
+        return {}
+    if str(entry.get("source_ref") or "") != str(receipt.get("source_ref") or ""):
+        return {}
+    if str(receipt.get("receipt_id") or "") != receipt_id:
+        return {}
+    return receipt
+
+
+def assignment_task_proof_binding(receipt: Mapping[str, Any]) -> str:
+    """Bind an AW proof subject to one exact assignment obligation."""
+
+    proof_subject = dict(receipt.get("proof_subject") or {}) if isinstance(receipt.get("proof_subject"), Mapping) else {}
+    payload = {
+        "assignment_proof_obligation": receipt.get("assignment_proof_obligation"),
+        "proof_subject_fingerprint": proof_subject.get("fingerprint"),
+        "command": receipt.get("command"),
+        "result": receipt.get("result"),
+        "changed_paths": sorted(str(path) for path in receipt.get("changed_paths", []) if str(path)),
+        "authority": receipt.get("authority"),
+        "producer_class": receipt.get("producer_class"),
+    }
+    rendered = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
+    return "sha256:" + hashlib.sha256(rendered).hexdigest()
 
 
 def materialize_canonical_assignment(
@@ -41,7 +110,7 @@ def materialize_canonical_assignment(
     if (
         isinstance(existing_assignment, dict)
         and existing_assignment.get("current_revision") == desired_assignment.get("current_revision")
-        and existing_assignment.get("status") in {"current", "closed", "archived"}
+        and existing_assignment.get("status") == "current"
     ):
         desired_assignment = existing_assignment
     try:
