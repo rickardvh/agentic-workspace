@@ -428,6 +428,17 @@ needs_review = false
     )
 
 
+def _write_installed_host_proof_target(target: Path) -> None:
+    _write_repo_local_proof_target(target)
+    source_checkout_entrypoint = target / "scripts" / "run_agentic_workspace.py"
+    source_checkout_entrypoint.unlink()
+    config_path = target / ".agentic-workspace" / "config.toml"
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(REPO_LOCAL_CLI_INVOKE, "agentic-workspace"),
+        encoding="utf-8",
+    )
+
+
 def _write_empty_proof_planning_state(target_root: Path) -> None:
     _write(
         target_root / ".agentic-workspace" / "planning" / "state.toml",
@@ -865,7 +876,8 @@ def test_proof_route_maintenance_selector_reports_route_health_repair_packet(tmp
 
 
 def test_proof_route_health_retires_failed_broad_receipt_after_focused_root_route_repair(tmp_path: Path, capsys) -> None:
-    _write_repo_local_proof_target(tmp_path)
+    _write_installed_host_proof_target(tmp_path)
+    assert not (tmp_path / "scripts" / "run_agentic_workspace.py").exists()
     _write(tmp_path / "src" / "agentic_workspace" / "config.py", "# fixture\n")
     config_path = tmp_path / ".agentic-workspace" / "config.toml"
     config_path.write_text(
@@ -967,8 +979,6 @@ owner = "workspace-cli-runtime"
     _write(tmp_path / "tests" / "test_workspace_proof_cli.py", "# fixture\n")
     _write(tmp_path / "tests" / "test_workspace_defaults_cli.py", "# fixture\n")
     _write(tmp_path / "tests" / "test_maintainer_surfaces.py", "# fixture\n")
-    _write(tmp_path / "scripts" / "run_agentic_workspace.py", "# fixture\n")
-
     assert (
         cli.main(
             [
@@ -1006,6 +1016,8 @@ owner = "workspace-cli-runtime"
     assert apply_payload["apply_receipt"]["validation_authority"] == (
         "proof_route_maintenance.route_health.repair_packets.validation_commands"
     )
+    assert all(command.startswith("agentic-workspace proof ") for command in apply_payload["apply_receipt"]["validation_commands"])
+    assert all("scripts/run_agentic_workspace.py" not in command for command in apply_payload["apply_receipt"]["validation_commands"])
     assert set(apply_payload["apply_receipt"]["validation_commands"]) != set(delta["lane"]["commands"])
     assert apply_payload["apply_receipt"]["candidate_route_commands"] == delta["lane"]["commands"]
     assert apply_payload["apply_receipt"]["candidate_route_status"] == "passed"
