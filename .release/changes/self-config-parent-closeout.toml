@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Close the self-configuration parent lifecycle with explicit child-satisfaction evidence."
+issues = [2767]
