@@ -2322,7 +2322,7 @@ def test_config_policy_apply_keeps_local_authority_and_completes_matching_readin
                 "--decision-json",
                 json.dumps(completion),
                 "--expect-config-revision",
-                context["shared_config_revision"],
+                context["local_config_revision"],
                 "--expect-setup-identity",
                 context["setup_identity"],
                 "--format",
@@ -2335,6 +2335,193 @@ def test_config_policy_apply_keeps_local_authority_and_completes_matching_readin
     receipt = json.loads((tmp_path / ".agentic-workspace" / "adoption-receipt.json").read_text(encoding="utf-8"))
     assert completed["readiness_status"] == "current"
     assert receipt["configuration_readiness"]["status"] == "current"
+
+
+def test_setup_defers_locally_resumes_without_transcript_and_re_elevates_required_work(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--format", "json"]) == 0
+    capsys.readouterr()
+    _write(
+        tmp_path / ".agentic-workspace" / "config.local.toml",
+        "schema_version = 1\n\n[delegation]\nexecution_role = 'orchestrator'\n",
+    )
+
+    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
+    concerns = json.loads(capsys.readouterr().out)["configuration_concerns"]
+    continuation = concerns["continuation"]
+    assert continuation["configuration_freshness"] == "required-for-affected-action"
+    assert continuation["user_disposition"] == "active"
+    assert continuation["unresolved_concern_ids"] == ["orchestration-posture"]
+    assert continuation["required_concern_ids"] == ["orchestration-posture"]
+    defer_decision = continuation["actions"]["defer"]["decision"]
+    local_revision = concerns["mutation_context"]["local_config_revision"]
+    assert (
+        cli.main(
+            [
+                "config-policy",
+                "--target",
+                str(tmp_path),
+                "--decision-json",
+                json.dumps(defer_decision),
+                "--expect-config-revision",
+                local_revision,
+                "--expect-setup-identity",
+                continuation["setup_identity"],
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    local_text = (tmp_path / ".agentic-workspace" / "config.local.toml").read_text(encoding="utf-8")
+    assert "[setup]" in local_text
+    assert 'prompt_disposition = "deferred"' in local_text
+    assert 'unresolved_concerns = ["orchestration-posture"]' in local_text
+
+    for _ in range(2):
+        assert cli.main(["start", "--target", str(tmp_path), "--task", "Inspect README.md.", "--format", "json"]) == 0
+        deferred = json.loads(capsys.readouterr().out)["decision_packet"]
+        assert deferred["configuration_readiness"]["status"] == "follow-up-deferred"
+        assert deferred["configuration_readiness"]["unresolved_concern_ids"] == ["orchestration-posture"]
+        assert deferred["action"]["id"] != "reconcile-repository-configuration"
+
+    second_checkout = tmp_path.parent / f"{tmp_path.name}-second-local-context"
+    shutil.copytree(tmp_path, second_checkout)
+    second_local_path = second_checkout / ".agentic-workspace" / "config.local.toml"
+    second_local = re.sub(r"(?ms)^\[setup\]\s*\n.*?(?=^\[|\Z)", "", second_local_path.read_text(encoding="utf-8"))
+    _write(second_local_path, second_local)
+    assert cli.main(["start", "--target", str(second_checkout), "--task", "Inspect README.md.", "--format", "json"]) == 0
+    independent = json.loads(capsys.readouterr().out)["decision_packet"]
+    assert independent["configuration_readiness"]["status"] == "reconciliation-required"
+    assert independent["action"]["id"] == "reconcile-repository-configuration"
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Delegate this change to another agent.", "--format", "json"]) == 0
+    required = json.loads(capsys.readouterr().out)["decision_packet"]
+    assert required["configuration_readiness"]["status"] == "action-required"
+    assert required["action"]["id"] == "reconcile-repository-configuration"
+
+    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
+    resumed_concerns = json.loads(capsys.readouterr().out)["configuration_concerns"]
+    assert resumed_concerns["continuation"]["user_disposition"] == "deferred"
+    assert resumed_concerns["continuation"]["unresolved_concern_ids"] == ["orchestration-posture"]
+    resume_decision = resumed_concerns["continuation"]["actions"]["resume"]["decision"]
+    assert resume_decision["clear_setup_disposition"] is True
+    assert (
+        cli.main(
+            [
+                "config-policy",
+                "--target",
+                str(tmp_path),
+                "--decision-json",
+                json.dumps(resume_decision),
+                "--expect-config-revision",
+                resumed_concerns["mutation_context"]["local_config_revision"],
+                "--expect-setup-identity",
+                resumed_concerns["continuation"]["setup_identity"],
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    assert "[setup]" not in (tmp_path / ".agentic-workspace" / "config.local.toml").read_text(encoding="utf-8")
+
+    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
+    suppress_concerns = json.loads(capsys.readouterr().out)["configuration_concerns"]
+    suppress_decision = suppress_concerns["continuation"]["actions"]["suppress_optional"]["decision"]
+    assert (
+        cli.main(
+            [
+                "config-policy",
+                "--target",
+                str(tmp_path),
+                "--decision-json",
+                json.dumps(suppress_decision),
+                "--expect-config-revision",
+                suppress_concerns["mutation_context"]["local_config_revision"],
+                "--expect-setup-identity",
+                suppress_concerns["continuation"]["setup_identity"],
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Inspect README.md.", "--format", "json"]) == 0
+    suppressed = json.loads(capsys.readouterr().out)["decision_packet"]
+    assert suppressed["configuration_readiness"]["status"] == "optional-prompts-suppressed"
+    assert suppressed["action"]["id"] != "reconcile-repository-configuration"
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Delegate this work.", "--format", "json"]) == 0
+    suppressed_required = json.loads(capsys.readouterr().out)["decision_packet"]
+    assert suppressed_required["configuration_readiness"]["status"] == "action-required"
+
+
+def test_setup_deferral_is_revision_bound_and_completion_retires_local_residue(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--format", "json"]) == 0
+    capsys.readouterr()
+    _write(tmp_path / "pyproject.toml", "[project]\nname = 'multi'\nversion = '0.1.0'\n")
+    _write(tmp_path / "package.json", '{"name":"multi-web"}\n')
+    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
+    concerns = json.loads(capsys.readouterr().out)["configuration_concerns"]
+    defer_decision = concerns["continuation"]["actions"]["defer"]["decision"]
+    assert (
+        cli.main(
+            [
+                "config-policy",
+                "--target",
+                str(tmp_path),
+                "--decision-json",
+                json.dumps(defer_decision),
+                "--expect-config-revision",
+                concerns["mutation_context"]["local_config_revision"],
+                "--expect-setup-identity",
+                concerns["continuation"]["setup_identity"],
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+
+    _write(tmp_path / "README.md", "# New bounded source context\n")
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Inspect the repository.", "--format", "json"]) == 0
+    stale = json.loads(capsys.readouterr().out)["decision_packet"]["configuration_readiness"]
+    assert stale["status"] == "reconciliation-required"
+    assert stale["stale_local_disposition"]["status"] == "discard-and-re-resolve"
+
+    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
+    current = json.loads(capsys.readouterr().out)["configuration_concerns"]
+    completion = current["mutation_context"]["reconciliation_completion"]["decision"]
+    assert completion["scope"] == "local"
+    assert completion["clear_setup_disposition"] is True
+    assert (
+        cli.main(
+            [
+                "config-policy",
+                "--target",
+                str(tmp_path),
+                "--decision-json",
+                json.dumps(completion),
+                "--expect-config-revision",
+                current["mutation_context"]["local_config_revision"],
+                "--expect-setup-identity",
+                current["mutation_context"]["setup_identity"],
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    assert "[setup]" not in (tmp_path / ".agentic-workspace" / "config.local.toml").read_text(encoding="utf-8")
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Inspect README.md.", "--format", "json"]) == 0
+    quiet = json.loads(capsys.readouterr().out)["decision_packet"]
+    assert "configuration_readiness" not in quiet
 
 
 def test_config_policy_apply_rejects_secret_material_without_writes(tmp_path: Path, capsys) -> None:

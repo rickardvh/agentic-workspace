@@ -173,6 +173,11 @@ SUPPORTED_DELEGATION_CONTROL_MODES = (
     "suggest",
     "auto",
 )
+SUPPORTED_SETUP_PROMPT_DISPOSITIONS = (
+    "active",
+    "deferred",
+    "optional-suppressed",
+)
 SUPPORTED_TARGET_IDENTITY_STATUSES = (
     "active",
     "retired",
@@ -416,6 +421,11 @@ class MixedAgentLocalOverride:
     human_override_policy: str | None
     manual_transport_policy: str | None
     clarification_mode: str | None
+    setup_prompt_disposition: str | None
+    setup_identity: str | None
+    setup_context_revision: str | None
+    setup_unresolved_concerns: tuple[str, ...]
+    setup_required_concerns: tuple[str, ...]
     local_memory_enabled: bool | None
     local_memory_path: Path
     target_guidance_enabled: bool | None
@@ -1949,6 +1959,11 @@ def empty_mixed_agent_local_override(*, path: Path | None, exists: bool) -> Mixe
         human_override_policy=None,
         manual_transport_policy=None,
         clarification_mode=None,
+        setup_prompt_disposition=None,
+        setup_identity=None,
+        setup_context_revision=None,
+        setup_unresolved_concerns=(),
+        setup_required_concerns=(),
         local_memory_enabled=None,
         local_memory_path=WORKSPACE_LOCAL_MEMORY_DEFAULT_PATH,
         target_guidance_enabled=None,
@@ -2553,6 +2568,7 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
             "safety",
             "delegation",
             "clarification",
+            "setup",
             "local_scratch_retention",
             "local_memory",
             "session_logging",
@@ -2744,6 +2760,46 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
             key="mode",
         )
 
+    # Setup prompting disposition belongs to this checkout/user only. Do not
+    # inherit it from workspace.shared_config_path or promote it across agents.
+    raw_setup = local_payload.get("setup", {})
+    if raw_setup is None:
+        raw_setup = {}
+    if not isinstance(raw_setup, dict):
+        raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [setup] section must be a table.")
+    unknown_setup = sorted(
+        set(raw_setup) - {"prompt_disposition", "setup_identity", "context_revision", "unresolved_concerns", "required_concerns"}
+    )
+    if unknown_setup:
+        unknown_text = ", ".join(unknown_setup)
+        warnings.append(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [setup] contains unsupported field(s): {unknown_text}.")
+    setup_prompt_disposition = require_optional_enum_or_none(
+        payload=raw_setup,
+        key="prompt_disposition",
+        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
+        allowed=SUPPORTED_SETUP_PROMPT_DISPOSITIONS,
+    )
+    setup_identity = require_optional_string(
+        payload=raw_setup,
+        key="setup_identity",
+        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
+    )
+    setup_context_revision = require_optional_string(
+        payload=raw_setup,
+        key="context_revision",
+        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
+    )
+    setup_unresolved_concerns = require_optional_string_list(
+        payload=raw_setup,
+        key="unresolved_concerns",
+        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
+    )
+    setup_required_concerns = require_optional_string_list(
+        payload=raw_setup,
+        key="required_concerns",
+        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
+    )
+
     raw_local_memory = payload.get("local_memory", {})
     if raw_local_memory is None:
         raw_local_memory = {}
@@ -2853,6 +2909,11 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
         human_override_policy=human_override_policy,
         manual_transport_policy=manual_transport_policy,
         clarification_mode=clarification_mode,
+        setup_prompt_disposition=setup_prompt_disposition,
+        setup_identity=setup_identity,
+        setup_context_revision=setup_context_revision,
+        setup_unresolved_concerns=setup_unresolved_concerns,
+        setup_required_concerns=setup_required_concerns,
         local_memory_enabled=require_optional_bool(
             payload=raw_local_memory,
             key="enabled",

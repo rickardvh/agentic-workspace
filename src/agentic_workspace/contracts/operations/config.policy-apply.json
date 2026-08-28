@@ -27,16 +27,17 @@
   ],
   "steps": [
     {"id": "resolve_root", "uses": "workspace.target-root.resolve", "description": "Resolve the effective target root."},
-    {"id": "apply_policy", "uses": "config.policy.apply", "description": "Validate authority, setup identity, revision, scope, fields, and values before a preservation-oriented scalar update."},
+    {"id": "apply_policy", "uses": "config.policy.apply", "description": "Validate authority, setup identity, revision, scope, fields, and values before a preservation-oriented bounded update."},
     {"id": "emit_result", "uses": "output.emit", "description": "Emit the compact owner, revision, and effect result."}
   ],
   "guards": [
     "Accept only agentic-workspace/config-policy-decision/v1 structured input with explicit authority and scope.",
     "Reject stale config revisions or setup identities before writing.",
     "Allow only the bounded policy inventory; module lifecycle and other owners remain separate.",
-    "Preserve comments and unknown fields by updating only one admitted scalar assignment at a time.",
+    "Preserve comments and unknown fields while updating only admitted scalar or compact concern-list assignments.",
     "Never promote credentials, secrets, or absolute machine paths into shared config."
-    ,"Complete readiness only through an explicit boolean decision whose setup identity still matches the adoption receipt."
+    ,"Complete readiness only through an explicit boolean decision whose setup identity still matches the adoption receipt.",
+    "Treat setup defer, optional suppression, and resume as local revision-bound disposition changes; they never mark repository readiness current and completion removes their local residue."
   ],
   "proof": [
     "shared and local mutation fixtures preserve unrelated comments and fields",

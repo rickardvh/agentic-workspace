@@ -1027,7 +1027,66 @@ def _read_adoption_receipt(*, target_root: Path) -> dict[str, Any]:
     return {"status": "present", "path": WORKSPACE_ADOPTION_RECEIPT_PATH.as_posix(), "payload": payload}
 
 
-def _configuration_readiness_startup_payload(*, target_root: Path, config: WorkspaceConfig, selected_modules: list[str]) -> dict[str, Any]:
+def _without_toml_table(source: str, table: str) -> str:
+    pattern = re.compile(rf"(?ms)^\[{re.escape(table)}\]\s*\r?\n.*?(?=^\[|\Z)")
+    return pattern.sub("", source).rstrip() + ("\n" if source else "")
+
+
+def _setup_context_revision(*, target_root: Path, selected_modules: list[str]) -> str:
+    local_path = target_root / WORKSPACE_LOCAL_CONFIG_PATH
+    local_source = local_path.read_text(encoding="utf-8") if local_path.is_file() else ""
+    bounded_sources = [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "GEMINI.md",
+        ".cursorrules",
+        "SYSTEM_INTENT.md",
+        "README.md",
+        "docs/system-intent.md",
+        "docs/product-direction.md",
+        "package.json",
+        "pyproject.toml",
+        "Cargo.toml",
+        "go.mod",
+        "CODEOWNERS",
+        ".github/CODEOWNERS",
+        "docs/CODEOWNERS",
+    ]
+    workflow_root = target_root / ".github" / "workflows"
+    if workflow_root.is_dir():
+        bounded_sources.extend(path.relative_to(target_root).as_posix() for path in sorted(workflow_root.glob("*.y*ml"))[:16])
+    source_revisions = []
+    for relative in bounded_sources:
+        path = target_root / relative
+        if path.is_file():
+            source_revisions.append([relative, hashlib.sha256(path.read_bytes()).hexdigest()])
+    payload: dict[str, Any] = {
+        "selected_modules": sorted(_dedupe(selected_modules)),
+        "shared_config_revision": _config_policy_revision(target_root / WORKSPACE_CONFIG_PATH),
+        "local_policy_revision": hashlib.sha256(_without_toml_table(local_source, "setup").encode("utf-8")).hexdigest(),
+        "bounded_source_revisions": source_revisions,
+    }
+    return "sha256:" + hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+
+
+def _task_depends_on_setup_concerns(*, task_text: str, concern_ids: Sequence[str]) -> bool:
+    normalized = task_text.lower()
+    if not normalized:
+        return False
+    if any(marker in normalized for marker in ("setup", "configure agentic workspace", "resume configuration")):
+        return True
+    markers = {
+        "orchestration-posture": ("delegate", "delegation", "assign", "handoff", "another agent"),
+        "cross-ecosystem-boundaries": ("ownership", "boundary", "cross-ecosystem", "planning lane"),
+    }
+    return any(
+        any(marker in normalized for marker in markers.get(concern_id, (concern_id.replace("-", " "),))) for concern_id in concern_ids
+    )
+
+
+def _configuration_readiness_startup_payload(
+    *, target_root: Path, config: WorkspaceConfig, selected_modules: list[str], task_text: str = ""
+) -> dict[str, Any]:
     receipt_status = _read_adoption_receipt(target_root=target_root)
     raw_receipt = receipt_status.get("payload") if receipt_status.get("status") == "present" else {}
     receipt: dict[str, Any] = raw_receipt if isinstance(raw_receipt, dict) else {}
@@ -1061,13 +1120,36 @@ def _configuration_readiness_startup_payload(*, target_root: Path, config: Works
             "identity": observed_identity,
             "surface": WORKSPACE_ADOPTION_RECEIPT_PATH.as_posix(),
         }
+    local_setup = config.local_override
+    local_disposition = str(local_setup.setup_prompt_disposition or "active")
+    context_revision = _setup_context_revision(target_root=target_root, selected_modules=selected_modules)
+    disposition_current = (
+        local_disposition in {"deferred", "optional-suppressed"}
+        and local_setup.setup_identity == (recorded_identity or observed_identity)
+        and local_setup.setup_context_revision == context_revision
+        and bool(local_setup.setup_unresolved_concerns)
+    )
+    action_required = disposition_current and _task_depends_on_setup_concerns(
+        task_text=task_text or "",
+        concern_ids=local_setup.setup_required_concerns,
+    )
     command = _command_with_cli_invoke(
         command="agentic-workspace setup --target . --format json",
         cli_invoke=config.cli_invoke,
     )
-    return {
+    payload: dict[str, Any] = {
         "kind": CONFIGURATION_READINESS_KIND,
-        "status": "reconciliation-required" if recorded_status == "reconciliation-required" else "stale",
+        "status": (
+            "action-required"
+            if action_required
+            else "follow-up-deferred"
+            if disposition_current and local_disposition == "deferred"
+            else "optional-prompts-suppressed"
+            if disposition_current
+            else "reconciliation-required"
+            if recorded_status == "reconciliation-required"
+            else "stale"
+        ),
         "identity": recorded_identity or "missing",
         "observed_identity": observed_identity,
         "surface": WORKSPACE_ADOPTION_RECEIPT_PATH.as_posix(),
@@ -1083,11 +1165,39 @@ def _configuration_readiness_startup_payload(*, target_root: Path, config: Works
             "unrelated read-only inspection remains allowed."
         ),
         "reason": (
-            "Fresh bootstrap has not reconciled repository configuration."
+            "Current work depends on an unresolved setup prerequisite."
+            if action_required
+            else "Setup follow-up is pending but locally deferred; unrelated ordinary work remains allowed."
+            if disposition_current and local_disposition == "deferred"
+            else "Optional setup prompting is locally suppressed; required prerequisites still re-elevate for affected work."
+            if disposition_current
+            else "Fresh bootstrap has not reconciled repository configuration."
             if recorded_status == "reconciliation-required"
-            else "The recorded setup identity no longer matches the effective bootstrap authority."
+            else "The recorded setup identity, configuration, capability, or bounded source context changed."
         ),
     }
+    if disposition_current:
+        payload["configuration_freshness"] = (
+            "required-for-affected-action" if local_setup.setup_required_concerns else "follow-up-recommended"
+        )
+        payload["user_disposition"] = local_disposition
+        payload["unresolved_concern_ids"] = list(local_setup.setup_unresolved_concerns)
+        payload["required_concern_ids"] = list(local_setup.setup_required_concerns)
+        payload["context_revision"] = context_revision
+        payload["resume"] = {
+            "action": "resume-repository-configuration",
+            "command": command,
+        }
+        payload["claim_boundary"] = (
+            "Only actions depending on required_concern_ids wait; unrelated direct work and claims remain available."
+        )
+    elif local_disposition in {"deferred", "optional-suppressed"}:
+        payload["stale_local_disposition"] = {
+            "status": "discard-and-re-resolve",
+            "recorded_context_revision": local_setup.setup_context_revision or "missing",
+            "observed_context_revision": context_revision,
+        }
+    return payload
 
 
 NECESSARY_SURFACE_DURABLE_PREFIXES = (
@@ -34487,6 +34597,7 @@ def _start_tiny_payload_fast(
         target_root=target_root,
         config=config,
         selected_modules=selected_modules,
+        task_text=task_text or "",
     )
     current_action = str(_as_dict(payload.get("immediate_next_allowed_action")).get("action") or "")
     setup_independent_actions = {
@@ -34499,7 +34610,7 @@ def _start_tiny_payload_fast(
         "select-changed-path-proof",
     }
     configuration_gate_applies = (
-        configuration_readiness.get("status") in {"reconciliation-required", "stale"}
+        configuration_readiness.get("status") in {"reconciliation-required", "stale", "action-required"}
         and installed_state_compatibility.get("status") == "compatible"
         and not active_planning_present
         and not normalized_paths
@@ -34532,6 +34643,8 @@ def _start_tiny_payload_fast(
             "claim_boundary": configuration_readiness.get("claim_boundary"),
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
         }
+    elif configuration_readiness.get("status") in {"follow-up-deferred", "optional-prompts-suppressed"}:
+        payload["configuration_readiness"] = configuration_readiness
     payload["routine_work_context"] = _routine_work_context_payload(
         source_payload=payload,
         surface="start",
@@ -50029,6 +50142,49 @@ def _setup_configuration_concerns_payload(*, target_root: Path, config: Workspac
         for status in ("satisfied", "inference-ready", "human-decision-required", "not-applicable", "bounded-route-required")
     }
     status = "human-decision-required" if human_questions else "bounded-route-required" if broad_work else "zero-question-ready"
+    unresolved_concern_ids = [
+        str(concern.get("id"))
+        for concern in concerns
+        if concern.get("status") in {"human-decision-required", "bounded-route-required", "follow-up-recommended"}
+    ]
+    required_concern_ids = [
+        str(concern.get("id")) for concern in concerns if concern.get("status") in {"human-decision-required", "bounded-route-required"}
+    ]
+    context_revision = _setup_context_revision(target_root=target_root, selected_modules=selected_modules)
+    local_disposition = config.local_override.setup_prompt_disposition or "active"
+    local_disposition_current = (
+        local_disposition in {"deferred", "optional-suppressed"}
+        and config.local_override.setup_identity == setup_identity
+        and config.local_override.setup_context_revision == context_revision
+        and tuple(unresolved_concern_ids) == config.local_override.setup_unresolved_concerns
+    )
+    disposition_decision_base = {
+        "kind": "agentic-workspace/config-policy-decision/v1",
+        "concern_id": "setup-continuation",
+        "authority": "human-answer",
+        "scope": "local",
+        "setup_identity": setup_identity,
+    }
+
+    def disposition_decision(disposition: str) -> dict[str, Any]:
+        return {
+            **disposition_decision_base,
+            "changes": {
+                "setup.prompt_disposition": disposition,
+                "setup.setup_identity": setup_identity,
+                "setup.context_revision": context_revision,
+                "setup.unresolved_concerns": unresolved_concern_ids,
+                "setup.required_concerns": required_concern_ids,
+            },
+        }
+
+    disposition_command = _command_with_cli_invoke(
+        command=(
+            "agentic-workspace config-policy --target . --decision-json '<selected-disposition.decision-json>' "
+            f"--expect-config-revision {local_config_revision} --expect-setup-identity {setup_identity} --format json"
+        ),
+        cli_invoke=config.cli_invoke,
+    )
     return {
         "kind": "agentic-workspace/setup-concerns/v1",
         "status": status,
@@ -50063,6 +50219,30 @@ def _setup_configuration_concerns_payload(*, target_root: Path, config: Workspac
             "status": "kept-transient",
             "rule": "Advisory orientation and weak setup findings do not become configuration pressure without stronger authority.",
         },
+        "continuation": {
+            "kind": "agentic-workspace/setup-continuation/v1",
+            "configuration_freshness": (
+                "required-for-affected-action" if required_concern_ids else "follow-up-recommended" if unresolved_concern_ids else "current"
+            ),
+            "user_disposition": local_disposition if local_disposition_current else "active",
+            "setup_identity": setup_identity,
+            "context_revision": context_revision,
+            "unresolved_concern_ids": unresolved_concern_ids,
+            "required_concern_ids": required_concern_ids,
+            "source": WORKSPACE_LOCAL_CONFIG_PATH.as_posix(),
+            "actions": {
+                "defer": {"decision": disposition_decision("deferred"), "command": disposition_command},
+                "suppress_optional": {"decision": disposition_decision("optional-suppressed"), "command": disposition_command},
+                "resume": {
+                    "decision": {**disposition_decision_base, "changes": {}, "clear_setup_disposition": True},
+                    "command": disposition_command,
+                },
+            },
+            "rule": (
+                "Deferral changes only local prompting disposition, never repository freshness. Applied decisions remain with their owners; "
+                "resume re-resolves from compact concern identities without the prior transcript."
+            ),
+        },
         "mutation_context": {
             "setup_identity": setup_identity,
             "shared_config_revision": shared_config_revision,
@@ -50074,15 +50254,16 @@ def _setup_configuration_concerns_payload(*, target_root: Path, config: Workspac
                     "kind": "agentic-workspace/config-policy-decision/v1",
                     "concern_id": "configuration-readiness",
                     "authority": "strong-repo-evidence",
-                    "scope": "shared",
+                    "scope": "local",
                     "setup_identity": setup_identity,
                     "changes": {},
                     "complete_readiness": True,
+                    "clear_setup_disposition": True,
                 },
                 "command": _command_with_cli_invoke(
                     command=(
                         "agentic-workspace config-policy --target . --decision-json '<reconciliation-completion.decision-json>' "
-                        f"--expect-config-revision {shared_config_revision} --expect-setup-identity {setup_identity} --format json"
+                        f"--expect-config-revision {local_config_revision} --expect-setup-identity {setup_identity} --format json"
                     ),
                     cli_invoke=config.cli_invoke,
                 ),
@@ -50132,6 +50313,13 @@ def _setup_configuration_concerns_payload(*, target_root: Path, config: Workspac
                 "disposition": "setup-reconciliation",
                 "owner": "setup.guidance",
                 "rule": "Re-resolve from the matching identity after every owner action; do not create a second transaction log.",
+            },
+            {
+                "concern": "temporary setup prompting disposition",
+                "disposition": "typed-local-owner",
+                "owner": "config.policy-apply",
+                "surface": f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()}#setup",
+                "rule": "Local defer or optional suppression never changes repository freshness or shared policy and is removed on resume/completion.",
             },
         ],
         "next": {
@@ -53548,6 +53736,11 @@ _CONFIG_POLICY_FIELDS: dict[str, dict[str, tuple[type, tuple[Any, ...] | None]]]
         "delegation.down_routing_behavior": (str, SUPPORTED_DOWN_ROUTING_BEHAVIORS),
         "delegation.human_override_policy": (str, SUPPORTED_HUMAN_OVERRIDE_POLICIES),
         "delegation.manual_transport_policy": (str, SUPPORTED_MANUAL_TRANSPORT_POLICIES),
+        "setup.prompt_disposition": (str, config_lib.SUPPORTED_SETUP_PROMPT_DISPOSITIONS),
+        "setup.setup_identity": (str, None),
+        "setup.context_revision": (str, None),
+        "setup.unresolved_concerns": (list, None),
+        "setup.required_concerns": (list, None),
     },
 }
 
@@ -53562,7 +53755,9 @@ def _toml_scalar(value: Any) -> str:
         return "true" if value else "false"
     if isinstance(value, str):
         return json.dumps(value, ensure_ascii=False)
-    raise WorkspaceUsageError("config policy values must be strings or booleans")
+    if isinstance(value, list) and all(isinstance(item, str) and item for item in value):
+        return "[" + ", ".join(json.dumps(item, ensure_ascii=False) for item in value) + "]"
+    raise WorkspaceUsageError("config policy values must be strings, booleans, or non-empty string lists")
 
 
 def _toml_comment_index(text: str) -> int | None:
@@ -53665,10 +53860,15 @@ def _apply_workspace_config_policy(values: dict[str, Any], _arguments: dict[str,
         )
     raw_changes = decision.get("changes", {})
     complete_readiness = decision.get("complete_readiness", False)
-    if not isinstance(raw_changes, dict) or not raw_changes and complete_readiness is not True:
-        raise WorkspaceUsageError("config-policy decision requires changes or complete_readiness=true")
+    clear_setup_disposition = decision.get("clear_setup_disposition", False)
+    if not isinstance(raw_changes, dict) or not raw_changes and complete_readiness is not True and clear_setup_disposition is not True:
+        raise WorkspaceUsageError("config-policy decision requires changes, complete_readiness=true, or clear_setup_disposition=true")
     if type(complete_readiness) is not bool:
         raise WorkspaceUsageError("config-policy complete_readiness must be a boolean")
+    if type(clear_setup_disposition) is not bool:
+        raise WorkspaceUsageError("config-policy clear_setup_disposition must be a boolean")
+    if clear_setup_disposition and scope != "local":
+        raise WorkspaceUsageError("config-policy can clear setup disposition only through local scope")
     config_path = target_root / (WORKSPACE_CONFIG_PATH if scope == "shared" else WORKSPACE_LOCAL_CONFIG_PATH)
     observed_revision = _config_policy_revision(config_path)
     expected_revision = str(values.get("expect_config_revision") or "")
@@ -53689,6 +53889,8 @@ def _apply_workspace_config_policy(values: dict[str, Any], _arguments: dict[str,
         if type(value) is not expected_type or choices is not None and value not in choices:
             allowed_text = f"; allowed values: {', '.join(map(str, choices))}" if choices else ""
             raise WorkspaceUsageError(f"config-policy value for {field_name} is invalid{allowed_text}")
+        if expected_type is list and (not all(isinstance(item, str) and item for item in value) or len(value) != len(set(value))):
+            raise WorkspaceUsageError(f"config-policy value for {field_name} must be a unique list of non-empty concern ids")
         lowered = f"{field_name} {value}".lower()
         if any(marker in lowered for marker in ("password", "secret", "credential", "private_key", "access_token")):
             raise WorkspaceUsageError("config-policy refuses credential or secret material")
@@ -53697,6 +53899,11 @@ def _apply_workspace_config_policy(values: dict[str, Any], _arguments: dict[str,
         section, key = field_name.split(".", 1)
         rendered = _replace_toml_scalar(source=rendered, section=section, key=key, value=value)
         effects.append({"owner": f"config.{scope}", "field": field_name, "value": value})
+    if clear_setup_disposition:
+        cleared = _without_toml_table(rendered, "setup")
+        if cleared != rendered:
+            effects.append({"owner": "config.local", "field": "setup", "value": "removed"})
+        rendered = cleared
     try:
         tomllib.loads(rendered)
     except tomllib.TOMLDecodeError as exc:

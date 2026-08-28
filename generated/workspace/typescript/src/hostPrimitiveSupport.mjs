@@ -2559,6 +2559,11 @@ const configPolicyFields = {
     'delegation.down_routing_behavior': ['never', 'bounded-mechanical-work', 'when-cheaper-safe-target-exists'],
     'delegation.human_override_policy': ['explicit-only', 'allowed-with-recorded-reason', 'disallowed'],
     'delegation.manual_transport_policy': ['disabled', 'allowed', 'required'],
+    'setup.prompt_disposition': ['active', 'deferred', 'optional-suppressed'],
+    'setup.setup_identity': null,
+    'setup.context_revision': null,
+    'setup.unresolved_concerns': { type: 'string-list' },
+    'setup.required_concerns': { type: 'string-list' },
   },
 };
 
@@ -2599,6 +2604,23 @@ function replaceTomlScalar(source, field, value) {
   return lines.join('');
 }
 
+function withoutTomlTable(source, table) {
+  const lines = source.match(/[^\n]*(?:\n|$)/g)?.filter((line) => line !== '') ?? [];
+  const kept = [];
+  let removing = false;
+  let found = false;
+  for (const line of lines) {
+    const content = line.endsWith('\n') ? line.slice(0, -1).replace(/\r$/, '') : line.replace(/\r$/, '');
+    const heading = content.match(/^\s*\[([^\]]+)\]\s*(?:#.*)?$/);
+    if (heading) {
+      removing = heading[1].trim() === table;
+      found = found || removing;
+    }
+    if (!removing) kept.push(line);
+  }
+  return found ? kept.join('') : source;
+}
+
 function applyWorkspaceConfigPolicy(values) {
   const targetRoot = resolve(String(values.target_root ?? values.target ?? '.'));
   let decision;
@@ -2614,8 +2636,10 @@ function applyWorkspaceConfigPolicy(values) {
   const observedSetupIdentity = existsSync(receiptPath) ? String(readJson(receiptPath)?.configuration_readiness?.identity ?? 'legacy-compatible') : 'legacy-compatible';
   if (observedSetupIdentity !== expectedSetupIdentity) throw new RuntimeError(`config-policy setup identity is stale: expected ${expectedSetupIdentity}, observed ${observedSetupIdentity}`);
   const changes = decision.changes ?? {};
-  if (!isObject(changes) || (Object.keys(changes).length === 0 && decision.complete_readiness !== true)) throw new RuntimeError('config-policy decision requires changes or complete_readiness=true');
+  if (!isObject(changes) || (Object.keys(changes).length === 0 && decision.complete_readiness !== true && decision.clear_setup_disposition !== true)) throw new RuntimeError('config-policy decision requires changes, complete_readiness=true, or clear_setup_disposition=true');
   if (decision.complete_readiness !== undefined && typeof decision.complete_readiness !== 'boolean') throw new RuntimeError('config-policy complete_readiness must be a boolean');
+  if (decision.clear_setup_disposition !== undefined && typeof decision.clear_setup_disposition !== 'boolean') throw new RuntimeError('config-policy clear_setup_disposition must be a boolean');
+  if (decision.clear_setup_disposition === true && scope !== 'local') throw new RuntimeError('config-policy can clear setup disposition only through local scope');
   const relativePath = scope === 'shared' ? '.agentic-workspace/config.toml' : '.agentic-workspace/config.local.toml';
   const configPath = join(targetRoot, relativePath);
   const configExists = existsSync(configPath);
@@ -2627,11 +2651,17 @@ function applyWorkspaceConfigPolicy(values) {
   for (const [field, value] of Object.entries(changes)) {
     if (!Object.prototype.hasOwnProperty.call(allowed, field)) throw new RuntimeError(`config-policy field ${JSON.stringify(field)} is not owned by the ${scope} policy operation`);
     const choices = allowed[field];
-    if ((choices && !choices.includes(value)) || (!choices && typeof value !== 'string')) throw new RuntimeError(`config-policy value for ${field} is invalid`);
+    const stringList = isObject(choices) && choices.type === 'string-list';
+    if ((Array.isArray(choices) && !choices.includes(value)) || (stringList && (!Array.isArray(value) || value.some((item) => typeof item !== 'string' || item.length === 0) || new Set(value).size !== value.length)) || (!choices && typeof value !== 'string')) throw new RuntimeError(`config-policy value for ${field} is invalid`);
     if (/(password|secret|credential|private_key|access_token)/i.test(`${field} ${value}`)) throw new RuntimeError('config-policy refuses credential or secret material');
     if (scope === 'shared' && typeof value === 'string' && (isAbsolute(value) || /^[A-Za-z]:[\\/]/.test(value))) throw new RuntimeError('config-policy refuses absolute machine paths in shared configuration');
     rendered = replaceTomlScalar(rendered, field, value);
     effects.push({ owner: `config.${scope}`, field, value });
+  }
+  if (decision.clear_setup_disposition === true) {
+    const cleared = withoutTomlTable(rendered, 'setup');
+    if (cleared !== rendered) effects.push({ owner: 'config.local', field: 'setup', value: 'removed' });
+    rendered = cleared;
   }
   let readinessReceipt = null;
   if (decision.complete_readiness === true) {

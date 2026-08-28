@@ -2253,7 +2253,13 @@ def test_config_policy_generated_python_and_typescript_preview_parity(tmp_path: 
             "authority": "human-answer",
             "scope": "local",
             "setup_identity": context["setup_identity"],
-            "changes": {"delegation.assignment_policy": "best-fit-advisory"},
+            "changes": {
+                "setup.prompt_disposition": "deferred",
+                "setup.setup_identity": context["setup_identity"],
+                "setup.context_revision": "sha256:fixture-context",
+                "setup.unresolved_concerns": ["orchestration-posture"],
+                "setup.required_concerns": ["orchestration-posture"],
+            },
         }
         return {
             "target": str(targets[name]),
@@ -2289,6 +2295,7 @@ console.log(JSON.stringify(payload));
         "outcome",
         "mutation_applied",
         "reason_code",
+        "effects",
     ):
         assert python_payload[field] == typescript_payload[field]
 

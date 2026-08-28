@@ -27,6 +27,7 @@ This subskill assumes the main AW operating skill or compact router has already 
    - low-confidence or generic findings to transient report only.
 7. Before writing seed surfaces, check promotion criteria in `.agentic-workspace/docs/setup-findings-contract.md` and the durable candidate rule in `.agentic-workspace/docs/jumpstart-contract.md`.
 8. After every named owner route is complete, use `configuration_concerns.mutation_context.reconciliation_completion` exactly as returned to mark that same readiness identity current, then rerun ordinary `start`. Do not complete readiness while a human question or bounded Planning route remains.
+9. If the user stops before unresolved concerns are complete, select `configuration_concerns.continuation.actions.defer` exactly as returned. Use `suppress_optional` only for an explicit local preference to hide optional prompts; neither action marks readiness current or hides an affected required prerequisite. To continue later, use the returned `resume` decision or rerun `setup`, which re-resolves from the compact revision-bound concern ids without the old transcript. Never turn a temporary local disposition into shared repo policy.
 
 ## Mutation ownership
 
