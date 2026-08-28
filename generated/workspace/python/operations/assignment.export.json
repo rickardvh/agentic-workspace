@@ -7,13 +7,13 @@
   },
   "effects": {
     "destructive": false,
-    "idempotent": true,
+    "idempotent": false,
     "read_only": false,
     "requires_preflight_gate": false,
-    "writes_repo_state": false
+    "writes_repo_state": true
   },
   "guards": [
-    "Write only under .agentic-workspace/local/assignment-runs/.",
+    "Write run artifacts under .agentic-workspace/local/assignment-runs/; when no assignment id is supplied, also materialize only the live decision-derived Planning assignment and structural receipt.",
     "Import places returned work in received/awaiting-admission only; it does not prove, admit, integrate, or close.",
     "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
     "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade."
@@ -32,12 +32,12 @@
     },
     {
       "name": "assignment_id",
-      "required": true,
+      "required": false,
       "source": "cli-option"
     },
     {
       "name": "assignment_revision",
-      "required": true,
+      "required": false,
       "source": "cli-option"
     },
     {
@@ -47,7 +47,7 @@
     },
     {
       "name": "target_name",
-      "required": true,
+      "required": false,
       "source": "cli-option"
     },
     {
@@ -94,6 +94,16 @@
       "name": "dry_run",
       "required": false,
       "source": "cli-option"
+    },
+    {
+      "name": "task",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "changed",
+      "required": false,
+      "source": "cli-option"
     }
   ],
   "intent": "Provide the public adapter-neutral assignment/run lifecycle boundary for delegated execution, return admission, integration, cleanup, and scoped override.",
@@ -127,7 +137,7 @@
     ]
   },
   "locality": {
-    "network": "forbidden",
+    "network": "allowed",
     "outside_repo_writes": "forbidden",
     "requires_repo": true
   },
@@ -179,6 +189,12 @@
   ],
   "summary": "Prepare a durable assignment handoff packet and pasteable prompt from one assignment authority.",
   "writes": [
+    {
+      "description": "When no assignment id is supplied, export first materializes the live task-bound Planning assignment and structural identity receipt.",
+      "required": false,
+      "surface": ".agentic-workspace/planning/assignments/ and .agentic-workspace/proof/receipts/",
+      "when": "the live canonical assignment is not yet materialized"
+    },
     {
       "description": "transition records local disposable assignment/run artifacts derived from checked-in Planning authority",
       "required": true,
