@@ -5,13 +5,13 @@
   "owner_level": "slice",
   "lifecycle": "live",
   "phase": "implementation",
-  "revision": 3,
+  "revision": 5,
   "canonical_core": {
     "requested_outcome": "Fix GitHub issues #2797, #2803, and #2804 completely and deliver them as three ordered pull requests.",
     "hard_constraints": "Preserve proof admission and freshness, make rejected proof publication residue-free, preserve Planning CAS and owner-conflict guards, and do not mutate unrelated reconciliation residue.",
     "agent_may_decide": "The narrowest compatible implementation, fixture structure, generated-surface update sequence, and exact stack branch names.",
     "escalate_when": "An issue cannot satisfy its acceptance criteria without weakening an existing guard or changing public behavior outside the three issue boundaries.",
-    "next_action": "Implement and prove #2797, publish the first PR, then continue with #2803 and #2804 on stacked branches.",
+    "next_action": "Publish #2803 from codex/2803-proof-receipt-atomicity against codex/2797-proof-route-invocation, then implement #2804 on the third stack branch.",
     "proof_expectations": [
       "Installed-host route repair completes without a source-checkout script.",
       "Rejected and interrupted proof receipt publication leaves no persistent semantic residue.",
@@ -54,7 +54,7 @@
       "Focused source, contract, generated, release-note, and regression-test surfaces needed by those fixes."
     ],
     "effects": [
-      "PR 1 fixes #2797 from master.",
+      "PR 1 fixes #2797 from master as GitHub PR #2815.",
       "PR 2 fixes #2803 and targets PR 1's head branch.",
       "PR 3 fixes #2804 and targets PR 2's head branch."
     ]
@@ -70,6 +70,8 @@
         "#2797 installed-host apply/receipt/retirement regression passed",
         "14 focused route-repair tests passed",
         "500 Planning/root regression tests passed",
+        "#2803 whole-surface rejection, stale-subject, rollback, and idempotent-retry tests passed",
+        "#2803 receipt suite: 12 passed; proof-route repair suite: 13 passed",
         "workspace, memory, planning, and verification typechecks passed",
         "contract tooling and structured inventory passed"
       ]
@@ -84,7 +86,7 @@
     {"kind": "issue", "target": "2803", "label": "GitHub #2803", "role": "stack-pr-2", "locator": "https://github.com/rickardvh/agentic-workspace/issues/2803"},
     {"kind": "issue", "target": "2804", "label": "GitHub #2804", "role": "stack-pr-3", "locator": "https://github.com/rickardvh/agentic-workspace/issues/2804"}
   ],
-  "next_action": "Publish the #2797 PR from codex/2797-proof-route-invocation, then branch #2803 from that head.",
+  "next_action": "Publish #2803 from codex/2803-proof-receipt-atomicity against codex/2797-proof-route-invocation, then branch #2804 from that head.",
   "blockers": [],
   "proof": {
     "claims": [
@@ -99,9 +101,13 @@
     ],
     "refs": [
       "#2797 installed-host guarded repair lifecycle: passed",
+      "GitHub PR #2815 published from codex/2797-proof-route-invocation against master",
       "route-repair focused suite: 14 passed",
       "changed-selector proof suite: 37 passed",
       "Planning/root regression suite: 500 passed",
+      "#2803 receipt publication suite: 12 passed",
+      "#2797 proof-route repair compatibility suite: 13 passed",
+      "generated command package conformance: passed",
       "make typecheck: passed",
       "contract tooling and structured inventory: passed"
     ]
