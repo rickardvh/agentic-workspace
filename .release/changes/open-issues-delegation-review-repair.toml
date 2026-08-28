@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Repair non-local delegation parsing, generated parity, proof-template admission, and lifecycle closeout."
-issues = [2763]
