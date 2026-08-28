@@ -93,12 +93,12 @@ authority = "primary"
 summary = "Repo-owned workspace policy, workflow obligations, and structured operating settings."
 
 [[authority_surfaces]]
-concern = "compact-planning-state"
-surface = ".agentic-workspace/planning/state.toml"
+concern = "bounded-planning-continuity"
+surface = ".agentic-workspace/planning/execplans/"
 owner = "planning"
 ownership = "module_managed"
 authority = "primary"
-summary = "Consolidated active queue and roadmap state owned by the planning package."
+summary = "Owner-scoped execution continuity owned by the planning package; repository-wide views are derived."
 
 [[authority_surfaces]]
 concern = "design-constraints"

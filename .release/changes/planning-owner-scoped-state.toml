@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Replace checked-in aggregate Planning state with owner-scoped records, local selection, derived views, and idempotent legacy migration."
+issues = [2800, 2801, 2802]

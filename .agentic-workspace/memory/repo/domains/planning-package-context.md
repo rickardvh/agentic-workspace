@@ -10,8 +10,9 @@ Capture durable context for the planning bootstrap package and its package-local
 
 ## Durable boundaries
 
-- Planning owns active execution state through `.agentic-workspace/planning/state.toml` and `.agentic-workspace/planning/execplans/`.
-- Memory remains an optional companion for durable technical context and should not own active queue state.
+- Planning owns active execution custody through bounded execplan, lane/decomposition, issue-relation, and integration records. Current-owner selection is worktree-local and aggregate queue/roadmap views are derived.
+- `.agentic-workspace/planning/state.toml` is legacy upgrade input, not ongoing authority; fresh installs omit it and upgrades retire it after bounded migration.
+- Memory remains an optional companion for durable technical context and should not own active execution custody.
 - Package planning contract includes review artifacts, upstream-task intake, generated routing surfaces, and compatibility views.
 - Package planning source of truth lives under `packages/planning/src/`, `packages/planning/bootstrap/`, and `packages/planning/tests/`; the repo root is only the operational install used for dogfooding.
 
@@ -44,4 +45,4 @@ Use `.agentic-workspace/memory/repo/skills/package-context-inspection/SKILL.md` 
 
 ## Last confirmed
 
-2026-04-08 after narrowing package-context notes and moving the repeatable checklist into a checked-in skill
+2026-08-28 after replacing checked-in aggregate planning state with owner-scoped records and derived views

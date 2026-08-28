@@ -78,12 +78,20 @@ authority = "primary"
 summary = "Repo-level startup instructions and local operating constraints."
 
 [[authority_surfaces]]
-concern = "compact-planning-state"
-surface = ".agentic-workspace/planning/state.toml"
+concern = "planning-owner-records"
+surface = ".agentic-workspace/planning/execplans/"
 owner = "planning"
 ownership = "module_managed"
 authority = "primary"
-summary = "Consolidated active queue and roadmap state owned by the planning package."
+summary = "Bounded execution-owner records; local selection and derived views do not create checked-in aggregate authority."
+
+[[authority_surfaces]]
+concern = "legacy-planning-state"
+surface = ".agentic-workspace/planning/state.toml"
+owner = "planning"
+ownership = "module_managed"
+authority = "compatibility"
+summary = "Upgrade-only compatibility input retired after useful bounded owner and issue relations are migrated."
 
 
 [[authority_surfaces]]

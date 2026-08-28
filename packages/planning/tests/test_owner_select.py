@@ -2,13 +2,11 @@ from __future__ import annotations
 
 import copy
 import json
-import tomllib
 from pathlib import Path
 
 import pytest
 
 from repo_planning_bootstrap.installer import (
-    OWNER_SELECTION_RECEIPT_SCHEMA_PATH,
     create_execplan_scaffold,
     create_lane_record,
     install_bootstrap,
@@ -33,11 +31,9 @@ def test_owner_select_local_is_narrow_self_proving_and_idempotent(tmp_path: Path
     install_bootstrap(target=tmp_path)
     owner_path = _create_owner(tmp_path, "existing-owner")
     unrelated_path = _create_owner(tmp_path, "unrelated-owner")
-    state_path = tmp_path / ".agentic-workspace/planning/state.toml"
     before = {
         "owner": owner_path.read_bytes(),
         "unrelated": unrelated_path.read_bytes(),
-        "state": state_path.read_bytes(),
     }
 
     result = select_existing_owner(
@@ -57,7 +53,7 @@ def test_owner_select_local_is_narrow_self_proving_and_idempotent(tmp_path: Path
     assert not [action for action in result.actions if action.kind == "proof"]
     assert owner_path.read_bytes() == before["owner"]
     assert unrelated_path.read_bytes() == before["unrelated"]
-    assert state_path.read_bytes() == before["state"]
+    assert not (tmp_path / ".agentic-workspace/planning/state.toml").exists()
 
     selection_path = tmp_path / ".agentic-workspace/local/planning/owner-selection.json"
     receipt_path = tmp_path / ".agentic-workspace/local/planning/owner-selection-receipt.json"
@@ -86,32 +82,28 @@ def test_owner_select_dry_run_reports_exact_delta_without_writes(tmp_path: Path)
     assert after == before
 
 
-def test_owner_select_shared_requires_reason_and_preserves_unrelated_state(tmp_path: Path) -> None:
+def test_owner_select_shared_is_retired_without_mutation(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     selected_path = _create_owner(tmp_path, "selected-owner")
     active_path = _create_owner(tmp_path, "active-owner", activate=True)
     state_path = tmp_path / ".agentic-workspace/planning/state.toml"
-    state_before = tomllib.loads(state_path.read_text(encoding="utf-8"))
-    protected_before = copy.deepcopy(state_before.get("roadmap", {}))
+    selection_path = tmp_path / ".agentic-workspace/local/planning/owner-selection.json"
+    selection_before = selection_path.read_bytes()
 
     refused = select_existing_owner("selected-owner", target=tmp_path, mode="shared")
-    assert refused.reason_code == "shared-selection-reason-required"
-    assert tomllib.loads(state_path.read_text(encoding="utf-8")) == state_before
+    assert refused.reason_code == "shared-selection-retired"
+    assert "--mode local" in refused.recovery_command
 
     result = select_existing_owner(
         "selected-owner",
         target=tmp_path,
         mode="shared",
         reason="shared CI continuation owner",
-        expected_planning_revision=planning_revision(tmp_path)["revision_id"],
     )
-    state_after = tomllib.loads(state_path.read_text(encoding="utf-8"))
-    assert state_after["todo"]["active_items"][0]["id"] == "selected-owner"
-    assert any(item["id"] == "active-owner" for item in state_after["todo"]["queued_items"])
-    assert state_after.get("roadmap", {}) == protected_before
+    assert result.reason_code == "shared-selection-retired"
     assert selected_path.exists() and active_path.exists()
-    assert result.operation_receipt["changed_fields"] == ["todo.active_items", "todo.queued_items"]
-    assert set(result.operation_receipt["preserved_invariants"]) >= {"owner body", "roadmap", "decompositions"}
+    assert not state_path.exists()
+    assert selection_path.read_bytes() == selection_before
 
 
 @pytest.mark.parametrize(
@@ -159,30 +151,14 @@ def test_owner_select_rejects_closed_invalid_stale_and_lane_conflict(tmp_path: P
     assert select_existing_owner("existing-owner", target=tmp_path).reason_code == "owner-not-selectable"
 
 
-def test_owner_select_rolls_back_shared_state_when_receipt_validation_fails(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_owner_select_shared_rejection_is_non_mutating(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
-    _create_owner(tmp_path, "selected-owner")
-    _create_owner(tmp_path, "active-owner", activate=True)
-    state_path = tmp_path / ".agentic-workspace/planning/state.toml"
-    before = state_path.read_bytes()
-
-    from repo_planning_bootstrap import installer
-
-    original_findings = installer._json_schema_findings
-    receipt_checks = 0
-
-    def fail_second_receipt_check(*, payload: dict, schema_path: Path) -> list[str]:
-        nonlocal receipt_checks
-        if schema_path == OWNER_SELECTION_RECEIPT_SCHEMA_PATH:
-            receipt_checks += 1
-            if receipt_checks == 2:
-                return ["injected receipt failure"]
-        return original_findings(payload=payload, schema_path=schema_path)
-
-    monkeypatch.setattr(installer, "_json_schema_findings", fail_second_receipt_check)
+    owner_path = _create_owner(tmp_path, "selected-owner")
+    before = owner_path.read_bytes()
     result = select_existing_owner("selected-owner", target=tmp_path, mode="shared", reason="rollback proof")
-    assert result.reason_code == "owner-selection-rolled-back"
-    assert state_path.read_bytes() == before
+    assert result.reason_code == "shared-selection-retired"
+    assert owner_path.read_bytes() == before
+    assert not (tmp_path / ".agentic-workspace/planning/state.toml").exists()
     assert not (tmp_path / ".agentic-workspace/local/planning/owner-selection-receipt.json").exists()
 
 
@@ -200,23 +176,3 @@ def test_owner_select_stale_current_work_revision_and_unregistered_guidance(tmp_
     )
     assert "owner-select" in warning["suggested_fix"]
     assert "new-plan" not in warning["suggested_fix"]
-
-
-def test_owner_selection_state_patch_is_reusable_by_reconciliation_without_writing(tmp_path: Path) -> None:
-    install_bootstrap(target=tmp_path)
-    selected_path = _create_owner(tmp_path, "selected-owner")
-    _create_owner(tmp_path, "active-owner", activate=True)
-    state_path = tmp_path / ".agentic-workspace/planning/state.toml"
-    before = state_path.read_bytes()
-    state = tomllib.loads(before.decode("utf-8"))
-    selected_record = json.loads(selected_path.read_text(encoding="utf-8"))
-
-    from repo_planning_bootstrap.installer import _owner_selection_state_patch
-
-    proposal, changed_fields = _owner_selection_state_patch(tmp_path, state, owner_path=selected_path, owner_record=selected_record)
-    proposal.setdefault("reconciliation", {})["proposal_id"] = "issue-2281-fixture"
-
-    assert proposal["todo"]["active_items"][0]["id"] == "selected-owner"
-    assert changed_fields == ["todo.active_items", "todo.queued_items"]
-    assert proposal["reconciliation"]["proposal_id"] == "issue-2281-fixture"
-    assert state_path.read_bytes() == before

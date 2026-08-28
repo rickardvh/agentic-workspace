@@ -25,7 +25,7 @@
     {
       "class": "planning_candidate",
       "summary": "A bounded follow-on or handoff candidate worth preserving as explicit planning promotion guidance.",
-      "promote_to": ".agentic-workspace/planning/state.toml or .agentic-workspace/planning/execplans/ after bounded planning review",
+      "promote_to": ".agentic-workspace/planning/execplans/ or another bounded Planning owner after review",
       "preserve_when": [
         "confidence is at least 0.75",
         "the finding includes a bounded next_action",

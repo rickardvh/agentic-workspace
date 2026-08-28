@@ -31,7 +31,7 @@ This planning system is for execution. It is not intended to become a generic tr
 - Prefer feature-scoped plan files over growing broad shared hot files.
 - Skip `archive/` during normal startup unless the task explicitly needs historical plan context.
 - Do not treat `todo.active_items`, `roadmap`, or active execplans as long-form completion logs; once a plan is complete, close it and remove the completed-work detail from forward-looking planning surfaces.
-- When a completed slice came from `todo.active_items` or `roadmap`, remove or archive the matched queue residue in the same pass rather than leaving stale completed candidates behind.
+- When a bounded slice completes, archive or transition its owner-scoped record and explicit relations without maintaining aggregate queue residue.
 - Do not confuse slice completion with lane completion; a slice can ship while the larger intent remains open, and archive should wait until the lane-level proof is explicit.
 - Do not add sections such as `Added In This Pass`, `Completed Work`, or similar retrospective logs to `todo.active_items`; completed detail belongs in archived execplans, workflow-change notes, or git history.
 - Treat active plan state as branch-local and low half-life: archive, replace, or prune it rather than mutating it forever.

@@ -219,6 +219,9 @@ def test_no_cli_black_box_preserves_boundaries_for_each_module_combination(tmp_p
     command.extend(["--modules", ",".join(modules) if modules else "none"])
     completed = subprocess.run(command, cwd=WORKSPACE_ROOT, text=True, capture_output=True, check=False)
     assert completed.returncode == 0, completed.stderr or completed.stdout
+    if "planning" in modules:
+        assert not (host_root / ".agentic-workspace/planning/state.toml").exists()
+        assert (host_root / ".agentic-workspace/planning/execplans/README.md").is_file()
     manifest = json.loads((WORKSPACE_ROOT / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text(encoding="utf-8"))
 
     cli_available = (host_root / "bin" / "agentic-workspace").exists()

@@ -23,7 +23,8 @@
       "safe_to_edit": true,
       "refresh_command": "uv run python scripts/check/check_planning_surfaces.py",
       "representative_paths": [
-        ".agentic-workspace/planning/state.toml"
+        ".agentic-workspace/planning/execplans",
+        ".agentic-workspace/planning/issue-relations"
       ]
     },
     {

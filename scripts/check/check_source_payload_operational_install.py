@@ -783,9 +783,6 @@ def gather_boundary_warnings(*, repo_root: Path = REPO_ROOT) -> list[BoundaryWar
         repo_root / ".agentic-workspace" / "memory" / "SKILLS.md": (
             "Root operational memory install is missing `.agentic-workspace/memory/SKILLS.md`."
         ),
-        repo_root / ".agentic-workspace" / "planning" / "state.toml": (
-            "Root operational planning install is missing `.agentic-workspace/planning/state.toml`."
-        ),
         repo_root / ".agentic-workspace" / "planning" / "execplans" / "README.md": (
             "Root operational planning install is missing `.agentic-workspace/planning/execplans/README.md`."
         ),
@@ -839,7 +836,6 @@ def gather_boundary_summary(*, repo_root: Path = REPO_ROOT) -> dict[str, object]
         repo_root / ".agentic-workspace" / "memory" / "repo" / "index.md",
         repo_root / ".agentic-workspace" / "memory" / "WORKFLOW.md",
         repo_root / ".agentic-workspace" / "memory" / "SKILLS.md",
-        repo_root / ".agentic-workspace" / "planning" / "state.toml",
         repo_root / ".agentic-workspace" / "planning" / "execplans" / "README.md",
         repo_root / ".agentic-workspace" / "planning" / "agent-manifest.json",
     ]
@@ -1002,16 +998,10 @@ def gather_sync_proof(*, repo_root: Path = REPO_ROOT) -> dict[str, object]:
             package_name="planning",
             expected_payload=planning_expected,
             root_sentinels=[
-                ".agentic-workspace/planning/state.toml",
                 ".agentic-workspace/planning/execplans/README.md",
                 ".agentic-workspace/planning/agent-manifest.json",
             ],
             intentional_differences=[
-                {
-                    "path": ".agentic-workspace/planning/state.toml",
-                    "classification": "root-operational-state",
-                    "rule": "Active planning state is intentionally root-local and must not be shipped as package bootstrap payload.",
-                },
                 {
                     "path": ".agentic-workspace/planning/execplans/archive/",
                     "classification": "historical-dogfood-evidence",

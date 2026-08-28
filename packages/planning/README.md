@@ -8,7 +8,7 @@ Support-bearing installs use the exact root-wheel command projected from a versi
 
 ## Domain boundary
 
-Planning owns checked-in active-work custody: selected execution owners, bounded plans, lanes/decompositions, issue relations, continuation, and lifecycle transitions. It can contribute current ownership, a routed operation, or reconciliation facts when relevant.
+Planning owns checked-in active-work custody through bounded owner records: plans, lanes/decompositions, issue relations, continuation, and integration transitions. The current owner selection is worktree-local, while queue, roadmap, and current-work views are derived from those bounded records and external intent evidence.
 
 Planning does not own canonical product knowledge, proof sufficiency, semantic issue completion, general task tracking, or mutation authority outside the selected owner. Direct work should remain direct when no durable execution custody is needed.
 
@@ -22,7 +22,7 @@ Start with `agentic-workspace start`, `implement`, or `summary`; follow the exac
 
 ## Continuation contract
 
-If the completed slice came from the active queue or roadmap state, clear the matched queue residue in the same pass instead of leaving stale completed entries behind.
+When a bounded owner completes, transition or archive that owner and its explicit relations in the same pass. Do not maintain a checked-in aggregate current queue or roadmap projection.
 
 Execplans now treat four fields as first-class:
 
@@ -31,7 +31,9 @@ Execplans now treat four fields as first-class:
 - `Iterative Follow-Through`: what the slice enabled, deferred, discovered, and still needs to prove
 - `Execution Summary`: what was delivered, validated, routed, retained, and how later work resumes
 
-Required continuation for an unfinished larger intended outcome must be routed into a checked-in owner before the current slice closes. Keep `Iterative Follow-Through` current when a slice stops intentionally. Planning progress alone does not authorize a parent or issue completion claim.
+Required continuation for an unfinished larger intended outcome must be routed into a checked-in bounded owner before the current slice closes. Keep `Iterative Follow-Through` current when a slice stops intentionally. Planning progress alone does not authorize a parent or issue completion claim.
+
+Fresh installs do not create `.agentic-workspace/planning/state.toml`. Upgrade treats an existing file as legacy compatibility input: it migrates uniquely useful owner or issue relations, records local migration dispositions, removes the aggregate, and remains idempotent. Ordinary create, activate, close, archive, and reconcile operations never rewrite it.
 
 ## Installed contract
 

@@ -12,6 +12,7 @@ from repo_planning_bootstrap.installer import (
     archive_execplan,
     close_lane_record,
     close_planning_item,
+    create_execplan_scaffold,
     install_bootstrap,
     planning_reconcile,
     planning_revision,
@@ -19,11 +20,13 @@ from repo_planning_bootstrap.installer import (
     propose_integration_transition,
     select_existing_owner,
     shape_issue_relation,
+    upgrade_bootstrap,
 )
 
 
 def _state_bytes(root: Path) -> bytes:
-    return (root / ".agentic-workspace/planning/state.toml").read_bytes()
+    path = root / ".agentic-workspace/planning/state.toml"
+    return path.read_bytes() if path.is_file() else b""
 
 
 def _planning_persistent_snapshot(root: Path) -> dict[str, bytes]:
@@ -127,6 +130,111 @@ def _write_lane(root: Path, lane_id: str) -> str:
         encoding="utf-8",
     )
     return lane_ref
+
+
+def test_fresh_install_derives_planning_without_global_state(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+
+    assert not (tmp_path / ".agentic-workspace/planning/state.toml").exists()
+    summary = planning_summary(target=tmp_path, profile="full")
+    assert summary["todo"]["active_items"] == []
+    assert summary["todo"]["queued_items"] == []
+    assert summary["roadmap"]["candidates"] == []
+
+
+def test_new_plan_selects_locally_without_rewriting_legacy_aggregate(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    state_path = tmp_path / ".agentic-workspace/planning/state.toml"
+    state_path.write_text(
+        'kind = "agentic-planning-state"\nschema_version = "planning-state/v1"\n\n'
+        "[todo]\nactive_items = []\nqueued_items = []\n\n"
+        "[roadmap]\nlanes = []\ncandidates = []\n",
+        encoding="utf-8",
+    )
+    before = state_path.read_bytes()
+
+    result = create_execplan_scaffold(
+        plan_id="owner-a",
+        title="Owner A",
+        source="issue #2801",
+        activate=True,
+        switch_active=True,
+        target=tmp_path,
+    )
+
+    assert result.reason_code == ""
+    assert state_path.read_bytes() == before
+    selection = json.loads((tmp_path / ".agentic-workspace/local/planning/owner-selection.json").read_text(encoding="utf-8"))
+    assert selection["selected_owner"]["id"] == "owner-a"
+    assert planning_summary(target=tmp_path, profile="full")["todo"]["active_items"][0]["id"] == "owner-a"
+
+
+def test_upgrade_retires_legacy_state_idempotently_and_preserves_natural_owners(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    owner_ref = _write_owner(tmp_path, "owner-a")
+    state_path = tmp_path / ".agentic-workspace/planning/state.toml"
+    state_path.write_text(
+        f'''kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [{{ id = "owner-a", status = "active", surface = "{owner_ref}" }}]
+queued_items = [{{ id = "stale-queue", status = "next", refs = ["#99"] }}]
+
+[roadmap]
+lanes = [{{ id = "branch-safe", issues = ["2801"], priority = "p0.1", depends_on = ["2800"], reason = "bounded relation" }}]
+candidates = [{{ id = "external-backlog", refs = ["#123"] }}]
+''',
+        encoding="utf-8",
+    )
+
+    first = upgrade_bootstrap(target=tmp_path)
+    receipt_path = tmp_path / ".agentic-workspace/local/planning/legacy-state-migration.json"
+    receipt_before = receipt_path.read_bytes()
+
+    assert not state_path.exists()
+    assert any(action.kind == "removed" and action.path == state_path for action in first.actions)
+    receipt = json.loads(receipt_before)
+    dispositions = {entry["field"]: entry["disposition"] for entry in receipt["field_dispositions"]}
+    assert dispositions["todo.active_items"] == "localise"
+    assert dispositions["todo.queued_items"] == "drop"
+    assert dispositions["roadmap.lanes"] == "derive"
+    assert dispositions["roadmap.candidates"] == "return-to-external-evidence"
+    assert _relation_record(tmp_path, "2801")["lane_id"] == "branch-safe"
+    assert planning_summary(target=tmp_path, profile="full")["todo"]["active_items"][0]["id"] == "owner-a"
+
+    second = upgrade_bootstrap(target=tmp_path)
+    assert not state_path.exists()
+    assert receipt_path.read_bytes() == receipt_before
+    assert not any(action.path == state_path and action.kind in {"created", "updated"} for action in second.actions)
+
+
+def test_disjoint_owner_activation_merges_in_either_order_without_aggregate_repair(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    (tmp_path / ".gitignore").write_text(".agentic-workspace/local/\n", encoding="utf-8")
+    _init_git(tmp_path)
+    _commit_all(tmp_path, "baseline without aggregate")
+
+    for owner_id in ("owner-a", "owner-b"):
+        _git(tmp_path, "checkout", "main")
+        _git(tmp_path, "checkout", "-b", owner_id)
+        create_execplan_scaffold(plan_id=owner_id, title=owner_id, activate=True, switch_active=True, target=tmp_path)
+        assert not (tmp_path / ".agentic-workspace/planning/state.toml").exists()
+        assert _git(tmp_path, "status", "--short", "--untracked-files=all").stdout.splitlines() == [
+            f"?? .agentic-workspace/planning/execplans/{owner_id}.plan.json"
+        ]
+        _commit_all(tmp_path, f"create {owner_id}")
+
+    for branch, order in (("merge-a-b", ("owner-a", "owner-b")), ("merge-b-a", ("owner-b", "owner-a"))):
+        _git(tmp_path, "checkout", "main")
+        _git(tmp_path, "checkout", "-b", branch)
+        for owner_id in order:
+            _git(tmp_path, "merge", "--no-ff", owner_id, "-m", f"merge {owner_id}")
+        assert not (tmp_path / ".agentic-workspace/planning/state.toml").exists()
+        assert {path.name for path in (tmp_path / ".agentic-workspace/planning/execplans").glob("owner-*.plan.json")} == {
+            "owner-a.plan.json",
+            "owner-b.plan.json",
+        }
 
 
 def test_issue_shape_relation_is_checked_in_but_non_activating(tmp_path: Path) -> None:
@@ -466,7 +574,7 @@ def test_feature_branch_direct_terminal_writers_require_integration_proposal(tmp
     assert blocked_archive.reason_code == "integration-proposal-required-on-feature-branch"
     assert "integration-propose" in blocked_archive.actions[1].detail
     assert local_selection.reason_code == ""
-    assert blocked_shared_selection.reason_code == "integration-proposal-required-on-feature-branch"
+    assert blocked_shared_selection.reason_code == "shared-selection-retired"
     assert json.loads((tmp_path / owner_ref).read_text(encoding="utf-8"))["lifecycle"] == "live"
     assert (tmp_path / ".agentic-workspace/local/planning/owner-selection.json").exists()
 
@@ -567,9 +675,9 @@ def test_pending_integration_proposal_blocks_owner_selection(tmp_path: Path) -> 
     local_selection = select_existing_owner("issue-2345", target=tmp_path)
     blocked = select_existing_owner("issue-2345", target=tmp_path, mode="shared", reason="checked-in selection")
 
-    assert [action.kind for action in blocked.actions] == ["manual review", "next safe action"]
-    assert blocked.reason_code == "pending-integration-proposal-required"
-    assert "integration-apply --proposal issue-2345-select" in blocked.actions[1].detail
+    assert [action.kind for action in blocked.actions] == ["manual review"]
+    assert blocked.reason_code == "shared-selection-retired"
+    assert "--mode local" in blocked.recovery_command
     assert local_selection.reason_code == ""
     assert (tmp_path / ".agentic-workspace/local/planning/owner-selection.json").exists()
 
@@ -658,6 +766,7 @@ candidates = []
     summary = planning_summary(target=tmp_path, profile="full")
     legacy = summary["issue_relations"]["legacy_authority"]
     warnings = summary["warnings"]
+    state_before = state_path.read_text(encoding="utf-8")
 
     assert legacy["record_count"] == 1
     assert legacy["records"][0]["external_ref"] == "2344"
@@ -676,10 +785,11 @@ candidates = []
     assert relation["depends_on"] == ["2328"]
     assert relation["rationale"] == "keeps parent intent"
     assert relation["maturity"] == "ready-to-promote"
-    assert "issues" not in state_after
-    assert "depends_on" not in state_after
-    assert "strategic_relation_refs" in state_after
-    assert summary_after["issue_relations"]["legacy_authority"]["record_count"] == 0
+    assert state_after == state_before
+    legacy_after = summary_after["issue_relations"]["legacy_authority"]
+    assert legacy_after["record_count"] == 1
+    assert legacy_after["records"][0]["relation_status"] == "present"
+    assert legacy_after["records"][0]["authority_status"] == "freshness-demoted"
 
 
 def test_integration_apply_rejects_stale_subject_revision(tmp_path: Path) -> None:

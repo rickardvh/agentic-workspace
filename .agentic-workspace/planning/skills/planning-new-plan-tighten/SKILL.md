@@ -22,5 +22,5 @@ If the current request is prep-only handoff, the goal is cheaper durable state, 
 - A scaffold is not an implementation contract until the vague fields are replaced.
 - A prep-only scaffold is different: it is enough when summary verifies active Planning state. Do not manually polish or revalidate generated JSON during prep-only handoff.
 - Do not copy templates into unchecked custom shapes.
-- Do not leave `state.toml` pointing at a plan that summary reports as unhealthy.
+- Do not leave the worktree-local owner selection pointing at a plan that summary reports as unhealthy.
 - Do not use ad hoc shell snippets to validate generated JSON when summary or package checks can validate the surface.

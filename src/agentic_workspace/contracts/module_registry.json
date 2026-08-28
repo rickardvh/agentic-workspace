@@ -548,24 +548,27 @@
       "description": "Repo-native execution planning bootstrap and maintenance.",
       "selection_rank": 10,
       "install_signals": [
-        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/agent-manifest.json",
         ".agentic-workspace/planning/execplans"
       ],
       "workflow_surfaces": [
         "AGENTS.md",
-        ".agentic-workspace/planning/state.toml",
         ".agentic-workspace/planning/execplans",
+        ".agentic-workspace/planning/lanes",
+        ".agentic-workspace/planning/decompositions",
+        ".agentic-workspace/planning/issue-relations",
         "docs/maintainer/contributor-playbook.md"
       ],
       "generated_artifacts": [],
       "startup_steps": [
-        "Read `.agentic-workspace/planning/state.toml` via `agentic-workspace summary`.",
-        "Read the active feature plan in `.agentic-workspace/planning/execplans/` when the TODO surface points there.",
-        "Check the roadmap in `state.toml` (authoritative) only when promoting work."
+        "Resolve the worktree-local selected owner via `agentic-workspace summary`.",
+        "Read the selected feature plan in `.agentic-workspace/planning/execplans/` when the summary points there.",
+        "Inspect bounded lane, decomposition, and issue-relation records only when the routed task needs them."
       ],
       "sources_of_truth": [
-        "Active queue: `.agentic-workspace/planning/state.toml` (authoritative)",
-        "Roadmap: `.agentic-workspace/planning/state.toml` (authoritative)"
+        "Execution custody: bounded records under `.agentic-workspace/planning/` (authoritative)",
+        "Current owner: worktree-local selection (non-authoritative coordination aid)",
+        "Queue and roadmap: derived views, never checked-in aggregate authority"
       ],
       "root_agents_cleanup_blocks": [],
       "capabilities": [
@@ -695,9 +698,9 @@
         "resources": [
           {
             "uri": "planning://state",
-            "description": "Current planning state, active items, queued items, and roadmap lanes.",
+            "description": "Derived current-owner, queue, and roadmap view over bounded Planning records.",
             "read_only": true,
-            "source": ".agentic-workspace/planning/state.toml",
+            "source": "bounded Planning owner and relation records plus local owner selection",
             "command": "agentic-workspace summary --format json",
             "result_schema": "typed-validator:planning-summary"
           },

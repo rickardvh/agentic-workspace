@@ -7,7 +7,7 @@ description: Turn an externally tracked task into checked-in planning without ma
 
 Planning Intake Upstream Task converts an upstream issue, ticket, or task into the repo's checked-in planning surfaces.
 
-It exists to keep external trackers as intake sources while preserving execution authority inside `.agentic-workspace/planning/state.toml` and `.agentic-workspace/planning/execplans/`.
+It exists to keep external trackers as intent authorities while preserving execution custody in bounded execplan, lane, decomposition, and issue-relation records.
 
 ## Use When
 
@@ -17,13 +17,13 @@ It exists to keep external trackers as intake sources while preserving execution
 
 ## Do Not Use When
 
-- the task is already active and fully routed through `todo.active_items` plus an execplan
+- the task already has a selected, live execplan owner
 - the work is a bounded review pass rather than an accepted planning item
 - the real need is durable subsystem knowledge rather than active or candidate planning
 
 ## Workflow
 
-1. Read `AGENTS.md`, `.agentic-workspace/planning/state.toml`, and `.agentic-workspace/planning/upstream-task-intake.md`.
+1. Read `AGENTS.md`, the canonical Planning summary, and `.agentic-workspace/planning/upstream-task-intake.md`.
 2. Read the upstream task or issue that is being ingested.
 3. Normalize it into a compact summary:
    - source system
@@ -34,9 +34,9 @@ It exists to keep external trackers as intake sources while preserving execution
 4. Decide the smallest correct routing target:
    - dismiss
    - `.agentic-workspace/planning/reviews/`
-   - `roadmap` in `.agentic-workspace/planning/state.toml`
-   - `todo.active_items` in `.agentic-workspace/planning/state.toml`
-   - `todo.active_items` plus `.agentic-workspace/planning/execplans/`
+   - external intent evidence only
+   - a bounded lane or decomposition record
+   - an execplan plus an issue-relation record when execution custody is accepted
 5. Preserve the upstream source reference in the chosen planning surface.
 6. Keep execution detail in checked-in planning, not in the upstream tracker.
 
@@ -55,5 +55,5 @@ If the task becomes active planned work, ensure the execplan includes an `## Int
 
 - Keep the contract tracker-agnostic even when the current intake source is GitHub.
 - Do not treat the upstream tracker as the source of truth after promotion.
-- Do not paste full issue bodies into `roadmap`, `todo.active_items`, or execplans.
+- Do not paste full issue bodies into bounded planning records.
 - Prefer one-paragraph normalized summaries over copied tracker prose.

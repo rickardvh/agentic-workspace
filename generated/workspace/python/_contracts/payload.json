@@ -696,7 +696,7 @@
     ],
     "mode": "minimal-interruption",
     "repo_context": [
-      "Use .agentic-workspace/planning/state.toml or the active execplan when the prompt seems planning-shaped.",
+      "Use the selected bounded Planning owner when the prompt is planning-shaped.",
       "Use report before broad file reads when the prompt may touch several workspace surfaces.",
       "Use ownership when the target surface or owner is unclear."
     ],
@@ -1691,7 +1691,7 @@
         "reporting_destinations": [
           "agentic-workspace report --target ./repo --format json",
           "review outputs",
-          ".agentic-workspace/planning/state.toml or the active execplan when the current slice already owns planning residue"
+          "the bounded owner execplan when the current slice already owns planning residue"
         ],
         "reporting_rule": "Surface notable friction through bounded reporting or residue; do not act on it without explicit direction.",
         "summary": "Notice and surface notable repo friction, but do not reduce it on the agent's own initiative."
@@ -1710,7 +1710,7 @@
         "mode": "conservative",
         "reporting_destinations": [
           "agentic-workspace report --target ./repo --format json",
-          ".agentic-workspace/planning/state.toml or the active execplan when repeated friction deserves promotion"
+          "the bounded owner execplan when repeated friction deserves promotion"
         ],
         "reporting_rule": "Use reporting to justify or defer bounded follow-on; do not treat one hotspot as permission for standalone cleanup.",
         "summary": "Only reduce repo friction opportunistically inside already-touched scope; do not create standalone cleanup work from one hotspot alone."
@@ -1730,7 +1730,7 @@
         "mode": "balanced",
         "reporting_destinations": [
           "agentic-workspace report --target ./repo --format json",
-          ".agentic-workspace/planning/state.toml or the active execplan when friction should become bounded follow-on work"
+          "the bounded owner execplan when friction should become bounded follow-on work"
         ],
         "reporting_rule": "Use reporting to preserve evidence and deferred cleanup residue whenever the current slice intentionally stops short.",
         "summary": "Allow bounded friction reduction when evidence is clear and the extra work stays inside the current proof and ownership boundary."
@@ -1750,7 +1750,7 @@
         "mode": "proactive",
         "reporting_destinations": [
           "agentic-workspace report --target ./repo --format json",
-          ".agentic-workspace/planning/state.toml or the active execplan when proactive cleanup stops before the larger opportunity is complete"
+          "the bounded owner execplan when proactive cleanup stops before the larger opportunity is complete"
         ],
         "reporting_rule": "Use reporting to preserve evidence and unfinished bounded cleanup residue, not to justify hidden widening.",
         "summary": "Allow bounded standalone friction reduction when evidence is strong and the work can still stay inside clear ownership and proof lanes."

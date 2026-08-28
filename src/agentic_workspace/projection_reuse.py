@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import re
 import subprocess
 import sys
 import threading
@@ -694,14 +693,17 @@ def _content_revision(root: Path, relatives: list[str], *, max_files: int = 64) 
 
 def _planning_revision(root: Path) -> tuple[str, list[str]]:
     state_relative = ".agentic-workspace/planning/state.toml"
-    state_path = root / state_relative
     relatives = [state_relative]
-    try:
-        state_text = state_path.read_text(encoding="utf-8")
-    except OSError:
-        state_text = ""
-    referenced = re.findall(r'(?P<path>\.agentic-workspace/planning/(?:execplans|lanes)/[^"\']+\.(?:plan|lane)\.json)', state_text)
-    relatives.extend(referenced[:16])
+    planning_patterns = (
+        ".agentic-workspace/planning/execplans/*.plan.json",
+        ".agentic-workspace/planning/lanes/*.lane.json",
+        ".agentic-workspace/planning/decompositions/*.decomposition.json",
+        ".agentic-workspace/planning/issue-relations/*.issue-relation.json",
+        ".agentic-workspace/planning/integration/proposals/*.integration-proposal.json",
+        ".agentic-workspace/planning/integration/receipts/*.integration-receipt.json",
+    )
+    for pattern in planning_patterns:
+        relatives.extend(path.relative_to(root).as_posix() for path in sorted(root.glob(pattern)) if path.is_file())
     selection_relative = ".agentic-workspace/local/planning/owner-selection.json"
     if (root / selection_relative).is_file():
         relatives.append(selection_relative)
