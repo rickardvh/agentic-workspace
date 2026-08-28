@@ -3,9 +3,9 @@
   "id": "open-issues-enforcement-ratchet",
   "title": "Ratchet cross-owner enforcement invariants",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "validation",
-  "revision": 4,
+  "lifecycle": "closed",
+  "phase": "complete",
+  "revision": 5,
   "intent": {
     "outcome": "Satisfy #2762 by extending the existing context-authority registry and #2300 composed-operation release gate so one admitted revision-bound operating decision remains the sole ordinary authority for owner, action, permission, proof/claim, and continuation across source, installed, generated, and adapter consumers.",
     "non_goals": [

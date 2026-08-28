@@ -453,15 +453,6 @@ def _prepare_handoff_return_assignment(*, target: Path, scenario_id: str) -> int
     assignment_id = f"{scenario_id}-assignment"
     run_id = f"{scenario_id}-run"
     proof_ref = f".agentic-workspace/proof/receipts/{scenario_id}.json"
-    _write_json(
-        target / proof_ref,
-        {
-            "kind": "agentic-workspace/proof-receipt/v1",
-            "result": "passed",
-            "verified_by": "aw",
-            "revision": f"{scenario_id}:proof:1",
-        },
-    )
     assignment_gate = {
         "status": "handoff-required",
         "assignment_policy": "required-best-fit",
@@ -502,6 +493,15 @@ def _prepare_handoff_return_assignment(*, target: Path, scenario_id: str) -> int
         delegation_decision=delegation_decision,
     )
     _write_json(
+        target / proof_ref,
+        {
+            "kind": "agentic-workspace/assignment-structural-proof-receipt/v1",
+            "result": "passed",
+            "verified_by": "aw",
+            "assignment_revision": identity["revision"],
+        },
+    )
+    _write_json(
         target / ".agentic-workspace" / "planning" / "assignments" / f"{assignment_id}.assignment.json",
         {
             "kind": "agentic-workspace/planning-assignment/v1",
@@ -512,7 +512,7 @@ def _prepare_handoff_return_assignment(*, target: Path, scenario_id: str) -> int
             "assignment_gate": assignment_gate,
             "assignment_policy": assignment_policy,
             "delegation_decision": delegation_decision,
-            "aw_proof_receipt_ref": proof_ref,
+            "structural_proof_receipt_ref": proof_ref,
             "current_attempt": {"run_id": run_id, "owner": "planner", "status": "selected"},
         },
     )
@@ -530,8 +530,10 @@ def _prepare_handoff_return_assignment(*, target: Path, scenario_id: str) -> int
         "--target-name",
         "planner",
         "--transport",
-        "cli",
+        "manual",
     )
+    if exported.get("status") != "handoff-prepared":
+        raise RuntimeError(f"{scenario_id} assignment was not exported: {exported.get('failures')}")
     packet_ref = next(str(ref) for ref in exported.get("artifact_refs", []) if str(ref).endswith("export/packet.json"))
     packet = _read_json_if_present(target / packet_ref)
     assignment_revision = str(packet.get("assignment_revision") or "")

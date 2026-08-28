@@ -783,6 +783,7 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
                 "structural_proof_receipt_ref": current_authorities.get("proof_receipt_ref"),
                 "current_state": "handoff-prepared",
                 "run_id": run_id,
+                "assignment_id": assignment_id,
             }
         )
         writes = {packet_path: packet, prompt_path: prompt, manifest_path: manifest}
