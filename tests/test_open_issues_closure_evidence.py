@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import tomllib
 from pathlib import Path
 
 from agentic_workspace.reconciliation import compile_reconciliation
@@ -11,6 +12,11 @@ CLOSURE_REVIEW_PATH = REPO_ROOT / "docs" / "reviews" / "open-issues-closure-2026
 DOGFOOD_DISPOSITION_PATH = (
     REPO_ROOT / "tools" / "model-cli-harness" / "external-agent-evaluation" / "open-issues-dogfood-disposition-2026-08-28.json"
 )
+PLANNING_STATE_PATH = REPO_ROOT / ".agentic-workspace" / "planning" / "state.toml"
+
+
+def _planning_json(relative_path: str) -> dict[str, object]:
+    return json.loads((REPO_ROOT / relative_path).read_text(encoding="utf-8"))
 
 
 def _evidence() -> dict[str, object]:
@@ -31,6 +37,40 @@ def test_original_open_issue_inventory_has_exactly_one_closure_route() -> None:
     routed = [issue for route in routes if isinstance(route, dict) for issue in route["issues"]]
     assert set(routed) == included
     assert len(routed) == len(set(routed))
+
+
+def test_issue_2562_integrated_prerequisites_are_not_current_planning_work() -> None:
+    state = tomllib.loads(PLANNING_STATE_PATH.read_text(encoding="utf-8"))
+    todo = state["todo"]
+    active_ids = [item["id"] for item in todo["active_items"]]
+    queued_ids = {item["id"] for item in todo["queued_items"]}
+
+    assert active_ids.count("configured-orchestration-ordinary-action") == 1
+    assert "configured-orchestration-ordinary-action" not in queued_ids
+    assert queued_ids.isdisjoint(
+        {
+            "open-issues-nonlocal-delegation-implementation",
+            "open-issues-enforcement-ratchet",
+            "open-issues-lifecycle-composition-slice",
+        }
+    )
+
+    integrations = {
+        "open-issues-enforcement-ratchet": "pr-2793-refresh-enforcement-pr-2777",
+        "open-issues-lifecycle-composition-slice": "pr-2793-refresh-lifecycle-pr-2766",
+    }
+    for owner_id, transaction_id in integrations.items():
+        plan = _planning_json(f".agentic-workspace/planning/execplans/{owner_id}.plan.json")
+        proposal = _planning_json(f".agentic-workspace/planning/integration-proposals/{transaction_id}.integration-proposal.json")
+        receipt = _planning_json(f".agentic-workspace/planning/integration-receipts/{transaction_id}.integration-receipt.json")
+
+        assert plan["lifecycle"] == "archived"
+        assert plan["phase"] == "complete"
+        assert proposal["status"] == "integrated"
+        assert proposal["phase"] == "integrated-lifecycle-truth"
+        assert receipt["outcome"] == "integrated"
+        assert receipt["requested_transition"] == "archive-owner"
+        assert receipt["owner"]["id"] == owner_id
 
 
 def test_parent_closure_replay_names_every_required_integrated_capability() -> None:
