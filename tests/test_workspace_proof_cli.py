@@ -1242,6 +1242,7 @@ def test_proof_route_repair_receipt_rejects_forged_retirement_without_apply(tmp_
     from agentic_workspace.workspace_runtime_primitives import _record_proof_receipt_payload
 
     _write_repo_local_proof_target(tmp_path)
+    before = _proof_owned_publication_snapshot(tmp_path)
 
     with pytest.raises(WorkspaceUsageError, match="matching guarded apply receipt"):
         _record_proof_receipt_payload(
@@ -1256,7 +1257,7 @@ def test_proof_route_repair_receipt_rejects_forged_retirement_without_apply(tmp_
             receipt_claim_sufficiency="sufficient",
         )
 
-    assert not (tmp_path / ".agentic-workspace" / "local" / "proof-receipts" / "last.json").exists()
+    assert _proof_owned_publication_snapshot(tmp_path) == before
 
 
 def test_proof_route_consequence_owner_does_not_bulk_retire_unrelated_findings(tmp_path: Path) -> None:
@@ -5321,6 +5322,25 @@ def test_proof_changed_selector_routes_package_readmes_to_docs_review(tmp_path: 
     assert "git diff -- README.md docs .agentic-workspace/docs" in answer["required_commands"][0]
 
 
+def _proof_owned_publication_snapshot(target: Path) -> dict[str, bytes]:
+    """Capture every persistent surface owned by ordinary proof receipt publication."""
+    roots = [
+        target / ".agentic-workspace" / "local" / "proof-receipts",
+        target / ".agentic-workspace" / "proof" / "receipts",
+    ]
+    files = [
+        target / ".agentic-workspace" / "local" / "cache" / "proof-reuse.json",
+        target / ".agentic-workspace" / "delegation-outcomes.json",
+    ]
+    reviews_root = target / ".agentic-workspace" / "planning" / "reviews"
+    if reviews_root.is_dir():
+        files.extend(reviews_root.glob("*-review-stack-*-lifecycle.review.json*"))
+    for root in roots:
+        if root.is_dir():
+            files.extend(path for path in root.rglob("*") if path.is_file())
+    return {path.relative_to(target).as_posix(): path.read_bytes() for path in sorted(set(files)) if path.is_file()}
+
+
 def test_proof_record_receipt_writes_latest_execution_evidence(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
@@ -5364,6 +5384,110 @@ def test_proof_record_receipt_writes_latest_execution_evidence(tmp_path: Path, c
     assert history == [receipt]
     assert "repair_retry_ladder" not in receipt
     assert "repair_retry_ladder" not in payload
+
+
+def test_proof_record_receipt_cmd_20260827215319_3506eca4_rejection_has_zero_persistent_delta(tmp_path: Path) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    _write(tmp_path / ".agentic-workspace/local/proof-receipts/last.json", '{"sentinel":"last"}\n')
+    _write(tmp_path / ".agentic-workspace/local/proof-receipts/history.jsonl", '{"sentinel":"history"}\n')
+    _write(tmp_path / ".agentic-workspace/local/cache/proof-reuse.json", '{"sentinel":"cache"}\n')
+    _write(tmp_path / ".agentic-workspace/proof/receipts/index.json", '{"sentinel":"index"}\n')
+    before = _proof_owned_publication_snapshot(tmp_path)
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "README.md",
+                "--record-receipt",
+                "--receipt-command",
+                "make test-workspace",
+                "--receipt-result",
+                "passed",
+                "--format",
+                "json",
+            ]
+        )
+
+    assert exc_info.value.code == 2
+    assert _proof_owned_publication_snapshot(tmp_path) == before
+
+
+def test_proof_record_receipt_stale_subject_rejection_has_zero_persistent_delta(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import agentic_workspace.workspace_runtime_core as runtime_core
+    from agentic_workspace.config import WorkspaceUsageError
+
+    _write_repo_local_proof_target(tmp_path)
+    changed_path = "src/agentic_workspace/workspace_runtime_proof.py"
+    _write(tmp_path / changed_path, "before\n")
+    before = _proof_owned_publication_snapshot(tmp_path)
+    original_failure_context = runtime_core._proof_receipt_failure_context
+
+    def mutate_subject_after_capture(**kwargs):
+        result = original_failure_context(**kwargs)
+        _write(tmp_path / changed_path, "after\n")
+        return result
+
+    monkeypatch.setattr(runtime_core, "_proof_receipt_failure_context", mutate_subject_after_capture)
+    with pytest.raises(WorkspaceUsageError, match="subject changed before publication"):
+        runtime_core._record_proof_receipt_payload(
+            target_root=tmp_path,
+            command="make test-workspace",
+            result="passed",
+            changed_paths=[changed_path],
+        )
+
+    assert _proof_owned_publication_snapshot(tmp_path) == before
+
+
+def test_proof_record_receipt_rolls_back_injected_partial_publication(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import agentic_workspace.workspace_runtime_core as runtime_core
+
+    _write_repo_local_proof_target(tmp_path)
+    changed_path = "src/agentic_workspace/workspace_runtime_proof.py"
+    _write(tmp_path / changed_path, "subject\n")
+    before = _proof_owned_publication_snapshot(tmp_path)
+    original_writer = runtime_core._write_trusted_producer_receipt
+
+    def fail_after_producer_write(**kwargs):
+        original_writer(**kwargs)
+        raise RuntimeError("injected proof publication failure")
+
+    monkeypatch.setattr(runtime_core, "_write_trusted_producer_receipt", fail_after_producer_write)
+    with pytest.raises(RuntimeError, match="injected proof publication failure"):
+        runtime_core._record_proof_receipt_payload(
+            target_root=tmp_path,
+            command="make test-workspace",
+            result="passed",
+            changed_paths=[changed_path],
+        )
+
+    assert _proof_owned_publication_snapshot(tmp_path) == before
+
+
+def test_proof_record_receipt_successful_retry_is_byte_idempotent(tmp_path: Path) -> None:
+    import agentic_workspace.workspace_runtime_core as runtime_core
+
+    _write_repo_local_proof_target(tmp_path)
+    changed_path = "src/agentic_workspace/workspace_runtime_proof.py"
+    _write(tmp_path / changed_path, "subject\n")
+    kwargs = {
+        "target_root": tmp_path,
+        "command": "make test-workspace",
+        "result": "passed",
+        "changed_paths": [changed_path],
+    }
+
+    runtime_core._record_proof_receipt_payload(**kwargs)
+    after_first = _proof_owned_publication_snapshot(tmp_path)
+    runtime_core._record_proof_receipt_payload(**kwargs)
+
+    assert _proof_owned_publication_snapshot(tmp_path) == after_first
+    history = (tmp_path / ".agentic-workspace/local/proof-receipts/history.jsonl").read_text(encoding="utf-8").splitlines()
+    assert len(history) == 1
 
 
 def test_proof_record_receipt_rejects_unresolved_template_before_persistence(tmp_path: Path) -> None:
@@ -5917,6 +6041,31 @@ owner = "workspace-proof-runtime"
     binding = receipt["proof_template_binding"]
     assert binding["command"]["template"] == template_command
     assert binding["command"]["concrete"] == concrete_command
+    after_first = _proof_owned_publication_snapshot(tmp_path)
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                changed_paths[0],
+                "--changed",
+                changed_paths[1],
+                "--record-receipt",
+                "--receipt-command",
+                concrete_command,
+                "--receipt-result",
+                "passed",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    assert _proof_owned_publication_snapshot(tmp_path) == after_first
     assert binding["authority_states"]["evaluation_result_revision"]["status"] == "not-required"
     assert binding["authority_revisions"]["evaluation_result_revision"] == "not-required:evaluation"
     assert binding["authority_states"]["mutation_baseline"]["status"] == "not-required"

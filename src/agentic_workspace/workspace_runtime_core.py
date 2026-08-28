@@ -190,7 +190,7 @@ from agentic_workspace.proof_execution_projection import (
     selected_proof_preexecution_admission as _selected_proof_preexecution_admission,
 )
 from agentic_workspace.proof_receipt_admission import proof_receipt_admission
-from agentic_workspace.proof_subject import build_proof_subject
+from agentic_workspace.proof_subject import build_proof_subject, classify_proof_subject
 from agentic_workspace.repo_improvement_effectiveness import compile_repo_improvement_effectiveness
 from agentic_workspace.reporting_support import (
     StateDeltaRouteMeasurement,
@@ -51389,6 +51389,121 @@ def _tiny_required_proof_commands(answer: dict[str, Any]) -> list[str]:
 PROOF_RECEIPT_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "proof-receipts" / "last.json"
 PROOF_RECEIPT_HISTORY_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "proof-receipts" / "history.jsonl"
 PROOF_REUSE_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "cache" / "proof-reuse.json"
+
+
+def _proof_receipt_publication_paths(*, target_root: Path, producer_receipt_id: str) -> list[Path]:
+    """Return every path the ordinary proof receipt publication may mutate."""
+    producer_store = _trusted_producer_store_root(target_root=target_root, producer_class="aw-proof")
+    delegation_path, _, _ = config_lib.load_delegation_outcomes(target_root=target_root)
+    paths = {
+        target_root / PROOF_RECEIPT_RELATIVE_PATH,
+        target_root / PROOF_RECEIPT_HISTORY_RELATIVE_PATH,
+        target_root / PROOF_REUSE_RELATIVE_PATH,
+        producer_store / f"{producer_receipt_id}.json",
+        _trusted_producer_receipt_index_path(target_root=target_root, producer_class="aw-proof"),
+        delegation_path,
+    }
+    reviews_root = target_root / ".agentic-workspace" / "planning" / "reviews"
+    paths.update(reviews_root.glob("*-review-stack-*-lifecycle.review.json"))
+    try:
+        stack = json.loads(
+            (target_root / ".agentic-workspace" / "local" / "cache" / "pr-comment-stack.json").read_text(encoding="utf-8-sig")
+        )
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        stack = {}
+    members = stack.get("stack_members", []) if isinstance(stack, dict) else []
+    for member in members if isinstance(members, list) else ():
+        if not isinstance(member, dict):
+            continue
+        pr_number = str(member.get("pr_number") or "").strip()
+        if not pr_number:
+            continue
+        record_path = reviews_root / f"{date.today().isoformat()}-review-stack-{pr_number}-lifecycle.review.json"
+        paths.add(record_path)
+    paths.update(path.with_name(path.name + ".tmp") for path in tuple(paths) if path.parent == reviews_root)
+    return sorted(paths)
+
+
+@contextmanager
+def _proof_receipt_publication_transaction(*, target_root: Path, producer_receipt_id: str):
+    """Restore the complete proof-owned publication delta if any writer fails."""
+    paths = _proof_receipt_publication_paths(target_root=target_root, producer_receipt_id=producer_receipt_id)
+    before = {path: path.read_bytes() if path.is_file() else None for path in paths}
+    try:
+        yield
+    except BaseException as publication_error:
+        rollback_errors: list[str] = []
+        for path, content in before.items():
+            try:
+                if content is None:
+                    if path.is_file():
+                        path.unlink()
+                    continue
+                path.parent.mkdir(parents=True, exist_ok=True)
+                temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}.rollback")
+                try:
+                    temporary.write_bytes(content)
+                    temporary.replace(path)
+                finally:
+                    if temporary.exists():
+                        temporary.unlink()
+            except OSError as exc:
+                rollback_errors.append(f"{path.relative_to(target_root).as_posix()}: {exc}")
+        if rollback_errors:
+            raise WorkspaceUsageError(
+                "Proof receipt publication failed and its rollback was incomplete: " + "; ".join(rollback_errors)
+            ) from publication_error
+        raise
+
+
+def _existing_proof_publication_receipt(
+    *,
+    target_root: Path,
+    producer_receipt_id: str,
+    receipt: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Resolve a prior complete publication so a successful retry is byte-idempotent."""
+    receipt_path = _trusted_producer_receipt_path(
+        target_root=target_root,
+        producer_class="aw-proof",
+        receipt_ref=f"proof://receipts/{producer_receipt_id}",
+    )
+    if not receipt_path.is_file():
+        return None
+    try:
+        existing = json.loads(receipt_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise WorkspaceUsageError("Prior proof publication receipt is unreadable; refusing a non-idempotent retry.") from exc
+    if not isinstance(existing, dict):
+        raise WorkspaceUsageError("Prior proof publication receipt is invalid; refusing a non-idempotent retry.")
+    _trusted_producer_receipt_index_entry(
+        target_root=target_root,
+        producer_class="aw-proof",
+        receipt_id=producer_receipt_id,
+        receipt_path=receipt_path,
+        receipt=existing,
+    )
+    for field in ("command", "result", "changed_paths", "proof_subject", "target_context", "plan_id"):
+        if existing.get(field) != receipt.get(field):
+            raise WorkspaceUsageError("Prior proof publication identity collides with different receipt semantics.")
+    return existing
+
+
+def _proof_history_contains_publication(*, history_path: Path, producer_receipt_id: str) -> bool:
+    try:
+        lines = history_path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return False
+    for line in lines:
+        try:
+            item = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(item, dict) and item.get("publication_id") == producer_receipt_id:
+            return True
+    return False
+
+
 PROOF_RUNS_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "proof-receipts" / "runs"
 
 
@@ -51909,110 +52024,148 @@ def _record_proof_receipt_payload(
         }
     else:
         receipt["calibration"] = assignment_context
-    proof_reuse_cache = _write_proof_reuse_cache_from_receipt(
+    subject_currentness = classify_proof_subject(
         target_root=target_root,
-        command=command,
-        result=result,
-        changed_paths=changed_paths,
         receipt=receipt,
-        dry_run=dry_run,
+        changed_paths=receipt["changed_paths"],
+        command=command,
     )
-    if not dry_run:
-        receipt_path.parent.mkdir(parents=True, exist_ok=True)
-        receipt_path.write_text(json.dumps(receipt, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
-        history_path = target_root / PROOF_RECEIPT_HISTORY_RELATIVE_PATH
-        with history_path.open("a", encoding="utf-8") as stream:
-            stream.write(json.dumps(receipt, sort_keys=True, ensure_ascii=True) + "\n")
-        producer_receipt_id = hashlib.sha256(
-            json.dumps(
-                {
-                    "command": command,
-                    "result": result,
-                    "changed_paths": receipt["changed_paths"],
-                    "proof_subject": receipt.get("proof_subject", {}),
-                    "target_context": target_context,
-                },
-                sort_keys=True,
-                ensure_ascii=True,
-            ).encode("utf-8")
-        ).hexdigest()[:16]
-        producer_receipt_ref = f"proof://receipts/{producer_receipt_id}"
-        _write_trusted_producer_receipt(
-            target_root=target_root,
-            producer_class="aw-proof",
-            receipt_id=producer_receipt_id,
-            source_ref=producer_receipt_ref,
-            receipt={
-                **receipt,
-                "receipt_id": producer_receipt_id,
-                "producer_class": "aw-proof",
-                "authority": "aw-proof",
-                "source_type": "aw-proof-receipt",
-                "result": "passed" if admission.get("proof_sufficient") else "failed",
-                "confidence": "high",
-            },
+    if subject_currentness.get("status") not in {"reusable", "unverifiable"}:
+        reasons = ", ".join(str(reason) for reason in subject_currentness.get("reasons", []) if str(reason))
+        raise WorkspaceUsageError(
+            "Proof receipt subject changed before publication"
+            + (f" ({reasons})" if reasons else "")
+            + "; rerun the selected proof against the current subject."
         )
-        if target_context:
-            proof_outcome = "success" if admission.get("proof_sufficient") else "failed"
-            try:
-                calibration_admission = {
-                    "status": "recorded",
-                    "record": _record_aw_proof_delegation_outcome(
-                        target_root=target_root,
-                        delegation_target=target_context["delegation_target"],
-                        task_class=target_context["task_class"],
-                        scope_class=target_context["scope_class"],
-                        outcome=proof_outcome,
-                        proof_receipt_ref=producer_receipt_ref,
-                        idempotency_key=producer_receipt_id,
-                        review_burden="light" if proof_outcome == "success" else "high",
-                        handoff_sufficiency="sufficient" if proof_outcome == "success" else "insufficient",
-                        escalation_required=proof_outcome != "success",
-                    )["recorded"],
-                    "target_context": target_context,
-                    "source_ref": producer_receipt_ref,
-                    "rule": "Ordinary proof receipts feed delegation evidence only after producer-store resolution and target-context matching.",
-                }
-            except WorkspaceUsageError as exc:
-                if "duplicate evidence" not in str(exc):
-                    raise
-                calibration_admission = {
-                    "status": "already-recorded",
-                    "target_context": target_context,
-                    "source_ref": producer_receipt_ref,
-                    "rule": "Duplicate proof calibration is idempotent for the same target/task/scope/provenance key.",
-                }
+    producer_receipt_id = hashlib.sha256(
+        json.dumps(
+            {
+                "command": command,
+                "result": result,
+                "changed_paths": receipt["changed_paths"],
+                "proof_subject": receipt.get("proof_subject", {}),
+                "target_context": target_context,
+            },
+            sort_keys=True,
+            ensure_ascii=True,
+        ).encode("utf-8")
+    ).hexdigest()[:16]
+    receipt["publication_id"] = producer_receipt_id
+    producer_receipt_ref = "" if dry_run else f"proof://receipts/{producer_receipt_id}"
+    if not dry_run:
+        existing_publication = _existing_proof_publication_receipt(
+            target_root=target_root,
+            producer_receipt_id=producer_receipt_id,
+            receipt=receipt,
+        )
+        if existing_publication is not None:
+            producer_only_fields = {"receipt_id", "source_type", "confidence", "source_ref", "status", "revision"}
+            receipt = {key: value for key, value in existing_publication.items() if key not in producer_only_fields}
+
+    def publish_receipt() -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+        proof_reuse = _write_proof_reuse_cache_from_receipt(
+            target_root=target_root,
+            command=command,
+            result=result,
+            changed_paths=changed_paths,
+            receipt=receipt,
+            dry_run=dry_run,
+        )
+        if not dry_run:
+            receipt_path.parent.mkdir(parents=True, exist_ok=True)
+            receipt_path.write_text(json.dumps(receipt, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
+            history_path = target_root / PROOF_RECEIPT_HISTORY_RELATIVE_PATH
+            if not _proof_history_contains_publication(
+                history_path=history_path,
+                producer_receipt_id=producer_receipt_id,
+            ):
+                with history_path.open("a", encoding="utf-8") as stream:
+                    stream.write(json.dumps(receipt, sort_keys=True, ensure_ascii=True) + "\n")
+            _write_trusted_producer_receipt(
+                target_root=target_root,
+                producer_class="aw-proof",
+                receipt_id=producer_receipt_id,
+                source_ref=producer_receipt_ref,
+                receipt={
+                    **receipt,
+                    "receipt_id": producer_receipt_id,
+                    "producer_class": "aw-proof",
+                    "authority": "aw-proof",
+                    "source_type": "aw-proof-receipt",
+                    "result": "passed" if admission.get("proof_sufficient") else "failed",
+                    "confidence": "high",
+                },
+            )
+            if target_context:
+                proof_outcome = "success" if admission.get("proof_sufficient") else "failed"
+                try:
+                    calibration = {
+                        "status": "recorded",
+                        "record": _record_aw_proof_delegation_outcome(
+                            target_root=target_root,
+                            delegation_target=target_context["delegation_target"],
+                            task_class=target_context["task_class"],
+                            scope_class=target_context["scope_class"],
+                            outcome=proof_outcome,
+                            proof_receipt_ref=producer_receipt_ref,
+                            idempotency_key=producer_receipt_id,
+                            review_burden="light" if proof_outcome == "success" else "high",
+                            handoff_sufficiency="sufficient" if proof_outcome == "success" else "insufficient",
+                            escalation_required=proof_outcome != "success",
+                        )["recorded"],
+                        "target_context": target_context,
+                        "source_ref": producer_receipt_ref,
+                        "rule": "Ordinary proof receipts feed delegation evidence only after producer-store resolution and target-context matching.",
+                    }
+                except WorkspaceUsageError as exc:
+                    if "duplicate evidence" not in str(exc):
+                        raise
+                    calibration = {
+                        "status": "already-recorded",
+                        "target_context": target_context,
+                        "source_ref": producer_receipt_ref,
+                        "rule": "Duplicate proof calibration is idempotent for the same target/task/scope/provenance key.",
+                    }
+            else:
+                calibration = assignment_context
         else:
-            calibration_admission = assignment_context
+            calibration = {"status": "dry-run", "rule": "Dry runs do not write producer receipts or calibration evidence."}
+        transition = record_review_stack_transition(
+            target_root=target_root,
+            phase="review-proof",
+            phase_after="review-closeout-ready" if admission.get("proof_sufficient") else "review-proof",
+            command=command_text(
+                "agentic-workspace",
+                [
+                    "proof",
+                    *sum((["--changed", path] for path in _normalize_changed_paths(changed_paths)), []),
+                    "--record-receipt",
+                    "--receipt-command",
+                    command,
+                    "--receipt-result",
+                    result,
+                    "--format",
+                    "json",
+                ],
+            ),
+            outcome=result,
+            next_action_id="closeout-with-reused-proof-receipt" if admission.get("proof_sufficient") else "rerun-focused-proof",
+            changed_paths=_normalize_changed_paths(changed_paths),
+            command_exit_code=0 if admission.get("proof_sufficient") else 1,
+            proof_receipt_path=PROOF_RECEIPT_RELATIVE_PATH.as_posix(),
+            proof_receipt_result=result,
+            dry_run=dry_run,
+        )
+        return proof_reuse, calibration, transition
+
+    if dry_run:
+        proof_reuse_cache, calibration_admission, review_stack_transition = publish_receipt()
     else:
-        producer_receipt_ref = ""
-        calibration_admission = {"status": "dry-run", "rule": "Dry runs do not write producer receipts or calibration evidence."}
-    review_stack_transition = record_review_stack_transition(
-        target_root=target_root,
-        phase="review-proof",
-        phase_after="review-closeout-ready" if admission.get("proof_sufficient") else "review-proof",
-        command=command_text(
-            "agentic-workspace",
-            [
-                "proof",
-                *sum((["--changed", path] for path in _normalize_changed_paths(changed_paths)), []),
-                "--record-receipt",
-                "--receipt-command",
-                command,
-                "--receipt-result",
-                result,
-                "--format",
-                "json",
-            ],
-        ),
-        outcome=result,
-        next_action_id="closeout-with-reused-proof-receipt" if admission.get("proof_sufficient") else "rerun-focused-proof",
-        changed_paths=_normalize_changed_paths(changed_paths),
-        command_exit_code=0 if admission.get("proof_sufficient") else 1,
-        proof_receipt_path=PROOF_RECEIPT_RELATIVE_PATH.as_posix(),
-        proof_receipt_result=result,
-        dry_run=dry_run,
-    )
+        with _proof_receipt_publication_transaction(
+            target_root=target_root,
+            producer_receipt_id=producer_receipt_id,
+        ):
+            proof_reuse_cache, calibration_admission, review_stack_transition = publish_receipt()
     return _proof_receipt_write_result(
         dry_run=dry_run,
         receipt=receipt,
