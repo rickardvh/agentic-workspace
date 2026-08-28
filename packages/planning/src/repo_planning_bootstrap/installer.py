@@ -74,7 +74,7 @@ PLANNING_READ_DEPENDENCY_PLAN: dict[str, dict[str, Any]] = {
         "resolver": "planning_revision",
     },
     "todo": {"sources": ["planning-state"], "resolver": "tiny-state"},
-    "execplans": {"sources": ["planning-state", "live-owner-index"], "resolver": "tiny-live-owners"},
+    "execplans": {"sources": ["live-execplans"], "resolver": "direct-live-execplans"},
     "planning_record": {"sources": ["planning-state", "selected-owner"], "resolver": "selected-owner-record"},
     "active_contract": {"sources": ["planning-state", "selected-owner"], "resolver": "selected-owner-record"},
     "resumable_contract": {"sources": ["planning-state", "selected-owner"], "resolver": "selected-owner-record"},
@@ -90,7 +90,7 @@ PLANNING_READ_DEPENDENCY_PLAN: dict[str, dict[str, Any]] = {
     "execution_readiness": {"sources": ["planning-state", "live-owner-index"], "resolver": "tiny-readiness"},
     "current_execution_pressure": {"sources": ["planning-state", "selected-owner"], "resolver": "tiny-pressure"},
     "decision_packet": {"sources": ["planning-state", "selected-owner"], "resolver": "tiny-decision"},
-    "decomposition": {"sources": ["planning-state"], "resolver": "tiny-absence-state"},
+    "decomposition": {"sources": ["decompositions"], "resolver": "direct-decomposition"},
     "lanes": {"sources": ["lanes", "issue-relations"], "resolver": "tiny-lanes"},
     "issue_relations": {"sources": ["issue-relations"], "resolver": "derived-strategic-relations"},
     "integration": {"sources": ["integration-proposals", "integration-receipts"], "resolver": "derived-integration-lifecycle"},
@@ -2178,6 +2178,36 @@ def _selected_owner_query_payload(*, target_root: Path) -> dict[str, Any]:
     }
 
 
+def _planning_live_execplans_projection(*, target_root: Path) -> dict[str, Any]:
+    """Return the full current live-owner shape without reading completed or archived plans."""
+
+    execplan_dir = target_root / PLANNING_MANAGED_ROOT / "execplans"
+    plan_files: list[Path] = []
+    if execplan_dir.exists():
+        seen_stems: set[str] = set()
+        for path in sorted(execplan_dir.glob("*.plan.json")):
+            if path.name == "TEMPLATE.plan.json":
+                continue
+            seen_stems.add(path.name[: -len(".plan.json")])
+            plan_files.append(path)
+        for path in sorted(execplan_dir.glob("*.md")):
+            if path.name in {"README.md", "TEMPLATE.md"} or path.stem in seen_stems:
+                continue
+            plan_files.append(path)
+    active_execplans = [
+        {
+            "path": _planning_surface_relative(target_root, path),
+            "status": _execplan_status(path),
+        }
+        for path in sorted(plan_files)
+        if _execplan_is_live(path)
+    ]
+    return {
+        "active_count": len(active_execplans),
+        "active_execplans": active_execplans,
+    }
+
+
 def planning_summary_query(
     *,
     target: str | Path | None = None,
@@ -2199,6 +2229,9 @@ def planning_summary_query(
         "resumable_contract",
         "continuation_view",
         "handoff_contract",
+        "execplans",
+        "decomposition",
+        "planning_surface_health",
     }
     if not requested or not set(requested) <= supported:
         return {
@@ -2213,12 +2246,55 @@ def planning_summary_query(
     cache_key = (str(target_root.resolve()), revision_id, requested)
     cached = _PLANNING_SELECTED_OWNER_CACHE.get(cache_key)
     cache_status = "hit" if cached is not None else "miss"
+    invoked_resolvers: set[str] = {"planning_revision"}
     if cached is None:
-        source_payload = _selected_owner_query_payload(target_root=target_root)
+        source_payload: dict[str, Any] = {"planning_revision": revision}
+        selected_owner_fields = {
+            "planning_record",
+            "active_contract",
+            "resumable_contract",
+            "continuation_view",
+            "handoff_contract",
+        }
+        if set(requested) & selected_owner_fields:
+            source_payload.update(_selected_owner_query_payload(target_root=target_root))
+            invoked_resolvers.add("selected-owner-query")
+        if "execplans" in requested:
+            source_payload["execplans"] = _planning_live_execplans_projection(target_root=target_root)
+            invoked_resolvers.add("direct-live-execplans")
+        if "decomposition" in requested:
+            source_payload["decomposition"] = _planning_decomposition_projection(
+                target_root=target_root,
+                decomposition_dir=target_root / PLANNING_MANAGED_ROOT / "decompositions",
+            )
+            invoked_resolvers.add("direct-decomposition")
+        if "planning_surface_health" in requested:
+            state = _read_state_from_toml(target_root) or {}
+            lane_projection = _planning_lane_projection(target_root=target_root)
+            issue_relations = _issue_relation_projection(target_root=target_root)
+            integration = _integration_projection(target_root=target_root)
+            warnings = _planning_lane_surface_warnings(target_root=target_root, lane_projection=lane_projection)
+            warnings.extend(_planning_state_v1_warnings(target_root=target_root, state=state if state else None))
+            warnings.extend(
+                _planning_branch_safe_surface_warnings(
+                    target_root=target_root,
+                    issue_relations=issue_relations,
+                    integration=integration,
+                )
+            )
+            health = _planning_surface_health(warnings)
+            resolution = _selected_owner_resolution(target_root)
+            selected_item = _selected_owner_active_item(target_root=target_root, state=state, resolution=resolution)
+            if not int(health.get("warning_count", 0) or 0) and selected_item:
+                health["status"] = "active"
+            source_payload["planning_surface_health"] = health
+            invoked_resolvers.add("tiny-health")
         cached = {field: copy.deepcopy(source_payload[field]) for field in requested}
         if len(_PLANNING_SELECTED_OWNER_CACHE) >= 32:
             _PLANNING_SELECTED_OWNER_CACHE.pop(next(iter(_PLANNING_SELECTED_OWNER_CACHE)))
         _PLANNING_SELECTED_OWNER_CACHE[cache_key] = copy.deepcopy(cached)
+    else:
+        invoked_resolvers.add("revision-keyed-cache")
 
     dependency_plan = {field: copy.deepcopy(PLANNING_READ_DEPENDENCY_PLAN[field]) for field in requested}
     elapsed_ms = round((time.perf_counter() - started) * 1000, 3)
@@ -2238,6 +2314,13 @@ def planning_summary_query(
                 "finished-work-evidence",
                 "review-history",
                 "unrelated-external-backlog",
+            ],
+            "invoked_resolvers": sorted(invoked_resolvers),
+            "omitted_builders": [
+                "execplan_archive_builder",
+                "finished_work_builder",
+                "review_history_builder",
+                "unrelated_external_backlog_builder",
             ],
             "cache": {
                 "scope": "process-local-derived-view",
