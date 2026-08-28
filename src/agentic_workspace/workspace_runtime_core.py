@@ -30642,14 +30642,17 @@ def _select_summary_payload(
         }
         return selected
     requested_roots = {field.split(".", 1)[0] for field in requested_fields}
-    direct_owner_fields = {
+    direct_planning_fields = {
         "planning_revision",
         "planning_record",
         "active_contract",
         "resumable_contract",
         "continuation_view",
+        "execplans",
+        "decomposition",
+        "planning_surface_health",
     }
-    if requested_fields and requested_roots <= direct_owner_fields:
+    if requested_fields and requested_roots <= direct_planning_fields:
         from repo_planning_bootstrap.installer import planning_summary_query
 
         query = planning_summary_query(target=target_root, selectors=requested_fields)

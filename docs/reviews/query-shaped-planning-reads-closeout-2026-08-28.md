@@ -21,7 +21,16 @@ The retained canonical closeout is `.agentic-workspace/planning/closeout-evidenc
 
 ## Fresh proof
 
-On 2026-08-28, eight focused regression tests passed: three selected-owner/archive/cache tests, three tiny-report/pagination/reconcile tests, and two workspace packet/current-owner CLI tests. Generated command-package freshness and static proof also passed.
+On 2026-08-28, the two exact reopened regression commands were promoted to maintained clean-process fixtures through the normal workspace CLI:
+
+| Exact selector | Empty-history median | 1,000-closeout median | Scale | Max JSON bytes | Actual direct resolvers |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `summary --select decomposition,planning_surface_health,planning_revision` | ≤2 s enforced | ≤2 s enforced | ≤1.20x enforced | <65,536 enforced | `direct-decomposition`, `tiny-health`, `planning_revision` |
+| `summary --select planning_record,execplans,continuation_view,planning_revision` | ≤2 s enforced | ≤2 s enforced | ≤1.20x enforced | <65,536 enforced | `selected-owner-query`, `direct-live-execplans`, `planning_revision` |
+
+Each result reports `profile_loaded=query-shaped-direct`, `fallback_profile_loaded=false`, its exact per-field dependency plan, and `historical_sources_loaded=false`. The fixture contains a two-lane decomposition and two live execplans; direct results are compared with the corresponding broad-summary fields before the broad summary, archive count, finished-work, and ownership/history builders are replaced by fail-fast sentinels. This proves semantic equivalence and actual isolation rather than trusting declared omissions alone. Five fresh processes per history size enforce the two-second median and 20% scaling limit with the existing 10 ms noise floor. After the semantic repair, five clean current-repository calls measured 1.049 s and 1.109 s medians respectively, with 41,137-byte and 27,140-byte responses. The decomposition result is now the current authoritative record projection, not a `not-evaluated` placeholder, and the execplan result includes every current live execplan without loading completed or archived plans.
+
+The prior eight focused regressions still pass: three selected-owner/archive/cache tests, three tiny-report/pagination/reconcile tests, and two workspace packet/current-owner CLI tests. Generated command-package freshness and static proof also passed.
 
 The performance assertions are executable budgets, not prose measurements: any resolver exceeding two seconds or the 1,000-closeout 20% median bound reports the responsible query in the failing assertion.
 
