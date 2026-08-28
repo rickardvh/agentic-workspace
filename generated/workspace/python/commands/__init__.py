@@ -33,6 +33,7 @@ from . import assignment_reject as _command_assignment_reject
 from . import assignment_repair as _command_assignment_repair
 from . import autopilot_run as _command_autopilot_run
 from . import checkpoint_write as _command_checkpoint_write
+from . import config_policy_apply as _command_config_policy_apply
 from . import config_report as _command_config_report
 from . import correction_event_correct_dispute as _command_correction_event_correct_dispute
 from . import correction_event_identity_init as _command_correction_event_identity_init
@@ -119,6 +120,7 @@ GENERATED_COMMAND_HANDLERS = {
     'assignment.repair': _command_assignment_repair.run,
     'autopilot.run': _command_autopilot_run.run,
     'checkpoint.write': _command_checkpoint_write.run,
+    'config.policy-apply': _command_config_policy_apply.run,
     'config.report': _command_config_report.run,
     'correction-event.correct-dispute': _command_correction_event_correct_dispute.run,
     'correction-event.identity-init': _command_correction_event_identity_init.run,

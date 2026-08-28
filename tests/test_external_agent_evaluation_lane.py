@@ -1043,10 +1043,12 @@ def test_model_cli_harness_includes_setup_jumpstart_discovery_scenario(tmp_path:
     scenario = scenarios["setup-jumpstart-discovery"]
     assert "uv run agentic-workspace setup" in scenario["required_executed_commands"]
     assert "workspace-setup-jumpstart" in scenario["required_command_mentions"]
+    assert "config-policy" in scenario["required_command_mentions"]
     assert scenario["forbidden_write_patterns"] == ["**/*"]
     assert any("pre-write and pre-seed discovery" in note for note in scenario["expected_signals"])
     assert any("structured configuration concerns" in note for note in scenario["expected_signals"])
     assert any("zero-interaction" in note for note in scenario["expected_signals"])
+    assert any("direct managed config edits" in note for note in scenario["expected_signals"])
     assert "choose a module" in scenario["forbidden_response_phrases"]
 
     payload = module.run_suite(

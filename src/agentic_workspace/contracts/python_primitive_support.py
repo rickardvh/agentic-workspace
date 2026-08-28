@@ -46,6 +46,10 @@ def execute_host_primitive(
         return _guidance_lifecycle_apply(values=values, arguments=arguments, context=context)
     if primitive == "instructions.execute":
         return _instructions_execute(values=values, arguments=arguments, context=context)
+    if primitive == "config.policy.apply":
+        from agentic_workspace.workspace_runtime_core import _apply_workspace_config_policy
+
+        return _apply_workspace_config_policy(values, arguments, context)
     raise PrimitiveExecutionError(f"unsupported AW host primitive: {primitive!r}")
 
 

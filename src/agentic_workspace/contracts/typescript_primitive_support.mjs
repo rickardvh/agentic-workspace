@@ -1798,6 +1798,7 @@ function domainPrimitive(primitive, values, args, operationId) {
       escalation_required: Boolean(values.escalation_required ?? false),
     },
   };
+  if (primitive === 'config.policy.apply') return applyWorkspaceConfigPolicy(values);
   if (primitive === 'system_intent.config.resolve') return { target_root: resolve(String(values.target ?? '.')) };
   if (primitive === 'system_intent.source_metadata.refresh' || primitive === 'system_intent.mirror.read_or_create') {
     return systemIntentMutationResult(values);
@@ -2527,6 +2528,111 @@ function reportMemory(values) {
   return { kind: 'memory-module-report/v1', profile: 'tiny', module: 'memory', target_root: targetRoot, health: active.status === 'present' ? 'healthy' : 'attention-needed', status: { note_count: active.note_count, manifest_status: active.status }, active, next_action: { summary: active.status === 'present' ? 'No immediate memory action.' : 'Run full memory report for remediation detail.' }, detail_commands: { full: 'agentic-memory report --target . --verbose --format json', route: 'agentic-memory route --target . --files <paths> --format json' } };
 }
 
+const configPolicyFields = {
+  shared: {
+    'workspace.improvement_latitude': ['none', 'reporting', 'conservative', 'balanced', 'proactive'],
+    'workspace.optimization_bias': ['agent-efficiency', 'balanced', 'human-legibility'],
+    'assurance.default_level': ['low', 'medium', 'high', 'critical'],
+    'assurance.strict_closeout': [true, false],
+  },
+  local: {
+    'workspace.cli_invoke': null,
+    'delegation.mode': ['off', 'manual', 'suggest', 'auto'],
+    'delegation.execution_role': ['ordinary-executor', 'orchestrator', 'bounded-worker'],
+    'delegation.assignment_policy': ['local-preferred', 'best-fit-advisory', 'required-best-fit'],
+    'delegation.underfit_behavior': ['stay-when-safe', 'prepare-manual-escalation', 'require-delegation'],
+    'delegation.down_routing_behavior': ['never', 'bounded-mechanical-work', 'when-cheaper-safe-target-exists'],
+    'delegation.human_override_policy': ['explicit-only', 'allowed-with-recorded-reason', 'disallowed'],
+    'delegation.manual_transport_policy': ['disabled', 'allowed', 'required'],
+  },
+};
+
+function configPolicyRevision(text) {
+  return `sha256:${createHash('sha256').update(text).digest('hex')}`;
+}
+
+function replaceTomlScalar(source, field, value) {
+  const [section, key] = field.split('.', 2);
+  const rendered = typeof value === 'boolean' ? String(value) : JSON.stringify(value);
+  const lines = source.split(/(?<=\n)/);
+  let sectionIndex = -1;
+  let nextSection = lines.length;
+  const matches = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const stripped = lines[index].trim();
+    if (stripped === `[${section}]`) {
+      if (sectionIndex >= 0) throw new RuntimeError(`config policy apply found duplicate [${section}] tables`);
+      sectionIndex = index;
+      continue;
+    }
+    if (sectionIndex >= 0 && index > sectionIndex && /^\s*\[.*\]\s*$/.test(stripped)) { nextSection = index; break; }
+    if (sectionIndex >= 0 && index > sectionIndex && new RegExp(`^\\s*${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*=`).test(lines[index])) matches.push(index);
+  }
+  if (matches.length > 1) throw new RuntimeError(`config policy apply found duplicate ${field} assignments`);
+  if (matches.length === 1) {
+    const index = matches[0];
+    const newline = lines[index].endsWith('\r\n') ? '\r\n' : lines[index].endsWith('\n') ? '\n' : '';
+    const content = newline ? lines[index].slice(0, -newline.length) : lines[index];
+    const equals = content.indexOf('=');
+    const hash = content.indexOf('#', equals + 1);
+    const suffix = hash >= 0 ? ` ${content.slice(hash).trimStart()}` : '';
+    lines[index] = `${content.slice(0, equals + 1)} ${rendered}${suffix}${newline}`;
+    return lines.join('');
+  }
+  if (sectionIndex < 0) return `${source}${source.endsWith('\n\n') || source === '' ? '' : source.endsWith('\n') ? '\n' : '\n\n'}[${section}]\n${key} = ${rendered}\n`;
+  lines.splice(nextSection, 0, `${key} = ${rendered}\n`);
+  return lines.join('');
+}
+
+function applyWorkspaceConfigPolicy(values) {
+  const targetRoot = resolve(String(values.target_root ?? values.target ?? '.'));
+  let decision;
+  try { decision = JSON.parse(String(values.decision_json ?? '')); } catch (error) { throw new RuntimeError(`config-policy --decision-json is invalid JSON: ${error.message}`); }
+  if (!isObject(decision) || decision.kind !== 'agentic-workspace/config-policy-decision/v1') throw new RuntimeError('config-policy decision kind must be agentic-workspace/config-policy-decision/v1');
+  const scope = String(decision.scope ?? '');
+  const allowed = configPolicyFields[scope];
+  if (!allowed) throw new RuntimeError('config-policy decision scope must be shared or local');
+  if (!['strong-repo-evidence', 'human-answer'].includes(decision.authority)) throw new RuntimeError('config-policy decision authority must be strong-repo-evidence or human-answer');
+  const expectedSetupIdentity = String(values.expect_setup_identity ?? '');
+  if (!decision.setup_identity || decision.setup_identity !== expectedSetupIdentity) throw new RuntimeError('config-policy decision setup_identity must match --expect-setup-identity');
+  const receiptPath = join(targetRoot, '.agentic-workspace/adoption-receipt.json');
+  const observedSetupIdentity = existsSync(receiptPath) ? String(readJson(receiptPath)?.configuration_readiness?.identity ?? 'legacy-compatible') : 'legacy-compatible';
+  if (observedSetupIdentity !== expectedSetupIdentity) throw new RuntimeError(`config-policy setup identity is stale: expected ${expectedSetupIdentity}, observed ${observedSetupIdentity}`);
+  const changes = decision.changes ?? {};
+  if (!isObject(changes) || (Object.keys(changes).length === 0 && decision.complete_readiness !== true)) throw new RuntimeError('config-policy decision requires changes or complete_readiness=true');
+  if (decision.complete_readiness !== undefined && typeof decision.complete_readiness !== 'boolean') throw new RuntimeError('config-policy complete_readiness must be a boolean');
+  const relativePath = scope === 'shared' ? '.agentic-workspace/config.toml' : '.agentic-workspace/config.local.toml';
+  const configPath = join(targetRoot, relativePath);
+  const configExists = existsSync(configPath);
+  const source = configExists ? readText(configPath) : 'schema_version = 1\n';
+  const observedRevision = configPolicyRevision(configExists ? source : '');
+  if (String(values.expect_config_revision ?? '') !== observedRevision) throw new RuntimeError(`config-policy revision is stale for ${relativePath}: expected ${values.expect_config_revision}, observed ${observedRevision}`);
+  let rendered = source;
+  const effects = [];
+  for (const [field, value] of Object.entries(changes)) {
+    if (!Object.prototype.hasOwnProperty.call(allowed, field)) throw new RuntimeError(`config-policy field ${JSON.stringify(field)} is not owned by the ${scope} policy operation`);
+    const choices = allowed[field];
+    if ((choices && !choices.includes(value)) || (!choices && typeof value !== 'string')) throw new RuntimeError(`config-policy value for ${field} is invalid`);
+    if (/(password|secret|credential|private_key|access_token)/i.test(`${field} ${value}`)) throw new RuntimeError('config-policy refuses credential or secret material');
+    if (scope === 'shared' && typeof value === 'string' && (isAbsolute(value) || /^[A-Za-z]:[\\/]/.test(value))) throw new RuntimeError('config-policy refuses absolute machine paths in shared configuration');
+    rendered = replaceTomlScalar(rendered, field, value);
+    effects.push({ owner: `config.${scope}`, field, value });
+  }
+  let readinessReceipt = null;
+  if (decision.complete_readiness === true) {
+    if (!existsSync(receiptPath)) throw new RuntimeError('config-policy cannot complete readiness without a valid adoption receipt');
+    readinessReceipt = readJson(receiptPath);
+    const readiness = readinessReceipt?.configuration_readiness;
+    if (!isObject(readiness) || readiness.kind !== 'agentic-workspace/configuration-readiness/v1') throw new RuntimeError('config-policy cannot complete missing or unsupported readiness metadata');
+    if (String(readiness.identity ?? '') !== expectedSetupIdentity) throw new RuntimeError('config-policy readiness identity changed before completion');
+    effects.push({ owner: 'setup.guidance', field: 'configuration_readiness.status', value: 'current' });
+  }
+  if (values.dry_run !== true && rendered !== source) { mkdirSync(dirname(configPath), { recursive: true }); writeFileSync(configPath, rendered, 'utf8'); }
+  if (values.dry_run !== true && readinessReceipt) { readinessReceipt.configuration_readiness.status = 'current'; readinessReceipt.configuration_readiness.completed_by = 'config.policy-apply'; writeFileSync(receiptPath, `${JSON.stringify(readinessReceipt, null, 2)}\n`, 'utf8'); }
+  const mutationApplied = values.dry_run !== true && (rendered !== source || Boolean(readinessReceipt));
+  return { kind: 'agentic-workspace/config-policy-result/v1', status: values.dry_run === true ? 'preview' : rendered !== source ? 'applied' : 'current', scope, authority: decision.authority, concern_id: String(decision.concern_id ?? ''), setup_identity: decision.setup_identity, path: relativePath, previous_revision: observedRevision, revision: configPolicyRevision(rendered), effects, readiness_status: values.dry_run === true && readinessReceipt ? 'preview-current' : readinessReceipt ? 'current' : 'unchanged', outcome: mutationApplied ? 'applied' : 'noop', mutation_applied: mutationApplied, reason_code: values.dry_run === true ? 'dry-run' : mutationApplied ? 'authorised-policy-applied' : 'already-current', conflict_owner: '', recovery_command: 'agentic-workspace setup --target . --format json', re_resolve_command: 'agentic-workspace setup --target . --format json', claim_boundary: 'Only the explicitly authorised bounded policy fields were applied; other setup owners remain independent.' };
+}
+
 
 export function executeHostPrimitive(primitive, values, args, operationId) {
   if (primitive === 'workspace.target-root.resolve') {
@@ -2559,6 +2665,7 @@ export function executeHostPrimitive(primitive, values, args, operationId) {
     const config = workspaceConfig(values);
     return args?.include_payload ? { config, result: config } : config;
   }
+  if (primitive === 'config.policy.apply') return applyWorkspaceConfigPolicy(values);
   if (primitive === 'output.fields.select') return selectFields(values.config, values);
   return domainPrimitive(primitive, values, args, operationId);
 }

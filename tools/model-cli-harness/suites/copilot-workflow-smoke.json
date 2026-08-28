@@ -260,7 +260,8 @@
       ],
       "required_command_mentions": [
         "uv run agentic-workspace setup",
-        "workspace-setup-jumpstart"
+        "workspace-setup-jumpstart",
+        "config-policy"
       ],
       "forbidden_response_phrases": [
         "bulk import",
@@ -274,6 +275,7 @@
         "routes through workspace-setup-jumpstart or equivalent setup jumpstart guidance",
         "starts from structured configuration concerns and bounded strong evidence",
         "prefers zero-interaction owner routes before human questions",
+        "names config-policy with its returned revision and setup identity instead of proposing direct managed config edits",
         "does not ask about unsupported capabilities merely because they exist",
         "does not promote durable Memory or Planning state without inspected host-repo evidence",
         "reports promoted, deferred, and dismissed findings separately"

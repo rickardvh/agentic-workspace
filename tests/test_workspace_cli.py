@@ -2203,8 +2203,8 @@ def test_setup_asks_plain_language_question_for_unresolved_human_policy(tmp_path
     assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--format", "json"]) == 0
     capsys.readouterr()
     _write(
-        tmp_path / ".agentic-workspace" / "config.toml",
-        "schema_version = 1\n\n[modules]\nenabled = ['planning', 'memory']\n\n[mixed_agent]\nexecution_role = 'orchestrator'\n",
+        tmp_path / ".agentic-workspace" / "config.local.toml",
+        "schema_version = 1\n\n[delegation]\nexecution_role = 'orchestrator'\n",
     )
 
     assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -2212,11 +2212,166 @@ def test_setup_asks_plain_language_question_for_unresolved_human_policy(tmp_path
     concerns = json.loads(capsys.readouterr().out)["configuration_concerns"]
     question = concerns["human_questions"][0]
     assert concerns["status"] == "human-decision-required"
-    assert question["answer_owner"] == "config.mutation"
+    assert question["answer_owner"] == "config.policy-apply"
     assert question["already_inferred"] == "Multi-agent orchestration is intended; the transfer policy is unresolved."
     assert "automatically" in question["question"]
     assert "assignment_policy" not in question["question"]
     assert all(choice["consequence"] for choice in question["alternatives"])
+    assert all(choice["decision"]["scope"] == "local" for choice in question["alternatives"])
+    assert "--expect-config-revision sha256:" in question["apply_command"]
+
+
+def test_config_policy_apply_preserves_comments_unknown_fields_and_rejects_stale_revision(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--format", "json"]) == 0
+    capsys.readouterr()
+    config_path = tmp_path / ".agentic-workspace" / "config.toml"
+    config_path.write_text(
+        "schema_version = 1\n\n[modules]\nenabled = ['planning', 'memory']\n\n"
+        "[workspace]\nimprovement_latitude = 'conservative' # keep this comment\n"
+        "host_extension = 'preserve-me'\n",
+        encoding="utf-8",
+    )
+    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
+    concerns = json.loads(capsys.readouterr().out)["configuration_concerns"]
+    context = concerns["mutation_context"]
+    decision = {
+        "kind": "agentic-workspace/config-policy-decision/v1",
+        "concern_id": "improvement-latitude",
+        "authority": "human-answer",
+        "scope": "shared",
+        "setup_identity": context["setup_identity"],
+        "changes": {"workspace.improvement_latitude": "balanced"},
+    }
+    argv = [
+        "config-policy",
+        "--target",
+        str(tmp_path),
+        "--decision-json",
+        json.dumps(decision),
+        "--expect-config-revision",
+        context["shared_config_revision"],
+        "--expect-setup-identity",
+        context["setup_identity"],
+        "--format",
+        "json",
+    ]
+    assert cli.main([*argv, "--dry-run"]) == 0
+    preview = json.loads(capsys.readouterr().out)
+    assert preview["status"] == "preview"
+    assert "improvement_latitude = 'conservative'" in config_path.read_text(encoding="utf-8")
+    assert cli.main(argv) == 0
+    applied = json.loads(capsys.readouterr().out)
+    text = config_path.read_text(encoding="utf-8")
+    assert applied["outcome"] == "applied"
+    assert 'improvement_latitude = "balanced" # keep this comment' in text
+    assert "host_extension = 'preserve-me'" in text
+    with pytest.raises(SystemExit) as stale_exit:
+        cli.main(argv)
+    assert stale_exit.value.code == 2
+    assert "revision is stale" in capsys.readouterr().err
+    assert config_path.read_text(encoding="utf-8") == text
+
+
+def test_config_policy_apply_keeps_local_authority_and_completes_matching_readiness(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--format", "json"]) == 0
+    capsys.readouterr()
+    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
+    context = json.loads(capsys.readouterr().out)["configuration_concerns"]["mutation_context"]
+    decision = {
+        "kind": "agentic-workspace/config-policy-decision/v1",
+        "concern_id": "orchestration-posture",
+        "authority": "human-answer",
+        "scope": "local",
+        "setup_identity": context["setup_identity"],
+        "changes": {"delegation.assignment_policy": "best-fit-advisory"},
+    }
+    assert (
+        cli.main(
+            [
+                "config-policy",
+                "--target",
+                str(tmp_path),
+                "--decision-json",
+                json.dumps(decision),
+                "--expect-config-revision",
+                context["local_config_revision"],
+                "--expect-setup-identity",
+                context["setup_identity"],
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    result = json.loads(capsys.readouterr().out)
+    assert result["path"] == ".agentic-workspace/config.local.toml"
+    assert "assignment_policy" not in (tmp_path / ".agentic-workspace" / "config.toml").read_text(encoding="utf-8")
+    assert 'assignment_policy = "best-fit-advisory"' in (tmp_path / ".agentic-workspace" / "config.local.toml").read_text(encoding="utf-8")
+
+    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
+    context = json.loads(capsys.readouterr().out)["configuration_concerns"]["mutation_context"]
+    completion = context["reconciliation_completion"]["decision"]
+    assert (
+        cli.main(
+            [
+                "config-policy",
+                "--target",
+                str(tmp_path),
+                "--decision-json",
+                json.dumps(completion),
+                "--expect-config-revision",
+                context["shared_config_revision"],
+                "--expect-setup-identity",
+                context["setup_identity"],
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    completed = json.loads(capsys.readouterr().out)
+    receipt = json.loads((tmp_path / ".agentic-workspace" / "adoption-receipt.json").read_text(encoding="utf-8"))
+    assert completed["readiness_status"] == "current"
+    assert receipt["configuration_readiness"]["status"] == "current"
+
+
+def test_config_policy_apply_rejects_secret_material_without_writes(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--format", "json"]) == 0
+    capsys.readouterr()
+    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
+    context = json.loads(capsys.readouterr().out)["configuration_concerns"]["mutation_context"]
+    decision = {
+        "kind": "agentic-workspace/config-policy-decision/v1",
+        "concern_id": "local-invocation",
+        "authority": "human-answer",
+        "scope": "local",
+        "setup_identity": context["setup_identity"],
+        "changes": {"workspace.cli_invoke": "tool --password secret-value"},
+    }
+    local_path = tmp_path / ".agentic-workspace" / "config.local.toml"
+    before = local_path.read_bytes() if local_path.exists() else None
+    with pytest.raises(SystemExit) as secret_exit:
+        cli.main(
+            [
+                "config-policy",
+                "--target",
+                str(tmp_path),
+                "--decision-json",
+                json.dumps(decision),
+                "--expect-config-revision",
+                context["local_config_revision"],
+                "--expect-setup-identity",
+                context["setup_identity"],
+                "--format",
+                "json",
+            ]
+        )
+    assert secret_exit.value.code == 2
+    assert "secret" in capsys.readouterr().err
+    assert (local_path.read_bytes() if local_path.exists() else None) == before
 
 
 def test_setup_rejects_weak_policy_signals_and_bounds_broad_repo_analysis(tmp_path: Path, capsys) -> None:

@@ -275,6 +275,12 @@
       "path": "operations/config.report.json"
     },
     {
+      "command": "config-policy",
+      "id": "config.policy-apply",
+      "migration_status": "runtime-consumed",
+      "path": "operations/config.policy-apply.json"
+    },
+    {
       "command": "defaults",
       "id": "defaults.report",
       "migration_status": "runtime-consumed",

@@ -49871,10 +49871,13 @@ def _setup_configuration_concerns_payload(*, target_root: Path, config: Workspac
         }
     )
 
-    raw_mixed_agent = raw_config.get("mixed_agent")
-    mixed_agent: dict[str, Any] = raw_mixed_agent if isinstance(raw_mixed_agent, dict) else {}
-    orchestration_declared = mixed_agent.get("execution_role") == "orchestrator"
-    assignment_explicit = "assignment_policy" in mixed_agent
+    local_override = config.local_override
+    orchestration_declared = local_override.execution_role == "orchestrator"
+    assignment_explicit = local_override.assignment_policy is not None
+    setup_identity = _config_policy_setup_identity(target_root=target_root, config=config)
+    local_config_path = target_root / WORKSPACE_LOCAL_CONFIG_PATH
+    shared_config_revision = _config_policy_revision(config_path)
+    local_config_revision = _config_policy_revision(local_config_path)
     if orchestration_declared and not assignment_explicit:
         question = {
             "concern_id": "orchestration-posture",
@@ -49889,15 +49892,38 @@ def _setup_configuration_concerns_payload(*, target_root: Path, config: Workspac
                     "id": "automatic-best-fit",
                     "label": "Move suitable work automatically",
                     "consequence": "AW may assign bounded work to a better-fit configured target when its safety contract permits it.",
+                    "decision": {
+                        "kind": "agentic-workspace/config-policy-decision/v1",
+                        "concern_id": "orchestration-posture",
+                        "authority": "human-answer",
+                        "scope": "local",
+                        "setup_identity": setup_identity,
+                        "changes": {"delegation.assignment_policy": "required-best-fit"},
+                    },
                 },
                 {
                     "id": "explicit-delegation-only",
                     "label": "Keep work local by default",
                     "consequence": "AW will suggest delegation when useful but waits for an explicit choice before transfer.",
+                    "decision": {
+                        "kind": "agentic-workspace/config-policy-decision/v1",
+                        "concern_id": "orchestration-posture",
+                        "authority": "human-answer",
+                        "scope": "local",
+                        "setup_identity": setup_identity,
+                        "changes": {"delegation.assignment_policy": "best-fit-advisory"},
+                    },
                 },
             ],
-            "answer_owner": "config.mutation",
-            "detail_selector": "config.mixed_agent.assignment_policy",
+            "answer_owner": "config.policy-apply",
+            "apply_command": _command_with_cli_invoke(
+                command=(
+                    "agentic-workspace config-policy --target . --decision-json '<selected-alternative.decision-json>' "
+                    f"--expect-config-revision {local_config_revision} --expect-setup-identity {setup_identity} --format json"
+                ),
+                cli_invoke=config.cli_invoke,
+            ),
+            "detail_selector": "config.local_runtime.assignment_policy",
         }
         human_questions.append(question)
         orchestration_status = "human-decision-required"
@@ -49907,13 +49933,13 @@ def _setup_configuration_concerns_payload(*, target_root: Path, config: Workspac
     concerns.append(
         {
             "id": "orchestration-posture",
-            "owner": "config.mutation",
+            "owner": "config.policy-apply",
             "status": orchestration_status,
             "materiality": "shared-execution-authority",
             "dependency": "configured-targets",
             "evidence": evidence(
-                f"{WORKSPACE_CONFIG_PATH.as_posix()}#mixed_agent.execution_role" if orchestration_declared else "",
-                authority="explicit-workspace-config",
+                f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()}#delegation.execution_role" if orchestration_declared else "",
+                authority="explicit-local-config",
             ),
             "inference": (
                 "Orchestration is explicitly selected, but automatic transfer policy cannot be inferred."
@@ -49921,8 +49947,12 @@ def _setup_configuration_concerns_payload(*, target_root: Path, config: Workspac
                 else "No unresolved orchestration policy is active."
             ),
             "human_decision": question or {},
-            "apply_route": {"owner": "config.mutation", "status": "awaiting-human" if question else "not-required"},
-            "detail_selector": "config.mixed_agent",
+            "apply_route": {
+                "owner": "config.policy-apply",
+                "status": "awaiting-human" if question else "not-required",
+                "operation": "config.policy-apply",
+            },
+            "detail_selector": "config.local_runtime.assignment_policy",
         }
     )
 
@@ -50033,6 +50063,77 @@ def _setup_configuration_concerns_payload(*, target_root: Path, config: Workspac
             "status": "kept-transient",
             "rule": "Advisory orientation and weak setup findings do not become configuration pressure without stronger authority.",
         },
+        "mutation_context": {
+            "setup_identity": setup_identity,
+            "shared_config_revision": shared_config_revision,
+            "local_config_revision": local_config_revision,
+            "decision_kind": "agentic-workspace/config-policy-decision/v1",
+            "operation": "config.policy-apply",
+            "reconciliation_completion": {
+                "decision": {
+                    "kind": "agentic-workspace/config-policy-decision/v1",
+                    "concern_id": "configuration-readiness",
+                    "authority": "strong-repo-evidence",
+                    "scope": "shared",
+                    "setup_identity": setup_identity,
+                    "changes": {},
+                    "complete_readiness": True,
+                },
+                "command": _command_with_cli_invoke(
+                    command=(
+                        "agentic-workspace config-policy --target . --decision-json '<reconciliation-completion.decision-json>' "
+                        f"--expect-config-revision {shared_config_revision} --expect-setup-identity {setup_identity} --format json"
+                    ),
+                    cli_invoke=config.cli_invoke,
+                ),
+                "rule": "Run only after the listed owner actions are complete, then re-run start; the receipt is not a parallel setup history.",
+            },
+        },
+        "mutation_inventory": [
+            {
+                "concern": "workspace repo policy",
+                "disposition": "typed-owner",
+                "owner": "config.policy-apply",
+                "surface": WORKSPACE_CONFIG_PATH.as_posix(),
+            },
+            {
+                "concern": "machine or user runtime policy",
+                "disposition": "typed-owner",
+                "owner": "config.policy-apply",
+                "surface": WORKSPACE_LOCAL_CONFIG_PATH.as_posix(),
+            },
+            {
+                "concern": "module selection and lifecycle",
+                "disposition": "existing-owner",
+                "owner": "workspace lifecycle/modules",
+                "rule": "Never edit modules.enabled as a setup shortcut.",
+            },
+            {"concern": "startup adapter generation", "disposition": "existing-owner", "owner": "workspace.init"},
+            {"concern": "compiled system intent", "disposition": "existing-owner", "owner": "system-intent.sync"},
+            {
+                "concern": "ownership declarations",
+                "disposition": "ordinary-repo-source",
+                "owner": "OWNERSHIP.toml",
+                "reason": "Subsystem boundaries require repository judgment; a typed scalar writer adds no authority.",
+            },
+            {
+                "concern": "assurance profiles and requirements",
+                "disposition": "ordinary-repo-source",
+                "owner": "config assurance declarations",
+                "reason": "Nested proof semantics require review; only bounded default scalars use config.policy-apply.",
+            },
+            {
+                "concern": "Verification manifest and proof strategy",
+                "disposition": "existing-owner",
+                "owner": "verification module lifecycle and verification operations",
+            },
+            {
+                "concern": "configuration readiness",
+                "disposition": "setup-reconciliation",
+                "owner": "setup.guidance",
+                "rule": "Re-resolve from the matching identity after every owner action; do not create a second transaction log.",
+            },
+        ],
         "next": {
             "action": "ask-smallest-semantic-question"
             if human_questions
@@ -53429,6 +53530,225 @@ def _resolve_workspace_operation_target_root(values: dict[str, Any], _arguments:
     target_root = _resolve_target_root(values.get("target")) if values.get("target") else _resolve_target_root(None)
     _validate_target_root(command_name="config", target_root=target_root)
     return target_root
+
+
+_CONFIG_POLICY_FIELDS: dict[str, dict[str, tuple[type, tuple[Any, ...] | None]]] = {
+    "shared": {
+        "workspace.improvement_latitude": (str, SUPPORTED_IMPROVEMENT_LATITUDES),
+        "workspace.optimization_bias": (str, SUPPORTED_OPTIMIZATION_BIASES),
+        "assurance.default_level": (str, SUPPORTED_ASSURANCE_LEVELS),
+        "assurance.strict_closeout": (bool, None),
+    },
+    "local": {
+        "workspace.cli_invoke": (str, None),
+        "delegation.mode": (str, SUPPORTED_DELEGATION_CONTROL_MODES),
+        "delegation.execution_role": (str, SUPPORTED_ORCHESTRATION_EXECUTION_ROLES),
+        "delegation.assignment_policy": (str, SUPPORTED_ASSIGNMENT_POLICIES),
+        "delegation.underfit_behavior": (str, SUPPORTED_UNDERFIT_BEHAVIORS),
+        "delegation.down_routing_behavior": (str, SUPPORTED_DOWN_ROUTING_BEHAVIORS),
+        "delegation.human_override_policy": (str, SUPPORTED_HUMAN_OVERRIDE_POLICIES),
+        "delegation.manual_transport_policy": (str, SUPPORTED_MANUAL_TRANSPORT_POLICIES),
+    },
+}
+
+
+def _config_policy_revision(path: Path) -> str:
+    payload = path.read_bytes() if path.is_file() else b""
+    return "sha256:" + hashlib.sha256(payload).hexdigest()
+
+
+def _toml_scalar(value: Any) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, str):
+        return json.dumps(value, ensure_ascii=False)
+    raise WorkspaceUsageError("config policy values must be strings or booleans")
+
+
+def _toml_comment_index(text: str) -> int | None:
+    quote = ""
+    escaped = False
+    for index, character in enumerate(text):
+        if escaped:
+            escaped = False
+            continue
+        if character == "\\" and quote == '"':
+            escaped = True
+            continue
+        if character in {'"', "'"}:
+            quote = "" if quote == character else character if not quote else quote
+            continue
+        if character == "#" and not quote:
+            return index
+    return None
+
+
+def _replace_toml_scalar(*, source: str, section: str, key: str, value: Any) -> str:
+    lines = source.splitlines(keepends=True)
+    section_header = f"[{section}]"
+    section_index: int | None = None
+    next_section = len(lines)
+    matches: list[int] = []
+    for index, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped == section_header:
+            if section_index is not None:
+                raise WorkspaceUsageError(f"config policy apply found duplicate [{section}] tables")
+            section_index = index
+            continue
+        if section_index is not None and index > section_index and stripped.startswith("[") and stripped.endswith("]"):
+            next_section = index
+            break
+        if section_index is not None and index > section_index and re.match(rf"^\s*{re.escape(key)}\s*=", line):
+            matches.append(index)
+    rendered = _toml_scalar(value)
+    if len(matches) > 1:
+        raise WorkspaceUsageError(f"config policy apply found duplicate {section}.{key} assignments")
+    if matches:
+        index = matches[0]
+        line = lines[index]
+        newline = "\r\n" if line.endswith("\r\n") else "\n" if line.endswith("\n") else ""
+        content = line[: -len(newline)] if newline else line
+        equals = content.index("=")
+        suffix_index = _toml_comment_index(content[equals + 1 :])
+        suffix = ""
+        if suffix_index is not None:
+            suffix = content[equals + 1 + suffix_index :]
+            suffix = " " + suffix.lstrip()
+        lines[index] = f"{content[: equals + 1]} {rendered}{suffix}{newline}"
+        return "".join(lines)
+    if section_index is None:
+        separator = "" if not source or source.endswith("\n\n") else "\n" if source.endswith("\n") else "\n\n"
+        return f"{source}{separator}{section_header}\n{key} = {rendered}\n"
+    lines.insert(next_section, f"{key} = {rendered}\n")
+    return "".join(lines)
+
+
+def _config_policy_setup_identity(*, target_root: Path, config: WorkspaceConfig) -> str:
+    readiness = _configuration_readiness_startup_payload(
+        target_root=target_root,
+        config=config,
+        selected_modules=list(config.enabled_modules),
+    )
+    if readiness.get("status") == "legacy-compatible":
+        return "legacy-compatible"
+    return str(readiness.get("observed_identity") or readiness.get("identity") or "unavailable")
+
+
+def _apply_workspace_config_policy(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> dict[str, Any]:
+    target_root = Path(str(values.get("target_root") or values.get("target") or ".")).resolve()
+    raw_decision = values.get("decision_json")
+    if not isinstance(raw_decision, str) or not raw_decision.strip():
+        raise WorkspaceUsageError("config-policy requires --decision-json with an authorised structured decision")
+    try:
+        decision = json.loads(raw_decision)
+    except json.JSONDecodeError as exc:
+        raise WorkspaceUsageError(f"config-policy --decision-json is invalid JSON: {exc}") from exc
+    if not isinstance(decision, dict) or decision.get("kind") != "agentic-workspace/config-policy-decision/v1":
+        raise WorkspaceUsageError("config-policy decision kind must be agentic-workspace/config-policy-decision/v1")
+    scope = str(decision.get("scope") or "")
+    allowed = _CONFIG_POLICY_FIELDS.get(scope)
+    if allowed is None:
+        raise WorkspaceUsageError("config-policy decision scope must be shared or local")
+    authority = str(decision.get("authority") or "")
+    if authority not in {"strong-repo-evidence", "human-answer"}:
+        raise WorkspaceUsageError("config-policy decision authority must be strong-repo-evidence or human-answer")
+    setup_identity = str(decision.get("setup_identity") or "")
+    expected_setup_identity = str(values.get("expect_setup_identity") or "")
+    if not setup_identity or setup_identity != expected_setup_identity:
+        raise WorkspaceUsageError("config-policy decision setup_identity must match --expect-setup-identity")
+    config = config_lib.load_workspace_config(target_root=target_root)
+    observed_setup_identity = _config_policy_setup_identity(target_root=target_root, config=config)
+    if expected_setup_identity != observed_setup_identity:
+        raise WorkspaceUsageError(
+            f"config-policy setup identity is stale: expected {expected_setup_identity!r}, observed {observed_setup_identity!r}"
+        )
+    raw_changes = decision.get("changes", {})
+    complete_readiness = decision.get("complete_readiness", False)
+    if not isinstance(raw_changes, dict) or not raw_changes and complete_readiness is not True:
+        raise WorkspaceUsageError("config-policy decision requires changes or complete_readiness=true")
+    if type(complete_readiness) is not bool:
+        raise WorkspaceUsageError("config-policy complete_readiness must be a boolean")
+    config_path = target_root / (WORKSPACE_CONFIG_PATH if scope == "shared" else WORKSPACE_LOCAL_CONFIG_PATH)
+    observed_revision = _config_policy_revision(config_path)
+    expected_revision = str(values.get("expect_config_revision") or "")
+    if expected_revision != observed_revision:
+        raise WorkspaceUsageError(
+            f"config-policy revision is stale for {config_path.relative_to(target_root).as_posix()}: "
+            f"expected {expected_revision!r}, observed {observed_revision!r}"
+        )
+    source = config_path.read_text(encoding="utf-8") if config_path.is_file() else "schema_version = 1\n"
+    rendered = source
+    effects: list[dict[str, Any]] = []
+    for field, value in raw_changes.items():
+        field_name = str(field)
+        specification = allowed.get(field_name)
+        if specification is None:
+            raise WorkspaceUsageError(f"config-policy field {field_name!r} is not owned by the {scope} policy operation")
+        expected_type, choices = specification
+        if type(value) is not expected_type or choices is not None and value not in choices:
+            allowed_text = f"; allowed values: {', '.join(map(str, choices))}" if choices else ""
+            raise WorkspaceUsageError(f"config-policy value for {field_name} is invalid{allowed_text}")
+        lowered = f"{field_name} {value}".lower()
+        if any(marker in lowered for marker in ("password", "secret", "credential", "private_key", "access_token")):
+            raise WorkspaceUsageError("config-policy refuses credential or secret material")
+        if scope == "shared" and isinstance(value, str) and (Path(value).is_absolute() or re.match(r"^[A-Za-z]:[\\/]", value)):
+            raise WorkspaceUsageError("config-policy refuses absolute machine paths in shared configuration")
+        section, key = field_name.split(".", 1)
+        rendered = _replace_toml_scalar(source=rendered, section=section, key=key, value=value)
+        effects.append({"owner": f"config.{scope}", "field": field_name, "value": value})
+    try:
+        tomllib.loads(rendered)
+    except tomllib.TOMLDecodeError as exc:
+        raise WorkspaceUsageError(f"config-policy would produce invalid TOML: {exc}") from exc
+    readiness_receipt: dict[str, Any] | None = None
+    if complete_readiness:
+        receipt_status = _read_adoption_receipt(target_root=target_root)
+        raw_receipt = receipt_status.get("payload") if receipt_status.get("status") == "present" else None
+        if not isinstance(raw_receipt, dict):
+            raise WorkspaceUsageError("config-policy cannot complete readiness without a valid adoption receipt")
+        readiness = raw_receipt.get("configuration_readiness")
+        if not isinstance(readiness, dict) or readiness.get("kind") != CONFIGURATION_READINESS_KIND:
+            raise WorkspaceUsageError("config-policy cannot complete missing or unsupported readiness metadata")
+        if str(readiness.get("identity") or "") != setup_identity:
+            raise WorkspaceUsageError("config-policy readiness identity changed before completion")
+        readiness_receipt = raw_receipt
+    dry_run = bool(values.get("dry_run"))
+    if not dry_run and rendered != source:
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        config_path.write_text(rendered, encoding="utf-8", newline="")
+        config_lib.load_workspace_config(target_root=target_root)
+    if complete_readiness:
+        receipt_path = target_root / WORKSPACE_ADOPTION_RECEIPT_PATH
+        assert readiness_receipt is not None
+        readiness = cast(dict[str, Any], readiness_receipt["configuration_readiness"])
+        effects.append({"owner": "setup.guidance", "field": "configuration_readiness.status", "value": "current"})
+        if not dry_run:
+            readiness["status"] = "current"
+            readiness["completed_by"] = "config.policy-apply"
+            receipt_path.write_text(json.dumps(readiness_receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    result_revision = "sha256:" + hashlib.sha256(rendered.encode("utf-8")).hexdigest()
+    mutation_applied = not dry_run and (rendered != source or complete_readiness)
+    return {
+        "kind": "agentic-workspace/config-policy-result/v1",
+        "status": "preview" if dry_run else "applied" if rendered != source else "current",
+        "scope": scope,
+        "authority": authority,
+        "concern_id": str(decision.get("concern_id") or ""),
+        "setup_identity": setup_identity,
+        "path": config_path.relative_to(target_root).as_posix(),
+        "previous_revision": observed_revision,
+        "revision": result_revision,
+        "effects": effects,
+        "readiness_status": "preview-current" if dry_run and complete_readiness else "current" if complete_readiness else "unchanged",
+        "outcome": "applied" if mutation_applied else "noop",
+        "mutation_applied": mutation_applied,
+        "reason_code": "dry-run" if dry_run else "already-current" if not mutation_applied else "authorised-policy-applied",
+        "conflict_owner": "",
+        "recovery_command": "agentic-workspace setup --target . --format json",
+        "re_resolve_command": "agentic-workspace setup --target . --format json",
+        "claim_boundary": "Only the explicitly authorised bounded policy fields were applied; other setup owners remain independent.",
+    }
 
 
 def _load_workspace_operation_config(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> Any:

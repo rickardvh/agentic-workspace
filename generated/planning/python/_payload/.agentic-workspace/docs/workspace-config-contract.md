@@ -20,3 +20,5 @@ When the CLI works, prefer compact `start`, `config`, `ownership`, `summary`, an
 ## Editing rule
 
 Edit shared config only for an intentional repo-policy change. Keep machine paths, credentials, and local execution preferences in local config. Module state is not workspace config and must be changed through its owning module when that command surface is available.
+
+For setup reconciliation, use the structured `config.policy-apply` operation returned by `setup`. It accepts only a bounded shared/local field inventory, requires both the exact config revision and setup identity, preserves unrelated TOML source, and rejects secret material or shared absolute machine paths. Nested ownership, assurance, and Verification semantics remain reviewed repository source; this bounded operation is not a general config patch language.
