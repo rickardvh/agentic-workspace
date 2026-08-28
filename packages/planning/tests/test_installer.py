@@ -967,6 +967,16 @@ def test_planning_reconcile_syncs_stale_active_todo_projection(tmp_path: Path) -
         next_action="Use the fresher execplan action.",
         done_when="The active intent is fully satisfied.",
     )
+    record["phase"] = "validation"
+    record["revision"] = 4
+    record["relationships"]["external_posture"] = {
+        "state": "observed",
+        "refs": ["PR #2784 blocking review: stale canonical projection"],
+    }
+    record["relationships"]["proof_posture"] = {
+        "state": "satisfied",
+        "refs": ["PR #2784 package repair and exact-head CI passed"],
+    }
     _write(plan_path, json.dumps(record, indent=2))
     _write(
         state_path,
@@ -989,7 +999,13 @@ queued_items = []
     assert projection["status"] == "stale-projections"
     assert projection["safe_sync_count"] == 1
     assert projection["sync_targets"][0]["sync_action"] == "sync-active-todo-projection"
-    assert projection["sync_targets"][0]["updated_fields"] == {"next_action": "Use the fresher execplan action."}
+    assert projection["sync_targets"][0]["updated_fields"] == {
+        "next_action": "Use the fresher execplan action.",
+        "why_now": "PR #2784 blocking review: stale canonical projection",
+        "proof": "PR #2784 package repair and exact-head CI passed",
+        "phase": "validation",
+        "owner_revision": "4",
+    }
 
     preview = planning_reconcile(target=tmp_path, apply_safe_prune=True, dry_run=True)
 
@@ -1002,6 +1018,10 @@ queued_items = []
     assert applied["active_projection_reconciliation"]["status"] == "clean"
     state = tomllib.loads(state_path.read_text(encoding="utf-8"))
     assert state["todo"]["active_items"][0]["next_action"] == "Use the fresher execplan action."
+    assert state["todo"]["active_items"][0]["why_now"] == "PR #2784 blocking review: stale canonical projection"
+    assert state["todo"]["active_items"][0]["proof"] == "PR #2784 package repair and exact-head CI passed"
+    assert state["todo"]["active_items"][0]["phase"] == "validation"
+    assert state["todo"]["active_items"][0]["owner_revision"] == "4"
 
 
 def test_planning_cli_reconcile_outputs_provider_agnostic_state(tmp_path: Path, capsys) -> None:

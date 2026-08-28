@@ -4691,10 +4691,6 @@ def _active_projection_sync_targets(
     state: dict[str, Any],
     summary: dict[str, Any],
 ) -> list[dict[str, Any]]:
-    continuation = summary.get("continuation_view", {})
-    stale_projections = continuation.get("stale_projections", []) if isinstance(continuation, dict) else []
-    if not isinstance(stale_projections, list) or not stale_projections:
-        return []
     todo = state.get("todo")
     active_items = todo.get("active_items", []) if isinstance(todo, dict) else []
     if not isinstance(active_items, list):
@@ -4705,6 +4701,18 @@ def _active_projection_sync_targets(
     revision = planning_revision(target_root)
     plan_source = str(revision.get("active_execplan") or "").strip()
     plan_hash = str(revision.get("active_execplan_hash") or "").strip()
+    plan_record = _load_execplan_record(target_root / plan_source) if plan_source else None
+    relationships = plan_record.get("relationships", {}) if isinstance(plan_record, dict) else {}
+    external_posture = relationships.get("external_posture", {}) if isinstance(relationships, dict) else {}
+    proof_posture = relationships.get("proof_posture", {}) if isinstance(relationships, dict) else {}
+    external_refs = external_posture.get("refs", []) if isinstance(external_posture, dict) else []
+    proof_refs = proof_posture.get("refs", []) if isinstance(proof_posture, dict) else []
+    canonical_projection_fields = {
+        "why_now": "; ".join(str(ref).strip() for ref in external_refs if str(ref).strip()) if isinstance(external_refs, list) else "",
+        "proof": "; ".join(str(ref).strip() for ref in proof_refs if str(ref).strip()) if isinstance(proof_refs, list) else "",
+        "phase": _execplan_phase(plan_record) if plan_record else "",
+        "owner_revision": str(plan_record.get("revision", "")).strip() if isinstance(plan_record, dict) else "",
+    }
     targets: list[dict[str, Any]] = []
     for index, raw in enumerate(active_items):
         if not isinstance(raw, dict):
@@ -4723,6 +4731,17 @@ def _active_projection_sync_targets(
                     "field": "next_action",
                     "stale_value": str(raw.get("next_action", "")).strip(),
                     "chosen_value": next_action,
+                }
+            )
+        for projection_field, chosen_value in canonical_projection_fields.items():
+            if not chosen_value or chosen_value == "unknown" or str(raw.get(projection_field, "")).strip() == chosen_value:
+                continue
+            updated_fields[projection_field] = chosen_value
+            stale_fields.append(
+                {
+                    "field": projection_field,
+                    "stale_value": str(raw.get(projection_field, "")).strip(),
+                    "chosen_value": chosen_value,
                 }
             )
         if not stale_fields:

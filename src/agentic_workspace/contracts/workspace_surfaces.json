@@ -57,6 +57,14 @@
   },
   "required_references": [
     {
+      "source": ".agentic-workspace/docs/jumpstart-contract.md",
+      "target": ".agentic-workspace/adoption-receipt.json",
+      "kind": "optional",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": [],
+      "degraded_behavior": "Treat configuration readiness as unresolved until install creates the adoption receipt."
+    },
+    {
       "source": ".agentic-workspace/OWNERSHIP.toml",
       "target": ".agentic-workspace/OWNERSHIP.toml",
       "kind": "installed-local",
