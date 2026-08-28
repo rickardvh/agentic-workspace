@@ -16,6 +16,7 @@ SUPPORTED_REQUIRED_CAPABILITIES = frozenset(
         "module-skills-v1",
         "module-operations-v1",
         "module-results-v1",
+        "module-setup-concerns-v1",
     }
 )
 
@@ -36,6 +37,9 @@ class ModuleContractError(ValueError):
 
 
 FACT_TYPES = frozenset({"boolean", "string", "string-set", "identity"})
+SETUP_CONCERN_STATUSES = frozenset({"satisfied", "inference-ready", "human-decision-required", "not-applicable"})
+SETUP_CONCERN_MATERIALITIES = frozenset({"recommended", "action-required"})
+SETUP_CONCERN_ROUTE_KINDS = frozenset({"detail", "skill", "operation", "human-decision"})
 
 
 def _string_list(value: Any, *, field: str) -> list[str]:
@@ -84,6 +88,40 @@ def _validate_fact(fact: Mapping[str, Any], *, module: str, field: str) -> dict[
         "id": fact_id,
         "type": fact_type,
         "source": {"owner": owner, "revision": revision, "current": current},
+    }
+
+
+def _validate_setup_concern(concern: Mapping[str, Any], *, module: str, field: str) -> dict[str, Any]:
+    normalized = dict(concern)
+    concern_id = str(normalized.get("id", "")).strip()
+    semantic_revision = str(normalized.get("semantic_revision", "")).strip()
+    source_revision = str(normalized.get("source_revision", "")).strip()
+    owner = str(normalized.get("owner", "")).strip()
+    status = str(normalized.get("status", "")).strip()
+    materiality = str(normalized.get("materiality", "")).strip()
+    if not concern_id or not semantic_revision or not source_revision or not owner:
+        raise ModuleContractError(f"{field} requires id, semantic_revision, source_revision, and owner")
+    if status not in SETUP_CONCERN_STATUSES:
+        raise ModuleContractError(f"{field}.status must be one of: {', '.join(sorted(SETUP_CONCERN_STATUSES))}")
+    if materiality not in SETUP_CONCERN_MATERIALITIES:
+        raise ModuleContractError(f"{field}.materiality must be one of: {', '.join(sorted(SETUP_CONCERN_MATERIALITIES))}")
+    applicability = _mapping(normalized.get("applicability"), field=f"{field}.applicability")
+    if applicability.get("kind") != "module-enabled":
+        raise ModuleContractError(f"{field}.applicability.kind must be module-enabled")
+    route = _mapping(normalized.get("route"), field=f"{field}.route")
+    if route.get("kind") not in SETUP_CONCERN_ROUTE_KINDS or not str(route.get("id", "")).strip():
+        raise ModuleContractError(f"{field}.route requires a supported kind and non-empty id")
+    return {
+        **normalized,
+        "id": concern_id,
+        "semantic_revision": semantic_revision,
+        "source_revision": source_revision,
+        "owner": owner,
+        "status": status,
+        "materiality": materiality,
+        "applicability": {"kind": "module-enabled"},
+        "route": dict(route),
+        "source": {"owner": module, "contract": MODULE_CONTRACT_VERSION},
     }
 
 
@@ -140,6 +178,23 @@ def validate_module_contract(payload: Mapping[str, Any]) -> dict[str, Any]:
             if not str(item.get("id", "")).strip():
                 raise ModuleContractError(f"capabilities.{capability_class}[].id is required")
         normalized_capabilities[capability_class] = normalized_entries
+    raw_setup_concerns = capabilities.get("setup_concerns", [])
+    if not isinstance(raw_setup_concerns, list) or any(not isinstance(item, Mapping) for item in raw_setup_concerns):
+        raise ModuleContractError("capabilities.setup_concerns must be a list of objects")
+    setup_concerns = [
+        _validate_setup_concern(
+            _mapping(item, field=f"capabilities.setup_concerns[{index}]"), module=name, field=f"capabilities.setup_concerns[{index}]"
+        )
+        for index, item in enumerate(raw_setup_concerns)
+    ]
+    concern_ids = [str(item["id"]) for item in setup_concerns]
+    if len(concern_ids) != len(set(concern_ids)):
+        raise ModuleContractError("capabilities.setup_concerns must have unique ids")
+    if setup_concerns and "module-setup-concerns-v1" not in required_capabilities:
+        raise ModuleContractError(
+            "compatibility.required_capabilities must include module-setup-concerns-v1 when setup concerns are declared"
+        )
+    normalized_capabilities["setup_concerns"] = setup_concerns
 
     result_semantics = _mapping(contract.get("result_semantics"), field="result_semantics")
     result_schema = str(result_semantics.get("schema_version", "")).strip()
@@ -288,6 +343,11 @@ def module_contribution(contract: Mapping[str, Any], *, task: str, changed_paths
     if facts:
         contribution["facts"] = facts
     return contribution
+
+
+def module_setup_concerns(contract: Mapping[str, Any]) -> list[dict[str, Any]]:
+    capabilities = _mapping(contract.get("capabilities"), field="capabilities")
+    return [dict(item) for item in capabilities.get("setup_concerns", [])]
 
 
 def target_has_install_signal(target_root: Path, signals: list[str]) -> bool:

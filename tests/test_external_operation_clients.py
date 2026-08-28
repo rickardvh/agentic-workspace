@@ -2299,6 +2299,46 @@ console.log(JSON.stringify(payload));
     ):
         assert python_payload[field] == typescript_payload[field]
 
+    def completion_values(name: str) -> dict[str, object]:
+        context = contexts[name]
+        return {
+            "target": str(targets[name]),
+            "decision_json": json.dumps(context["reconciliation_completion"]["decision"]),
+            "expect_config_revision": context["local_config_revision"],
+            "expect_setup_identity": context["setup_identity"],
+            "dry_run": True,
+            "format": "json",
+        }
+
+    python_completion = invoke_python_config_policy(completion_values("python-policy"))
+    completion_script = f"""
+import {{ invokeGeneratedOperation }} from './generated/workspace/typescript/src/runtime.mjs';
+const payload = invokeGeneratedOperation({{
+  operationId: 'config.policy-apply',
+  operationPath: 'operations/config.policy-apply.json',
+  values: {json.dumps(completion_values("typescript-policy"))}
+}});
+console.log(JSON.stringify(payload));
+"""
+    completion_run = subprocess.run(["node", "--input-type=module", "--eval", completion_script], cwd=ROOT, text=True, capture_output=True)
+    assert completion_run.returncode == 0, completion_run.stderr
+    typescript_completion = json.loads(completion_run.stdout)
+    for field in (
+        "kind",
+        "status",
+        "scope",
+        "authority",
+        "path",
+        "previous_revision",
+        "revision",
+        "readiness_status",
+        "outcome",
+        "mutation_applied",
+        "reason_code",
+        "effects",
+    ):
+        assert python_completion[field] == typescript_completion[field]
+
 
 @pytest.mark.parametrize(
     "payload",

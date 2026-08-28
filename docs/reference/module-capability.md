@@ -30,6 +30,7 @@ Small capability-first contract for peer modules. Workspace owns resolve, act, a
 | `capabilities.resources` | ref `#/$defs/capability_list` | no |  | Contract field for module.capabilities.resources. |  |  |
 | `capabilities.skills` | ref `#/$defs/capability_list` | no |  | Contract field for module.capabilities.skills. |  |  |
 | `capabilities.operations` | ref `#/$defs/capability_list` | no |  | Contract field for module.capabilities.operations. |  |  |
+| `capabilities.setup_concerns` | array of ref `#/$defs/setup_concern` | no |  | Bounded semantic setup concerns applicable only while this module is explicitly enabled. Declarations are read-only contributions; effects remain owned by their route. |  |  |
 | `result_semantics` | object | yes |  | Contract field for module.result_semantics. |  |  |
 | `result_semantics.schema_version` | string | yes |  | Contract field for module.result_semantics.schema_version. |  |  |
 | `result_semantics.guaranteed_fields` | array of string | yes |  | Contract field for module.result_semantics.guaranteed_fields. |  |  |

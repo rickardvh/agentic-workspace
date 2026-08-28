@@ -17,8 +17,10 @@ from typing import Any
 from repo_verification_bootstrap import runtime_primitives as verification_runtime_primitives
 from tests.workspace_cli_support import *
 
+from agentic_workspace import module_contract as module_contract_runtime
 from agentic_workspace import session_logging
 from agentic_workspace.config import workspace_pointer_block
+from agentic_workspace.module_contract import DiscoveredModule, validate_module_contract
 
 
 def _mark_configuration_readiness_current(target_root: Path) -> None:
@@ -2522,6 +2524,156 @@ def test_setup_deferral_is_revision_bound_and_completion_retires_local_residue(t
     assert cli.main(["start", "--target", str(tmp_path), "--task", "Inspect README.md.", "--format", "json"]) == 0
     quiet = json.loads(capsys.readouterr().out)["decision_packet"]
     assert "configuration_readiness" not in quiet
+
+
+def test_setup_reconciles_only_current_enabled_module_concern_delta(tmp_path: Path, capsys, monkeypatch: pytest.MonkeyPatch) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--format", "json"]) == 0
+    capsys.readouterr()
+
+    def apply_completion(concerns: dict[str, Any]) -> None:
+        completion = concerns["mutation_context"]["reconciliation_completion"]["decision"]
+        assert (
+            cli.main(
+                [
+                    "config-policy",
+                    "--target",
+                    str(tmp_path),
+                    "--decision-json",
+                    json.dumps(completion),
+                    "--expect-config-revision",
+                    concerns["mutation_context"]["local_config_revision"],
+                    "--expect-setup-identity",
+                    concerns["mutation_context"]["setup_identity"],
+                    "--format",
+                    "json",
+                ]
+            )
+            == 0
+        )
+        capsys.readouterr()
+
+    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
+    initial = json.loads(capsys.readouterr().out)["configuration_concerns"]
+    apply_completion(initial)
+
+    original_descriptors = workspace_runtime_core._module_operations()
+
+    def module_contract(*, semantic_revision: str, source_revision: str, status: str, description: str = "Signals") -> dict[str, Any]:
+        return validate_module_contract(
+            {
+                "schema_version": "agentic-workspace/module-capability/v2",
+                "name": "signals",
+                "description": description,
+                "compatibility": {
+                    "reader_epoch": 1,
+                    "required_capabilities": ["module-setup-concerns-v1"],
+                },
+                "ownership": {
+                    "roots": [],
+                    "effect_classes": [],
+                    "authority_exclusions": ["cannot grant mutation, proof, or completion authority"],
+                },
+                "relevance": {"task_terms": [], "path_prefixes": []},
+                "capabilities": {
+                    "resources": [],
+                    "skills": [],
+                    "operations": [],
+                    "setup_concerns": [
+                        {
+                            "id": "retention-policy",
+                            "semantic_revision": semantic_revision,
+                            "source_revision": source_revision,
+                            "status": status,
+                            "materiality": "recommended",
+                            "owner": "signals.retention-policy",
+                            "applicability": {"kind": "module-enabled"},
+                            "route": {"kind": "human-decision", "id": "signals.retention-policy"},
+                            "question": "How long should imported build signals be retained?",
+                        }
+                    ],
+                },
+                "result_semantics": {
+                    "schema_version": "signals/result/v1",
+                    "guaranteed_fields": [],
+                    "effect_fields": [],
+                    "warning_fields": [],
+                },
+            }
+        )
+
+    current_contract = module_contract(semantic_revision="retention/v1", source_revision="source-r1", status="human-decision-required")
+
+    def install_contract(contract: dict[str, Any]) -> None:
+        discovered = DiscoveredModule(name="signals", entry_point="fixture:signals", contract=contract, operations={}, status="available")
+        descriptor = workspace_runtime_core._external_module_descriptor(discovered)
+
+        def descriptors() -> dict[str, Any]:
+            return {**original_descriptors, "signals": descriptor}
+
+        monkeypatch.setattr(workspace_runtime_core, "_module_operations", descriptors)
+        monkeypatch.setattr(workspace_runtime_startup, "_module_operations", descriptors)
+        monkeypatch.setattr(module_contract_runtime, "discover_module_contracts", lambda: [discovered])
+
+    install_contract(current_contract)
+    shared_path = tmp_path / ".agentic-workspace" / "config.toml"
+    shared_text = shared_path.read_text(encoding="utf-8")
+    shared_text = re.sub(r"enabled\s*=\s*\[[^\]]*\]", 'enabled = ["planning", "memory", "signals"]', shared_text)
+    _write(shared_path, shared_text)
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Inspect README.md.", "--format", "json"]) == 0
+    enabled_start = json.loads(capsys.readouterr().out)["decision_packet"]
+    assert enabled_start["action"]["id"] == "reconcile-repository-configuration"
+    assert enabled_start["configuration_readiness"]["status"] == "stale"
+
+    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
+    enabled = json.loads(capsys.readouterr().out)["configuration_concerns"]
+    assert [question["concern_id"] for question in enabled["human_questions"]] == ["module:signals:retention-policy"]
+    assert enabled["delta"]["counts"]["newly-applicable"] == 1
+    assert all(not concern["setup_pressure"] for concern in enabled["concerns"] if not concern["id"].startswith("module:"))
+
+    install_contract(module_contract(semantic_revision="retention/v1", source_revision="source-r2", status="satisfied"))
+    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
+    reconciled = json.loads(capsys.readouterr().out)["configuration_concerns"]
+    assert reconciled["human_questions"] == []
+    apply_completion(reconciled)
+    recorded_concern = json.loads((tmp_path / ".agentic-workspace" / "adoption-receipt.json").read_text(encoding="utf-8"))[
+        "configuration_readiness"
+    ]["concern_receipts"]["module:signals:retention-policy"]
+    current_concern = workspace_runtime_core._module_setup_concern_payloads(
+        selected_modules=["planning", "memory", "signals"], descriptors=workspace_runtime_core._module_operations()
+    )[0]
+    assert recorded_concern["semantic_revision"] == current_concern["semantic_revision"]
+    assert recorded_concern["source_revision"] == current_concern["source_revision"]
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Inspect README.md.", "--format", "json"]) == 0
+    current_start = json.loads(capsys.readouterr().out)["decision_packet"]
+    assert "configuration_readiness" not in current_start, current_start.get("configuration_readiness")
+
+    install_contract(
+        module_contract(
+            semantic_revision="retention/v1",
+            source_revision="source-r2",
+            status="satisfied",
+            description="Cosmetically revised module docs",
+        )
+    )
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Inspect README.md.", "--format", "json"]) == 0
+    assert "configuration_readiness" not in json.loads(capsys.readouterr().out)["decision_packet"]
+
+    install_contract(module_contract(semantic_revision="retention/v3", source_revision="source-r7", status="human-decision-required"))
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Inspect README.md.", "--format", "json"]) == 0
+    changed = json.loads(capsys.readouterr().out)["decision_packet"]["configuration_readiness"]
+    assert changed["changed_concern_ids"] == ["module:signals:retention-policy"]
+    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
+    jumped = json.loads(capsys.readouterr().out)["configuration_concerns"]
+    assert [question["concern_id"] for question in jumped["human_questions"]] == ["module:signals:retention-policy"]
+    assert jumped["delta"]["counts"]["semantics-changed"] == 1
+
+    shared_text = re.sub(r"enabled\s*=\s*\[[^\]]*\]", 'enabled = ["planning", "memory"]', shared_path.read_text(encoding="utf-8"))
+    _write(shared_path, shared_text)
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Inspect README.md.", "--format", "json"]) == 0
+    disabled = json.loads(capsys.readouterr().out)["decision_packet"]
+    assert "configuration_readiness" not in disabled
 
 
 def test_config_policy_apply_rejects_secret_material_without_writes(tmp_path: Path, capsys) -> None:

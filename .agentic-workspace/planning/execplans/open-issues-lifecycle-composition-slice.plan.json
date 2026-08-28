@@ -3,9 +3,9 @@
   "id": "open-issues-lifecycle-composition-slice",
   "title": "Implement Planning lifecycle composition issues",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "validation",
-  "revision": 7,
+  "lifecycle": "closed",
+  "phase": "complete",
+  "revision": 8,
   "intent": {
     "outcome": "Implement #2345, #2590, #2729, and #2765 as one independently reviewable Planning lifecycle-composition PR: disjoint owner integration makes progress without weakening same-owner conflicts, archive-owner integration carries canonical subject proof directly into atomic closeout, admitted material external observations reconcile stale selected-owner actions, and the Workspace reconcile facade cannot drift from the canonical Planning operation it projects.",
     "non_goals": [

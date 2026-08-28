@@ -30,6 +30,7 @@ def _contract(
     roots: list[str] | None = None,
     effects: list[str] | None = None,
     operations: list[dict[str, Any]] | None = None,
+    setup_concerns: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     return {
         "schema_version": MODULE_CONTRACT_VERSION,
@@ -53,6 +54,7 @@ def _contract(
             "resources": [{"id": "signals.latest", "ref": "signals://latest", "read_only": True}],
             "skills": [],
             "operations": operations or [],
+            "setup_concerns": setup_concerns or [],
         },
         "result_semantics": {
             "schema_version": "signals/result/v1",
@@ -89,6 +91,30 @@ def test_read_only_module_omits_dummy_workflow_dimensions() -> None:
     assert contribution["resources"][0]["id"] == "signals.latest"
     assert contribution["operations"] == []
     assert "Planning" not in json.dumps(contribution)
+
+
+def test_independent_module_declares_semantic_setup_concern_without_workspace_choreography() -> None:
+    concern = {
+        "id": "retention-policy",
+        "semantic_revision": "retention-policy/v2",
+        "source_revision": "source-r4",
+        "status": "human-decision-required",
+        "materiality": "recommended",
+        "owner": "signals.retention-policy",
+        "applicability": {"kind": "module-enabled"},
+        "route": {"kind": "human-decision", "id": "signals.retention-policy"},
+        "question": "How long should imported build signals be retained?",
+    }
+    contract = validate_module_contract(
+        _contract(required_capabilities=["module-resources-v1", "module-setup-concerns-v1"], setup_concerns=[concern])
+    )
+
+    assert contract["capabilities"]["setup_concerns"][0]["semantic_revision"] == "retention-policy/v2"
+    assert contract["capabilities"]["setup_concerns"][0]["source"]["owner"] == "signals"
+    assert "setup_concerns" not in module_contribution(contract, task="inspect the build signal", changed_paths=[])
+
+    with pytest.raises(ModuleContractError, match="module-setup-concerns-v1"):
+        validate_module_contract(_contract(setup_concerns=[concern]))
 
 
 def test_entry_point_discovery_is_identity_agnostic_and_removal_is_clean() -> None:

@@ -153,6 +153,7 @@ from agentic_workspace.module_contract import (
     discover_module_contracts,
     module_contract_compatibility,
     module_contribution,
+    module_setup_concerns,
     target_has_install_signal,
     validate_module_contract,
 )
@@ -557,8 +558,9 @@ LOCAL_WORK_THREAD_INDEX_PATH = LOCAL_WORK_THREAD_ROOT / "index.json"
 
 def _load_workspace_config(*, target_root: Path, descriptors: dict[str, "ModuleDescriptor"] | None = None, **kwargs):
     """Backward-compatible alias for tests and local helpers."""
-    if descriptors is not None and "valid_presets" not in kwargs:
-        kwargs["valid_presets"] = set(descriptors)
+    if "valid_presets" not in kwargs:
+        resolved_descriptors = descriptors if descriptors is not None else _module_operations()
+        kwargs["valid_presets"] = set(resolved_descriptors)
     return config_lib.load_workspace_config(target_root=target_root, **kwargs)
 
 
@@ -1113,13 +1115,42 @@ def _configuration_readiness_startup_payload(
     recorded_identity = str(readiness.get("identity") or "")
     recorded_status = str(readiness.get("status") or "")
     current = recorded_status == "current" and recorded_identity == observed_identity and basis == observed_basis
-    if current:
+    prior_concerns = readiness.get("concern_receipts")
+    if current and not isinstance(prior_concerns, dict):
         return {
             "kind": CONFIGURATION_READINESS_KIND,
             "status": "current",
             "identity": observed_identity,
             "surface": WORKSPACE_ADOPTION_RECEIPT_PATH.as_posix(),
         }
+    changed_module_concerns: list[str] = []
+    if recorded_status == "current" and isinstance(prior_concerns, dict):
+        descriptors = _module_operations()
+        module_contracts = _module_setup_concern_payloads(selected_modules=selected_modules, descriptors=descriptors)
+        current_module_ids: set[str] = set()
+        for concern in module_contracts:
+            identity = str(concern["id"])
+            current_module_ids.add(identity)
+            prior = _as_dict(prior_concerns.get(identity))
+            if prior.get("semantic_revision") != concern.get("semantic_revision") or prior.get("source_revision") != concern.get(
+                "source_revision"
+            ):
+                changed_module_concerns.append(identity)
+        if not changed_module_concerns:
+            retired = sorted(
+                identity for identity in prior_concerns if str(identity).startswith("module:") and identity not in current_module_ids
+            )
+            return {
+                "kind": CONFIGURATION_READINESS_KIND,
+                "status": "current",
+                "identity": observed_identity,
+                "surface": WORKSPACE_ADOPTION_RECEIPT_PATH.as_posix(),
+                "capability_delta": {
+                    "status": "quiet-no-new-semantic-concerns",
+                    "retired_concern_ids": retired,
+                    "rule": "Package or enabled-module identity changes do not replay unchanged concern contracts.",
+                },
+            }
     local_setup = config.local_override
     local_disposition = str(local_setup.setup_prompt_disposition or "active")
     context_revision = _setup_context_revision(target_root=target_root, selected_modules=selected_modules)
@@ -1173,9 +1204,13 @@ def _configuration_readiness_startup_payload(
             if disposition_current
             else "Fresh bootstrap has not reconciled repository configuration."
             if recorded_status == "reconciliation-required"
+            else "Enabled capability setup semantics or source authority changed: " + ", ".join(changed_module_concerns)
+            if changed_module_concerns
             else "The recorded setup identity, configuration, capability, or bounded source context changed."
         ),
     }
+    if changed_module_concerns:
+        payload["changed_concern_ids"] = changed_module_concerns
     if disposition_current:
         payload["configuration_freshness"] = (
             "required-for-affected-action" if local_setup.setup_required_concerns else "follow-up-recommended"
@@ -49728,6 +49763,125 @@ def _setup_orientation_surfaces(*, target_root: Path) -> tuple[Path, ...]:
     )
 
 
+_CORE_SETUP_CONCERN_SEMANTIC_REVISIONS = {
+    "startup-entrypoint": "workspace.startup-entrypoint/v1",
+    "system-intent-source": "workspace.system-intent-source/v1",
+    "proof-route": "workspace.proof-route/v1",
+    "ownership-boundaries": "workspace.ownership-boundaries/v1",
+    "orchestration-posture": "workspace.orchestration-posture/v1",
+    "verification-capability": "workspace.verification-capability/v1",
+    "cross-ecosystem-boundaries": "workspace.cross-ecosystem-boundaries/v1",
+}
+
+
+def _setup_concern_receipts(*, target_root: Path) -> dict[str, dict[str, Any]]:
+    receipt_status = _read_adoption_receipt(target_root=target_root)
+    receipt = _as_dict(receipt_status.get("payload"))
+    readiness = _as_dict(receipt.get("configuration_readiness"))
+    raw = readiness.get("concern_receipts")
+    return {str(key): _as_dict(value) for key, value in raw.items()} if isinstance(raw, dict) else {}
+
+
+def _setup_concern_source_revision(*, target_root: Path, concern: dict[str, Any]) -> str:
+    explicit = str(concern.get("source_revision") or "")
+    if explicit:
+        return explicit
+    evidence = _as_dict(concern.get("evidence"))
+    sources = [str(item) for item in _list_payload(evidence.get("sources")) if str(item)]
+    source_state: list[list[str]] = []
+    for source in sorted(sources):
+        path_text = source.split("#", 1)[0]
+        path = target_root / path_text
+        revision = hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else "missing"
+        source_state.append([source, revision])
+    payload = {
+        "id": str(concern.get("id") or ""),
+        "status": str(concern.get("status") or ""),
+        "sources": source_state,
+    }
+    return "sha256:" + hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+
+
+def _module_setup_concern_payloads(*, selected_modules: list[str], descriptors: dict[str, ModuleDescriptor]) -> list[dict[str, Any]]:
+    concerns: list[dict[str, Any]] = []
+    for module_name in selected_modules:
+        descriptor = descriptors.get(module_name)
+        if descriptor is None or descriptor.availability != "available" or descriptor.public_contract is None:
+            continue
+        for declaration in module_setup_concerns(descriptor.public_contract):
+            local_id = str(declaration["id"])
+            identity = f"module:{module_name}:{local_id}"
+            route = _as_dict(declaration.get("route"))
+            concerns.append(
+                {
+                    "id": identity,
+                    "module_concern_id": local_id,
+                    "module": module_name,
+                    "owner": str(declaration["owner"]),
+                    "status": str(declaration["status"]),
+                    "materiality": str(declaration["materiality"]),
+                    "dependency": "enabled-module-capability",
+                    "semantic_revision": str(declaration["semantic_revision"]),
+                    "source_revision": str(declaration["source_revision"]),
+                    "evidence": {
+                        "sources": [f"module:{module_name}#capabilities.setup_concerns.{local_id}"],
+                        "authority": "compatible-enabled-module-contract",
+                        "strength": "strong",
+                    },
+                    "inference": str(declaration.get("inference") or "Enabled module contributed a bounded setup concern."),
+                    "human_decision": {
+                        "concern_id": identity,
+                        "question": str(
+                            declaration.get("question") or "Choose the module-owned setup behavior for this enabled capability."
+                        ),
+                        "answer_owner": str(declaration["owner"]),
+                        "apply_route": route,
+                    }
+                    if declaration["status"] == "human-decision-required"
+                    else {},
+                    "apply_route": {
+                        "owner": str(declaration["owner"]),
+                        "status": "awaiting-human"
+                        if declaration["status"] == "human-decision-required"
+                        else "ready-for-owner"
+                        if declaration["status"] == "inference-ready"
+                        else "not-required",
+                        **route,
+                    },
+                    "detail_selector": f"modules.{module_name}.setup_concerns.{local_id}",
+                }
+            )
+    return concerns
+
+
+def _setup_capability_freshness_revision(*, target_root: Path, selected_modules: list[str]) -> str:
+    """Return the compact semantic input that invalidates reusable startup projections."""
+    receipt = _as_dict(_read_adoption_receipt(target_root=target_root).get("payload"))
+    readiness = _as_dict(receipt.get("configuration_readiness"))
+    module_concerns = _module_setup_concern_payloads(
+        selected_modules=selected_modules,
+        descriptors=_module_operations(),
+    )
+    payload = {
+        "readiness": {
+            "status": str(readiness.get("status") or ""),
+            "identity": str(readiness.get("identity") or ""),
+            "basis": _as_dict(readiness.get("basis")),
+            "concern_receipts": _as_dict(readiness.get("concern_receipts")),
+        },
+        "module_concerns": [
+            {
+                "id": str(concern.get("id") or ""),
+                "semantic_revision": str(concern.get("semantic_revision") or ""),
+                "source_revision": str(concern.get("source_revision") or ""),
+            }
+            for concern in module_concerns
+        ],
+    }
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return "sha256:" + hashlib.sha256(encoded).hexdigest()
+
+
 def _repo_looks_setup_mature(*, target_root: Path) -> bool:
     return all((path.exists() for path in _setup_orientation_surfaces(target_root=target_root)))
 
@@ -50137,18 +50291,86 @@ def _setup_configuration_concerns_payload(*, target_root: Path, config: Workspac
             }
         )
 
+    descriptors = _module_operations()
+    for module_concern in _module_setup_concern_payloads(selected_modules=selected_modules, descriptors=descriptors):
+        concerns.append(module_concern)
+        if module_concern["status"] == "human-decision-required":
+            human_questions.append(copy.deepcopy(_as_dict(module_concern.get("human_decision"))))
+        elif module_concern["status"] == "inference-ready":
+            zero_interaction_actions.append(
+                {
+                    "concern_id": module_concern["id"],
+                    "owner": module_concern["owner"],
+                    "status": "ready-for-owner",
+                    "apply_route": copy.deepcopy(_as_dict(module_concern.get("apply_route"))),
+                    "claim_boundary": "The enabled module declares the concern; its named owner remains responsible for effects.",
+                }
+            )
+
+    prior_concern_receipts = _setup_concern_receipts(target_root=target_root)
+    current_concern_receipts: dict[str, dict[str, Any]] = {}
+    pressure_ids: set[str] = set()
+    delta_counts = {"newly-applicable": 0, "semantics-changed": 0, "source-changed": 0, "unchanged": 0}
+    for concern in concerns:
+        concern_id = str(concern.get("id") or "")
+        identity = concern_id if concern_id.startswith("module:") else f"workspace:{concern_id}"
+        semantic_revision = str(
+            concern.get("semantic_revision") or _CORE_SETUP_CONCERN_SEMANTIC_REVISIONS.get(concern_id) or f"workspace:{concern_id}/v1"
+        )
+        source_revision = _setup_concern_source_revision(target_root=target_root, concern=concern)
+        contract = {
+            "identity": identity,
+            "semantic_revision": semantic_revision,
+            "source_revision": source_revision,
+            "materiality": str(concern.get("materiality") or "recommended"),
+            "owner": str(concern.get("owner") or ""),
+        }
+        prior = prior_concern_receipts.get(identity, {})
+        if not prior:
+            delta_status = "newly-applicable"
+        elif prior.get("semantic_revision") != semantic_revision:
+            delta_status = "semantics-changed"
+        elif prior.get("source_revision") != source_revision:
+            delta_status = "source-changed"
+        else:
+            delta_status = "unchanged"
+        delta_counts[delta_status] += 1
+        active_status = concern.get("status") in {
+            "inference-ready",
+            "human-decision-required",
+            "bounded-route-required",
+            "follow-up-recommended",
+        }
+        pressure = bool(active_status and delta_status != "unchanged")
+        if pressure:
+            pressure_ids.add(concern_id)
+        concern["contract"] = contract
+        concern["delta_status"] = delta_status
+        concern["setup_pressure"] = pressure
+        current_concern_receipts[identity] = contract
+
+    human_questions = [question for question in human_questions if str(question.get("concern_id") or "") in pressure_ids]
+    zero_interaction_actions = [action for action in zero_interaction_actions if str(action.get("concern_id") or "") in pressure_ids]
+    retired_concern_ids = sorted(set(prior_concern_receipts) - set(current_concern_receipts))
+
     status_counts = {
-        status: sum(1 for concern in concerns if concern.get("status") == status)
+        status: sum(1 for concern in concerns if concern.get("status") == status and concern.get("setup_pressure"))
         for status in ("satisfied", "inference-ready", "human-decision-required", "not-applicable", "bounded-route-required")
     }
-    status = "human-decision-required" if human_questions else "bounded-route-required" if broad_work else "zero-question-ready"
+    bounded_pressure = any(concern.get("status") == "bounded-route-required" and concern.get("setup_pressure") for concern in concerns)
+    status = "human-decision-required" if human_questions else "bounded-route-required" if bounded_pressure else "zero-question-ready"
     unresolved_concern_ids = [
         str(concern.get("id"))
         for concern in concerns
         if concern.get("status") in {"human-decision-required", "bounded-route-required", "follow-up-recommended"}
+        and concern.get("setup_pressure")
     ]
     required_concern_ids = [
-        str(concern.get("id")) for concern in concerns if concern.get("status") in {"human-decision-required", "bounded-route-required"}
+        str(concern.get("id"))
+        for concern in concerns
+        if concern.get("status") in {"human-decision-required", "bounded-route-required"}
+        and concern.get("materiality") != "recommended"
+        and concern.get("setup_pressure")
     ]
     context_revision = _setup_context_revision(target_root=target_root, selected_modules=selected_modules)
     local_disposition = config.local_override.setup_prompt_disposition or "active"
@@ -50185,6 +50407,13 @@ def _setup_configuration_concerns_payload(*, target_root: Path, config: Workspac
         ),
         cli_invoke=config.cli_invoke,
     )
+    adoption_status = _read_adoption_receipt(target_root=target_root)
+    adoption_payload = _as_dict(adoption_status.get("payload"))
+    readiness_basis = {
+        "selected_modules": sorted(_dedupe(selected_modules)),
+        "payload_mirror": bool(adoption_payload.get("payload_mirror")),
+        "checked_in_rule": str(adoption_payload.get("checked_in_rule") or ""),
+    }
     return {
         "kind": "agentic-workspace/setup-concerns/v1",
         "status": status,
@@ -50204,6 +50433,12 @@ def _setup_configuration_concerns_payload(*, target_root: Path, config: Workspac
         },
         "zero_interaction_actions": zero_interaction_actions,
         "human_questions": human_questions,
+        "concern_contracts": list(current_concern_receipts.values()),
+        "delta": {
+            "counts": delta_counts,
+            "retired_concern_ids": retired_concern_ids,
+            "rule": "Compare the current applicable semantic/source concern set directly; never replay chronological setup generations.",
+        },
         "inspection_budget": {
             "inspected_sources": inspected,
             "source_count": len(inspected),
@@ -50259,6 +50494,8 @@ def _setup_configuration_concerns_payload(*, target_root: Path, config: Workspac
                     "changes": {},
                     "complete_readiness": True,
                     "clear_setup_disposition": True,
+                    "readiness_basis": readiness_basis,
+                    "concern_receipts": current_concern_receipts,
                 },
                 "command": _command_with_cli_invoke(
                     command=(
@@ -51346,6 +51583,33 @@ def _proof_execution_subject(*, target_root: Path, changed_paths: list[str], req
     return payload
 
 
+def _materialized_proof_execution_selection(
+    *, selection: dict[str, Any], changed_paths: list[str], materialize: Callable[..., str]
+) -> dict[str, Any]:
+    """Bind changed-path templates before proof admission or process launch."""
+
+    resolved = copy.deepcopy(selection)
+    resolved["required_commands"] = [
+        materialize(command=str(command), changed_paths=changed_paths)
+        for command in _list_payload(selection.get("required_commands"))
+        if str(command).strip()
+    ]
+    for selected in _list_payload(resolved.get("selected_commands")):
+        if not isinstance(selected, dict):
+            continue
+        selected["command"] = materialize(command=str(selected.get("command") or ""), changed_paths=changed_paths)
+        selected["command_identity"] = hashlib.sha256(selected["command"].encode("utf-8")).hexdigest()[:16]
+    for lane in _list_payload(resolved.get("selected_lanes")):
+        if not isinstance(lane, dict):
+            continue
+        lane["required_commands"] = [
+            materialize(command=str(command), changed_paths=changed_paths)
+            for command in _list_payload(lane.get("required_commands"))
+            if str(command).strip()
+        ]
+    return resolved
+
+
 def _execute_selected_proof_payload(
     *,
     target_root: Path,
@@ -51362,6 +51626,16 @@ def _execute_selected_proof_payload(
         task_text=task_text,
         include_durable_intent=False,
     )
+    from agentic_workspace.workspace_runtime_proof import (
+        _proof_route_materialize_validation_command,
+        _selected_proof_command_for_receipt,
+    )
+
+    selection = _materialized_proof_execution_selection(
+        selection=selection,
+        changed_paths=changed_paths,
+        materialize=_proof_route_materialize_validation_command,
+    )
     required_commands = [str(item) for item in _list_payload(selection.get("required_commands")) if str(item).strip()]
     if not required_commands:
         return {
@@ -51374,8 +51648,6 @@ def _execute_selected_proof_payload(
                 "command": "agentic-workspace proof --target . --changed <paths> --format json",
             },
         }
-    from agentic_workspace.workspace_runtime_proof import _selected_proof_command_for_receipt
-
     preexecution_admissions = [
         _selected_proof_preexecution_admission(
             target_root=target_root,
@@ -53869,6 +54141,8 @@ def _apply_workspace_config_policy(values: dict[str, Any], _arguments: dict[str,
         raise WorkspaceUsageError("config-policy clear_setup_disposition must be a boolean")
     if clear_setup_disposition and scope != "local":
         raise WorkspaceUsageError("config-policy can clear setup disposition only through local scope")
+    if complete_readiness and raw_changes:
+        raise WorkspaceUsageError("config-policy readiness completion must be a separate no-change reconciliation decision")
     config_path = target_root / (WORKSPACE_CONFIG_PATH if scope == "shared" else WORKSPACE_LOCAL_CONFIG_PATH)
     observed_revision = _config_policy_revision(config_path)
     expected_revision = str(values.get("expect_config_revision") or "")
@@ -53909,6 +54183,7 @@ def _apply_workspace_config_policy(values: dict[str, Any], _arguments: dict[str,
     except tomllib.TOMLDecodeError as exc:
         raise WorkspaceUsageError(f"config-policy would produce invalid TOML: {exc}") from exc
     readiness_receipt: dict[str, Any] | None = None
+    completion_concern_receipts: dict[str, dict[str, str]] = {}
     if complete_readiness:
         receipt_status = _read_adoption_receipt(target_root=target_root)
         raw_receipt = receipt_status.get("payload") if receipt_status.get("status") == "present" else None
@@ -53917,9 +54192,35 @@ def _apply_workspace_config_policy(values: dict[str, Any], _arguments: dict[str,
         readiness = raw_receipt.get("configuration_readiness")
         if not isinstance(readiness, dict) or readiness.get("kind") != CONFIGURATION_READINESS_KIND:
             raise WorkspaceUsageError("config-policy cannot complete missing or unsupported readiness metadata")
-        if str(readiness.get("identity") or "") != setup_identity:
-            raise WorkspaceUsageError("config-policy readiness identity changed before completion")
         readiness_receipt = raw_receipt
+        completed_concerns = _setup_configuration_concerns_payload(
+            target_root=target_root,
+            config=config,
+            selected_modules=list(config.enabled_modules),
+        )
+        completion_concern_receipts = {
+            str(contract["identity"]): {
+                "identity": str(contract["identity"]),
+                "semantic_revision": str(contract["semantic_revision"]),
+                "source_revision": str(contract["source_revision"]),
+                "materiality": str(contract["materiality"]),
+                "owner": str(contract["owner"]),
+            }
+            for contract in _list_payload(completed_concerns.get("concern_contracts"))
+            if isinstance(contract, dict) and contract.get("identity")
+        }
+        decision_concern_receipts = decision.get("concern_receipts")
+        if decision_concern_receipts != completion_concern_receipts:
+            raise WorkspaceUsageError(
+                "config-policy readiness concern receipts are stale or do not match current applicable setup concerns"
+            )
+        expected_readiness_basis = {
+            "selected_modules": sorted(_dedupe(list(config.enabled_modules))),
+            "payload_mirror": bool(readiness_receipt.get("payload_mirror")),
+            "checked_in_rule": str(readiness_receipt.get("checked_in_rule") or ""),
+        }
+        if decision.get("readiness_basis") != expected_readiness_basis:
+            raise WorkspaceUsageError("config-policy readiness basis is stale or does not match the current capability set")
     dry_run = bool(values.get("dry_run"))
     if not dry_run and rendered != source:
         config_path.parent.mkdir(parents=True, exist_ok=True)
@@ -53932,6 +54233,11 @@ def _apply_workspace_config_policy(values: dict[str, Any], _arguments: dict[str,
         effects.append({"owner": "setup.guidance", "field": "configuration_readiness.status", "value": "current"})
         if not dry_run:
             readiness["status"] = "current"
+            readiness["identity"] = setup_identity
+            readiness["basis"] = {
+                **cast(dict[str, Any], decision["readiness_basis"]),
+            }
+            readiness["concern_receipts"] = completion_concern_receipts
             readiness["completed_by"] = "config.policy-apply"
             receipt_path.write_text(json.dumps(readiness_receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     result_revision = "sha256:" + hashlib.sha256(rendered.encode("utf-8")).hexdigest()

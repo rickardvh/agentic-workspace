@@ -2634,12 +2634,14 @@ function applyWorkspaceConfigPolicy(values) {
   if (!decision.setup_identity || decision.setup_identity !== expectedSetupIdentity) throw new RuntimeError('config-policy decision setup_identity must match --expect-setup-identity');
   const receiptPath = join(targetRoot, '.agentic-workspace/adoption-receipt.json');
   const observedSetupIdentity = existsSync(receiptPath) ? String(readJson(receiptPath)?.configuration_readiness?.identity ?? 'legacy-compatible') : 'legacy-compatible';
-  if (observedSetupIdentity !== expectedSetupIdentity) throw new RuntimeError(`config-policy setup identity is stale: expected ${expectedSetupIdentity}, observed ${observedSetupIdentity}`);
+  const decisionSetupIdentity = isObject(decision.readiness_basis) ? createHash('sha256').update(stableJson(decision.readiness_basis)).digest('hex').slice(0, 24) : '';
+  if (observedSetupIdentity !== expectedSetupIdentity && !(decision.complete_readiness === true && decisionSetupIdentity === expectedSetupIdentity)) throw new RuntimeError(`config-policy setup identity is stale: expected ${expectedSetupIdentity}, observed ${observedSetupIdentity}`);
   const changes = decision.changes ?? {};
   if (!isObject(changes) || (Object.keys(changes).length === 0 && decision.complete_readiness !== true && decision.clear_setup_disposition !== true)) throw new RuntimeError('config-policy decision requires changes, complete_readiness=true, or clear_setup_disposition=true');
   if (decision.complete_readiness !== undefined && typeof decision.complete_readiness !== 'boolean') throw new RuntimeError('config-policy complete_readiness must be a boolean');
   if (decision.clear_setup_disposition !== undefined && typeof decision.clear_setup_disposition !== 'boolean') throw new RuntimeError('config-policy clear_setup_disposition must be a boolean');
   if (decision.clear_setup_disposition === true && scope !== 'local') throw new RuntimeError('config-policy can clear setup disposition only through local scope');
+  if (decision.complete_readiness === true && Object.keys(changes).length !== 0) throw new RuntimeError('config-policy readiness completion must be a separate no-change reconciliation decision');
   const relativePath = scope === 'shared' ? '.agentic-workspace/config.toml' : '.agentic-workspace/config.local.toml';
   const configPath = join(targetRoot, relativePath);
   const configExists = existsSync(configPath);
@@ -2669,11 +2671,11 @@ function applyWorkspaceConfigPolicy(values) {
     readinessReceipt = readJson(receiptPath);
     const readiness = readinessReceipt?.configuration_readiness;
     if (!isObject(readiness) || readiness.kind !== 'agentic-workspace/configuration-readiness/v1') throw new RuntimeError('config-policy cannot complete missing or unsupported readiness metadata');
-    if (String(readiness.identity ?? '') !== expectedSetupIdentity) throw new RuntimeError('config-policy readiness identity changed before completion');
+    if (!isObject(decision.readiness_basis) || !isObject(decision.concern_receipts)) throw new RuntimeError('config-policy readiness completion requires exact readiness_basis and concern_receipts from setup');
     effects.push({ owner: 'setup.guidance', field: 'configuration_readiness.status', value: 'current' });
   }
   if (values.dry_run !== true && rendered !== source) { mkdirSync(dirname(configPath), { recursive: true }); writeFileSync(configPath, rendered, 'utf8'); }
-  if (values.dry_run !== true && readinessReceipt) { readinessReceipt.configuration_readiness.status = 'current'; readinessReceipt.configuration_readiness.completed_by = 'config.policy-apply'; writeFileSync(receiptPath, `${JSON.stringify(readinessReceipt, null, 2)}\n`, 'utf8'); }
+  if (values.dry_run !== true && readinessReceipt) { readinessReceipt.configuration_readiness.status = 'current'; readinessReceipt.configuration_readiness.identity = expectedSetupIdentity; readinessReceipt.configuration_readiness.basis = decision.readiness_basis; readinessReceipt.configuration_readiness.concern_receipts = decision.concern_receipts; readinessReceipt.configuration_readiness.completed_by = 'config.policy-apply'; writeFileSync(receiptPath, `${JSON.stringify(readinessReceipt, null, 2)}\n`, 'utf8'); }
   const mutationApplied = values.dry_run !== true && (rendered !== source || Boolean(readinessReceipt));
   return { kind: 'agentic-workspace/config-policy-result/v1', status: values.dry_run === true ? 'preview' : rendered !== source ? 'applied' : 'current', scope, authority: decision.authority, concern_id: String(decision.concern_id ?? ''), setup_identity: decision.setup_identity, path: relativePath, previous_revision: observedRevision, revision: configPolicyRevision(rendered), effects, readiness_status: values.dry_run === true && readinessReceipt ? 'preview-current' : readinessReceipt ? 'current' : 'unchanged', outcome: mutationApplied ? 'applied' : 'noop', mutation_applied: mutationApplied, reason_code: values.dry_run === true ? 'dry-run' : mutationApplied ? 'authorised-policy-applied' : 'already-current', conflict_owner: '', recovery_command: 'agentic-workspace setup --target . --format json', re_resolve_command: 'agentic-workspace setup --target . --format json', claim_boundary: 'Only the explicitly authorised bounded policy fields were applied; other setup owners remain independent.' };
 }

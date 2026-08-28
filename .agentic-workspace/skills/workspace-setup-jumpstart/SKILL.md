@@ -13,13 +13,13 @@ This subskill assumes the main AW operating skill or compact router has already 
 1. Run the configured invocation with `setup --target . --format json` for bounded post-bootstrap setup guidance.
    When ordinary startup routed here from `configuration_readiness`, preserve that receipt identity and claim boundary: configured-workflow implementation waits, while unrelated read-only inspection remains allowed.
 2. Begin with `configuration_concerns`. Inspect only the strong repo-owned sources and exact selectors named by active concerns; do not scan the workspace tree, docs, backlog, scratch, or source merely to look for configuration ideas.
-3. Resolve concerns in this order:
+3. Resolve only concerns whose returned `setup_pressure` is true, in this order. The current semantic/source concern set is authoritative; do not replay unchanged or retired receipts:
    - accept `satisfied` and `not-applicable` without questions;
    - send `inference-ready` work through its `apply_route` owner, then rerun setup;
    - ask only the first `human-decision-required` question, in its outcome/consequence wording, send the answer to `answer_owner`, then rerun setup;
    - send `bounded-route-required` analysis to its named Planning/human owner instead of expanding setup.
 4. Prefer the zero-question path. Explicit config, commands, CI, durable intent sources, and ownership maps may support technical inference. Generic filenames, keywords, directory names, scratch artifacts, and package-source-repo policy cannot independently authorize assurance, proof, ownership, capability, or other shared policy.
-5. Treat setup as pre-write and pre-seed discovery. This skill does not write shared config directly or maintain a separate wizard state. For a `config.policy-apply` route, select the exact returned decision object, keep its shared/local scope, setup identity, and reported config revision, preview consequential changes with `--dry-run`, then apply and rerun setup. Never translate the decision into a direct TOML edit.
+5. Treat setup as pre-write and pre-seed discovery. This skill does not write shared config directly or maintain a separate wizard state. For a `config.policy-apply` route, select the exact returned decision object, keep its shared/local scope, setup identity, reported config revision, capability readiness basis, and semantic concern receipts, preview consequential changes with `--dry-run`, then apply and rerun setup. Readiness completion is a separate no-change decision and is rejected if any of those current inputs drift. Never translate the decision into a direct TOML edit.
 6. Promote only:
    - durable operating knowledge to Memory;
    - bounded follow-up to Planning;
@@ -59,4 +59,4 @@ Stop and ask or create bounded Planning state if setup output points at broad re
 ## Output
 
 Report setup mode, strongest candidate surfaces, what will be seeded, promoted, or dismissed, and the proof command.
-Until a typed setup owner records the same readiness identity as current, do not claim repository configuration reconciliation is complete.
+Until a typed setup owner records the same readiness identity, capability basis, and current concern receipt set as current, do not claim repository configuration reconciliation is complete. These receipts are current-state evidence, not chronological setup history, and never authorize automatic module enablement or upgrade.

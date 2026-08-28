@@ -3107,6 +3107,11 @@ def validate_enabled_modules(value: Any, *, config_path: Path, known_modules: tu
 
 def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None = None) -> WorkspaceConfig:
     defaults = default_module_update_policies()
+    if valid_presets is None:
+        from agentic_workspace.module_contract import discover_module_contracts
+
+        valid_presets = set(SUPPORTED_CORE_MODULES)
+        valid_presets.update(module.name for module in discover_module_contracts() if module.contract)
 
     # Discovery logic
     discovered_root = discover_workspace_root(target_root)
