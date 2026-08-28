@@ -12,7 +12,6 @@ import hashlib
 import json
 import re
 import subprocess
-import tomllib
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -207,16 +206,6 @@ def _raw_active_planning_record_for_closeout(*, planning_record: dict[str, Any],
         return {}
     task = planning_record.get("task", {}) if isinstance(planning_record, dict) else {}
     surface = str(task.get("surface", "")).strip() if isinstance(task, dict) else ""
-    if not surface:
-        state_path = target_root / ".agentic-workspace" / "planning" / "state.toml"
-        try:
-            state = tomllib.loads(state_path.read_text(encoding="utf-8-sig"))
-        except (OSError, tomllib.TOMLDecodeError):
-            state = {}
-        todo = state.get("todo", {}) if isinstance(state, dict) else {}
-        active_items = todo.get("active_items", []) if isinstance(todo, dict) else []
-        first_item = next((item for item in active_items if isinstance(item, dict)), {})
-        surface = str(first_item.get("surface", "")).strip() if isinstance(first_item, dict) else ""
     if not surface:
         active_summary = _fast_planning_active_summary(target_root=target_root)
         surface = str(active_summary.get("active_execplan", "")).strip()

@@ -1,8 +1,8 @@
 {
   "schema_version": "agent-manifest.v1",
   "bootstrap": {
-    "task_source_of_truth": ".agentic-workspace/planning/state.toml",
-    "roadmap_source_of_truth": ".agentic-workspace/planning/state.toml",
+    "task_source_of_truth": "external task owner plus bounded Planning owner records",
+    "roadmap_source_of_truth": "external task owner plus bounded lane and issue-relation records",
     "active_plan_dir": ".agentic-workspace/planning/execplans/",
     "archived_plan_dir": ".agentic-workspace/planning/execplans/archive/",
     "first_reads": [
@@ -20,7 +20,7 @@
     ],
     "surface_roles": [
       "`AGENTS.md` is the canonical ordinary repo startup entrypoint.",
-      "`.agentic-workspace/planning/state.toml` is the package-owned active queue and candidate-lane state after the compact summary has shown raw detail is needed.",
+      "`.agentic-workspace/planning/execplans/` and relation-specific records own bounded continuity; compact repository views are derived.",
       "`.agentic-workspace/docs/routing-contract.md` is the authoritative routing home.",
       "`AGENTS.md` is the agent entrypoint router.",
       "`.agentic-workspace/planning/agent-manifest.json` is the machine-readable routing mirror; changing operational truth belongs in compact queryable surfaces."
@@ -41,10 +41,9 @@
         "cue": "The task needs active sequencing, blockers, proof expectations, promotion decisions, or cross-session continuation.",
         "load_next": [
           "agentic-workspace summary --format json",
-          ".agentic-workspace/planning/state.toml",
           ".agentic-workspace/planning/execplans/"
         ],
-        "why": "Planning owns active execution state and near-term follow-through."
+        "why": "Planning owns bounded execution continuity and near-term follow-through."
       },
       {
         "boundary": "memory",
@@ -66,9 +65,9 @@
       },
       {
         "module": "planning",
-        "owns": "active execution state, sequencing, proof expectations, and promotion-ready follow-through",
-        "escalate_when": "the task needs milestones, blockers, queue updates, or explicit continuation semantics",
-        "capability_unlocked": "summary, active queue state, execplans, and planning validation surfaces",
+        "owns": "bounded owner continuity, sequencing, proof expectations, and promotion-ready follow-through",
+        "escalate_when": "the task needs milestones, blockers, handoff, integration, or explicit continuation semantics",
+        "capability_unlocked": "derived summary views, execplans, relation records, and planning validation surfaces",
         "first_surface": "agentic-workspace summary --format json"
       },
       {
@@ -81,9 +80,8 @@
     ],
     "conditional_reads": [
       "Read `agentic-workspace summary --format json` when the Startup Router or explicit task asks for planning recovery or ownership boundary review.",
-      "Read `.agentic-workspace/planning/state.toml` only when the compact summary shows active work that still needs raw queue detail.",
       "Read the active feature plan in `.agentic-workspace/planning/execplans/` when the task belongs to one.",
-      "Read the roadmap data in `.agentic-workspace/planning/state.toml` only when promoting work, reprioritising, or reviewing candidate epics.",
+      "Read bounded lane or issue-relation records only when the compact route names them.",
       "Read `.agentic-workspace/docs/routing-contract.md` when execution hits an edge case, ambiguity, or requires deep context.",
       "Do not bulk-read all planning surfaces for ordinary execution work; start from the Startup Router and then the one relevant active plan if routed there.",
       "Read only the repo docs explicitly referenced by that route.",
@@ -91,7 +89,7 @@
     ],
     "small_task_mode": [
       "For very local changes, skip plans unless this manifest, the active plan, or the nearest descendant `AGENTS.md` says they are needed.",
-      "Keep direct tasks in `.agentic-workspace/planning/state.toml` only when one coherent pass can finish them and the row can stay compact: `ID`, `Status`, `Surface`, `Why now`, `Next action`, and `Done when`.",
+      "Keep direct tasks out of checked-in Planning state when one coherent pass can finish them without expensive continuation context.",
       "Use `agentic-workspace report --target ./repo --section execution_readiness --format json` when deciding whether the cheap direct path is still safe or whether stronger planning, delegation, or explicit escalation is warranted.",
       "Do not create a checked-in plan just because a stronger model could write one; escalate only when the artifact should save more rediscovery, restart cost, or coordination risk than it costs to produce."
     ],
@@ -103,9 +101,9 @@
       "Use `.agentic-workspace/docs/execution-flow-contract.md` for orchestrator-worker handoff rules."
     ],
     "completion_reminders": [
-      "Do not leave completed task detail in `.agentic-workspace/planning/state.toml` once it no longer changes execution.",
-      "If the completed slice came from the active queue or roadmap state, clear the matched queue residue in the same pass.",
-      "When direct execution changes durable knowledge or leaves meaningful follow-up, record only that minimal residue in memory, canonical docs, the roadmap state in `.agentic-workspace/planning/state.toml`, or a promoted execplan."
+      "Archive or shrink completed bounded owner detail once it no longer changes execution.",
+      "Do not preserve repository-global queue or candidate residue during closeout.",
+      "When direct execution changes durable knowledge or leaves meaningful follow-up, record only that minimal residue in memory, canonical docs, an external task owner, or a promoted bounded execplan."
     ],
     "generated_surfaces": [
       "External compatibility adapters may be generated by workspace tooling, but they are not planning bootstrap payload and must not become doctrine."
@@ -125,7 +123,6 @@
   "docs": {
     "AGENTS.md": "bootstrap-contract",
     "README.md": "human-overview",
-    ".agentic-workspace/planning/state.toml": "active-queue-and-roadmap",
     ".agentic-workspace/planning/execplans/README.md": "execplan-convention",
     ".agentic-workspace/planning/execplans/archive/README.md": "execplan-archive-convention",
     ".agentic-workspace/docs/execution-flow-contract.md": "execution-flow-contract",
@@ -158,7 +155,6 @@
       "prefer_when": "the change affects planning state, execplans, generated agent docs, or the planning bootstrap itself.",
       "touches": [
         "AGENTS.md",
-        ".agentic-workspace/planning/state.toml",
         ".agentic-workspace/planning/upstream-task-intake.md",
         ".agentic-workspace/planning/pre-ingestion-refinement.md",
         ".agentic-workspace/docs/lifecycle-and-config-contract.md",
@@ -178,10 +174,10 @@
     }
   },
   "invariants": [
-    ".agentic-workspace/planning/state.toml owns active queue state and lightweight direct tasks.",
+    "Bounded Planning records own only continuity that is expensive to reconstruct.",
     "Active execplans own milestone sequencing, blockers, validation scope, and completion detail for planned work.",
-    ".agentic-workspace/planning/state.toml also owns inactive long-horizon candidate lanes and promotion signals.",
-    "Package-owned planning state belongs under `.agentic-workspace/planning/` and should be summarized before root queue files are read.",
+    "Repository backlog, priority, and candidate state remain with their external source owner.",
+    "Package-owned Planning records belong under `.agentic-workspace/planning/` and should be reached through compact derived queries.",
     "Checked-in memory, when installed, owns durable routed knowledge rather than active planning state.",
     "Planning should remain useful without memory being installed.",
     "Direct execution is a valid success mode for small local work.",

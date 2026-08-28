@@ -10,7 +10,7 @@ _sys.path.insert(0, str(_Path(__file__).resolve().parent))
 from planning_test_support import *
 
 
-def test_close_item_removes_completed_active_todo_from_state(tmp_path: Path) -> None:
+def test_close_item_leaves_legacy_aggregate_unchanged(tmp_path: Path) -> None:
     _write(
         tmp_path / ".agentic-workspace/planning/state.toml",
         """
@@ -31,7 +31,7 @@ queued_items = [
     state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
 
     assert result.warnings == []
-    assert state["todo"]["active_items"] == []
+    assert state["todo"]["active_items"][0]["id"] == "done-item"
     assert state["todo"]["queued_items"][0]["id"] == "next-item"
     assert any(action.kind == "updated" and "issue: #953" in action.detail for action in result.actions)
 
@@ -120,7 +120,7 @@ active_items = [
     assert result.warnings == []
     assert not (tmp_path / ".agentic-workspace/planning/execplans/plan-alpha.plan.json").exists()
     assert archived_path.exists()
-    assert state["todo"]["active_items"] == []
+    assert state["todo"]["active_items"][0]["id"] == "plan-alpha"
     assert any(action.kind == "archived" for action in result.actions)
     assert any(action.kind == "updated" and "prepared normalized closeout fields" in action.detail for action in result.actions)
     assert "Open upstream issue from refreshed external intent evidence" not in archived_text
@@ -197,7 +197,7 @@ active_items = [
     assert unique_archive_path.exists()
     assert json.loads(stale_archive_path.read_text(encoding="utf-8"))["proof_report"]["validation proof"] == "stale close-item proof"
     assert json.loads(unique_archive_path.read_text(encoding="utf-8"))["proof_report"]["validation proof"] == "fresh close-item proof"
-    assert state["todo"]["active_items"] == []
+    assert state["todo"]["active_items"][0]["id"] == "plan-alpha"
     assert any(action.kind == "retention" and "unique retained archive path" in action.detail for action in result.actions)
     assert any(action.kind == "archived" and action.path == unique_archive_path for action in result.actions)
 
@@ -243,7 +243,7 @@ active_items = [
     assert any(action.kind == "closed" and action.path == live_path for action in result.actions)
     assert not live_path.exists()
     assert not archive_path.exists()
-    assert state["todo"]["active_items"] == []
+    assert state["todo"]["active_items"][0]["id"] == "plan-alpha"
 
 
 def test_close_item_runtime_cli_outputs_json(tmp_path: Path, capsys) -> None:

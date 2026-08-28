@@ -8017,7 +8017,11 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
             "uninstall_handler": planning_uninstall_bootstrap,
             "doctor_handler": planning_doctor_bootstrap,
             "status_handler": planning_collect_status,
-            "detector": lambda target_root: (target_root / ".agentic-workspace" / "planning" / "state.toml").exists(),
+            "detector": lambda target_root: (
+                (target_root / ".agentic-workspace" / "planning" / "state.toml").exists()
+                or (target_root / ".agentic-workspace" / "planning" / "execplans" / "README.md").exists()
+                or (target_root / ".agentic-workspace" / "planning" / "skills" / "REGISTRY.json").exists()
+            ),
         },
         "memory": {
             "install_handler": memory_install_bootstrap,
@@ -8242,12 +8246,12 @@ authority = "primary"
 summary = "Repo-owned workspace policy, workflow obligations, and structured operating settings."
 
 [[authority_surfaces]]
-concern = "compact-planning-state"
-surface = ".agentic-workspace/planning/state.toml"
+concern = "bounded-planning-continuity"
+surface = ".agentic-workspace/planning/execplans/"
 owner = "planning"
 ownership = "module_managed"
 authority = "primary"
-summary = "Consolidated active queue and roadmap state owned by the planning package."
+summary = "Owner-scoped execution continuity owned by the planning package; repository-wide views are derived."
 
 [[authority_surfaces]]
 concern = "shared-workflow-contract"
@@ -10807,9 +10811,9 @@ def _minimal_module_footprint_report(
 
     if module_name == "planning":
         _ensure_text(
-            Path(".agentic-workspace/planning/state.toml"),
-            "# Agentic Workspace planning state\nactive_items = []\n",
-            "create minimal planning state anchor without copying planning package templates, schemas, or bundled skills",
+            Path(".agentic-workspace/planning/execplans/README.md"),
+            "# Planning execplans\n\nBounded owner records live here when continuity is expensive to reconstruct.\n",
+            "create the bounded-owner Planning anchor without a repository-global state aggregate",
         )
         execplans = target_root / ".agentic-workspace" / "planning" / "execplans"
         if execplans.exists():
@@ -34805,8 +34809,6 @@ def _planning_owner_admission_contract() -> dict[str, Any]:
             "owner-revision-mismatch",
             "owner-record-missing-live-revision",
             "owner-record-planning-revision-mismatch",
-            "local-selection-missing-planning-revision",
-            "local-selection-planning-revision-mismatch",
             "local-selection-target-mismatch",
             "local-selection-current-work-mismatch",
             "owner-not-in-live-graph",
@@ -35279,17 +35281,9 @@ def _planning_owner_admission_candidate(
     in_live_graph = (relative or owner_ref) in live_refs
     explicit_residual = _planning_owner_explicit_residual(record)
     if source.endswith("owner-selection.json") and selection_payload is not None:
-        selection_revision = str(selection_payload.get("planning_revision") or "").strip()
-        if not selection_revision:
-            return {**candidate, "status": "rejected", "reason": "local-selection-missing-planning-revision"}
-        if expected_planning_revision and selection_revision != expected_planning_revision and not explicit_residual:
-            return {
-                **candidate,
-                "status": "rejected",
-                "reason": "local-selection-planning-revision-mismatch",
-                "expected_planning_revision": expected_planning_revision,
-                "selection_planning_revision": selection_revision,
-            }
+        # Local selection is scoped to one worktree and one bounded owner. A
+        # repository-wide revision would make unrelated owner changes reject
+        # valid local attention, recreating the aggregate conflict domain.
         target_mismatch = _planning_owner_selection_target_mismatch(target_root=target_root, selection_payload=selection_payload)
         if target_mismatch:
             return {**candidate, "status": "rejected", **target_mismatch}
@@ -35384,7 +35378,7 @@ def _planning_owner_admission_payload(*, target_root: Path, state_data: dict[str
             owner_id=str(selected.get("id") or ""),
             owner_ref=str(selected.get("ref") or ""),
             live_refs=live_refs,
-            require_live_graph_or_residual=True,
+            require_live_graph_or_residual=False,
             selection_payload=selected.get("payload") if isinstance(selected.get("payload"), dict) else {},
             planning_revision=planning_revision,
             selection_basis_revision=selection_basis_revision,
@@ -35468,12 +35462,13 @@ def _planning_owner_intent_refs(owner_payload: dict[str, Any]) -> list[str]:
 
 def _fast_planning_active_summary(*, target_root: Path) -> dict[str, Any]:
     state_path = target_root / ".agentic-workspace" / "planning" / "state.toml"
-    if not state_path.exists():
-        return {"todo_active_count": 0, "active_execplan": None, "planning_status": "unavailable"}
-    try:
-        data = tomllib.loads(state_path.read_text(encoding="utf-8"))
-    except (OSError, tomllib.TOMLDecodeError):
-        return {"todo_active_count": 0, "active_execplan": None, "planning_status": "unavailable"}
+    if state_path.exists():
+        try:
+            data = tomllib.loads(state_path.read_text(encoding="utf-8"))
+        except (OSError, tomllib.TOMLDecodeError):
+            data = {}
+    else:
+        data = {}
     todo = data.get("todo", {}) if isinstance(data, dict) else {}
     active_items = todo.get("active_items", []) if isinstance(todo, dict) else []
     active_items = active_items if isinstance(active_items, list) else []
@@ -41941,13 +41936,13 @@ def _archive_record_closeout_state(*, target_root: Path, relative_path: str) -> 
     execution_run = _as_dict(record.get("execution_run"))
     status = (
         str(
-            record.get("status")
+            closure_check.get("slice status")
+            or active_milestone.get("status")
+            or record.get("status")
             or canonical_core.get("status")
             or machine_execution.get("status")
-            or active_milestone.get("status")
             or execution_run.get("run status")
             or execution_run.get("run_status")
-            or closure_check.get("slice status")
             or ""
         )
         .strip()
@@ -58450,8 +58445,8 @@ def _ownership_diagnostics(
             concern="active execution state",
             status="suspected-drift",
             suspected_surface=agent_instructions_file,
-            expected_primary_owner=owner_for("compact-planning-state", ".agentic-workspace/planning/state.toml + execplans"),
-            suggested_route=f"Move durable current-work and handoff detail into planning state, summary, or an execplan; keep {agent_instructions_file} as an adapter.",
+            expected_primary_owner=owner_for("bounded-planning-continuity", ".agentic-workspace/planning/execplans/"),
+            suggested_route=f"Move durable current-work and handoff detail into a bounded Planning owner; keep {agent_instructions_file} as an adapter.",
             evidence="startup adapter contains active-state or handoff language outside the managed workspace fence",
         )
     config_active_markers = ("current_task", "active_task", "active_execplan", "handoff", "next_action", "validation_run")
@@ -58461,7 +58456,7 @@ def _ownership_diagnostics(
             concern="active execution state",
             status="suspected-drift",
             suspected_surface=WORKSPACE_CONFIG_PATH.as_posix(),
-            expected_primary_owner=owner_for("compact-planning-state", ".agentic-workspace/planning/state.toml + execplans"),
+            expected_primary_owner=owner_for("bounded-planning-continuity", ".agentic-workspace/planning/execplans/"),
             suggested_route="Keep config for repo-owned policy; move current execution state or handoff details into Planning.",
             evidence="workspace config contains active-task or handoff-shaped keys",
         )

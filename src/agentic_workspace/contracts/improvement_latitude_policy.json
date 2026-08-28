@@ -106,7 +106,7 @@
       "reporting_destinations": [
         "agentic-workspace report --target ./repo --format json",
         "review outputs",
-        ".agentic-workspace/planning/state.toml or the active execplan when the current slice already owns planning residue"
+        "the bounded owner execplan when the current slice already owns planning residue"
       ],
       "reporting_rule": "Surface notable friction through bounded reporting or residue; do not act on it without explicit direction."
     },
@@ -125,7 +125,7 @@
       ],
       "reporting_destinations": [
         "agentic-workspace report --target ./repo --format json",
-        ".agentic-workspace/planning/state.toml or the active execplan when repeated friction deserves promotion"
+        "the bounded owner execplan when repeated friction deserves promotion"
       ],
       "reporting_rule": "Use reporting to justify or defer bounded follow-on; do not treat one hotspot as permission for standalone cleanup."
     },
@@ -145,7 +145,7 @@
       ],
       "reporting_destinations": [
         "agentic-workspace report --target ./repo --format json",
-        ".agentic-workspace/planning/state.toml or the active execplan when friction should become bounded follow-on work"
+        "the bounded owner execplan when friction should become bounded follow-on work"
       ],
       "reporting_rule": "Use reporting to preserve evidence and deferred cleanup residue whenever the current slice intentionally stops short."
     },
@@ -165,7 +165,7 @@
       ],
       "reporting_destinations": [
         "agentic-workspace report --target ./repo --format json",
-        ".agentic-workspace/planning/state.toml or the active execplan when proactive cleanup stops before the larger opportunity is complete"
+        "the bounded owner execplan when proactive cleanup stops before the larger opportunity is complete"
       ],
       "reporting_rule": "Use reporting to preserve evidence and unfinished bounded cleanup residue, not to justify hidden widening."
     }

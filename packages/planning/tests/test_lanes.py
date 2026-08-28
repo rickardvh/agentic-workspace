@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import tomllib
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -144,15 +143,14 @@ def test_lane_create_projects_first_class_lane_record(tmp_path: Path) -> None:
         purpose="Make the parent intent concrete before slices start.",
     )
 
-    assert [action.kind for action in result.actions] == ["created", "updated", "proof", "proof"]
+    assert [action.kind for action in result.actions] == ["created", "derived", "proof", "proof"]
     lane_path = tmp_path / ".agentic-workspace" / "planning" / "lanes" / "planning-lane.lane.json"
     record = json.loads(lane_path.read_text(encoding="utf-8"))
     assert record["kind"] == "planning-lane/v1"
     assert record["lane_outcome"] == "Represent lane strategy outside execplans."
     assert record["slice_sequence"] == []
 
-    state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
-    assert state["roadmap"]["lanes"][0]["owner_surface"] == ".agentic-workspace/planning/lanes/planning-lane.lane.json"
+    assert not (tmp_path / ".agentic-workspace/planning/state.toml").exists()
 
     summary = planning_summary(target=tmp_path, profile="compact")
     assert summary["lanes"]["record_count"] == 1
@@ -167,7 +165,7 @@ def test_promote_decomposition_lane_creates_lane_owner_without_execplan(tmp_path
 
     result = promote_decomposition_lane_to_lane_record("lane-artifacts", target=tmp_path)
 
-    assert [action.kind for action in result.actions] == ["created", "updated", "updated", "proof", "proof"]
+    assert [action.kind for action in result.actions] == ["created", "updated", "derived", "proof", "proof"]
     lane_path = tmp_path / ".agentic-workspace/planning/lanes/lane-artifacts.lane.json"
     assert lane_path.exists()
     assert not (tmp_path / ".agentic-workspace/planning/execplans/lane-artifacts.plan.json").exists()
@@ -188,25 +186,23 @@ def test_promote_decomposition_lane_reuses_matching_owner(tmp_path: Path) -> Non
     promote_decomposition_lane_to_lane_record("lane-artifacts", target=tmp_path)
     state_path = tmp_path / ".agentic-workspace/planning/state.toml"
     before_decomposition = decomposition_path.read_bytes()
-    before_state = state_path.read_bytes()
 
     dry_run = promote_decomposition_lane_to_lane_record("lane-artifacts", target=tmp_path, dry_run=True)
 
-    assert [action.kind for action in dry_run.actions] == ["would update", "would update", "proof", "proof"]
+    assert [action.kind for action in dry_run.actions] == ["would update", "would derive", "proof", "proof"]
     assert decomposition_path.read_bytes() == before_decomposition
-    assert state_path.read_bytes() == before_state
+    assert not state_path.exists()
 
     result = promote_decomposition_lane_to_lane_record("lane-artifacts", target=tmp_path)
 
-    assert [action.kind for action in result.actions] == ["updated", "updated", "proof", "proof"]
+    assert [action.kind for action in result.actions] == ["updated", "derived", "proof", "proof"]
     warnings = planning_summary(target=tmp_path, profile="compact")["planning_surface_health"]["warnings"]
     assert not [warning for warning in warnings if warning["warning_class"] == "planning_state_v1_schema"]
 
 
-def test_lane_create_rolls_back_when_state_write_fails(tmp_path: Path, monkeypatch) -> None:
+def test_lane_create_does_not_call_legacy_state_writer(tmp_path: Path, monkeypatch) -> None:
     install_bootstrap(target=tmp_path)
     state_path = tmp_path / ".agentic-workspace/planning/state.toml"
-    before_state = state_path.read_bytes()
 
     def fail_state_write(*_args, **_kwargs) -> None:
         raise OSError("injected state write failure")
@@ -214,18 +210,16 @@ def test_lane_create_rolls_back_when_state_write_fails(tmp_path: Path, monkeypat
     monkeypatch.setattr("repo_planning_bootstrap.installer._write_state_to_toml", fail_state_write)
     result = create_lane_record(lane_id="atomic-lane", title="Atomic Lane", target=tmp_path)
 
-    assert [action.kind for action in result.actions] == ["manual review"]
-    assert not (tmp_path / ".agentic-workspace/planning/lanes/atomic-lane.lane.json").exists()
-    assert state_path.read_bytes() == before_state
+    assert [action.kind for action in result.actions] == ["created", "derived", "proof", "proof"]
+    assert (tmp_path / ".agentic-workspace/planning/lanes/atomic-lane.lane.json").exists()
+    assert not state_path.exists()
 
 
-def test_lane_promotion_rolls_back_every_surface_when_state_write_fails(tmp_path: Path, monkeypatch) -> None:
+def test_lane_promotion_does_not_call_legacy_state_writer(tmp_path: Path, monkeypatch) -> None:
     decomposition_path = tmp_path / ".agentic-workspace/planning/decompositions/parent.decomposition.json"
     _write_decomposition(decomposition_path)
     install_bootstrap(target=tmp_path)
     state_path = tmp_path / ".agentic-workspace/planning/state.toml"
-    before_decomposition = decomposition_path.read_bytes()
-    before_state = state_path.read_bytes()
 
     def fail_state_write(*_args, **_kwargs) -> None:
         raise OSError("injected state write failure")
@@ -233,10 +227,10 @@ def test_lane_promotion_rolls_back_every_surface_when_state_write_fails(tmp_path
     monkeypatch.setattr("repo_planning_bootstrap.installer._write_state_to_toml", fail_state_write)
     result = promote_decomposition_lane_to_lane_record("lane-artifacts", target=tmp_path)
 
-    assert [action.kind for action in result.actions] == ["manual review"]
-    assert not (tmp_path / ".agentic-workspace/planning/lanes/lane-artifacts.lane.json").exists()
-    assert decomposition_path.read_bytes() == before_decomposition
-    assert state_path.read_bytes() == before_state
+    assert [action.kind for action in result.actions] == ["created", "updated", "derived", "proof", "proof"]
+    assert (tmp_path / ".agentic-workspace/planning/lanes/lane-artifacts.lane.json").exists()
+    assert json.loads(decomposition_path.read_text(encoding="utf-8"))["candidate_lanes"][0]["readiness"] == "promoted"
+    assert not state_path.exists()
 
 
 def test_lane_promotion_rejects_incompatible_owner_without_mutating_it(tmp_path: Path) -> None:
@@ -263,7 +257,7 @@ def test_lane_promotion_rejects_incompatible_owner_without_mutating_it(tmp_path:
         target=tmp_path,
     )
 
-    assert [action.kind for action in recovered.actions] == ["created", "updated", "updated", "proof", "proof"]
+    assert [action.kind for action in recovered.actions] == ["created", "updated", "derived", "proof", "proof"]
     alternate_path = tmp_path / ".agentic-workspace/planning/lanes/lane-artifacts-from-parent.lane.json"
     assert alternate_path.exists()
     assert lane_path.read_bytes() == before_lane
@@ -296,18 +290,12 @@ def test_lane_activate_projects_current_slice_execplan_ref_and_keeps_summary_cle
 
     result = activate_lane_record("activation-lane", target=tmp_path, current_slice="slice-one")
 
-    assert [action.kind for action in result.actions] == ["updated", "updated", "proof", "proof"]
-    state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
-    active_lane = state["roadmap"]["lanes"][0]
-    assert active_lane["status"] == "active"
-    assert active_lane["maturity"] == "active"
-    assert active_lane["current_slice"] == "slice-one"
-    assert active_lane["execplan"] == ".agentic-workspace/planning/execplans/slice-one.plan.json"
-    assert active_lane["next_action"] == "execute the slice."
-    assert active_lane["done_when"] == "slice proof passes."
+    assert [action.kind for action in result.actions] == ["updated", "derived", "proof", "proof"]
+    assert not (tmp_path / ".agentic-workspace/planning/state.toml").exists()
     lane = json.loads(lane_path.read_text(encoding="utf-8"))
+    assert lane["status"] == "active"
     assert lane["current_slice"] == "slice-one"
-    assert lane["slice_sequence"][0]["execplan_ref"] == active_lane["execplan"]
+    assert lane["slice_sequence"][0]["execplan_ref"] == ".agentic-workspace/planning/execplans/slice-one.plan.json"
 
     summary = planning_summary(target=tmp_path, profile="compact")
     warnings = summary["planning_surface_health"]["warnings"]
@@ -683,7 +671,7 @@ def test_lane_activate_selects_successor_after_prior_slice_is_explicitly_complet
 
     result = activate_lane_record("activation-lane", target=tmp_path, current_slice="slice-two")
 
-    assert [action.kind for action in result.actions] == ["updated", "updated", "proof", "proof"]
+    assert [action.kind for action in result.actions] == ["updated", "derived", "proof", "proof"]
     updated = json.loads(lane_path.read_text(encoding="utf-8"))
     assert updated["current_slice"] == "slice-two"
     statuses = {item["id"]: item["status"] for item in updated["slice_sequence"]}
@@ -744,22 +732,17 @@ def test_lane_activate_infers_current_slice_execplan_when_slice_sequence_is_mini
 
     result = activate_lane_record("activation-lane", target=tmp_path, current_slice="slice-one")
 
-    assert [action.kind for action in result.actions] == ["updated", "updated", "proof", "proof"]
-    state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
-    active_lane = state["roadmap"]["lanes"][0]
-    assert active_lane["status"] == "active"
-    assert active_lane["current_slice"] == "slice-one"
-    assert active_lane["execplan"] == ".agentic-workspace/planning/execplans/slice-one.plan.json"
-    assert active_lane["next_action"] == "execute the slice."
-    assert active_lane["done_when"] == "slice proof passes."
+    assert [action.kind for action in result.actions] == ["updated", "derived", "proof", "proof"]
+    assert not (tmp_path / ".agentic-workspace/planning/state.toml").exists()
     lane = json.loads((tmp_path / ".agentic-workspace/planning/lanes/activation-lane.lane.json").read_text(encoding="utf-8"))
+    assert lane["status"] == "active"
     assert lane["current_slice"] == "slice-one"
     assert lane["slice_sequence"] == [
         {
             "id": "slice-one",
             "title": "Slice One",
             "status": "active",
-            "execplan_ref": active_lane["execplan"],
+            "execplan_ref": ".agentic-workspace/planning/execplans/slice-one.plan.json",
             "depends_on": [],
             "purpose_for_lane": lane["purpose_for_parent"],
         }
@@ -784,16 +767,13 @@ def test_new_plan_attaches_first_execplan_to_already_active_lane(tmp_path: Path)
         lane="activation-lane",
     )
 
-    assert [action.kind for action in result.actions] == ["created", "updated", "updated", "updated", "next", "next"]
-    assert any("attached execplan 'slice-one' to active lane 'activation-lane'" in action.detail for action in result.actions)
-    state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
-    active_lane = state["roadmap"]["lanes"][0]
-    assert active_lane["owner_surface"] == ".agentic-workspace/planning/lanes/activation-lane.lane.json"
-    assert active_lane["execplan"] == ".agentic-workspace/planning/execplans/slice-one.plan.json"
+    assert [action.kind for action in result.actions] == ["created", "updated", "updated", "next"]
+    assert any("recorded owner-scoped slice 'slice-one'" in action.detail for action in result.actions)
+    assert not (tmp_path / ".agentic-workspace/planning/state.toml").exists()
     lane = json.loads((tmp_path / ".agentic-workspace/planning/lanes/activation-lane.lane.json").read_text(encoding="utf-8"))
     assert lane["status"] == "active"
     assert lane["current_slice"] == "slice-one"
-    assert lane["slice_sequence"][0]["execplan_ref"] == active_lane["execplan"]
+    assert lane["slice_sequence"][0]["execplan_ref"] == ".agentic-workspace/planning/execplans/slice-one.plan.json"
 
     summary = planning_summary(target=tmp_path, profile="compact")
     assert summary["planning_surface_health"]["warnings"] == []
@@ -805,9 +785,7 @@ def test_new_plan_does_not_attach_unrelated_plan_to_single_active_lane(tmp_path:
 
     result = create_execplan_scaffold(plan_id="unrelated", title="Unrelated", target=tmp_path, activate=True)
 
-    state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
-    active_lane = state["roadmap"]["lanes"][0]
-    assert "execplan" not in active_lane
+    assert not (tmp_path / ".agentic-workspace/planning/state.toml").exists()
     assert not any("attached execplan" in action.detail for action in result.actions)
 
 
@@ -848,8 +826,7 @@ def test_new_plan_does_not_guess_when_multiple_lanes_are_active(tmp_path: Path) 
 
     create_execplan_scaffold(plan_id="slice-one", title="Slice One", target=tmp_path, activate=True)
 
-    state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
-    assert all("execplan" not in lane for lane in state["roadmap"]["lanes"])
+    assert not (tmp_path / ".agentic-workspace/planning/state.toml").exists()
 
 
 def test_lane_close_and_archive_preserve_parent_contribution(tmp_path: Path) -> None:
@@ -864,7 +841,7 @@ def test_lane_close_and_archive_preserve_parent_contribution(tmp_path: Path) -> 
         parent_contribution="lane artifacts now own strategy and proof aggregation",
         parent_close_permission="may-advance-parent",
     )
-    assert [action.kind for action in close_result.actions] == ["updated", "updated", "next safe action", "proof", "proof"]
+    assert [action.kind for action in close_result.actions] == ["updated", "derived", "next safe action", "proof", "proof"]
     assert any("lane-archive closeable-lane" in action.detail for action in close_result.actions if action.kind == "next safe action")
     summary = planning_summary(target=tmp_path, profile="compact")
     assert summary["planning_surface_health"]["status"] == "not-clean"
@@ -899,7 +876,7 @@ def test_lane_close_and_archive_preserve_parent_contribution(tmp_path: Path) -> 
     assert "full_intent_complete" in raw_lane["completion_gate"]["claim_authorization"]["blocked_claim_classes"]
 
     archive_result = archive_lane_record("closeable-lane", target=tmp_path)
-    assert [action.kind for action in archive_result.actions] == ["archived", "updated", "proof", "proof"]
+    assert [action.kind for action in archive_result.actions] == ["archived", "derived", "proof", "proof"]
     assert not (tmp_path / ".agentic-workspace/planning/lanes/closeable-lane.lane.json").exists()
     assert (tmp_path / ".agentic-workspace/planning/lanes/archive/closeable-lane.lane.json").exists()
     post_archive = planning_summary(target=tmp_path, profile="compact")

@@ -17,14 +17,14 @@ Package-local contract for work under `packages/planning/`.
 
 - This package contains the reusable `agentic-planning` source, shipped planning payload, helper rendering/check logic, and tests.
 - Treat `bootstrap/` as packaged target-repository content, not as the active planning system of this monorepo.
-- Treat `.agentic-workspace/planning/state.toml`, `.agentic-workspace/planning/execplans/`, and root tooling as the operational authority for this repository.
+- Treat owner records under `.agentic-workspace/planning/execplans/`, bounded lane/decomposition/relation records, and root tooling as the operational authority for this repository. `state.toml`, when present, is legacy upgrade input only.
 - When a task crosses package source, shipped payload, and root install boundaries, use `../../docs/maintainer/source-payload-operational-install.md` to keep the layers separate.
 
 ## Architecture Context
 
 - Workspace layer: `agentic-workspace` is the thin composition layer and normal lifecycle front door for installs that include planning.
 - Package layer: `packages/planning/` owns planning-specific source, shipped payload, package skills, and regression coverage.
-- Installed layer: the target repo's `.agentic-workspace/planning/state.toml` and `.agentic-workspace/planning/execplans/` are the live planning contract after bootstrap.
+- Installed layer: the target repo's bounded owner and relation records are the checked-in planning contract after bootstrap; current selection is worktree-local and summary/report views are derived.
 - In this monorepo, the root planning install is the live operational copy; this package directory is not a second active planner.
 
 ## Start Here
@@ -32,7 +32,7 @@ Package-local contract for work under `packages/planning/`.
 1. Read `README.md`.
 2. Read `pyproject.toml` when changing packaging, CLI entry points, or metadata.
 3. Read only the relevant files under `src/repo_planning_bootstrap/`, `bootstrap/`, `skills/`, or `tests/` for the task.
-4. When the task affects planning ownership, startup routing, generated agent docs, or managed wrappers, re-check `../../AGENTS.md`, `.agentic-workspace/planning/state.toml`, and the active execplan.
+4. When the task affects planning ownership, startup routing, generated agent docs, or managed wrappers, re-check `../../AGENTS.md`, the locally selected owner reported by `agentic-workspace summary`, and that owner's record.
 5. When working on shipped package behavior, refresh the installed package through the canonical upgrade workflow first so the task starts from the latest checked-in package version.
 
 ## Sources Of Truth

@@ -1826,6 +1826,8 @@ candidates = []
     )
     record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
     _write_execplan_record(record_path, status="active")
+    state_path = tmp_path / ".agentic-workspace/planning/state.toml"
+    state_before = state_path.read_bytes()
     record = json.loads(record_path.read_text(encoding="utf-8"))
     record["execution_summary"].pop("knowledge promoted (Memory/Docs/Config)", None)
     record["execution_summary"]["knowledge promoted (memory/docs/config)"] = "none"
@@ -1881,11 +1883,11 @@ candidates = []
     assert options["host-side-issue-closure"]["allowed"] is False
     assert "host tracker issue closure" in options["host-side-issue-closure"]["why"]
     assert options["keep-larger-intent-open"]["allowed"] is True
-    assert options["keep-larger-intent-open"]["owner"] == ".agentic-workspace/planning/state.toml"
+    assert options["keep-larger-intent-open"]["owner"] == "explicit bounded continuation owner required"
     assert any(
         action["kind"] == "dogfooding reflection" and "issues, Memory, planning" in action["detail"] for action in payload["actions"]
     )
-    assert b"\r\n" not in (tmp_path / ".agentic-workspace/planning/state.toml").read_bytes()
+    assert state_path.read_bytes() == state_before
 
 
 def test_planning_closeout_reads_shell_sensitive_proof_from_file(tmp_path: Path, capsys) -> None:
@@ -2680,12 +2682,12 @@ def test_planning_closeout_routes_partial_lane_residue_to_continuation(tmp_path:
     assert archived["closure_check"]["closeout scope"] == "lane"
     assert archived["closure_check"]["closure decision"] == "archive-but-keep-lane-open"
     assert archived["intent_satisfaction"]["was original intent fully satisfied?"] == "no"
-    assert archived["intent_satisfaction"]["unsolved intent passed to"] == ".agentic-workspace/planning/state.toml"
-    assert archived["residual"] == {"status": "open", "owner": ".agentic-workspace/planning/state.toml"}
+    assert archived["intent_satisfaction"]["unsolved intent passed to"] == "explicit bounded continuation owner required"
+    assert archived["residual"] == {"status": "open", "owner": "explicit bounded continuation owner required"}
     options = {option["id"]: option for option in payload["completion_options"]}
     assert options["claim-slice-complete"]["allowed"] is True
     assert options["keep-larger-intent-open"]["allowed"] is True
-    assert options["keep-larger-intent-open"]["owner"] == ".agentic-workspace/planning/state.toml"
+    assert options["keep-larger-intent-open"]["owner"] == "explicit bounded continuation owner required"
     assert options["close-larger-intent"]["allowed"] is False
 
 
@@ -2809,6 +2811,8 @@ lanes = ["parent-lane"]
 candidates = []
 """,
     )
+    legacy_state_path = tmp_path / ".agentic-workspace/planning/state.toml"
+    legacy_state_before = legacy_state_path.read_bytes()
     record_path = tmp_path / ".agentic-workspace/planning/execplans/merged-child.plan.json"
     _write_execplan_record(record_path, status="active")
     record = json.loads(record_path.read_text(encoding="utf-8"))
@@ -2867,9 +2871,7 @@ candidates = []
     assert archived["child_intent_satisfaction"]["status"] == "satisfied"
     assert archived["child_intent_satisfaction"]["parent_intent_effect"] == "none"
     assert archived["execution_summary"]["follow-on routed to"] == "external-review"
-    state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
-    assert "merged-child" not in state_text
-    assert '"parent-lane"' in state_text
+    assert legacy_state_path.read_bytes() == legacy_state_before
 
 
 def test_planning_closeout_blocks_proxy_lane_archive_and_close(tmp_path: Path, capsys) -> None:
@@ -2993,7 +2995,7 @@ queued_items = []
     assert archived["closure_check"]["closure decision"] == "archive-and-close"
     assert archived["proof_report"]["validation proof"] == "schema-backed writer validation"
     assert "EXT-1" in json.dumps(archived["references"])
-    assert state["work_items"] == []
+    assert state["work_items"][0]["id"] == "parent-lane"
     assert planning_summary(target=tmp_path)["work_maturity"]["counts"]["closed_items"] == 0
 
 
@@ -3019,7 +3021,8 @@ work_items = [
     payload = json.loads(capsys.readouterr().out)
 
     assert any(action["kind"] == "would create" for action in payload["actions"])
-    assert any(action["kind"] == "would update" for action in payload["actions"])
+    assert not any(action["kind"] == "would update" for action in payload["actions"])
+    assert any(action["kind"] == "compatibility input unchanged" for action in payload["actions"])
     assert not (tmp_path / ".agentic-workspace/planning/execplans/archive/parent-lane.plan.json").exists()
     assert "parent-lane" in (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
 
@@ -3136,6 +3139,7 @@ execplans = [
 ]
 """,
     )
+    legacy_state_before = (tmp_path / ".agentic-workspace/planning/state.toml").read_bytes()
     plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
     _write_execplan_record(plan_path, item_id="plan-alpha", status="completed")
     record = json.loads(plan_path.read_text(encoding="utf-8"))
@@ -3152,7 +3156,6 @@ execplans = [
     result = archive_execplan("plan-alpha", target=tmp_path, apply_cleanup=True)
     archived_record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json"
     closeout_evidence_path = tmp_path / ".agentic-workspace" / "planning" / "closeout-evidence" / "plan-alpha.closeout.json"
-    state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
     summary = planning_summary(target=tmp_path)
 
     assert not archived_record_path.exists()
@@ -3165,19 +3168,14 @@ execplans = [
     assert last_closeout["authority"] == "planning-terminal-command"
     assert last_closeout["plan_id"] == "plan-alpha"
     assert last_closeout["evidence_path"] == ".agentic-workspace/planning/closeout-evidence/plan-alpha.closeout.json"
-    assert "execplans = []" in state_text
-    assert 'maturity = "closed"' not in state_text
-    assert "durable_residue" not in state_text
-    assert "residue_owner" not in state_text
-    assert 'title = "Plan Alpha"' not in state_text
-    assert 'closure = "archive-and-close"' not in state_text
+    assert (tmp_path / ".agentic-workspace/planning/state.toml").read_bytes() == legacy_state_before
     assert summary["work_maturity"]["closed_items"] == []
     assert summary["work_maturity"]["counts"]["residue_routing_needed"] == 0
     assert not any(
         warning["warning_class"] == "historical_work_in_live_planning_state" for warning in summary["planning_surface_health"]["warnings"]
     )
     assert summary["todo"]["queued_count"] == 0
-    assert any("remove active execplan 'plan-alpha' from live planning state after archive" in action.detail for action in result.actions)
+    assert not any(action.path == tmp_path / ".agentic-workspace/planning/state.toml" for action in result.actions)
     assert any(action.kind == "retained closeout evidence" and action.path == closeout_evidence_path for action in result.actions)
 
 
@@ -3194,6 +3192,7 @@ execplans = [
 ]
 """,
     )
+    legacy_state_before = (tmp_path / ".agentic-workspace/planning/state.toml").read_bytes()
     live_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
     stale_archive_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json"
     _write_execplan_record(live_path, item_id="plan-alpha", status="completed")
@@ -3208,7 +3207,6 @@ execplans = [
 
     result = archive_execplan("plan-alpha", target=tmp_path, apply_cleanup=True, retain_archive=True)
     unique_archive_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha-2.plan.json"
-    state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
     summary = planning_summary(target=tmp_path)
 
     assert result.warnings == []
@@ -3217,7 +3215,7 @@ execplans = [
     assert unique_archive_path.exists()
     assert json.loads(stale_archive_path.read_text(encoding="utf-8"))["proof_report"]["validation proof"] == "stale retained archive"
     assert json.loads(unique_archive_path.read_text(encoding="utf-8"))["proof_report"]["validation proof"] == "fresh retained archive"
-    assert "plan-alpha" not in state_text
+    assert (tmp_path / ".agentic-workspace/planning/state.toml").read_bytes() == legacy_state_before
     assert summary["execplans"].get("active_count", 0) == 0
     assert any(action.kind == "retention" and "unique retained archive path" in action.detail for action in result.actions)
     assert any(action.kind == "archived" and action.path == unique_archive_path for action in result.actions)
@@ -3258,11 +3256,12 @@ def test_archive_execplan_apply_cleanup_updates_completed_todo_and_roadmap(tmp_p
 
     todo_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
     roadmap_text = (tmp_path / "ROADMAP.md").read_text(encoding="utf-8")
-    assert "plan-alpha" not in todo_text
-    assert "- No active work right now." in todo_text
-    assert "- No active handoff right now." in roadmap_text
-    assert any(action.kind == "updated" and action.path == tmp_path / ".agentic-workspace/planning/state.toml" for action in result.actions)
-    assert any(action.kind == "updated" and action.path == tmp_path / "ROADMAP.md" for action in result.actions)
+    assert "plan-alpha" in todo_text
+    assert "Plan alpha is the current active package pass." in roadmap_text
+    assert not any(
+        action.kind == "updated" and action.path in {tmp_path / ".agentic-workspace/planning/state.toml", tmp_path / "ROADMAP.md"}
+        for action in result.actions
+    )
 
 
 def test_archive_execplan_apply_cleanup_removes_active_todo_pointer_to_same_plan(tmp_path: Path) -> None:
@@ -3290,18 +3289,8 @@ def test_archive_execplan_apply_cleanup_removes_active_todo_pointer_to_same_plan
     result = archive_execplan("bounded-delegated-judgment-contract-2026-04-09", target=tmp_path, apply_cleanup=True)
 
     todo_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
-    assert "Surface: .agentic-workspace/planning/execplans/bounded-delegated-judgment-contract-2026-04-09.md" not in todo_text
-    assert "- No active work right now." in todo_text
-    assert (
-        "Promote the next bounded candidate only when fresh repeated friction or explicit maintainer choice justifies activation."
-        in todo_text
-    )
-    assert any(
-        action.kind == "updated"
-        and action.path == tmp_path / ".agentic-workspace/planning/state.toml"
-        and "remove TODO item 'bounded-delegated-judgment-contract'" in action.detail
-        for action in result.actions
-    )
+    assert "Surface: .agentic-workspace/planning/execplans/bounded-delegated-judgment-contract-2026-04-09.md" in todo_text
+    assert not any(action.path == tmp_path / ".agentic-workspace/planning/state.toml" for action in result.actions)
     assert not (
         tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "bounded-delegated-judgment-contract-2026-04-09.plan.json"
     ).exists()
@@ -3332,8 +3321,7 @@ def test_archive_execplan_apply_cleanup_handles_active_todo_without_blank_before
 
     todo_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
     assert "## Action" in todo_text
-    assert "- No active work right now." in todo_text
-    assert "Complete `intent-continuity-across-slices`" not in todo_text
+    assert "Complete `intent-continuity-across-slices`" in todo_text
 
 
 def test_archive_execplan_apply_cleanup_updates_compact_now_todo_shape(tmp_path: Path) -> None:
@@ -3361,14 +3349,9 @@ Use `agentic-workspace summary --format json` first; keep this file as the repo-
     result = archive_execplan("front-door-defaults-tranche-2026-04-09", target=tmp_path, apply_cleanup=True)
 
     todo_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
-    assert "front-door-defaults-tranche: Active" not in todo_text
-    assert ".agentic-workspace/planning/execplans/front-door-defaults-tranche-2026-04-09.md" not in todo_text
-    assert "- No active work right now." in todo_text
-    assert (
-        "Promote the next bounded candidate only when fresh repeated friction or explicit maintainer choice justifies activation."
-        in todo_text
-    )
-    assert any(action.kind == "updated" and action.path == tmp_path / ".agentic-workspace/planning/state.toml" for action in result.actions)
+    assert "front-door-defaults-tranche: Active" in todo_text
+    assert ".agentic-workspace/planning/execplans/front-door-defaults-tranche-2026-04-09.md" in todo_text
+    assert not any(action.path == tmp_path / ".agentic-workspace/planning/state.toml" for action in result.actions)
 
 
 def test_archive_execplan_apply_cleanup_removes_compact_state_active_item_pointer(tmp_path: Path) -> None:
@@ -3399,9 +3382,8 @@ candidates = []
 
     assert not archived_path.exists()
     assert not plan_path.exists()
-    assert "intent-validation-and-dangling-debt-2026-04-22.md" not in state_text
-    assert "active_items = []" in state_text
-    assert any(action.kind == "updated" and "remove TODO item '#257'" in action.detail for action in result.actions)
+    assert "intent-validation-and-dangling-debt-2026-04-22.md" in state_text
+    assert not any(action.path == tmp_path / ".agentic-workspace/planning/state.toml" for action in result.actions)
 
 
 def test_archive_execplan_apply_cleanup_removes_active_execplan_pointer_variants(tmp_path: Path) -> None:
@@ -3503,6 +3485,7 @@ queued_items = []
     for label, plan_id, plan_ref, state_template, absent_fragments, present_fragments, action_fragment in scenarios:
         repo = tmp_path / label
         _write(repo / ".agentic-workspace/planning/state.toml", state_template.replace("__PLAN_REF__", plan_ref))
+        state_before = (repo / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
         _write(repo / "ROADMAP.md", "# Roadmap\n")
         plan_path = repo / plan_ref
         _write_execplan_record(plan_path, item_id=plan_id, status="completed")
@@ -3519,11 +3502,8 @@ queued_items = []
         archived_path = repo / ".agentic-workspace" / "planning" / "execplans" / "archive" / f"{plan_id}.plan.json"
         assert not archived_path.exists(), label
         assert not plan_path.exists(), label
-        for fragment in absent_fragments:
-            assert fragment not in state_text, label
-        for fragment in present_fragments:
-            assert fragment in state_text, label
-        assert any(action.kind == "updated" and action_fragment in action.detail for action in result.actions), label
+        assert state_text == state_before, label
+        assert not any(action.path == repo / ".agentic-workspace/planning/state.toml" for action in result.actions), label
 
 
 def test_archive_execplan_apply_cleanup_merges_compact_state_todo_and_roadmap_cleanup(tmp_path: Path) -> None:
@@ -3559,12 +3539,10 @@ candidates = [
 
     assert not archived_path.exists()
     assert not plan_path.exists()
-    assert "active_items = []" in state_text
-    assert "planning-backed-dogfooding-guardrail" not in state_text
+    assert "planning-backed-dogfooding-guardrail" in state_text
     assert "Machine-first planning state and closeout hygiene" in state_text
     assert "machine-first-planning-state" in state_text
-    assert any(action.kind == "updated" and "remove TODO item" in action.detail for action in result.actions)
-    assert any(action.kind == "updated" and "roadmap lanes" in action.detail for action in result.actions)
+    assert not any(action.path == tmp_path / ".agentic-workspace/planning/state.toml" for action in result.actions)
 
 
 def test_archive_execplan_cleanup_requires_all_stem_tokens_before_removing_state_lane(tmp_path: Path) -> None:
@@ -3596,7 +3574,7 @@ candidates = [
     archive_execplan("lower-trust-closeout-reconciliation-view", target=tmp_path, apply_cleanup=True)
 
     state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
-    assert "active_items = []" in state_text
+    assert "lower-trust-closeout-reconciliation-view" in state_text
     assert "machine-first-planning-state" in state_text
     assert "Graceful partial compliance and bypass trust" in state_text
 
@@ -3677,11 +3655,9 @@ def test_archive_execplan_apply_cleanup_removes_matching_candidate_entries(tmp_p
         result = archive_execplan(plan_slug, target=repo, apply_cleanup=True)
 
         updated_roadmap = (repo / "ROADMAP.md").read_text(encoding="utf-8")
-        assert removed_text not in updated_roadmap, label
+        assert removed_text in updated_roadmap, label
         assert retained_text in updated_roadmap, label
-        assert any(
-            action.kind == "updated" and action.path == repo / "ROADMAP.md" and action_detail in action.detail for action in result.actions
-        )
+        assert not any(action.path == repo / "ROADMAP.md" for action in result.actions)
 
 
 def test_archive_execplan_cleanup_does_not_remove_unrelated_candidate_lane_from_generic_plan_stem(tmp_path: Path) -> None:
@@ -3776,8 +3752,8 @@ def test_archive_execplan_without_cleanup_only_suggests_roadmap_followup(tmp_pat
 
     result = archive_execplan("plan-alpha", target=tmp_path)
 
-    assert any(action.kind == "suggested fix" and action.path == tmp_path / "ROADMAP.md" for action in result.actions)
-    assert any(warning["warning_class"] == "roadmap_archive_followup" for warning in result.warnings)
+    assert not any(action.path == tmp_path / "ROADMAP.md" for action in result.actions)
+    assert not any(warning["warning_class"] == "roadmap_archive_followup" for warning in result.warnings)
 
 
 def test_archive_execplan_ignores_generic_roadmap_language(tmp_path: Path) -> None:

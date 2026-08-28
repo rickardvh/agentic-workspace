@@ -9,12 +9,12 @@ Planning Autopilot is a bounded execution skill for the planning contract. Its o
 
 ## Operating Rules
 
-1. Read `AGENTS.md`, `.agentic-workspace/planning/state.toml`, and the active execplan before making changes.
+1. Read `AGENTS.md`, resolve the locally selected owner through the canonical summary, and read that owner record before making changes.
 2. Treat the checked-in planning surfaces as the execution contract. Do not invent new scope from chat context alone.
 3. Enter ordinary Autopilot through `autopilot.run`; if a host cannot supply an executor command, report that the host boundary is unavailable instead of running a direct skill-owned loop.
 4. Execute one bounded slice per executor invocation, then let the host entrypoint admit the attempted final response and decide whether continuation is required.
 5. Run the narrowest validation that proves the milestone.
-6. Update `.agentic-workspace/planning/state.toml` and the active execplan when the milestone completes or blocks.
+6. Update only the bounded active owner and its explicit relations when the milestone completes or blocks; aggregate views are derived.
 7. Capture improvement signals that matter to future execution, but do not expand scope just because an adjacent issue is visible.
 8. Stop only on an authorized terminal outcome: completed objective, qualified external blocker with no safe continuation, or user pause. Ambiguity, plan drift, and code drift must route to reconciliation or to a typed BLOCKED outcome that proves no safe continuation remains.
 

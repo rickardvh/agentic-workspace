@@ -210,8 +210,8 @@ CONTEXT_AUTHORITY_SOURCE_SPECS: dict[str, dict[str, Any]] = {
         "source_adapter": "ownership-source-adapter",
     },
     "planning": {
-        "source": ".agentic-workspace/planning/state.toml",
-        "required": [".agentic-workspace/planning/state.toml"],
+        "source": ".agentic-workspace/planning/execplans/README.md",
+        "required": [".agentic-workspace/planning/execplans/README.md"],
         "routes": [".agentic-workspace/planning/**"],
         "source_adapter": "planning-source-adapter",
     },
@@ -240,8 +240,8 @@ CONTEXT_AUTHORITY_SOURCE_SPECS: dict[str, dict[str, Any]] = {
         "source_adapter": "proof-source-adapter",
     },
     "mutation-baseline": {
-        "source": ".agentic-workspace/planning/state.toml",
-        "required": [".agentic-workspace/planning/state.toml"],
+        "source": ".agentic-workspace/config.toml",
+        "required": [".agentic-workspace/config.toml"],
         "routes": ["*"],
         "requires_git_head": True,
         "source_adapter": "mutation-baseline-source-adapter",

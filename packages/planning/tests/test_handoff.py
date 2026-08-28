@@ -36,7 +36,7 @@ candidates = []
     )
 
 
-def test_planning_summary_projects_handoff_role_metadata(tmp_path: Path) -> None:
+def test_planning_summary_does_not_treat_legacy_handoff_metadata_as_authority(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(
         tmp_path / ".agentic-workspace/planning/state.toml",
@@ -65,23 +65,15 @@ candidates = []
     compact = planning_summary(target=tmp_path, profile="compact")
     handoff = planning_handoff(target=tmp_path)
 
-    expected_role_metadata = {
-        "decision_owner": "human",
-        "strategy_role": "product/architecture",
-        "owner_role": "implementation",
-        "delivery_role": "implementation",
-        "review_role": "validation",
-        "knowledge_owner": "planning/docs",
-        "handoff_ready": True,
-    }
+    expected_role_metadata = {}
     assert summary["planning_revision"]["revision_id"]
     assert compact["planning_revision"]["revision_id"]
     assert summary["active_contract"]["role_metadata"] == expected_role_metadata
-    assert summary["active_contract"]["next_role_needed"] == "implementation"
+    assert summary["active_contract"]["next_role_needed"] == ""
     assert summary["planning_record"]["role_metadata"] == expected_role_metadata
     assert summary["handoff_contract"]["role_metadata"] == expected_role_metadata
-    assert summary["handoff_contract"]["next_role_needed"] == "implementation"
-    assert compact["handoff_contract"]["role_metadata"] == expected_role_metadata
+    assert summary["handoff_contract"]["next_role_needed"] == ""
+    assert "role_metadata" not in compact["handoff_contract"]
     assert compact["handoff_contract"]["ready_worker_prompt"]["status"] == "present"
     assert compact["handoff_contract"]["ready_worker_prompt"]["plan_path"] == ".agentic-workspace/planning/execplans/active-plan.plan.json"
     assert handoff["handoff_contract"]["role_metadata"] == expected_role_metadata
@@ -703,7 +695,7 @@ def test_targeted_execplan_writer_lifecycle_updates_lane_projection(tmp_path: Pa
     assert applied["projection_effects"]["lane"]["slice_sequence[0]"]["after"]["status"] == "completed"
     assert json.loads(lane_path.read_text(encoding="utf-8"))["current_slice"] == ""
     state = installer_mod._read_state_from_toml(tmp_path)
-    assert state["todo"]["active_items"] == []
+    assert state["todo"]["active_items"][0]["id"] == "lane-plan"
     receipt = json.loads((tmp_path / applied["receipt_path"]).read_text(encoding="utf-8"))
     assert receipt["result"]["postcondition"]["terminal_owner_absent_from_active_state"] is True
 
@@ -773,9 +765,9 @@ def test_targeted_execplan_writer_allows_live_phase_reconciliation(tmp_path: Pat
     assert updated["canonical_core"]["next_action"] == "await independent review"
     state = installer_mod._read_state_from_toml(tmp_path)
     assert state["todo"]["active_items"][0]["status"] == "active"
-    assert state["todo"]["active_items"][0]["phase"] == "validation"
-    assert state["todo"]["active_items"][0]["next_action"] == "await independent review"
-    assert state["todo"]["active_items"][0]["proof"] == "Implementation revision abc123; independent review pending."
+    assert "phase" not in state["todo"]["active_items"][0]
+    assert state["todo"]["active_items"][0]["next_action"] == "continue implementation"
+    assert "proof" not in state["todo"]["active_items"][0]
 
 
 def test_targeted_execplan_writer_rejects_unsupported_parent_projection(tmp_path: Path) -> None:

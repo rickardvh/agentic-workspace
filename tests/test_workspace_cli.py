@@ -9,7 +9,6 @@ import shlex
 import shutil
 import subprocess
 import sys
-import tomllib
 from datetime import date, datetime, timedelta, timezone
 from types import SimpleNamespace
 from typing import Any
@@ -455,6 +454,8 @@ def test_completed_child_reconciliation_is_cross_consumer_idempotent_and_fails_c
 
     served = tmp_path / "served"
     _write_completed_child_reconciliation_fixture(served)
+    state_path = served / ".agentic-workspace/planning/state.toml"
+    state_before = state_path.read_bytes()
     closeout = {
         "target": served,
         "claim_level": "slice",
@@ -475,9 +476,7 @@ def test_completed_child_reconciliation_is_cross_consumer_idempotent_and_fails_c
     planning = planning_installer.planning_summary(target=served)
     assert planning["planning_record"]["status"] == "unavailable"
     assert planning["work_maturity"]["status"] == "idle"
-    state = (served / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
-    assert "merged-child" not in state
-    assert '"parent-lane"' in state
+    assert state_path.read_bytes() == state_before
 
     assert cli.main(["start", "--target", str(served), "--task", "Review unrelated repository docs", "--format", "json"]) == 0
     started = json.loads(capsys.readouterr().out)
@@ -565,6 +564,8 @@ def test_refreshed_external_owner_reconciliation_applies_only_with_semantic_auth
         {"kind": "issue", "target": "#42", "label": "GitHub #42", "role": "external-owner", "locator": ""}
     )
     planning_installer._write_execplan_record(record_path=owner_path, record=owner)
+    state_path = tmp_path / ".agentic-workspace/planning/state.toml"
+    state_before = state_path.read_bytes()
     _write(
         tmp_path / ".agentic-workspace/local/cache/external-intent-evidence.json",
         json.dumps(
@@ -607,17 +608,13 @@ def test_refreshed_external_owner_reconciliation_applies_only_with_semantic_auth
     )
 
     result = workspace_runtime_core._reconcile_external_active_owners_after_refresh(target_root=tmp_path, requested=True, dry_run=False)
-    state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
-    active_ids = {item["id"] for item in state["todo"]["active_items"]}
-
     assert result["status"] == expected_status
+    assert state_path.read_bytes() == state_before
     if proof_state == "satisfied":
-        assert "merged-child" not in active_ids
         closed = planning_installer._load_execplan_record(owner_path)
         assert closed is not None and closed["lifecycle"] == "closed"
         assert result["receipt"]["closed_owner_ids"] == ["merged-child.plan"]
     else:
-        assert "merged-child" in active_ids
         retained = planning_installer._load_execplan_record(owner_path)
         assert retained is not None and planning_installer._execplan_lifecycle(retained) == "live"
         assert retained["next_action"] == (
@@ -1920,7 +1917,8 @@ def test_init_ordinary_footprint_omits_package_payload_and_writes_receipt(tmp_pa
     assert payload["footprint_profile"] == "necessary-surfaces"
     assert payload["payload_mirror"] is False
     assert payload["bootstrap_footprint"]["status"] == "necessary-surfaces"
-    assert (tmp_path / ".agentic-workspace" / "planning" / "state.toml").exists()
+    assert not (tmp_path / ".agentic-workspace" / "planning" / "state.toml").exists()
+    assert (tmp_path / ".agentic-workspace" / "planning" / "execplans" / "README.md").exists()
     assert (tmp_path / ".agentic-workspace" / "memory" / "repo" / "index.md").exists()
     receipt = json.loads((tmp_path / ".agentic-workspace" / "adoption-receipt.json").read_text(encoding="utf-8"))
     assert receipt["kind"] == "agentic-workspace/adoption-receipt/v1"
@@ -2108,22 +2106,31 @@ def test_doctor_requires_adoption_receipt_before_treating_missing_payload_as_hea
 
 
 @pytest.mark.parametrize(
-    ("command", "missing_path", "expected_warning"),
+    ("command", "missing_paths", "expected_warning"),
     [
-        ("status", ".agentic-workspace/planning/state.toml", "enabled module 'planning' is not installed"),
-        ("doctor", ".agentic-workspace/planning/state.toml", "enabled module 'planning' is not installed"),
-        ("status", ".agentic-workspace/memory/repo/index.md", "enabled module 'memory' is not installed"),
-        ("doctor", ".agentic-workspace/memory/repo/index.md", "enabled module 'memory' is not installed"),
+        (
+            "status",
+            (".agentic-workspace/planning/execplans/README.md", ".agentic-workspace/planning/skills/REGISTRY.json"),
+            "enabled module 'planning' is not installed",
+        ),
+        (
+            "doctor",
+            (".agentic-workspace/planning/execplans/README.md", ".agentic-workspace/planning/skills/REGISTRY.json"),
+            "enabled module 'planning' is not installed",
+        ),
+        ("status", (".agentic-workspace/memory/repo/index.md",), "enabled module 'memory' is not installed"),
+        ("doctor", (".agentic-workspace/memory/repo/index.md",), "enabled module 'memory' is not installed"),
     ],
 )
 def test_adoption_receipt_does_not_hide_missing_necessary_module_anchors(
-    tmp_path: Path, capsys, command: str, missing_path: str, expected_warning: str
+    tmp_path: Path, capsys, command: str, missing_paths: tuple[str, ...], expected_warning: str
 ) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--format", "json"]) == 0
     capsys.readouterr()
     assert (tmp_path / ".agentic-workspace" / "adoption-receipt.json").is_file()
-    (tmp_path / missing_path).unlink()
+    for missing_path in missing_paths:
+        (tmp_path / missing_path).unlink()
 
     assert cli.main([command, "--target", str(tmp_path), "--format", "json"]) == 0
 
@@ -3708,6 +3715,7 @@ def _write_issue_1981_closeout_fixture(
     external_status: str = "closed",
     include_stale_task_posture_residue: bool = False,
     active_milestone_status: str = "active",
+    terminal_phase: bool = False,
 ) -> None:
     from repo_planning_bootstrap import installer as planning_installer
 
@@ -3732,7 +3740,7 @@ candidates = []
     record = planning_installer._build_execplan_record_from_todo_item(
         title="Issue 1981 state-delta shared core",
         item_id="issue-1981",
-        status=active_milestone_status,
+        status="active",
         why_now="regress closeout trust alignment.",
         next_action="Close complete.",
         done_when="Issue 1981 can honestly be closed.",
@@ -3746,6 +3754,8 @@ candidates = []
         "ready": "ready",
         "blocked": "none",
     }
+    if terminal_phase:
+        record["phase"] = "complete"
     if include_stale_task_posture_residue:
         record["active_milestone"]["id"] = "task-posture-fixture"
     record["proof_expectations"] = [
@@ -3812,6 +3822,17 @@ candidates = []
     planning_installer._write_execplan_record(
         record_path=target / ".agentic-workspace" / "planning" / "execplans" / "issue-1981.plan.json",
         record=record,
+    )
+    owner_ref = ".agentic-workspace/planning/execplans/issue-1981.plan.json"
+    _write_json(
+        target / ".agentic-workspace" / "local" / "planning" / "owner-selection.json",
+        {
+            "kind": "agentic-planning/owner-selection/v1",
+            "mode": "local",
+            "current_work_id": "default",
+            "selected_owner": {"id": "issue-1981", "ref": owner_ref},
+            "planning_revision": cli._planning_owner_selection_basis_revision(target_root=target, state_data={}),
+        },
     )
     if include_stale_task_posture_residue:
         _write_json(
@@ -6660,13 +6681,12 @@ def test_planning_front_door_lane_activation_recovery_does_not_fabricate_plan(tm
 
     assert cli.main(recovery_args[planning_index:]) == 0
     payload = json.loads(capsys.readouterr().out)
-    state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
 
     blocked_reconcile = payload["lane_current_slice_reconciliation"]
     assert blocked_reconcile["status"] == "human-selection-required"
     assert blocked_reconcile["reason_code"] == "human-owner-selection-required"
     assert blocked_reconcile["decision"] == "no-write"
-    assert state["roadmap"]["lanes"][0].get("execplan", "") == ""
+    assert not (tmp_path / ".agentic-workspace/planning/state.toml").exists()
     lane = json.loads((tmp_path / ".agentic-workspace/planning/lanes/lane-alpha.lane.json").read_text(encoding="utf-8"))
     assert lane["status"] != "active"
     assert not any("execplan_ref" in item for item in lane.get("slice_sequence", []) if isinstance(item, dict))
@@ -6738,7 +6758,6 @@ def test_planning_front_door_lane_activation_recovery_does_not_fabricate_plan(tm
     assert cli.main(apply_args) == 0
     payload = json.loads(capsys.readouterr().out)
     restored_reconcile = payload["lane_current_slice_reconciliation"]
-    state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
 
     assert restored_reconcile["status"] == "applied"
     assert restored_reconcile["transition"] == "relink"
@@ -6749,11 +6768,11 @@ def test_planning_front_door_lane_activation_recovery_does_not_fabricate_plan(tm
         "relink lane current-slice relation 'lane-alpha-slice' on lane 'lane-alpha'" in action["detail"]
         for action in restored_reconcile["actions"]
     )
-    assert state["roadmap"]["lanes"][0]["execplan"] == ".agentic-workspace/planning/execplans/lane-alpha-slice.plan.json"
+    assert not (tmp_path / ".agentic-workspace/planning/state.toml").exists()
     lane = json.loads((tmp_path / ".agentic-workspace/planning/lanes/lane-alpha.lane.json").read_text(encoding="utf-8"))
     assert lane["status"] == "active"
     assert lane["current_slice"] == "lane-alpha-slice"
-    assert lane["slice_sequence"][0]["execplan_ref"] == state["roadmap"]["lanes"][0]["execplan"]
+    assert lane["slice_sequence"][0]["execplan_ref"] == ".agentic-workspace/planning/execplans/lane-alpha-slice.plan.json"
     assert cli.main(apply_args) == 0
     replay = json.loads(capsys.readouterr().out)["lane_current_slice_reconciliation"]
     assert replay["status"] == "already-applied"
@@ -8473,6 +8492,7 @@ def test_upgrade_replay_preserves_context_through_proof_and_bounded_closeout(tmp
 
 def test_upgrade_to_necessary_surfaces_repairs_missing_required_skills(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     workspace = tmp_path / ".agentic-workspace"
     assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--format", "json"]) == 0
     capsys.readouterr()
@@ -10316,7 +10336,12 @@ def test_start_routes_completed_active_plan_to_archive_before_new_reflection(tmp
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
     capsys.readouterr()
-    _write_issue_1981_closeout_fixture(tmp_path, include_proof=True, active_milestone_status="completed")
+    _write_issue_1981_closeout_fixture(
+        tmp_path,
+        include_proof=True,
+        active_milestone_status="completed",
+        terminal_phase=True,
+    )
 
     assert (
         cli.main(
@@ -10342,7 +10367,7 @@ def test_start_routes_completed_active_plan_to_archive_before_new_reflection(tmp
     assert selected["next_safe_action"]["next_safe_action"] != "archive-or-retire-completed-plan"
     assert admission["status"] == "rejected"
     assert admission["rejected_candidates"][0]["ref"] == ".agentic-workspace/planning/execplans/issue-1981.plan.json"
-    assert admission["rejected_candidates"][0]["reason"] == "owner-lifecycle-not-live"
+    assert admission["rejected_candidates"][0]["reason"] == "owner-phase-terminal"
     assert admission["repair_route"]["status"] == "available"
     assert admission["admission_contract"]["consumers"] == [
         "start",
@@ -10699,7 +10724,57 @@ active_items = [{{ id = "issue-2258", status = "active", surface = "{owner_ref}"
         assert mismatch["overlap_signal"] == "low-overlap-explicit-task"
 
 
-def test_start_route_rejects_stale_local_selected_planning_owner(tmp_path: Path, capsys) -> None:
+def test_fast_planning_summary_uses_local_owner_without_legacy_state(tmp_path: Path) -> None:
+    selected_ref = ".agentic-workspace/planning/execplans/owner-a.plan.json"
+    other_ref = ".agentic-workspace/planning/execplans/owner-b.plan.json"
+    for owner_ref, owner_id in ((selected_ref, "owner-a"), (other_ref, "owner-b")):
+        _write(
+            tmp_path / owner_ref,
+            json.dumps(
+                {
+                    "kind": "planning-execplan/v1",
+                    "id": owner_id,
+                    "title": owner_id,
+                    "lifecycle": "live",
+                    "phase": "implementation",
+                    "intent": {"outcome": f"Complete {owner_id}"},
+                }
+            ),
+        )
+    planning_revision = cli._planning_owner_selection_basis_revision(target_root=tmp_path, state_data={})
+    _write(
+        tmp_path / ".agentic-workspace/local/planning/owner-selection.json",
+        json.dumps(
+            {
+                "kind": "agentic-planning/owner-selection/v1",
+                "mode": "local",
+                "current_work_id": "default",
+                "selected_owner": {"id": "owner-a", "ref": selected_ref},
+                "planning_revision": planning_revision,
+            }
+        ),
+    )
+
+    summary = cli._fast_planning_active_summary(target_root=tmp_path)
+
+    assert not (tmp_path / ".agentic-workspace/planning/state.toml").exists()
+    assert summary["active_execplan"] == selected_ref
+    assert summary["todo_active_count"] == 1
+    assert summary["planning_status"] == "present"
+
+
+def test_planning_module_detector_accepts_owner_scoped_install_without_legacy_state(tmp_path: Path) -> None:
+    from repo_planning_bootstrap import installer as planning_installer
+
+    planning_installer.install_bootstrap(target=tmp_path)
+
+    planning = workspace_runtime_core._module_operations()["planning"]
+
+    assert planning.detector(tmp_path) is True
+    assert not (tmp_path / ".agentic-workspace/planning/state.toml").exists()
+
+
+def test_start_route_rejects_local_selected_owner_from_other_work_context(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     shared_ref = ".agentic-workspace/planning/execplans/issue-2290.plan.json"
     selected_ref = ".agentic-workspace/planning/execplans/issue-2281.plan.json"
@@ -10764,7 +10839,7 @@ active_items = [{ id = "issue-2290", status = "active", surface = ".agentic-work
     assert route["implementation_allowed"] is True
     assert "claim-active-plan-progress" in route["blocked_claims"]
     assert route["owner_admission"]["rejected_candidates"][0]["ref"] == selected_ref
-    assert route["owner_admission"]["rejected_candidates"][0]["reason"] == "local-selection-missing-planning-revision"
+    assert route["owner_admission"]["rejected_candidates"][0]["reason"] == "local-selection-current-work-mismatch"
     assert gate["owner_admission"] == route["owner_admission"]
     assert route["binding"]["identity"]["observed"]["selected_owner"]["ref"] == shared_ref
     assert route["binding"]["adoption_guard"]["on_mismatch"] == "reject-stale-projection-and-re-resolve"
@@ -10892,7 +10967,7 @@ active_items = [{ id = "issue-2290", status = "active", surface = ".agentic-work
     assert reference_identity["current_planning_revision"]
 
 
-def test_start_route_rejects_stale_local_selection_revision(tmp_path: Path, capsys) -> None:
+def test_start_route_accepts_owner_scoped_local_selection_despite_aggregate_revision_change(tmp_path: Path, capsys) -> None:
     from repo_planning_bootstrap.installer import planning_revision
 
     _init_git_repo(tmp_path)
@@ -10956,8 +11031,8 @@ active_items = [{ id = "issue-2290", status = "active", surface = ".agentic-work
     route = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]["route_decision"]
     admission = route["owner_admission"]
     assert route["selected_owner"] == selected_ref
-    assert admission["rejected_candidates"][0]["reason"] == "local-selection-planning-revision-mismatch"
-    assert admission["selected_owner"]["source"] == ".agentic-workspace/planning/state.toml:todo.active_items"
+    assert admission["rejected_candidates"] == []
+    assert admission["selected_owner"]["source"] == ".agentic-workspace/local/planning/owner-selection.json"
 
 
 def test_start_route_rejects_local_selection_from_another_current_work(tmp_path: Path, capsys) -> None:
@@ -11239,7 +11314,7 @@ def test_start_route_replays_stale_2290_local_selection_without_claim_constraint
     assert route["selected_owner"] == ""
     assert route["task_relation"] == "not-applicable"
     assert route["owner_admission"]["status"] == "rejected"
-    assert route["owner_admission"]["rejected_candidates"][0]["reason"] == "local-selection-planning-revision-mismatch"
+    assert route["owner_admission"]["rejected_candidates"][0]["reason"] == "local-selection-current-work-mismatch"
     assert "claim-active-plan-progress" not in route.get("blocked_claims", [])
 
 
@@ -12284,8 +12359,8 @@ def test_ordinary_planning_consumers_project_one_route_authority_without_orienta
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning", "--format", "json"]) == 0
     capsys.readouterr()
-    planning_state = tmp_path / ".agentic-workspace" / "planning" / "state.toml"
-    state_before = planning_state.read_bytes()
+    planning_anchor = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "README.md"
+    anchor_before = planning_anchor.read_bytes()
     task = "Inspect the current Planning route"
     commands = [
         ["start", "--select", "planning_route_decision"],
@@ -12337,7 +12412,8 @@ def test_ordinary_planning_consumers_project_one_route_authority_without_orienta
                 tuple(route["blocked_claims"]),
             )
         }
-    assert planning_state.read_bytes() == state_before
+    assert planning_anchor.read_bytes() == anchor_before
+    assert not (tmp_path / ".agentic-workspace/planning/state.toml").exists()
     assert not (tmp_path / ".agentic-workspace" / "local" / "planning-carry.json").exists()
 
 

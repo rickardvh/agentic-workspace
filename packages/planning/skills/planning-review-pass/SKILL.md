@@ -10,7 +10,7 @@ It exists to capture compact, evidence-backed findings without turning review ou
 
 ## Operating Rules
 
-1. Read `AGENTS.md`, `.agentic-workspace/planning/state.toml`, and any explicitly referenced review scope before starting.
+1. Read `AGENTS.md`, the selected owner from the canonical summary, and any explicitly referenced review scope before starting.
 2. Treat the task as analysis, not implementation, unless the prompt explicitly asks for fixes too.
 3. Choose one primary review mode from `.agentic-workspace/planning/reviews/README.md` before inspecting deeply.
 4. Keep the review bounded to one subsystem, one question, or one risk area. If the user asks for a matrix or portfolio pass, split it into one compact artifact per mode instead of widening one file.

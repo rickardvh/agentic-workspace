@@ -43,6 +43,7 @@ PLANNING_EXTERNAL_INTENT_CACHE_PATH = Path(".agentic-workspace") / "local" / "ca
 PLANNING_PROOF_RECEIPT_PATH = Path(".agentic-workspace") / "local" / "proof-receipts" / "last.json"
 PLANNING_OWNER_SELECTION_PATH = Path(".agentic-workspace") / "local" / "planning" / "owner-selection.json"
 PLANNING_OWNER_SELECTION_RECEIPT_PATH = Path(".agentic-workspace") / "local" / "planning" / "owner-selection-receipt.json"
+PLANNING_LEGACY_STATE_MIGRATION_RECEIPT_PATH = Path(".agentic-workspace") / "local" / "planning" / "legacy-state-migration.json"
 PLANNING_RECONCILIATION_PROPOSAL_ROOT = Path(".agentic-workspace") / "local" / "planning" / "reconciliation-proposals"
 PLANNING_RECONCILIATION_RECEIPT_ROOT = Path(".agentic-workspace") / "local" / "planning" / "reconciliation-receipts"
 PLANNING_ABSENT_RELATION_SUBJECT = "__absent__"
@@ -126,6 +127,7 @@ CLOSEOUT_EVIDENCE_SCHEMA_PATH = PLANNING_SCHEMA_ROOT / "planning-closeout-eviden
 SOURCE_PLANNING_CHECKER_SCRIPT_PATH = Path(__file__).resolve().parents[2] / "scripts" / "check" / "check_planning_surfaces.py"
 PLANNING_STATE_KIND = "agentic-planning-state"
 PLANNING_STATE_SCHEMA_VERSION = "planning-state/v1"
+PLANNING_EXPLICIT_CONTINUATION_OWNER = "explicit bounded continuation owner required"
 MANAGED_STATE_HEADER_LINES = (
     "# Agentic Workspace managed state.",
     "# Do not edit by hand when the CLI is available.",
@@ -1715,7 +1717,7 @@ def install_bootstrap(
         _copy_payload(target_root=target_root, result=result, conservative=False, force=force, files=OPTIONAL_PAYLOAD_FILES)
     _render_generated_agent_files(target_root=target_root, result=result, apply=not dry_run)
     if not dry_run:
-        _ensure_state_toml_exists(target_root, overwrite=force)
+        _migrate_legacy_planning_state(target_root=target_root, result=result, dry_run=False)
         _remove_generated_planning_views(target_root, result=result)
         _backfill_execplan_records(target_root)
         _backfill_review_records(target_root)
@@ -1745,7 +1747,7 @@ def adopt_bootstrap(*, target: str | Path | None = None, dry_run: bool = False, 
         _copy_payload(target_root=target_root, result=result, conservative=True, force=False, files=OPTIONAL_PAYLOAD_FILES)
     _render_generated_agent_files(target_root=target_root, result=result, apply=not dry_run)
     if not dry_run:
-        _ensure_state_toml_exists(target_root)
+        _migrate_legacy_planning_state(target_root=target_root, result=result, dry_run=False)
         _remove_generated_planning_views(target_root, result=result)
         _backfill_execplan_records(target_root)
         _backfill_review_records(target_root)
@@ -1772,8 +1774,8 @@ def upgrade_bootstrap(*, target: str | Path | None = None, dry_run: bool = False
 
     _render_generated_agent_files(target_root=target_root, result=result, apply=not dry_run)
     _migrate_current_execplan_owners(target_root=target_root, result=result, dry_run=dry_run)
+    _migrate_legacy_planning_state(target_root=target_root, result=result, dry_run=dry_run)
     if not dry_run:
-        _ensure_state_toml_exists(target_root)
         _remove_generated_planning_views(target_root, result=result)
         _backfill_execplan_records(target_root)
         _backfill_review_records(target_root)
@@ -2344,41 +2346,20 @@ def _planning_summary_work_items(*, target_root: Path, todo_path: Path, legacy_t
     """Resolve active, queued, and roadmap work from the canonical or legacy source."""
 
     state = _read_state_from_toml(target_root)
-    if state:
-        active_items = _state_active_items(state)
-        queued_items = _state_queued_items(state)
-        return {
-            "state": state,
-            "active_items": active_items,
-            "queued_items": queued_items,
-            "roadmap_lanes": _state_roadmap_lanes(state),
-            "roadmap_candidates": _state_roadmap_candidates(state),
-            "todo_line_count": 0,
-            "todo_item_count": len(active_items) + len(queued_items),
-        }
-    legacy_todo_lines, legacy_todo_items = _read_todo_items(legacy_todo_path)
-    todo_lines, todo_items = (legacy_todo_lines, legacy_todo_items) if legacy_todo_items else _read_todo_items(todo_path)
-    active_items: list[dict[str, Any]] = []
+    resolution = _selected_owner_resolution(target_root)
+    selected = _selected_owner_active_item(target_root=target_root, state={}, resolution=resolution)
+    active_items = [selected] if selected else []
     queued_items: list[dict[str, Any]] = []
-    for item in todo_items:
-        status = item.fields.get("status", "").lower()
-        projection = {
-            "id": item.fields.get("id", ""),
-            "surface": item.fields.get("surface", ""),
-            "why_now": item.fields.get("why now", ""),
-        }
-        if any(marker in status for marker in ("in-progress", "active", "ongoing")):
-            active_items.append(projection)
-        elif status not in {"completed", "done", "closed"}:
-            queued_items.append({**projection, "status": item.fields.get("status", "")})
+    lane_projection = _planning_lane_projection(target_root=target_root)
+    roadmap_lanes = [dict(item) for item in lane_projection.get("records", []) if isinstance(item, dict)]
     return {
         "state": state,
         "active_items": active_items,
         "queued_items": queued_items,
-        "roadmap_lanes": _roadmap_candidate_lanes(roadmap_path),
-        "roadmap_candidates": _roadmap_candidates(roadmap_path),
-        "todo_line_count": len(todo_lines),
-        "todo_item_count": len(todo_items),
+        "roadmap_lanes": roadmap_lanes,
+        "roadmap_candidates": [],
+        "todo_line_count": 0,
+        "todo_item_count": len(active_items),
     }
 
 
@@ -2558,7 +2539,7 @@ def planning_summary(
         task_text=task_text,
         changed_paths=changed_paths or [],
     )
-    work_maturity = _planning_work_maturity_projection(state=state, active_execplans=active_execplans)
+    work_maturity = _planning_work_maturity_projection(state=None, active_execplans=active_execplans)
     execution_readiness = _execution_readiness_payload(
         active_items=active_items,
         active_execplans=active_execplans,
@@ -3346,38 +3327,8 @@ def _write_planning_reconciliation_transaction(
         if isinstance(owner.get("revision"), int):
             owner["revision"] = int(owner["revision"]) + 1
         _write_execplan_record(record_path=owner_path, record=owner, render_markdown=False)
-    selection_changed: list[str] = []
-    state = _read_state_from_toml(target_root) or {}
-    todo = state.get("todo", {}) if isinstance(state, dict) else {}
-    state_changed = False
-    closed_paths = {item["path"] for item in owner_transitions if item["transition"] == "close-slice"}
-    for todo_field in ("active_items", "queued_items"):
-        raw_items = todo.get(todo_field, []) if isinstance(todo, dict) else []
-        if not isinstance(raw_items, list):
-            continue
-        retained = [
-            item
-            for item in raw_items
-            if not (
-                isinstance(item, dict)
-                and (
-                    str(item.get("id") or "") in closed_owner_ids or str(item.get("surface") or item.get("execplan") or "") in closed_paths
-                )
-            )
-        ]
-        if retained != raw_items:
-            todo[todo_field] = retained
-            selection_changed.append(f"todo.{todo_field}")
-            state_changed = True
-    if selected_owner is not None:
-        selected_path = target_root / selected_owner["path"]
-        selected_record = _load_execplan_record(selected_path)
-        if selected_record is None:
-            raise OSError(f"selected reconciliation owner disappeared: {selected_owner['path']}")
-        state, selection_changed = _owner_selection_state_patch(target_root, state, owner_path=selected_path, owner_record=selected_record)
-        state_changed = state_changed or bool(selection_changed)
-    if state_changed:
-        _write_state_to_toml(target_root, state)
+    # Current attention is local and aggregate views are derived.  Reconcile
+    # mutates only the admitted owner records and its integration receipt.
     receipt_path.parent.mkdir(parents=True, exist_ok=True)
     receipt = {
         "kind": "agentic-planning/reconciliation-receipt/v1",
@@ -3424,13 +3375,9 @@ def _planning_reconciliation_transaction(
     cleanup_targets = [
         copy.deepcopy(item)
         for item in payload.get("completed_work_reconciliation", {}).get("cleanup_targets", [])
-        if isinstance(item, dict) and item.get("safe_to_prune") is True
+        if isinstance(item, dict) and item.get("safe_to_prune") is True and str(item.get("path") or "") != PLANNING_STATE_PATH.as_posix()
     ]
-    sync_targets = [
-        copy.deepcopy(item)
-        for item in payload.get("active_projection_reconciliation", {}).get("sync_targets", [])
-        if isinstance(item, dict) and item.get("safe_to_sync") is True
-    ]
+    sync_targets: list[dict[str, Any]] = []
     external = _load_external_intent_evidence(target_root)
     owner_observations = [
         copy.deepcopy(item)
@@ -3512,16 +3459,13 @@ def _planning_reconciliation_transaction(
         ],
     ]
     survivors = [item for item in owner_transitions if item["transition"] in {"remain-live", "refresh-owner-action"}]
-    selected_owner = survivors[0] if survivors else None
-    if selected_owner is not None:
-        operations.append(
-            {
-                "kind": "select-existing-owner",
-                "id": selected_owner["owner_id"],
-                "path": selected_owner["path"],
-                "owned_fields": ["todo.active_items", "todo.queued_items"],
-            }
-        )
+    resolution = _selected_owner_resolution(target_root)
+    selected_id = str(resolution.get("owner_id") or "")
+    selected_ref = str(resolution.get("owner_ref") or "")
+    selected_owner = next(
+        (item for item in survivors if item["owner_id"] == selected_id or item["path"] == selected_ref),
+        None,
+    )
     for item in owner_transitions:
         if item["transition"] == "refresh-owner-action":
             operations.append(
@@ -3540,7 +3484,7 @@ def _planning_reconciliation_transaction(
                     "kind": "close-slice",
                     "id": item["owner_id"],
                     "path": item["path"],
-                    "owned_fields": ["lifecycle", "phase", "revision", "todo.active_items", "todo.queued_items"],
+                    "owned_fields": ["lifecycle", "phase", "revision"],
                     "evidence": item["observation_ids"],
                 }
             )
@@ -3551,9 +3495,7 @@ def _planning_reconciliation_transaction(
         "refreshed_owner_action_ids": [item["owner_id"] for item in owner_transitions if item["transition"] == "refresh-owner-action"],
         "selected_owner_id": str(selected_owner.get("owner_id") or "") if selected_owner else "",
         "owner_fields": ["lifecycle", "phase", "next_action", "revision"],
-        "selection_fields": ["todo.active_items", "todo.queued_items"]
-        if selected_owner or any(item["transition"] == "close-slice" for item in owner_transitions)
-        else [],
+        "selection_fields": [],
     }
     external_revision = hashlib.sha256(json.dumps(owner_observations, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[
         :20
@@ -3626,8 +3568,7 @@ def _planning_reconciliation_transaction(
             "expected_planning_revision": expected_planning_revision.strip(),
             "actual_planning_revision": planning_revision_id,
         }
-    touched = [target_root / PLANNING_STATE_PATH]
-    touched.extend(target_root / str(item.get("path")) for item in cleanup_targets if str(item.get("path") or ""))
+    touched = [target_root / str(item.get("path")) for item in cleanup_targets if str(item.get("path") or "")]
     touched.extend(
         target_root / item["path"] for item in owner_transitions if item["transition"] in {"close-slice", "refresh-owner-action"}
     )
@@ -4015,46 +3956,7 @@ def _reconcile_lane_current_slice(
                 "repair": "declare the replacement slice relation before superseding; this transaction will not append inferred slices",
             }
     state = _read_state_from_toml(target_root) or {}
-    updated_state = copy.deepcopy(state)
-    if requested_transition in {"restore", "relink"}:
-        attached_lane = _attach_execplan_to_active_lane(updated_state, lane_id=lane_id, execplan_ref=target_execplan)
-    else:
-        attached_lane = lane_id
-        roadmap_raw = updated_state.get("roadmap")
-        roadmap = roadmap_raw if isinstance(roadmap_raw, dict) else {}
-        lanes = roadmap.get("lanes")
-        if isinstance(lanes, list):
-            for index, item in enumerate(lanes):
-                if isinstance(item, dict) and str(item.get("id") or "").strip() == lane_id:
-                    lane_item = {str(key): value for key, value in item.items()}
-                    lane_item["execplan"] = "" if requested_transition == "cancel" else target_execplan
-                    lane_item["status"] = "ready" if requested_transition == "cancel" else "active"
-                    lane_item["maturity"] = "ready" if requested_transition == "cancel" else "active"
-                    lanes[index] = lane_item
-                    roadmap["lanes"] = lanes
-                    updated_state["roadmap"] = roadmap
-                    break
-            else:
-                attached_lane = ""
-        else:
-            attached_lane = ""
-    if not attached_lane:
-        return {
-            "kind": "planning-lane-current-slice-reconciliation/v1",
-            "status": "blocked",
-            "reason_code": "ambiguous-or-conflicting-lane",
-            "lane": lane_id,
-            "relation_identity": actual_relation_identity,
-            "owner_surface": ".agentic-workspace/planning/state.toml",
-            "subject_id": subject_id,
-            "expected_lane_revision": requested_expected_lane_revision,
-            "current_lane_revision": current_lane_revision,
-            "expected_execplan": target_execplan,
-            "transition": requested_transition,
-            "applied": False,
-            "dry_run": dry_run,
-            "repair": "select the exact lane relation and resolve conflicting roadmap lane state before applying",
-        }
+    updated_state = state
     updated_record = copy.deepcopy(lane_record)
     updated_record["status"] = "ready" if requested_transition == "cancel" else "active"
     updated_record["current_slice"] = (
@@ -4084,30 +3986,13 @@ def _reconcile_lane_current_slice(
             item["execplan_ref"] = target_execplan
     updated_record["slice_sequence"] = slice_sequence
     changed_lane_fields = [key for key in sorted(set(lane_record) | set(updated_record)) if lane_record.get(key) != updated_record.get(key)]
-    changed_state_fields = ["roadmap.lanes"] if state.get("roadmap") != updated_state.get("roadmap") else []
+    changed_state_fields: list[str] = []
     before_lane_revision = current_lane_revision
     after_lane_revision = _record_revision(updated_record)
-    state_lane_before = [
-        item for item in state.get("roadmap", {}).get("lanes", []) if isinstance(state.get("roadmap"), dict) and isinstance(item, dict)
-    ]
-    state_lane_after = [
-        item
-        for item in updated_state.get("roadmap", {}).get("lanes", [])
-        if isinstance(updated_state.get("roadmap"), dict) and isinstance(item, dict)
-    ]
     preserved_unrelated_lanes = [
         str(item.get("id") or "").strip()
-        for item in state_lane_before
-        if str(item.get("id") or "").strip() != lane_id
-        and item
-        == next(
-            (
-                after_item
-                for after_item in state_lane_after
-                if isinstance(after_item, dict) and str(after_item.get("id") or "").strip() == str(item.get("id") or "").strip()
-            ),
-            None,
-        )
+        for item in _planning_lane_projection(target_root=target_root).get("records", [])
+        if isinstance(item, dict) and str(item.get("id") or "").strip() not in {"", lane_id}
     ]
     receipt = {
         "kind": "agentic-planning/lane-current-slice-reconciliation-receipt/v1",
@@ -4153,12 +4038,15 @@ def _reconcile_lane_current_slice(
 
         def write_lane_and_state() -> None:
             _write_lane_record(record_path=lane_path, record=updated_record)
-            _write_state_to_toml(target_root, updated_state)
             receipt["planning_revision_after"] = str(planning_revision(target_root).get("revision_id") or "")
             receipt_path.parent.mkdir(parents=True, exist_ok=True)
             receipt_path.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8", newline="\n")
 
-        _apply_planning_writes_atomically([lane_path, target_root / PLANNING_STATE_PATH, receipt_path], write_lane_and_state)
+        _apply_planning_writes_atomically([lane_path, receipt_path], write_lane_and_state)
+        # A successful bounded-owner mutation must not leave a query result from
+        # the pre-apply revision observable in this process. The revision-keyed
+        # cache remains the fast path for reads between mutations.
+        _PLANNING_SELECTED_OWNER_CACHE.clear()
     return {
         "kind": "planning-lane-current-slice-reconciliation/v1",
         "status": "applied" if apply and not dry_run else "preview",
@@ -4191,11 +4079,6 @@ def _reconcile_lane_current_slice(
                 "kind": "updated" if apply and not dry_run else "would update",
                 "path": _planning_surface_relative(target_root, lane_path),
                 "detail": f"{requested_transition} lane current-slice relation '{actual_subject}' on lane '{lane_id}'",
-            },
-            {
-                "kind": "updated" if apply and not dry_run else "would update",
-                "path": PLANNING_STATE_PATH.as_posix(),
-                "detail": f"{requested_transition} roadmap lane '{lane_id}' owner reference",
             },
             {
                 "kind": "created" if apply and not dry_run else "would create",
@@ -4774,6 +4657,11 @@ def _active_projection_sync_targets(
     state: dict[str, Any],
     summary: dict[str, Any],
 ) -> list[dict[str, Any]]:
+    # Active TODO rows are legacy compatibility input, never a writable
+    # projection target.  Current views derive directly from the selected
+    # owner and local work context.
+    return []
+
     todo = state.get("todo")
     active_items = todo.get("active_items", []) if isinstance(todo, dict) else []
     if not isinstance(active_items, list):
@@ -4855,8 +4743,14 @@ def _apply_reconcile_safe_prune(
     projection_sync_targets: list[dict[str, Any]] | None = None,
     dry_run: bool,
 ) -> dict[str, Any]:
-    safe_targets = [target for target in cleanup_targets if target.get("safe_to_prune") is True]
-    safe_sync_targets = [target for target in projection_sync_targets or [] if target.get("safe_to_sync") is True]
+    safe_targets = [
+        target
+        for target in cleanup_targets
+        if target.get("safe_to_prune") is True and str(target.get("path") or "") != PLANNING_STATE_PATH.as_posix()
+    ]
+    # Legacy aggregate projections are compatibility input only.  Reconcile
+    # derives the current view and never refreshes committed index bytes.
+    safe_sync_targets: list[dict[str, Any]] = []
     applied: list[dict[str, Any]] = []
     skipped: list[dict[str, Any]] = []
     synced: list[dict[str, Any]] = []
@@ -5679,6 +5573,11 @@ def _planning_lane_projection(*, target_root: Path) -> dict[str, Any]:
                     if isinstance(record.get("subsystems"), list)
                     else [],
                     "current_slice": str(record.get("current_slice", "")).strip(),
+                    "execplan_refs": [
+                        str(item.get("execplan_ref", "")).strip()
+                        for item in slices
+                        if isinstance(item, dict) and str(item.get("execplan_ref", "")).strip()
+                    ],
                     "slice_count": len(slices),
                     "ready_slice_count": sum(1 for item in slices if isinstance(item, dict) and item.get("status") == "ready"),
                     "active_slice_count": sum(1 for item in slices if isinstance(item, dict) and item.get("status") == "active"),
@@ -9089,8 +8988,8 @@ def _prep_only_changed_path_warnings(*, target_root: Path, planning_record: dict
         path
         for path in changed_paths
         if not path.startswith(".agentic-workspace/planning/")
+        and not path.startswith(".agentic-workspace/local/planning/")
         and path not in {"TODO.md", "ROADMAP.md"}
-        and path != ".agentic-workspace/planning/state.toml"
     ]
     if not violating_paths:
         return []
@@ -9776,10 +9675,16 @@ def _registered_execplan_refs(
     for item in planning_items:
         for key in ("surface", "path", "execplan"):
             add_ref(item.get(key))
-        raw_refs = item.get("refs", [])
-        if isinstance(raw_refs, list):
-            for ref in raw_refs:
-                add_ref(ref)
+        for refs_key in ("refs", "execplan_refs"):
+            raw_refs = item.get(refs_key, [])
+            if isinstance(raw_refs, list):
+                for ref in raw_refs:
+                    add_ref(ref)
+        slice_sequence = item.get("slice_sequence", [])
+        if isinstance(slice_sequence, list):
+            for slice_item in slice_sequence:
+                if isinstance(slice_item, dict):
+                    add_ref(slice_item.get("execplan_ref"))
 
     if isinstance(state, dict):
         for section_name in ("active", "queued"):
@@ -14025,32 +13930,18 @@ def create_lane_record(
     if findings:
         result.add("manual review", record_path, f"lane record did not validate against planning-lane.schema.json: {'; '.join(findings)}")
         return result
-    lane_relative = record_path.relative_to(target_root).as_posix()
-    proposed_state = _roadmap_state_with_lane(target_root, record, lane_relative=lane_relative)
-    state_findings = _proposed_planning_state_findings(target_root, proposed_state)
-    if state_findings:
-        result.add("manual review", target_root / PLANNING_STATE_PATH, f"proposed lane state did not validate: {'; '.join(state_findings)}")
-        return result
     if dry_run:
         result.add("would create", record_path, "schema-valid lane record")
-        result.add("would update", target_root / PLANNING_STATE_PATH, f"index lane '{slug}' in roadmap.lanes")
+        result.add("would derive", record_path, f"lane '{slug}' in summary/report views")
         _add_planning_mutation_proof_actions(result)
         return result
-
-    def write_lane_and_state() -> None:
-        _write_lane_record(record_path=record_path, record=record)
-        _write_state_to_toml(target_root, proposed_state)
-
     try:
-        _apply_planning_writes_atomically(
-            [record_path, target_root / PLANNING_STATE_PATH],
-            write_lane_and_state,
-        )
+        _write_lane_record(record_path=record_path, record=record)
     except OSError as exc:
-        result.add("manual review", target_root / PLANNING_STATE_PATH, f"lane creation rolled back after write failure: {exc}")
+        result.add("manual review", record_path, f"lane creation failed: {exc}")
         return result
     result.add("created", record_path, "schema-valid lane record")
-    result.add("updated", target_root / PLANNING_STATE_PATH, f"indexed lane '{slug}' in roadmap.lanes")
+    result.add("derived", record_path, f"lane '{slug}' is discoverable from its bounded owner record")
     _add_planning_mutation_proof_actions(result)
     return result
 
@@ -14118,35 +14009,32 @@ def promote_decomposition_lane_to_lane_record(
         updated_lanes[matched_index] = updated_lane
         updated_record["candidate_lanes"] = updated_lanes
         decomposition_findings = _json_schema_findings(payload=updated_record, schema_path=DECOMPOSITION_RECORD_SCHEMA_PATH)
-        proposed_state = _roadmap_state_with_lane(target_root, existing_record, lane_relative=lane_relative)
-        state_findings = _proposed_planning_state_findings(target_root, proposed_state)
-        if decomposition_findings or state_findings:
+        if decomposition_findings:
             result.add(
                 "manual review",
                 matched_path,
-                f"proposed promotion did not validate: {'; '.join([*decomposition_findings, *state_findings])}",
+                f"proposed promotion did not validate: {'; '.join(decomposition_findings)}",
             )
             return result
         if dry_run:
             result.add("would update", matched_path, f"link decomposition lane '{lane_id}' to existing compatible owner")
-            result.add("would update", target_root / PLANNING_STATE_PATH, f"reconciled lane '{slug}' in roadmap.lanes")
+            result.add("would derive", record_path, f"lane '{slug}' from its bounded owner record")
             _add_planning_mutation_proof_actions(result)
             return result
 
-        def link_owner_and_state() -> None:
+        def link_owner() -> None:
             matched_path.write_text(json.dumps(updated_record, indent=2) + "\n", encoding="utf-8", newline="\n")
-            _write_state_to_toml(target_root, proposed_state)
 
         try:
             _apply_planning_writes_atomically(
-                [matched_path, target_root / PLANNING_STATE_PATH],
-                link_owner_and_state,
+                [matched_path],
+                link_owner,
             )
         except OSError as exc:
-            result.add("manual review", target_root / PLANNING_STATE_PATH, f"lane promotion rolled back after write failure: {exc}")
+            result.add("manual review", matched_path, f"lane promotion rolled back after write failure: {exc}")
             return result
         result.add("updated", matched_path, f"linked decomposition lane '{lane_id}' to existing compatible owner")
-        result.add("updated", target_root / PLANNING_STATE_PATH, f"reconciled lane '{slug}' in roadmap.lanes")
+        result.add("derived", record_path, f"lane '{slug}' from its bounded owner record")
         _add_planning_mutation_proof_actions(result)
         return result
     record = _default_lane_record(
@@ -14183,38 +14071,35 @@ def promote_decomposition_lane_to_lane_record(
     updated_record["candidate_lanes"] = updated_lanes
     record_findings = _json_schema_findings(payload=record, schema_path=LANE_RECORD_SCHEMA_PATH)
     decomposition_findings = _json_schema_findings(payload=updated_record, schema_path=DECOMPOSITION_RECORD_SCHEMA_PATH)
-    proposed_state = _roadmap_state_with_lane(target_root, record, lane_relative=lane_relative)
-    state_findings = _proposed_planning_state_findings(target_root, proposed_state)
-    if record_findings or decomposition_findings or state_findings:
+    if record_findings or decomposition_findings:
         result.add(
             "manual review",
             record_path,
-            f"proposed promotion did not validate: {'; '.join([*record_findings, *decomposition_findings, *state_findings])}",
+            f"proposed promotion did not validate: {'; '.join([*record_findings, *decomposition_findings])}",
         )
         return result
     if dry_run:
         result.add("would create", record_path, "schema-valid lane record from decomposition lane")
         result.add("would update", matched_path, f"mark decomposition lane '{lane_id}' as promoted")
-        result.add("would update", target_root / PLANNING_STATE_PATH, f"index lane '{slug}' in roadmap.lanes")
+        result.add("would derive", record_path, f"lane '{slug}' from its bounded owner record")
         _add_planning_mutation_proof_actions(result)
         return result
 
-    def write_lane_promotion_and_state() -> None:
+    def write_lane_promotion() -> None:
         _write_lane_record(record_path=record_path, record=record)
         matched_path.write_text(json.dumps(updated_record, indent=2) + "\n", encoding="utf-8", newline="\n")
-        _write_state_to_toml(target_root, proposed_state)
 
     try:
         _apply_planning_writes_atomically(
-            [record_path, matched_path, target_root / PLANNING_STATE_PATH],
-            write_lane_promotion_and_state,
+            [record_path, matched_path],
+            write_lane_promotion,
         )
     except OSError as exc:
-        result.add("manual review", target_root / PLANNING_STATE_PATH, f"lane promotion rolled back after write failure: {exc}")
+        result.add("manual review", record_path, f"lane promotion rolled back after write failure: {exc}")
         return result
     result.add("created", record_path, "schema-valid lane record from decomposition lane")
     result.add("updated", matched_path, f"marked decomposition lane '{lane_id}' as promoted")
-    result.add("updated", target_root / PLANNING_STATE_PATH, f"indexed lane '{slug}' in roadmap.lanes")
+    result.add("derived", record_path, f"lane '{slug}' from its bounded owner record")
     _add_planning_mutation_proof_actions(result)
     return result
 
@@ -15397,75 +15282,44 @@ def _owner_selection_lane_findings(target_root: Path, owner_path: Path, owner_re
     parent_id = str(parent.get("owner_id", "")).strip() if isinstance(parent, dict) else ""
     if not parent_id or parent_id == "none":
         return []
+    owner_id = str(owner_record.get("id", "")).strip()
+    actual_ref = _planning_surface_relative(target_root, owner_path)
+    references = owner_record.get("references", [])
+    for reference in references if isinstance(references, list) else []:
+        if not isinstance(reference, dict) or str(reference.get("kind", "")).strip() != "source":
+            continue
+        source_ref = str(reference.get("target", "")).strip()
+        if not source_ref.endswith(".decomposition.json"):
+            continue
+        source_path = target_root / source_ref
+        try:
+            decomposition = json.loads(source_path.read_text(encoding="utf-8-sig"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            return [f"source decomposition '{source_ref}' is absent or invalid"]
+        candidates = [
+            item
+            for item in decomposition.get("candidate_lanes", [])
+            if isinstance(item, dict) and str(item.get("id", "")).strip() == owner_id
+        ]
+        if len(candidates) != 1:
+            return [f"source decomposition '{source_ref}' must contain exactly one candidate lane '{owner_id}'"]
+        declared_ref = str(candidates[0].get("owner_surface", "")).strip()
+        if declared_ref and declared_ref != actual_ref:
+            return [f"source decomposition '{source_ref}' maps candidate lane '{owner_id}' to '{declared_ref}', not '{actual_ref}'"]
+        return []
     lane_path = _lane_record_path(target_root, parent_id)
     lane = _load_lane_record(lane_path)
     if lane is None:
         return [f"parent lane '{parent_id}' is absent or invalid"]
-    owner_id = str(owner_record.get("id", "")).strip()
     matching_slices = [
         item for item in lane.get("slice_sequence", []) if isinstance(item, dict) and str(item.get("id", "")).strip() == owner_id
     ]
     if len(matching_slices) != 1:
         return [f"parent lane '{parent_id}' must contain exactly one slice '{owner_id}'"]
     declared_ref = str(matching_slices[0].get("execplan_ref") or matching_slices[0].get("execplan") or "").strip()
-    actual_ref = _planning_surface_relative(target_root, owner_path)
     if declared_ref and declared_ref != actual_ref:
         return [f"parent lane '{parent_id}' maps slice '{owner_id}' to '{declared_ref}', not '{actual_ref}'"]
     return []
-
-
-def _owner_selection_state_patch(
-    target_root: Path,
-    state: dict[str, Any],
-    *,
-    owner_path: Path,
-    owner_record: dict[str, Any],
-) -> tuple[dict[str, Any], list[str]]:
-    next_state = copy.deepcopy(state)
-    todo = next_state.setdefault("todo", {})
-    active = list(todo.get("active_items", [])) if isinstance(todo.get("active_items"), list) else []
-    queued = list(todo.get("queued_items", [])) if isinstance(todo.get("queued_items"), list) else []
-    owner_id = str(owner_record.get("id", "")).strip()
-    owner_ref = _planning_surface_relative(target_root, owner_path)
-    selected: dict[str, Any] | None = None
-    remaining_active: list[Any] = []
-    remaining_queued: list[Any] = []
-    for bucket, remaining in ((active, remaining_active), (queued, remaining_queued)):
-        for raw in bucket:
-            if isinstance(raw, dict) and (str(raw.get("id", "")).strip() == owner_id or _active_execplan_reference(raw) == owner_ref):
-                if selected is not None:
-                    raise ValueError(f"owner '{owner_id}' has multiple state index entries")
-                selected = copy.deepcopy(raw)
-            else:
-                remaining.append(raw)
-    for raw in remaining_active:
-        if isinstance(raw, dict):
-            raw["status"] = "next"
-            raw["maturity"] = "ready"
-            remaining_queued.append(raw)
-    if selected is None:
-        proof = owner_record.get("proof", {})
-        claims = proof.get("claims", []) if isinstance(proof, dict) else []
-        selected = {
-            "id": owner_id,
-            "title": str(owner_record.get("title") or _title_from_slug(owner_id)).strip(),
-            "surface": owner_ref,
-            "why_now": owner_ref,
-            "owner_role": "implementation",
-            "review_role": "validation",
-            "handoff_ready": True,
-            "next_action": str(owner_record.get("next_action") or "Continue the selected owner.").strip(),
-            "done_when": str(claims[0]).strip() if claims else "Selected owner acceptance and proof are satisfied.",
-            "proof": "Use the selected owner's proof contract.",
-        }
-    selected["status"] = "active"
-    selected["maturity"] = "active"
-    selected["surface"] = owner_ref
-    todo["active_items"] = [selected]
-    todo["queued_items"] = remaining_queued
-    next_state["todo"] = todo
-    changed = [] if next_state == state else ["todo.active_items", "todo.queued_items"]
-    return next_state, changed
 
 
 def select_existing_owner(
@@ -15491,9 +15345,17 @@ def select_existing_owner(
         result.add("manual review", selection_path, "--mode must be local or shared")
         result.reason_code = "unsupported-selection-mode"
         return result
-    if mode == "shared" and not reason.strip():
-        result.add("manual review", target_root / PLANNING_STATE_PATH, "shared selection requires --reason")
-        result.reason_code = "shared-selection-reason-required"
+    if mode == "shared":
+        recovery_owner = owner.strip() or f"--owner-ref {owner_ref.strip() or '<repo-relative-plan.json>'}"
+        result.add(
+            "manual review",
+            selection_path,
+            "shared owner selection is retired because current-work selection is local context; use --mode local",
+        )
+        result.reason_code = "shared-selection-retired"
+        result.recovery_command = (
+            f"{_workspace_cli_invoke(target_root)} planning owner-select {recovery_owner} --mode local --target . --dry-run --format json"
+        )
         return result
     if not owner.strip() and not owner_ref.strip():
         result.add("manual review", target_root / PLANNING_MANAGED_ROOT / "execplans", "provide OWNER or --owner-ref")
@@ -15547,44 +15409,9 @@ def select_existing_owner(
         result.reason_code = "owner-not-selectable"
         result.recovery_command = f"{_workspace_cli_invoke(target_root)} summary --target . --select planning_surface_health --format json"
         return result
-    if mode == "shared":
-        if not _guard_feature_branch_integration_mutation(
-            result,
-            target_root=target_root,
-            subject_path=owner_path,
-            owner_id=str(owner_record.get("id", "")).strip(),
-            owner_ref=owner_relative,
-            operation="shared owner selection",
-            requested_transition="mark-integrated",
-        ):
-            return result
-        if not _guard_pending_integration_owner_mutation(
-            result,
-            target_root=target_root,
-            owner_path=owner_path,
-            owner_id=str(owner_record.get("id", "")).strip(),
-            operation="shared owner selection",
-        ):
-            return result
     work_id = current_work_id.strip() or "default"
-    state = _read_state_from_toml(target_root) or {}
     protected_sections = ["owner body", "roadmap", "decompositions", "lane records", "unrelated local work contexts"]
-    proposed_state = state
     changed_fields = ["local.current_work.selected_owner"]
-    if mode == "shared":
-        try:
-            proposed_state, changed_fields = _owner_selection_state_patch(
-                target_root, state, owner_path=owner_path, owner_record=owner_record
-            )
-        except ValueError as exc:
-            result.add("manual review", target_root / PLANNING_STATE_PATH, str(exc))
-            result.reason_code = "owner-index-ambiguous"
-            return result
-        state_findings = _proposed_planning_state_findings(target_root, proposed_state)
-        if state_findings:
-            result.add("manual review", target_root / PLANNING_STATE_PATH, "; ".join(state_findings))
-            result.reason_code = "proposed-selection-invalid"
-            return result
     selection = {
         "kind": "agentic-planning/owner-selection/v1",
         "mode": mode,
@@ -15600,15 +15427,8 @@ def select_existing_owner(
             existing_selection = loaded if isinstance(loaded, dict) else {}
         except (OSError, UnicodeDecodeError, json.JSONDecodeError):
             existing_selection = {}
-    state_noop = mode == "local" or proposed_state == state
     semantic_selection_fields = ("kind", "mode", "current_work_id", "selected_owner", "reason")
-    selection_noop = (
-        all(existing_selection.get(field) == selection.get(field) for field in semantic_selection_fields)
-        if mode == "local"
-        else proposed_state == state
-    )
-    no_op = state_noop and selection_noop
-    proposed_state_hash = hashlib.sha256(("\n".join(_state_to_toml_lines(proposed_state)) + "\n").encode("utf-8")).hexdigest()[:16]
+    no_op = all(existing_selection.get(field) == selection.get(field) for field in semantic_selection_fields)
 
     def build_receipt(*, outcome: str, after_planning: dict[str, Any], after_current_work: str) -> dict[str, Any]:
         return {
@@ -15628,7 +15448,7 @@ def select_existing_owner(
             "preserved_invariants": protected_sections,
             "revisions": {
                 "planning_before": str(before_planning.get("revision_id", "")),
-                "planning_after": str(after_planning.get("revision_id", proposed_state_hash)),
+                "planning_after": str(after_planning.get("revision_id", before_planning.get("revision_id", ""))),
             },
             "validation_outcome": "passed",
             "verification_command": f"{_workspace_cli_invoke(target_root)} planning owner-select --owner-ref {owner_relative} --target . --dry-run --format json",
@@ -15641,7 +15461,7 @@ def select_existing_owner(
         return result
     preview_receipt = build_receipt(
         outcome="dry-run" if dry_run else "selected",
-        after_planning={"revision_id": proposed_state_hash if mode == "shared" else before_planning["revision_id"]},
+        after_planning=before_planning,
         after_current_work="proposed",
     )
     receipt_findings = _json_schema_findings(payload=preview_receipt, schema_path=OWNER_SELECTION_RECEIPT_SCHEMA_PATH)
@@ -15653,7 +15473,7 @@ def select_existing_owner(
     if dry_run:
         result.add(
             "would update",
-            selection_path if mode == "local" else target_root / PLANNING_STATE_PATH,
+            selection_path,
             f"select '{selection['selected_owner']['id']}'",
         )
         result.add("would preserve", owner_path, "; ".join(protected_sections))
@@ -15662,11 +15482,8 @@ def select_existing_owner(
     receipt_box: dict[str, Any] = {}
 
     def write_selection() -> None:
-        if mode == "local":
-            selection_path.parent.mkdir(parents=True, exist_ok=True)
-            selection_path.write_text(json.dumps(selection, indent=2) + "\n", encoding="utf-8", newline="\n")
-        else:
-            _write_state_to_toml(target_root, proposed_state)
+        selection_path.parent.mkdir(parents=True, exist_ok=True)
+        selection_path.write_text(json.dumps(selection, indent=2) + "\n", encoding="utf-8", newline="\n")
         after_planning = planning_revision(target_root)
         after_current_work = _owner_selection_revision(selection_path)
         receipt = build_receipt(outcome="selected", after_planning=after_planning, after_current_work=after_current_work)
@@ -15677,7 +15494,7 @@ def select_existing_owner(
         receipt_path.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8", newline="\n")
         receipt_box.update(receipt)
 
-    touched = [receipt_path, selection_path if mode == "local" else target_root / PLANNING_STATE_PATH]
+    touched = [receipt_path, selection_path]
     try:
         _apply_planning_writes_atomically(touched, write_selection)
     except OSError as exc:
@@ -15801,30 +15618,22 @@ def activate_lane_record(
                 }
             )
             record["slice_sequence"] = slices
-    lane_relative = record_path.relative_to(target_root).as_posix()
     record_findings = _json_schema_findings(payload=record, schema_path=LANE_RECORD_SCHEMA_PATH)
-    proposed_state = _roadmap_state_with_lane(target_root, record, lane_relative=lane_relative)
-    state_findings = _proposed_planning_state_findings(target_root, proposed_state)
-    if record_findings or state_findings:
-        result.add("manual review", record_path, f"proposed activation did not validate: {'; '.join([*record_findings, *state_findings])}")
+    if record_findings:
+        result.add("manual review", record_path, f"proposed activation did not validate: {'; '.join(record_findings)}")
         return result
     if dry_run:
         result.add("would update", record_path, "mark lane active and record current slice")
-        result.add("would update", target_root / PLANNING_STATE_PATH, f"project active lane '{slug}'")
+        result.add("would derive", record_path, f"active lane '{slug}' in summary/report views")
         _add_planning_mutation_proof_actions(result)
         return result
-
-    def write_lane_and_state() -> None:
-        _write_lane_record(record_path=record_path, record=record)
-        _write_state_to_toml(target_root, proposed_state)
-
     try:
-        _apply_planning_writes_atomically([record_path, target_root / PLANNING_STATE_PATH], write_lane_and_state)
+        _write_lane_record(record_path=record_path, record=record)
     except OSError as exc:
-        result.add("manual review", target_root / PLANNING_STATE_PATH, f"lane activation rolled back after write failure: {exc}")
+        result.add("manual review", record_path, f"lane activation failed: {exc}")
         return result
     result.add("updated", record_path, "marked lane active and recorded current slice")
-    result.add("updated", target_root / PLANNING_STATE_PATH, f"projected active lane '{slug}'")
+    result.add("derived", record_path, f"active lane '{slug}' from its bounded owner record")
     _add_planning_mutation_proof_actions(result)
     return result
 
@@ -15932,16 +15741,14 @@ def close_lane_record(
     record["completion_gate"] = _planning_completion_gate_payload(
         record=record, patch=lane_gate_patch, claim_level_requested=claim_level_requested
     )
-    lane_relative = record_path.relative_to(target_root).as_posix()
     if dry_run:
         result.add("would update", record_path, "record lane proof aggregation, parent contribution, and closeout state")
-        result.add("would update", target_root / PLANNING_STATE_PATH, f"project closed lane '{slug}'")
+        result.add("would derive", record_path, f"closed lane '{slug}' in summary/report views")
         _add_planning_mutation_proof_actions(result)
         return result
     _write_lane_record(record_path=record_path, record=record)
-    _upsert_roadmap_lane_state(target_root, record, lane_relative=lane_relative)
     result.add("updated", record_path, "recorded lane proof aggregation, parent contribution, and closeout state")
-    result.add("updated", target_root / PLANNING_STATE_PATH, f"projected closed lane '{slug}'")
+    result.add("derived", record_path, f"closed lane '{slug}' from its bounded owner record")
     result.add("next safe action", record_path, f"agentic-planning lane-archive {slug} --target . --format json")
     _add_planning_mutation_proof_actions(result)
     return result
@@ -15991,14 +15798,13 @@ def archive_lane_record(
     archived["status"] = "archived"
     if dry_run:
         result.add("would move", record_path, archive_path.relative_to(target_root).as_posix())
-        result.add("would update", target_root / PLANNING_STATE_PATH, f"remove archived lane '{slug}' from roadmap.lanes")
+        result.add("would derive", archive_path, f"absence of archived lane '{slug}' from live views")
         _add_planning_mutation_proof_actions(result)
         return result
     _write_lane_record(record_path=archive_path, record=archived)
     record_path.unlink()
-    _remove_roadmap_lane_state(target_root, slug)
     result.add("archived", archive_path, "moved closed lane record to lanes/archive")
-    result.add("updated", target_root / PLANNING_STATE_PATH, f"removed archived lane '{slug}' from roadmap.lanes")
+    result.add("derived", archive_path, f"archived lane '{slug}' is absent from live views")
     _add_planning_mutation_proof_actions(result)
     return result
 
@@ -16068,25 +15874,6 @@ def _promote_decomposition_lane_to_execplan(
         return None
 
     result = InstallResult(target_root=target_root, message=f"Promote decomposition lane '{item_id}' to execplan", dry_run=dry_run)
-    state_path = target_root / PLANNING_STATE_PATH
-    state = _read_state_from_toml(target_root) or {
-        "kind": PLANNING_STATE_KIND,
-        "schema_version": PLANNING_STATE_SCHEMA_VERSION,
-        "work_items": [],
-        "active": {"execplans": []},
-        "todo": {"active_items": [], "queued_items": []},
-        "roadmap": {"lanes": [], "candidates": []},
-    }
-    todo = state.get("todo") if isinstance(state.get("todo"), dict) else {}
-    active_items = todo.get("active_items", []) if isinstance(todo, dict) else []
-    if active_items:
-        result.add(
-            "manual review",
-            state_path,
-            "active planning item already exists; archive or switch active work before promoting a decomposition lane",
-        )
-        return result
-
     slug = _slugify(plan_slug or item_id)
     if not slug:
         result.add("manual review", matched_path, "decomposition lane id cannot be converted into an execplan slug")
@@ -16153,26 +15940,6 @@ def _promote_decomposition_lane_to_execplan(
         }
     ]
 
-    updated_state = copy.deepcopy(state)
-    updated_todo = updated_state.get("todo")
-    if not isinstance(updated_todo, dict):
-        updated_todo = {}
-    updated_todo["active_items"] = [
-        {
-            "id": slug,
-            "title": title,
-            "maturity": "active",
-            "status": "active",
-            "surface": record_relative,
-            "why_now": why_now,
-            "owner_role": "implementation",
-            "handoff_ready": True,
-            "refs": [source_relative],
-        }
-    ]
-    updated_todo.setdefault("queued_items", [])
-    updated_state["todo"] = updated_todo
-
     updated_record = copy.deepcopy(matched_record)
     updated_lanes = list(updated_record.get("candidate_lanes", []))
     updated_lane = copy.deepcopy(matched_lane)
@@ -16183,16 +15950,25 @@ def _promote_decomposition_lane_to_execplan(
 
     if dry_run:
         result.add("would create", record_path, "scaffold canonical execplan record from decomposition lane")
-        result.add("would update", state_path, f"register active planning item '{slug}'")
+        result.add("would update", target_root / PLANNING_OWNER_SELECTION_PATH, f"select '{slug}' for the local work context")
         result.add("would update", matched_path, f"mark decomposition lane '{item_id}' as promoted")
         _add_planning_mutation_proof_actions(result)
         return result
 
     _write_execplan_record(record_path=record_path, record=plan_record)
-    _write_state_to_toml(target_root, updated_state)
     matched_path.write_text(json.dumps(updated_record, indent=2) + "\n", encoding="utf-8")
+    selection_result = select_existing_owner(
+        slug,
+        target=target_root,
+        mode="local",
+        reason=f"Promoted from decomposition lane {item_id}.",
+        expected_planning_revision=str(planning_revision(target_root).get("revision_id") or ""),
+    )
+    if selection_result.reason_code:
+        result.add("manual review", record_path, f"local owner selection failed: {selection_result.reason_code}")
+        return result
     result.add("created", record_path, "scaffolded canonical execplan record from decomposition lane")
-    result.add("updated", state_path, f"registered active planning item '{slug}'")
+    result.add("updated", target_root / PLANNING_OWNER_SELECTION_PATH, f"selected '{slug}' for the local work context")
     result.add("updated", matched_path, f"marked decomposition lane '{item_id}' as promoted")
     _add_planning_mutation_proof_actions(result)
     return result
@@ -16437,6 +16213,114 @@ def create_execplan_scaffold(
     if findings:
         result.add("manual review", record_path, f"scaffold did not validate against planning-execplan.schema.json: {'; '.join(findings)}")
         return result
+
+    # Owner-scoped lifecycle: creating or selecting one owner must never
+    # rewrite repository-global active/queue collections.  Queue intent is
+    # represented by the planned owner itself; current attention is local.
+    if activate:
+        plan_record["lifecycle"] = "live"
+        if _execplan_phase(plan_record) in {"", "shaping"}:
+            plan_record["phase"] = "implementation"
+        relationships = plan_record.get("relationships")
+        if not isinstance(relationships, dict):
+            relationships = {}
+            plan_record["relationships"] = relationships
+        selection = relationships.get("selection")
+        if not isinstance(selection, dict):
+            selection = {}
+            relationships["selection"] = selection
+        selection.update({"state": "selected-local", "owner": slug})
+    elif queue:
+        plan_record["lifecycle"] = "planned"
+
+    owner_scoped_findings = _json_schema_findings(payload=plan_record, schema_path=EXECPLAN_RECORD_SCHEMA_PATH)
+    if owner_scoped_findings:
+        result.add("manual review", record_path, f"owner-scoped scaffold is invalid: {'; '.join(owner_scoped_findings)}")
+        return result
+
+    lane_record_update: tuple[Path, dict[str, Any]] | None = None
+    if lane_id:
+        lane_record_path = _lane_record_path(target_root, lane_id)
+        lane_record = _load_lane_record(lane_record_path)
+        if lane_record is None:
+            result.add("manual review", lane_record_path, f"lane '{lane_id}' was not found; no plan was created")
+            return result
+        updated_lane_record = copy.deepcopy(lane_record)
+        slices = list(updated_lane_record.get("slice_sequence", []))
+        matching_slice = next((item for item in slices if isinstance(item, dict) and str(item.get("id") or "").strip() == slug), None)
+        if isinstance(matching_slice, dict):
+            matching_slice["status"] = "active"
+            matching_slice["execplan_ref"] = record_relative
+        else:
+            slices.append(
+                {
+                    "id": slug,
+                    "title": plan_title,
+                    "status": "active",
+                    "execplan_ref": record_relative,
+                    "depends_on": [],
+                    "purpose_for_lane": str(updated_lane_record.get("purpose_for_parent") or plan_title).strip(),
+                }
+            )
+        updated_lane_record["slice_sequence"] = slices
+        updated_lane_record["current_slice"] = slug
+        updated_lane_record["status"] = "active"
+        lane_findings = _json_schema_findings(payload=updated_lane_record, schema_path=LANE_RECORD_SCHEMA_PATH)
+        if lane_findings:
+            result.add("manual review", lane_record_path, f"proposed active lane did not validate: {'; '.join(lane_findings)}")
+            return result
+        lane_record_update = (lane_record_path, updated_lane_record)
+
+    if dry_run:
+        result.add("would create" if not record_path.exists() else "would update", record_path, "schema-valid owner-scoped execplan")
+        if activate:
+            result.add("would update", target_root / PLANNING_OWNER_SELECTION_PATH, f"select '{slug}' for the local work context")
+        elif queue:
+            result.add("preserved", record_path, "planned owner exists without a repository-global queue projection")
+        if lane_record_update is not None:
+            result.add("would update", lane_record_update[0], f"record owner-scoped slice '{slug}'")
+        result.add("next", record_path, _new_plan_tightening_checklist(prep_only=prep_only))
+        return result
+
+    original_record = record_path.read_bytes() if record_path.exists() else None
+    original_lane = lane_record_update[0].read_bytes() if lane_record_update is not None and lane_record_update[0].exists() else None
+    try:
+        _write_execplan_record(record_path=record_path, record=plan_record)
+        if lane_record_update is not None:
+            _write_lane_record(record_path=lane_record_update[0], record=lane_record_update[1])
+        if activate:
+            selection_result = select_existing_owner(
+                slug,
+                target=target_root,
+                mode="local",
+                reason=source_text or f"Selected owner {slug} for current work.",
+                expected_planning_revision=str(planning_revision(target_root).get("revision_id") or ""),
+            )
+            if selection_result.reason_code:
+                raise OSError(f"local owner selection failed: {selection_result.reason_code}")
+    except OSError as exc:
+        if original_record is None:
+            if record_path.exists():
+                record_path.unlink()
+        else:
+            record_path.write_bytes(original_record)
+        if lane_record_update is not None:
+            if original_lane is None:
+                if lane_record_update[0].exists():
+                    lane_record_update[0].unlink()
+            else:
+                lane_record_update[0].write_bytes(original_lane)
+        result.add("manual review", record_path, f"owner-scoped execplan creation rolled back: {exc}")
+        return result
+    result.add("created" if not overwrite else "updated", record_path, "schema-valid owner-scoped execplan")
+    if activate:
+        result.add("updated", target_root / PLANNING_OWNER_SELECTION_PATH, f"selected '{slug}' for the local work context")
+    elif queue:
+        result.add("preserved", record_path, "planned owner exists without a repository-global queue projection")
+    if lane_record_update is not None:
+        result.add("updated", lane_record_update[0], f"recorded owner-scoped slice '{slug}'")
+    result.add("next", record_path, _new_plan_tightening_checklist(prep_only=prep_only))
+    return result
 
     demoted_record_updates: list[tuple[Path, dict[str, Any]]] = []
     state = _read_state_from_toml(target_root) or {
@@ -16744,7 +16628,7 @@ def _switched_active_execplan_record_updates(
 def _new_plan_tightening_checklist(*, prep_only: bool) -> str:
     if prep_only:
         return (
-            "prep-only route: run summary, then stop without manual JSON tightening, README, PLANNING_STATE, "
+            "prep-only route: run summary, then stop without manual JSON tightening, README, aggregate planning state, "
             "product files, or handoff docs unless summary reports a blocking Planning problem"
         )
     return (
@@ -17719,16 +17603,16 @@ def _apply_prep_only_execplan_defaults(plan_record: dict[str, Any]) -> None:
     # Prep-only records are stop/proof markers, not implementation contracts.
     # Drop closeout-only prompts that have repeatedly tempted agents into
     # polishing generated JSON during a handoff-only pass.
-    next_action = "Run agentic-workspace summary --target . --verbose --format json, confirm the planning state is clean, then stop without product scaffolding."
-    done_when = "Canonical Planning state exists, summary verifies it, and no product source, package, dependency, README, handoff, or app scaffold files were created."
+    next_action = "Run agentic-workspace summary --target . --verbose --format json, confirm the Planning owner is clean, then stop without product scaffolding."
+    done_when = "The canonical Planning owner exists, summary verifies it, and no product source, package, dependency, README, handoff, or app scaffold files were created."
     if plan_record.get("id"):
+        owner_ref = f".agentic-workspace/planning/execplans/{_slugify(str(plan_record['id']))}.plan.json"
         allowed = [
-            ".agentic-workspace/planning/state.toml",
             ".agentic-workspace/planning/execplans/",
             ".agentic-workspace/planning/decompositions/",
         ]
         plan_record["intent"] = {
-            "outcome": "Prepare durable Planning state for later continuation without product implementation.",
+            "outcome": "Prepare a durable Planning owner for later continuation without product implementation.",
             "non_goals": ["Do not create product, package, dependency, README, handoff, or app scaffold files."],
         }
         plan_record["next_action"] = next_action
@@ -17738,23 +17622,20 @@ def _apply_prep_only_execplan_defaults(plan_record: dict[str, Any]) -> None:
             "requirements": ["agentic-workspace summary --target . --verbose --format json"],
             "refs": [],
         }
-        plan_record["specialist_contracts"] = [
-            {"kind": "planning-mode/prep-only", "target": ".agentic-workspace/planning/state.toml", "revision": 1}
-        ]
+        plan_record["specialist_contracts"] = [{"kind": "planning-mode/prep-only", "target": owner_ref, "revision": 1}]
         return
     plan_record.pop("task_intent_promotion", None)
     plan_record["goal"] = [
-        "Prepare durable checked-in Planning state for later continuation without implementing or scaffolding the product."
+        "Prepare a durable checked-in Planning owner for later continuation without implementing or scaffolding the product."
     ]
     plan_record["non_goals"] = [
         "Do not create README, PLANNING_STATE, HANDOFF, SLICES, package, dependency, source, public, database, schema, or app scaffold files.",
-        "Do not start implementation; this slice ends after Planning state and summary verification.",
+        "Do not start implementation; this slice ends after Planning owner and summary verification.",
     ]
     plan_record["immediate_next_action"] = [next_action]
     plan_record["completion_criteria"] = [done_when]
     plan_record["validation_commands"] = ["agentic-workspace summary --target . --verbose --format json"]
     plan_record["touched_paths"] = [
-        ".agentic-workspace/planning/state.toml",
         ".agentic-workspace/planning/execplans/",
         ".agentic-workspace/planning/decompositions/",
     ]
@@ -17776,18 +17657,17 @@ def _apply_prep_only_execplan_defaults(plan_record: dict[str, Any]) -> None:
     planning_mode["prep_only"] = True
     planning_mode["halt_after_summary"] = True
     planning_mode["halt_instruction"] = (
-        "HALT: prep-only mode active. Create Planning state, run agentic-workspace summary --target . --verbose --format json, "
+        "HALT: prep-only mode active. Create a Planning owner, run agentic-workspace summary --target . --verbose --format json, "
         "then stop. Do not manually tighten or revalidate generated JSON unless summary reports a blocking Planning problem. "
         "Do not create product files, scaffolds, README, PLANNING_STATE, or handoff documentation."
     )
     planning_mode["minimal_success_criteria"] = [
-        "prep-only execplan registered in Planning state",
+        "prep-only execplan is a valid bounded Planning owner",
         "agentic-workspace summary --target . --verbose --format json exits successfully",
         "only canonical Planning surfaces changed",
     ]
     planning_mode["manual_tightening_policy"] = "defer during prep-only handoff unless summary reports a blocking Planning problem"
     planning_mode["allowed_outputs"] = [
-        ".agentic-workspace/planning/state.toml",
         ".agentic-workspace/planning/execplans/<id>.plan.json",
         ".agentic-workspace/planning/decompositions/<id>.decomposition.json",
     ]
@@ -19766,13 +19646,12 @@ def archive_parent_lane_closeout(
 
     if dry_run:
         result.add("would create", record_path, "schema-valid parent lane closeout record")
-        result.add("would update", state_path, f"remove closed parent lane '{parent_id}' from first-line planning state")
+        result.add("compatibility input unchanged", state_path, "legacy aggregate state is retired only by upgrade migration")
         return result
 
     _write_execplan_record(record_path=record_path, record=record)
-    _write_state_to_toml(target_root, _closed_parent_lane_state(state, parent_id, item))
     result.add("created", record_path, "schema-valid parent lane closeout record")
-    result.add("updated", state_path, f"removed closed parent lane '{parent_id}' from first-line planning state")
+    result.add("compatibility input unchanged", state_path, "legacy aggregate state is retired only by upgrade migration")
     return result
 
 
@@ -19899,7 +19778,7 @@ def _closeout_continuation_conflict(
     if normalized_claim == "slice" and normalized_residue not in {"none", "dismissed"}:
         return None
     return {
-        "owner": owner or PLANNING_STATE_PATH.as_posix(),
+        "owner": owner or PLANNING_EXPLICIT_CONTINUATION_OWNER,
         "required_follow_on": required_follow_on or ("yes" if live_unsolved_owner else ""),
         "unsolved_owner": live_unsolved_owner,
     }
@@ -20165,7 +20044,7 @@ def _closeout_completion_options(
         {
             "id": "keep-larger-intent-open",
             "allowed": (closure_decision == "archive-but-keep-lane-open" or not larger_intent_close_allowed) and not blocked,
-            "owner": continuation_owner if closure_decision == "archive-but-keep-lane-open" else PLANNING_STATE_PATH.as_posix(),
+            "owner": continuation_owner or PLANNING_EXPLICIT_CONTINUATION_OWNER,
             "why": "intent-status keeps continuation explicit"
             if closure_decision == "archive-but-keep-lane-open"
             else "slice closeout does not authorize larger-intent closure"
@@ -20346,11 +20225,13 @@ def closeout_execplan(
     )
     if retire_completed_child_continuation:
         closure_decision = "archive-but-keep-lane-open"
-        continuation_owner = str(existing_required_continuation.get("owner surface") or "").strip() or PLANNING_STATE_PATH.as_posix()
+        continuation_owner = str(existing_required_continuation.get("owner surface") or "").strip()
+        if not continuation_owner or continuation_owner == PLANNING_STATE_PATH.as_posix():
+            continuation_owner = PLANNING_EXPLICIT_CONTINUATION_OWNER
         inferred_open_parent_slice = True
     intent_satisfied = "no" if closure_decision == "archive-but-keep-lane-open" else "yes"
     if closure_decision == "archive-but-keep-lane-open" and not continuation_owner:
-        continuation_owner = PLANNING_STATE_PATH.as_posix()
+        continuation_owner = PLANNING_EXPLICIT_CONTINUATION_OWNER
 
     placeholder_values = {
         "",
@@ -21747,38 +21628,11 @@ def archive_execplan(
                 "retained archive destination already exists; using unique retained archive path",
             )
 
+    # Aggregate TODO/current-work projections are legacy compatibility input.
+    # Archiving the bounded owner is sufficient; summary and roadmap views are
+    # derived and no checked-in aggregate cleanup is required.
     cleanup_todo_lines: list[str] | None = None
-    todo_ref_items = _todo_referencing_items(target_root / ".agentic-workspace/planning/state.toml", plan_path, target_root)
-    if apply_cleanup and todo_ref_items:
-        closed_state = _close_state_active_execplan_for_archive(
-            target_root=target_root,
-            plan_path=plan_path,
-            archived_record_relative=archived_record_relative,
-            durable_residue=durable_residue,
-            closure_decision=closure_decision,
-        )
-        if closed_state["changed"]:
-            cleanup_todo_lines = _state_to_toml_lines(closed_state["state"])
-            for detail in closed_state["details"]:
-                result.add("would update" if dry_run else "updated", target_root / ".agentic-workspace/planning/state.toml", detail)
-        else:
-            cleanup_todo_lines = _remove_todo_items(target_root / ".agentic-workspace/planning/state.toml", todo_ref_items)
-        for item in todo_ref_items:
-            if closed_state["changed"]:
-                continue
-            result.add(
-                "would update" if dry_run else "updated",
-                target_root / ".agentic-workspace/planning/state.toml",
-                (f"remove TODO item '{item.item_id}' while closing its plan"),
-            )
-    elif apply_cleanup:
-        compact_cleanup = _cleanup_compact_todo_archive_followup(
-            target_root / ".agentic-workspace/planning/state.toml", plan_path, target_root
-        )
-        if compact_cleanup["changed"]:
-            cleanup_todo_lines = compact_cleanup["text"].splitlines()
-            for detail in compact_cleanup["details"]:
-                result.add("would update" if dry_run else "updated", target_root / ".agentic-workspace/planning/state.toml", detail)
+    todo_ref_items: list[TodoItem] = []
 
     remaining_todo_refs = [] if cleanup_todo_lines is not None else todo_ref_items
     blocking_todo_refs = [item for item in remaining_todo_refs if _normalize_status(item.fields.get("status", "")) != "completed"]
@@ -21799,41 +21653,9 @@ def archive_execplan(
             )
         return result
 
-    cleanup_roadmap_state = _cleanup_state_roadmap_followup(target_root, plan_path)
-    if cleanup_roadmap_state["changed"] and apply_cleanup:
-        action_kind = "would update" if dry_run else "updated"
-        for detail in cleanup_roadmap_state["details"]:
-            result.add(action_kind, target_root / PLANNING_STATE_PATH, detail)
-    elif cleanup_roadmap_state["changed"] or cleanup_roadmap_state["note"]:
-        note = (
-            cleanup_roadmap_state["note"]
-            or ".agentic-workspace/planning/state.toml has cleanup-ready roadmap residue tied to the archived plan."
-        )
-        result.warnings.append(
-            {
-                "warning_class": "roadmap_archive_followup",
-                "path": PLANNING_STATE_PATH.as_posix(),
-                "message": note,
-            }
-        )
-        result.add("suggested fix", target_root / PLANNING_STATE_PATH, note)
-
+    cleanup_roadmap_state = {"changed": False, "state": None}
     legacy_roadmap_path = target_root / "ROADMAP.md"
-    cleanup_legacy_roadmap = _cleanup_roadmap_archive_followup(legacy_roadmap_path, plan_path)
-    if cleanup_legacy_roadmap["changed"] and apply_cleanup:
-        action_kind = "would update" if dry_run else "updated"
-        for detail in cleanup_legacy_roadmap["details"]:
-            result.add(action_kind, legacy_roadmap_path, detail)
-    elif cleanup_legacy_roadmap["changed"] or cleanup_legacy_roadmap["note"]:
-        note = cleanup_legacy_roadmap["note"] or "ROADMAP.md has cleanup-ready residue tied to the archived plan."
-        result.warnings.append(
-            {
-                "warning_class": "roadmap_archive_followup",
-                "path": "ROADMAP.md",
-                "message": note,
-            }
-        )
-        result.add("suggested fix", legacy_roadmap_path, note)
+    cleanup_legacy_roadmap = {"changed": False, "text": None}
 
     if retain_archive:
         archive_size_warning = _archive_size_guardrail_warning(
@@ -21952,12 +21774,8 @@ def archive_execplan(
             plan_path.unlink()
         if record_path.exists():
             record_path.unlink()
-    if cleanup_todo_lines is not None and not (cleanup_roadmap_state["changed"] and apply_cleanup):
-        (target_root / ".agentic-workspace/planning/state.toml").write_text(
-            "\n".join(cleanup_todo_lines).rstrip() + "\n",
-            encoding="utf-8",
-            newline="\n",
-        )
+    # Legacy aggregate cleanup is derived from bounded owner removal; the
+    # compatibility file is never rewritten by closeout.
     if cleanup_roadmap_state["changed"] and apply_cleanup:
         state_to_write = cleanup_roadmap_state["state"]
         if cleanup_todo_lines is not None and isinstance(state_to_write, dict):
@@ -24520,6 +24338,13 @@ def _resolve_closeout_execplan_path(
 def _execplan_status(path: Path) -> str:
     record = _load_execplan_record(path)
     if record is not None:
+        milestone = _record_section_dict(record, "active_milestone")
+        milestone_status = str(milestone.get("status") or "").strip().lower() if milestone is not None else ""
+        if milestone_status in {"completed", "done", "closed"}:
+            return milestone_status
+        phase = _execplan_phase(record)
+        if phase in {"complete", "completed", "closed"}:
+            return "completed"
         lifecycle = _execplan_lifecycle(record)
         return {
             "live": "in-progress",
@@ -25817,9 +25642,13 @@ def _remove_close_item_state_candidate(state: dict[str, Any], candidate: dict[st
 
 
 def _write_state_to_toml(target_root: Path, state: dict[str, Any]) -> None:
-    state_path = target_root / PLANNING_STATE_PATH
-    state_path.parent.mkdir(parents=True, exist_ok=True)
-    state_path.write_text("\n".join(_state_to_toml_lines(state)), encoding="utf-8", newline="\n")
+    """Retained for legacy call-site compatibility; aggregate writes are retired.
+
+    No ordinary lifecycle operation may create or refresh planning-state/v1.
+    Upgrade migration consumes and removes the legacy file instead.
+    """
+
+    del target_root, state
 
 
 def _apply_planning_writes_atomically(paths: list[Path], apply: Callable[[], None]) -> None:
@@ -25914,19 +25743,154 @@ def _state_to_toml_lines(state: dict[str, Any]) -> list[str]:
     return lines
 
 
-def _ensure_state_toml_exists(target_root: Path, *, overwrite: bool = False) -> None:
-    """Ensure a baseline state.toml exists in the managed planning root."""
-    state_path = target_root / PLANNING_STATE_PATH
-    if state_path.exists() and not overwrite:
-        return
+def _legacy_state_field_dispositions(state: dict[str, Any]) -> list[dict[str, Any]]:
+    """Classify every planning-state/v1 aggregate field for subtraction.
 
-    state = {
-        "kind": PLANNING_STATE_KIND,
-        "schema_version": PLANNING_STATE_SCHEMA_VERSION,
-        "active": {"execplans": []},
-        "work_items": [],
+    The receipt is deliberately local: it explains an upgrade decision without
+    becoming a replacement checked-in index.
+    """
+
+    dispositions: list[dict[str, Any]] = [
+        {"field": "kind", "disposition": "drop", "reason": "legacy format marker"},
+        {"field": "schema_version", "disposition": "drop", "reason": "legacy format marker"},
+    ]
+    classes = {
+        "todo.active_items": ("localise", "current attention belongs to local owner selection"),
+        "todo.queued_items": ("drop", "repository backlog and priority are externally owned"),
+        "roadmap.lanes": ("derive", "lane records and issue relations own durable lane facts"),
+        "roadmap.candidates": ("return-to-external-evidence", "candidate backlog is not Planning authority"),
+        "active.execplans": ("derive", "execplan lifecycle and local selection own the current view"),
+        "work_items": ("drop", "legacy project-management residue has no bounded owner"),
     }
-    _write_state_to_toml(target_root, state)
+    for field_name, (disposition, reason) in classes.items():
+        parent_name, _, child_name = field_name.partition(".")
+        parent = state.get(parent_name)
+        value = parent.get(child_name) if child_name and isinstance(parent, dict) else state.get(parent_name)
+        dispositions.append(
+            {
+                "field": field_name,
+                "disposition": disposition,
+                "reason": reason,
+                "entry_count": len(value) if isinstance(value, list) else int(value is not None),
+            }
+        )
+    known_roots = {"kind", "schema_version", "todo", "roadmap", "active", "work_items"}
+    for field_name in sorted(set(state) - known_roots):
+        dispositions.append(
+            {
+                "field": field_name,
+                "disposition": "drop",
+                "reason": "unrecognised legacy aggregate field is non-authoritative historical residue",
+            }
+        )
+    return dispositions
+
+
+def _legacy_active_owner_candidate(target_root: Path, state: dict[str, Any]) -> tuple[str, str]:
+    candidates: list[tuple[str, str]] = []
+    for item in _state_active_items(state):
+        owner_id = str(item.get("id") or "").strip()
+        owner_ref = _active_execplan_reference(item)
+        if not owner_id or not owner_ref:
+            continue
+        owner_path = (target_root / owner_ref).resolve()
+        try:
+            owner_path.relative_to(target_root.resolve())
+        except ValueError:
+            continue
+        record = _load_execplan_record(owner_path)
+        if record is None or str(record.get("id") or "").strip() != owner_id:
+            continue
+        if _execplan_lifecycle(record) not in {"live", "planned"}:
+            continue
+        candidates.append((owner_id, _planning_surface_relative(target_root, owner_path)))
+    return candidates[0] if len(candidates) == 1 else ("", "")
+
+
+def _migrate_legacy_planning_state(*, target_root: Path, result: InstallResult, dry_run: bool) -> dict[str, Any]:
+    """Retire planning-state/v1 as compatibility input without replacing it."""
+
+    state_path = target_root / PLANNING_STATE_PATH
+    receipt_path = target_root / PLANNING_LEGACY_STATE_MIGRATION_RECEIPT_PATH
+    if not state_path.is_file():
+        return {
+            "kind": "agentic-planning/legacy-state-migration/v1",
+            "status": "already-migrated" if receipt_path.is_file() else "not-present",
+            "state_path": PLANNING_STATE_PATH.as_posix(),
+        }
+    state = _read_state_from_toml(target_root)
+    if not isinstance(state, dict):
+        result.add("manual review", state_path, "legacy Planning state is unreadable; migration did not delete it")
+        return {
+            "kind": "agentic-planning/legacy-state-migration/v1",
+            "status": "blocked",
+            "reason_code": "legacy-state-unreadable",
+        }
+
+    before = state_path.read_bytes()
+    before_hash = hashlib.sha256(before).hexdigest()
+    dispositions = _legacy_state_field_dispositions(state)
+    owner_id, owner_ref = _legacy_active_owner_candidate(target_root, state)
+    issue_migration = _migrate_legacy_issue_authority(target_root=target_root, dry_run=dry_run)
+    if issue_migration.get("status") == "blocked":
+        result.add("manual review", state_path, "legacy issue relations could not be assigned safely; aggregate migration stopped")
+        return {
+            "kind": "agentic-planning/legacy-state-migration/v1",
+            "status": "blocked",
+            "reason_code": "legacy-issue-relation-migration-blocked",
+            "issue_relation_migration": issue_migration,
+        }
+    receipt = {
+        "kind": "agentic-planning/legacy-state-migration/v1",
+        "status": "dry-run" if dry_run else "applied",
+        "source": {"path": PLANNING_STATE_PATH.as_posix(), "schema_version": str(state.get("schema_version") or ""), "sha256": before_hash},
+        "field_dispositions": dispositions,
+        "issue_relation_migration": {
+            "status": issue_migration.get("status", "not-required"),
+            "legacy_record_count": issue_migration.get("legacy_record_count", 0),
+            "migrated_relations": issue_migration.get("migrated_relations", []),
+        },
+        "preserved_owner": {"id": owner_id, "ref": owner_ref} if owner_id else {},
+        "result": {
+            "legacy_state_present": False,
+            "replacement_aggregate_created": False,
+            "local_selection_written": bool(owner_id),
+        },
+        "rule": "Legacy aggregate fields are preserved only through existing bounded owners; projections, backlog state, and historical residue are not copied.",
+    }
+    if dry_run:
+        result.add("would remove", state_path, "retire planning-state/v1 after bounded-owner disposition")
+        return receipt
+
+    state_path.unlink()
+    if owner_id:
+        current_revision = str(planning_revision(target_root).get("revision_id") or "")
+        selection_result = select_existing_owner(
+            owner_id,
+            target=target_root,
+            mode="local",
+            reason="Preserved the sole valid legacy active owner during planning-state/v1 migration.",
+            expected_planning_revision=current_revision,
+        )
+        if selection_result.reason_code:
+            # The owner file remains canonical even when local attention cannot
+            # be inferred.  Do not recreate the aggregate to preserve a hint.
+            receipt["preserved_owner"]["selection_status"] = "not-selected"
+            receipt["preserved_owner"]["reason_code"] = selection_result.reason_code
+            receipt["result"]["local_selection_written"] = False
+        else:
+            receipt["preserved_owner"]["selection_status"] = "selected-local"
+    receipt_path.parent.mkdir(parents=True, exist_ok=True)
+    receipt_path.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8", newline="\n")
+    result.add("removed", state_path, "retired repository-global Planning aggregate after bounded-owner migration")
+    result.add("receipt", receipt_path, "local idempotent planning-state/v1 disposition receipt")
+    return receipt
+
+
+def _ensure_state_toml_exists(target_root: Path, *, overwrite: bool = False) -> None:
+    """Compatibility no-op: fresh installs no longer create global Planning state."""
+
+    del target_root, overwrite
 
 
 def _is_managed_compatibility_view(path: Path) -> bool:

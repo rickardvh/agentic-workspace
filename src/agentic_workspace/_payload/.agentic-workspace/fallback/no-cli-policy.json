@@ -1,6 +1,6 @@
 {
   "kind": "agentic-workspace/degraded-recovery-capsule/v1",
-  "contract_digest": "sha256:d82dde223b5f90071f34898c502902100252d0e858c076d05520b45cff439fe7",
+  "contract_digest": "sha256:50ef8f4ae19816c120df93cc9834a32b8309544fbce27fc46e44fa7c63772a4e",
   "authority": {
     "decision_source": "planning_safety_gate.route_decision",
     "action_source": "route_decision.next_safe_action.operation_invocation",
@@ -53,8 +53,8 @@
       "required_when_selected": true
     },
     "planning": {
-      "surface": ".agentic-workspace/planning/state.toml",
-      "boundary": "checked-in-execution-state-and-closeout",
+      "surface": ".agentic-workspace/planning/execplans/README.md",
+      "boundary": "bounded-owner-execution-continuity-and-closeout",
       "required_when_selected": true
     },
     "verification": {

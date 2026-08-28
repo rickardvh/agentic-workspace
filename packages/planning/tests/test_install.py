@@ -35,7 +35,7 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     closeout_evidence_schema_path = tmp_path / ".agentic-workspace" / "planning" / "schemas" / "planning-closeout-evidence.schema.json"
 
     assert (tmp_path / "AGENTS.md").exists()
-    assert (tmp_path / ".agentic-workspace/planning/state.toml").exists()
+    assert not (tmp_path / ".agentic-workspace/planning/state.toml").exists()
     assert not (tmp_path / ".agentic-workspace/planning/TODO.md").exists()
     assert not (tmp_path / ".agentic-workspace/planning/ROADMAP.md").exists()
     assert not (tmp_path / "TODO.md").exists()
@@ -135,15 +135,10 @@ def test_direct_planning_install_skips_orchestrator_warning_when_workspace_prese
     assert not any(action.kind == "warning" and action.path == tmp_path / ".agentic-workspace" / "WORKFLOW.md" for action in result.actions)
 
 
-def test_install_bootstrap_state_toml_includes_managed_state_header(tmp_path: Path) -> None:
+def test_install_bootstrap_does_not_create_legacy_aggregate_state(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
 
-    state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
-    assert state_text.startswith("# Agentic Workspace managed state.\n")
-    assert "# Do not edit by hand when the CLI is available." in state_text
-    assert "# Inspect: uv run agentic-workspace summary --format json" in state_text
-    assert "# Mutate through the package command named by that output." in state_text
-    assert 'kind = "agentic-planning-state"' in state_text
+    assert not (tmp_path / ".agentic-workspace/planning/state.toml").exists()
 
 
 def test_install_bootstrap_include_optional_copies_optional_payload(tmp_path: Path) -> None:
@@ -269,7 +264,8 @@ def test_adopt_bootstrap_docs_heavy_repo_preserves_root_surfaces_and_installs_he
     result = adopt_bootstrap(target=tmp_path)
 
     assert agents_path.read_text(encoding="utf-8") == "# Existing agents\n"
-    assert todo_path.read_text(encoding="utf-8") == "# Existing TODO\n"
+    assert not todo_path.exists()
+    assert (tmp_path / ".agentic-workspace/local/planning/legacy-state-migration.json").exists()
     assert roadmap_path.read_text(encoding="utf-8") == "# Existing Roadmap\n"
     assert execplan_readme_path.read_text(encoding="utf-8") == "# Existing execution docs\n"
     assert contributor_playbook_path.read_text(encoding="utf-8") == "# Existing contributor playbook\n"
@@ -884,7 +880,7 @@ def test_upgrade_bootstrap_preserves_unowned_root_todo_and_roadmap_files(tmp_pat
     assert roadmap_path.exists()
     assert todo_path.read_text(encoding="utf-8") == todo_text
     assert roadmap_path.read_text(encoding="utf-8") == roadmap_text
-    assert (tmp_path / ".agentic-workspace/planning/state.toml").exists()
+    assert not (tmp_path / ".agentic-workspace/planning/state.toml").exists()
 
 
 def test_upgrade_bootstrap_flags_managed_compatibility_views_for_manual_review(tmp_path: Path) -> None:
@@ -899,7 +895,7 @@ def test_upgrade_bootstrap_flags_managed_compatibility_views_for_manual_review(t
 
     assert todo_path.exists()
     assert roadmap_path.exists()
-    assert (tmp_path / ".agentic-workspace/planning/state.toml").exists()
+    assert not (tmp_path / ".agentic-workspace/planning/state.toml").exists()
     assert not (tmp_path / "docs" / "planning-process.md").exists()
     assert any(
         action.kind == "manual review" and action.path == todo_path and "unsupported legacy compatibility view" in action.detail

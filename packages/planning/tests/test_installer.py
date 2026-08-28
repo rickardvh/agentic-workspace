@@ -156,7 +156,7 @@ def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routin
     routing_text = render_module.render_routing(manifest_payload)
 
     assert "Execplans now treat four fields as first-class" in readme_text
-    assert "clear the matched queue residue in the same pass" in readme_text
+    assert "Do not maintain a checked-in aggregate current queue" in readme_text
     assert "`Required Continuation`" in readme_text
     assert "`Iterative Follow-Through`" in readme_text
     assert "`Execution Summary`" in readme_text
@@ -173,7 +173,7 @@ def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routin
     assert "do not substitute bare `agentic-workspace`" in bootstrap_agents_text
     assert "Read package-local `AGENTS.md` only for the package being edited." in bootstrap_agents_text
     assert "## When Needed" not in bootstrap_agents_text
-    assert "remove or archive the matched queue residue in the same pass" in execplans_readme_text
+    assert "without maintaining aggregate queue residue" in execplans_readme_text
     assert "## Authority Table" not in quickstart_text
     assert "## Escalation Table" not in quickstart_text
     assert "Generated, non-authoritative helper" in quickstart_text
@@ -204,7 +204,7 @@ def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routin
     assert any("Ask the Startup Router first" in item for item in manifest_payload["bootstrap"]["tiny_safe_model"])
     assert manifest_payload["bootstrap"]["boundary_triggered_escalation"][0]["boundary"] == "workspace"
     assert manifest_payload["bootstrap"]["top_level_capabilities"][1]["module"] == "planning"
-    assert any("clear the matched queue residue in the same pass" in item for item in manifest_payload["bootstrap"]["completion_reminders"])
+    assert any("Do not preserve repository-global queue" in item for item in manifest_payload["bootstrap"]["completion_reminders"])
     assert "generated static adapter" in quickstart_text
     assert "Do not bulk-read all planning surfaces" in quickstart_text
     assert "clear the matched queue residue in the same pass" not in quickstart_text
@@ -272,7 +272,6 @@ candidates = [
             },
         ],
     )
-
     reconcile = planning_reconcile(target=tmp_path)
 
     assert reconcile["kind"] == "planning-reconcile/v1"
@@ -427,7 +426,6 @@ queued_items = []
 def test_unmatched_external_backlog_stays_out_of_ordinary_planning_pressure(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     state_path = tmp_path / ".agentic-workspace/planning/state.toml"
-    before_state = state_path.read_text(encoding="utf-8")
     items = [
         {
             "system": "synthetic-tracker",
@@ -453,7 +451,7 @@ def test_unmatched_external_backlog_stays_out_of_ordinary_planning_pressure(tmp_
     assert current["untracked_open_count"] == 0
     assert "EXT-999" not in json.dumps(current)
     assert len(json.dumps(current)) < 2500
-    assert state_path.read_text(encoding="utf-8") == before_state
+    assert not state_path.exists()
 
     reconcile = planning_reconcile(target=tmp_path)
     reconcile_external = reconcile["external_work_state"]
@@ -542,23 +540,22 @@ candidates = [
         ],
     )
 
+    state_before = state_path.read_bytes()
     preview = planning_reconcile(target=tmp_path, apply_safe_prune=True, dry_run=True)
 
     assert preview["apply_result"]["dry_run"] is True
-    assert preview["apply_result"]["applied_count"] == 3
+    assert preview["apply_result"]["applied_count"] == 1
     assert decomposition_path.exists()
 
     applied = planning_reconcile(target=tmp_path, apply_safe_prune=True)
 
-    assert applied["apply_result"]["applied_count"] == 3
-    assert applied["completed_work_reconciliation"]["cleanup_target_count"] == 0
+    assert applied["apply_result"]["applied_count"] == 1
+    assert applied["completed_work_reconciliation"]["cleanup_target_count"] == 2
     assert not decomposition_path.exists()
-    state = tomllib.loads(state_path.read_text(encoding="utf-8"))
-    assert [lane["id"] for lane in state["roadmap"]["lanes"]] == ["open-lane"]
-    assert state["roadmap"]["candidates"] == []
+    assert state_path.read_bytes() == state_before
 
 
-def test_reconciliation_transaction_previews_applies_and_is_idempotent(tmp_path: Path) -> None:
+def test_reconciliation_transaction_does_not_propose_aggregate_pruning(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     state_path = tmp_path / ".agentic-workspace/planning/state.toml"
     _write(
@@ -590,46 +587,18 @@ candidates = []
         ],
     )
 
+    state_before = state_path.read_bytes()
     preview = planning_reconcile(target=tmp_path)
     assert preview["status"] == "attention-needed"
     transaction = planning_reconcile(target=tmp_path, preview=True)
     assert transaction["status"] == "preview"
     proposal = transaction["proposal"]
-    assert proposal["operations"][0]["kind"] == "safe-prune"
-    proposal_id = proposal["proposal_id"]
-    revision = planning_revision(tmp_path)["revision_id"]
-
-    stale = planning_reconcile(
-        target=tmp_path,
-        apply=True,
-        proposal=proposal_id,
-        expected_planning_revision="stale",
-    )
-    assert stale["status"] == "blocked"
-    assert stale["reason"] == "planning-revision-mismatch"
-    assert tomllib.loads(state_path.read_text(encoding="utf-8"))["roadmap"]["lanes"]
-
-    applied = planning_reconcile(
-        target=tmp_path,
-        apply=True,
-        proposal=proposal_id,
-        expected_planning_revision=revision,
-    )
-    assert applied["status"] == "applied"
-    assert applied["receipt"]["apply_result"]["applied_count"] == 1
-    assert tomllib.loads(state_path.read_text(encoding="utf-8"))["roadmap"]["lanes"] == []
-
-    repeated = planning_reconcile(
-        target=tmp_path,
-        apply=True,
-        proposal=proposal_id,
-        expected_planning_revision=revision,
-    )
-    assert repeated["status"] == "already-applied"
+    assert proposal["operations"] == []
+    assert state_path.read_bytes() == state_before
 
 
-def test_reconciliation_transaction_closes_merged_owners_and_selects_survivor(tmp_path: Path, monkeypatch) -> None:
-    """The ordinary merged-stack path is one preview plus one CAS apply."""
+def test_reconciliation_transaction_closes_merged_owners_without_global_selection(tmp_path: Path) -> None:
+    """The ordinary merged-stack path changes bounded owners, not global attention."""
     install_bootstrap(target=tmp_path)
     execplans = tmp_path / ".agentic-workspace/planning/execplans"
     closed_ids = [f"merged-{index}" for index in range(6)]
@@ -737,12 +706,12 @@ queued_items = [
     assert [(item["owner_id"], item["reason"]) for item in proposal["blocked_items"]] == [
         (ambiguous_id, "external-owner-relationship-ambiguous")
     ]
-    assert proposal["selected_owner"]["owner_id"] == survivor_id
+    assert proposal["selected_owner"] is None
     assert proposal["source"]["external_evidence_revision"]
     assert proposal["source"]["proof_revision"]
     assert proposal["semantic_delta"]["closed_owner_ids"] == closed_ids
     assert proposal["semantic_delta"]["blocked_owner_ids"] == [ambiguous_id]
-    assert proposal["semantic_delta"]["selected_owner_id"] == survivor_id
+    assert proposal["semantic_delta"]["selected_owner_id"] == ""
     dry_run = planning_reconcile(
         target=tmp_path,
         apply=True,
@@ -781,21 +750,7 @@ queued_items = [
 
     proposal = planning_reconcile(target=tmp_path, preview=True)["proposal"]
 
-    first_owner_before_rollback = (execplans / "merged-0.plan.json").read_bytes()
-    monkeypatch.setattr(
-        installer_mod, "_write_state_to_toml", lambda *_args, **_kwargs: (_ for _ in ()).throw(ValueError("fixture write failure"))
-    )
-    rolled_back = planning_reconcile(
-        target=tmp_path,
-        apply=True,
-        proposal=proposal["proposal_id"],
-        expected_planning_revision=planning_revision(tmp_path)["revision_id"],
-    )
-    assert rolled_back["status"] == "rolled-back"
-    assert (execplans / "merged-0.plan.json").read_bytes() == first_owner_before_rollback
-    assert not list((tmp_path / ".agentic-workspace/local/planning/reconciliation-receipts").glob("*.json"))
-    monkeypatch.undo()
-
+    state_before = (tmp_path / ".agentic-workspace/planning/state.toml").read_bytes()
     applied = planning_reconcile(
         target=tmp_path,
         apply=True,
@@ -804,13 +759,11 @@ queued_items = [
     )
     assert applied["status"] == "applied"
     assert applied["receipt"]["closed_owner_ids"] == closed_ids
-    assert applied["receipt"]["selected_owner"]["owner_id"] == survivor_id
+    assert applied["receipt"]["selected_owner"] is None
     assert applied["receipt"]["semantic_delta"] == proposal["semantic_delta"]
     assert all(json.loads((execplans / f"{owner_id}.plan.json").read_text())["lifecycle"] == "closed" for owner_id in closed_ids)
     assert json.loads((execplans / f"{ambiguous_id}.plan.json").read_text())["lifecycle"] == "live"
-    state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text())
-    assert state["todo"]["active_items"][0]["id"] == survivor_id
-    assert state["todo"]["queued_items"][0]["id"] == "unrelated"
+    assert (tmp_path / ".agentic-workspace/planning/state.toml").read_bytes() == state_before
 
 
 def test_provider_neutral_completion_refreshes_obsolete_action_without_claiming_semantic_closeout(tmp_path: Path) -> None:
@@ -904,7 +857,7 @@ queued_items = []
 
 
 def test_reconciliation_transaction_is_safe_and_useful_without_external_provider(tmp_path: Path) -> None:
-    """Local owner/proof facts can restore selection without inferring completion."""
+    """Local owner/proof facts do not invent repository-global selection."""
     install_bootstrap(target=tmp_path)
     execplans = tmp_path / ".agentic-workspace/planning/execplans"
     for owner_id in ("local-current", "local-other"):
@@ -936,7 +889,7 @@ queued_items = []
         ("local-other", "remain-live", "no-admitted-completion"),
     ]
     assert preview["semantic_delta"]["closed_owner_ids"] == []
-    assert preview["selected_owner"]["owner_id"] == "local-current"
+    assert preview["selected_owner"] is None
 
     applied = planning_reconcile(
         target=tmp_path,
@@ -946,16 +899,16 @@ queued_items = []
     )
     assert applied["status"] == "applied"
     assert applied["receipt"]["claims_authorized"] == []
-    assert applied["receipt"]["selected_owner"]["owner_id"] == "local-current"
+    assert applied["receipt"]["selected_owner"] is None
     assert all(
         json.loads((execplans / f"{owner_id}.plan.json").read_text())["lifecycle"] == "live"
         for owner_id in ("local-current", "local-other")
     )
     state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text())
-    assert state["todo"]["active_items"][0]["id"] == "local-current"
+    assert state["todo"]["active_items"] == []
 
 
-def test_planning_reconcile_syncs_stale_active_todo_projection(tmp_path: Path) -> None:
+def test_planning_reconcile_reports_but_does_not_sync_stale_legacy_projection(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     state_path = tmp_path / ".agentic-workspace/planning/state.toml"
     plan_path = tmp_path / ".agentic-workspace/planning/execplans/resume-lane.plan.json"
@@ -995,33 +948,22 @@ queued_items = []
     reconcile = planning_reconcile(target=tmp_path)
 
     projection = reconcile["active_projection_reconciliation"]
-    assert reconcile["status"] == "attention-needed"
-    assert projection["status"] == "stale-projections"
-    assert projection["safe_sync_count"] == 1
-    assert projection["sync_targets"][0]["sync_action"] == "sync-active-todo-projection"
-    assert projection["sync_targets"][0]["updated_fields"] == {
-        "next_action": "Use the fresher execplan action.",
-        "why_now": "PR #2784 blocking review: stale canonical projection",
-        "proof": "PR #2784 package repair and exact-head CI passed",
-        "phase": "validation",
-        "owner_revision": "4",
-    }
+    assert reconcile["status"] == "clean"
+    assert projection["status"] == "clean"
+    assert projection["safe_sync_count"] == 0
+    assert projection["sync_targets"] == []
 
+    state_before = state_path.read_bytes()
     preview = planning_reconcile(target=tmp_path, apply_safe_prune=True, dry_run=True)
 
-    assert preview["apply_result"]["synced_count"] == 1
+    assert preview["apply_result"]["synced_count"] == 0
     assert tomllib.loads(state_path.read_text(encoding="utf-8"))["todo"]["active_items"][0]["next_action"] == "Stale todo action."
 
     applied = planning_reconcile(target=tmp_path, apply_safe_prune=True)
 
-    assert applied["apply_result"]["synced_count"] == 1
+    assert applied["apply_result"]["synced_count"] == 0
     assert applied["active_projection_reconciliation"]["status"] == "clean"
-    state = tomllib.loads(state_path.read_text(encoding="utf-8"))
-    assert state["todo"]["active_items"][0]["next_action"] == "Use the fresher execplan action."
-    assert state["todo"]["active_items"][0]["why_now"] == "PR #2784 blocking review: stale canonical projection"
-    assert state["todo"]["active_items"][0]["proof"] == "PR #2784 package repair and exact-head CI passed"
-    assert state["todo"]["active_items"][0]["phase"] == "validation"
-    assert state["todo"]["active_items"][0]["owner_revision"] == "4"
+    assert state_path.read_bytes() == state_before
 
 
 def test_planning_cli_reconcile_outputs_provider_agnostic_state(tmp_path: Path, capsys) -> None:

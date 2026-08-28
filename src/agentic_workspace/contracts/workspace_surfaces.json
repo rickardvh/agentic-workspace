@@ -48,7 +48,6 @@
       ".agentic-workspace/memory/repo/index.md"
     ],
     "planning": [
-      ".agentic-workspace/planning/state.toml",
       ".agentic-workspace/planning/agent-manifest.json",
       ".agentic-workspace/planning/execplans/README.md",
       ".agentic-workspace/planning/execplans/TEMPLATE.plan.json"
@@ -84,13 +83,6 @@
       "kind": "installed-local",
       "profiles": ["necessary-surfaces", "full-mirror"],
       "modules": []
-    },
-    {
-      "source": ".agentic-workspace/OWNERSHIP.toml",
-      "target": ".agentic-workspace/planning/state.toml",
-      "kind": "installed-local",
-      "profiles": ["necessary-surfaces", "full-mirror"],
-      "modules": ["planning"]
     },
     {
       "source": ".agentic-workspace/OWNERSHIP.toml",
@@ -166,7 +158,7 @@
     },
     {
       "source": ".agentic-workspace/fallback/no-cli-policy.json",
-      "target": ".agentic-workspace/planning/state.toml",
+      "target": ".agentic-workspace/planning/execplans/README.md",
       "kind": "installed-local",
       "profiles": ["necessary-surfaces", "full-mirror"],
       "modules": ["planning"]
@@ -213,13 +205,6 @@
       "kind": "installed-local",
       "profiles": ["necessary-surfaces", "full-mirror"],
       "modules": []
-    },
-    {
-      "source": ".agentic-workspace/docs/module-map.md",
-      "target": ".agentic-workspace/planning/state.toml",
-      "kind": "installed-local",
-      "profiles": ["necessary-surfaces", "full-mirror"],
-      "modules": ["planning"]
     },
     {
       "source": ".agentic-workspace/docs/module-map.md",
