@@ -1081,6 +1081,18 @@
       "storage_class": "diagnostic-fixture"
     },
     {
+      "checked_in_justification": "Maintainer-reviewed promotion replays and authority controls prove stronger-owner selection and provisional subtraction without becoming runtime authority.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "notes": "The focused promotion test validates deterministic replay, aid staging, authority controls, and subtraction posture.",
+      "owner": "workspace-evaluation",
+      "pattern": "docs/reviews/consequential-learning-promotion-2812.json",
+      "schema_or_validator": "validator: uv run pytest tests/test_learning_promotion.py::test_deterministic_promotion_selects_existing_operation_and_replay_no_longer_needs_lesson",
+      "status": "typed-validator-backed",
+      "storage_class": "diagnostic-fixture"
+    },
+    {
       "checked_in_justification": "Maintainer-reviewed dogfooding evidence used to prioritize product work; not package runtime authority.",
       "editable_by_agents": true,
       "format": "json",

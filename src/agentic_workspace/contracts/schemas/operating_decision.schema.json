@@ -76,6 +76,10 @@
       "type": "object",
       "description": "Sparse cross-owner later-outcome attribution joined through each destination's existing revision identity and the canonical operating-decision identity; omitted when no later outcome applies."
     },
+    "learning_promotion": {
+      "type": "object",
+      "description": "Evidence-, authority-, latitude-, revision-, and proof-bounded selection of existing stronger-owner operations plus post-promotion subtraction; omitted on quiet paths."
+    },
     "bounded_adaptations": {
       "type": "object",
       "description": "Deduplicated currentness or missing-coverage candidates derived from existing improvement evidence and routed to canonical owner operations or explicit decisions."

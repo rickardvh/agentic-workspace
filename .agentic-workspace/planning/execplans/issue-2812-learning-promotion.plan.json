@@ -1,0 +1,92 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2812-learning-promotion",
+  "title": "Promote proven learning into stronger repo-native owners",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "implementation",
+  "revision": 2,
+  "intent": {
+    "outcome": "Proven learning selects one stronger existing repo-native owner operation under evidence, authority, latitude, revision, and cost constraints; completed promotion proves the owner and subtracts duplicate provisional residue while unsafe or target-specific cases remain correctly bounded.",
+    "non_goals": [
+      "Create a universal promotion store, mutation command, or policy engine.",
+      "Authorize canonical mutation from recurrence count, one success, or agent inference alone.",
+      "Delete durable anti-rediscovery rationale whose value survives stronger-owner promotion."
+    ]
+  },
+  "parent": {
+    "owner_id": "issue-2809-consequential-learning",
+    "contribution": "Move evidenced learning out of provisional context into the strongest existing owner and subtract obsolete residue.",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "src/agentic_workspace/learning_promotion.py",
+      "src/agentic_workspace/operating_decision.py",
+      "src/agentic_workspace/contracts/schemas/operating_decision.schema.json",
+      "src/agentic_workspace/contracts/structured_file_inventory.json",
+      "tests/test_learning_promotion.py",
+      "docs/architecture/learning-promotion.md",
+      "docs/reviews/consequential-learning-promotion-2812.json"
+    ],
+    "effects": [
+      "Promotion decisions refer to existing target-specific operations and never invent a generic mutation surface.",
+      "Completed promotions require revision-bound proof and produce an explicit retain/shrink/stub/delete subtraction decision."
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected-local",
+      "owner": "issue-2812-learning-promotion"
+    },
+    "proof_posture": {
+      "state": "pending",
+      "refs": []
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    },
+    "delegation": {
+      "state": "recorded",
+      "route": "keep-local",
+      "reason": "Session policy explicitly prohibits spawning sub-agents; promotion builds sequentially on the same operating-decision contract."
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2812",
+      "label": "https://github.com/rickardvh/agentic-workspace/issues/2812",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Implement the promotion and subtraction compiler, compose it into operating decisions, and prove deterministic, procedural, human-authority, target-specific, durable-advisory, unsafe, and quiet cases.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Promote proven learning into stronger repo-native owners is implemented, validated, and closed out honestly."
+    ],
+    "requirements": [
+      "uv run --active pytest tests/test_learning_promotion.py tests/test_learning_effectiveness.py -q",
+      "make lint-workspace",
+      "make typecheck",
+      "make maintainer-surfaces"
+    ],
+    "refs": []
+  },
+  "continuation": {
+    "owner": "none",
+    "residual_intent": "none"
+  },
+  "specialist_contracts": [
+    {
+      "kind": "planning-delegation/v1",
+      "target": "planning://delegation/keep-local",
+      "revision": 1
+    }
+  ]
+}
