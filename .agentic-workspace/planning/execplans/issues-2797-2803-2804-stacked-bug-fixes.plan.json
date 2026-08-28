@@ -4,14 +4,14 @@
   "title": "Fix open proof and Planning bugs in a stacked PR series",
   "owner_level": "slice",
   "lifecycle": "live",
-  "phase": "implementation",
-  "revision": 5,
+  "phase": "verification",
+  "revision": 7,
   "canonical_core": {
     "requested_outcome": "Fix GitHub issues #2797, #2803, and #2804 completely and deliver them as three ordered pull requests.",
     "hard_constraints": "Preserve proof admission and freshness, make rejected proof publication residue-free, preserve Planning CAS and owner-conflict guards, and do not mutate unrelated reconciliation residue.",
     "agent_may_decide": "The narrowest compatible implementation, fixture structure, generated-surface update sequence, and exact stack branch names.",
     "escalate_when": "An issue cannot satisfy its acceptance criteria without weakening an existing guard or changing public behavior outside the three issue boundaries.",
-    "next_action": "Publish #2803 from codex/2803-proof-receipt-atomicity against codex/2797-proof-route-invocation, then implement #2804 on the third stack branch.",
+    "next_action": "Publish PR 3 against codex/2803-proof-receipt-atomicity, then resolve stack check and review findings.",
     "proof_expectations": [
       "Installed-host route repair completes without a source-checkout script.",
       "Rejected and interrupted proof receipt publication leaves no persistent semantic residue.",
@@ -55,7 +55,7 @@
     ],
     "effects": [
       "PR 1 fixes #2797 from master as GitHub PR #2815.",
-      "PR 2 fixes #2803 and targets PR 1's head branch.",
+      "PR 2 fixes #2803 as GitHub PR #2816 and targets PR 1's head branch.",
       "PR 3 fixes #2804 and targets PR 2's head branch."
     ]
   },
@@ -65,7 +65,7 @@
       "owner": "issues-2797-2803-2804-stacked-bug-fixes"
     },
     "proof_posture": {
-      "state": "partial-passed",
+      "state": "passed-awaiting-pr-checks",
       "refs": [
         "#2797 installed-host apply/receipt/retirement regression passed",
         "14 focused route-repair tests passed",
@@ -73,7 +73,10 @@
         "#2803 whole-surface rejection, stale-subject, rollback, and idempotent-retry tests passed",
         "#2803 receipt suite: 12 passed; proof-route repair suite: 13 passed",
         "workspace, memory, planning, and verification typechecks passed",
-        "contract tooling and structured inventory passed"
+        "contract tooling and structured inventory passed",
+        "#2804 target-authority transaction suite: 3 passed; full branch-safety suite: 35 passed",
+        "Planning/root regression suite with #2804 route projection: 501 passed",
+        "generated external consumer and command-package conformance: passed"
       ]
     },
     "external_posture": {
@@ -86,7 +89,7 @@
     {"kind": "issue", "target": "2803", "label": "GitHub #2803", "role": "stack-pr-2", "locator": "https://github.com/rickardvh/agentic-workspace/issues/2803"},
     {"kind": "issue", "target": "2804", "label": "GitHub #2804", "role": "stack-pr-3", "locator": "https://github.com/rickardvh/agentic-workspace/issues/2804"}
   ],
-  "next_action": "Publish #2803 from codex/2803-proof-receipt-atomicity against codex/2797-proof-route-invocation, then branch #2804 from that head.",
+  "next_action": "Publish PR 3 against codex/2803-proof-receipt-atomicity, then resolve stack check and review findings.",
   "blockers": [],
   "proof": {
     "claims": [
@@ -102,6 +105,7 @@
     "refs": [
       "#2797 installed-host guarded repair lifecycle: passed",
       "GitHub PR #2815 published from codex/2797-proof-route-invocation against master",
+      "GitHub PR #2816 published from codex/2803-proof-receipt-atomicity against codex/2797-proof-route-invocation",
       "route-repair focused suite: 14 passed",
       "changed-selector proof suite: 37 passed",
       "Planning/root regression suite: 500 passed",
@@ -109,7 +113,10 @@
       "#2797 proof-route repair compatibility suite: 13 passed",
       "generated command package conformance: passed",
       "make typecheck: passed",
-      "contract tooling and structured inventory: passed"
+      "contract tooling and structured inventory: passed",
+      "#2804 branch-safety suite: 35 passed",
+      "Planning/root regression suite after #2804: 501 passed",
+      "external consumer profile tests: 19 passed"
     ]
   },
   "intent_continuity": {

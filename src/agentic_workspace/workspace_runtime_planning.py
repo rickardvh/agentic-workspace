@@ -1736,6 +1736,13 @@ def _planning_route_decision_payload(
         decision["reason_codes"] = [*decision["reason_codes"], "current-reconciliation-proposal"]
         decision["reconciliation_proposal"] = proposal
     elif proposal.get("status") == "stale":
+        stale_next_packet = _route_decision_next_action_packet(
+            route_evidence={**route_evidence, "reconciliation_proposal": proposal},
+            task_relation=task_relation,
+            owner_posture="reconciliation-stale",
+            required_transition="reconcile",
+            planning_revision=planning_revision,
+        )
         decision.update(
             {
                 "owner_posture": "reconciliation-stale",
@@ -1743,10 +1750,15 @@ def _planning_route_decision_payload(
                 "implementation_allowed": False,
                 "mutation_authority": "none",
                 "state_update_policy": "fresh-reconciliation-proposal-required",
+                "next_safe_action": stale_next_packet,
+                "action_identity": _as_dict(_as_dict(stale_next_packet.get("operation_invocation")).get("input_identity")),
             }
         )
         decision["reason_codes"] = [*decision["reason_codes"], "stale-reconciliation-proposal"]
         decision["reconciliation_proposal"] = proposal
+    reconciliation_transaction = _as_dict(route_evidence.get("reconciliation_transaction"))
+    if reconciliation_transaction.get("status") not in {"", "absent"}:
+        decision["reconciliation_transaction"] = reconciliation_transaction
     identity_basis = {
         key: decision.get(key)
         for key in (
@@ -1757,6 +1769,7 @@ def _planning_route_decision_payload(
             "structured_inputs",
             "mutation_baseline_admission",
             "reconciliation_proposal",
+            "reconciliation_transaction",
             "action_identity",
             "blocked_claims",
             "state_update_policy",
@@ -1966,6 +1979,21 @@ def _route_decision_next_action_packet(
         proof = "review and apply the revision-bound reconciliation proposal; external completion alone cannot close intent"
         required_inputs = ["selected owner", "current external completion evidence", "local proof posture", "Planning revision"]
         risk = "external-owner-state-changed"
+    elif (
+        required_transition == "reconcile"
+        and _as_dict(route_evidence.get("reconciliation_transaction")).get("status") == "preview-available"
+    ):
+        transaction = _as_dict(route_evidence.get("reconciliation_transaction"))
+        action = "compile-planning-reconciliation-proposal"
+        summary = "Compile the exact bounded target-authority reconciliation transaction before applying stale integration proposals."
+        command = str(transaction.get("preview_command") or "")
+        proof = "review and apply the revision-bound transaction; preserve unrelated owners, relations, local selection, and human intent"
+        required_inputs = [
+            *[f"affected owner: {item}" for item in _as_list(transaction.get("affected_owner_refs"))],
+            f"target authority revision: {transaction.get('current_target_authority_revision')}",
+            "Planning revision",
+        ]
+        risk = "target-authority-reconciliation-stale"
     elif required_transition == "reconcile":
         action = "refresh-planning-reconciliation-proposal"
         summary = "Refresh the Planning reconciliation proposal before applying a transition."
@@ -3310,6 +3338,47 @@ def _current_reconciliation_proposal(*, target_root: Path, planning_revision: di
     return {"status": "stale", "freshness": "stale", "proposal_id": stale_proposal_id} if stale_proposal_id else {"status": "absent"}
 
 
+def _compiled_target_authority_reconciliation(*, target_root: Path) -> dict[str, Any]:
+    """Project a bounded stale-target transaction without persisting it."""
+    proposal_root = target_root / ".agentic-workspace/planning/integration-proposals"
+    if not proposal_root.is_dir() or not any(proposal_root.glob("*.integration-proposal.json")):
+        return {"status": "absent"}
+    try:
+        from repo_planning_bootstrap.installer import planning_reconcile
+
+        transaction = _as_dict(planning_reconcile(target=target_root, preview=True, dry_run=True))
+    except Exception as exc:  # pragma: no cover - defensive package boundary.
+        return {
+            "status": "unavailable",
+            "reason": "target-authority-reconciliation-preview-unavailable",
+            "error": str(exc),
+        }
+    if transaction.get("transaction_class") != "target-authority-integration":
+        return {"status": "absent"}
+    if transaction.get("status") != "preview":
+        return {
+            "status": str(transaction.get("status") or "blocked"),
+            "reason": str(transaction.get("reason") or "target-authority-reconciliation-blocked"),
+            "affected_owner_refs": [str(item) for item in _as_list(transaction.get("affected_owner_refs"))],
+            "target_prerequisite": str(transaction.get("target_prerequisite") or ""),
+        }
+    proposal = _as_dict(transaction.get("proposal"))
+    source = _as_dict(proposal.get("source"))
+    return {
+        "status": "preview-available",
+        "transaction_class": "target-authority-integration",
+        "proposal_id": str(proposal.get("proposal_id") or ""),
+        "preview_command": str(proposal.get("preview_command") or ""),
+        "apply_command": str(proposal.get("apply_command") or ""),
+        "planning_revision": str(source.get("planning_revision") or ""),
+        "current_target_authority_revision": str(proposal.get("current_target_authority_revision") or ""),
+        "affected_owner_refs": [str(item) for item in _as_list(proposal.get("affected_owner_refs"))],
+        "eligible_proposals": [str(item) for item in _as_list(proposal.get("eligible_proposals"))],
+        "refreshed_proposals": [str(item) for item in _as_list(proposal.get("refreshed_proposals"))],
+        "operations": [copy.deepcopy(item) for item in _as_list(proposal.get("operations")) if isinstance(item, dict)],
+    }
+
+
 def _bounded_reflection_reporting_payload(*, task_text: str | None) -> dict[str, Any]:
     text = " ".join((task_text or "").lower().split())
     if not text:
@@ -3697,6 +3766,7 @@ def _planning_safety_gate_payload(
         path_classification=path_classification,
     )
     reconciliation_proposal = _current_reconciliation_proposal(target_root=target_root, planning_revision=planning_revision)
+    reconciliation_transaction = _compiled_target_authority_reconciliation(target_root=target_root)
     external_reconciliation = _active_owner_external_reconciliation(
         target_root=target_root,
         active_summary=active_summary,
@@ -3707,7 +3777,10 @@ def _planning_safety_gate_payload(
         **route_evidence,
         "admitted_external_observation": external_reconciliation,
         "external_refresh_command": str(external_reconciliation.get("refresh_command") or ""),
-        "reconciliation_preview_command": str(external_reconciliation.get("reconcile_command") or ""),
+        "reconciliation_preview_command": str(
+            reconciliation_transaction.get("preview_command") or external_reconciliation.get("reconcile_command") or ""
+        ),
+        "reconciliation_transaction": reconciliation_transaction,
         **_structured_route_inputs(
             target_root=target_root,
             active_summary=active_summary,
@@ -3724,6 +3797,10 @@ def _planning_safety_gate_payload(
         route_evidence["owner_posture"] = (
             "externally-stale" if external_reconciliation.get("status") == "refresh-required" else "external-conflict"
         )
+        route_evidence["required_transition"] = "reconcile"
+    if reconciliation_transaction.get("status") == "preview-available":
+        route_evidence["status"] = "target-authority-reconciliation-stale"
+        route_evidence["owner_posture"] = "reconciliation-stale"
         route_evidence["required_transition"] = "reconcile"
     route_decision = _planning_route_decision_payload(
         route_evidence,

@@ -6,7 +6,7 @@
     "command": "reconcile",
     "format_option": "format"
   },
-  "summary": "Report planning reconciliation state and optionally apply exact safe-to-prune cleanup targets.",
+  "summary": "Report planning reconciliation state and compile stale target-authority proposals into one exact preview/apply transaction.",
   "classification": "lifecycle-mutation",
   "inputs": [
     {
@@ -59,13 +59,13 @@
       "name": "preview",
       "source": "cli-option",
       "required": false,
-      "description": "Compile and persist a reusable reconciliation proposal without mutating Planning state."
+      "description": "Compile and persist one bounded reusable proposal, including target-authority CAS refresh for mechanically stale integration proposals, without mutating authoritative Planning state."
     },
     {
       "name": "apply",
       "source": "cli-option",
       "required": false,
-      "description": "Apply a previously previewed reconciliation proposal."
+      "description": "Apply a previously previewed reconciliation proposal as one exact compare-and-swap transaction."
     },
     {
       "name": "proposal",
@@ -135,7 +135,7 @@
     {
       "surface": ".agentic-workspace/planning/integration-{proposals,receipts}/ and affected owner records",
       "required": false,
-      "when": "--apply-pending-integrations applies eligible pending proposals as one target transaction"
+      "when": "--apply-pending-integrations or --apply of a target-authority preview applies eligible pending proposals as one target transaction; the owner records, refreshed proposals, integration receipts, and reconciliation receipt publish atomically"
     },
     {
       "surface": ".agentic-workspace/planning/lanes/<lane>.lane.json and .agentic-workspace/planning/state.toml",
@@ -188,6 +188,8 @@
     "--apply-safe-prune must only mutate targets already present in cleanup_targets with safe_to_prune=true.",
     "--dry-run must not write repo state.",
     "--apply requires the exact proposal id and expected Planning revision returned by preview.",
+    "Target-authority previews preserve unrelated owners, relations, worktree-local selection, and human-authored intent while refreshing only CAS-stale proposals whose semantic subjects remain current.",
+    "Target-authority apply fails closed for same-owner or semantic conflicts; disjoint eligible proposals remain independently applicable.",
     "--apply-issue-relation-reconcile requires the current relation revision for semantic edits.",
     "--apply-issue-relation-migration preserves membership, priority, dependencies, rationale, and maturity before demoting duplicate legacy fields.",
     "--apply-pending-integrations applies the eligible disjoint owner set atomically on an admitted target branch, preserves stale unrelated proposals as explicit skips, and fails closed for same-owner overlap.",
@@ -201,6 +203,7 @@
     "proposal/apply tests cover revision guards, idempotence, and transaction rollback",
     "issue-relation tests cover supported conflict repair and legacy authority migration",
     "pending integration tests cover one-invocation target apply, stale disjoint skips, same-owner failure, and transaction rollback",
+    "target-authority reconciliation tests cover bounded preview, exact regeneration after CAS drift, semantic conflict isolation, atomic publication, preserved owner-scoped state, and idempotent replay",
     "provider-neutral external-observation tests cover stale action refresh plus ambiguous-completion non-authority",
     "workspace CLI tests cover missing-source block and exact source restore through the root planning reconcile front door"
   ],
