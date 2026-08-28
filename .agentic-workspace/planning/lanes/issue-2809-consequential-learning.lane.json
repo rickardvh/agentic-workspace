@@ -1,0 +1,81 @@
+{
+  "kind": "planning-lane/v1",
+  "id": "issue-2809-consequential-learning",
+  "title": "Make consequential outcomes teach future work by construction",
+  "status": "active",
+  "parent_decomposition_ref": "",
+  "lane_outcome": "Consequential outcome evidence becomes bounded future decision value, later outcomes correct it, and proven learning moves to the strongest existing owner without creating a parallel learning store.",
+  "purpose_for_parent": "Close GitHub lane #2809 through its ordered producer, effectiveness, promotion, and integration slices.",
+  "subsystems": [
+    "operating decision",
+    "reconciliation",
+    "Memory effectiveness",
+    "adaptation and improvement",
+    "Evaluation"
+  ],
+  "technical_strategy": "Reuse source-owned outcome evidence, future_context_signals, reconciliation dispositions, Memory effectiveness, improvement pressure, and existing promotion owners. Add only generic composition contracts needed to carry bounded semantic learning across those owners.",
+  "technology_choices": [
+    "Provider-agnostic Python value compilers",
+    "Existing operating-decision and reconciliation JSON contracts",
+    "Deterministic fixtures plus maintained Evaluation evidence"
+  ],
+  "slice_sequence": [
+    {
+      "id": "issue-2810-learning-candidates",
+      "title": "Issue 2810 Learning Candidates",
+      "status": "active",
+      "execplan_ref": ".agentic-workspace/planning/execplans/issue-2810-learning-candidates.plan.json",
+      "depends_on": [],
+      "purpose_for_lane": "Produce bounded heterogeneous future-learning candidates through existing reconciliation custody."
+    },
+    {
+      "id": "issue-2811-learning-effectiveness",
+      "title": "Make learned lessons self-correct from later outcomes",
+      "status": "planned",
+      "execplan_ref": ".agentic-workspace/planning/execplans/issue-2811-learning-effectiveness.plan.json",
+      "depends_on": ["issue-2810-learning-candidates"],
+      "purpose_for_lane": "Attribute later relevant outcomes and refine routing or lesson quality."
+    },
+    {
+      "id": "issue-2812-learning-promotion",
+      "title": "Promote proven learning into stronger repo-native owners",
+      "status": "planned",
+      "execplan_ref": ".agentic-workspace/planning/execplans/issue-2812-learning-promotion.plan.json",
+      "depends_on": ["issue-2811-learning-effectiveness"],
+      "purpose_for_lane": "Promote proven learning and subtract provisional residue."
+    },
+    {
+      "id": "issue-2813-learning-integration-gate",
+      "title": "Prove AW learns from mistakes and shortcuts in ordinary work",
+      "status": "planned",
+      "execplan_ref": ".agentic-workspace/planning/execplans/issue-2813-learning-integration-gate.plan.json",
+      "depends_on": ["issue-2812-learning-promotion"],
+      "purpose_for_lane": "Run the heterogeneous integration and Evaluation gate."
+    }
+  ],
+  "current_slice": "issue-2810-learning-candidates",
+  "acceptance_boundary": "All four GitHub children are satisfied, heterogeneous sources traverse the full learning loop, current Evaluation concludes satisfied, no-signal controls stay quiet, and subtraction review finds no parallel store or phase.",
+  "proof_strategy": "Each stacked PR proves one owner boundary; the final gate runs heterogeneous before/learning/later-work fixtures, authority and no-signal controls, package validation, and criteria-by-criteria review.",
+  "proof_aggregation": {
+    "status": "not-started",
+    "evidence": [],
+    "known_gaps": []
+  },
+  "residual_lane_work": "not evaluated",
+  "lane_to_epic_contribution": "not evaluated",
+  "parent_close_permission": "not-evaluated",
+  "closeout_state": {
+    "status": "open",
+    "summary": "",
+    "residual_work": "",
+    "next_owner": ""
+  },
+  "references": [
+    "https://github.com/rickardvh/agentic-workspace/issues/2809",
+    "https://github.com/rickardvh/agentic-workspace/issues/2810",
+    "https://github.com/rickardvh/agentic-workspace/issues/2811",
+    "https://github.com/rickardvh/agentic-workspace/issues/2812",
+    "https://github.com/rickardvh/agentic-workspace/issues/2813"
+  ],
+  "notes": "Stack order follows the parent issue: candidate production, later-outcome correction, stronger-owner promotion, then integration/evaluation."
+}
