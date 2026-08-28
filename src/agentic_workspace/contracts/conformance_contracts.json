@@ -86,6 +86,12 @@
     },
     {
       "adapter_kind": "process",
+      "id": "config.policy-apply.process",
+      "operation_id": "config.policy-apply",
+      "path": "conformance/config.policy-apply.process.json"
+    },
+    {
+      "adapter_kind": "process",
       "id": "config.selected-text.process",
       "operation_id": "config.report",
       "path": "conformance/config.selected-text.process.json"

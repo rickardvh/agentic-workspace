@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Introduce the self-configuration startup contract and synchronized support-bearing guidance."
+issues = [2768]

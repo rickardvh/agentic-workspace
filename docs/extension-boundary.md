@@ -29,7 +29,7 @@ For an ordinary capability, the contract should reduce toward:
 - **identity / compatibility** — what capability this is, whether it is available, and whether core can admit it safely;
 - **ownership** — which state/resources/roots/effects belong to it;
 - **relevance** — bounded facts that make the capability worth considering for the current task or changed surface;
-- **capabilities** — source-owned resources/context, lazily discoverable procedures/skills, and typed operations the module provides;
+- **capabilities** — source-owned resources/context, lazily discoverable procedures/skills, typed operations, and bounded semantic setup concerns the module provides;
 - **result semantics** — bounded state/evidence/blocker/residue/continuation/effect meaning returned by those operations or observations.
 
 Dependencies/conflicts may compose with compatibility/ownership where required.
@@ -51,6 +51,10 @@ They should increasingly exercise the same generic capability path expected of i
 ### Independent modules
 
 Independent modules can publish an `agentic_workspace.modules` entry point whose value is an `agentic-workspace/module-capability/v2` descriptor. Core discovers and validates that descriptor without learning the module's identity, derives its bounded `resolve -> act -> reconcile` participation, and admits declared typed operations through the same effect and ownership checks used by first-party contributions.
+
+An enabled independent module may also declare `module-setup-concerns-v1` concerns. Workspace handles them generically by stable identity plus semantic/source revision; core does not branch on module names. Only a new or changed applicable concern enters setup, while unchanged, disabled, irrelevant, or cosmetically changed capability descriptions stay out of ordinary startup pressure. Selecting or upgrading the module remains an explicit external owner action.
+
+Those concerns may carry a bounded `source_obligation` for host-repository knowledge required by the capability. This adds setup/currentness pressure and proportional claim limits, but it does not grant modules authority to invent, copy, or silently satisfy repository policy.
 
 The public contribution contract remains narrower than the full internal registry/runtime vocabulary. Independent authors should not assume that lifecycle hooks, posture fragments, workflow phases, renderer packets, report slots, callbacks, or internal descriptor fields are stable API.
 

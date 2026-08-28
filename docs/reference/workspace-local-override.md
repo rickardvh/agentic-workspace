@@ -38,6 +38,12 @@ Machine-local override schema for invocation preferences, delegation capabilitie
 | `delegation.manual_transport_policy` | enum `"disabled"`, `"allowed"`, `"required-when-no-automatic-method"` | no | `"allowed"` | Whether a human may carry a prepared assignment packet when no automatic execution method is available. |  |  |
 | `clarification` | object | no |  | Machine-local clarification control for when agents should stop for human input instead of guessing or widening scope. |  |  |
 | `clarification.mode` | enum `"ask-first"`, `"suggest"`, `"auto-continue"` | no | `"suggest"` | Local control mode for clarification: stop and ask before proceeding when intent is unclear, surface the ask-human option without forcing it, or continue with the best bounded interpretation unless a hard blocker is present. |  |  |
+| `setup` | object | no |  | Machine-local setup prompt preference and compact revision-bound continuation identity; canonical applied policy remains with its owning surface. |  |  |
+| `setup.prompt_disposition` | enum `"active"`, `"deferred"`, `"optional-suppressed"` | no |  | Local user disposition for unresolved setup prompting. It never changes repository configuration freshness. |  |  |
+| `setup.setup_identity` | string | no |  | Bootstrap readiness identity to which the local disposition applies. |  |  |
+| `setup.context_revision` | string | no |  | Revision of the configuration, capability, and bounded source context used to derive the unresolved concerns. |  |  |
+| `setup.unresolved_concerns` | ref `#/$defs/string_list` | no |  | Compact unresolved setup concern identities retained for transcript-free resume. |  |  |
+| `setup.required_concerns` | ref `#/$defs/string_list` | no |  | Subset whose affected actions remain gated even when optional prompting is deferred or suppressed. |  |  |
 | `local_memory` | object | no |  | Machine-local memory opt-in and path configuration. |  |  |
 | `local_memory.enabled` | boolean | no |  | Whether this machine may use local-only repo memory in addition to checked-in shared Memory. |  |  |
 | `local_memory.path` | string | no |  | Repository-relative path for local-only memory; it must stay ignored and non-authoritative. |  |  |

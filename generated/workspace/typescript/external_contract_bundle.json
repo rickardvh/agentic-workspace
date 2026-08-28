@@ -1,7 +1,7 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:55d01748b74ada881b8bac761c873b59bbdc8cfafe33f642189df402c5c2fc6e",
+  "profile_fingerprint": "sha256:a0c0699a53b80e165b05df6daf10f001f6a57a7d91fe4df494fa5d2ca4c67ff7",
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",
@@ -5468,8 +5468,8 @@
     "assignment.admit": {
       "identity": "assignment.admit",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:ad9fb25e8a00291d2fbdbe15002cb1d6f8439251488b771683fc60ca3ccdf085",
-      "compatibility_fingerprint": "sha256:100cb363c3a13681bea3e3db57b7f31159a2a19770240d958bcc46eb16a1c428",
+      "fingerprint": "sha256:9948f22b100c61f9c1b1e0d40c2017fcfbf0a0783072963c2e10893277ef1b06",
+      "compatibility_fingerprint": "sha256:d6bd4450571837f81301cb32ee120de89b8bd94e6f56f269c11f5e16c80bfbb9",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -5995,14 +5995,8 @@
                 "target": {
                   "type": "string"
                 },
-                "task": {
-                  "type": "string"
-                },
                 "target_name": {
                   "minLength": 1,
-                  "type": "string"
-                },
-                "task_proof_receipt_ref": {
                   "type": "string"
                 },
                 "transport": {
@@ -6129,8 +6123,8 @@
     "assignment.cleanup": {
       "identity": "assignment.cleanup",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:3d5c4560657758017debac973e24603918444649b9e1da4b0fb6ce7a27a325f2",
-      "compatibility_fingerprint": "sha256:8e628e54b4b801f32b8338a4a33851d95febd96c4700a5fc9ee2795dc3242e12",
+      "fingerprint": "sha256:1abb9fdb91ad91539b791efe2b0870908a05fa7a2df90e4a4b31a13a044c55d0",
+      "compatibility_fingerprint": "sha256:479d569da5002587dd405cc84a2021e524eb09f66e49fb2c1f7b1b1e0e20497e",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -6598,14 +6592,8 @@
                 "target": {
                   "type": "string"
                 },
-                "task": {
-                  "type": "string"
-                },
                 "target_name": {
                   "minLength": 1,
-                  "type": "string"
-                },
-                "task_proof_receipt_ref": {
                   "type": "string"
                 },
                 "transport": {
@@ -6732,8 +6720,8 @@
     "assignment.close": {
       "identity": "assignment.close",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:577ae7cefcc270cfe3c2a131f9d84c72fdc8cae68115470cbdef2fd96d7cd0f6",
-      "compatibility_fingerprint": "sha256:ae5a46f4d6d4c870516b2b775c1034917c05d67bb26a9ff220c348d6cd1fd063",
+      "fingerprint": "sha256:8ebc340ad103c98c2ae756fd5c6a57586272afc3d1e844468cfb27840632e78d",
+      "compatibility_fingerprint": "sha256:c8af64feb3321734529db300a8e4bb2d2aace04d34be6d3f0b77f4e72aa5eb62",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -6778,11 +6766,6 @@
           },
           {
             "name": "run_id",
-            "required": true,
-            "source": "cli-option"
-          },
-          {
-            "name": "task_proof_receipt_ref",
             "required": true,
             "source": "cli-option"
           },
@@ -6879,7 +6862,7 @@
         },
         "proof": [
           "assignment lifecycle tests prove export/import/admit/integrate/override fail-closed behavior and local artifact placement",
-          "assignment.close.process proves close fails closed without current integrated assignment and indexed task-proof authority",
+          "assignment.close.process",
           "generated external clients expose and negotiate the operation family as runtime-backed",
           "operation contract validates against operation.schema.json"
         ],
@@ -6918,7 +6901,7 @@
             "uses": "output.emit"
           }
         ],
-        "summary": "Close an integrated assignment run with producer-owned task proof and retire its checked-in Planning authority.",
+        "summary": "Close an integrated or intentionally rejected assignment run and retire its checked-in Planning authority.",
         "writes": [
           {
             "description": "transition records local disposable assignment/run artifacts derived from checked-in Planning authority",
@@ -7046,11 +7029,6 @@
             },
             {
               "name": "run_id",
-              "required": true,
-              "source": "cli-option"
-            },
-            {
-              "name": "task_proof_receipt_ref",
               "required": true,
               "source": "cli-option"
             },
@@ -7217,14 +7195,8 @@
                 "target": {
                   "type": "string"
                 },
-                "task": {
-                  "type": "string"
-                },
                 "target_name": {
                   "minLength": 1,
-                  "type": "string"
-                },
-                "task_proof_receipt_ref": {
                   "type": "string"
                 },
                 "transport": {
@@ -7351,8 +7323,8 @@
     "assignment.export": {
       "identity": "assignment.export",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:745da9695c46f4831a98a43e547859f3ab1794e4e48aeaca39112a010e403d35",
-      "compatibility_fingerprint": "sha256:4045b3a281311ec243e370d135037fb9b7ddbb82a0c58982922c8a913da7efff",
+      "fingerprint": "sha256:e8061311439663333aa3890ee497f671d02ae9ea840d2b415f4889c9f9d95f76",
+      "compatibility_fingerprint": "sha256:135171ad72f5f7d568a5ebb143fa3cdf0958fd15af0a31c833984a823e6920bc",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -7362,13 +7334,13 @@
         },
         "effects": {
           "destructive": false,
-          "idempotent": false,
+          "idempotent": true,
           "read_only": false,
           "requires_preflight_gate": false,
-          "writes_repo_state": true
+          "writes_repo_state": false
         },
         "guards": [
-          "Write run artifacts under .agentic-workspace/local/assignment-runs/; when no assignment id is supplied, also materialize only the live decision-derived Planning assignment and structural receipt.",
+          "Write only under .agentic-workspace/local/assignment-runs/.",
           "Import places returned work in received/awaiting-admission only; it does not prove, admit, integrate, or close.",
           "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
           "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade."
@@ -7387,12 +7359,12 @@
           },
           {
             "name": "assignment_id",
-            "required": false,
+            "required": true,
             "source": "cli-option"
           },
           {
             "name": "assignment_revision",
-            "required": false,
+            "required": true,
             "source": "cli-option"
           },
           {
@@ -7402,7 +7374,7 @@
           },
           {
             "name": "target_name",
-            "required": false,
+            "required": true,
             "source": "cli-option"
           },
           {
@@ -7449,16 +7421,6 @@
             "name": "dry_run",
             "required": false,
             "source": "cli-option"
-          },
-          {
-            "name": "task",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "changed",
-            "required": false,
-            "source": "cli-option"
           }
         ],
         "intent": "Provide the public adapter-neutral assignment/run lifecycle boundary for delegated execution, return admission, integration, cleanup, and scoped override.",
@@ -7492,7 +7454,7 @@
           ]
         },
         "locality": {
-          "network": "allowed",
+          "network": "forbidden",
           "outside_repo_writes": "forbidden",
           "requires_repo": true
         },
@@ -7544,12 +7506,6 @@
         ],
         "summary": "Prepare a durable assignment handoff packet and pasteable prompt from one assignment authority.",
         "writes": [
-          {
-            "description": "When no assignment id is supplied, export first materializes the live task-bound Planning assignment and structural identity receipt.",
-            "required": false,
-            "surface": ".agentic-workspace/planning/assignments/ and .agentic-workspace/proof/receipts/",
-            "when": "the live canonical assignment is not yet materialized"
-          },
           {
             "description": "transition records local disposable assignment/run artifacts derived from checked-in Planning authority",
             "required": true,
@@ -7660,12 +7616,12 @@
             },
             {
               "name": "assignment_id",
-              "required": false,
+              "required": true,
               "source": "cli-option"
             },
             {
               "name": "assignment_revision",
-              "required": false,
+              "required": true,
               "source": "cli-option"
             },
             {
@@ -7675,7 +7631,7 @@
             },
             {
               "name": "target_name",
-              "required": false,
+              "required": true,
               "source": "cli-option"
             },
             {
@@ -7722,16 +7678,6 @@
               "name": "dry_run",
               "required": false,
               "source": "cli-option"
-            },
-            {
-              "name": "task",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "changed",
-              "required": false,
-              "source": "cli-option"
             }
           ],
           "output": {
@@ -7740,13 +7686,13 @@
           },
           "effects": {
             "destructive": false,
-            "idempotent": false,
+            "idempotent": true,
             "read_only": false,
             "requires_preflight_gate": false,
-            "writes_repo_state": true
+            "writes_repo_state": false
           },
           "guards": [
-            "Write run artifacts under .agentic-workspace/local/assignment-runs/; when no assignment id is supplied, also materialize only the live decision-derived Planning assignment and structural receipt.",
+            "Write only under .agentic-workspace/local/assignment-runs/.",
             "Import places returned work in received/awaiting-admission only; it does not prove, admit, integrate, or close.",
             "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
             "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade."
@@ -7846,14 +7792,8 @@
                 "target": {
                   "type": "string"
                 },
-                "task": {
-                  "type": "string"
-                },
                 "target_name": {
                   "minLength": 1,
-                  "type": "string"
-                },
-                "task_proof_receipt_ref": {
                   "type": "string"
                 },
                 "transport": {
@@ -7980,8 +7920,8 @@
     "assignment.import": {
       "identity": "assignment.import",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:33628177dea0134bc92c718385ce836f071915f61e5dbe152d5da9e33403c368",
-      "compatibility_fingerprint": "sha256:f44eb008d46bd543db873ea3f19ec21daf86183690d6f36884fd85181dd83269",
+      "fingerprint": "sha256:d43be9fac0349e9ca0e40b79324f4fb23b0ee4c57189187049268752ee885c91",
+      "compatibility_fingerprint": "sha256:54baa4af8719f08a046a214feda6bfc5bf2dc03ec29f9e4a571bd1170e051631",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -8449,14 +8389,8 @@
                 "target": {
                   "type": "string"
                 },
-                "task": {
-                  "type": "string"
-                },
                 "target_name": {
                   "minLength": 1,
-                  "type": "string"
-                },
-                "task_proof_receipt_ref": {
                   "type": "string"
                 },
                 "transport": {
@@ -8583,8 +8517,8 @@
     "assignment.integrate": {
       "identity": "assignment.integrate",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:a6d9ab50dcf4523b99bd74fbd82e00e4eeb12fe91eb4a9c00ac78053a4b20928",
-      "compatibility_fingerprint": "sha256:5004ee59db012135c6b71594d664cad8ac37640c4aceac993dbe56e855bcb786",
+      "fingerprint": "sha256:9a75ecdb0630511d11a7bb1fd7652c1d3e01efe6f0fb85c0a377537d2fbea649",
+      "compatibility_fingerprint": "sha256:65f9b5cc258f69af9e3efaaf594d7648e3a28835576e5f9009baeaf9395905f9",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -9052,14 +8986,8 @@
                 "target": {
                   "type": "string"
                 },
-                "task": {
-                  "type": "string"
-                },
                 "target_name": {
                   "minLength": 1,
-                  "type": "string"
-                },
-                "task_proof_receipt_ref": {
                   "type": "string"
                 },
                 "transport": {
@@ -9186,8 +9114,8 @@
     "assignment.override": {
       "identity": "assignment.override",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:d48019e160fa198346f4de2e6e3e08b7210624d0d6a2a7b6872e9d33dd51d157",
-      "compatibility_fingerprint": "sha256:28f83957be2b1f6613426cb2a6ee5e8311e9a66b73c5441eee2e4974aea26ce1",
+      "fingerprint": "sha256:d8b60c1fa490ab2c61561437dead477407b09fd27cb931672d4a6c496049fc06",
+      "compatibility_fingerprint": "sha256:46109161b1faeb3863c9251a19c2f23e5363f57790bb2dcc9d3344bd9958e788",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -9655,14 +9583,8 @@
                 "target": {
                   "type": "string"
                 },
-                "task": {
-                  "type": "string"
-                },
                 "target_name": {
                   "minLength": 1,
-                  "type": "string"
-                },
-                "task_proof_receipt_ref": {
                   "type": "string"
                 },
                 "transport": {
@@ -9789,8 +9711,8 @@
     "assignment.reassign": {
       "identity": "assignment.reassign",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:afbf07cc823fe828f9565be9e67abddc9f3ff0683289f30db5654899d362fc46",
-      "compatibility_fingerprint": "sha256:3007778779503c3879c7e0c99d81bec916796b85de0ec72a8d25ed20de78e703",
+      "fingerprint": "sha256:c81646758b369cf43b944f15bfd537eeb41e6d2adf5f695cbb9c0e981665b966",
+      "compatibility_fingerprint": "sha256:036997e20081daf52bf9f0b30c965f0cc0617bb9ad5cfb751a0b3f92da8ef649",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -10258,14 +10180,8 @@
                 "target": {
                   "type": "string"
                 },
-                "task": {
-                  "type": "string"
-                },
                 "target_name": {
                   "minLength": 1,
-                  "type": "string"
-                },
-                "task_proof_receipt_ref": {
                   "type": "string"
                 },
                 "transport": {
@@ -10392,8 +10308,8 @@
     "assignment.reject": {
       "identity": "assignment.reject",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:12476ac7d23874e580b8e2536ad5f38542733be486b3e45c28d3eba2fc7f3d7c",
-      "compatibility_fingerprint": "sha256:7112cd25098c8882aec648c0e4e0eb6c4263408d5db01a22db6dcfdb6b1409c4",
+      "fingerprint": "sha256:dacba226eee4efe9aff523a60e757aab4f4a9568c4be3059221d09db1820f78f",
+      "compatibility_fingerprint": "sha256:2cfdf4b8cbc9c2f4479ca0d9b1ad137f632ce755e0962fc7656768330b3d1021",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -10861,14 +10777,8 @@
                 "target": {
                   "type": "string"
                 },
-                "task": {
-                  "type": "string"
-                },
                 "target_name": {
                   "minLength": 1,
-                  "type": "string"
-                },
-                "task_proof_receipt_ref": {
                   "type": "string"
                 },
                 "transport": {
@@ -10995,8 +10905,8 @@
     "assignment.repair": {
       "identity": "assignment.repair",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:3d56227a6d64c7169a2beaa92112b73cdeedfc3ca3d1e6b822886583b5a37dd3",
-      "compatibility_fingerprint": "sha256:669aa4ba847498251d4adebcf3df2da3b81926cba7a2434abc0748f6bc084615",
+      "fingerprint": "sha256:bef43cf64cbfb120cd0c49dc5c8538f348226f6a65c2fb0bf48359bbdba0dbcc",
+      "compatibility_fingerprint": "sha256:15838fff4323822a0596ef39ee1c84cd47ff051c81944ec5228dfe9cca35e254",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -11464,14 +11374,8 @@
                 "target": {
                   "type": "string"
                 },
-                "task": {
-                  "type": "string"
-                },
                 "target_name": {
                   "minLength": 1,
-                  "type": "string"
-                },
-                "task_proof_receipt_ref": {
                   "type": "string"
                 },
                 "transport": {
@@ -22915,17 +22819,9 @@
             "description": "Target repository path for the lifecycle operation.",
             "type": "string"
           },
-          "task": {
-            "description": "Full human intent bound into the canonical assignment identity.",
-            "type": "string"
-          },
           "target_name": {
             "description": "Named target or worker lane that receives the assignment packet.",
             "minLength": 1,
-            "type": "string"
-          },
-          "task_proof_receipt_ref": {
-            "description": "Repo-relative AW proof receipt whose assignment obligation must match the run being closed.",
             "type": "string"
           },
           "transport": {

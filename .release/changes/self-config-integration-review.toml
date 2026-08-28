@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Integrate the self-configuration lanes with reviewable lifecycle evidence and guidance."
+issues = [2773]

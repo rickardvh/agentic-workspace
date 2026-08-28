@@ -128,6 +128,7 @@ from agentic_workspace.workspace_runtime_core import (
     _selector_prevalidation_error,
     _selector_requests,
     _session_improvement_pressure_payload,
+    _setup_capability_freshness_revision,
     _sibling_repo_aw_freshness_payload,
     _start_profile_for_select,
     _start_tiny_payload_fast,
@@ -439,6 +440,11 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "workflow_sufficiency": payload.get("workflow_sufficiency"),
         **({"planning_safety_gate": payload["planning_safety_gate"]} if "planning_safety_gate" in payload else {}),
         **({"lane_shaping_gate": payload["lane_shaping_gate"]} if "lane_shaping_gate" in payload else {}),
+        **(
+            {"configuration_readiness": payload["configuration_readiness"]}
+            if isinstance(payload.get("configuration_readiness"), dict)
+            else {}
+        ),
         "package_boundary": payload["package_boundary"],
         "authority_markers": payload["authority_markers"][:1],
         "immediate_next_allowed_action": immediate,
@@ -2507,6 +2513,11 @@ def _ordinary_start_decision_payload(
         **({"owner": owner} if owner else {}),
         **({"attention": attention} if attention else {}),
         "detail_routes": detail_routes,
+        **(
+            {"configuration_readiness": copy.deepcopy(source_payload["configuration_readiness"])}
+            if isinstance(source_payload.get("configuration_readiness"), dict)
+            else {}
+        ),
         **({"bounded_external_effect": bounded_external_effect} if bounded_external_effect else {}),
     }
     projected = {
@@ -3469,6 +3480,10 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
         "task": str(task_text or ""),
         "changed": changed_paths,
         "external_freshness_required": os.environ.get("AW_PROJECTION_EXTERNAL_STATE", "").lower() in {"1", "true", "yes"},
+        "setup_capability_freshness_revision": _setup_capability_freshness_revision(
+            target_root=target_root,
+            selected_modules=list(config.enabled_modules),
+        ),
     }
     reuse_context: dict[str, Any] | None = None
     admitted_input: dict[str, Any] = {}
@@ -3522,7 +3537,13 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
                 revalidate_input_revisions=lambda: prepare_projection_reuse(
                     root=target_root,
                     operation="start",
-                    query=reuse_query,
+                    query={
+                        **reuse_query,
+                        "setup_capability_freshness_revision": _setup_capability_freshness_revision(
+                            target_root=target_root,
+                            selected_modules=list(config.enabled_modules),
+                        ),
+                    },
                     force_refresh=True,
                 ).get("decision_input_revisions", {}),
             ),

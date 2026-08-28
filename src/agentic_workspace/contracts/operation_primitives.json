@@ -225,6 +225,16 @@
       "taxonomy_tier": "tier-1-portable-codegen"
     },
     {
+      "conformance_ref": "config policy operation fixtures and generated public client parity",
+      "generic_behavior_audit": "A bounded package-domain mutation is preferable to a generic TOML patch primitive because authority, setup identity, and the admitted field inventory are workspace policy semantics.",
+      "id": "config.policy.apply",
+      "migration_path": "Retain as a package-domain owner unless the bounded config-policy decision contract becomes implementation-independent across unrelated packages.",
+      "summary": "Apply one authorised revision-bound shared or local workspace policy decision while preserving unrelated TOML source.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "workspace configuration owner",
+      "tier_reason": "Field authority, setup readiness identity, and shared/local config ownership are Agentic Workspace domain rules."
+    },
+    {
       "conformance_ref": "contract tooling and generated command package checks",
       "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed.",
       "id": "delegation.outcome.append",

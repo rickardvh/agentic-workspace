@@ -150,6 +150,13 @@
         "operations": {
           "$ref": "#/$defs/capability_list",
           "description": "Contract field for module.capabilities.operations."
+        },
+        "setup_concerns": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/setup_concern"
+          },
+          "description": "Bounded semantic setup concerns applicable only while this module is explicitly enabled. Declarations are read-only contributions; effects remain owned by their route."
         }
       },
       "additionalProperties": true,
@@ -242,9 +249,86 @@
           }
         }
       }
+    },
+    {
+      "if": {
+        "properties": {
+          "capabilities": {
+            "required": ["setup_concerns"],
+            "properties": {
+              "setup_concerns": {"minItems": 1}
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "compatibility": {
+            "properties": {
+              "required_capabilities": {
+                "contains": {"const": "module-setup-concerns-v1"}
+              }
+            }
+          }
+        }
+      }
     }
   ],
   "$defs": {
+    "setup_concern": {
+      "type": "object",
+      "required": ["id", "semantic_revision", "source_revision", "status", "materiality", "owner", "applicability", "route"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1, "description": "Stable semantic concern id within the owning module."},
+        "semantic_revision": {"type": "string", "minLength": 1, "description": "Changes only when the concern meaning or decision validity changes."},
+        "source_revision": {"type": "string", "minLength": 1, "description": "Current module-owned source revision used to derive status."},
+        "status": {"enum": ["satisfied", "inference-ready", "human-decision-required", "not-applicable"]},
+        "materiality": {"enum": ["recommended", "action-required"]},
+        "owner": {"type": "string", "minLength": 1, "description": "Canonical owner for any effect or decision."},
+        "applicability": {
+          "type": "object",
+          "required": ["kind"],
+          "properties": {"kind": {"const": "module-enabled"}},
+          "additionalProperties": false
+        },
+        "route": {
+          "type": "object",
+          "required": ["kind", "id"],
+          "properties": {
+            "kind": {"enum": ["detail", "skill", "operation", "human-decision"]},
+            "id": {"type": "string", "minLength": 1}
+          },
+          "additionalProperties": true
+        },
+        "question": {"type": "string", "minLength": 1},
+        "inference": {"type": "string", "minLength": 1},
+        "source_obligation": {
+          "type": "object",
+          "required": ["semantic_need", "source_class", "owner", "status", "candidates", "auto_bind_safe", "affected_claims", "continuation"],
+          "properties": {
+            "semantic_need": {"type": "string", "minLength": 1},
+            "source_class": {"type": "string", "minLength": 1},
+            "owner": {"type": "string", "minLength": 1},
+            "status": {"enum": ["satisfied", "candidate-existing", "missing", "ambiguous", "stale-or-incompatible", "insufficient-authority"]},
+            "candidates": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+            "current_source": {"type": "string"},
+            "auto_bind_safe": {"type": "boolean"},
+            "affected_claims": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+            "continuation": {
+              "type": "object",
+              "required": ["kind", "id"],
+              "properties": {
+                "kind": {"enum": ["bind-existing", "create-source", "enrich-source", "human-decision", "disable-or-narrow", "defer"]},
+                "id": {"type": "string", "minLength": 1}
+              },
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
     "fact": {
       "type": "object",
       "required": ["id", "type", "value", "source"],

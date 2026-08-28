@@ -4035,6 +4035,46 @@
       ]
     },
     {
+      "audience": "advanced_host_repo",
+      "classification_note": "revision-bound application of an authorised bounded workspace policy decision",
+      "help": "Apply one structured shared or local workspace policy decision without replacing unrelated configuration.",
+      "mutates_state": true,
+      "name": "config-policy",
+      "options": [
+        {
+          "flags": ["--target"],
+          "help": "Optional repository path containing the owned config surface.",
+          "name": "target"
+        },
+        {
+          "flags": ["--decision-json"],
+          "help": "Authorised agentic-workspace/config-policy-decision/v1 JSON object.",
+          "name": "decision_json",
+          "required": true
+        },
+        {
+          "flags": ["--expect-config-revision"],
+          "help": "Exact sha256 revision reported for the selected shared or local config surface.",
+          "name": "expect_config_revision",
+          "required": true
+        },
+        {
+          "flags": ["--expect-setup-identity"],
+          "help": "Exact setup readiness identity against which the decision was made.",
+          "name": "expect_setup_identity",
+          "required": true
+        },
+        {
+          "action": "store_true",
+          "flags": ["--dry-run"],
+          "help": "Validate and preview the bounded policy effects without writing.",
+          "name": "dry_run"
+        }
+      ],
+      "role": "core_context_router",
+      "uses_option_groups": ["format"]
+    },
+    {
       "audience": "ordinary_host_repo",
       "classification_note": "compiled system-intent declaration and sync route",
       "help": "Show or refresh the workspace-owned compiled system-intent declaration.",

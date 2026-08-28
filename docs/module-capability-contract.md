@@ -6,13 +6,13 @@ The versioned public contract is `agentic-workspace/module-capability/v2`, regis
 
 ## Author-facing shape
 
-A module declares five things:
+A module declares six things:
 
 1. `name`, `description`, and `compatibility`: stable identity plus the reader epoch and required generic capabilities.
 2. `ownership`: module-owned roots and effect classes, plus explicit authority the module cannot acquire.
 3. `relevance`: bounded task terms and path prefixes that decide whether the contribution belongs in the current contract.
 4. `facts`: optional typed, source-owned, revision/currentness-bound values that existing instruction clauses may reference. Modules define values, not predicate or effect operators.
-5. `capabilities`: optional `resources`, `skills`, and typed `operations`. Omit dimensions the module does not use.
+5. `capabilities`: optional `resources`, `skills`, typed `operations`, and semantic `setup_concerns`. Omit dimensions the module does not use.
 6. `result_semantics`: the result schema, guaranteed fields, effect fields, and warning fields the kernel may reconcile.
 
 Dependencies, conflicts, and selection rank are optional. Unknown additive metadata is allowed. Unknown required capabilities and newer reader epochs fail closed.
@@ -26,7 +26,7 @@ def module_provider():
             "description": "Read bounded build signals.",
             "compatibility": {
                 "reader_epoch": 1,
-                "required_capabilities": ["module-resources-v1", "module-facts-v1"],
+                "required_capabilities": ["module-resources-v1", "module-facts-v1", "module-setup-concerns-v1"],
             },
             "ownership": {
                 "roots": [],
@@ -58,7 +58,20 @@ def module_provider():
                         "ref": "signals://latest",
                         "read_only": True,
                     }
-                ]
+                ],
+                "setup_concerns": [
+                    {
+                        "id": "retention-policy",
+                        "semantic_revision": "signals.retention-policy/v1",
+                        "source_revision": "signals-config-r1",
+                        "status": "human-decision-required",
+                        "materiality": "recommended",
+                        "owner": "signals.retention-policy",
+                        "applicability": {"kind": "module-enabled"},
+                        "route": {"kind": "human-decision", "id": "signals.retention-policy"},
+                        "question": "How long should imported build signals be retained?",
+                    }
+                ],
             },
             "result_semantics": {
                 "schema_version": "signals/result/v1",
@@ -86,6 +99,12 @@ Only enabled, installed, compatible, and relevant modules contribute to the curr
 Fact ids and types are stable contract declarations. Each value names the module owner plus a non-empty revision and explicit currentness bit. Workspace admits these values directly into the existing instruction IR; it does not persist them in a central fact store. A repo-owned bounded clause may consume a current fact, while stale revisions evaluate as unknown. The ordinary start and implement compilers merge that existing source-owned program with relevant module facts before compiling the operating decision.
 
 A contract with one or more facts must include `module-facts-v1` in `compatibility.required_capabilities`. This makes readers that do not support facts reject the module instead of accepting it while silently ignoring source-owned facts.
+
+A contract with one or more setup concerns must likewise require `module-setup-concerns-v1`. Concern ids are stable within the module; Workspace namespaces them as `module:<module>:<id>`. `semantic_revision` changes only when the decision meaning changes, while `source_revision` changes when the authoritative source snapshot changes. Status is one of `satisfied`, `inference-ready`, `human-decision-required`, or `not-applicable`; materiality is `recommended` or `action-required`; applicability is currently the generic `module-enabled` predicate. The route names the module-owned detail, skill, operation, or human decision that can resolve the concern.
+
+A setup concern may include `source_obligation` when the enabled capability depends on repository-owned semantic content. It names the semantic need, source class and owner, current status/candidates, safe auto-bind posture, affected claims, and one continuation. Workspace transports that declaration generically; the module owner remains authoritative for its status and effects. See [Repo-source obligations](repo-source-obligation-contract.md).
+
+Setup consumes only concerns from explicitly enabled, installed, compatible modules. It compares the current semantic/source set with compact receipts from the last completed reconciliation. Newly applicable or changed concerns may create pressure; unchanged concerns stay quiet, cosmetic descriptor changes do not reopen setup, and disabling a module retires its receipts without replay. The receipt is current-state evidence, not a chronological setup version or history, and it never enables or upgrades a capability automatically.
 
 When a module operation includes `facts`, the list is the module owner's reconciled current snapshot: values may refresh declared ids and types, and an empty list removes the facts from the next contribution. Before accepting that result, Workspace reloads the module's public contract provider and requires its facts to match the reported snapshot. The previously discovered contract remains immutable; a fresh discovery therefore observes the new revision, stale marker, or removal without relying on process-local Workspace mutation. An operation result that omits `facts` leaves the module owner's current snapshot unchanged.
 

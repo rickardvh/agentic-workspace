@@ -11,6 +11,24 @@
   },
   "entries": [
     {
+      "operation_id": "config.policy-apply",
+      "program": "agentic-workspace",
+      "command": "config-policy",
+      "generated_transport": "generated/workspace/python/cli.py",
+      "operation_contract": "operations/config.policy-apply.json",
+      "primitive_executor": "command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": [
+        "bounded workspace configuration policy admission and preservation-oriented mutation"
+      ],
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "config.policy-apply.process",
+      "domain_runtime_primitive_refs": ["config.policy.apply"],
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "The generated operation and dataflow own the public interface, while the workspace configuration owner enforces field authority, shared/local separation, setup identity, stale revision rejection, source preservation, and readiness completion.",
+      "what_would_make_portable_later": "Promote only if another package shares the same setup-readiness and workspace-policy authority semantics; a generic TOML patch primitive is intentionally forbidden.",
+      "generic_behavior_audit": "This is an explicit package-domain mutation boundary rather than generic deterministic runtime debt. The field inventory and stale-write checks express Agentic Workspace configuration authority, and generated Python/TypeScript callables are parity-tested."
+    },
+    {
       "operation_id": "config.report",
       "program": "agentic-workspace",
       "command": "config",

@@ -49,7 +49,7 @@ Exact output contracts are documented in the generated [Startup context](../refe
 
 Some commands are useful in advanced host repositories but are not ordinary startup input:
 
-- `setup`: post-bootstrap setup findings and guidance.
+- `setup`: agent-routed post-bootstrap reconciliation detail. Ordinary users begin with `start`; fresh or stale readiness returns this exact continuation when needed, so users do not discover or administer `setup` manually.
 - `reconcile`: stale planning state against provider-agnostic external work evidence.
 - `external-intent refresh-github`: optional GitHub issue evidence refresh.
 - `note-delegation-outcome`: local-only delegation outcome tuning.
