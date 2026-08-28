@@ -3,9 +3,9 @@
   "id": "open-issues-enforcement-ratchet",
   "title": "Ratchet cross-owner enforcement invariants",
   "owner_level": "slice",
-  "lifecycle": "closed",
+  "lifecycle": "archived",
   "phase": "complete",
-  "revision": 5,
+  "revision": 6,
   "intent": {
     "outcome": "Satisfy #2762 by extending the existing context-authority registry and #2300 composed-operation release gate so one admitted revision-bound operating decision remains the sole ordinary authority for owner, action, permission, proof/claim, and continuation across source, installed, generated, and adapter consumers.",
     "non_goals": [
@@ -70,6 +70,15 @@
       "state": "recorded",
       "route": "keep-local",
       "reason": "No sub-agent delegation was requested; this release-gate layer is a bounded continuation of the exact stacked head."
+    },
+    "integration": {
+      "status": "integrated",
+      "transition": "archive-owner",
+      "applied_at": "2026-08-28T14:22:23.640051Z",
+      "proof_refs": [
+        "PR #2777 merged; exact-head CI passed; .agentic-workspace/planning/closeout-evidence/issue-2562-parent-closeout.closeout.json"
+      ],
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/pr-2793-refresh-enforcement-pr-2777.integration-receipt.json"
     }
   },
   "references": [
@@ -139,5 +148,14 @@
       "target": "planning://delegation/keep-local",
       "revision": 1
     }
-  ]
+  ],
+  "active_milestone": {
+    "status": "archived",
+    "ready": "ready",
+    "blocked": "none"
+  },
+  "proof_report": {
+    "integration proof": "PR #2777 merged; exact-head CI passed; .agentic-workspace/planning/closeout-evidence/issue-2562-parent-closeout.closeout.json",
+    "integration applied at": "2026-08-28T14:22:23.640051Z"
+  }
 }

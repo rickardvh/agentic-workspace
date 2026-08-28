@@ -3,9 +3,9 @@
   "id": "open-issues-lifecycle-composition-slice",
   "title": "Implement Planning lifecycle composition issues",
   "owner_level": "slice",
-  "lifecycle": "closed",
+  "lifecycle": "archived",
   "phase": "complete",
-  "revision": 8,
+  "revision": 9,
   "intent": {
     "outcome": "Implement #2345, #2590, #2729, and #2765 as one independently reviewable Planning lifecycle-composition PR: disjoint owner integration makes progress without weakening same-owner conflicts, archive-owner integration carries canonical subject proof directly into atomic closeout, admitted material external observations reconcile stale selected-owner actions, and the Workspace reconcile facade cannot drift from the canonical Planning operation it projects.",
     "non_goals": [
@@ -77,6 +77,15 @@
       "state": "recorded",
       "route": "keep-local",
       "reason": "Host instructions do not authorize sub-agent delegation for this task; the selected current target can implement the bounded first lane directly, and the lane itself must preserve verifier independence without delegating implementation authority."
+    },
+    "integration": {
+      "status": "integrated",
+      "transition": "archive-owner",
+      "applied_at": "2026-08-28T14:22:25.407832Z",
+      "proof_refs": [
+        "PR #2766 merged; exact-head CI passed; .agentic-workspace/planning/closeout-evidence/issue-2562-parent-closeout.closeout.json"
+      ],
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/pr-2793-refresh-lifecycle-pr-2766.integration-receipt.json"
     }
   },
   "references": [
@@ -163,5 +172,14 @@
       "target": "planning://delegation/keep-local",
       "revision": 1
     }
-  ]
+  ],
+  "active_milestone": {
+    "status": "archived",
+    "ready": "ready",
+    "blocked": "none"
+  },
+  "proof_report": {
+    "integration proof": "PR #2766 merged; exact-head CI passed; .agentic-workspace/planning/closeout-evidence/issue-2562-parent-closeout.closeout.json",
+    "integration applied at": "2026-08-28T14:22:25.407832Z"
+  }
 }
