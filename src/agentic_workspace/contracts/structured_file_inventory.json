@@ -1069,6 +1069,18 @@
       "storage_class": "diagnostic-fixture"
     },
     {
+      "checked_in_justification": "Maintained before-learning-later-work traces prove sparse cross-owner attribution while preserving explicit causal uncertainty.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "notes": "The focused effectiveness test validates cost change, canonical decision identity, compactness, and non-causal attribution.",
+      "owner": "workspace-evaluation",
+      "pattern": "docs/reviews/consequential-learning-effectiveness-traces-2811.json",
+      "schema_or_validator": "validator: uv run pytest tests/test_learning_effectiveness.py::test_maintained_traces_show_cost_change_without_claiming_causality",
+      "status": "typed-validator-backed",
+      "storage_class": "diagnostic-fixture"
+    },
+    {
       "checked_in_justification": "Maintainer-reviewed dogfooding evidence used to prioritize product work; not package runtime authority.",
       "editable_by_agents": true,
       "format": "json",
