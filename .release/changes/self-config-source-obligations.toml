@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Expose source-specific obligations for self-configuration decisions."
-issues = [2774]

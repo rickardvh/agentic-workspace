@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Compose owner-scoped Planning integration, proof-bearing closeout, external-action reconciliation, and canonical Workspace command projection."
