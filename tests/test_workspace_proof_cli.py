@@ -281,6 +281,9 @@ lint-planning:
 check-planning:
 \tpython -c "print('planning checks')"
 
+check-planning-nosync:
+\tpython -c "print('planning owner acceptance')"
+
 test-workspace:
 \tpython -c "print('workspace tests')"
 
@@ -4670,6 +4673,77 @@ def test_proof_selection_composes_feature_and_affected_owner_baselines() -> None
     covered_ids = set(coverage["covered_owners"])
     assert {"contract_tooling", "workspace_cli"}.issubset(covered_ids)
     assert "make test-workspace" in selection["required_commands"]
+
+
+def test_proof_selection_keeps_affected_subsystem_gap_until_owner_acceptance_gate_is_declared(tmp_path: Path) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    changed_path = "packages/planning/src/repo_planning_bootstrap/installer.py"
+    _write(tmp_path / changed_path, "# fixture\n")
+    ownership = tmp_path / ".agentic-workspace" / "OWNERSHIP.toml"
+    ownership.write_text(
+        ownership.read_text(encoding="utf-8")
+        + """
+
+[[subsystems]]
+id = "planning"
+paths = ["packages/planning/**"]
+owns = ["planning semantics"]
+""",
+        encoding="utf-8",
+    )
+    config = tmp_path / ".agentic-workspace" / "config.toml"
+    config.write_text(
+        config.read_text(encoding="utf-8")
+        + """
+
+[assurance.domain_proof_lanes.planning_feature]
+purpose = "Focused Planning feature proof."
+applies_to_paths = ["packages/planning/**"]
+commands = ["make test-planning"]
+escalation = ["owner acceptance remains uncovered"]
+claim_boundary = "focused-feature-only"
+owner = "planning"
+route_role = "behavior"
+""",
+        encoding="utf-8",
+    )
+
+    missing = workspace_runtime_proof._proof_selection_for_changed_paths(
+        changed_paths=[changed_path],
+        target_root=tmp_path,
+        include_durable_intent=False,
+        include_assurance_requirements=False,
+        include_routine_work_context=False,
+        include_runtime_diagnostics=False,
+        include_test_strategy_check=False,
+    )
+
+    assert "domain:planning_feature" in {lane["id"] for lane in missing["selected_lanes"]}
+    assert "subsystem:planning" in missing["proof_decision"]["owner_coverage"]["uncovered_owners"]
+    assert missing["proof_decision"]["sufficiency"]["claim_allowed"] is False
+    assert missing["proof_decision"]["safe_claim_now"]["state"] == "proof-missing"
+
+    ownership.write_text(
+        ownership.read_text(encoding="utf-8").replace(
+            'owns = ["planning semantics"]',
+            'owns = ["planning semantics"]\nproof = ["make check-planning-nosync"]',
+        ),
+        encoding="utf-8",
+    )
+    covered = workspace_runtime_proof._proof_selection_for_changed_paths(
+        changed_paths=[changed_path],
+        target_root=tmp_path,
+        include_durable_intent=False,
+        include_assurance_requirements=False,
+        include_routine_work_context=False,
+        include_runtime_diagnostics=False,
+        include_test_strategy_check=False,
+    )
+
+    assert "subsystem:planning" in covered["proof_decision"]["owner_coverage"]["covered_owners"]
+    assert "make check-planning-nosync" in covered["required_commands"]
+    assert "make test-planning" in covered["required_commands"]
+    assert "make check-memory-nosync" not in covered["required_commands"]
 
 
 def test_proof_changed_keeps_existing_path_specific_proof_required(tmp_path: Path, capsys) -> None:
