@@ -9027,6 +9027,8 @@ candidates = []
     assert posture["assignment_action"]["operation_invocation"]["arguments"]["changed"] == [
         "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json"
     ]
+    assert posture["assignment_action"]["operation_invocation"]["arguments"]["transport"] == "manual"
+    assert '--transport "manual"' in posture["assignment_action"]["command"]
     assert (
         cli.main(
             [
@@ -9203,6 +9205,26 @@ def test_configured_orchestrator_compiles_current_nonlocal_and_returned_assignme
     assert current["status"] == "direct-current-target"
     assert current["action"] == "continue-with-selected-target"
     assert "operation_invocation" not in current
+
+    materialize = workspace_runtime_core._assignment_primary_action_payload(
+        target_root=tmp_path,
+        assignment_policy=policy,
+        assignment_decision=decision,
+        assignment_gate={
+            "status": "handoff-required",
+            "implementation_allowed": False,
+            "selected_target": "worker",
+            "target_identity_ref": "target:worker",
+        },
+        selected_target={"name": "worker", "provider": "codex", "execution_methods": ["cli"]},
+        delegation_control={"execution_permitted": True},
+        cli_invoke="agentic-workspace",
+        task_text="check the reference",
+        changed_paths=["docs/reference.md"],
+    )
+    assert materialize["action"] == "materialize-canonical-assignment"
+    assert materialize["operation_invocation"]["arguments"]["transport"] == "cli"
+    assert '--transport "cli"' in materialize["command"]
 
     assignment_dir = tmp_path / ".agentic-workspace" / "planning" / "assignments"
     assignment_dir.mkdir(parents=True)
