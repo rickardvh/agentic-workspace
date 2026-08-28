@@ -99,4 +99,4 @@ Report in this shape:
 - Prefer evidence from the current PR head over stale prior comments.
 - Do not infer merge readiness from passing CI alone.
 - Keep comments focused on actionable blockers or durable suggestions.
-- If GitHub disallows a formal review action because the reviewer shares the PR author's account, a top-level comment may communicate findings but cannot satisfy the repository's human/independent review gate. This fallback does not authorize implementation-agent self-review. Report the patch as ready for re-review and obtain a current-head verdict from a distinct configured authority; shared credential association never manufactures separation of duty.
+- When GitHub cannot submit a formal review because the independent reviewer shares the PR author's account, the configured reviewer automation may use a top-level terminal marker. This repository admits that marker by the configured GitHub App producer provenance, not by `user.login` or `author_association`. This does not authorize implementation-agent self-review: implementation sessions must not use the reviewer automation or emit `aw-chatgpt-review` markers for their own patch.
