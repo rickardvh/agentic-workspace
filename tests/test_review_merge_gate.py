@@ -15,6 +15,7 @@ RULESET = ROOT / ".github" / "rulesets" / "master-support-bearing.json"
 HEAD_A = "a" * 40
 HEAD_B = "b" * 40
 HEAD_C = "c" * 40
+REVIEWER_APP = "chatgpt-codex-connector"
 
 
 def _module():
@@ -34,8 +35,9 @@ def _comment(
     identifier: int = 1,
     pr_number: int = 2501,
     login: str = "independent-reviewer",
+    app_slug: str | None = REVIEWER_APP,
 ) -> dict[str, object]:
-    return {
+    comment: dict[str, object] = {
         "id": identifier,
         "author_association": association,
         "user": {"login": login},
@@ -44,6 +46,9 @@ def _comment(
         ),
         "html_url": f"https://example.test/review/{identifier}",
     }
+    if app_slug is not None:
+        comment["performed_via_github_app"] = {"slug": app_slug}
+    return comment
 
 
 def _git(repo: Path, *args: str) -> str:
@@ -134,33 +139,58 @@ def test_latest_current_head_merge_ready_decision_admits_merge() -> None:
     assert decision.review_url == "https://example.test/review/2"
 
 
-@pytest.mark.parametrize("association", ["OWNER", "MEMBER", "COLLABORATOR"])
-def test_self_authored_marker_cannot_satisfy_independent_gate(association: str) -> None:
-    decision = _module().review_gate_decision(
-        pr_number=2501,
-        head_sha=HEAD_A,
-        comments=[_comment(decision="merge-ready", association=association, login="implementation-owner")],
-        implementation_principals=["implementation-owner"],
-    )
-
-    assert decision.status == "review-self-authored"
-    assert decision.conclusion == "failure"
-    assert "ready-for-re-review" in decision.summary
-
-
-def test_independent_current_head_marker_remains_authoritative_after_self_authored_marker() -> None:
+@pytest.mark.parametrize("association", ["OWNER", "MEMBER", "COLLABORATOR", "NONE"])
+def test_configured_reviewer_app_is_authoritative_with_shared_login(association: str) -> None:
     decision = _module().review_gate_decision(
         pr_number=2501,
         head_sha=HEAD_A,
         comments=[
-            _comment(decision="merge-ready", identifier=1, login="implementation-owner"),
-            _comment(decision="merge-ready", identifier=2, login="independent-reviewer"),
+            _comment(
+                decision="merge-ready",
+                association=association,
+                login="implementation-owner",
+                app_slug=REVIEWER_APP,
+            )
         ],
-        implementation_principals=["implementation-owner"],
     )
 
     assert decision.status == "merge-ready"
-    assert decision.review_url == "https://example.test/review/2"
+    assert decision.conclusion == "success"
+
+
+@pytest.mark.parametrize("app_slug", [None, "some-other-app"])
+def test_marker_without_configured_reviewer_app_cannot_authorize_merge(app_slug: str | None) -> None:
+    decision = _module().review_gate_decision(
+        pr_number=2501,
+        head_sha=HEAD_A,
+        comments=[
+            _comment(
+                decision="merge-ready",
+                association="OWNER",
+                login="implementation-owner",
+                app_slug=app_slug,
+            )
+        ],
+    )
+
+    assert decision.status == "review-missing"
+    assert decision.conclusion == "failure"
+    assert REVIEWER_APP in decision.summary
+
+
+def test_unconfigured_app_marker_cannot_supersede_authoritative_review() -> None:
+    decision = _module().review_gate_decision(
+        pr_number=2501,
+        head_sha=HEAD_A,
+        comments=[
+            _comment(decision="merge-ready", identifier=1, login="rickardvh", app_slug=REVIEWER_APP),
+            _comment(decision="blocked", identifier=2, login="rickardvh", app_slug="some-other-app"),
+        ],
+    )
+
+    assert decision.status == "merge-ready"
+    assert decision.conclusion == "success"
+    assert decision.review_url == "https://example.test/review/1"
 
 
 def test_prior_merge_ready_decision_admits_patch_preserving_base_merge() -> None:
@@ -295,15 +325,6 @@ def test_carry_forward_rejects_conflict_resolution_that_changes_reviewed_patch(t
     verdict = module._trusted_base_carry_forward(pr_number=2501, reviewed_head=reviewed, current_head=current, base_head=base_head)
 
     assert verdict == module.CarryForwardVerdict(False, "merge-does-not-preserve-reviewed-patch")
-
-
-def test_untrusted_marker_cannot_authorize_merge() -> None:
-    decision = _module().review_gate_decision(
-        pr_number=2501, head_sha=HEAD_A, comments=[_comment(decision="merge-ready", association="NONE")]
-    )
-
-    assert decision.status == "review-missing"
-    assert decision.conclusion == "failure"
 
 
 def test_server_side_workflow_and_ruleset_consume_the_same_required_check() -> None:
