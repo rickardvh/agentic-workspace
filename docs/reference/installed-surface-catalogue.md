@@ -3,7 +3,7 @@
 
 Exact footprint, ownership, and availability values generated from `workspace_surfaces.json` and `module_registry.json`.
 
-- Contract digest: `sha256:6aabb8cc3284448c6f495e6b40118ba1d1dc84ca07f540a9165cea1d7d1347ac`
+- Contract digest: `sha256:01fa83f1e6b886079b157e6e4719685b192777af43e847db41e1825ebbcadf58`
 - Supported profiles: `necessary-surfaces`, `full-mirror`
 - Declared modules: `planning`, `memory`, `verification`
 
@@ -36,7 +36,7 @@ File count: 16
 
 ### `necessary-surfaces` + `planning`
 
-File count: 20
+File count: 19
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/WORKFLOW.md`
@@ -49,7 +49,6 @@ File count: 20
 - `.agentic-workspace/planning/agent-manifest.json`
 - `.agentic-workspace/planning/execplans/README.md`
 - `.agentic-workspace/planning/execplans/TEMPLATE.plan.json`
-- `.agentic-workspace/planning/state.toml`
 - `.agentic-workspace/skills/REGISTRY.json`
 - `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md`
 - `.agentic-workspace/skills/workspace-operating-loop/SKILL.md`
@@ -106,7 +105,7 @@ File count: 16
 
 ### `necessary-surfaces` + `planning,memory`
 
-File count: 23
+File count: 22
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/WORKFLOW.md`
@@ -122,7 +121,6 @@ File count: 23
 - `.agentic-workspace/planning/agent-manifest.json`
 - `.agentic-workspace/planning/execplans/README.md`
 - `.agentic-workspace/planning/execplans/TEMPLATE.plan.json`
-- `.agentic-workspace/planning/state.toml`
 - `.agentic-workspace/skills/REGISTRY.json`
 - `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md`
 - `.agentic-workspace/skills/workspace-operating-loop/SKILL.md`
@@ -134,7 +132,7 @@ File count: 23
 
 ### `necessary-surfaces` + `planning,verification`
 
-File count: 20
+File count: 19
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/WORKFLOW.md`
@@ -147,7 +145,6 @@ File count: 20
 - `.agentic-workspace/planning/agent-manifest.json`
 - `.agentic-workspace/planning/execplans/README.md`
 - `.agentic-workspace/planning/execplans/TEMPLATE.plan.json`
-- `.agentic-workspace/planning/state.toml`
 - `.agentic-workspace/skills/REGISTRY.json`
 - `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md`
 - `.agentic-workspace/skills/workspace-operating-loop/SKILL.md`
@@ -183,7 +180,7 @@ File count: 19
 
 ### `necessary-surfaces` + `planning,memory,verification`
 
-File count: 23
+File count: 22
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/WORKFLOW.md`
@@ -199,7 +196,6 @@ File count: 23
 - `.agentic-workspace/planning/agent-manifest.json`
 - `.agentic-workspace/planning/execplans/README.md`
 - `.agentic-workspace/planning/execplans/TEMPLATE.plan.json`
-- `.agentic-workspace/planning/state.toml`
 - `.agentic-workspace/skills/REGISTRY.json`
 - `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md`
 - `.agentic-workspace/skills/workspace-operating-loop/SKILL.md`
@@ -233,7 +229,7 @@ File count: 17
 
 ### `full-mirror` + `planning`
 
-File count: 21
+File count: 20
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/WORKFLOW.md`
@@ -246,7 +242,6 @@ File count: 21
 - `.agentic-workspace/planning/agent-manifest.json`
 - `.agentic-workspace/planning/execplans/README.md`
 - `.agentic-workspace/planning/execplans/TEMPLATE.plan.json`
-- `.agentic-workspace/planning/state.toml`
 - `.agentic-workspace/skills/REGISTRY.json`
 - `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md`
 - `.agentic-workspace/skills/workspace-operating-loop/SKILL.md`
@@ -306,7 +301,7 @@ File count: 17
 
 ### `full-mirror` + `planning,memory`
 
-File count: 24
+File count: 23
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/WORKFLOW.md`
@@ -322,7 +317,6 @@ File count: 24
 - `.agentic-workspace/planning/agent-manifest.json`
 - `.agentic-workspace/planning/execplans/README.md`
 - `.agentic-workspace/planning/execplans/TEMPLATE.plan.json`
-- `.agentic-workspace/planning/state.toml`
 - `.agentic-workspace/skills/REGISTRY.json`
 - `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md`
 - `.agentic-workspace/skills/workspace-operating-loop/SKILL.md`
@@ -335,7 +329,7 @@ File count: 24
 
 ### `full-mirror` + `planning,verification`
 
-File count: 21
+File count: 20
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/WORKFLOW.md`
@@ -348,7 +342,6 @@ File count: 21
 - `.agentic-workspace/planning/agent-manifest.json`
 - `.agentic-workspace/planning/execplans/README.md`
 - `.agentic-workspace/planning/execplans/TEMPLATE.plan.json`
-- `.agentic-workspace/planning/state.toml`
 - `.agentic-workspace/skills/REGISTRY.json`
 - `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md`
 - `.agentic-workspace/skills/workspace-operating-loop/SKILL.md`
@@ -386,7 +379,7 @@ File count: 20
 
 ### `full-mirror` + `planning,memory,verification`
 
-File count: 24
+File count: 23
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/WORKFLOW.md`
@@ -402,7 +395,6 @@ File count: 24
 - `.agentic-workspace/planning/agent-manifest.json`
 - `.agentic-workspace/planning/execplans/README.md`
 - `.agentic-workspace/planning/execplans/TEMPLATE.plan.json`
-- `.agentic-workspace/planning/state.toml`
 - `.agentic-workspace/skills/REGISTRY.json`
 - `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md`
 - `.agentic-workspace/skills/workspace-operating-loop/SKILL.md`
@@ -421,7 +413,6 @@ File count: 24
 | `.agentic-workspace/OWNERSHIP.toml` | `installed-local` | necessary-surfaces, full-mirror | — | required in the selected footprint |
 | `.agentic-workspace/WORKFLOW.md` | `installed-local` | necessary-surfaces, full-mirror | — | required in the selected footprint |
 | `.agentic-workspace/config.toml` | `installed-local` | necessary-surfaces, full-mirror | — | required in the selected footprint |
-| `.agentic-workspace/planning/state.toml` | `installed-local` | necessary-surfaces, full-mirror | planning | required in the selected footprint |
 | `.agentic-workspace/verification/manifest.toml` | `optional` | necessary-surfaces, full-mirror | verification | selected-but-unconfigured: Treat Verification as selected but unconfigured until the repo supplies its manifest. |
 | `.agentic-workspace/system-intent/WORKFLOW.md` | `installed-local` | full-mirror | — | required in the selected footprint |
 | `.agentic-workspace/system-intent/intent.toml` | `optional` | necessary-surfaces, full-mirror | — | Keep system intent unavailable until an authoritative mirror is installed. |
@@ -430,6 +421,7 @@ File count: 24
 | `.agentic-workspace/docs/module-map.md` | `installed-local` | necessary-surfaces, full-mirror | — | required in the selected footprint |
 | `.agentic-workspace/skills/workspace-startup/SKILL.md` | `installed-local` | necessary-surfaces, full-mirror | — | required in the selected footprint |
 | `.agentic-workspace/memory/repo/index.md` | `installed-local` | necessary-surfaces, full-mirror | memory | required in the selected footprint |
+| `.agentic-workspace/planning/execplans/README.md` | `installed-local` | necessary-surfaces, full-mirror | planning | required in the selected footprint |
 | `.agentic-workspace/docs/setup-findings-contract.md` | `installed-local` | necessary-surfaces, full-mirror | — | required in the selected footprint |
 | `.agentic-workspace/docs/jumpstart-contract.md` | `installed-local` | necessary-surfaces, full-mirror | — | required in the selected footprint |
 | `.agentic-workspace/docs/workspace-config-contract.md` | `installed-local` | necessary-surfaces, full-mirror | — | required in the selected footprint |
