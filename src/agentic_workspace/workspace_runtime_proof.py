@@ -8510,7 +8510,9 @@ def _proof_decision_packet(
         safe_claim_state = "manual-review-required"
     elif manual_required:
         safe_claim_state = "manual-review-required"
-    elif required_commands or unavailable_commands or architecture_count or assurance_active or closeout_posture_missing:
+    elif (
+        required_commands or unavailable_commands or uncovered_owners or architecture_count or assurance_active or closeout_posture_missing
+    ):
         safe_claim_state = "proof-missing"
     else:
         safe_claim_state = "slice-only-completion"
@@ -8944,14 +8946,16 @@ def _proof_selection_for_changed_paths(
     subsystem_lanes: list[dict[str, Any]] = []
     for subsystem in subsystem_matches["matched_subsystems"]:
         proof_commands = [str(command) for command in subsystem.get("proof", []) if str(command).strip()]
-        if not proof_commands:
-            continue
         subsystem_lanes.append(
             {
                 "id": f"subsystem:{subsystem['id']}",
                 "when": "changed path matches host-repo subsystem ownership",
                 "enough_proof": proof_commands,
-                "recovery_signal": "missing or failing subsystem proof should block closeout for changes in this subsystem",
+                "recovery_signal": (
+                    "missing or failing subsystem proof should block closeout for changes in this subsystem"
+                    if proof_commands
+                    else "declare a current owner-maintained proof command for this affected subsystem before claiming sufficiency"
+                ),
                 "subsystem": {
                     "id": subsystem["id"],
                     "matched_paths": subsystem.get("matched_paths", []),

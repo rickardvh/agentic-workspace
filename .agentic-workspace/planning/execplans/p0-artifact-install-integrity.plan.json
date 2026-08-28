@@ -3,9 +3,9 @@
   "id": "p0-artifact-install-integrity",
   "title": "P0 artifact and install integrity",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "closeout",
-  "revision": 5,
+  "lifecycle": "archived",
+  "phase": "complete",
+  "revision": 6,
   "canonical_core": {
     "requested_outcome": "Close GitHub issues #2450 and #2451 with transportable generated-artifact identity and referentially closed necessary-surface installs.",
     "hard_constraints": "Do not require Git metadata for semantic freshness; do not restore full payload mirrors; preserve safe degraded no-CLI behavior.",
@@ -88,6 +88,17 @@
         "GitHub #2450",
         "GitHub #2451"
       ]
+    },
+    "integration": {
+      "status": "integrated",
+      "transition": "archive-owner",
+      "applied_at": "2026-08-28T21:11:10.616243Z",
+      "proof_refs": [
+        "uv run pytest tests/test_agentic_workspace_launcher.py tests/test_source_payload_operational_install.py -q",
+        "uv run python scripts/check/check_source_payload_operational_install.py",
+        "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node"
+      ],
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/p0-artifact-install-integrity-archive-owner.integration-receipt.json"
     }
   },
   "references": [
@@ -172,7 +183,7 @@
     "next owner": "GitHub #2483 and #2484"
   },
   "active_milestone": {
-    "status": "completed",
+    "status": "archived",
     "ready": "ready",
     "blocked": "none"
   },
@@ -223,7 +234,9 @@
   "proof_report": {
     "validation proof": "Focused launcher/install tests: 30 passed; workspace necessary-surface tests: 9 passed; generated Python and TypeScript local conformance passed; Python and TypeScript Docker conformance passed; contract tooling, maintainer surfaces, schema docs, typecheck, and selected workspace proof tests passed. Structured-file inventory remains blocked by pre-existing unclassified integration receipts on origin/master and is routed as repository residue.",
     "proof achieved now": "yes; planning closeout recorded explicit proof input.",
-    "evidence for \"proof achieved\" state": "Focused launcher/install tests: 30 passed; workspace necessary-surface tests: 9 passed; generated Python and TypeScript local conformance passed; Python and TypeScript Docker conformance passed; contract tooling, maintainer surfaces, schema docs, typecheck, and selected workspace proof tests passed. Structured-file inventory remains blocked by pre-existing unclassified integration receipts on origin/master and is routed as repository residue."
+    "evidence for \"proof achieved\" state": "Focused launcher/install tests: 30 passed; workspace necessary-surface tests: 9 passed; generated Python and TypeScript local conformance passed; Python and TypeScript Docker conformance passed; contract tooling, maintainer surfaces, schema docs, typecheck, and selected workspace proof tests passed. Structured-file inventory remains blocked by pre-existing unclassified integration receipts on origin/master and is routed as repository residue.",
+    "integration proof": "uv run pytest tests/test_agentic_workspace_launcher.py tests/test_source_payload_operational_install.py -q, uv run python scripts/check/check_source_payload_operational_install.py, uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
+    "integration applied at": "2026-08-28T21:11:10.616243Z"
   },
   "required_continuation": {
     "required follow-on for the larger intended outcome": "yes",

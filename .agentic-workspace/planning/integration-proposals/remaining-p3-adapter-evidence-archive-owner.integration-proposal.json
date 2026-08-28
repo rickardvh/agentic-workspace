@@ -1,8 +1,8 @@
 {
   "kind": "planning-integration-proposal/v1",
   "id": "remaining-p3-adapter-evidence-archive-owner",
-  "status": "pending",
-  "phase": "integration-pending",
+  "status": "integrated",
+  "phase": "integrated-lifecycle-truth",
   "requested_transition": "archive-owner",
   "owner": {
     "id": "remaining-p3-adapter-evidence",
@@ -20,7 +20,7 @@
   "expected_subject_revision": "879fedde9d424590",
   "expected_planning_revision": "e6a9be5a713b46cc",
   "created_at": "2026-08-14T08:05:24.314566Z",
-  "updated_at": "2026-08-14T08:05:24.314566Z",
+  "updated_at": "2026-08-28T21:11:10.616243Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -36,5 +36,7 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "93ac2b039fdfb9b6"
+  "proposal_revision": "1bd09ca208064c9e",
+  "integrated_at": "2026-08-28T21:11:10.616243Z",
+  "integration_receipt_ref": ".agentic-workspace/planning/integration-receipts/remaining-p3-adapter-evidence-archive-owner.integration-receipt.json"
 }

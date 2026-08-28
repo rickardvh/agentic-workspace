@@ -3,9 +3,9 @@
   "id": "remaining-p3-adapter-evidence",
   "title": "Close remaining adapter orchestration correction and evaluation issues",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "implementation",
-  "revision": 2,
+  "lifecycle": "archived",
+  "phase": "complete",
+  "revision": 3,
   "intent": {
     "outcome": "Close the remaining adapter, orchestration, correction-learning, and longitudinal-evaluation issues with one coherent integration PR and honest provider-availability evidence.",
     "non_goals": [
@@ -54,6 +54,13 @@
         "GitHub #2194 #2207 #2216 #2217 #2221 #2222 #2223 #2224 #2266",
         "tools/model-cli-harness/external-agent-evaluation/provider-availability-2026-08-14.json"
       ]
+    },
+    "integration": {
+      "status": "integrated",
+      "transition": "archive-owner",
+      "applied_at": "2026-08-28T21:11:10.616243Z",
+      "proof_refs": [],
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/remaining-p3-adapter-evidence-archive-owner.integration-receipt.json"
     }
   },
   "references": [
@@ -89,5 +96,14 @@
     "owner": "none",
     "residual_intent": "none"
   },
-  "specialist_contracts": []
+  "specialist_contracts": [],
+  "active_milestone": {
+    "status": "archived",
+    "ready": "ready",
+    "blocked": "none"
+  },
+  "proof_report": {
+    "integration proof": "integration proposal applied",
+    "integration applied at": "2026-08-28T21:11:10.616243Z"
+  }
 }

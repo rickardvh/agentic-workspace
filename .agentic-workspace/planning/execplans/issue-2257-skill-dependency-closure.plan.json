@@ -5,7 +5,7 @@
   "owner_level": "slice",
   "lifecycle": "closed",
   "phase": "complete",
-  "revision": 3,
+  "revision": 4,
   "intent": {
     "outcome": "https://github.com/rickardvh/agentic-workspace/issues/2257",
     "non_goals": [
@@ -56,6 +56,13 @@
       "refs": [
         "https://github.com/rickardvh/agentic-workspace/pull/2332#issuecomment-5017576608"
       ]
+    },
+    "integration": {
+      "status": "integrated",
+      "transition": "mark-integrated",
+      "applied_at": "2026-08-28T21:11:10.616243Z",
+      "proof_refs": [],
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2257-skill-dependency-closure-mark-integrated.integration-receipt.json"
     }
   },
   "references": [
@@ -153,7 +160,9 @@
   "proof_report": {
     "validation proof": "Existing plan proof: generated command packages passed; operation conformance pass=19 fail=0 unavailable=0 skipped=0; planning/workspace tests and lint passed; workspace CLI 217 passed; typecheck passed; runtime mirror shape_in_sync; skill CLI 36 passed; scoped doctor dependency tests 5 passed; packaging fixtures 2 passed; artifact duplicate check and git diff check passed. GitHub issue #2257 closed completed on 2026-07-25.",
     "proof achieved now": "yes; planning closeout recorded explicit proof input.",
-    "evidence for \"proof achieved\" state": "Existing plan proof: generated command packages passed; operation conformance pass=19 fail=0 unavailable=0 skipped=0; planning/workspace tests and lint passed; workspace CLI 217 passed; typecheck passed; runtime mirror shape_in_sync; skill CLI 36 passed; scoped doctor dependency tests 5 passed; packaging fixtures 2 passed; artifact duplicate check and git diff check passed. GitHub issue #2257 closed completed on 2026-07-25."
+    "evidence for \"proof achieved\" state": "Existing plan proof: generated command packages passed; operation conformance pass=19 fail=0 unavailable=0 skipped=0; planning/workspace tests and lint passed; workspace CLI 217 passed; typecheck passed; runtime mirror shape_in_sync; skill CLI 36 passed; scoped doctor dependency tests 5 passed; packaging fixtures 2 passed; artifact duplicate check and git diff check passed. GitHub issue #2257 closed completed on 2026-07-25.",
+    "integration proof": "integration proposal applied",
+    "integration applied at": "2026-08-28T21:11:10.616243Z"
   },
   "intent_satisfaction": {
     "original intent": "Issue 2257 routed skill dependency closure",

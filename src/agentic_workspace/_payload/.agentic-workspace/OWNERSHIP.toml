@@ -177,6 +177,7 @@ id = "planning"
 paths = [".agentic-workspace/planning/**", "packages/planning/**"]
 owns = ["active execution state", "execplan scaffolds and closeout", "planning package workflow semantics"]
 does_not_own = ["durable memory note policy", "workspace command runtime internals"]
+proof = ["make check-planning-nosync"]
 escalate_when = ["change widens planning state semantics", "closeout or archive behavior changes"]
 
 [[subsystems]]
@@ -184,6 +185,7 @@ id = "memory"
 paths = [".agentic-workspace/memory/**", "packages/memory/**"]
 owns = ["durable repo knowledge", "memory note routing", "memory package workflow semantics"]
 does_not_own = ["active execution planning", "workspace command runtime internals"]
+proof = ["make check-memory-nosync"]
 escalate_when = ["change widens what memory may store", "promotion policy changes"]
 
 [[subsystems]]
@@ -191,7 +193,7 @@ id = "verification"
 paths = [".agentic-workspace/verification/**", "packages/verification/**"]
 owns = ["reusable proof protocols", "verification evidence routing", "verification package workflow semantics"]
 does_not_own = ["semantic user acceptance", "active execution planning", "issue or parent-lane closure"]
-proof = ["uv run pytest packages/verification/tests -q"]
+proof = ["make check-verification-nosync"]
 escalate_when = ["change makes Verification a proof authority", "protocol changes widen closeout or acceptance semantics"]
 
 [[subsystems]]
