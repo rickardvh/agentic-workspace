@@ -7,7 +7,7 @@
       "--target",
       ".",
       "--return-json",
-      "{\"changed_paths\":[\"src/feature.py\"]}",
+      "{\"assignment_revision\":\"assignment-rev-1\",\"run_id\":\"run-1\",\"target\":\"codex_luna\",\"changed_paths\":[\"src/feature.py\"],\"summary\":\"Implemented the bounded change.\",\"stop_conditions_hit\":[]}",
       "--run-id",
       "run-1",
       "--format",

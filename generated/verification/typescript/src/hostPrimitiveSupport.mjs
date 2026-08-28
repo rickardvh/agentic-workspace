@@ -1944,15 +1944,15 @@ function assignmentCurrentAuthorities(targetRoot, values, state, runId, failures
   const currentRevision = assignmentText(planning.current_revision) || assignmentText(identity.revision);
   if (assignmentText(values.assignment_revision) && assignmentText(values.assignment_revision) !== currentRevision) failures.push({ reason: 'assignment-revision-mismatch', field: 'assignment_revision', recovery: 'Refresh from the current checked-in Planning assignment revision.' });
   if (['superseded', 'closed', 'archived'].includes(assignmentText(planning.status))) failures.push({ reason: 'assignment-not-current', field: 'planning_assignment_ref.status', recovery: 'Reassign or reopen a current Planning assignment before continuing.' });
-  const proofRef = assignmentText(planning.aw_proof_receipt_ref ?? planning.proof_receipt_ref);
-  const proof = assignmentReadJsonRef(targetRoot, proofRef, 'planning_assignment_ref.aw_proof_receipt_ref', failures);
+  const proofRef = assignmentText(planning.structural_proof_receipt_ref);
+  const proof = assignmentReadJsonRef(targetRoot, proofRef, 'planning_assignment_ref.structural_proof_receipt_ref', failures);
   const liveMutationBaseline = assignmentLiveMutationBaseline(targetRoot);
   if (!liveMutationBaseline) failures.push({ reason: 'missing-current-authority', field: 'live_mutation_baseline', recovery: 'Record an AW mutation baseline file or run inside a Git checkout before admission.' });
   return {
     assignment_gate: assignmentGate,
     assignment_policy: assignmentPolicy,
     delegation_decision: delegationDecision,
-    aw_proof_receipt: proof,
+    structural_proof_receipt: proof,
     live_mutation_baseline: liveMutationBaseline,
     run_state: assignmentCurrentRunState(runId, state, planning),
     planning_assignment_ref: planningRef,
@@ -1993,8 +1993,13 @@ function assignmentIdentity(authorities) {
     stop_conditions: gate.stop_conditions ?? nextStep.stop_conditions ?? [],
     mutation_baseline: gate.mutation_baseline ?? nextStep.mutation_baseline ?? null,
     return_admission_owner: 'delegated-return.admit',
+    human_intent: gate.human_intent ?? nextStep.human_intent ?? gate.task ?? gate.task_class ?? null,
+    required_inputs: gate.required_inputs ?? nextStep.required_inputs ?? [],
+    prohibited_effects: gate.prohibited_effects ?? nextStep.prohibited_effects ?? ['scope-widening', 'merge', 'closeout', 'proof-authority', 'human-authority'],
+    dispatch_adapter: isObject(gate.dispatch_adapter) ? gate.dispatch_adapter : {},
+    claim_authority: { worker_result: 'evidence-only', proof: 'orchestrator-owned', integration: 'orchestrator-owned', completion: 'orchestrator-owned' },
   };
-  const required = ['target', 'target_identity_ref', 'target_revision', 'task_class', 'scope_class', 'plan_ref', 'plan_revision', 'slice_id', 'slice_revision', 'assignment_decision_revision', 'handoff_run_id', 'role', 'allowed_effects', 'allowed_paths', 'return_schema', 'proof_obligation_id', 'proof_obligation_revision', 'stop_conditions', 'mutation_baseline'];
+  const required = ['target', 'target_identity_ref', 'task_class', 'scope_class', 'plan_ref', 'plan_revision', 'slice_id', 'slice_revision', 'assignment_decision_revision', 'handoff_run_id', 'role', 'allowed_effects', 'allowed_paths', 'return_schema', 'proof_obligation_id', 'proof_obligation_revision', 'stop_conditions', 'mutation_baseline'];
   identity.missing_required_fields = required.filter((key) => Array.isArray(identity[key]) ? !identity[key].length : !assignmentText(identity[key]));
   identity.complete = identity.missing_required_fields.length === 0;
   identity.revision = assignmentDigest(identity);
@@ -2018,27 +2023,150 @@ function assignmentAdmitWithCurrentAuthority(authorities, returned) {
     assignment_gate: authorities.assignment_gate,
     assignment_policy: authorities.assignment_policy,
     delegation_decision: authorities.delegation_decision,
-    aw_proof_receipt: authorities.aw_proof_receipt,
+    structural_proof_receipt: authorities.structural_proof_receipt,
   })) {
     if (!isObject(value) || !Object.keys(value).length) failures.push({ reason: 'missing-current-authority', field: `current_authorities.${field}`, recovery: 'Resolve the current assignment/run/proof/baseline authorities and retry admission.' });
   }
   if (!assignmentText(authorities.live_mutation_baseline)) failures.push({ reason: 'missing-current-authority', field: 'current_authorities.live_mutation_baseline', recovery: 'Resolve the current assignment/run/proof/baseline authorities and retry admission.' });
   const identity = assignmentIdentity(authorities);
   if (!identity.complete) failures.push({ reason: 'incomplete-assignment-identity', field: 'assignment_identity', recovery: 'Regenerate the assignment with all required identity fields.' });
-  const proof = isObject(authorities.aw_proof_receipt) ? authorities.aw_proof_receipt : {};
-  if (proof.result !== 'passed' || proof.verified_by !== 'aw') failures.push({ reason: 'aw-proof-missing-or-not-passed', field: 'current_authorities.aw_proof_receipt', recovery: 'Run AW-owned proof and record the current receipt before admission.' });
+  const proof = isObject(authorities.structural_proof_receipt) ? authorities.structural_proof_receipt : {};
+  if (proof.kind !== 'agentic-workspace/assignment-structural-proof-receipt/v1' || proof.result !== 'passed' || proof.verified_by !== 'aw' || assignmentText(proof.assignment_revision) !== assignmentText(identity.revision)) failures.push({ reason: 'assignment-structural-proof-missing-or-stale', field: 'current_authorities.structural_proof_receipt', recovery: 'Prepare the current assignment again so AW can seal its structural identity.' });
   const runState = isObject(authorities.run_state) ? authorities.run_state : {};
   if (['duplicate', 'malformed', 'superseded', 'closed'].includes(assignmentText(runState.status))) failures.push({ reason: 'return-run-not-awaiting-admission', field: 'current_authorities.run_state', recovery: 'Import a fresh return or route repair/reassignment.' });
   if (assignmentText(returned.assignment_revision) !== assignmentText(identity.revision)) failures.push({ reason: 'stale-assignment-revision', field: 'assignment_revision', recovery: 'Refresh the handoff and resubmit against the current assignment revision.' });
-  if (assignmentText(returned.target) && assignmentText(returned.target) !== assignmentText(identity.target)) failures.push({ reason: 'target-mismatch', field: 'target', recovery: 'Return work from the selected assignment target only.' });
+  if (assignmentText(returned.target) !== assignmentText(identity.target)) failures.push({ reason: 'target-mismatch', field: 'target', recovery: 'Return work from the selected assignment target only.' });
+  if (assignmentText(returned.run_id) !== assignmentText(runState.run_id)) failures.push({ reason: 'return-run-mismatch', field: 'run_id', recovery: 'Return work for the current assignment run only.' });
+  if (Array.isArray(returned.stop_conditions_hit) && returned.stop_conditions_hit.length) failures.push({ reason: 'stop-condition-hit', field: 'stop_conditions_hit', recovery: 'Route the reported stop condition before integration.' });
   if (assignmentText(authorities.live_mutation_baseline) !== assignmentText(identity.mutation_baseline)) failures.push({ reason: 'mutation-baseline-mismatch', field: 'live_mutation_baseline', recovery: 'Rebase or regenerate the returned work against the current baseline.' });
+  if (identity.role === 'implementer' && !String(returned.patch ?? '').trim()) failures.push({ reason: 'missing-implementation-patch', field: 'patch', recovery: 'Return the proposed unified diff required by the implementer assignment contract.' });
   const allowed = new Set(Array.isArray(identity.allowed_paths) ? identity.allowed_paths : []);
   const changed = Array.isArray(returned.changed_paths) ? returned.changed_paths : [];
   if (!allowed.size) failures.push({ reason: 'missing-canonical-scope', field: 'assignment_identity.allowed_paths', recovery: 'Refresh the assignment so AW can compare returned paths.' });
   for (const path of changed) {
     if (!allowed.has(path)) failures.push({ reason: 'scope-escape', field: 'changed_paths', recovery: 'Repair returned work to stay inside the assigned scope.' });
   }
-  return { admitted: failures.length === 0, status: failures.length ? 'rejected' : 'admitted', failures, assignment_revision: identity.revision, assignment_identity: identity, current_authority: { planning_assignment: authorities.planning_assignment_ref, proof_receipt: proof, proof_source: authorities.proof_receipt_ref, mutation_baseline: authorities.live_mutation_baseline, baseline_source: 'host-resolved:git-or-aw-baseline' }, rule: 'Returned delegated work is executable only after AW re-resolves current assignment/run identity, transport authority, canonical scope, AW-owned proof, stop conditions, and baseline immediately before admission.' };
+  for (const path of assignmentPatchPaths(assignmentText(returned.patch))) {
+    if (!allowed.has(path)) failures.push({ reason: 'returned-patch-outside-assignment-scope', field: 'patch', recovery: 'Return a unified diff touching only the assignment allowed paths.' });
+  }
+  return { admitted: failures.length === 0, status: failures.length ? 'rejected' : 'admitted', failures, assignment_revision: identity.revision, assignment_identity: identity, current_authority: { planning_assignment: authorities.planning_assignment_ref, structural_proof_receipt: proof, proof_source: authorities.proof_receipt_ref, mutation_baseline: authorities.live_mutation_baseline, baseline_source: 'host-resolved:git-or-aw-baseline' }, rule: 'Returned delegated work is executable only after AW re-resolves current assignment/run identity, transport authority, canonical scope, structural proof, stop conditions, and baseline immediately before admission.' };
+}
+
+function diffGitPathTokens(line) {
+  const value = String(line ?? '').slice('diff --git '.length);
+  const tokens = [];
+  let offset = 0;
+  while (tokens.length < 2) {
+    while (value[offset] === ' ') offset += 1;
+    if (offset >= value.length) return [];
+    const start = offset;
+    if (value[offset] === '"') {
+      offset += 1;
+      let escaped = false;
+      let closed = false;
+      while (offset < value.length) {
+        const character = value[offset];
+        offset += 1;
+        if (escaped) escaped = false;
+        else if (character === '\\') escaped = true;
+        else if (character === '"') {
+          closed = true;
+          break;
+        }
+      }
+      if (!closed) return [];
+    } else {
+      while (offset < value.length && value[offset] !== ' ') offset += 1;
+    }
+    tokens.push(value.slice(start, offset));
+  }
+  while (value[offset] === ' ') offset += 1;
+  return offset === value.length ? tokens : [];
+}
+
+export function assignmentPatchPaths(patchText) {
+  const paths = new Set();
+  const addPath = (rawValue) => {
+    let value = String(rawValue ?? '').split('\t', 1)[0].trim();
+    if (!value || value === '/dev/null') return;
+    if (value.startsWith('"') && value.endsWith('"')) value = value.slice(1, -1).replaceAll('\\"', '"').replaceAll('\\\\', '\\');
+    if (value.startsWith('a/') || value.startsWith('b/')) value = value.slice(2);
+    if (value) paths.add(value);
+  };
+  for (const line of String(patchText ?? '').split(/\r?\n/)) {
+    if (line.startsWith('+++ ') || line.startsWith('--- ')) addPath(line.slice(4));
+    else if (line.startsWith('rename from ') || line.startsWith('rename to ')) addPath(line.split(' ').slice(2).join(' '));
+    else if (line.startsWith('copy from ') || line.startsWith('copy to ')) addPath(line.split(' ').slice(2).join(' '));
+    else if (line.startsWith('diff --git ')) {
+      for (const path of diffGitPathTokens(line)) addPath(path);
+    }
+  }
+  return [...paths].sort();
+}
+
+function assignmentIndexedTaskProof(targetRoot, receiptRef, failures) {
+  const storeRoot = resolveInside(targetRoot, '.agentic-workspace/proof/receipts');
+  const ref = assignmentText(receiptRef);
+  let receiptId = '';
+  let receiptPath = '';
+  if (ref.startsWith('proof://receipts/')) {
+    receiptId = ref.split('/').at(-1) ?? '';
+    if (!/^[A-Za-z0-9_.-]+$/.test(receiptId)) return {};
+    receiptPath = resolveInside(storeRoot, `${receiptId}.json`);
+  } else {
+    receiptPath = resolveInside(targetRoot, ref);
+    const withinStore = relative(storeRoot, receiptPath);
+    if (withinStore.startsWith('..') || isAbsolute(withinStore) || !withinStore.endsWith('.json')) return {};
+    receiptId = withinStore.replaceAll('\\', '/').split('/').at(-1).replace(/\.json$/, '');
+  }
+  try {
+    const receipt = readJson(receiptPath);
+    const index = readJson(resolveInside(storeRoot, 'index.json'));
+    const entry = isObject(index.receipts) && isObject(index.receipts[receiptId]) ? index.receipts[receiptId] : {};
+    const indexedPath = assignmentText(entry.path) ? resolveInside(storeRoot, assignmentText(entry.path)) : '';
+    if (index.kind !== 'agentic-workspace/trusted-producer-receipt-index/v1' || indexedPath !== receiptPath || !['current', 'fresh', 'accepted'].includes(assignmentText(entry.status) || 'current') || entry.superseded_by) return {};
+    if (entry.producer_class !== 'aw-proof' || receipt.producer_class !== 'aw-proof' || assignmentText(entry.revision) !== assignmentText(receipt.revision) || assignmentText(entry.source_ref) !== assignmentText(receipt.source_ref) || assignmentText(receipt.receipt_id) !== receiptId) return {};
+    return receipt;
+  } catch (_error) {
+    failures.push({ reason: 'assignment-task-proof-not-producer-owned', field: 'task_proof_receipt_ref', recovery: 'Supply the current proof:// receipt resolved through the AW proof producer index.' });
+    return {};
+  }
+}
+
+function assignmentTaskProofSufficient(receipt) {
+  const command = assignmentText(receipt.command);
+  const recordedAt = assignmentText(receipt.recorded_at);
+  const changed = Array.isArray(receipt.changed_paths) ? receipt.changed_paths.map(String) : [];
+  const unresolved = /<[^<>\r\n]+>|\{\{[^{}\r\n]+\}\}|\$\{[^{}\r\n]+\}/;
+  const timestampValid = /(?:Z|[+-]\d{2}:\d{2})$/.test(recordedAt) && !Number.isNaN(Date.parse(recordedAt));
+  return receipt.kind === 'agentic-workspace/proof-receipt/v1' && command && !unresolved.test(command) && receipt.result === 'passed' && timestampValid && changed.length > 0 && changed.every((path) => assignmentText(path) && !unresolved.test(String(path))) && receipt.authority === 'aw-proof' && receipt.producer_class === 'aw-proof' && receipt.assignment_proof_obligation?.kind === 'agentic-workspace/assignment-task-proof-obligation/v1' && receipt.assignment_proof_binding === assignmentTaskProofBinding(receipt);
+}
+
+function assignmentTaskProofBinding(receipt) {
+  const subject = isObject(receipt.proof_subject) ? receipt.proof_subject : {};
+  return assignmentDigest({ assignment_proof_obligation: receipt.assignment_proof_obligation, proof_subject_fingerprint: subject.fingerprint, command: receipt.command, result: receipt.result, changed_paths: Array.isArray(receipt.changed_paths) ? [...receipt.changed_paths].map(String).sort() : [], authority: receipt.authority, producer_class: receipt.producer_class });
+}
+
+function assignmentDispatch(packet, prompt, targetRoot, transport) {
+  const identity = isObject(packet.assignment_identity) ? packet.assignment_identity : {};
+  const adapter = isObject(identity.dispatch_adapter) ? identity.dispatch_adapter : {};
+  const methods = new Set(Array.isArray(adapter.execution_methods) ? adapter.execution_methods.map(String) : []);
+  if (!methods.has(transport)) return { status: 'blocked', reason: 'transport-not-admitted-by-target' };
+  if (String(adapter.provider ?? '') !== 'codex' || !['internal', 'cli'].includes(transport)) return { status: 'blocked', reason: 'unsupported-automatic-target-adapter' };
+  const args = ['exec', '--ephemeral', '--sandbox', 'read-only', '--cd', targetRoot];
+  if (assignmentText(adapter.model)) args.push('--model', assignmentText(adapter.model));
+  args.push('-');
+  const result = spawnSync('codex', args, { cwd: targetRoot, encoding: 'utf8', input: prompt, timeout: 1800000 });
+  let returned = {};
+  try {
+    let output = assignmentText(result.stdout);
+    if (output.startsWith('```json') && output.endsWith('```')) output = output.slice(7, -3).trim();
+    returned = JSON.parse(output);
+  } catch (_error) {
+    returned = {};
+  }
+  if (result.status !== 0 || !isObject(returned) || (identity.role === 'implementer' && !assignmentText(returned.patch))) returned = {};
+  return { kind: 'agentic-workspace/assignment-dispatch-receipt/v1', status: Object.keys(returned).length ? 'returned' : 'blocked', reason: Object.keys(returned).length ? 'worker-returned-untrusted-evidence' : 'target-adapter-return-invalid', transport, provider: adapter.provider ?? null, model: adapter.model ?? null, exit_code: result.status, returned_work: returned, claim_boundary: 'transport-only; return still requires AW admission, integration, proof, and closeout' };
 }
 
 function assignmentLifecycleApply(values, operationId) {
@@ -2047,7 +2175,16 @@ function assignmentLifecycleApply(values, operationId) {
   const assignmentId = assignmentText(values.assignment_id);
   const assignmentRevision = assignmentText(values.assignment_revision);
   const seed = assignmentId || assignmentRevision ? `${assignmentId}:${assignmentRevision}:${transition}` : transition;
-  const runId = assignmentText(values.run_id) || `run-${createHash('sha256').update(seed).digest('hex').slice(0, 12)}`;
+  let canonicalRunId = assignmentText(values.run_id);
+  if (!canonicalRunId && assignmentId) {
+    try {
+      const planning = readJson(resolveInside(targetRoot, assignmentPlanningRef(values, assignmentId)));
+      canonicalRunId = assignmentText(isObject(planning.current_attempt) ? planning.current_attempt.run_id : '');
+    } catch (_error) {
+      canonicalRunId = '';
+    }
+  }
+  const runId = canonicalRunId || `run-${createHash('sha256').update(seed).digest('hex').slice(0, 12)}`;
   const runDir = resolveInside(resolveInside(targetRoot, '.agentic-workspace/local/assignment-runs'), assignmentFragment(runId));
   const statePath = resolveInside(runDir, 'state.json');
   const state = existsSync(statePath) ? readJson(statePath) : {};
@@ -2062,26 +2199,51 @@ function assignmentLifecycleApply(values, operationId) {
   const artifact = (relativePath) => resolveInside(runDir, relativePath);
   if (transition === 'export') {
     const id = requireField('assignment_id');
+    if (!id && assignmentText(values.task)) failures.push({ reason: 'native-assignment-materialization-unavailable', field: 'assignment_id', recovery: 'Materialize the live assignment through the Python AW host, then retry the TypeScript export with its assignment id and revision.' });
     const rev = assignmentRevision;
     const authorities = assignmentCurrentAuthorities(targetRoot, values, state, runId, failures);
     const identity = assignmentIdentity(authorities);
     if (rev && identity.revision !== rev) failures.push({ reason: 'assignment-revision-mismatch', field: 'assignment_revision', recovery: 'Export from the current Planning assignment identity revision.' });
     const targetName = assignmentText(values.target_name) || assignmentText(identity.target);
     if (!targetName) failures.push({ reason: 'missing-required-input', field: 'target_name', recovery: 'Retry assignment export with a current Planning assignment target.' });
-    const effectivePacket = { kind: 'agentic-workspace/assignment-export-packet/v1', assignment_id: id, assignment_revision: identity.revision, run_id: runId, target: targetName, transport: assignmentText(values.transport) || 'manual', scope: identity.allowed_paths ?? [], assignment_identity: identity, authority_refs: { planning_assignment: authorities.planning_assignment_ref, proof_receipt: authorities.proof_receipt_ref, mutation_baseline: 'host-resolved:git-or-aw-baseline' }, return_contract: 'assignment import places results in received/awaiting-admission before admission or integration' };
+    const transport = assignmentText(values.transport) || 'manual';
+    const effectivePacket = { kind: 'agentic-workspace/assignment-export-packet/v1', assignment_id: id, assignment_revision: identity.revision, run_id: runId, target: targetName, transport, scope: identity.allowed_paths ?? [], assignment_identity: identity, authority_refs: { planning_assignment: authorities.planning_assignment_ref, structural_proof_receipt: authorities.proof_receipt_ref, mutation_baseline: 'host-resolved:git-or-aw-baseline' }, return_contract: { required_fields: ['assignment_revision', 'run_id', 'target', 'changed_paths', 'summary', 'stop_conditions_hit', ...(identity.role === 'implementer' ? ['patch'] : [])], worker_proof_authority: false, worker_completion_authority: false } };
     const packetPath = artifact('export/packet.json');
     const promptPath = artifact('export/prompt.md');
     const manifestPath = artifact('export/manifest.json');
     artifactPaths.push(packetPath, promptPath, manifestPath);
     writes.set(packetPath, effectivePacket);
-    writes.set(promptPath, `You are receiving an Agentic Workspace assignment packet.\n\n\`\`\`json\n${JSON.stringify(effectivePacket, null, 2)}\n\`\`\``);
+    const prompt = `You are receiving an Agentic Workspace assignment packet. Do not edit the host checkout. For repo-write assignments, return the proposed unified diff in a patch field.\n\n\`\`\`json\n${JSON.stringify(effectivePacket, null, 2)}\n\`\`\``;
+    writes.set(promptPath, prompt);
     writes.set(manifestPath, { kind: 'agentic-workspace/assignment-export-manifest/v1', assignment_id: id, assignment_revision: rev, run_id: runId, integrity: assignmentDigest(effectivePacket) });
-    Object.assign(state, { assignment: effectivePacket, planning_assignment_ref: authorities.planning_assignment_ref, proof_receipt_ref: authorities.proof_receipt_ref, current_state: 'handoff-prepared', run_id: runId, assignment_id: id });
+    Object.assign(state, { assignment: effectivePacket, planning_assignment_ref: authorities.planning_assignment_ref, structural_proof_receipt_ref: authorities.proof_receipt_ref, current_state: 'handoff-prepared', run_id: runId, assignment_id: id });
+    if (transport !== 'manual' && !failures.length) {
+      const dispatch = assignmentDispatch(effectivePacket, prompt, targetRoot, transport);
+      const dispatchPath = artifact('dispatch/receipt.json');
+      artifactPaths.push(dispatchPath);
+      writes.set(dispatchPath, dispatch);
+      if (dispatch.status !== 'returned' || !isObject(dispatch.returned_work) || !Object.keys(dispatch.returned_work).length) failures.push({ reason: dispatch.reason ?? 'automatic-dispatch-failed', field: 'transport', recovery: 'Repair the configured target adapter or use admitted manual transport.' });
+      else {
+        const returnId = assignmentDigest(dispatch.returned_work).replace('sha256:', '').slice(0, 16);
+        const returnPath = artifact(`received/awaiting-admission/${returnId}.json`);
+        artifactPaths.push(returnPath);
+        writes.set(returnPath, dispatch.returned_work);
+        state.returns = { [returnId]: { artifact_ref: relative(targetRoot, returnPath).replaceAll('\\', '/'), integrity: assignmentDigest(dispatch.returned_work), state: 'received/awaiting-admission' } };
+        Object.assign(state, { current_state: 'awaiting-admission', last_return_id: returnId });
+      }
+    }
   } else if (transition === 'import') {
     requireField('run_id');
     const returned = assignmentParseJson(requireField('return_json'), 'return_json');
     const returnId = assignmentText(values.return_id) || assignmentDigest(returned).replace('sha256:', '').slice(0, 16);
     const assignment = isObject(state.assignment) ? state.assignment : {};
+    const identity = isObject(assignment.assignment_identity) ? assignment.assignment_identity : {};
+    const requiredReturnFields = ['assignment_revision', 'run_id', 'target', 'changed_paths', 'summary', 'stop_conditions_hit', ...(identity.role === 'implementer' ? ['patch'] : [])];
+    const missingReturnFields = requiredReturnFields.filter((field) => !(field in returned));
+    if (missingReturnFields.length) failures.push({ reason: 'malformed-return', field: `return_json.${missingReturnFields.join(',')}`, recovery: 'Return every required field from the exported return contract.' });
+    if (identity.role === 'implementer' && !String(returned.patch ?? '').trim()) failures.push({ reason: 'malformed-return', field: 'return_json.patch', recovery: 'Return a non-empty unified diff for an implementer assignment.' });
+    if (assignmentText(returned.run_id) !== runId) failures.push({ reason: 'return-run-mismatch', field: 'return_json.run_id', recovery: 'Return work for the exported assignment run only.' });
+    if (!Array.isArray(returned.changed_paths) || !Array.isArray(returned.stop_conditions_hit)) failures.push({ reason: 'malformed-return', field: 'return_json.changed_paths|stop_conditions_hit', recovery: 'Return changed_paths and stop_conditions_hit as JSON arrays.' });
     if (assignment.assignment_revision && assignmentText(returned.assignment_revision) !== assignmentText(assignment.assignment_revision)) failures.push({ reason: 'assignment-revision-mismatch', field: 'return_json.assignment_revision', recovery: 'Return work generated from the current exported assignment packet.' });
     const returnPath = artifact(`received/awaiting-admission/${assignmentFragment(returnId)}.json`);
     const receiptPath = artifact(`received/import-${assignmentFragment(returnId)}.json`);
@@ -2120,10 +2282,47 @@ function assignmentLifecycleApply(values, operationId) {
     const admission = assignmentAdmitWithCurrentAuthority(authorities, returned);
     if (!admission.admitted) failures.push(...admission.failures);
     if (state.last_admission_status !== 'admitted') failures.push({ reason: 'return-not-admitted', field: 'state.last_admission_status', recovery: 'Run assignment admit with current authority before integration.' });
+    const patch = String(returned.patch ?? '');
+    if (!failures.length && patch && !Boolean(values.dry_run)) {
+      const integrationPatchPath = artifact('integration/returned.patch');
+      mkdirSync(dirname(integrationPatchPath), { recursive: true });
+      writeFileSync(integrationPatchPath, patch, 'utf8');
+      artifactPaths.push(integrationPatchPath);
+      const applied = spawnSync('git', ['apply', '--recount', integrationPatchPath], { cwd: targetRoot, encoding: 'utf8' });
+      if (applied.status !== 0) failures.push({ reason: 'assignment-patch-apply-failed', field: 'returned_work.patch', recovery: 'Repair the returned unified diff against the current mutation baseline and retry integration.' });
+    }
     const receiptPath = artifact('integration/integration.json');
     artifactPaths.push(receiptPath);
     writes.set(receiptPath, { kind: 'agentic-workspace/assignment-integration-receipt/v1', run_id: runId, status: failures.length ? 'blocked' : 'integrated', admission });
     Object.assign(state, { current_state: failures.length ? 'blocked' : 'integrated' });
+  } else if (transition === 'close') {
+    requireField('run_id');
+    const priorState = assignmentText(state.current_state);
+    if (priorState !== 'integrated') failures.push({ reason: 'assignment-run-not-integrated', field: 'state.current_state', recovery: 'Admit and integrate the current return before closing the assignment.' });
+    const planningRef = assignmentPlanningRef(values, assignmentId || assignmentText(state.assignment_id));
+    const planning = assignmentReadJsonRef(targetRoot, planningRef, 'planning_assignment_ref', failures);
+    const currentAttempt = isObject(planning.current_attempt) ? planning.current_attempt : {};
+    if (assignmentText(currentAttempt.run_id) && assignmentText(currentAttempt.run_id) !== runId) failures.push({ reason: 'return-run-mismatch', field: 'planning_assignment_ref.current_attempt.run_id', recovery: 'Close only the current assignment run.' });
+    const taskProofRef = requireField('task_proof_receipt_ref');
+    const taskProof = assignmentIndexedTaskProof(targetRoot, taskProofRef, failures);
+    if (!Object.keys(taskProof).length && !failures.some((failure) => failure.reason === 'assignment-task-proof-not-producer-owned')) failures.push({ reason: 'assignment-task-proof-not-producer-owned', field: 'task_proof_receipt_ref', recovery: 'Supply the current proof:// receipt resolved through the AW proof producer index.' });
+    const expected = isObject(planning.assignment_gate?.proof_obligation) ? planning.assignment_gate.proof_obligation : {};
+    const observed = isObject(taskProof.assignment_proof_obligation) ? taskProof.assignment_proof_obligation : {};
+    if (assignmentStableStringify(expected) !== assignmentStableStringify(observed)) failures.push({ reason: 'assignment-proof-obligation-mismatch', field: 'task_proof_receipt_ref.assignment_proof_obligation', recovery: 'Supply the passed AW proof receipt sealed for this exact assignment obligation.' });
+    if (!assignmentTaskProofSufficient(taskProof)) failures.push({ reason: 'assignment-task-proof-not-admitted', field: 'task_proof_receipt_ref', recovery: 'Run AW proof for the integrated assignment and supply its admitted passed receipt.' });
+    const expectedPaths = new Set(Array.isArray(planning.assignment_gate?.allowed_paths) ? planning.assignment_gate.allowed_paths.map(String) : []);
+    const provedPaths = new Set(Array.isArray(taskProof.changed_paths) ? taskProof.changed_paths.map(String) : []);
+    if (!expectedPaths.size || [...expectedPaths].some((path) => !provedPaths.has(path))) failures.push({ reason: 'assignment-proof-scope-mismatch', field: 'task_proof_receipt_ref.changed_paths', recovery: 'Record proof covering every allowed path in the integrated assignment.' });
+    const receiptPath = artifact('closeout/close.json');
+    artifactPaths.push(receiptPath);
+    writes.set(receiptPath, { kind: 'agentic-workspace/assignment-closeout-receipt/v1', run_id: runId, status: failures.length ? 'blocked' : 'closed', task_proof_receipt_ref: taskProofRef });
+    if (!failures.length) {
+      planning.status = 'closed';
+      planning.current_attempt = { ...(isObject(planning.current_attempt) ? planning.current_attempt : {}), status: 'closed' };
+      planning.closeout = { run_id: runId, receipt_ref: relative(targetRoot, receiptPath).replaceAll('\\', '/'), task_proof_receipt_ref: taskProofRef };
+      writes.set(resolveInside(targetRoot, planningRef), planning);
+      Object.assign(state, { current_state: 'closed' });
+    } else Object.assign(state, { current_state: priorState });
   } else if (transition === 'override') {
     requireField('assignment_id');
     requireField('reason');

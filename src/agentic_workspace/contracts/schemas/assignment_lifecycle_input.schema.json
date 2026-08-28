@@ -113,13 +113,21 @@
       "description": "Target repository path for the lifecycle operation.",
       "type": "string"
     },
+    "task": {
+      "description": "Full human intent bound into the canonical assignment identity.",
+      "type": "string"
+    },
     "target_name": {
       "description": "Named target or worker lane that receives the assignment packet.",
       "minLength": 1,
       "type": "string"
     },
+    "task_proof_receipt_ref": {
+      "description": "Repo-relative AW proof receipt whose assignment obligation must match the run being closed.",
+      "type": "string"
+    },
     "transport": {
-      "description": "Transport channel used for the assignment packet or returned result.",
+      "description": "Transport channel used for the assignment packet or returned result; manual prepares a handoff, while a configuration-authorized internal or CLI route executes the sealed packet through its target adapter.",
       "enum": [
         "manual",
         "internal",
