@@ -52100,8 +52100,9 @@ def _record_proof_receipt_payload(
         )
         if not dry_run:
             receipt_path.parent.mkdir(parents=True, exist_ok=True)
-            receipt_path.write_text(  # lgtm[py/clear-text-storage-sensitive-data]
-                json.dumps(receipt, indent=2, ensure_ascii=True) + "\n", encoding="utf-8"
+            receipt_path.write_text(
+                json.dumps(receipt, indent=2, ensure_ascii=True) + "\n",  # lgtm[py/clear-text-storage-sensitive-data]
+                encoding="utf-8",
             )
             history_path = target_root / PROOF_RECEIPT_HISTORY_RELATIVE_PATH
             if not _proof_history_contains_publication(
@@ -52109,8 +52110,9 @@ def _record_proof_receipt_payload(
                 producer_receipt_id=producer_receipt_id,
             ):
                 with history_path.open("a", encoding="utf-8") as stream:
-                    stream.write(  # lgtm[py/clear-text-storage-sensitive-data]
-                        json.dumps(receipt, sort_keys=True, ensure_ascii=True) + "\n"
+                    stream.write(
+                        json.dumps(receipt, sort_keys=True, ensure_ascii=True)  # lgtm[py/clear-text-storage-sensitive-data]
+                        + "\n"
                     )
             _write_trusted_producer_receipt(
                 target_root=target_root,
