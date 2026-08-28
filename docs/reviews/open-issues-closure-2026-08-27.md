@@ -4,6 +4,12 @@ Date: 2026-08-27
 
 Scope: #2345, #2562, #2590, #2721, #2725, #2729, #2752, #2754, #2762, #2763, and #2765. Issues #2767–#2774 opened after intake and are intentionally excluded.
 
+## 2026-08-28 repair addendum
+
+The later counterevidence is now resolved by the lane-aligned repair stack. PR #2782 replaces the earlier delegation claim with fail-closed return admission, proof authority, generated-client parity, and a real supported-host trace. PR #2783 adds the ordinary no-delegation-wording assignment episode, direct-current-target counterexample, and stronger-owner disposition required by #2724 and #2752. The replay records no extra conversational permission, no worker proof/completion authority, a closed host-owned lifecycle, and no assignment residue for direct work.
+
+This addendum is the current closure basis for #2721. The older table below remains the original inventory map; where it names #2778, PR #2782 is the corrective successor and PR #2783 supplies the final dogfood disposition layer. Parent closure is contingent on this ordered repair stack merging.
+
 ## Decision
 
 The original inventory is implemented as three product-semantic layers, one repository-local Memory correction, and this evidence-only parent closure layer. The stack does not add a workflow framework, a second decision authority, or portable review-control machinery. Review and merge procedures remain owned by this repository, so this review claims implementation and proof readiness, not approval or merge completion.

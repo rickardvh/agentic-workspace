@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 # ruff: noqa: F403,F405
+import hashlib
 import shlex
 
 from tests.workspace_cli_support import *
@@ -9018,19 +9019,144 @@ candidates = []
     assert decision["delegation_next_step"]["assignment_gate"]["selected_target"] == "planner"
     assert decision["handoff_command"] == "agentic-workspace planning handoff --target . --format json"
     materialization = posture["assignment_materialization"]
-    assert materialization["status"] == "materialized", materialization
-    assert materialization["assignment_ref"].startswith(".agentic-workspace/planning/assignments/ordinary-")
-    assert posture["assignment_action"]["action"] == "export-assigned-handoff"
+    assert materialization == {}
+    assert list((tmp_path / ".agentic-workspace" / "planning" / "assignments").glob("*.json")) == []
+    assert posture["assignment_action"]["action"] == "materialize-canonical-assignment"
     assert posture["assignment_action"]["operation_invocation"]["operation_id"] == "assignment.export"
-    assignment = json.loads((tmp_path / materialization["assignment_ref"]).read_text(encoding="utf-8"))
-    assert assignment["authority"] == "ordinary-implement-live-assignment-decision"
-    assert assignment["assignment_gate"]["plan_ref"] == plan_ref
-    assert assignment["assignment_gate"]["target_revision"] is None
+    assert posture["assignment_action"]["operation_invocation"]["arguments"]["task"] == "update delegation config schema"
+    assert posture["assignment_action"]["operation_invocation"]["arguments"]["changed"] == [
+        "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json"
+    ]
+    assert posture["assignment_action"]["operation_invocation"]["arguments"]["transport"] == "manual"
+    assert '--transport "manual"' in posture["assignment_action"]["command"]
+    assert (
+        cli.main(
+            [
+                "assignment",
+                "export",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "update delegation config schema",
+                "--changed",
+                "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    first_export = json.loads(capsys.readouterr().out)
+    assert first_export["status"] == "handoff-prepared"
+    assignment_files = list((tmp_path / ".agentic-workspace" / "planning" / "assignments").glob("*.assignment.json"))
+    assert len(assignment_files) == 1
+    first_assignment = json.loads(assignment_files[0].read_text(encoding="utf-8"))
+    assert "aw_proof_receipt_ref" not in first_assignment
+    assert first_assignment["structural_proof_receipt_ref"].endswith(".assignment-proof.json")
+    assert first_assignment["assignment_gate"]["role"] == "implementer"
+    assert first_assignment["assignment_gate"]["allowed_effects"] == ["repo-write"]
+    first_run_id = first_assignment["current_attempt"]["run_id"]
+    first_assignment["status"] = "closed"
+    first_assignment["current_attempt"]["status"] = "closed"
+    _write_json(assignment_files[0], first_assignment)
+    assert (
+        cli.main(
+            [
+                "assignment",
+                "export",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "update delegation config schema",
+                "--changed",
+                "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    json.loads(capsys.readouterr().out)
+    retried_assignment = json.loads(assignment_files[0].read_text(encoding="utf-8"))
+    assert retried_assignment["current_attempt"]["attempt"] == 2
+    assert retried_assignment["current_attempt"]["run_id"] != first_run_id
+
+    assert (
+        cli.main(
+            [
+                "assignment",
+                "export",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "update a different delegation contract",
+                "--changed",
+                "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    json.loads(capsys.readouterr().out)
+    assignment_files = list((tmp_path / ".agentic-workspace" / "planning" / "assignments").glob("*.assignment.json"))
+    assert len(assignment_files) == 2
+    assignments = [json.loads(path.read_text(encoding="utf-8")) for path in assignment_files]
+    assert len({item["assignment_id"] for item in assignments}) == 2
+    assert len({item["current_attempt"]["run_id"] for item in assignments}) == 2
     lifecycle = posture["delegated_run_lifecycle"]
     assert lifecycle["status"] == "waiting-for-handoff"
     assert lifecycle["assignment"]["target"] == "planner"
     assert lifecycle["manual_transport"]["export_allowed"] is True
     assert lifecycle["manual_transport"]["import_requires_review"] is True
+
+
+def test_assignment_role_and_effects_use_resolved_task_class_not_task_wording() -> None:
+    assert workspace_runtime_core._assignment_role_and_effects(task_class="validation") == ("validator", ["read-only"])
+    assert workspace_runtime_core._assignment_role_and_effects(task_class="mechanical-follow-through") == (
+        "implementer",
+        ["repo-write"],
+    )
+    assert workspace_runtime_core._assignment_role_and_effects(task_class="proof") == ("validator", ["read-only"])
+
+
+def test_assignment_proof_obligation_selects_exact_integrated_intent_among_current_assignments(tmp_path: Path) -> None:
+    assignments_root = tmp_path / ".agentic-workspace/planning/assignments"
+    assignments_root.mkdir(parents=True)
+    for suffix, intent in (("one", "implement first task"), ("two", "implement second task")):
+        run_id = f"run-{suffix}"
+        digest = hashlib.sha256(intent.encode("utf-8")).hexdigest()
+        obligation = {
+            "kind": "agentic-workspace/assignment-task-proof-obligation/v1",
+            "id": f"proof:{suffix}",
+            "revision": f"proof-rev-{suffix}",
+            "subject": {"assignment_id": f"assign-{suffix}", "run_id": run_id, "human_intent_digest": digest},
+        }
+        _write_json(
+            assignments_root / f"assign-{suffix}.assignment.json",
+            {
+                "kind": "agentic-workspace/planning-assignment/v1",
+                "assignment_id": f"assign-{suffix}",
+                "status": "current",
+                "assignment_gate": {
+                    "human_intent": intent,
+                    "allowed_paths": ["src/shared.py"],
+                    "proof_obligation": obligation,
+                },
+                "current_attempt": {"run_id": run_id, "status": "integrated"},
+            },
+        )
+        _write_json(
+            tmp_path / f".agentic-workspace/local/assignment-runs/{run_id}/state.json",
+            {"current_state": "integrated", "run_id": run_id},
+        )
+
+    selected = workspace_runtime_core._integrated_assignment_proof_obligation(
+        target_root=tmp_path,
+        changed_paths=["src/shared.py"],
+        task_text="implement second task",
+    )
+    assert selected["id"] == "proof:two"
 
 
 def test_configured_orchestrator_compiles_current_nonlocal_and_returned_assignment_actions(tmp_path: Path) -> None:
@@ -9080,6 +9206,26 @@ def test_configured_orchestrator_compiles_current_nonlocal_and_returned_assignme
     assert current["action"] == "continue-with-selected-target"
     assert "operation_invocation" not in current
 
+    materialize = workspace_runtime_core._assignment_primary_action_payload(
+        target_root=tmp_path,
+        assignment_policy=policy,
+        assignment_decision=decision,
+        assignment_gate={
+            "status": "handoff-required",
+            "implementation_allowed": False,
+            "selected_target": "worker",
+            "target_identity_ref": "target:worker",
+        },
+        selected_target={"name": "worker", "provider": "codex", "execution_methods": ["cli"]},
+        delegation_control={"execution_permitted": True},
+        cli_invoke="agentic-workspace",
+        task_text="check the reference",
+        changed_paths=["docs/reference.md"],
+    )
+    assert materialize["action"] == "materialize-canonical-assignment"
+    assert materialize["operation_invocation"]["arguments"]["transport"] == "cli"
+    assert '--transport "cli"' in materialize["command"]
+
     assignment_dir = tmp_path / ".agentic-workspace" / "planning" / "assignments"
     assignment_dir.mkdir(parents=True)
     _write_json(
@@ -9106,7 +9252,7 @@ def test_configured_orchestrator_compiles_current_nonlocal_and_returned_assignme
         assignment_policy=policy,
         assignment_decision=decision,
         assignment_gate=gate,
-        selected_target={"name": "worker", "execution_methods": ["cli"]},
+        selected_target={"name": "worker", "provider": "codex", "execution_methods": ["cli"]},
         delegation_control={"execution_permitted": True},
         cli_invoke="agentic-workspace",
     )
@@ -9168,8 +9314,9 @@ def test_configured_orchestrator_compiles_current_nonlocal_and_returned_assignme
         delegation_control={"execution_permitted": True},
         cli_invoke="agentic-workspace",
     )
-    assert integrated["action"] == "close-integrated-assignment"
-    assert integrated["operation_invocation"]["operation_id"] == "assignment.close"
+    assert integrated["action"] == "prove-integrated-assignment"
+    assert integrated["status"] == "proof-required"
+    assert "operation_invocation" not in integrated
 
     _write_json(state_path, {"current_state": "closed", "run_id": "run-1"})
     closed = workspace_runtime_core._assignment_primary_action_payload(

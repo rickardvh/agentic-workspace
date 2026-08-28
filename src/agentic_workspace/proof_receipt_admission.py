@@ -95,6 +95,28 @@ def proof_receipt_admission(receipt: dict[str, Any]) -> dict[str, Any]:
                     "Replace empty or templated --changed values with concrete repo-relative paths.",
                 )
                 break
+    obligation = receipt.get("assignment_proof_obligation")
+    if obligation is not None:
+        from agentic_workspace.assignment_lifecycle import assignment_task_proof_binding
+
+        if not isinstance(obligation, dict) or obligation.get("kind") != "agentic-workspace/assignment-task-proof-obligation/v1":
+            reject(
+                "invalid-assignment-proof-obligation",
+                "assignment_proof_obligation",
+                "Record assignment proof through the AW proof producer while the exact run is integrated.",
+            )
+        if receipt.get("producer_class") != "aw-proof" or receipt.get("authority") != "aw-proof":
+            reject(
+                "assignment-proof-not-aw-owned",
+                "producer_class|authority",
+                "Record assignment proof through the AW proof producer.",
+            )
+        if receipt.get("assignment_proof_binding") != assignment_task_proof_binding(receipt):
+            reject(
+                "assignment-proof-binding-mismatch",
+                "assignment_proof_binding",
+                "Record the proof again against the current integrated assignment.",
+            )
     admitted = not failures
     return {
         "kind": "agentic-workspace/proof-receipt-admission/v1",
