@@ -3,7 +3,7 @@
 
 Exact footprint, ownership, and availability values generated from `workspace_surfaces.json` and `module_registry.json`.
 
-- Contract digest: `sha256:0eea35d5e7ecabd76461fcd1560bdf3fb6906e9c05a59888398cc1d9eab3eed2`
+- Contract digest: `sha256:6aabb8cc3284448c6f495e6b40118ba1d1dc84ca07f540a9165cea1d7d1347ac`
 - Supported profiles: `necessary-surfaces`, `full-mirror`
 - Declared modules: `planning`, `memory`, `verification`
 
@@ -417,6 +417,7 @@ File count: 24
 
 | Target | Kind | Profiles | Modules | Availability / degraded behavior |
 | --- | --- | --- | --- | --- |
+| `.agentic-workspace/adoption-receipt.json` | `optional` | necessary-surfaces, full-mirror | — | Treat configuration readiness as unresolved until install creates the adoption receipt. |
 | `.agentic-workspace/OWNERSHIP.toml` | `installed-local` | necessary-surfaces, full-mirror | — | required in the selected footprint |
 | `.agentic-workspace/WORKFLOW.md` | `installed-local` | necessary-surfaces, full-mirror | — | required in the selected footprint |
 | `.agentic-workspace/config.toml` | `installed-local` | necessary-surfaces, full-mirror | — | required in the selected footprint |

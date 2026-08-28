@@ -1390,6 +1390,7 @@ def _validate_typescript_runtime_handoff_thinness(
 
 
 TYPESCRIPT_SUPPORTED_EXACT_PRIMITIVES = {
+    "config.policy.apply",
     "typescript.domain.execute",
     "path.target_root.resolve",
     "workspace.target-root.resolve",

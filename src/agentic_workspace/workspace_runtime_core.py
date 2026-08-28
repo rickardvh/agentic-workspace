@@ -157,6 +157,7 @@ from agentic_workspace.module_contract import (
     discover_module_contracts,
     module_contract_compatibility,
     module_contribution,
+    module_setup_concerns,
     target_has_install_signal,
     validate_module_contract,
 )
@@ -561,8 +562,9 @@ LOCAL_WORK_THREAD_INDEX_PATH = LOCAL_WORK_THREAD_ROOT / "index.json"
 
 def _load_workspace_config(*, target_root: Path, descriptors: dict[str, "ModuleDescriptor"] | None = None, **kwargs):
     """Backward-compatible alias for tests and local helpers."""
-    if descriptors is not None and "valid_presets" not in kwargs:
-        kwargs["valid_presets"] = set(descriptors)
+    if "valid_presets" not in kwargs:
+        resolved_descriptors = descriptors if descriptors is not None else _module_operations()
+        kwargs["valid_presets"] = set(resolved_descriptors)
     return config_lib.load_workspace_config(target_root=target_root, **kwargs)
 
 
@@ -728,6 +730,7 @@ def _installed_package_source_class(*, package: str) -> str:
 
 
 ADOPTION_RECEIPT_KIND = "agentic-workspace/adoption-receipt/v1"
+CONFIGURATION_READINESS_KIND = "agentic-workspace/configuration-readiness/v1"
 
 
 def _resolve_bootstrap_footprint_profile(*, target_root: Path, requested_profile: str | None = None, mirror_payload: bool = False) -> str:
@@ -944,6 +947,12 @@ def _adoption_receipt_payload(*, selected_modules: list[str], reports: list[dict
             ]
         )
     )
+    readiness_basis = {
+        "selected_modules": sorted(_dedupe(selected_modules)),
+        "payload_mirror": payload_mirror,
+        "checked_in_rule": "necessary-surfaces-only",
+    }
+    readiness_identity = hashlib.sha256(json.dumps(readiness_basis, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:24]
     return {
         "kind": ADOPTION_RECEIPT_KIND,
         "checked_in_rule": "necessary-surfaces-only",
@@ -955,6 +964,18 @@ def _adoption_receipt_payload(*, selected_modules: list[str], reports: list[dict
             "absolute-path provenance",
         ],
         "payload_mirror": payload_mirror,
+        "configuration_readiness": {
+            "kind": CONFIGURATION_READINESS_KIND,
+            "status": "reconciliation-required",
+            "identity": readiness_identity,
+            "basis": readiness_basis,
+            "owner": "setup.guidance",
+            "required_skill": "workspace-setup-jumpstart",
+            "rule": (
+                "Fresh bootstrap requires one repository-configuration reconciliation before configured-workflow claims. "
+                "The setup owner may later replace this status with current after applying the same identity."
+            ),
+        },
         "recheck_command": "agentic-workspace doctor --target . --format json",
         "rule": (
             "This receipt is the durable authority that ordinary bootstrap intentionally omitted generic package payload. "
@@ -970,6 +991,18 @@ def _write_adoption_receipt_action(
     path = target_root / relative
     existing_text = path.read_text(encoding="utf-8") if path.exists() else None
     payload = _adoption_receipt_payload(selected_modules=selected_modules, reports=reports, payload_mirror=payload_mirror)
+    if existing_text is not None:
+        try:
+            existing_payload = json.loads(existing_text)
+        except json.JSONDecodeError:
+            existing_payload = {}
+        existing_readiness = existing_payload.get("configuration_readiness") if isinstance(existing_payload, dict) else None
+        if isinstance(existing_readiness, dict) and existing_readiness.get("kind") == CONFIGURATION_READINESS_KIND:
+            payload["configuration_readiness"] = existing_readiness
+        elif isinstance(existing_payload, dict) and existing_payload.get("kind") == ADOPTION_RECEIPT_KIND:
+            # A receipt written before readiness identity existed is evidence of
+            # an established adoption, not evidence that setup is incomplete.
+            payload.pop("configuration_readiness", None)
     rendered_text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
     if existing_text == rendered_text:
         return {"kind": "current", "path": relative.as_posix(), "detail": "adoption receipt already current"}
@@ -998,6 +1031,269 @@ def _read_adoption_receipt(*, target_root: Path) -> dict[str, Any]:
             "error": "adoption receipt kind is missing or unsupported",
         }
     return {"status": "present", "path": WORKSPACE_ADOPTION_RECEIPT_PATH.as_posix(), "payload": payload}
+
+
+def _without_toml_table(source: str, table: str) -> str:
+    pattern = re.compile(rf"(?ms)^\[{re.escape(table)}\]\s*\r?\n.*?(?=^\[|\Z)")
+    return pattern.sub("", source).rstrip() + ("\n" if source else "")
+
+
+def _setup_context_revision(*, target_root: Path, selected_modules: list[str]) -> str:
+    local_path = target_root / WORKSPACE_LOCAL_CONFIG_PATH
+    local_source = local_path.read_text(encoding="utf-8") if local_path.is_file() else ""
+    local_policy_source = _without_toml_table(local_source, "setup")
+    local_policy_source = re.sub(r"(?m)^schema_version\s*=\s*1\s*$", "", local_policy_source).strip()
+    bounded_sources = [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "GEMINI.md",
+        ".cursorrules",
+        "SYSTEM_INTENT.md",
+        "README.md",
+        "docs/system-intent.md",
+        "docs/product-direction.md",
+        "package.json",
+        "pyproject.toml",
+        "Cargo.toml",
+        "go.mod",
+        "CODEOWNERS",
+        ".github/CODEOWNERS",
+        "docs/CODEOWNERS",
+    ]
+    try:
+        effective_config = _load_workspace_config(target_root=target_root)
+    except (OSError, WorkspaceUsageError):
+        effective_config = None
+    if effective_config is not None:
+        bounded_sources.extend(effective_config.system_intent.sources)
+        assurance = effective_config.assurance
+        bounded_sources.extend(
+            source
+            for source in (
+                assurance.classification_source,
+                assurance.invariant_registry,
+                assurance.risk_registry,
+            )
+            if source
+        )
+        for item in (*assurance.requirements, *assurance.domain_proof_lanes, *assurance.closeout_postures):
+            bounded_sources.extend(item.authority_refs)
+    bounded_sources = _dedupe(bounded_sources)
+    workflow_root = target_root / ".github" / "workflows"
+    if workflow_root.is_dir():
+        bounded_sources.extend(path.relative_to(target_root).as_posix() for path in sorted(workflow_root.glob("*.y*ml"))[:16])
+    source_revisions = []
+    for relative in bounded_sources:
+        path = target_root / relative
+        if path.is_file():
+            source_revisions.append([relative, hashlib.sha256(path.read_bytes()).hexdigest()])
+    payload: dict[str, Any] = {
+        "selected_modules": sorted(_dedupe(selected_modules)),
+        "shared_config_revision": _config_policy_revision(target_root / WORKSPACE_CONFIG_PATH),
+        "local_policy_revision": hashlib.sha256(local_policy_source.encode("utf-8")).hexdigest(),
+        "bounded_source_revisions": source_revisions,
+    }
+    return "sha256:" + hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+
+
+def _task_depends_on_setup_concerns(*, task_text: str, concern_ids: Sequence[str]) -> bool:
+    normalized = task_text.lower()
+    if not normalized:
+        return False
+    if any(marker in normalized for marker in ("setup", "configure agentic workspace", "resume configuration")):
+        return True
+    markers = {
+        "orchestration-posture": ("delegate", "delegation", "assign", "handoff", "another agent"),
+        "cross-ecosystem-boundaries": ("ownership", "boundary", "cross-ecosystem", "planning lane"),
+        "source:system-intent": ("intent", "product direction", "roadmap", "full intent", "closeout"),
+        "source:assurance-classifier": ("assurance", "high risk", "classify", "security", "compliance"),
+        "source:invariant-registry": ("invariant", "high assurance", "completion", "closeout"),
+        "source:risk-registry": ("risk", "high assurance", "security", "compliance"),
+    }
+    for raw_concern_id in concern_ids:
+        concern_id = raw_concern_id.removeprefix("workspace:")
+        terms = markers.get(concern_id)
+        if terms is None and concern_id.startswith("source:"):
+            terms = frozenset(("proof", "assurance", "closeout", "review", "claim"))
+        if terms is None:
+            terms = (concern_id.replace("-", " "),)
+        if any(marker in normalized for marker in terms):
+            return True
+    return False
+
+
+def _configuration_readiness_startup_payload(
+    *, target_root: Path, config: WorkspaceConfig, selected_modules: list[str], task_text: str = ""
+) -> dict[str, Any]:
+    receipt_status = _read_adoption_receipt(target_root=target_root)
+    raw_receipt = receipt_status.get("payload") if receipt_status.get("status") == "present" else {}
+    receipt: dict[str, Any] = raw_receipt if isinstance(raw_receipt, dict) else {}
+    readiness = receipt.get("configuration_readiness")
+    if not isinstance(readiness, dict):
+        return {
+            "status": "legacy-compatible",
+            "surface": WORKSPACE_ADOPTION_RECEIPT_PATH.as_posix(),
+            "rule": "Missing readiness metadata does not prove that an established repository needs setup.",
+        }
+    if readiness.get("kind") != CONFIGURATION_READINESS_KIND:
+        return {
+            "status": "unavailable",
+            "surface": WORKSPACE_ADOPTION_RECEIPT_PATH.as_posix(),
+            "reason": "configuration readiness kind is unsupported",
+        }
+    basis = readiness.get("basis") if isinstance(readiness.get("basis"), dict) else {}
+    observed_basis = {
+        "selected_modules": sorted(_dedupe(selected_modules)),
+        "payload_mirror": bool(receipt.get("payload_mirror")),
+        "checked_in_rule": str(receipt.get("checked_in_rule") or ""),
+    }
+    observed_identity = hashlib.sha256(json.dumps(observed_basis, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:24]
+    recorded_identity = str(readiness.get("identity") or "")
+    recorded_status = str(readiness.get("status") or "")
+    current = recorded_status == "current" and recorded_identity == observed_identity and basis == observed_basis
+    prior_concerns = readiness.get("concern_receipts")
+    if current and not isinstance(prior_concerns, dict):
+        return {
+            "kind": CONFIGURATION_READINESS_KIND,
+            "status": "current",
+            "identity": observed_identity,
+            "surface": WORKSPACE_ADOPTION_RECEIPT_PATH.as_posix(),
+        }
+    changed_module_concerns: list[str] = []
+    if recorded_status == "current" and isinstance(prior_concerns, dict):
+        descriptors = _module_operations()
+        module_contracts = _module_setup_concern_payloads(selected_modules=selected_modules, descriptors=descriptors)
+        current_module_ids: set[str] = set()
+        for concern in module_contracts:
+            identity = str(concern["id"])
+            current_module_ids.add(identity)
+            prior = _as_dict(prior_concerns.get(identity))
+            if prior.get("semantic_revision") != concern.get("semantic_revision") or prior.get("source_revision") != concern.get(
+                "source_revision"
+            ):
+                changed_module_concerns.append(identity)
+        raw_config: dict[str, Any] = {}
+        config_path = target_root / WORKSPACE_CONFIG_PATH
+        if config_path.is_file():
+            try:
+                loaded = tomllib.loads(config_path.read_text(encoding="utf-8"))
+            except (OSError, tomllib.TOMLDecodeError):
+                loaded = {}
+            raw_config = loaded if isinstance(loaded, dict) else {}
+        source_contracts = _workspace_source_obligation_payloads(
+            target_root=target_root,
+            config=config,
+            raw_config=raw_config,
+        )
+        current_source_ids: set[str] = set()
+        for concern in source_contracts:
+            identity = f"workspace:{concern['id']}"
+            current_source_ids.add(identity)
+            prior = _as_dict(prior_concerns.get(identity))
+            semantic_revision = str(concern.get("semantic_revision") or "workspace.repo-source-obligation/v1")
+            source_revision = _setup_concern_source_revision(target_root=target_root, concern=concern)
+            if prior.get("semantic_revision") != semantic_revision or prior.get("source_revision") != source_revision:
+                changed_module_concerns.append(identity)
+        if not changed_module_concerns:
+            retired = sorted(
+                identity
+                for identity in prior_concerns
+                if (str(identity).startswith("module:") and identity not in current_module_ids)
+                or (str(identity).startswith("workspace:source:") and identity not in current_source_ids)
+            )
+            return {
+                "kind": CONFIGURATION_READINESS_KIND,
+                "status": "current",
+                "identity": observed_identity,
+                "surface": WORKSPACE_ADOPTION_RECEIPT_PATH.as_posix(),
+                "capability_delta": {
+                    "status": "quiet-no-new-semantic-concerns",
+                    "retired_concern_ids": retired,
+                    "rule": "Package or enabled-module identity changes do not replay unchanged concern contracts.",
+                },
+            }
+    local_setup = config.local_override
+    local_disposition = str(local_setup.setup_prompt_disposition or "active")
+    context_revision = _setup_context_revision(target_root=target_root, selected_modules=selected_modules)
+    disposition_current = (
+        local_disposition in {"deferred", "optional-suppressed"}
+        and local_setup.setup_identity == (recorded_identity or observed_identity)
+        and local_setup.setup_context_revision == context_revision
+        and bool(local_setup.setup_unresolved_concerns)
+    )
+    action_required = disposition_current and _task_depends_on_setup_concerns(
+        task_text=task_text or "",
+        concern_ids=local_setup.setup_required_concerns,
+    )
+    command = _command_with_cli_invoke(
+        command="agentic-workspace setup --target . --format json",
+        cli_invoke=config.cli_invoke,
+    )
+    payload: dict[str, Any] = {
+        "kind": CONFIGURATION_READINESS_KIND,
+        "status": (
+            "action-required"
+            if action_required
+            else "follow-up-deferred"
+            if disposition_current and local_disposition == "deferred"
+            else "optional-prompts-suppressed"
+            if disposition_current
+            else "reconciliation-required"
+            if recorded_status == "reconciliation-required"
+            else "stale"
+        ),
+        "identity": recorded_identity or "missing",
+        "observed_identity": observed_identity,
+        "surface": WORKSPACE_ADOPTION_RECEIPT_PATH.as_posix(),
+        "owner": "setup.guidance",
+        "required_skill": "workspace-setup-jumpstart",
+        "exact_continuation": {
+            "action": "reconcile-repository-configuration",
+            "command": command,
+            "run": command,
+        },
+        "claim_boundary": (
+            "Configured-workflow claims and effects wait for repository setup reconciliation; "
+            "unrelated read-only inspection remains allowed."
+        ),
+        "reason": (
+            "Current work depends on an unresolved setup prerequisite."
+            if action_required
+            else "Setup follow-up is pending but locally deferred; unrelated ordinary work remains allowed."
+            if disposition_current and local_disposition == "deferred"
+            else "Optional setup prompting is locally suppressed; required prerequisites still re-elevate for affected work."
+            if disposition_current
+            else "Fresh bootstrap has not reconciled repository configuration."
+            if recorded_status == "reconciliation-required"
+            else "Enabled capability setup semantics or source authority changed: " + ", ".join(changed_module_concerns)
+            if changed_module_concerns
+            else "The recorded setup identity, configuration, capability, or bounded source context changed."
+        ),
+    }
+    if changed_module_concerns:
+        payload["changed_concern_ids"] = changed_module_concerns
+    if disposition_current:
+        payload["configuration_freshness"] = (
+            "required-for-affected-action" if local_setup.setup_required_concerns else "follow-up-recommended"
+        )
+        payload["user_disposition"] = local_disposition
+        payload["unresolved_concern_ids"] = list(local_setup.setup_unresolved_concerns)
+        payload["required_concern_ids"] = list(local_setup.setup_required_concerns)
+        payload["context_revision"] = context_revision
+        payload["resume"] = {
+            "action": "resume-repository-configuration",
+            "command": command,
+        }
+        payload["claim_boundary"] = (
+            "Only actions depending on required_concern_ids wait; unrelated direct work and claims remain available."
+        )
+    elif local_disposition in {"deferred", "optional-suppressed"}:
+        payload["stale_local_disposition"] = {
+            "status": "discard-and-re-resolve",
+            "recorded_context_revision": local_setup.setup_context_revision or "missing",
+            "observed_context_revision": context_revision,
+        }
+    return payload
 
 
 NECESSARY_SURFACE_DURABLE_PREFIXES = (
@@ -29287,12 +29583,12 @@ def _next_safe_action_packet(
     proof_hint = str(immediate.get("next_proof", "") or "")
     decision = str((workflow_sufficiency or {}).get("sufficiency_result") or (workflow_sufficiency or {}).get("decision") or "")
     preferred_routes = (skill_routing or {}).get("preferred_routes", [])
-    skill = ""
-    if action in {"ask-intent-discovery-question", "ask-work-shape-clarification"}:
+    skill = str(immediate.get("required_skill") or "")
+    if not skill and action in {"ask-intent-discovery-question", "ask-work-shape-clarification"}:
         skill = "workspace-intent-discovery"
-    elif action == "present-lane-shaping-prompt":
+    elif not skill and action == "present-lane-shaping-prompt":
         skill = "planning-decompose"
-    elif action in {
+    elif not skill and action in {
         "export-assigned-handoff",
         "dispatch-assigned-target",
         "admit-returned-assignment",
@@ -29301,9 +29597,9 @@ def _next_safe_action_packet(
         "reassign-blocked-assignment",
     }:
         skill = "planning-orchestrator-workflow"
-    elif action in {"produce-bounded-reflection-report", "archive-or-retire-completed-plan", "inspect-current-task"}:
+    elif not skill and action in {"produce-bounded-reflection-report", "archive-or-retire-completed-plan", "inspect-current-task"}:
         skill = ""
-    elif action != "choose-smallest-workflow-shape" and isinstance(preferred_routes, list):
+    elif not skill and action != "choose-smallest-workflow-shape" and isinstance(preferred_routes, list):
         for route in preferred_routes:
             if isinstance(route, dict) and route.get("skill"):
                 skill = str(route.get("skill"))
@@ -29334,6 +29630,13 @@ def _next_safe_action_packet(
             [
                 "begin ordinary workspace work before installed payload target is satisfied",
                 "claim installed payload target satisfied before recheck passes",
+            ]
+        )
+    if action == "reconcile-repository-configuration":
+        forbidden_actions.extend(
+            [
+                "begin configured-workflow implementation before repository setup reconciliation",
+                "claim repository configuration is current before startup observes a current readiness identity",
             ]
         )
     if action in {"export-assigned-handoff", "dispatch-assigned-target"}:
@@ -34389,6 +34692,58 @@ def _start_tiny_payload_fast(
             "target_identity_ref": assignment_action.get("target_identity_ref"),
             "implementation_allowed": assignment_action.get("implementation_allowed"),
         }
+    configuration_readiness = _configuration_readiness_startup_payload(
+        target_root=target_root,
+        config=config,
+        selected_modules=selected_modules,
+        task_text=task_text or "",
+    )
+    current_action = str(_as_dict(payload.get("immediate_next_allowed_action")).get("action") or "")
+    setup_independent_actions = {
+        "continue-read-only-source-evidence-review",
+        "inspect-closeout-trust-before-completion-answer",
+        "inspect-known-task-paths",
+        "refresh-external-issue-intent",
+        "refresh-open-issue-intake",
+        "run-installed-payload-target-upgrade",
+        "select-changed-path-proof",
+    }
+    configuration_gate_applies = (
+        configuration_readiness.get("status") in {"reconciliation-required", "stale", "action-required"}
+        and installed_state_compatibility.get("status") == "compatible"
+        and not active_planning_present
+        and not normalized_paths
+        and read_only_response.get("status") != "read-only-reporting"
+        and current_action not in setup_independent_actions
+    )
+    if configuration_gate_applies:
+        payload["configuration_readiness"] = configuration_readiness
+        continuation = _as_dict(configuration_readiness.get("exact_continuation"))
+        command = str(continuation.get("command") or "")
+        payload["workflow_sufficiency"] = _workflow_sufficiency_payload(
+            surface="start",
+            decision="repository-configuration-reconciliation-required",
+            reason=str(configuration_readiness.get("reason") or "Repository configuration needs reconciliation."),
+            required_next_action="reconcile-repository-configuration",
+            evidence_required=["current receipt-bound configuration readiness identity"],
+            hard_gate=True,
+        )
+        payload["immediate_next_allowed_action"] = {
+            "action": "reconcile-repository-configuration",
+            "summary": str(configuration_readiness.get("reason") or "Reconcile repository configuration before configured work."),
+            "command": command or None,
+            "run": command or None,
+            "risk": "configuration-authority-reconciliation",
+            "required_inputs": ["target repository", "adoption receipt readiness identity"],
+            "next_proof": "Rerun ordinary startup after setup records a current readiness identity.",
+            "read_first": [command] if command else [],
+            "required_skill": "workspace-setup-jumpstart",
+            "implementation_allowed": False,
+            "claim_boundary": configuration_readiness.get("claim_boundary"),
+            "open_execplan_only_when": startup_template["open_execplan_only_when"],
+        }
+    elif configuration_readiness.get("status") in {"follow-up-deferred", "optional-prompts-suppressed"}:
+        payload["configuration_readiness"] = configuration_readiness
     payload["routine_work_context"] = _routine_work_context_payload(
         source_payload=payload,
         surface="start",
@@ -49601,6 +49956,407 @@ def _setup_orientation_surfaces(*, target_root: Path) -> tuple[Path, ...]:
     )
 
 
+_CORE_SETUP_CONCERN_SEMANTIC_REVISIONS = {
+    "startup-entrypoint": "workspace.startup-entrypoint/v1",
+    "system-intent-source": "workspace.system-intent-source/v1",
+    "proof-route": "workspace.proof-route/v1",
+    "ownership-boundaries": "workspace.ownership-boundaries/v1",
+    "orchestration-posture": "workspace.orchestration-posture/v1",
+    "verification-capability": "workspace.verification-capability/v1",
+    "cross-ecosystem-boundaries": "workspace.cross-ecosystem-boundaries/v1",
+}
+
+
+def _setup_concern_receipts(*, target_root: Path) -> dict[str, dict[str, Any]]:
+    receipt_status = _read_adoption_receipt(target_root=target_root)
+    receipt = _as_dict(receipt_status.get("payload"))
+    readiness = _as_dict(receipt.get("configuration_readiness"))
+    raw = readiness.get("concern_receipts")
+    return {str(key): _as_dict(value) for key, value in raw.items()} if isinstance(raw, dict) else {}
+
+
+def _setup_concern_source_revision(*, target_root: Path, concern: dict[str, Any]) -> str:
+    explicit = str(concern.get("source_revision") or "")
+    if explicit:
+        return explicit
+    evidence = _as_dict(concern.get("evidence"))
+    sources = [str(item) for item in _list_payload(evidence.get("sources")) if str(item)]
+    source_state: list[list[str]] = []
+    for source in sorted(sources):
+        path_text = source.split("#", 1)[0]
+        path = target_root / path_text
+        revision = hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else "missing"
+        source_state.append([source, revision])
+    payload = {
+        "id": str(concern.get("id") or ""),
+        "status": str(concern.get("status") or ""),
+        "sources": source_state,
+        "source_obligation": {
+            "status": str(_as_dict(concern.get("source_obligation")).get("status") or ""),
+            "configured_sources": _list_payload(_as_dict(concern.get("source_obligation")).get("configured_sources")),
+            "current_source": str(_as_dict(concern.get("source_obligation")).get("current_source") or ""),
+        }
+        if isinstance(concern.get("source_obligation"), dict)
+        else {},
+    }
+    return "sha256:" + hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+
+
+def _module_setup_concern_payloads(*, selected_modules: list[str], descriptors: dict[str, ModuleDescriptor]) -> list[dict[str, Any]]:
+    concerns: list[dict[str, Any]] = []
+    for module_name in selected_modules:
+        descriptor = descriptors.get(module_name)
+        if descriptor is None or descriptor.availability != "available" or descriptor.public_contract is None:
+            continue
+        for declaration in module_setup_concerns(descriptor.public_contract):
+            local_id = str(declaration["id"])
+            identity = f"module:{module_name}:{local_id}"
+            route = _as_dict(declaration.get("route"))
+            source_obligation = copy.deepcopy(_as_dict(declaration.get("source_obligation")))
+            concern = {
+                "id": identity,
+                "module_concern_id": local_id,
+                "module": module_name,
+                "owner": str(declaration["owner"]),
+                "status": str(declaration["status"]),
+                "materiality": str(declaration["materiality"]),
+                "dependency": "enabled-module-capability",
+                "semantic_revision": str(declaration["semantic_revision"]),
+                "source_revision": str(declaration["source_revision"]),
+                "evidence": {
+                    "sources": [f"module:{module_name}#capabilities.setup_concerns.{local_id}"],
+                    "authority": "compatible-enabled-module-contract",
+                    "strength": "strong",
+                },
+                "inference": str(declaration.get("inference") or "Enabled module contributed a bounded setup concern."),
+                "human_decision": {
+                    "concern_id": identity,
+                    "question": str(declaration.get("question") or "Choose the module-owned setup behavior for this enabled capability."),
+                    "answer_owner": str(declaration["owner"]),
+                    "apply_route": route,
+                }
+                if declaration["status"] == "human-decision-required"
+                else {},
+                "apply_route": {
+                    "owner": str(declaration["owner"]),
+                    "status": "awaiting-human"
+                    if declaration["status"] == "human-decision-required"
+                    else "ready-for-owner"
+                    if declaration["status"] == "inference-ready"
+                    else "not-required",
+                    **route,
+                },
+                "detail_selector": f"modules.{module_name}.setup_concerns.{local_id}",
+            }
+            if source_obligation:
+                concern["source_obligation"] = source_obligation
+            concerns.append(concern)
+    return concerns
+
+
+def _repo_source_path_state(*, target_root: Path, relative: str) -> tuple[str, str]:
+    """Classify one exact configured source without promoting weak discovery hints."""
+    normalized = relative.strip().replace("\\", "/").lstrip("./")
+    if not normalized:
+        return "missing", ""
+    lowered = normalized.lower()
+    if lowered.startswith(("scratch/", "tmp/", "temp/", ".agentic-workspace/local/")):
+        return "insufficient-authority", normalized
+    filesystem_part = normalized.split("#", 1)[0]
+    candidate = (target_root / filesystem_part).resolve()
+    try:
+        candidate.relative_to(target_root.resolve())
+    except ValueError:
+        return "insufficient-authority", normalized
+    return ("satisfied" if candidate.is_file() else "missing"), normalized
+
+
+def _source_obligation_concern(
+    *,
+    obligation_id: str,
+    owner: str,
+    semantic_need: str,
+    source_class: str,
+    configured_sources: Sequence[str],
+    target_root: Path,
+    materiality: str,
+    affected_claims: Sequence[str],
+    preferred_source: str = "",
+    auto_bind_when_unambiguous: bool = False,
+    require_all: bool = False,
+) -> dict[str, Any]:
+    classified = [_repo_source_path_state(target_root=target_root, relative=source) for source in configured_sources]
+    acceptable = [path for status, path in classified if status == "satisfied"]
+    rejected = [path for status, path in classified if status == "insufficient-authority"]
+    preferred_status = next((status for status, path in classified if path == preferred_source), "") if preferred_source else ""
+    if require_all and rejected:
+        status = "insufficient-authority"
+    elif require_all and len(acceptable) != len(configured_sources):
+        status = "missing"
+    elif require_all:
+        status = "satisfied"
+    elif rejected and not acceptable:
+        status = "insufficient-authority"
+    elif preferred_source and preferred_status == "satisfied":
+        status = "satisfied"
+    elif preferred_source and acceptable:
+        status = "ambiguous"
+    elif len(acceptable) > 1:
+        status = "ambiguous"
+    elif len(acceptable) == 1 and auto_bind_when_unambiguous:
+        status = "candidate-existing"
+    elif len(acceptable) == 1:
+        status = "satisfied"
+    else:
+        status = "missing"
+    auto_bind_safe = status == "candidate-existing"
+    current_source = preferred_source if preferred_status == "satisfied" else acceptable[0] if status == "satisfied" else ""
+    continuation_kind = (
+        "bind-existing"
+        if status == "candidate-existing"
+        else "human-decision"
+        if status == "ambiguous"
+        else "enrich-source"
+        if status == "insufficient-authority"
+        else "create-source"
+        if status == "missing"
+        else "defer"
+    )
+    setup_status = (
+        "satisfied" if status == "satisfied" else "inference-ready" if status == "candidate-existing" else "human-decision-required"
+    )
+    obligation = {
+        "kind": "agentic-workspace/repo-source-obligation/v1",
+        "id": obligation_id,
+        "semantic_need": semantic_need,
+        "source_class": source_class,
+        "owner": owner,
+        "status": status,
+        "materiality": materiality,
+        "configured_sources": list(configured_sources),
+        "candidates": acceptable,
+        "rejected_candidates": rejected,
+        "current_source": current_source,
+        "auto_bind_safe": auto_bind_safe,
+        "affected_claims": list(affected_claims),
+        "continuation": {
+            "kind": continuation_kind,
+            "id": f"{owner}:{obligation_id}",
+            "minimum_action": (
+                f"Bind the unambiguous existing {source_class} source {acceptable[0]}."
+                if auto_bind_safe
+                else f"Choose which {source_class} source is authoritative."
+                if status == "ambiguous"
+                else f"Create or enrich a repository-owned {source_class} source with the required domain content."
+                if status in {"missing", "insufficient-authority"}
+                else "No source action is required."
+            ),
+            "alternatives": ["disable-or-narrow-dependent-configuration", "defer-if-non-blocking"],
+        },
+        "scaffold": {
+            "allowed": status == "missing",
+            "content_boundary": "Create headings and ownership metadata only; do not invent substantive policy or domain decisions.",
+        },
+        "maintenance_handoff": "Later removal, movement, or staleness is handled by repository currentness reconciliation (#2661).",
+    }
+    question = {
+        "concern_id": obligation_id,
+        "why_required": f"The selected configuration depends on repository-owned {source_class}: {semantic_need}",
+        "already_inferred": (
+            f"Found candidates: {', '.join(acceptable)}." if acceptable else "No authoritative configured source is currently available."
+        ),
+        "question": (
+            f"Which repository-owned {source_class} source should AW use?"
+            if status == "ambiguous"
+            else f"Provide the repository-owned {source_class} content, or narrow the dependent configuration."
+        ),
+        "answer_owner": owner,
+        "continuation": copy.deepcopy(obligation["continuation"]),
+    }
+    return {
+        "id": obligation_id,
+        "owner": owner,
+        "status": setup_status,
+        "materiality": materiality,
+        "dependency": "effective-config-or-enabled-capability",
+        "semantic_revision": "workspace.repo-source-obligation/v1",
+        "evidence": {
+            "strength": "strong" if acceptable else "configured-requirement",
+            "sources": acceptable,
+            "authority": "exact-repo-owned-config-binding",
+        },
+        "inference": (
+            f"Repository source requirement satisfied by {current_source}."
+            if status == "satisfied"
+            else f"Configuration requires {semantic_need}"
+        ),
+        "source_obligation": obligation,
+        "human_decision": question if setup_status == "human-decision-required" else {},
+        "apply_route": {
+            "owner": owner,
+            "status": "ready-for-owner"
+            if auto_bind_safe
+            else "awaiting-human"
+            if setup_status == "human-decision-required"
+            else "not-required",
+            "continuation": copy.deepcopy(obligation["continuation"]),
+        },
+        "detail_selector": f"configuration_concerns.source_obligations.{obligation_id}",
+    }
+
+
+def _workspace_source_obligation_payloads(
+    *, target_root: Path, config: WorkspaceConfig, raw_config: dict[str, Any]
+) -> list[dict[str, Any]]:
+    """Derive only obligations made applicable by explicit effective configuration."""
+    obligations: list[dict[str, Any]] = []
+    raw_intent = _as_dict(raw_config.get("system_intent"))
+    explicit_intent_sources = [str(item) for item in _list_payload(raw_intent.get("sources")) if str(item).strip()]
+    if explicit_intent_sources:
+        preferred = str(raw_intent.get("preferred_source") or "")
+        intent_obligation = _source_obligation_concern(
+            obligation_id="source:system-intent",
+            owner="system-intent.sync",
+            semantic_need="durable product or project intent used to shape implementation and closeout",
+            source_class="system-intent authority",
+            configured_sources=explicit_intent_sources,
+            preferred_source=preferred,
+            target_root=target_root,
+            materiality="action-required",
+            affected_claims=("system-intent-alignment", "full-intent-complete"),
+            auto_bind_when_unambiguous=not bool(preferred),
+        )
+        compiled_intent = target_root / ".agentic-workspace/system-intent/intent.toml"
+        nested_intent = _as_dict(intent_obligation.get("source_obligation"))
+        if compiled_intent.is_file() and len(nested_intent.get("candidates", [])) == 1:
+            nested_intent["status"] = "satisfied"
+            nested_intent["current_source"] = nested_intent["candidates"][0]
+            nested_intent["auto_bind_safe"] = False
+            intent_obligation["source_obligation"] = nested_intent
+            intent_obligation["status"] = "satisfied"
+            intent_obligation["human_decision"] = {}
+            intent_obligation["apply_route"] = {"owner": "system-intent.sync", "status": "not-required"}
+        obligations.append(intent_obligation)
+
+    assurance = config.assurance
+    direct_sources = [
+        (
+            "source:assurance-classifier",
+            assurance.classification_source if assurance.classification_owner == "repository-owned" else None,
+            "assurance classification rules needed to classify repository work",
+            "assurance classifier authority",
+            "assurance.classification",
+        ),
+        (
+            "source:invariant-registry",
+            assurance.invariant_registry,
+            "the invariants that must hold for higher-assurance completion",
+            "invariant registry",
+            "high-assurance-completion",
+        ),
+        (
+            "source:risk-registry",
+            assurance.risk_registry,
+            "repository risks used to select higher-assurance handling",
+            "risk registry",
+            "high-assurance-completion",
+        ),
+    ]
+    for obligation_id, source, need, source_class, affected_claim in direct_sources:
+        if source:
+            obligations.append(
+                _source_obligation_concern(
+                    obligation_id=obligation_id,
+                    owner="assurance.config",
+                    semantic_need=need,
+                    source_class=source_class,
+                    configured_sources=(source,),
+                    preferred_source=source,
+                    target_root=target_root,
+                    materiality="action-required",
+                    affected_claims=(affected_claim,),
+                )
+            )
+
+    authority_groups: list[tuple[str, str, Sequence[str], Sequence[str]]] = []
+    authority_groups.extend(
+        (f"requirement-{item.id}", "assurance requirement authority", item.authority_refs, item.applies_to_task_markers)
+        for item in assurance.requirements
+        if item.authority_refs
+    )
+    authority_groups.extend(
+        (f"proof-lane-{item.id}", "proof or runbook authority", item.authority_refs, item.applies_to_task_markers)
+        for item in assurance.domain_proof_lanes
+        if item.authority_refs
+    )
+    authority_groups.extend(
+        (f"closeout-{item.id}", "closeout authority", item.authority_refs, item.applies_to_paths)
+        for item in assurance.closeout_postures
+        if item.authority_refs
+    )
+    for group_id, source_class, sources, task_markers in authority_groups:
+        obligations.append(
+            _source_obligation_concern(
+                obligation_id=f"source:{group_id}",
+                owner="assurance.config",
+                semantic_need=f"repository-owned {source_class} cited by active assurance configuration",
+                source_class=source_class,
+                configured_sources=sources,
+                target_root=target_root,
+                materiality="action-required",
+                affected_claims=tuple(task_markers) or (group_id,),
+                require_all=True,
+            )
+        )
+    return obligations
+
+
+def _setup_capability_freshness_revision(*, target_root: Path, selected_modules: list[str]) -> str:
+    """Return the compact semantic input that invalidates reusable startup projections."""
+    receipt = _as_dict(_read_adoption_receipt(target_root=target_root).get("payload"))
+    readiness = _as_dict(receipt.get("configuration_readiness"))
+    module_concerns = _module_setup_concern_payloads(
+        selected_modules=selected_modules,
+        descriptors=_module_operations(),
+    )
+    config = _load_workspace_config(target_root=target_root)
+    raw_config: dict[str, Any] = {}
+    config_path = target_root / WORKSPACE_CONFIG_PATH
+    if config_path.is_file():
+        try:
+            loaded = tomllib.loads(config_path.read_text(encoding="utf-8"))
+        except (OSError, tomllib.TOMLDecodeError):
+            loaded = {}
+        raw_config = loaded if isinstance(loaded, dict) else {}
+    source_concerns = _workspace_source_obligation_payloads(target_root=target_root, config=config, raw_config=raw_config)
+    payload = {
+        "readiness": {
+            "status": str(readiness.get("status") or ""),
+            "identity": str(readiness.get("identity") or ""),
+            "basis": _as_dict(readiness.get("basis")),
+            "concern_receipts": _as_dict(readiness.get("concern_receipts")),
+        },
+        "module_concerns": [
+            {
+                "id": str(concern.get("id") or ""),
+                "semantic_revision": str(concern.get("semantic_revision") or ""),
+                "source_revision": str(concern.get("source_revision") or ""),
+            }
+            for concern in module_concerns
+        ],
+        "source_obligations": [
+            {
+                "id": str(concern.get("id") or ""),
+                "status": str(_as_dict(concern.get("source_obligation")).get("status") or ""),
+                "source_revision": _setup_concern_source_revision(target_root=target_root, concern=concern),
+            }
+            for concern in source_concerns
+        ],
+    }
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return "sha256:" + hashlib.sha256(encoded).hexdigest()
+
+
 def _repo_looks_setup_mature(*, target_root: Path) -> bool:
     return all((path.exists() for path in _setup_orientation_surfaces(target_root=target_root)))
 
@@ -49636,6 +50392,685 @@ def _host_repo_orientation_payload(*, target_root: Path) -> dict[str, Any]:
         "candidate_count": len(candidates),
         "candidates": candidates,
         "rule": "Host orientation candidates are read-only setup hints; setup must not seed Memory, Planning, assurance, or verification state from them without agent judgment.",
+    }
+
+
+def _setup_configuration_concerns_payload(*, target_root: Path, config: WorkspaceConfig, selected_modules: list[str]) -> dict[str, Any]:
+    """Project bounded setup judgments from strong repo-owned evidence.
+
+    This is intentionally a concern classifier, not a repository analyzer or
+    config writer.  It reads a fixed, small source set and routes inferred
+    actions or human-owned choices to their existing owners.
+    """
+
+    inspected: list[str] = []
+    concerns: list[dict[str, Any]] = []
+    zero_interaction_actions: list[dict[str, Any]] = []
+    human_questions: list[dict[str, Any]] = []
+
+    def existing(relative: str) -> bool:
+        present = (target_root / relative).is_file()
+        if present:
+            _append_unique(inspected, relative)
+        return present
+
+    def evidence(*sources: str, authority: str, strength: str = "strong") -> dict[str, Any]:
+        return {
+            "strength": strength,
+            "sources": [source for source in sources if source],
+            "authority": authority,
+        }
+
+    config_path = target_root / WORKSPACE_CONFIG_PATH
+    raw_config: dict[str, Any] = {}
+    if config_path.is_file():
+        _append_unique(inspected, WORKSPACE_CONFIG_PATH.as_posix())
+        try:
+            loaded_config = tomllib.loads(config_path.read_text(encoding="utf-8"))
+        except (OSError, tomllib.TOMLDecodeError):
+            loaded_config = {}
+        raw_config = loaded_config if isinstance(loaded_config, dict) else {}
+
+    startup_surface = config.agent_instructions_file
+    startup_present = existing(startup_surface)
+    concerns.append(
+        {
+            "id": "startup-entrypoint",
+            "owner": "workspace.init",
+            "status": "satisfied" if startup_present else "inference-ready",
+            "materiality": "required-for-ordinary-startup",
+            "dependency": "none",
+            "evidence": evidence(
+                WORKSPACE_CONFIG_PATH.as_posix() if raw_config else "",
+                startup_surface if startup_present else "",
+                authority="repo-owned-config-and-adapter",
+            ),
+            "inference": f"Use {startup_surface} as the repository startup adapter.",
+            "apply_route": {
+                "owner": "workspace.init",
+                "command": _command_with_cli_invoke(
+                    command="agentic-workspace init --target . --format json",
+                    cli_invoke=config.cli_invoke,
+                ),
+                "status": "not-required" if startup_present else "owner-route-required",
+            },
+            "detail_selector": "config.workspace.agent_instructions_file",
+        }
+    )
+
+    intent_sources = [
+        path for path in ("SYSTEM_INTENT.md", "docs/system-intent.md", "docs/product-direction.md", "README.md") if existing(path)
+    ]
+    intent_current = existing(".agentic-workspace/system-intent/intent.toml")
+    if intent_current:
+        intent_status = "satisfied"
+        intent_inference = "A current workspace system-intent surface already exists."
+    elif intent_sources:
+        intent_status = "inference-ready"
+        intent_inference = f"Sync interpreted system intent from the strongest available repo source: {intent_sources[0]}."
+        zero_interaction_actions.append(
+            {
+                "concern_id": "system-intent-source",
+                "owner": "system-intent.sync",
+                "status": "ready-for-owner",
+                "command": _command_with_cli_invoke(
+                    command="agentic-workspace system-intent --target . --sync --format json",
+                    cli_invoke=config.cli_invoke,
+                ),
+                "claim_boundary": "The owner may sync interpreted fields; confirmed human intent remains human-owned.",
+            }
+        )
+    else:
+        intent_status = "not-applicable"
+        intent_inference = "No strong durable product-intent source was found; do not manufacture one from filenames."
+    concerns.append(
+        {
+            "id": "system-intent-source",
+            "owner": "system-intent.sync",
+            "status": intent_status,
+            "materiality": "useful-when-a-durable-intent-source-exists",
+            "dependency": "startup-entrypoint",
+            "evidence": evidence(*intent_sources, authority="repo-owned-intent-source"),
+            "inference": intent_inference,
+            "apply_route": {
+                "owner": "system-intent.sync",
+                "status": "ready-for-owner" if intent_status == "inference-ready" else "not-required",
+            },
+            "detail_selector": "system_intent",
+        }
+    )
+
+    explicit_test_commands: list[dict[str, str]] = []
+    package_json_path = target_root / "package.json"
+    if package_json_path.is_file():
+        _append_unique(inspected, "package.json")
+        try:
+            package_payload = json.loads(package_json_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            package_payload = {}
+        scripts = package_payload.get("scripts") if isinstance(package_payload, dict) else {}
+        if isinstance(scripts, dict) and isinstance(scripts.get("test"), str) and scripts["test"].strip():
+            explicit_test_commands.append({"command": "npm test", "source": "package.json#scripts.test"})
+    pyproject_path = target_root / "pyproject.toml"
+    if pyproject_path.is_file():
+        _append_unique(inspected, "pyproject.toml")
+        try:
+            pyproject = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
+        except (OSError, tomllib.TOMLDecodeError):
+            pyproject = {}
+        tool = pyproject.get("tool") if isinstance(pyproject, dict) else {}
+        if isinstance(tool, dict) and isinstance(tool.get("pytest"), dict):
+            explicit_test_commands.append({"command": "pytest", "source": "pyproject.toml#tool.pytest"})
+    workflow_sources: list[str] = []
+    workflows_root = target_root / ".github" / "workflows"
+    if workflows_root.is_dir():
+        workflow_sources = [path.relative_to(target_root).as_posix() for path in sorted(workflows_root.glob("*.y*ml"))[:4]]
+        for source in workflow_sources:
+            _append_unique(inspected, source)
+    proof_status = "inference-ready" if explicit_test_commands else "not-applicable"
+    if explicit_test_commands:
+        zero_interaction_actions.append(
+            {
+                "concern_id": "proof-route",
+                "owner": "proof.selection",
+                "status": "inferred-no-mutation-required",
+                "inferred_value": explicit_test_commands[0]["command"],
+                "claim_boundary": "Live changed-path proof still selects and confirms the command before a proof claim.",
+            }
+        )
+    concerns.append(
+        {
+            "id": "proof-route",
+            "owner": "proof.selection",
+            "status": proof_status,
+            "materiality": "required-before-proof-claims",
+            "dependency": "none",
+            "evidence": evidence(
+                *[item["source"] for item in explicit_test_commands],
+                *workflow_sources,
+                authority="explicit-toolchain-or-ci-command",
+            ),
+            "inference": (
+                f"Use the explicit repository test route {explicit_test_commands[0]['command']!r} as a proof candidate."
+                if explicit_test_commands
+                else "No explicit repeatable test command was found; generic test-like filenames are insufficient."
+            ),
+            "apply_route": {
+                "owner": "proof.selection",
+                "status": "ready-for-owner" if explicit_test_commands else "not-required",
+                "command": _command_with_cli_invoke(
+                    command="agentic-workspace proof --target . --changed <paths> --format json",
+                    cli_invoke=config.cli_invoke,
+                )
+                if explicit_test_commands
+                else "",
+            },
+            "detail_selector": "proof_route_hints",
+        }
+    )
+
+    codeowners = next(
+        (path for path in (".github/CODEOWNERS", "CODEOWNERS", "docs/CODEOWNERS") if existing(path)),
+        "",
+    )
+    if codeowners:
+        zero_interaction_actions.append(
+            {
+                "concern_id": "ownership-boundaries",
+                "owner": "ownership.report",
+                "status": "ready-for-owner",
+                "command": _command_with_cli_invoke(
+                    command="agentic-workspace ownership --target . --format json",
+                    cli_invoke=config.cli_invoke,
+                ),
+                "claim_boundary": "CODEOWNERS is evidence for a proposal; the ownership owner decides the shared mapping.",
+            }
+        )
+    concerns.append(
+        {
+            "id": "ownership-boundaries",
+            "owner": "ownership.report",
+            "status": "inference-ready" if codeowners else "not-applicable",
+            "materiality": "required-only-for-shared-ownership-policy",
+            "dependency": "none",
+            "evidence": evidence(codeowners, authority="explicit-repository-ownership-map"),
+            "inference": (
+                f"Use {codeowners} as evidence when proposing host ownership boundaries."
+                if codeowners
+                else "Directory names alone do not authorize shared ownership policy."
+            ),
+            "apply_route": {
+                "owner": "ownership.report",
+                "status": "ready-for-owner" if codeowners else "not-required",
+                "command": _command_with_cli_invoke(
+                    command="agentic-workspace ownership --target . --format json",
+                    cli_invoke=config.cli_invoke,
+                )
+                if codeowners
+                else "",
+            },
+            "detail_selector": "ownership",
+        }
+    )
+
+    local_override = config.local_override
+    orchestration_declared = local_override.execution_role == "orchestrator"
+    assignment_explicit = local_override.assignment_policy is not None
+    setup_identity = _config_policy_setup_identity(target_root=target_root, config=config)
+    local_config_path = target_root / WORKSPACE_LOCAL_CONFIG_PATH
+    shared_config_revision = _config_policy_revision(config_path)
+    local_config_revision = _config_policy_revision(local_config_path)
+    if orchestration_declared and not assignment_explicit:
+        question = {
+            "concern_id": "orchestration-posture",
+            "why_required": (
+                "The repository explicitly selects orchestration, but it does not say whether work may automatically "
+                "move to another agent. Repository evidence cannot decide that human-owned authority boundary."
+            ),
+            "already_inferred": "Multi-agent orchestration is intended; the transfer policy is unresolved.",
+            "question": "Should suitable work move automatically to the best available agent, or stay here unless you explicitly delegate it?",
+            "alternatives": [
+                {
+                    "id": "automatic-best-fit",
+                    "label": "Move suitable work automatically",
+                    "consequence": "AW may assign bounded work to a better-fit configured target when its safety contract permits it.",
+                    "decision": {
+                        "kind": "agentic-workspace/config-policy-decision/v1",
+                        "concern_id": "orchestration-posture",
+                        "authority": "human-answer",
+                        "scope": "local",
+                        "setup_identity": setup_identity,
+                        "changes": {"delegation.assignment_policy": "required-best-fit"},
+                    },
+                },
+                {
+                    "id": "explicit-delegation-only",
+                    "label": "Keep work local by default",
+                    "consequence": "AW will suggest delegation when useful but waits for an explicit choice before transfer.",
+                    "decision": {
+                        "kind": "agentic-workspace/config-policy-decision/v1",
+                        "concern_id": "orchestration-posture",
+                        "authority": "human-answer",
+                        "scope": "local",
+                        "setup_identity": setup_identity,
+                        "changes": {"delegation.assignment_policy": "best-fit-advisory"},
+                    },
+                },
+            ],
+            "answer_owner": "config.policy-apply",
+            "apply_command": _command_with_cli_invoke(
+                command=(
+                    "agentic-workspace config-policy --target . --decision-json '<selected-alternative.decision-json>' "
+                    f"--expect-config-revision {local_config_revision} --expect-setup-identity {setup_identity} --format json"
+                ),
+                cli_invoke=config.cli_invoke,
+            ),
+            "detail_selector": "config.local_runtime.assignment_policy",
+        }
+        human_questions.append(question)
+        orchestration_status = "human-decision-required"
+    else:
+        question = None
+        orchestration_status = "satisfied" if orchestration_declared else "not-applicable"
+    concerns.append(
+        {
+            "id": "orchestration-posture",
+            "owner": "config.policy-apply",
+            "status": orchestration_status,
+            "materiality": "shared-execution-authority",
+            "dependency": "configured-targets",
+            "evidence": evidence(
+                f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()}#delegation.execution_role" if orchestration_declared else "",
+                authority="explicit-local-config",
+            ),
+            "inference": (
+                "Orchestration is explicitly selected, but automatic transfer policy cannot be inferred."
+                if question
+                else "No unresolved orchestration policy is active."
+            ),
+            "human_decision": question or {},
+            "apply_route": {
+                "owner": "config.policy-apply",
+                "status": "awaiting-human" if question else "not-required",
+                "operation": "config.policy-apply",
+            },
+            "detail_selector": "config.local_runtime.assignment_policy",
+        }
+    )
+
+    if "verification" in selected_modules:
+        verification_status = "satisfied"
+        verification_inference = "Verification is already enabled."
+    elif explicit_test_commands and workflow_sources:
+        verification_status = "inference-ready"
+        verification_inference = (
+            "Explicit test and CI routes support recommending repeatable Verification without a module-choice question."
+        )
+        zero_interaction_actions.append(
+            {
+                "concern_id": "verification-capability",
+                "owner": "modules.reconcile",
+                "status": "ready-for-owner",
+                "desired_outcome": "Preserve repeatable CI-backed proof routes for future claims.",
+                "detail_command": _command_with_cli_invoke(
+                    command="agentic-workspace modules --target . --format json",
+                    cli_invoke=config.cli_invoke,
+                ),
+            }
+        )
+    else:
+        verification_status = "not-applicable"
+        verification_inference = "Do not ask about Verification merely because the capability exists."
+    concerns.append(
+        {
+            "id": "verification-capability",
+            "owner": "modules.reconcile",
+            "status": verification_status,
+            "materiality": "repeatable-proof-lifecycle",
+            "dependency": "proof-route",
+            "evidence": evidence(
+                *[item["source"] for item in explicit_test_commands],
+                *workflow_sources,
+                authority="explicit-repeatable-proof-routes",
+            ),
+            "inference": verification_inference,
+            "apply_route": {
+                "owner": "modules.reconcile",
+                "status": "ready-for-owner" if verification_status == "inference-ready" else "not-required",
+            },
+            "detail_selector": "modules",
+        }
+    )
+
+    ecosystem_sources = [source for source in ("pyproject.toml", "package.json", "Cargo.toml", "go.mod") if existing(source)]
+    broad_work = len(ecosystem_sources) > 1 and not codeowners
+    if broad_work:
+        concerns.append(
+            {
+                "id": "cross-ecosystem-boundaries",
+                "owner": "planning",
+                "status": "bounded-route-required",
+                "materiality": "broad-active-work",
+                "dependency": "human-or-planning-boundary",
+                "evidence": evidence(*ecosystem_sources, authority="multiple-explicit-toolchain-manifests"),
+                "inference": "Multiple explicit ecosystems are present without an authoritative ownership map; setup must not analyze the whole repository.",
+                "apply_route": {
+                    "owner": "planning",
+                    "status": "bounded-route-required",
+                    "command": _command_with_cli_invoke(
+                        command="agentic-workspace planning new-plan --id <id> --title <title> --target . --format json",
+                        cli_invoke=config.cli_invoke,
+                    ),
+                },
+                "detail_selector": "host_orientation",
+            }
+        )
+
+    source_obligation_concerns = _workspace_source_obligation_payloads(
+        target_root=target_root,
+        config=config,
+        raw_config=raw_config,
+    )
+    for source_concern in source_obligation_concerns:
+        concerns.append(source_concern)
+        if source_concern["status"] == "human-decision-required":
+            human_questions.append(copy.deepcopy(_as_dict(source_concern.get("human_decision"))))
+        elif source_concern["status"] == "inference-ready":
+            zero_interaction_actions.append(
+                {
+                    "concern_id": source_concern["id"],
+                    "owner": source_concern["owner"],
+                    "status": "ready-for-owner",
+                    "apply_route": copy.deepcopy(_as_dict(source_concern.get("apply_route"))),
+                    "claim_boundary": "Only the named source owner may bind the existing repository authority.",
+                }
+            )
+
+    descriptors = _module_operations()
+    for module_concern in _module_setup_concern_payloads(selected_modules=selected_modules, descriptors=descriptors):
+        concerns.append(module_concern)
+        if module_concern["status"] == "human-decision-required":
+            human_questions.append(copy.deepcopy(_as_dict(module_concern.get("human_decision"))))
+        elif module_concern["status"] == "inference-ready":
+            zero_interaction_actions.append(
+                {
+                    "concern_id": module_concern["id"],
+                    "owner": module_concern["owner"],
+                    "status": "ready-for-owner",
+                    "apply_route": copy.deepcopy(_as_dict(module_concern.get("apply_route"))),
+                    "claim_boundary": "The enabled module declares the concern; its named owner remains responsible for effects.",
+                }
+            )
+
+    prior_concern_receipts = _setup_concern_receipts(target_root=target_root)
+    current_concern_receipts: dict[str, dict[str, Any]] = {}
+    pressure_ids: set[str] = set()
+    delta_counts = {"newly-applicable": 0, "semantics-changed": 0, "source-changed": 0, "unchanged": 0}
+    for concern in concerns:
+        concern_id = str(concern.get("id") or "")
+        identity = concern_id if concern_id.startswith("module:") else f"workspace:{concern_id}"
+        semantic_revision = str(
+            concern.get("semantic_revision") or _CORE_SETUP_CONCERN_SEMANTIC_REVISIONS.get(concern_id) or f"workspace:{concern_id}/v1"
+        )
+        source_revision = _setup_concern_source_revision(target_root=target_root, concern=concern)
+        contract = {
+            "identity": identity,
+            "semantic_revision": semantic_revision,
+            "source_revision": source_revision,
+            "materiality": str(concern.get("materiality") or "recommended"),
+            "owner": str(concern.get("owner") or ""),
+            "status": str(concern.get("status") or ""),
+            "source_obligation_status": str(_as_dict(concern.get("source_obligation")).get("status") or ""),
+        }
+        prior = prior_concern_receipts.get(identity, {})
+        if not prior:
+            delta_status = "newly-applicable"
+        elif prior.get("semantic_revision") != semantic_revision:
+            delta_status = "semantics-changed"
+        elif prior.get("source_revision") != source_revision:
+            delta_status = "source-changed"
+        else:
+            delta_status = "unchanged"
+        delta_counts[delta_status] += 1
+        active_status = concern.get("status") in {
+            "inference-ready",
+            "human-decision-required",
+            "bounded-route-required",
+            "follow-up-recommended",
+        }
+        pressure = bool(active_status and delta_status != "unchanged")
+        if pressure:
+            pressure_ids.add(concern_id)
+        concern["contract"] = contract
+        concern["delta_status"] = delta_status
+        concern["setup_pressure"] = pressure
+        current_concern_receipts[identity] = contract
+
+    human_questions = [question for question in human_questions if str(question.get("concern_id") or "") in pressure_ids]
+    zero_interaction_actions = [action for action in zero_interaction_actions if str(action.get("concern_id") or "") in pressure_ids]
+    retired_concern_ids = sorted(set(prior_concern_receipts) - set(current_concern_receipts))
+
+    status_counts = {
+        status: sum(1 for concern in concerns if concern.get("status") == status and concern.get("setup_pressure"))
+        for status in ("satisfied", "inference-ready", "human-decision-required", "not-applicable", "bounded-route-required")
+    }
+    bounded_pressure = any(concern.get("status") == "bounded-route-required" and concern.get("setup_pressure") for concern in concerns)
+    status = "human-decision-required" if human_questions else "bounded-route-required" if bounded_pressure else "zero-question-ready"
+    unresolved_concern_ids = [
+        str(concern.get("id"))
+        for concern in concerns
+        if concern.get("status") in {"human-decision-required", "bounded-route-required", "follow-up-recommended"}
+        and concern.get("setup_pressure")
+    ]
+    required_concern_ids = [
+        str(concern.get("id"))
+        for concern in concerns
+        if concern.get("status") in {"human-decision-required", "bounded-route-required"}
+        and concern.get("materiality") != "recommended"
+        and concern.get("setup_pressure")
+    ]
+    context_revision = _setup_context_revision(target_root=target_root, selected_modules=selected_modules)
+    local_disposition = config.local_override.setup_prompt_disposition or "active"
+    local_disposition_current = (
+        local_disposition in {"deferred", "optional-suppressed"}
+        and config.local_override.setup_identity == setup_identity
+        and config.local_override.setup_context_revision == context_revision
+        and tuple(unresolved_concern_ids) == config.local_override.setup_unresolved_concerns
+    )
+    disposition_decision_base = {
+        "kind": "agentic-workspace/config-policy-decision/v1",
+        "concern_id": "setup-continuation",
+        "authority": "human-answer",
+        "scope": "local",
+        "setup_identity": setup_identity,
+    }
+
+    def disposition_decision(disposition: str) -> dict[str, Any]:
+        return {
+            **disposition_decision_base,
+            "changes": {
+                "setup.prompt_disposition": disposition,
+                "setup.setup_identity": setup_identity,
+                "setup.context_revision": context_revision,
+                "setup.unresolved_concerns": unresolved_concern_ids,
+                "setup.required_concerns": required_concern_ids,
+            },
+        }
+
+    disposition_command = _command_with_cli_invoke(
+        command=(
+            "agentic-workspace config-policy --target . --decision-json '<selected-disposition.decision-json>' "
+            f"--expect-config-revision {local_config_revision} --expect-setup-identity {setup_identity} --format json"
+        ),
+        cli_invoke=config.cli_invoke,
+    )
+    adoption_status = _read_adoption_receipt(target_root=target_root)
+    adoption_payload = _as_dict(adoption_status.get("payload"))
+    readiness_basis = {
+        "selected_modules": sorted(_dedupe(selected_modules)),
+        "payload_mirror": bool(adoption_payload.get("payload_mirror")),
+        "checked_in_rule": str(adoption_payload.get("checked_in_rule") or ""),
+    }
+    return {
+        "kind": "agentic-workspace/setup-concerns/v1",
+        "status": status,
+        "concerns": concerns,
+        "status_counts": status_counts,
+        "inferred_configuration": {
+            "startup_adapter": startup_surface if startup_present else "owner-route-required",
+            "intent_source": intent_sources[0] if intent_sources else "not-inferred",
+            "proof_command_candidates": [item["command"] for item in explicit_test_commands],
+            "ownership_source": codeowners or "not-inferred",
+            "capability_outcomes": [
+                action["desired_outcome"]
+                for action in zero_interaction_actions
+                if isinstance(action, dict) and action.get("desired_outcome")
+            ],
+            "authority": "projection-only; each change remains owned by its apply_route",
+        },
+        "zero_interaction_actions": zero_interaction_actions,
+        "human_questions": human_questions,
+        "source_obligations": [
+            copy.deepcopy(_as_dict(concern.get("source_obligation")))
+            for concern in concerns
+            if isinstance(concern.get("source_obligation"), dict)
+        ],
+        "concern_contracts": list(current_concern_receipts.values()),
+        "delta": {
+            "counts": delta_counts,
+            "retired_concern_ids": retired_concern_ids,
+            "rule": "Compare the current applicable semantic/source concern set directly; never replay chronological setup generations.",
+        },
+        "inspection_budget": {
+            "inspected_sources": inspected,
+            "source_count": len(inspected),
+            "excluded_as_independent_authority": [
+                "generic filenames or keywords",
+                "scratch and local artifacts",
+                "package-source-repository policy",
+                "broad docs, backlog, or source-tree scans",
+            ],
+            "rule": "Inspect only fixed strong sources needed by active concerns; exact selectors own further detail.",
+        },
+        "transient_findings": {
+            "status": "kept-transient",
+            "rule": "Advisory orientation and weak setup findings do not become configuration pressure without stronger authority.",
+        },
+        "continuation": {
+            "kind": "agentic-workspace/setup-continuation/v1",
+            "configuration_freshness": (
+                "required-for-affected-action" if required_concern_ids else "follow-up-recommended" if unresolved_concern_ids else "current"
+            ),
+            "user_disposition": local_disposition if local_disposition_current else "active",
+            "setup_identity": setup_identity,
+            "context_revision": context_revision,
+            "unresolved_concern_ids": unresolved_concern_ids,
+            "required_concern_ids": required_concern_ids,
+            "source": WORKSPACE_LOCAL_CONFIG_PATH.as_posix(),
+            "actions": {
+                "defer": {"decision": disposition_decision("deferred"), "command": disposition_command},
+                "suppress_optional": {"decision": disposition_decision("optional-suppressed"), "command": disposition_command},
+                "resume": {
+                    "decision": {**disposition_decision_base, "changes": {}, "clear_setup_disposition": True},
+                    "command": disposition_command,
+                },
+            },
+            "rule": (
+                "Deferral changes only local prompting disposition, never repository freshness. Applied decisions remain with their owners; "
+                "resume re-resolves from compact concern identities without the prior transcript."
+            ),
+        },
+        "mutation_context": {
+            "setup_identity": setup_identity,
+            "shared_config_revision": shared_config_revision,
+            "local_config_revision": local_config_revision,
+            "decision_kind": "agentic-workspace/config-policy-decision/v1",
+            "operation": "config.policy-apply",
+            "reconciliation_completion": {
+                "decision": {
+                    "kind": "agentic-workspace/config-policy-decision/v1",
+                    "concern_id": "configuration-readiness",
+                    "authority": "strong-repo-evidence",
+                    "scope": "local",
+                    "setup_identity": setup_identity,
+                    "changes": {},
+                    "complete_readiness": True,
+                    "clear_setup_disposition": True,
+                    "readiness_basis": readiness_basis,
+                    "concern_receipts": current_concern_receipts,
+                },
+                "command": _command_with_cli_invoke(
+                    command=(
+                        "agentic-workspace config-policy --target . --decision-json '<reconciliation-completion.decision-json>' "
+                        f"--expect-config-revision {local_config_revision} --expect-setup-identity {setup_identity} --format json"
+                    ),
+                    cli_invoke=config.cli_invoke,
+                ),
+                "rule": "Run only after the listed owner actions are complete, then re-run start; the receipt is not a parallel setup history.",
+            },
+        },
+        "mutation_inventory": [
+            {
+                "concern": "workspace repo policy",
+                "disposition": "typed-owner",
+                "owner": "config.policy-apply",
+                "surface": WORKSPACE_CONFIG_PATH.as_posix(),
+            },
+            {
+                "concern": "machine or user runtime policy",
+                "disposition": "typed-owner",
+                "owner": "config.policy-apply",
+                "surface": WORKSPACE_LOCAL_CONFIG_PATH.as_posix(),
+            },
+            {
+                "concern": "module selection and lifecycle",
+                "disposition": "existing-owner",
+                "owner": "workspace lifecycle/modules",
+                "rule": "Never edit modules.enabled as a setup shortcut.",
+            },
+            {"concern": "startup adapter generation", "disposition": "existing-owner", "owner": "workspace.init"},
+            {"concern": "compiled system intent", "disposition": "existing-owner", "owner": "system-intent.sync"},
+            {
+                "concern": "ownership declarations",
+                "disposition": "ordinary-repo-source",
+                "owner": "OWNERSHIP.toml",
+                "reason": "Subsystem boundaries require repository judgment; a typed scalar writer adds no authority.",
+            },
+            {
+                "concern": "assurance profiles and requirements",
+                "disposition": "ordinary-repo-source",
+                "owner": "config assurance declarations",
+                "reason": "Nested proof semantics require review; only bounded default scalars use config.policy-apply.",
+            },
+            {
+                "concern": "Verification manifest and proof strategy",
+                "disposition": "existing-owner",
+                "owner": "verification module lifecycle and verification operations",
+            },
+            {
+                "concern": "configuration readiness",
+                "disposition": "setup-reconciliation",
+                "owner": "setup.guidance",
+                "rule": "Re-resolve from the matching identity after every owner action; do not create a second transaction log.",
+            },
+            {
+                "concern": "temporary setup prompting disposition",
+                "disposition": "typed-local-owner",
+                "owner": "config.policy-apply",
+                "surface": f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()}#setup",
+                "rule": "Local defer or optional suppression never changes repository freshness or shared policy and is removed on resume/completion.",
+            },
+        ],
+        "next": {
+            "action": "ask-smallest-semantic-question"
+            if human_questions
+            else "route-bounded-work"
+            if broad_work
+            else "apply-zero-interaction-owner-routes",
+            "question_count": len(human_questions),
+            "auto_action_count": len(zero_interaction_actions),
+            "rule": "After each owner action or human answer, re-resolve setup concerns; do not maintain a separate wizard state.",
+        },
     }
 
 
@@ -49706,6 +51141,11 @@ def _setup_payload(
     assurance_onboarding = _assurance_onboarding_payload(assurance=config.assurance)
     verification_guidance = _verification_enablement_guidance(target_root=target_root, config=config)
     target_arg = _command_target_arg(target_root)
+    configuration_concerns = _setup_configuration_concerns_payload(
+        target_root=target_root,
+        config=config,
+        selected_modules=selected_modules,
+    )
 
     def command_with_target(command: str) -> str:
         return str(_command_with_cli_invoke(command=command, cli_invoke=config.cli_invoke, target_arg=target_arg))
@@ -49779,6 +51219,38 @@ def _setup_payload(
                     command_with_target("agentic-workspace report --target ./repo --format json"),
                 ],
             }
+    if configuration_concerns.get("status") == "human-decision-required":
+        next_action = {
+            "summary": "Ask only the first unresolved human-owned semantic question, then route its answer to the named owner",
+            "commands": [],
+            "question": configuration_concerns["human_questions"][0],
+        }
+    elif configuration_concerns.get("status") == "bounded-route-required":
+        bounded = next(
+            (
+                concern
+                for concern in configuration_concerns.get("concerns", [])
+                if isinstance(concern, dict) and concern.get("status") == "bounded-route-required"
+            ),
+            {},
+        )
+        raw_route = bounded.get("apply_route")
+        route: dict[str, Any] = raw_route if isinstance(raw_route, dict) else {}
+        command = str(route.get("command") or "")
+        next_action = {
+            "summary": "Route broad cross-ecosystem analysis to bounded Planning instead of expanding setup",
+            "commands": [command] if command else [],
+        }
+    elif configuration_concerns.get("zero_interaction_actions"):
+        commands = [
+            str(action.get("command") or action.get("detail_command") or "")
+            for action in configuration_concerns["zero_interaction_actions"]
+            if isinstance(action, dict)
+        ]
+        next_action = {
+            "summary": "Apply the zero-interaction setup work through each concern's owning route, then re-resolve",
+            "commands": [command for command in commands if command],
+        }
     if installed_state_attention is not None:
         commands = [
             str(installed_state_attention.get("dry_run_command") or "").strip(),
@@ -49806,6 +51278,7 @@ def _setup_payload(
         },
         "analysis_input": findings_input,
         "host_orientation": host_orientation,
+        "configuration_concerns": configuration_concerns,
         **({"installed_state_compatibility": installed_state_compatibility} if installed_state_attention is not None else {}),
         **({"installed_state_attention": installed_state_attention} if installed_state_attention is not None else {}),
         "proof_route_hints": {
@@ -49856,6 +51329,12 @@ def _emit_setup(
         print("Host orientation candidates:")
         for item in payload["host_orientation"]["candidates"]:
             print(f"- {item['surface']}: {item['reason']}")
+    configuration_concerns = payload.get("configuration_concerns", {})
+    if isinstance(configuration_concerns, dict):
+        print(f"- configuration concerns: {configuration_concerns.get('status', 'unknown')}")
+        questions = configuration_concerns.get("human_questions", [])
+        if isinstance(questions, list) and questions:
+            print(f"- question: {questions[0].get('question', '')}")
     print(f"- next action: {payload['next_action']['summary']}")
     for command in payload["next_action"]["commands"]:
         print(f"  - {command}")
@@ -53064,6 +54543,294 @@ def _resolve_workspace_operation_target_root(values: dict[str, Any], _arguments:
     target_root = _resolve_target_root(values.get("target")) if values.get("target") else _resolve_target_root(None)
     _validate_target_root(command_name="config", target_root=target_root)
     return target_root
+
+
+_CONFIG_POLICY_FIELDS: dict[str, dict[str, tuple[type, tuple[Any, ...] | None]]] = {
+    "shared": {
+        "workspace.improvement_latitude": (str, SUPPORTED_IMPROVEMENT_LATITUDES),
+        "workspace.optimization_bias": (str, SUPPORTED_OPTIMIZATION_BIASES),
+        "assurance.default_level": (str, SUPPORTED_ASSURANCE_LEVELS),
+        "assurance.strict_closeout": (bool, None),
+    },
+    "local": {
+        "workspace.cli_invoke": (str, None),
+        "delegation.mode": (str, SUPPORTED_DELEGATION_CONTROL_MODES),
+        "delegation.execution_role": (str, SUPPORTED_ORCHESTRATION_EXECUTION_ROLES),
+        "delegation.assignment_policy": (str, SUPPORTED_ASSIGNMENT_POLICIES),
+        "delegation.underfit_behavior": (str, SUPPORTED_UNDERFIT_BEHAVIORS),
+        "delegation.down_routing_behavior": (str, SUPPORTED_DOWN_ROUTING_BEHAVIORS),
+        "delegation.human_override_policy": (str, SUPPORTED_HUMAN_OVERRIDE_POLICIES),
+        "delegation.manual_transport_policy": (str, SUPPORTED_MANUAL_TRANSPORT_POLICIES),
+        "setup.prompt_disposition": (str, config_lib.SUPPORTED_SETUP_PROMPT_DISPOSITIONS),
+        "setup.setup_identity": (str, None),
+        "setup.context_revision": (str, None),
+        "setup.unresolved_concerns": (list, None),
+        "setup.required_concerns": (list, None),
+    },
+}
+
+
+def _config_policy_revision(path: Path) -> str:
+    payload = path.read_bytes() if path.is_file() else b""
+    return "sha256:" + hashlib.sha256(payload).hexdigest()
+
+
+def _toml_scalar(value: Any) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, str):
+        return json.dumps(value, ensure_ascii=False)
+    if isinstance(value, list) and all(isinstance(item, str) and item for item in value):
+        return "[" + ", ".join(json.dumps(item, ensure_ascii=False) for item in value) + "]"
+    raise WorkspaceUsageError("config policy values must be strings, booleans, or non-empty string lists")
+
+
+def _toml_comment_index(text: str) -> int | None:
+    quote = ""
+    escaped = False
+    for index, character in enumerate(text):
+        if escaped:
+            escaped = False
+            continue
+        if character == "\\" and quote == '"':
+            escaped = True
+            continue
+        if character in {'"', "'"}:
+            quote = "" if quote == character else character if not quote else quote
+            continue
+        if character == "#" and not quote:
+            return index
+    return None
+
+
+def _replace_toml_scalar(*, source: str, section: str, key: str, value: Any) -> str:
+    lines = source.splitlines(keepends=True)
+    section_header = f"[{section}]"
+    section_index: int | None = None
+    next_section = len(lines)
+    matches: list[int] = []
+    for index, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped == section_header:
+            if section_index is not None:
+                raise WorkspaceUsageError(f"config policy apply found duplicate [{section}] tables")
+            section_index = index
+            continue
+        if section_index is not None and index > section_index and stripped.startswith("[") and stripped.endswith("]"):
+            next_section = index
+            break
+        if section_index is not None and index > section_index and re.match(rf"^\s*{re.escape(key)}\s*=", line):
+            matches.append(index)
+    rendered = _toml_scalar(value)
+    if len(matches) > 1:
+        raise WorkspaceUsageError(f"config policy apply found duplicate {section}.{key} assignments")
+    if matches:
+        index = matches[0]
+        line = lines[index]
+        newline = "\r\n" if line.endswith("\r\n") else "\n" if line.endswith("\n") else ""
+        content = line[: -len(newline)] if newline else line
+        equals = content.index("=")
+        suffix_index = _toml_comment_index(content[equals + 1 :])
+        suffix = ""
+        if suffix_index is not None:
+            suffix = content[equals + 1 + suffix_index :]
+            suffix = " " + suffix.lstrip()
+        lines[index] = f"{content[: equals + 1]} {rendered}{suffix}{newline}"
+        return "".join(lines)
+    if section_index is None:
+        separator = "" if not source or source.endswith("\n\n") else "\n" if source.endswith("\n") else "\n\n"
+        return f"{source}{separator}{section_header}\n{key} = {rendered}\n"
+    lines.insert(next_section, f"{key} = {rendered}\n")
+    return "".join(lines)
+
+
+def _config_policy_setup_identity(*, target_root: Path, config: WorkspaceConfig) -> str:
+    readiness = _configuration_readiness_startup_payload(
+        target_root=target_root,
+        config=config,
+        selected_modules=list(config.enabled_modules),
+    )
+    if readiness.get("status") == "legacy-compatible":
+        return "legacy-compatible"
+    return str(readiness.get("observed_identity") or readiness.get("identity") or "unavailable")
+
+
+def _apply_workspace_config_policy(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> dict[str, Any]:
+    target_root = Path(str(values.get("target_root") or values.get("target") or ".")).resolve()
+    raw_decision = values.get("decision_json")
+    if not isinstance(raw_decision, str) or not raw_decision.strip():
+        raise WorkspaceUsageError("config-policy requires --decision-json with an authorised structured decision")
+    try:
+        decision = json.loads(raw_decision)
+    except json.JSONDecodeError as exc:
+        raise WorkspaceUsageError(f"config-policy --decision-json is invalid JSON: {exc}") from exc
+    if not isinstance(decision, dict) or decision.get("kind") != "agentic-workspace/config-policy-decision/v1":
+        raise WorkspaceUsageError("config-policy decision kind must be agentic-workspace/config-policy-decision/v1")
+    scope = str(decision.get("scope") or "")
+    allowed = _CONFIG_POLICY_FIELDS.get(scope)
+    if allowed is None:
+        raise WorkspaceUsageError("config-policy decision scope must be shared or local")
+    authority = str(decision.get("authority") or "")
+    if authority not in {"strong-repo-evidence", "human-answer"}:
+        raise WorkspaceUsageError("config-policy decision authority must be strong-repo-evidence or human-answer")
+    setup_identity = str(decision.get("setup_identity") or "")
+    expected_setup_identity = str(values.get("expect_setup_identity") or "")
+    if not setup_identity or setup_identity != expected_setup_identity:
+        raise WorkspaceUsageError("config-policy decision setup_identity must match --expect-setup-identity")
+    config = config_lib.load_workspace_config(target_root=target_root)
+    observed_setup_identity = _config_policy_setup_identity(target_root=target_root, config=config)
+    if expected_setup_identity != observed_setup_identity:
+        raise WorkspaceUsageError(
+            f"config-policy setup identity is stale: expected {expected_setup_identity!r}, observed {observed_setup_identity!r}"
+        )
+    raw_changes = decision.get("changes", {})
+    complete_readiness = decision.get("complete_readiness", False)
+    clear_setup_disposition = decision.get("clear_setup_disposition", False)
+    if not isinstance(raw_changes, dict) or not raw_changes and complete_readiness is not True and clear_setup_disposition is not True:
+        raise WorkspaceUsageError("config-policy decision requires changes, complete_readiness=true, or clear_setup_disposition=true")
+    if type(complete_readiness) is not bool:
+        raise WorkspaceUsageError("config-policy complete_readiness must be a boolean")
+    if type(clear_setup_disposition) is not bool:
+        raise WorkspaceUsageError("config-policy clear_setup_disposition must be a boolean")
+    if clear_setup_disposition and scope != "local":
+        raise WorkspaceUsageError("config-policy can clear setup disposition only through local scope")
+    if complete_readiness and raw_changes:
+        raise WorkspaceUsageError("config-policy readiness completion must be a separate no-change reconciliation decision")
+    config_path = target_root / (WORKSPACE_CONFIG_PATH if scope == "shared" else WORKSPACE_LOCAL_CONFIG_PATH)
+    observed_revision = _config_policy_revision(config_path)
+    expected_revision = str(values.get("expect_config_revision") or "")
+    if expected_revision != observed_revision:
+        raise WorkspaceUsageError(
+            f"config-policy revision is stale for {config_path.relative_to(target_root).as_posix()}: "
+            f"expected {expected_revision!r}, observed {observed_revision!r}"
+        )
+    source = config_path.read_text(encoding="utf-8") if config_path.is_file() else "schema_version = 1\n"
+    rendered = source
+    effects: list[dict[str, Any]] = []
+    for field, value in raw_changes.items():
+        field_name = str(field)
+        specification = allowed.get(field_name)
+        if specification is None:
+            raise WorkspaceUsageError(f"config-policy field {field_name!r} is not owned by the {scope} policy operation")
+        expected_type, choices = specification
+        if type(value) is not expected_type or choices is not None and value not in choices:
+            allowed_text = f"; allowed values: {', '.join(map(str, choices))}" if choices else ""
+            raise WorkspaceUsageError(f"config-policy value for {field_name} is invalid{allowed_text}")
+        if expected_type is list and (not all(isinstance(item, str) and item for item in value) or len(value) != len(set(value))):
+            raise WorkspaceUsageError(f"config-policy value for {field_name} must be a unique list of non-empty concern ids")
+        lowered = f"{field_name} {value}".lower()
+        if any(marker in lowered for marker in ("password", "secret", "credential", "private_key", "access_token")):
+            raise WorkspaceUsageError("config-policy refuses credential or secret material")
+        if scope == "shared" and isinstance(value, str) and (Path(value).is_absolute() or re.match(r"^[A-Za-z]:[\\/]", value)):
+            raise WorkspaceUsageError("config-policy refuses absolute machine paths in shared configuration")
+        section, key = field_name.split(".", 1)
+        rendered = _replace_toml_scalar(source=rendered, section=section, key=key, value=value)
+        effects.append({"owner": f"config.{scope}", "field": field_name, "value": value})
+    if clear_setup_disposition:
+        cleared = _without_toml_table(rendered, "setup")
+        if cleared != rendered:
+            effects.append({"owner": "config.local", "field": "setup", "value": "removed"})
+        rendered = cleared
+    try:
+        tomllib.loads(rendered)
+    except tomllib.TOMLDecodeError as exc:
+        raise WorkspaceUsageError(f"config-policy would produce invalid TOML: {exc}") from exc
+    readiness_receipt: dict[str, Any] | None = None
+    completion_concern_receipts: dict[str, dict[str, str]] = {}
+    if complete_readiness:
+        receipt_status = _read_adoption_receipt(target_root=target_root)
+        raw_receipt = receipt_status.get("payload") if receipt_status.get("status") == "present" else None
+        if not isinstance(raw_receipt, dict):
+            raise WorkspaceUsageError("config-policy cannot complete readiness without a valid adoption receipt")
+        readiness = raw_receipt.get("configuration_readiness")
+        if not isinstance(readiness, dict) or readiness.get("kind") != CONFIGURATION_READINESS_KIND:
+            raise WorkspaceUsageError("config-policy cannot complete missing or unsupported readiness metadata")
+        readiness_receipt = raw_receipt
+        completed_concerns = _setup_configuration_concerns_payload(
+            target_root=target_root,
+            config=config,
+            selected_modules=list(config.enabled_modules),
+        )
+        unresolved_required_sources = [
+            str(concern.get("id") or "")
+            for concern in _list_payload(completed_concerns.get("concerns"))
+            if isinstance(concern, dict)
+            and isinstance(concern.get("source_obligation"), dict)
+            and concern.get("setup_pressure")
+            and concern.get("materiality") != "recommended"
+            and _as_dict(concern.get("source_obligation")).get("status") != "satisfied"
+        ]
+        if unresolved_required_sources:
+            raise WorkspaceUsageError(
+                "config-policy readiness cannot be completed while required repo-source obligations remain unresolved: "
+                + ", ".join(unresolved_required_sources)
+            )
+        completion_concern_receipts = {
+            str(contract["identity"]): {
+                "identity": str(contract["identity"]),
+                "semantic_revision": str(contract["semantic_revision"]),
+                "source_revision": str(contract["source_revision"]),
+                "materiality": str(contract["materiality"]),
+                "owner": str(contract["owner"]),
+                "status": str(contract.get("status") or ""),
+                "source_obligation_status": str(contract.get("source_obligation_status") or ""),
+            }
+            for contract in _list_payload(completed_concerns.get("concern_contracts"))
+            if isinstance(contract, dict) and contract.get("identity")
+        }
+        decision_concern_receipts = decision.get("concern_receipts")
+        if decision_concern_receipts != completion_concern_receipts:
+            raise WorkspaceUsageError(
+                "config-policy readiness concern receipts are stale or do not match current applicable setup concerns"
+            )
+        expected_readiness_basis = {
+            "selected_modules": sorted(_dedupe(list(config.enabled_modules))),
+            "payload_mirror": bool(readiness_receipt.get("payload_mirror")),
+            "checked_in_rule": str(readiness_receipt.get("checked_in_rule") or ""),
+        }
+        if decision.get("readiness_basis") != expected_readiness_basis:
+            raise WorkspaceUsageError("config-policy readiness basis is stale or does not match the current capability set")
+    dry_run = bool(values.get("dry_run"))
+    if not dry_run and rendered != source:
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        config_path.write_text(rendered, encoding="utf-8", newline="")
+        config_lib.load_workspace_config(target_root=target_root)
+    if complete_readiness:
+        receipt_path = target_root / WORKSPACE_ADOPTION_RECEIPT_PATH
+        assert readiness_receipt is not None
+        readiness = cast(dict[str, Any], readiness_receipt["configuration_readiness"])
+        effects.append({"owner": "setup.guidance", "field": "configuration_readiness.status", "value": "current"})
+        if not dry_run:
+            readiness["status"] = "current"
+            readiness["identity"] = setup_identity
+            readiness["basis"] = {
+                **cast(dict[str, Any], decision["readiness_basis"]),
+            }
+            readiness["concern_receipts"] = completion_concern_receipts
+            readiness["completed_by"] = "config.policy-apply"
+            receipt_path.write_text(json.dumps(readiness_receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    result_revision = "sha256:" + hashlib.sha256(rendered.encode("utf-8")).hexdigest()
+    mutation_applied = not dry_run and (rendered != source or complete_readiness)
+    return {
+        "kind": "agentic-workspace/config-policy-result/v1",
+        "status": "preview" if dry_run else "applied" if rendered != source else "current",
+        "scope": scope,
+        "authority": authority,
+        "concern_id": str(decision.get("concern_id") or ""),
+        "setup_identity": setup_identity,
+        "path": config_path.relative_to(target_root).as_posix(),
+        "previous_revision": observed_revision,
+        "revision": result_revision,
+        "effects": effects,
+        "readiness_status": "preview-current" if dry_run and complete_readiness else "current" if complete_readiness else "unchanged",
+        "outcome": "applied" if mutation_applied else "noop",
+        "mutation_applied": mutation_applied,
+        "reason_code": "dry-run" if dry_run else "already-current" if not mutation_applied else "authorised-policy-applied",
+        "conflict_owner": "",
+        "recovery_command": "agentic-workspace setup --target . --format json",
+        "re_resolve_command": "agentic-workspace setup --target . --format json",
+        "claim_boundary": "Only the explicitly authorised bounded policy fields were applied; other setup owners remain independent.",
+    }
 
 
 def _load_workspace_operation_config(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> Any:

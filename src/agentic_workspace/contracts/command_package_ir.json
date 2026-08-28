@@ -284,6 +284,7 @@
         "operation_executor": {
           "module_file": "primitives.operation_executor",
           "supported_operation_ids": [
+            "config.policy-apply",
             "config.report",
             "defaults.report",
             "delegation-outcome.append",
@@ -8001,6 +8002,33 @@
           "status": "generated"
         },
         {
+          "adapter_id": "config.policy-apply.cli",
+          "command": {"manifest_ref": "cli_commands.json", "name": "config-policy"},
+          "conformance_refs": ["config.policy-apply.process"],
+          "effect_hints": {"destructive": false, "idempotent": true, "read_only": false, "requires_preflight_gate": false, "writes_repo_state": true},
+          "interface": {
+            "help": "Apply one structured shared or local workspace policy decision without replacing unrelated configuration.",
+            "name": "config-policy",
+            "options": [
+              {"choices": ["text", "json"], "default": "text", "flags": ["--format"], "help": "Output format.", "name": "format"},
+              {"flags": ["--target"], "help": "Optional repository path containing the owned config surface.", "name": "target"},
+              {"flags": ["--decision-json"], "help": "Authorised agentic-workspace/config-policy-decision/v1 JSON object.", "name": "decision_json", "required": true},
+              {"flags": ["--expect-config-revision"], "help": "Exact sha256 revision reported for the selected shared or local config surface.", "name": "expect_config_revision", "required": true},
+              {"flags": ["--expect-setup-identity"], "help": "Exact setup readiness identity against which the decision was made.", "name": "expect_setup_identity", "required": true},
+              {"action": "store_true", "flags": ["--dry-run"], "help": "Validate and preview the bounded policy effects without writing.", "name": "dry_run"}
+            ]
+          },
+          "operation_ref": {"id": "config.policy-apply", "path": "operations/config.policy-apply.json"},
+          "projection_boundary": {
+            "runtime_owned": ["bounded config authority validation", "revision and setup identity admission", "preservation-oriented TOML mutation", "readiness completion"],
+            "target_specific": ["parser library", "package entrypoint wiring", "help text layout", "test container image"],
+            "universal": ["command identity", "option semantics", "operation reference", "runtime primitive reference", "effect hints", "conformance refs"]
+          },
+          "runtime_binding": {"kind": "operation-primitive-sequence", "primitive_refs": ["workspace.target-root.resolve", "config.policy.apply", "output.emit"]},
+          "schemas": {"input": [], "output": []},
+          "status": "generated"
+        },
+        {
           "adapter_id": "system-intent.sync.cli",
           "command": {
             "manifest_ref": "cli_commands.json",
@@ -15411,6 +15439,7 @@
           ],
           "module_file": "primitives.operation_executor",
           "supported_operation_ids": [
+            "config.policy-apply",
             "config.report",
             "defaults.report",
             "delegation-outcome.append",

@@ -232,6 +232,39 @@
       },
       "status": "generated"
     },
+    "config-policy": {
+      "command": {
+        "command_manifest": "cli_commands.json",
+        "name": "config-policy",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-workspace"
+      },
+      "conformance_refs": [
+        "config.policy-apply.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "config.policy-apply.cli",
+      "operation_id": "config.policy-apply",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.target-root.resolve",
+          "config.policy.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
     "correction-event": {
       "command": {
         "command_manifest": "cli_commands.json",

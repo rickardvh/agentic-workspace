@@ -11,7 +11,17 @@ agentic-workspace start --target . --task "<task>" --format json
 agentic-workspace setup --target . --format json
 ```
 
+A fresh necessary-surfaces bootstrap records a versioned `configuration_readiness` identity in `.agentic-workspace/adoption-receipt.json`. Ordinary startup uses that durable receipt, not setup-shaped task wording, to route one exact `reconcile-repository-configuration` action to `workspace-setup-jumpstart` and the configured `setup` command. A current identity stays quiet. Missing readiness metadata in a legacy receipt is not, by itself, evidence that setup is incomplete; an explicit stale identity blocks only configured-workflow claims and effects while leaving unrelated read-only inspection available.
+
 Use `setup` as a pre-write and pre-seed discovery report. It may point at candidate surfaces, promotion rules, and follow-up routes, but it does not authorize bulk imports or automatic planning/memory writes by itself.
+
+## Configuration concerns
+
+The setup report projects current work as `configuration_concerns`: each concern names its identity, owner, status, materiality/dependency, evidence strength and authority, inference, apply route or human decision, and detail selector. Resolve `satisfied` and `not-applicable` silently. Route `inference-ready` work to its existing owner without asking the user, then rerun setup. Ask only a current `human-decision-required` question, using outcome and consequence language, and route the answer immediately to its owner. A `bounded-route-required` concern stops setup and moves broad analysis to bounded Planning or human authority.
+
+Strong inference sources are explicit repo config, durable intent documents, declared test commands, CI workflows, and ownership maps. Generic filenames, keywords, directory names, scratch artifacts, and policy copied from the Agentic Workspace source repository are not independent authority. Capability needs may be translated from a recurring repository outcome to the owning module route without asking the user to choose module names.
+
+Setup has no fixed questionnaire and keeps no independent wizard state. A repository may need zero questions; after every owner action or human answer, ordinary setup is resolved again from current authority.
 
 ## Promote
 

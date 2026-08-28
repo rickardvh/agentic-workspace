@@ -112,6 +112,25 @@
       ]
     },
     {
+      "artifact_id": "root-workspace.config-policy.python",
+      "operation_id": "config.policy-apply",
+      "package_id": "root-workspace",
+      "target": "python",
+      "adapter_id": "python.function",
+      "proof_role": "operation-conformance",
+      "symbol": "generated.workspace.python.commands.config_policy_apply:invoke",
+      "source_ref": "command_package_ir:root-workspace/config-policy",
+      "wrapper_refs": ["config.policy-apply.cli"],
+      "case_ids": ["config.policy-apply.preview-parity"],
+      "path_refs": [
+        "generated/workspace/python/commands/config_policy_apply.py",
+        "generated/workspace/python/primitives/operation_executor.py",
+        "src/agentic_workspace/contracts/operations/config.policy-apply.json",
+        "src/agentic_workspace/contracts/conformance/config.policy-apply.process.json"
+      ],
+      "stale_when": ["config.policy-apply operation or generated Python callable changes", "config.policy-apply.process expectations change"]
+    },
+    {
       "artifact_id": "root-workspace.config-cli.python",
       "operation_id": "config.report",
       "package_id": "root-workspace",
@@ -190,6 +209,25 @@
         "root-workspace config generated TypeScript runtime artifact changes",
         "config.selected-text.process conformance expectations change"
       ]
+    },
+    {
+      "artifact_id": "root-workspace.config-policy.typescript",
+      "operation_id": "config.policy-apply",
+      "package_id": "root-workspace",
+      "target": "typescript",
+      "adapter_id": "typescript.function",
+      "proof_role": "operation-conformance",
+      "symbol": "generated/workspace/typescript/src/runtime.mjs:invokeGeneratedOperation",
+      "source_ref": "command_package_ir:root-workspace/config-policy",
+      "wrapper_refs": ["config.policy-apply.cli"],
+      "case_ids": ["config.policy-apply.preview-parity"],
+      "path_refs": [
+        "generated/workspace/typescript/src/runtime.mjs",
+        "generated/workspace/typescript/resources/operations/config.policy-apply.json",
+        "src/agentic_workspace/contracts/operations/config.policy-apply.json",
+        "src/agentic_workspace/contracts/conformance/config.policy-apply.process.json"
+      ],
+      "stale_when": ["config.policy-apply operation or generated TypeScript callable changes", "config.policy-apply.process expectations change"]
     },
     {
       "artifact_id": "root-workspace.config-cli.typescript",

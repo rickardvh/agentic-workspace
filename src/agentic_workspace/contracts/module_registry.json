@@ -639,7 +639,8 @@
               "input_schema": "generated planning operation",
               "result_schema": "planning lifecycle result"
             }
-          ]
+          ],
+          "setup_concerns": []
         },
         "result_semantics": {
           "schema_version": "planning lifecycle result",
@@ -939,7 +940,8 @@
               "input_schema": "memory note input",
               "result_schema": "memory operation result"
             }
-          ]
+          ],
+          "setup_concerns": []
         },
         "result_semantics": {
           "schema_version": "memory operation result",
@@ -1216,7 +1218,8 @@
             }
           ],
           "skills": [],
-          "operations": []
+          "operations": [],
+          "setup_concerns": []
         },
         "result_semantics": {
           "schema_version": "agentic-workspace/verification/v1",

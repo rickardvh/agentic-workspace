@@ -3,9 +3,9 @@
 
 Exact current command values generated from `cli_commands.json` and `cli_option_groups.json`. The schema-shape references remain at `cli-commands.md` and `cli-option-groups.md`.
 
-- Contract digest: `sha256:496bcda635648d0326bfd8ad518c151c38f4a57abe0ef07a6e1ae7149974f9ac`
+- Contract digest: `sha256:206b7669ac5fe9469a9fff55aa7f805beb459aba6c3c4bf24fd9510f7e5f00c7`
 - Program: `agentic-workspace`
-- Command/subcommand count: 124
+- Command/subcommand count: 125
 
 Shared-state mutability and ignored local diagnostics are separate. A `no` below means the command contract does not mutate shared workspace state. When local session logging is enabled, any command may still write ignored machine-local diagnostics:
 
@@ -92,6 +92,7 @@ Shared-state mutability and ignored local diagnostics are separate. A `no` below
 | `agentic-workspace setup` | `reusable_host_repo_diagnostics` | `advanced_host_repo` | no | 4 | Show the bounded post-bootstrap setup guidance for a mature repository. |
 | `agentic-workspace ownership` | `core_context_router` | `ordinary_host_repo` | no | 4 | Show the canonical ownership and authority mapping for the target repository. |
 | `agentic-workspace config` | `core_context_router` | `ordinary_host_repo` | no | 4 | Show the resolved repo-owned workspace config layered onto product defaults. |
+| `agentic-workspace config-policy` | `core_context_router` | `advanced_host_repo` | yes | 6 | Apply one structured shared or local workspace policy decision without replacing unrelated configuration. |
 | `agentic-workspace system-intent` | `core_context_router` | `ordinary_host_repo` | no | 3 | Show or refresh the workspace-owned compiled system-intent declaration. |
 | `agentic-workspace note-delegation-outcome` | `reusable_host_repo_diagnostics` | `local_only` | yes | 13 | Append one local-only delegation outcome record for target-profile tuning. |
 | `agentic-workspace skills` | `module_delegation_front_door` | `ordinary_host_repo` | no | 4 | List registered workspace skills from installed package registries and repo-owned skill registries. |
@@ -1144,6 +1145,19 @@ resolved repo and local configuration posture
 | `--target` | no | `—` | — | `value` | Optional repository path used to resolve repo-owned config. |
 | `--select` | no | `—` | — | `value` | Return only comma-separated top-level or dotted JSON fields from the full command payload. Prefer this over --verbose when one or a few fields are needed. |
 | `--verbose` | no | `—` | — | `store_true` | Emit full resolved config detail. Prefer default output or targeted fields for ordinary posture checks. |
+
+## `agentic-workspace config-policy`
+
+revision-bound application of an authorised bounded workspace policy decision
+
+| Flags | Required | Default | Choices | Action / nargs | Description |
+| --- | --- | --- | --- | --- | --- |
+| `--format` | no | `text` | text, json | `value` | Output format. |
+| `--target` | no | `—` | — | `value` | Optional repository path containing the owned config surface. |
+| `--decision-json` | yes | `—` | — | `value` | Authorised agentic-workspace/config-policy-decision/v1 JSON object. |
+| `--expect-config-revision` | yes | `—` | — | `value` | Exact sha256 revision reported for the selected shared or local config surface. |
+| `--expect-setup-identity` | yes | `—` | — | `value` | Exact setup readiness identity against which the decision was made. |
+| `--dry-run` | no | `—` | — | `store_true` | Validate and preview the bounded policy effects without writing. |
 
 ## `agentic-workspace system-intent`
 

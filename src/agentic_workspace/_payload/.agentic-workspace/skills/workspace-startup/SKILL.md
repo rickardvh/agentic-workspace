@@ -26,6 +26,7 @@ Do not replace a configured invocation with a guessed bare command.
    - proof or claim boundaries;
    - routed owner, skill, operation, selector, or preferred invocation;
    - compatibility projections such as `planning_route_decision` or `planning_safety_gate` when the current runtime emits them.
+   - receipt-bound `configuration_readiness` when fresh or stale bootstrap authority requires repository setup reconciliation.
 4. Treat module- or phase-specific fields as projections of the current operating decision, not as a fixed architecture to generalize from. Follow the route they name. **Do not reclassify the task** from prose, legacy task-switch fields, or another capability after a current authoritative route decision exists.
 5. If the compact result is insufficient, use only the smallest selector, skill, operation, or safe probe it routes to before broadening context.
 
@@ -34,6 +35,7 @@ Do not replace a configured invocation with a guessed bare command.
 1. Follow the supported next action before inventing a different command path.
 2. Prefer a typed/routed operation, generated command, specialized skill, exact owner/selector, or explicit human decision over hand-editing managed state.
 3. Load a specialized capability procedure only when the current decision routes there.
+   A `reconcile-repository-configuration` action routes exactly to `workspace-setup-jumpstart` and its configured `setup --target . --format json` command; do not substitute task-keyword inference or broad repo discovery.
 4. Keep direct work direct when the contract permits it. Do not create Planning, Memory, review, proof, handoff, or other artifacts merely to demonstrate AW use.
 5. Do not infer permission from advisory prose when a current hard gate or forbidden action says otherwise.
 

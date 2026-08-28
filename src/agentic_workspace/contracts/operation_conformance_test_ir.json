@@ -563,6 +563,60 @@
       }
     },
     {
+      "id": "config.policy-apply.preview-parity",
+      "title": "Bounded config policy preview preserves shared authority and cross-target result parity",
+      "behavioral_class": "cross-target-parity",
+      "operation_ref": {
+        "package_id": "root-workspace",
+        "operation_id": "config.policy-apply",
+        "operation_path": "operations/config.policy-apply.json",
+        "conformance_ref": "config.policy-apply.process"
+      },
+      "artifacts": [
+        {"artifact_id": "root-workspace.config-policy.python", "target": "python", "adapter_id": "python.function", "proof_role": "operation-conformance", "source_ref": "command_package_ir:root-workspace/config-policy", "wrapper_refs": ["config.policy-apply.cli"]},
+        {"artifact_id": "root-workspace.config-policy.typescript", "target": "typescript", "adapter_id": "typescript.function", "proof_role": "operation-conformance", "source_ref": "command_package_ir:root-workspace/config-policy", "wrapper_refs": ["config.policy-apply.cli"]}
+      ],
+      "schema_refs": {"operation_contract": "operations/config.policy-apply.json", "input": [], "output": []},
+      "composition": {
+        "case_focus": "Structured decision admission, shared scope, stale-bound preview, and public result parity.",
+        "assumes_primitives": ["config.policy.apply", "output.emit"],
+        "reuses_case_ids": []
+      },
+      "targets": [{"kind": "python", "mode": "run"}, {"kind": "typescript", "mode": "run"}],
+      "input": {
+        "json": {
+          "target": ".",
+          "decision_json": "{\"kind\":\"agentic-workspace/config-policy-decision/v1\",\"concern_id\":\"conformance\",\"authority\":\"human-answer\",\"scope\":\"shared\",\"setup_identity\":\"legacy-compatible\",\"changes\":{\"workspace.improvement_latitude\":\"balanced\"}}",
+          "expect_config_revision": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "expect_setup_identity": "legacy-compatible",
+          "dry_run": true,
+          "format": "json"
+        },
+        "argv": ["config-policy", "--target", ".", "--decision-json", "{\"kind\":\"agentic-workspace/config-policy-decision/v1\",\"concern_id\":\"conformance\",\"authority\":\"human-answer\",\"scope\":\"shared\",\"setup_identity\":\"legacy-compatible\",\"changes\":{\"workspace.improvement_latitude\":\"balanced\"}}", "--expect-config-revision", "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "--expect-setup-identity", "legacy-compatible", "--dry-run", "--format", "json"],
+        "fixture_id": "missing-config-policy",
+        "fixture_files": {".git/.keep": "", "README.md": "# Fixture\n"}
+      },
+      "expected": {
+        "exit_code": 0,
+        "result": {"format": "json", "selected_fields": {"kind": "agentic-workspace/config-policy-result/v1", "status": "preview", "scope": "shared", "authority": "human-answer", "path": ".agentic-workspace/config.toml", "outcome": "noop", "mutation_applied": false, "reason_code": "dry-run"}},
+        "stdout": {"format": "json", "selected_fields": {"kind": "agentic-workspace/config-policy-result/v1", "status": "preview", "scope": "shared"}},
+        "stderr": {"format": "none", "allow_non_empty": false},
+        "parity": {
+          "compare": ["exit_code", "selected canonical result fields", "structured error absence"],
+          "normalization": ["ignore target-specific path separators", "compare declared selected fields instead of full payload ordering"]
+        }
+      },
+      "freshness": {
+        "source_refs": ["src/agentic_workspace/contracts/operations/config.policy-apply.json", "src/agentic_workspace/contracts/conformance/config.policy-apply.process.json", "src/agentic_workspace/contracts/python_primitive_support.py", "src/agentic_workspace/contracts/typescript_primitive_support.mjs"],
+        "stale_when": ["config policy decision, result, authority, revision, or target primitive behavior changes"]
+      },
+      "migration": {
+        "replaces_handwritten_tests": ["generated cross-target config policy preview shape is represented by this IR case"],
+        "retain_handwritten_tests": ["config source preservation, stale-write rejection, secret rejection, local authority, and readiness completion fixtures remain runtime-owner tests"],
+        "rationale": "Direct generated Python and TypeScript callables prove public operation parity; handwritten tests retain mutation-owner edge cases."
+      }
+    },
+    {
       "id": "config.selected-output.success",
       "title": "Root config selected text output preserves selected-output contract",
       "behavioral_class": "success",

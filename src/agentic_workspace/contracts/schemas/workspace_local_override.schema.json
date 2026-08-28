@@ -187,6 +187,40 @@
       "additionalProperties": false,
       "description": "Machine-local clarification control for when agents should stop for human input instead of guessing or widening scope."
     },
+    "setup": {
+      "type": "object",
+      "properties": {
+        "prompt_disposition": {
+          "type": "string",
+          "enum": [
+            "active",
+            "deferred",
+            "optional-suppressed"
+          ],
+          "description": "Local user disposition for unresolved setup prompting. It never changes repository configuration freshness."
+        },
+        "setup_identity": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Bootstrap readiness identity to which the local disposition applies."
+        },
+        "context_revision": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Revision of the configuration, capability, and bounded source context used to derive the unresolved concerns."
+        },
+        "unresolved_concerns": {
+          "$ref": "#/$defs/string_list",
+          "description": "Compact unresolved setup concern identities retained for transcript-free resume."
+        },
+        "required_concerns": {
+          "$ref": "#/$defs/string_list",
+          "description": "Subset whose affected actions remain gated even when optional prompting is deferred or suppressed."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Machine-local setup prompt preference and compact revision-bound continuation identity; canonical applied policy remains with its owning surface."
+    },
     "local_memory": {
       "type": "object",
       "properties": {

@@ -17,6 +17,7 @@ from tests.test_workspace_proof_cli import _verified_host_fixture, _write_indepe
 import agentic_workspace.client as public_client
 from agentic_workspace import (
     AWClientError,
+    cli,
     detect_workspace,
     external_conformance_profile,
     external_contract_bundle,
@@ -2560,6 +2561,114 @@ console.log(JSON.stringify(payload));
     typescript_payload = json.loads(completed.stdout)
     assert python_payload["kind"] == typescript_payload["kind"] == "agentic-workspace/delegation-outcomes/v1"
     assert python_payload["recorded"]["outcome"] == typescript_payload["recorded"]["outcome"] == "success"
+
+
+def test_config_policy_generated_python_and_typescript_preview_parity(tmp_path: Path, capsys, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.syspath_prepend(str(ROOT))
+    from generated.workspace.python.commands.config_policy_apply import invoke as invoke_python_config_policy
+
+    targets = {name: tmp_path / name for name in ("python-policy", "typescript-policy")}
+    contexts: dict[str, dict[str, object]] = {}
+    for name, target in targets.items():
+        subprocess.run(["git", "init", "-q", str(target)], check=True)
+        assert cli.main(["init", "--target", str(target), "--modules", "planning,memory", "--format", "json"]) == 0
+        capsys.readouterr()
+        assert cli.main(["setup", "--target", str(target), "--format", "json"]) == 0
+        contexts[name] = json.loads(capsys.readouterr().out)["configuration_concerns"]["mutation_context"]
+
+    def values(name: str) -> dict[str, object]:
+        context = contexts[name]
+        decision = {
+            "kind": "agentic-workspace/config-policy-decision/v1",
+            "concern_id": "orchestration-posture",
+            "authority": "human-answer",
+            "scope": "local",
+            "setup_identity": context["setup_identity"],
+            "changes": {
+                "setup.prompt_disposition": "deferred",
+                "setup.setup_identity": context["setup_identity"],
+                "setup.context_revision": "sha256:fixture-context",
+                "setup.unresolved_concerns": ["orchestration-posture"],
+                "setup.required_concerns": ["orchestration-posture"],
+            },
+        }
+        return {
+            "target": str(targets[name]),
+            "decision_json": json.dumps(decision),
+            "expect_config_revision": context["local_config_revision"],
+            "expect_setup_identity": context["setup_identity"],
+            "dry_run": True,
+            "format": "json",
+        }
+
+    python_payload = invoke_python_config_policy(values("python-policy"))
+    script = f"""
+import {{ invokeGeneratedOperation }} from './generated/workspace/typescript/src/runtime.mjs';
+const payload = invokeGeneratedOperation({{
+  operationId: 'config.policy-apply',
+  operationPath: 'operations/config.policy-apply.json',
+  values: {json.dumps(values("typescript-policy"))}
+}});
+console.log(JSON.stringify(payload));
+"""
+    completed = subprocess.run(["node", "--input-type=module", "--eval", script], cwd=ROOT, text=True, capture_output=True)
+    assert completed.returncode == 0, completed.stderr
+    typescript_payload = json.loads(completed.stdout)
+    for field in (
+        "kind",
+        "status",
+        "scope",
+        "authority",
+        "path",
+        "previous_revision",
+        "revision",
+        "readiness_status",
+        "outcome",
+        "mutation_applied",
+        "reason_code",
+        "effects",
+    ):
+        assert python_payload[field] == typescript_payload[field]
+
+    def completion_values(name: str) -> dict[str, object]:
+        context = contexts[name]
+        return {
+            "target": str(targets[name]),
+            "decision_json": json.dumps(context["reconciliation_completion"]["decision"]),
+            "expect_config_revision": context["local_config_revision"],
+            "expect_setup_identity": context["setup_identity"],
+            "dry_run": True,
+            "format": "json",
+        }
+
+    python_completion = invoke_python_config_policy(completion_values("python-policy"))
+    completion_script = f"""
+import {{ invokeGeneratedOperation }} from './generated/workspace/typescript/src/runtime.mjs';
+const payload = invokeGeneratedOperation({{
+  operationId: 'config.policy-apply',
+  operationPath: 'operations/config.policy-apply.json',
+  values: {json.dumps(completion_values("typescript-policy"))}
+}});
+console.log(JSON.stringify(payload));
+"""
+    completion_run = subprocess.run(["node", "--input-type=module", "--eval", completion_script], cwd=ROOT, text=True, capture_output=True)
+    assert completion_run.returncode == 0, completion_run.stderr
+    typescript_completion = json.loads(completion_run.stdout)
+    for field in (
+        "kind",
+        "status",
+        "scope",
+        "authority",
+        "path",
+        "previous_revision",
+        "revision",
+        "readiness_status",
+        "outcome",
+        "mutation_applied",
+        "reason_code",
+        "effects",
+    ):
+        assert python_completion[field] == typescript_completion[field]
 
 
 @pytest.mark.parametrize(
