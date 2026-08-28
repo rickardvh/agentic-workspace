@@ -3,9 +3,14 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from agentic_workspace.reconciliation import compile_reconciliation
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 EVIDENCE_PATH = REPO_ROOT / "tools" / "model-cli-harness" / "external-agent-evaluation" / "open-issues-closure-2026-08-27.json"
 CLOSURE_REVIEW_PATH = REPO_ROOT / "docs" / "reviews" / "open-issues-closure-2026-08-27.md"
+DOGFOOD_DISPOSITION_PATH = (
+    REPO_ROOT / "tools" / "model-cli-harness" / "external-agent-evaluation" / "open-issues-dogfood-disposition-2026-08-28.json"
+)
 
 
 def _evidence() -> dict[str, object]:
@@ -102,3 +107,53 @@ def test_closure_review_contains_a_subtraction_disposition_for_each_peer_surface
     assert residue["status"] == "integration-proposed"
     assert (REPO_ROOT / str(residue["proposal"])).is_file()
     assert "Merge and review decisions remain governed by repository policy" in str(payload["claim_boundary"])
+
+
+def test_issue_2724_ordinary_prompt_executes_assignment_without_worker_claim_authority() -> None:
+    payload = json.loads(DOGFOOD_DISPOSITION_PATH.read_text(encoding="utf-8"))
+    episode = payload["ordinary_assignment_episode"]
+    assert "delegate" not in episode["human_intent"].lower()
+    assert episode["explicit_delegation_wording"] is False
+    assert episode["extra_conversational_permission"] is False
+    assert episode["action"] == "dispatch-assigned-target"
+    assert episode["transport"] in {"internal", "cli"}
+    assert episode["return_status"] == "awaiting-admission"
+    assert episode["admission_status"] == "admitted"
+    assert episode["integration_status"] == "integrated"
+    assert episode["closeout_status"] == "closed"
+    assert episode["worker_proof_authority"] is False
+    assert episode["worker_completion_authority"] is False
+    assert episode["host_proof_result"] == "passed"
+    assert all(len(episode[field]) == 64 for field in ("return_sha256", "admission_sha256", "closeout_sha256"))
+
+    counterexample = payload["current_target_counterexample"]
+    assert counterexample["selected_target_relation"] == "current-target"
+    assert counterexample["assignment_materialized"] is False
+    assert counterexample["assignment_residue"] == []
+
+
+def test_issue_2752_pr_2746_signal_reconciles_to_stronger_owner_without_duplicate_memory() -> None:
+    payload = json.loads(DOGFOOD_DISPOSITION_PATH.read_text(encoding="utf-8"))
+    replay = payload["pr_2746_future_context_replay"]
+    signal = replay["signal"]
+    result = compile_reconciliation(
+        {
+            "result": {"status": "succeeded"},
+            "intent": {"status": "satisfied"},
+            "proof": {"status": "passed"},
+            "future_context_capture": {"status": replay["capture_input_status"]},
+            "future_context_signals": [signal],
+        }
+    )
+    reconciliation = result["future_context_reconciliation"]
+    disposition = reconciliation["dispositions"][0]
+
+    assert signal["authority_state"] == "owner-admitted"
+    assert signal["disposition"]["owner"] == "proof/code/test"
+    assert reconciliation["status"] == replay["expected_reconciliation"]["status"]
+    assert reconciliation["none_found_allowed"] is False
+    assert reconciliation["capture_input_status"] == "not_evaluated"
+    assert reconciliation["custody_transfer_safe"] is True
+    assert disposition["outcome"] == "already-absorbed"
+    assert disposition["duplicate_memory_record_required"] is False
+    assert replay["human_supplied_memory_destination"] is False
