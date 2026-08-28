@@ -46,6 +46,11 @@
       "source": "cli-option"
     },
     {
+      "name": "task_proof_receipt_ref",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
       "name": "target_name",
       "required": false,
       "source": "cli-option"
@@ -138,7 +143,7 @@
   },
   "proof": [
     "assignment lifecycle tests prove export/import/admit/integrate/override fail-closed behavior and local artifact placement",
-    "assignment.close.process",
+    "assignment.close.process proves close fails closed without current integrated assignment and indexed task-proof authority",
     "generated external clients expose and negotiate the operation family as runtime-backed",
     "operation contract validates against operation.schema.json"
   ],
@@ -177,7 +182,7 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Close an integrated or intentionally rejected assignment run and retire its checked-in Planning authority.",
+  "summary": "Close an integrated assignment run with producer-owned task proof and retire its checked-in Planning authority.",
   "writes": [
     {
       "description": "transition records local disposable assignment/run artifacts derived from checked-in Planning authority",

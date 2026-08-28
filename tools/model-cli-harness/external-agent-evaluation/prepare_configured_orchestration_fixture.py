@@ -137,7 +137,19 @@ def configure(target: Path, *, task: str) -> None:
     proof_path = target / proof_ref
     proof_path.parent.mkdir(parents=True, exist_ok=True)
     proof_path.write_text(
-        json.dumps({"kind": "agentic-workspace/proof-receipt/v1", "result": "pending", "revision": "proof-rev-1"}, indent=2)
+        json.dumps(
+            {
+                "kind": "agentic-workspace/assignment-structural-proof-receipt/v1",
+                "result": "passed",
+                "verified_by": "aw",
+                "assignment_id": "configured-orchestration-assignment",
+                "assignment_decision_revision": assignment_gate["assignment_decision_revision"],
+                "assignment_revision": identity["revision"],
+                "mutation_baseline": assignment_gate["mutation_baseline"],
+                "claim_boundary": "assignment-identity-and-routing-only; task implementation and completion remain unproved",
+            },
+            indent=2,
+        )
         + "\n",
         encoding="utf-8",
     )
@@ -150,7 +162,7 @@ def configure(target: Path, *, task: str) -> None:
         "assignment_gate": assignment_gate,
         "assignment_policy": assignment_policy,
         "delegation_decision": delegation_decision,
-        "aw_proof_receipt_ref": proof_ref,
+        "structural_proof_receipt_ref": proof_ref,
         "current_attempt": {
             "run_id": "configured-orchestration-run-1",
             "owner": assignment_gate.get("selected_target"),

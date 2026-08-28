@@ -244,6 +244,22 @@ route_role = "behavior"
 precedence = "55"
 allowed_composition = ["maintenance", "evidence"]
 
+[assurance.domain_proof_lanes.delegation_lifecycle_review_repair]
+purpose = "Focused proof for delegation lifecycle conformance and its canonical AW proof receipts."
+applies_to_paths = [".agentic-workspace/proof/receipts/*.json", "src/agentic_workspace/contracts/conformance/assignment.import.process.json"]
+commands = ["uv run python scripts/check/check_generated_command_packages.py --conformance --require-node", "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success"]
+review_aids = ["Confirm the strengthened delegated-return fixture reaches awaiting-admission and current canonical receipts bind to concrete changed-path commands."]
+evidence_concepts = ["generated-adapter-conformance", "regression_prevention"]
+proof_profiles = ["workspace_behavior"]
+authority_refs = ["src/agentic_workspace/contracts/conformance/assignment.import.process.json", ".agentic-workspace/proof/receipts/index.json"]
+escalation = ["the repair changes assignment admission authority rather than fixture or receipt binding"]
+escalation_conditions = ["cross-owner", "cross-claim-boundary"]
+claim_boundary = "focused-delegation-conformance-and-receipt-proof-required-before-closure"
+owner = "workspace-cli-runtime"
+route_role = "behavior"
+precedence = "85"
+allowed_composition = ["maintenance", "evidence", "broad"]
+
 [assurance.domain_proof_lanes.evaluation_operation_runtime]
 purpose = "Focused Evaluation operation runtime, contract, projection, and behavior proof."
 applies_to_paths = ["src/agentic_workspace/evaluation.py", "src/agentic_workspace/contracts/operations/evaluation.*.json", "src/agentic_workspace/contracts/schemas/evaluation_summary.schema.json", "generated/workspace/python/operations/evaluation.*.json", "generated/workspace/typescript/resources/operations/evaluation.*.json", "tests/test_workspace_evaluation.py"]
