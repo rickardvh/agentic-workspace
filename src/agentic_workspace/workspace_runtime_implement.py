@@ -2131,8 +2131,16 @@ def _ordinary_implement_decision_payload(*, selected: dict[str, Any], source_pay
             "restricted": restricted_effects,
             "allowed_claims": allowed_claims,
             "blocked_claims": blocked_claims,
-            "overridden_allowed_claims": claim_authority["overridden_allowed_claims"],
-            "non_authoritative_allowed_claims": claim_authority["non_authoritative_allowed_claims"],
+            **(
+                {"overridden_allowed_claims": claim_authority["overridden_allowed_claims"]}
+                if claim_authority["overridden_allowed_claims"]
+                else {}
+            ),
+            **(
+                {"non_authoritative_allowed_claims": claim_authority["non_authoritative_allowed_claims"]}
+                if claim_authority["non_authoritative_allowed_claims"]
+                else {}
+            ),
             "outside_working_set": "requires-explicit-authority",
             **({"derived": copy.deepcopy(derived_effect_closure)} if derived_effect_closure else {}),
         },

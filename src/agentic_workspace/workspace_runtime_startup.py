@@ -2412,6 +2412,13 @@ def _ordinary_start_decision_payload(
         allowed=_list_payload(route.get("allowed_claims")),
         blocked=_list_payload(route.get("blocked_claims")),
     )
+    claim_effects = {
+        "allowed_claims": claim_authority["allowed_claims"],
+        "blocked_claims": claim_authority["blocked_claims"],
+    }
+    for diagnostic in ("overridden_allowed_claims", "non_authoritative_allowed_claims"):
+        if claim_authority[diagnostic]:
+            claim_effects[diagnostic] = claim_authority[diagnostic]
     effects = {
         "workflow_required": bounded_external_effect.get("status") != "direct-route-admitted",
         "implementation_allowed": bool(next_action.get("implementation_allowed"))
@@ -2425,7 +2432,7 @@ def _ordinary_start_decision_payload(
         "forbidden_actions": [
             str(item) for item in _list_payload(next_action.get("forbidden_actions") or signals.get("hard_blockers")) if str(item).strip()
         ],
-        **claim_authority,
+        **claim_effects,
     }
     claim_boundary = next_action.get("claim_boundary", legacy_decision.get("claim_boundary", "not-evaluated"))
 
@@ -3429,13 +3436,15 @@ def _fast_start_selected_decision_payload(
         "selected_owner": route.get("selected_owner"),
         "selected_owner_revision": _as_dict(route.get("selected_owner_identity")).get("revision"),
     }
-    action_signals["claim_boundary"] = {
+    claim_boundary_signal = {
         "allowed_claims": claim_authority["allowed_claims"],
         "blocked_claims": blocked_claims,
-        "overridden_allowed_claims": claim_authority["overridden_allowed_claims"],
-        "non_authoritative_allowed_claims": claim_authority["non_authoritative_allowed_claims"],
         "mutation_authority": route.get("mutation_authority"),
     }
+    for diagnostic in ("overridden_allowed_claims", "non_authoritative_allowed_claims"):
+        if claim_authority[diagnostic]:
+            claim_boundary_signal[diagnostic] = claim_authority[diagnostic]
+    action_signals["claim_boundary"] = claim_boundary_signal
     action_signals["construction_profile"] = {
         "id": "start-selected-decision/v1",
         "broad_start_payload_constructed": False,
