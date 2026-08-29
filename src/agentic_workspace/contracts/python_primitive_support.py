@@ -850,7 +850,9 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
                             "recovery": "Repair the configured target adapter so it returns every required contract field.",
                         }
                     )
-                if identity.get("role") == "implementer" and not str(returned.get("patch") or "").strip():
+                returned_changed_paths = returned.get("changed_paths")
+                patch_text = str(returned.get("patch") or "")
+                if identity.get("role") == "implementer" and bool(returned_changed_paths) and not patch_text.strip():
                     failures.append(
                         {
                             "reason": "malformed-return",
@@ -858,8 +860,7 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
                             "recovery": "Repair the configured target adapter so implementer returns include a non-empty unified diff.",
                         }
                     )
-                elif identity.get("role") == "implementer":
-                    patch_text = str(returned.get("patch") or "")
+                elif identity.get("role") == "implementer" and patch_text.strip():
                     if not _assignment_patch_paths(patch_text):
                         failures.append(
                             {
@@ -953,7 +954,11 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
                     "recovery": "Return every required field from the exported return contract.",
                 }
             )
-        if assignment_identity.get("role") == "implementer" and not str(returned.get("patch") or "").strip():
+        if (
+            assignment_identity.get("role") == "implementer"
+            and bool(returned.get("changed_paths"))
+            and not str(returned.get("patch") or "").strip()
+        ):
             failures.append(
                 {
                     "reason": "malformed-return",

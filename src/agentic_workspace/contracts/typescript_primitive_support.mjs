@@ -2237,9 +2237,9 @@ function assignmentLifecycleApply(values, operationId) {
         const requiredReturnFields = ['assignment_revision', 'run_id', 'target', 'changed_paths', 'summary', 'stop_conditions_hit', ...(identity.role === 'implementer' ? ['patch'] : [])];
         const missingReturnFields = requiredReturnFields.filter((field) => !(field in returned));
         if (missingReturnFields.length) failures.push({ reason: 'malformed-return', field: `returned_work.${missingReturnFields.join(',')}`, recovery: 'Repair the configured target adapter so it returns every required contract field.' });
-        if (identity.role === 'implementer' && !String(returned.patch ?? '').trim()) failures.push({ reason: 'malformed-return', field: 'returned_work.patch', recovery: 'Repair the configured target adapter so implementer returns include a non-empty unified diff.' });
-        else if (identity.role === 'implementer' && !assignmentPatchPaths(String(returned.patch ?? '')).length) failures.push({ reason: 'malformed-return', field: 'returned_work.patch', recovery: 'Repair the configured target adapter so the patch is a complete git-compatible unified diff.' });
-        else if (identity.role === 'implementer') {
+        if (identity.role === 'implementer' && Array.isArray(returned.changed_paths) && returned.changed_paths.length && !String(returned.patch ?? '').trim()) failures.push({ reason: 'malformed-return', field: 'returned_work.patch', recovery: 'Repair the configured target adapter so implementer returns include a non-empty unified diff.' });
+        else if (identity.role === 'implementer' && String(returned.patch ?? '').trim() && !assignmentPatchPaths(String(returned.patch ?? '')).length) failures.push({ reason: 'malformed-return', field: 'returned_work.patch', recovery: 'Repair the configured target adapter so the patch is a complete git-compatible unified diff.' });
+        else if (identity.role === 'implementer' && String(returned.patch ?? '').trim()) {
           const patchCheck = spawnSync('git', ['apply', '--check', '-'], { cwd: targetRoot, input: String(returned.patch ?? ''), encoding: 'utf8' });
           if (patchCheck.status !== 0) failures.push({ reason: 'malformed-return', field: 'returned_work.patch', recovery: 'Repair the configured target adapter so the patch applies cleanly to the current checkout.', detail: assignmentText(patchCheck.stderr) });
         }
@@ -2264,7 +2264,7 @@ function assignmentLifecycleApply(values, operationId) {
     const requiredReturnFields = ['assignment_revision', 'run_id', 'target', 'changed_paths', 'summary', 'stop_conditions_hit', ...(identity.role === 'implementer' ? ['patch'] : [])];
     const missingReturnFields = requiredReturnFields.filter((field) => !(field in returned));
     if (missingReturnFields.length) failures.push({ reason: 'malformed-return', field: `return_json.${missingReturnFields.join(',')}`, recovery: 'Return every required field from the exported return contract.' });
-    if (identity.role === 'implementer' && !String(returned.patch ?? '').trim()) failures.push({ reason: 'malformed-return', field: 'return_json.patch', recovery: 'Return a non-empty unified diff for an implementer assignment.' });
+    if (identity.role === 'implementer' && Array.isArray(returned.changed_paths) && returned.changed_paths.length && !String(returned.patch ?? '').trim()) failures.push({ reason: 'malformed-return', field: 'return_json.patch', recovery: 'Return a non-empty unified diff when an implementer reports changed paths.' });
     if (assignmentText(returned.run_id) !== runId) failures.push({ reason: 'return-run-mismatch', field: 'return_json.run_id', recovery: 'Return work for the exported assignment run only.' });
     if (!Array.isArray(returned.changed_paths) || !Array.isArray(returned.stop_conditions_hit)) failures.push({ reason: 'malformed-return', field: 'return_json.changed_paths|stop_conditions_hit', recovery: 'Return changed_paths and stop_conditions_hit as JSON arrays.' });
     if (assignment.assignment_revision && assignmentText(returned.assignment_revision) !== assignmentText(assignment.assignment_revision)) failures.push({ reason: 'assignment-revision-mismatch', field: 'return_json.assignment_revision', recovery: 'Return work generated from the current exported assignment packet.' });
