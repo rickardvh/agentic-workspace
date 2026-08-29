@@ -4,14 +4,14 @@
   "title": "Issue 2817: execute binding assignments through configured transport",
   "owner_level": "lane",
   "lifecycle": "live",
-  "phase": "implementation",
-  "revision": 2,
+  "phase": "closeout",
+  "revision": 3,
   "canonical_core": {
     "requested_outcome": "A binding non-local Planning assignment with an authorized automatic transport compiles to and executes one revision-bound typed dispatch action in the ordinary path, while manual handoff remains an explicit fallback and returned work retains the existing admission, integration, proof, and reconciliation boundary.",
     "hard_constraints": "Do not add a scheduler, worker registry, orchestration database, second assignment authority, provider-specific fields to portable assignment semantics, silent local fallback, or completion authority for worker output.",
     "agent_may_decide": "Choose the smallest compatible operation and adapter split, exact fixture organization, and PR boundaries while preserving current assignment identity and lifecycle owners.",
     "escalate_when": "The fix requires a second assignment record, weakens proof/admission, changes target ranking, expands into #2818 context-cost work, or cannot preserve manual and unavailable transport behavior.",
-    "next_action": "Implement stack slice 1: make automatic, manual, local, and blocked executor dispositions explicit and route the ordinary primary action to the typed automatic dispatch operation.",
+    "next_action": "Merge PRs #2841, #2842, and #2846 in order, then apply the checked-in archive-owner integration proposal on the target branch; no implementation or feature-branch proof work remains.",
     "proof_expectations": [
       "Deterministic retained-local, automatic CLI/internal, manual-only, unavailable/failure, and explicit override fixtures use the same canonical assignment semantics.",
       "Automatic dispatch executes without delegation wording and returned work remains untrusted until existing admission and integration operations succeed.",
@@ -38,7 +38,7 @@
       "Focused, generated-conformance, package, and routed AW proof are green for every changed path."
     ],
     "continuation_owner": "repository maintainers",
-    "closeout_decision": "Close #2817 only after all three stacked PR slices are merged and current-master evidence satisfies the issue completion rule."
+    "closeout_decision": "The feature stack satisfies #2817; close the issue only after PRs #2841, #2842, and #2846 merge in order and the archive-owner proposal is applied against current target-branch truth."
   },
   "goal": [
     "Remove the interpretive seam between a binding non-local assignment and execution of its configured automatic transport.",
@@ -63,18 +63,18 @@
     "stop before touching": "#2818 cost ranking/context projection, unrelated Planning owners, release v0.51.0 PR content, or provider credentials."
   },
   "active_milestone": {
-    "id": "stack-1-dispatch-contract",
-    "status": "active",
-    "scope": "Compile binding executor disposition and automatic dispatch into one primary typed operation.",
-    "ready": "Current master already materializes canonical assignments and has export/import/admit/integrate lifecycle primitives.",
-    "blocked": "none",
+    "id": "feature-branch-closeout",
+    "status": "completed",
+    "scope": "All three stacked slices implement and prove configured binding-assignment dispatch through the existing returned-work lifecycle.",
+    "ready": "Focused adapter fixtures, external-client parity, full operation conformance, and the maintained supported-host no-keyword trace pass on the feature stack.",
+    "blocked": "Target-branch archive-owner integration remains pending until the stack merges.",
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Create the first stack branch from master and implement the typed dispatch disposition/operation contract with focused fixtures."
+    "Merge PR #2841, then PR #2842, then PR #2846; apply the checked-in archive-owner proposal on the target branch."
   ],
   "blockers": [
-    "None."
+    "Target-branch lifecycle integration is pending; no implementation or feature-branch proof blocker remains."
   ],
   "touched_paths": [
     "src/agentic_workspace/workspace_runtime_core.py",
@@ -150,8 +150,14 @@
       "owner": "issue-2817-binding-assignment-auto-dispatch"
     },
     "proof_posture": {
-      "state": "pending",
-      "refs": []
+      "state": "passed",
+      "refs": [
+        "pytest:assignment-adapter-focused:6-passed",
+        "pytest:external-operation-clients:77-passed",
+        "conformance:external-operations:302-passed-9-declared-unavailable",
+        "tools/model-cli-harness/external-agent-evaluation/binding-assignment-auto-dispatch-dogfood-2026-08-29.json",
+        ".agentic-workspace/proof/receipts/ordinary-5d0fa2519b31223661416637c86b27af802a63ca98a2ca9b26ee8944887a7089.assignment-proof.json"
+      ]
     },
     "external_posture": {
       "state": "observed-current",
@@ -160,7 +166,7 @@
       ]
     }
   },
-  "next_action": "Implement stack slice 1: typed executor disposition and primary automatic dispatch operation.",
+  "next_action": "Merge PRs #2841, #2842, and #2846 in order, then apply the checked-in archive-owner integration proposal on the target branch; no implementation or feature-branch proof work remains.",
   "proof": {
     "claims": [
       "Binding non-local automatic assignment is executable through the configured transport without a second delegation decision.",
@@ -170,11 +176,42 @@
       "Focused assignment decision/action/lifecycle tests and cross-surface operation conformance pass.",
       "Supported-host no-keyword dogfood executes automatic transport and completes normal return reconciliation."
     ],
-    "refs": []
+    "refs": [
+      "pytest:assignment-adapter-focused:6-passed",
+      "pytest:external-operation-clients:77-passed",
+      "conformance:external-operations:302-passed-9-declared-unavailable",
+      "tools/model-cli-harness/external-agent-evaluation/binding-assignment-auto-dispatch-dogfood-2026-08-29.json",
+      ".agentic-workspace/proof/receipts/ordinary-5d0fa2519b31223661416637c86b27af802a63ca98a2ca9b26ee8944887a7089.assignment-proof.json"
+    ]
   },
   "continuation": {
-    "owner": "repository maintainers",
-    "residual_intent": "Issue #2818 owns context projection and cost-aware ranking after this executable transport prerequisite."
+    "owner": ".agentic-workspace/planning/integration-proposals/issue-2817-binding-assignment-auto-dispatch-archive-owner.integration-proposal.json",
+    "residual_intent": "Merge the stack and apply the archive-owner transition on the target branch. Issue #2818 independently owns context projection and cost-aware ranking."
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "current planning owner",
+    "handoff source": "issue-2817-binding-assignment-auto-dispatch",
+    "what happened": "Delivered the selected-owner admission fix, typed assignment dispatch contract, configured provider-neutral adapter execution, returned-work lifecycle preservation, and maintained supported-host dogfood evidence across PRs #2841, #2842, and #2846.",
+    "scope touched": "Planning assignment disposition and dispatch operation contracts; configured process and host-native adapters; local override schema and docs; generated Python and TypeScript consumers; assignment lifecycle tests and evidence.",
+    "changed surfaces": "Workspace runtime and contracts, generated package projections, assignment/config/external-client tests, supported-host evaluation evidence, release metadata, and this owner/proposal pair.",
+    "validations run": "6 focused adapter fixtures passed; 77 external-operation client tests passed; operation conformance passed 302 cases with 9 declared unavailable; supported-host no-keyword dispatch completed return admit, integrate, proof, close, and reconcile.",
+    "result for continuation": "Feature-branch implementation and proof are complete; target-branch archive integration remains.",
+    "next step": "Merge PRs #2841, #2842, and #2846 in order, then apply the archive-owner proposal on the target branch."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Yes; #2818 cost/context work, provider-specific portable semantics, scheduler/registry work, silent local fallback, and worker completion authority remain out of scope.",
+    "proof status": "passed with routed-proof coverage gap tracked in #2850",
+    "intent served": "yes on the feature stack; target-branch lifecycle integration is intentionally pending",
+    "config compliance": "Used AW start, implement, focused tests, full operation conformance, supported-host assignment lifecycle proof, and integration-proposal routing.",
+    "misinterpretation risk": "low",
+    "follow-on decision": "Apply the checked-in archive-owner proposal after ordered stack integration."
+  },
+  "proof_report": {
+    "validation proof": "6 focused adapter fixtures; 77 external-operation client tests; 302 passing operation-conformance cases with 9 declared unavailable; maintained supported-host no-keyword dispatch and returned-work lifecycle trace.",
+    "proof achieved now": "yes for feature-branch implementation and behavior; target-branch lifecycle apply remains pending",
+    "evidence for \"proof achieved\" state": "Checked-in operation receipts and assignment proof, the maintained dogfood trace, and current focused/conformance runs; #2850 tracks the missing narrow routed-proof mapping."
   },
   "specialist_contracts": []
 }

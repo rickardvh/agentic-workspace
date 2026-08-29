@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Execute binding assignments through configured provider-neutral process and host-native dispatch adapters."
+issues = [2817]
