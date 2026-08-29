@@ -526,6 +526,11 @@ def test_integration_proposal_is_pending_until_guarded_apply(tmp_path: Path) -> 
 def test_integration_proposal_dry_run_projects_the_typed_apply_invocation(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     owner_ref = _write_owner(tmp_path, "issue-2865")
+    _init_git(tmp_path)
+    _commit_all(tmp_path, "baseline pending owner")
+    _git(tmp_path, "checkout", "-b", "feature/2865-complete")
+    before_subject = installer._integration_subject_revision(target_root=tmp_path, owner_ref=owner_ref, external_ref="#2865")
+    before_planning = installer._planning_target_authority_revision(tmp_path)["revision_id"]
 
     preview = propose_integration_transition(
         proposal_id="issue-2865-archive",
@@ -533,6 +538,10 @@ def test_integration_proposal_dry_run_projects_the_typed_apply_invocation(tmp_pa
         owner_ref=owner_ref,
         issue="#2865",
         requested_transition="archive-owner",
+        proof="proof://feature-head/2865",
+        record_feature_completion=True,
+        expected_subject_revision=before_subject,
+        expected_planning_revision=before_planning,
         target=tmp_path,
         dry_run=True,
     )
@@ -543,8 +552,9 @@ def test_integration_proposal_dry_run_projects_the_typed_apply_invocation(tmp_pa
     assert invocation["operation_id"] == "planning.integration-propose.lifecycle"
     assert invocation["arguments"]["proposal_id"] == "issue-2865-archive"
     assert invocation["arguments"]["requested_transition"] == "archive-owner"
-    assert invocation["arguments"]["expected_subject_revision"]
-    assert invocation["arguments"]["expected_planning_revision"]
+    assert invocation["arguments"]["expected_subject_revision"] == before_subject
+    assert invocation["arguments"]["expected_planning_revision"] == before_planning
+    assert invocation["arguments"]["record_feature_completion"] is True
     assert lifecycle_plan["next_safe_command"] == invocation["renderings"]["cli"]
     assert "archive-plan" not in lifecycle_plan["next_safe_command"]
 
@@ -557,8 +567,8 @@ def test_integration_proposal_dry_run_projects_the_typed_apply_invocation(tmp_pa
     assert payload["operation_receipt"]["proposal_id"] == "issue-2865-archive"
     proposal = _proposal_record(tmp_path, "issue-2865-archive")
     assert proposal["requested_transition"] == "archive-owner"
-    assert proposal["expected_subject_revision"] == invocation["arguments"]["expected_subject_revision"]
-    assert proposal["expected_planning_revision"] == invocation["arguments"]["expected_planning_revision"]
+    assert proposal["expected_subject_revision"] != before_subject
+    assert proposal["expected_planning_revision"] != before_planning
 
 
 def test_integration_apply_supports_close_archive_and_keep_open(tmp_path: Path) -> None:

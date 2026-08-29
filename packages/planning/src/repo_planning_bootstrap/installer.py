@@ -15222,6 +15222,12 @@ def propose_integration_transition(
         "feature branch does not close parent/lane lifecycle truth",
         "integration apply is target-branch authoritative",
     ]
+    invocation_subject_revision = (expected_subject_revision or expected_target_revision).strip() or _integration_subject_revision(
+        target_root=target_root, owner_ref=owner_path_text, external_ref=external
+    )
+    invocation_planning_revision = expected_planning_revision.strip() or str(
+        _planning_target_authority_revision(target_root).get("revision_id", "")
+    )
     subject_revision = (
         _integration_subject_revision_after_record(
             target_root=target_root,
@@ -15286,8 +15292,8 @@ def propose_integration_transition(
         "proof": proof_refs,
         "parent_boundary": proposal["parent_boundary"],
         "invariant": preserved_invariants,
-        "expected_subject_revision": subject_revision,
-        "expected_planning_revision": target_authority_revision,
+        "expected_subject_revision": invocation_subject_revision,
+        "expected_planning_revision": invocation_planning_revision,
         "record_feature_completion": bool(record_feature_completion),
     }
     invocation_arguments = {key: value for key, value in invocation_arguments.items() if value not in ("", [], None, False)}
