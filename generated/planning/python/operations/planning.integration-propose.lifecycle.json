@@ -16,6 +16,7 @@
     "Feature branches write proposals, not integrated lifecycle truth.",
     "Do not select current work, rewrite aggregate collections, close unrelated owners, or claim terminal parent truth.",
     "Record a subject revision so target-branch apply can reject stale proposals.",
+    "Feature-completion recording requires explicit proof plus current owner and target-authority revision guards; it writes owner proof/closeout posture and the proposal atomically without applying terminal lifecycle truth.",
     "Refresh only an existing pending proposal, require proposal/subject/target revision guards, and preserve immutable lifecycle semantics.",
     "--expect-planning-revision is self-identifying as planning_revision.target_authority_revision in help, structured output, and stale recovery."
   ],
@@ -73,6 +74,12 @@
     },
     {
       "name": "expect_target_revision",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "description": "Atomically admit supplied feature-head proof, record non-terminal owner closeout posture, and create the guarded integration proposal.",
+      "name": "record_feature_completion",
       "required": false,
       "source": "cli-option"
     },
@@ -171,6 +178,11 @@
   ],
   "summary": "Create a pending target-branch Planning integration proposal.",
   "writes": [
+    {
+      "required": false,
+      "surface": ".agentic-workspace/planning/execplans/<owner>.plan.json",
+      "when": "record_feature_completion on an admitted feature branch"
+    },
     {
       "required": false,
       "surface": ".agentic-workspace/planning/integration-proposals/<id>.integration-proposal.json",

@@ -2488,6 +2488,14 @@
           {
             "action": "store_true",
             "flags": [
+              "--record-feature-completion"
+            ],
+            "help": "Atomically record accepted feature-head proof and non-terminal closeout posture before creating the guarded integration proposal.",
+            "name": "record_feature_completion"
+          },
+          {
+            "action": "store_true",
+            "flags": [
               "--refresh-existing"
             ],
             "help": "Refresh revision guards on an existing pending proposal without changing lifecycle semantics.",

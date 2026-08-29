@@ -6203,6 +6203,7 @@ def test_planning_front_door_preserves_integration_propose_contract(monkeypatch,
         "subject-revision",
         "--expect-target-revision",
         "target-revision",
+        "--record-feature-completion",
         "--refresh-existing",
         "--expect-proposal-revision",
         "proposal-revision",
@@ -6238,6 +6239,7 @@ def test_planning_front_door_preserves_integration_propose_contract(monkeypatch,
     ]:
         assert actual[actual.index(option) + 1] == expected[expected.index(option) + 1]
     assert "--refresh-existing" in actual
+    assert "--record-feature-completion" in actual
     assert "--dry-run" in actual
     assert forwarded == [actual]
 

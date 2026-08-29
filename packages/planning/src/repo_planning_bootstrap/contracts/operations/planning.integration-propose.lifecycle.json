@@ -16,6 +16,7 @@
     {"name": "invariant", "source": "cli-option", "required": false},
     {"name": "expect_subject_revision", "source": "cli-option", "required": false},
     {"name": "expect_target_revision", "source": "cli-option", "required": false},
+    {"name": "record_feature_completion", "source": "cli-option", "required": false, "description": "Atomically admit supplied feature-head proof, record non-terminal owner closeout posture, and create the guarded integration proposal."},
     {"name": "refresh_existing", "source": "cli-option", "required": false},
     {"name": "expect_proposal_revision", "source": "cli-option", "required": false},
     {"name": "target", "source": "cli-option", "required": false},
@@ -31,6 +32,7 @@
     {"surface": ".agentic-workspace/planning/issue-relations/<issue>.issue-relation.json", "required": false}
   ],
   "writes": [
+    {"surface": ".agentic-workspace/planning/execplans/<owner>.plan.json", "required": false, "when": "record_feature_completion on an admitted feature branch"},
     {"surface": ".agentic-workspace/planning/integration-proposals/<id>.integration-proposal.json", "required": false, "when": "not a dry run"}
   ],
   "steps": [
@@ -41,6 +43,7 @@
     "Feature branches write proposals, not integrated lifecycle truth.",
     "Do not select current work, rewrite aggregate collections, close unrelated owners, or claim terminal parent truth.",
     "Record a subject revision so target-branch apply can reject stale proposals.",
+    "Feature-completion recording requires explicit proof plus current owner and target-authority revision guards; it writes owner proof/closeout posture and the proposal atomically without applying terminal lifecycle truth.",
     "Refresh only an existing pending proposal, require proposal/subject/target revision guards, and preserve immutable lifecycle semantics.",
     "--expect-planning-revision is self-identifying as planning_revision.target_authority_revision in help, structured output, and stale recovery."
   ],

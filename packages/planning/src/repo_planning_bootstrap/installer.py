@@ -6676,7 +6676,22 @@ def _guard_feature_branch_integration_mutation(
         command += f" --owner-ref {subject_relative}"
     if external_ref.strip():
         command += f" --issue {external_ref.strip()}"
-    command += f" --requested-transition {requested_transition} --target . --format json"
+    command += f" --requested-transition {requested_transition}"
+    if requested_transition in {"close-owner", "archive-owner"} and subject_relative:
+        owner_record = _load_execplan_record(subject_path)
+        proof_refs = _canonical_owner_subject_proof_refs(owner_record) if isinstance(owner_record, dict) else []
+        proof_arg = ",".join(proof_refs) if proof_refs else "<proof-ref>"
+        subject_revision = _integration_subject_revision(
+            target_root=target_root,
+            owner_ref=subject_relative,
+            external_ref=external_ref,
+        )
+        target_revision = str(_planning_target_authority_revision(target_root).get("revision_id") or "")
+        command += (
+            f" --record-feature-completion --proof {proof_arg}"
+            f" --expect-subject-revision {subject_revision} --expect-planning-revision {target_revision}"
+        )
+    command += " --target . --format json"
     result.add(
         "manual review",
         subject_path,
@@ -14620,6 +14635,78 @@ def _canonical_owner_subject_proof_refs(owner_record: dict[str, Any]) -> list[st
     return _dedupe(refs)
 
 
+def _prepare_feature_completion_record(
+    *,
+    owner_record: dict[str, Any],
+    proof_refs: list[str],
+    proposal_id: str,
+    proposal_ref: str,
+    requested_transition: str,
+) -> dict[str, Any]:
+    """Record non-terminal feature-head completion before target integration."""
+
+    updated = copy.deepcopy(owner_record)
+    proof_text = ", ".join(proof_refs)
+    relationships = dict(updated.get("relationships") or {}) if isinstance(updated.get("relationships"), dict) else {}
+    relationships["proof_posture"] = {"state": "accepted", "refs": list(proof_refs)}
+    updated["relationships"] = relationships
+
+    proof = dict(updated.get("proof") or {}) if isinstance(updated.get("proof"), dict) else {}
+    proof["refs"] = _dedupe([*([str(item) for item in proof.get("refs", [])] if isinstance(proof.get("refs"), list) else []), *proof_refs])
+    updated["proof"] = proof
+    updated["proof_report"] = {
+        "validation proof": proof_text,
+        "proof achieved now": "yes; integration-propose recorded accepted feature-head proof.",
+        'evidence for "proof achieved" state': proof_text,
+    }
+
+    intent_value = updated.get("intent")
+    intent: dict[str, Any] = intent_value if isinstance(intent_value, dict) else {}
+    outcome = str(intent.get("outcome") or updated.get("title") or "feature-head outcome").strip()
+    scope_value = updated.get("scope")
+    scope: dict[str, Any] = scope_value if isinstance(scope_value, dict) else {}
+    owned_scope = "; ".join(str(item).strip() for item in scope.get("owned", []) if str(item).strip())
+    next_step = f"Apply integration proposal '{proposal_id}' from admitted target authority."
+    updated["execution_run"] = {
+        "run status": "completed",
+        "executor": "current planning owner",
+        "handoff source": str(updated.get("id") or "feature owner"),
+        "what happened": outcome,
+        "scope touched": owned_scope or "bounded owner scope",
+        "changed surfaces": owned_scope or "see proof references",
+        "validations run": proof_text,
+        "result for continuation": "feature-head complete; terminal lifecycle remains target-authoritative",
+        "next step": next_step,
+    }
+    updated["finished_run_review"] = {
+        "review status": "complete",
+        "scope respected": "yes; bounded feature-head scope and proof were reviewed.",
+        "proof status": "passed",
+        "intent served": "yes; target integration remains the terminal lifecycle authority.",
+        "config compliance": "used planning integration-propose command-owned writer",
+        "misinterpretation risk": "low",
+        "follow-on decision": proposal_ref,
+    }
+    existing_intent_value = updated.get("intent_satisfaction")
+    existing_intent_satisfaction: dict[str, Any] = existing_intent_value if isinstance(existing_intent_value, dict) else {}
+    updated["intent_satisfaction"] = {
+        "original intent": str(existing_intent_satisfaction.get("original intent") or outcome).strip(),
+        "was original intent fully satisfied?": "yes",
+        "evidence of intent satisfaction": proof_text,
+        "unsolved intent passed to": "none",
+    }
+    updated["closure_check"] = {
+        "closeout scope": "slice",
+        "slice status": "completed",
+        "larger-intent status": "closed",
+        "closure decision": "archive-and-close" if requested_transition == "archive-owner" else "close-owner",
+        "why this decision is honest": "Feature-head proof is accepted; terminal lifecycle truth awaits target integration.",
+        "evidence carried forward": proof_text,
+        "reopen trigger": "New contradictory evidence or rejected target integration.",
+    }
+    return updated
+
+
 def _refresh_existing_integration_proposal(
     *,
     result: InstallResult,
@@ -14835,6 +14922,7 @@ def propose_integration_transition(
     invariant: str | Iterable[str] | None = None,
     expected_subject_revision: str = "",
     expected_target_revision: str = "",
+    record_feature_completion: bool = False,
     refresh_existing: bool = False,
     expected_proposal_revision: str = "",
     target: str | Path | None = None,
@@ -14888,6 +14976,8 @@ def propose_integration_transition(
             "invariant": invariant,
         }
         provided_semantic_inputs = sorted(key for key, value in semantic_inputs.items() if _csv_items(value))
+        if record_feature_completion:
+            provided_semantic_inputs.append("record_feature_completion")
         if provided_semantic_inputs:
             result.add(
                 "manual review",
@@ -14922,12 +15012,108 @@ def propose_integration_transition(
     admission = _git_branch_admission(target_root)
     feature_owner_update: dict[str, Any] | None = None
     feature_owner_path: Path | None = None
+    if record_feature_completion and (
+        admission.get("phase") != "feature"
+        or transition not in {"close-owner", "archive-owner"}
+        or owner_record is None
+        or not owner_path_text
+    ):
+        result.add(
+            "manual review",
+            target_root / (owner_path_text or PLANNING_STATE_PATH.as_posix()),
+            "--record-feature-completion requires a feature branch, a canonical owner ref, and close-owner or archive-owner",
+        )
+        result.reason_code = "feature-completion-mode-not-admitted"
+        result.conflict_owner = owner_path_text or PLANNING_STATE_PATH.as_posix()
+        return result
     if (
         admission.get("phase") == "feature"
         and transition in {"close-owner", "archive-owner"}
         and owner_record is not None
         and owner_path_text
     ):
+        requested_proof_refs = _csv_items(proof)
+        if record_feature_completion:
+            current_subject_revision = _integration_subject_revision(
+                target_root=target_root,
+                owner_ref=owner_path_text,
+                external_ref=external,
+            )
+            current_planning_revision = str(_planning_target_authority_revision(target_root).get("revision_id", ""))
+            if not requested_proof_refs:
+                result.add(
+                    "manual review",
+                    target_root / owner_path_text,
+                    "--record-feature-completion requires canonical proof refs through --proof",
+                )
+                result.reason_code = "feature-completion-proof-required"
+                result.conflict_owner = owner_path_text
+                return result
+            if not expected_subject_revision.strip():
+                result.add(
+                    "manual review",
+                    target_root / owner_path_text,
+                    "--record-feature-completion requires --expect-subject-revision from the current owner",
+                )
+                result.reason_code = "feature-completion-subject-revision-required"
+                result.conflict_owner = owner_path_text
+                result.recovery_command = (
+                    f"{_workspace_cli_invoke(target_root)} planning integration-propose --proposal-id {proposal_slug} "
+                    f"--owner-ref {owner_path_text} --requested-transition {transition} --record-feature-completion "
+                    f"--proof {','.join(requested_proof_refs)} --expect-subject-revision {current_subject_revision} "
+                    f"--expect-planning-revision {current_planning_revision} --target . --format json"
+                )
+                return result
+            if expected_subject_revision.strip() != current_subject_revision:
+                result.add(
+                    "manual review",
+                    target_root / owner_path_text,
+                    f"feature-head owner revision changed: expected {expected_subject_revision.strip()}, found {current_subject_revision}",
+                )
+                result.reason_code = "stale-feature-completion-subject-revision"
+                result.conflict_owner = owner_path_text
+                result.recovery_command = (
+                    f"{_workspace_cli_invoke(target_root)} planning integration-propose --proposal-id {proposal_slug} "
+                    f"--owner-ref {owner_path_text} --requested-transition {transition} --record-feature-completion "
+                    f"--proof {','.join(requested_proof_refs)} --expect-subject-revision {current_subject_revision} "
+                    f"--expect-planning-revision {current_planning_revision} --target . --format json"
+                )
+                return result
+            if not expected_planning_revision.strip():
+                result.add(
+                    "manual review",
+                    target_root / owner_path_text,
+                    "--record-feature-completion requires --expect-planning-revision from planning_revision.target_authority_revision",
+                )
+                result.reason_code = "feature-completion-planning-revision-required"
+                result.conflict_owner = PLANNING_STATE_PATH.as_posix()
+                return result
+            if expected_planning_revision.strip() != current_planning_revision:
+                result.add(
+                    "manual review",
+                    target_root / owner_path_text,
+                    (
+                        "feature-head Planning target authority changed: --expect-planning-revision expected "
+                        f"{expected_planning_revision.strip()}, but planning_revision.target_authority_revision is "
+                        f"{current_planning_revision}"
+                    ),
+                )
+                result.reason_code = "stale-feature-completion-planning-revision"
+                result.conflict_owner = owner_path_text
+                result.recovery_command = (
+                    f"{_workspace_cli_invoke(target_root)} planning integration-propose --proposal-id {proposal_slug} "
+                    f"--owner-ref {owner_path_text} --requested-transition {transition} --record-feature-completion "
+                    f"--proof {','.join(requested_proof_refs)} --expect-subject-revision {current_subject_revision} "
+                    f"--expect-planning-revision {current_planning_revision} --target . --format json"
+                )
+                return result
+            owner_record = _prepare_feature_completion_record(
+                owner_record=owner_record,
+                proof_refs=requested_proof_refs,
+                proposal_id=proposal_slug,
+                proposal_ref=_planning_surface_relative(target_root, proposal_path),
+                requested_transition=transition,
+            )
         posture = owner_record.get("relationships", {}).get("proof_posture", {})
         posture = posture if isinstance(posture, dict) else {}
         proof_state = str(posture.get("state") or posture.get("status") or "").strip().lower()
@@ -14993,6 +15179,10 @@ def propose_integration_transition(
             feature_owner_update["phase"] = "closeout"
             feature_owner_update["revision"] = int(feature_owner_update.get("revision", 0) or 0) + 1
             feature_owner_update["next_action"] = f"Apply integration proposal '{proposal_slug}' from admitted target authority."
+            canonical_core = feature_owner_update.get("canonical_core")
+            if isinstance(canonical_core, dict):
+                canonical_core["next_action"] = feature_owner_update["next_action"]
+                canonical_core["closeout_decision"] = "pending-target-integration"
             relationships = feature_owner_update.setdefault("relationships", {})
             if not isinstance(relationships, dict):
                 relationships = {}
