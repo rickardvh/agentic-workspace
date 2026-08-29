@@ -628,7 +628,19 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
     del arguments
     operation_id = str(values.get("operation_id") or "")
     transition = str(values.get("assignment_command") or operation_id.rsplit(".", 1)[-1])
-    supported = {"export", "import", "admit", "reject", "repair", "reassign", "integrate", "close", "cleanup", "override"}
+    supported = {
+        "dispatch",
+        "export",
+        "import",
+        "admit",
+        "reject",
+        "repair",
+        "reassign",
+        "integrate",
+        "close",
+        "cleanup",
+        "override",
+    }
     if transition not in supported:
         raise PrimitiveExecutionError(f"unsupported assignment lifecycle transition: {transition!r}")
     target_root = Path(str(values.get("target_root") or values.get("target") or context.cwd)).resolve()
@@ -637,7 +649,7 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
 
     assignment_id = _optional_text(values.get("assignment_id"))
     assignment_revision = _optional_text(values.get("assignment_revision"))
-    if transition == "export" and not assignment_id:
+    if transition in {"dispatch", "export"} and not assignment_id:
         from agentic_workspace import config as config_lib
         from agentic_workspace.workspace_runtime_core import _execution_posture_payload
 
@@ -716,7 +728,7 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             else None,
         }
 
-    if transition == "export":
+    if transition in {"dispatch", "export"}:
         assignment_id = require("assignment_id")
         current_authorities = _assignment_current_authorities_from_store(
             target_root=target_root,
@@ -792,6 +804,14 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
         }
         artifact_paths.extend([packet_path, prompt_path, manifest_path])
         transport = _optional_text(values.get("transport")) or "manual"
+        if transition == "dispatch" and transport == "manual":
+            failures.append(
+                {
+                    "reason": "automatic-transport-required",
+                    "field": "transport",
+                    "recovery": "Use assignment export for manual handoff or retry dispatch with an authorized automatic transport.",
+                }
+            )
         state.update(
             {
                 "assignment": packet,

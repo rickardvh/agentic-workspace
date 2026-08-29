@@ -2197,7 +2197,7 @@ function assignmentLifecycleApply(values, operationId) {
     return value;
   };
   const artifact = (relativePath) => resolveInside(runDir, relativePath);
-  if (transition === 'export') {
+  if (transition === 'export' || transition === 'dispatch') {
     const id = requireField('assignment_id');
     if (!id && assignmentText(values.task)) failures.push({ reason: 'native-assignment-materialization-unavailable', field: 'assignment_id', recovery: 'Materialize the live assignment through the Python AW host, then retry the TypeScript export with its assignment id and revision.' });
     const rev = assignmentRevision;
@@ -2207,6 +2207,7 @@ function assignmentLifecycleApply(values, operationId) {
     const targetName = assignmentText(values.target_name) || assignmentText(identity.target);
     if (!targetName) failures.push({ reason: 'missing-required-input', field: 'target_name', recovery: 'Retry assignment export with a current Planning assignment target.' });
     const transport = assignmentText(values.transport) || 'manual';
+    if (transition === 'dispatch' && transport === 'manual') failures.push({ reason: 'automatic-transport-required', field: 'transport', recovery: 'Use assignment export for manual handoff or retry dispatch with an authorized automatic transport.' });
     const effectivePacket = { kind: 'agentic-workspace/assignment-export-packet/v1', assignment_id: id, assignment_revision: identity.revision, run_id: runId, target: targetName, transport, scope: identity.allowed_paths ?? [], assignment_identity: identity, authority_refs: { planning_assignment: authorities.planning_assignment_ref, structural_proof_receipt: authorities.proof_receipt_ref, mutation_baseline: 'host-resolved:git-or-aw-baseline' }, return_contract: { required_fields: ['assignment_revision', 'run_id', 'target', 'changed_paths', 'summary', 'stop_conditions_hit', ...(identity.role === 'implementer' ? ['patch'] : [])], worker_proof_authority: false, worker_completion_authority: false } };
     const packetPath = artifact('export/packet.json');
     const promptPath = artifact('export/prompt.md');

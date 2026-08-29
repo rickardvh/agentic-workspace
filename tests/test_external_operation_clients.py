@@ -42,6 +42,7 @@ from agentic_workspace.generated_operations import (
     agent_guidance_weaken,
     assignment_admit,
     assignment_close,
+    assignment_dispatch,
     assignment_export,
     assignment_import,
     assignment_integrate,
@@ -1093,6 +1094,7 @@ def test_public_operation_client_invokes_by_operation_identity(monkeypatch: pyte
 
 def test_assignment_lifecycle_operations_are_declared_but_not_ready_without_receipts() -> None:
     operation_ids = [
+        "assignment.dispatch",
         "assignment.export",
         "assignment.import",
         "assignment.admit",
@@ -1115,6 +1117,31 @@ def test_assignment_lifecycle_operations_are_declared_but_not_ready_without_rece
     }
     assert set(statuses) == set(operation_ids)
     assert set(statuses.values()) == {"runtime-backed"}
+
+
+def test_assignment_dispatch_public_operation_rejects_missing_current_authority(tmp_path: Path) -> None:
+    (tmp_path / ".agentic-workspace").mkdir()
+    (tmp_path / ".agentic-workspace/config.toml").write_text(
+        'schema_version = 1\n[workspace]\ncli_invoke = "agentic-workspace"\n', encoding="utf-8"
+    )
+
+    result = assignment_dispatch(
+        {
+            "assignment_id": "missing-assignment",
+            "assignment_revision": "revision-1",
+            "target_name": "planner",
+            "run_id": "run-1",
+            "transport": "cli",
+        },
+        target=tmp_path,
+        invocation=[sys.executable, str(ROOT / "scripts/run_agentic_workspace.py")],
+    )
+
+    assert result["operation_id"] == "assignment.dispatch"
+    assert result["transition"] == "dispatch"
+    assert result["status"] == "blocked"
+    assert result["mutation_applied"] is False
+    assert result["reason_code"] == "missing-current-authority"
 
 
 def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_path: Path) -> None:

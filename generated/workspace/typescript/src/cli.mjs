@@ -9,7 +9,7 @@ import { writeSync } from 'node:fs';
 import { runGeneratedOperation } from './runtime.mjs';
 
 const supportedCommands = new Set(["agent-guidance", "assignment", "autopilot", "checkpoint", "config", "config-policy", "correction-event", "defaults", "doctor", "evaluation", "external-evidence-query", "external-evidence-submit", "external-intent", "final-response", "implement", "init", "install", "instructions", "memory", "modules", "note-delegation-outcome", "ownership", "planning", "preflight", "prompt", "proof", "reconcile", "report", "session-log", "setup", "skills", "start", "status", "summary", "system-intent", "uninstall", "upgrade", "work-thread"]);
-const nativeOperationIds = new Set(["agent-guidance.delete", "agent-guidance.edit", "agent-guidance.merge", "agent-guidance.promote", "agent-guidance.retire", "agent-guidance.revalidate", "agent-guidance.split", "agent-guidance.supersede", "agent-guidance.suppress", "agent-guidance.weaken", "assignment.admit", "assignment.cleanup", "assignment.close", "assignment.export", "assignment.import", "assignment.integrate", "assignment.override", "assignment.reassign", "assignment.reject", "assignment.repair", "autopilot.run", "checkpoint.write", "config.policy-apply", "config.report", "correction-event.correct-dispute", "correction-event.identity-init", "correction-event.prune-compact", "correction-event.query", "correction-event.submit", "correction-event.withdraw-supersede", "defaults.report", "delegation-outcome.append", "doctor.report", "evaluation.authority-refresh", "evaluation.delivery-status", "evaluation.external-adapter-receipt", "evaluation.external-delivery", "evaluation.external-host-result-import", "evaluation.external-request", "evaluation.local-delivery", "evaluation.observe", "evaluation.prune", "evaluation.register", "evaluation.report-preview", "evaluation.retry", "evaluation.status", "evaluation.transition", "external-evidence.query", "external-evidence.submit", "external-intent.refresh-github", "final-response.admit", "implement.context", "init.lifecycle", "install.lifecycle", "instructions.check", "instructions.create", "instructions.explain", "instructions.list", "instructions.migrate", "memory.front-door", "modules.report", "ownership.report", "planning.front-door", "preflight.report", "prompt.init", "prompt.uninstall", "prompt.upgrade", "proof.report", "reconcile.report", "report.combined", "session-log.manage", "setup.guidance", "skills.report", "start.context", "status.report", "summary.report", "system-intent.sync", "uninstall.lifecycle", "upgrade.lifecycle", "work-thread.carry-inspect", "work-thread.carry-prune", "work-thread.carry-select", "work-thread.prune", "work-thread.select"]);
+const nativeOperationIds = new Set(["agent-guidance.delete", "agent-guidance.edit", "agent-guidance.merge", "agent-guidance.promote", "agent-guidance.retire", "agent-guidance.revalidate", "agent-guidance.split", "agent-guidance.supersede", "agent-guidance.suppress", "agent-guidance.weaken", "assignment.admit", "assignment.cleanup", "assignment.close", "assignment.dispatch", "assignment.export", "assignment.import", "assignment.integrate", "assignment.override", "assignment.reassign", "assignment.reject", "assignment.repair", "autopilot.run", "checkpoint.write", "config.policy-apply", "config.report", "correction-event.correct-dispute", "correction-event.identity-init", "correction-event.prune-compact", "correction-event.query", "correction-event.submit", "correction-event.withdraw-supersede", "defaults.report", "delegation-outcome.append", "doctor.report", "evaluation.authority-refresh", "evaluation.delivery-status", "evaluation.external-adapter-receipt", "evaluation.external-delivery", "evaluation.external-host-result-import", "evaluation.external-request", "evaluation.local-delivery", "evaluation.observe", "evaluation.prune", "evaluation.register", "evaluation.report-preview", "evaluation.retry", "evaluation.status", "evaluation.transition", "external-evidence.query", "external-evidence.submit", "external-intent.refresh-github", "final-response.admit", "implement.context", "init.lifecycle", "install.lifecycle", "instructions.check", "instructions.create", "instructions.explain", "instructions.list", "instructions.migrate", "memory.front-door", "modules.report", "ownership.report", "planning.front-door", "preflight.report", "prompt.init", "prompt.uninstall", "prompt.upgrade", "proof.report", "reconcile.report", "report.combined", "session-log.manage", "setup.guidance", "skills.report", "start.context", "status.report", "summary.report", "system-intent.sync", "uninstall.lifecycle", "upgrade.lifecycle", "work-thread.carry-inspect", "work-thread.carry-prune", "work-thread.carry-select", "work-thread.prune", "work-thread.select"]);
 const commandDefinitions = [
   {
     "interface": {
@@ -8460,6 +8460,99 @@ const commandDefinitions = [
       "options": [],
       "subcommand_dest": "assignment_command",
       "subcommands": [
+        {
+          "help": "Execute one configured automatic assignment transport and capture its return for admission.",
+          "name": "dispatch",
+          "operation_ref": {
+            "id": "assignment.dispatch",
+            "path": "operations/assignment.dispatch.json"
+          },
+          "options": [
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to the current directory.",
+              "name": "target"
+            },
+            {
+              "flags": [
+                "--assignment-id"
+              ],
+              "help": "Stable Planning assignment id.",
+              "name": "assignment_id"
+            },
+            {
+              "flags": [
+                "--assignment-revision"
+              ],
+              "help": "Current assignment identity revision.",
+              "name": "assignment_revision"
+            },
+            {
+              "flags": [
+                "--run-id"
+              ],
+              "help": "Stable assignment run id.",
+              "name": "run_id"
+            },
+            {
+              "flags": [
+                "--target-name"
+              ],
+              "help": "Selected target name.",
+              "name": "target_name"
+            },
+            {
+              "flags": [
+                "--task"
+              ],
+              "help": "Full human intent used when dispatch must materialize the live assignment first.",
+              "name": "task"
+            },
+            {
+              "action": "append",
+              "flags": [
+                "--changed"
+              ],
+              "help": "Changed or allowed path used to bind a newly materialized assignment.",
+              "name": "changed"
+            },
+            {
+              "choices": [
+                "internal",
+                "cli",
+                "api"
+              ],
+              "flags": [
+                "--transport"
+              ],
+              "help": "Configured automatic transport route.",
+              "name": "transport",
+              "required": true
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--dry-run"
+              ],
+              "help": "Report the transition without writing local artifacts or executing transport.",
+              "name": "dry_run"
+            }
+          ]
+        },
         {
           "help": "Prepare a durable assignment handoff packet and pasteable prompt from one assignment authority.",
           "name": "export",

@@ -267,6 +267,7 @@ def run_operation_values(operation: dict[str, Any], *, initial_values: Mapping[s
         'assignment.admit',
         'assignment.cleanup',
         'assignment.close',
+        'assignment.dispatch',
         'assignment.export',
         'assignment.import',
         'assignment.integrate',

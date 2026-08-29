@@ -822,6 +822,12 @@
     },
     {
       "command": "assignment",
+      "id": "assignment.dispatch",
+      "migration_status": "runtime-consumed",
+      "path": "operations/assignment.dispatch.json"
+    },
+    {
+      "command": "assignment",
       "id": "assignment.export",
       "migration_status": "runtime-consumed",
       "path": "operations/assignment.export.json"

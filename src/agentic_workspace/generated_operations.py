@@ -137,6 +137,16 @@ def assignment_close(values: Mapping[str, Any], *, target: str | Path, invocatio
     )
 
 
+def assignment_dispatch(values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None) -> dict[str, Any]:
+    return invoke_operation(
+        "assignment.dispatch",
+        values,
+        target=target,
+        invocation=invocation,
+        allow_runtime_backed=True,
+    )
+
+
 def assignment_export(values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None) -> dict[str, Any]:
     return invoke_operation(
         "assignment.export",

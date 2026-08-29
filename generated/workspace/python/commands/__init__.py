@@ -24,6 +24,7 @@ from . import agent_guidance_weaken as _command_agent_guidance_weaken
 from . import assignment_admit as _command_assignment_admit
 from . import assignment_cleanup as _command_assignment_cleanup
 from . import assignment_close as _command_assignment_close
+from . import assignment_dispatch as _command_assignment_dispatch
 from . import assignment_export as _command_assignment_export
 from . import assignment_import as _command_assignment_import
 from . import assignment_integrate as _command_assignment_integrate
@@ -111,6 +112,7 @@ GENERATED_COMMAND_HANDLERS = {
     'assignment.admit': _command_assignment_admit.run,
     'assignment.cleanup': _command_assignment_cleanup.run,
     'assignment.close': _command_assignment_close.run,
+    'assignment.dispatch': _command_assignment_dispatch.run,
     'assignment.export': _command_assignment_export.run,
     'assignment.import': _command_assignment_import.run,
     'assignment.integrate': _command_assignment_integrate.run,
