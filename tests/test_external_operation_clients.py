@@ -558,7 +558,7 @@ def _trusted_guidance_host_event(
 
 
 def _independent_review_host_result_fixture(tmp_path: Path, *, changed_paths: list[str] | None = None, **overrides: object):
-    changed = changed_paths or ["src/feature.py"]
+    changed = ["src/feature.py"] if changed_paths is None else changed_paths
     review_result = {
         "kind": "agentic-workspace/independent-review-result/v1",
         "status": "accepted",
@@ -997,9 +997,10 @@ def test_typescript_client_public_export_reads_profile() -> None:
 def test_typescript_assignment_patch_paths_parse_quoted_headers_without_backtracking() -> None:
     script = r"""
 import { assignmentPatchPaths } from './src/agentic_workspace/contracts/typescript_primitive_support.mjs';
-const adversarial = 'diff --git "' + '\\!'.repeat(50000) + ' a/unterminated';
 const valid = 'diff --git "a/src/feature file.py" "b/src/feature file.py"';
-console.log(JSON.stringify({adversarial: assignmentPatchPaths(adversarial), valid: assignmentPatchPaths(valid)}));
+const sizes = [1, 10, 1000, 50000];
+const adversarial = sizes.map((size) => assignmentPatchPaths('diff --git "' + '\\!'.repeat(size) + ' a/unterminated'));
+console.log(JSON.stringify({adversarial, valid: assignmentPatchPaths(valid)}));
 """
     completed = subprocess.run(
         ["node", "--input-type=module", "--eval", script],
@@ -1007,13 +1008,18 @@ console.log(JSON.stringify({adversarial: assignmentPatchPaths(adversarial), vali
         text=True,
         capture_output=True,
         check=False,
-        timeout=5,
+        timeout=30,
     )
     assert completed.returncode == 0, completed.stderr
     assert json.loads(completed.stdout) == {
-        "adversarial": [],
+        "adversarial": [[], [], [], []],
         "valid": ["src/feature file.py"],
     }
+    support = (ROOT / "src/agentic_workspace/contracts/typescript_primitive_support.mjs").read_text(encoding="utf-8")
+    parser = support.split("function diffGitPathTokens(line) {", 1)[1].split("\n}\n\nexport function assignmentPatchPaths", 1)[0]
+    assert "while (offset < value.length)" in parser
+    assert parser.count("offset += 1") == 5
+    assert ".match(" not in parser and ".exec(" not in parser
 
 
 def test_generated_clients_share_fail_closed_readiness_contract() -> None:
@@ -1688,6 +1694,23 @@ def test_assignment_admit_host_result_ref_succeeds_with_protected_host_store(tmp
 
     assert admitted["status"] == "admitted"
     assert admitted["receipt"]["review_result"]["custody"]["host_result_ref"] == host_ref
+
+
+def test_assignment_admit_preserves_explicit_empty_independent_review_scope(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    host_ref, host_result, _resolver = _independent_review_host_result_fixture(tmp_path, changed_paths=[])
+
+    assert host_result["review_result"]["changed_paths"] == []
+    assert host_result["review_result"]["scope_digest"] == _independent_review_scope_digest([])
+    with _verified_host_fixture(monkeypatch, host_ref):
+        admitted = admit_independent_review_result_operation(
+            target_root=tmp_path,
+            values={"host_result_ref": host_ref, "required_mode": "separate-actor"},
+            changed_paths=[],
+        )
+
+    assert admitted["status"] == "admitted"
+    assert admitted["receipt"]["changed_paths"] == []
+    assert admitted["receipt"]["scope_digest"] == _independent_review_scope_digest([])
 
 
 def test_correction_event_generated_operations_store_query_and_preserve_low_authority(

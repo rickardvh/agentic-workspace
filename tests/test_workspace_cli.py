@@ -23,13 +23,6 @@ from agentic_workspace.config import workspace_pointer_block
 from agentic_workspace.module_contract import DiscoveredModule, validate_module_contract
 
 
-def _mark_configuration_readiness_current(target_root: Path) -> None:
-    receipt_path = target_root / ".agentic-workspace" / "adoption-receipt.json"
-    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
-    receipt["configuration_readiness"]["status"] = "current"
-    _write(receipt_path, json.dumps(receipt, indent=2, sort_keys=True) + "\n")
-
-
 def test_active_external_backed_owner_routes_refresh_then_reconciliation(tmp_path: Path) -> None:
     cache = tmp_path / ".agentic-workspace/local/cache/external-intent-evidence.json"
     active_summary = {
@@ -9601,7 +9594,7 @@ def test_start_default_stays_under_tiny_output_budget_for_docs_task(tmp_path: Pa
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
     capsys.readouterr()
-    _mark_configuration_readiness_current(tmp_path)
+    mark_configuration_readiness_current(tmp_path)
 
     assert (
         cli.main(
@@ -10127,7 +10120,7 @@ def test_start_routes_high_assurance_milestone_to_planning_before_implementation
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
     capsys.readouterr()
-    _mark_configuration_readiness_current(tmp_path)
+    mark_configuration_readiness_current(tmp_path)
 
     assert (
         cli.main(
@@ -14008,6 +14001,110 @@ def test_local_chat_checkpoint_startup_reports_absent_stale_and_unreadable(tmp_p
     assert unreadable["status"] == "unreadable"
 
 
+def test_mismatched_checkpoint_is_history_and_does_not_loop_selected_owner_start(tmp_path: Path, capsys) -> None:
+    _init_real_git_repo_with_commit(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    mark_configuration_readiness_current(tmp_path)
+    subprocess.run(["git", "checkout", "-b", "feature/old-checkpoint"], cwd=tmp_path, check=True, capture_output=True)
+    assert (
+        cli.main(
+            [
+                "checkpoint",
+                "write",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Old checkpoint task",
+                "--pr",
+                "2703",
+                "--durable-source",
+                "docs/old.md",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    subprocess.run(["git", "checkout", "-b", "feature/current-owner"], cwd=tmp_path, check=True, capture_output=True)
+    assert (
+        cli.main(
+            [
+                "planning",
+                "new-plan",
+                "--id",
+                "current-owner",
+                "--title",
+                "Current owner task",
+                "--target",
+                str(tmp_path),
+                "--activate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    owner_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "current-owner.plan.json"
+    owner = json.loads(owner_path.read_text(encoding="utf-8"))
+    owner["phase"] = "implementation"
+    owner["next_action"] = "Implement the current owner task."
+    owner["implementation_blockers"] = []
+    owner["intent_satisfaction"] = {
+        "original intent": "Current owner task",
+        "was original intent fully satisfied?": "no; implementation is in progress",
+        "evidence of intent satisfaction": "The current owner is selected and ready for implementation.",
+        "unsolved intent passed to": "this active execplan",
+    }
+    owner_path.write_text(json.dumps(owner, indent=2) + "\n", encoding="utf-8")
+    capsys.readouterr()
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Current owner task", "--format", "json"]) == 0
+    decision = json.loads(capsys.readouterr().out)["decision_packet"]
+    assert decision["owner"]["task_relation"] == "continues-selected-owner"
+    assert decision["action"]["id"] != "continue-active-planning-record"
+    assert decision["effects"]["implementation_allowed"] is True
+
+    assert cli.main(["start", "--target", str(tmp_path), "--select", "local_chat_checkpoint", "--format", "json"]) == 0
+    checkpoint = json.loads(capsys.readouterr().out)["values"]["local_chat_checkpoint"]
+    assert checkpoint["current_work_control"]["relation"] == "historical-mismatch"
+    assert checkpoint["current_work_control"]["control_allowed"] is False
+    assert "branch" in checkpoint["current_work_control"]["mismatched_fields"]
+
+
+def test_same_work_stale_checkpoint_names_exact_refresh_route(tmp_path: Path, capsys) -> None:
+    _init_real_git_repo_with_commit(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert (
+        cli.main(
+            [
+                "checkpoint",
+                "write",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Same work",
+                "--durable-source",
+                "docs/same.md",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    _write(tmp_path / "later.txt", "later\n")
+    subprocess.run(["git", "add", "later.txt"], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "later"], cwd=tmp_path, check=True, capture_output=True)
+    capsys.readouterr()
+
+    assert cli.main(["start", "--target", str(tmp_path), "--select", "local_chat_checkpoint", "--format", "json"]) == 0
+    checkpoint = json.loads(capsys.readouterr().out)["values"]["local_chat_checkpoint"]
+    control = checkpoint["current_work_control"]
+    assert control["relation"] == "stale-same-work"
+    assert control["control_allowed"] is True
+    assert control["required_action"] == "refresh-checkpoint"
+    assert "checkpoint write" in control["command"] and "--replace" in control["command"]
+
+
 def _init_real_git_repo_with_commit(target: Path) -> None:
     subprocess.run(["git", "init"], cwd=target, text=True, capture_output=True, check=True)
     subprocess.run(["git", "config", "user.email", "agent@example.test"], cwd=target, text=True, capture_output=True, check=True)
@@ -15441,7 +15538,7 @@ def test_start_required_skill_projection_survives_compact_catalog(tmp_path: Path
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
     capsys.readouterr()
-    _mark_configuration_readiness_current(tmp_path)
+    mark_configuration_readiness_current(tmp_path)
 
     assert (
         cli.main(
@@ -16627,7 +16724,15 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
         )
         == 0
     )
-    correction = json.loads(capsys.readouterr().out)["decision_packet"]["transition"]
+    implement_decision = json.loads(capsys.readouterr().out)["decision_packet"]
+    derived = implement_decision["effects"]["derived"]
+    assert derived["phase"] == "pre-mutation-admission"
+    assert derived["status"] == "applied"
+    assert derived["effects"][0]["owner"] == "review-stack.lifecycle"
+    assert derived["effects"][0]["persistence"] == "repository-persistent"
+    assert derived["effects"][0]["decision"] == "allow"
+    assert derived["actual_written_paths"] == [derived["effects"][0]["path"]]
+    correction = implement_decision["transition"]
     assert correction["status"] == "written"
     assert correction["phase_after"] == "review-proof"
     admissions = correction["calibration_admissions"]

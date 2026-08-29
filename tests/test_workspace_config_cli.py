@@ -326,8 +326,10 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
     assert payload["workspace"]["maintainer_mode_detail"]["status"] == "disabled"
     assert payload["workspace"]["supported_advanced_features"] == ["review_artifacts", "external_adapters"]
     assert payload["workspace"]["workflow_artifact_adapter"]["canonical_surfaces"] == [
-        ".agentic-workspace/planning/state.toml",
         ".agentic-workspace/planning/execplans/",
+        ".agentic-workspace/planning/lanes/",
+        ".agentic-workspace/planning/decompositions/",
+        ".agentic-workspace/planning/issue-relations/",
     ]
     assert payload["workspace"]["agent_configuration_substrate"]["canonical_doc"] == ".agentic-workspace/docs/workspace-config-contract.md"
     assert payload["workspace"]["agent_configuration_substrate"]["owner_surface"] == ".agentic-workspace/config.toml"

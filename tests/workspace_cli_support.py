@@ -458,6 +458,15 @@ def _write(path: Path, content: str, encoding: str = "utf-8") -> None:
     path.write_text(content, encoding=encoding)
 
 
+def mark_configuration_readiness_current(target_root: Path) -> None:
+    """Put an initialized fixture on the supported configuration-current authority."""
+
+    receipt_path = target_root / ".agentic-workspace" / "adoption-receipt.json"
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    receipt["configuration_readiness"]["status"] = "current"
+    _write(receipt_path, json.dumps(receipt, indent=2, sort_keys=True) + "\n")
+
+
 def _write_json(path: Path, payload: dict[str, object]) -> None:
     _write(path, json.dumps(payload, indent=2) + "\n")
 

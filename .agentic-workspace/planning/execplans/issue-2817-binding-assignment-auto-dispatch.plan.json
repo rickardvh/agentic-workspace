@@ -3,9 +3,9 @@
   "id": "issue-2817-binding-assignment-auto-dispatch",
   "title": "Issue 2817: execute binding assignments through configured transport",
   "owner_level": "lane",
-  "lifecycle": "live",
-  "phase": "closeout",
-  "revision": 4,
+  "lifecycle": "archived",
+  "phase": "complete",
+  "revision": 5,
   "canonical_core": {
     "requested_outcome": "A binding non-local Planning assignment with an authorized automatic transport compiles to and executes one revision-bound typed dispatch action in the ordinary path, while manual handoff remains an explicit fallback and returned work retains the existing admission, integration, proof, and reconciliation boundary.",
     "hard_constraints": "Do not add a scheduler, worker registry, orchestration database, second assignment authority, provider-specific fields to portable assignment semantics, silent local fallback, or completion authority for worker output.",
@@ -66,10 +66,10 @@
   },
   "active_milestone": {
     "id": "feature-branch-closeout",
-    "status": "completed",
+    "status": "archived",
     "scope": "All three stacked slices implement and prove configured binding-assignment dispatch through the existing returned-work lifecycle.",
     "ready": "Focused adapter fixtures, external-client parity, full operation conformance, and the maintained supported-host no-keyword trace pass on the feature stack.",
-    "blocked": "Target-branch archive-owner integration remains pending until the stack merges.",
+    "blocked": "none",
     "optional_deps": "none"
   },
   "immediate_next_action": [
@@ -170,6 +170,23 @@
       "refs": [
         "https://github.com/rickardvh/agentic-workspace/issues/2817"
       ]
+    },
+    "integration": {
+      "status": "integrated",
+      "transition": "archive-owner",
+      "applied_at": "2026-08-29T13:48:43.111635Z",
+      "proof_refs": [
+        "pytest:assignment-adapter-focused:6-passed",
+        "pytest:external-operation-clients:77-passed",
+        "conformance:external-operations:302-passed-9-declared-unavailable",
+        "proof-decision:1b50f105bcd9841c:sufficient-recorded",
+        "proof-subject:85ddaed8a3494784097fd5677755f6c76e4bd82a827daa9928ecb31ac21f2b00",
+        "pytest:assignment-adapter-proof-routing:2-passed",
+        "pytest:workspace-proof-changed-selector:37-passed",
+        "tools/model-cli-harness/external-agent-evaluation/binding-assignment-auto-dispatch-dogfood-2026-08-29.json",
+        ".agentic-workspace/proof/receipts/ordinary-5d0fa2519b31223661416637c86b27af802a63ca98a2ca9b26ee8944887a7089.assignment-proof.json"
+      ],
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2817-binding-assignment-auto-dispatch-archive-owner.integration-receipt.json"
     }
   },
   "next_action": "Merge PRs #2841, #2842, and #2846 in order, then apply the checked-in archive-owner integration proposal on the target branch; no implementation or feature-branch proof work remains.",
@@ -221,7 +238,9 @@
   "proof_report": {
     "validation proof": "6 focused adapter fixtures; 77 external-operation client tests; 302 passing operation-conformance cases with 9 declared unavailable; maintained supported-host no-keyword dispatch and returned-work lifecycle trace; 2 focused proof-owner regressions and 37 changed-selector tests; exact four-class support route sufficient-recorded with 9 accepted receipts.",
     "proof achieved now": "yes for feature-branch implementation and behavior; target-branch lifecycle apply remains pending",
-    "evidence for \"proof achieved\" state": "Checked-in operation receipts and assignment proof, the maintained dogfood trace, current focused/conformance runs, proof decision 1b50f105bcd9841c, and exact proof-subject fingerprint 85ddaed8a3494784097fd5677755f6c76e4bd82a827daa9928ecb31ac21f2b00. The four formerly uncovered support classes now have focused owners, no manual-fallback residue, and a negative fixture retains a genuinely additional owner."
+    "evidence for \"proof achieved\" state": "Checked-in operation receipts and assignment proof, the maintained dogfood trace, current focused/conformance runs, proof decision 1b50f105bcd9841c, and exact proof-subject fingerprint 85ddaed8a3494784097fd5677755f6c76e4bd82a827daa9928ecb31ac21f2b00. The four formerly uncovered support classes now have focused owners, no manual-fallback residue, and a negative fixture retains a genuinely additional owner.",
+    "integration proof": "pytest:assignment-adapter-focused:6-passed, pytest:external-operation-clients:77-passed, conformance:external-operations:302-passed-9-declared-unavailable, proof-decision:1b50f105bcd9841c:sufficient-recorded, proof-subject:85ddaed8a3494784097fd5677755f6c76e4bd82a827daa9928ecb31ac21f2b00, pytest:assignment-adapter-proof-routing:2-passed, pytest:workspace-proof-changed-selector:37-passed, tools/model-cli-harness/external-agent-evaluation/binding-assignment-auto-dispatch-dogfood-2026-08-29.json, .agentic-workspace/proof/receipts/ordinary-5d0fa2519b31223661416637c86b27af802a63ca98a2ca9b26ee8944887a7089.assignment-proof.json",
+    "integration applied at": "2026-08-29T13:48:43.111635Z"
   },
   "specialist_contracts": []
 }

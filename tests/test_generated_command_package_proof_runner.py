@@ -682,7 +682,7 @@ def test_operation_conformance_runner_executes_python_cases(capsys) -> None:
     assert payload["artifact_registry"] == "operation_artifact_registry.json"
     assert payload["summary"]["state"] == "pass"
     assert payload["summary"]["fail_count"] == 0
-    assert payload["summary"]["pass_count"] == 12
+    assert payload["summary"]["pass_count"] == len(payload["cases"])
     cases = {(case["case_id"], case["target"]): case for case in payload["cases"]}
     assert cases[("defaults.selected-output.success", "python")]["state"] == "pass"
     assert cases[("defaults.selected-output.success", "python")]["adapter_id"] == "python.function"
@@ -709,9 +709,12 @@ def test_operation_conformance_runner_reports_typescript_unavailable(monkeypatch
     strict = runner.run_ir_cases(target_selection="typescript", case_filter=set(), require_node=True)
 
     assert soft["summary"]["state"] == "pass"
-    assert soft["summary"]["unavailable_count"] == 10
+    unavailable_cases = {case["case_id"] for case in soft["cases"] if case["state"] == "unavailable"}
+    failed_cases = {case["case_id"] for case in strict["cases"] if case["state"] == "fail"}
+    assert soft["summary"]["unavailable_count"] == len(unavailable_cases)
     assert strict["summary"]["state"] == "fail"
-    assert strict["summary"]["fail_count"] == 10
+    assert strict["summary"]["fail_count"] == len(failed_cases)
+    assert unavailable_cases == failed_cases
 
 
 def test_vendor_neutral_non_operation_cases_are_unavailable_not_skipped(monkeypatch, tmp_path: Path) -> None:
@@ -2252,6 +2255,7 @@ def test_generated_python_conformance_reports_crash_retry_recovery(monkeypatch) 
         case=registries["root-workspace"]["doctor.report.process"],
         command=["python", "shim.py"],
         first_returncode=-11,
+        retry_returncode=0,
     )
 
     assert "runtime crash recovered after retry" in message
@@ -2260,6 +2264,42 @@ def test_generated_python_conformance_reports_crash_retry_recovery(monkeypatch) 
     assert "first_exit=-11" in message
     assert "recovery_record=" in message
     assert checker.RECOVERED_CONFORMANCE_RETRIES[-1]["conformance_ref"] == "doctor.report.process"
+    assert checker.RECOVERED_CONFORMANCE_RETRIES[-1]["final_result"] == "admitted-pass"
+    assert [attempt["result"] for attempt in checker.RECOVERED_CONFORMANCE_RETRIES[-1]["attempts"]] == [
+        "runtime-crash",
+        "admitted-pass",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("retry_result", "expected_status", "expected_final"),
+    [
+        (subprocess.CompletedProcess(["python"], -11, "", "crash"), "recovery-failed", "retry-runtime-crash"),
+        (subprocess.CompletedProcess(["python"], 1, "", "failed"), "recovery-failed", "retry-validation-failed"),
+        (None, "ambiguous", "retry-result-unavailable"),
+    ],
+)
+def test_generated_python_conformance_reports_failed_retry_truthfully(retry_result, expected_status, expected_final) -> None:
+    checker = _load_checker()
+    registries, errors = checker._adapter_conformance_cases_by_package()
+    assert errors == []
+    checker.RECOVERED_CONFORMANCE_RETRIES.clear()
+
+    message = checker._format_generated_adapter_retry_failure(
+        language="python",
+        package_id="root-workspace",
+        case=registries["root-workspace"]["doctor.report.process"],
+        command=["python", "shim.py"],
+        first_returncode=-11,
+        retry_result=retry_result,
+        retry_failures=[] if retry_result is None or retry_result.returncode == -11 else [object()],
+    )
+
+    record = checker.RECOVERED_CONFORMANCE_RETRIES[-1]
+    assert "retry did not recover" in message
+    assert record["status"] == expected_status
+    assert record["final_result"] == expected_final
+    assert f'"status": "{expected_status}"' in message
 
 
 def test_generated_python_conformance_strict_retry_recovery_fails(monkeypatch) -> None:

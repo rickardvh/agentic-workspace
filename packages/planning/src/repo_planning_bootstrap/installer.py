@@ -14774,21 +14774,134 @@ def propose_integration_transition(
         )
         result.reason_code = "unsupported-integration-transition"
         return result
+    admission = _git_branch_admission(target_root)
+    feature_owner_update: dict[str, Any] | None = None
+    feature_owner_path: Path | None = None
+    if (
+        admission.get("phase") == "feature"
+        and transition in {"close-owner", "archive-owner"}
+        and owner_record is not None
+        and owner_path_text
+    ):
+        posture = owner_record.get("relationships", {}).get("proof_posture", {})
+        posture = posture if isinstance(posture, dict) else {}
+        proof_state = str(posture.get("state") or posture.get("status") or "").strip().lower()
+        proof_refs = _canonical_owner_subject_proof_refs(owner_record)
+        feature_proven = proof_state in {"accepted", "complete", "completed", "proved", "recorded-and-accepted", "satisfied"} and bool(
+            proof_refs
+        )
+        existing_integration = owner_record.get("relationships", {}).get("integration", {})
+        existing_integration = existing_integration if isinstance(existing_integration, dict) else {}
+        already_pending = (
+            str(existing_integration.get("status") or "") == "feature-complete-integration-pending"
+            and str(existing_integration.get("proposal_id") or "") == proposal_slug
+        )
+        if feature_proven and not already_pending:
+            current_subject_revision = _integration_subject_revision(
+                target_root=target_root,
+                owner_ref=owner_path_text,
+                external_ref=external,
+            )
+            current_planning_revision = str(_planning_target_authority_revision(target_root).get("revision_id", ""))
+            if expected_planning_revision.strip() and expected_planning_revision.strip() != current_planning_revision:
+                result.add(
+                    "manual review",
+                    target_root / owner_path_text,
+                    (
+                        "feature-head Planning authority changed: expected "
+                        f"{expected_planning_revision.strip()}, found {current_planning_revision}"
+                    ),
+                )
+                result.reason_code = "stale-feature-completion-planning-revision"
+                result.conflict_owner = owner_path_text
+                return result
+            if not expected_subject_revision.strip():
+                result.add(
+                    "manual review",
+                    target_root / owner_path_text,
+                    "feature-head completion requires --expect-subject-revision from the current owner",
+                )
+                result.reason_code = "feature-completion-subject-revision-required"
+                result.conflict_owner = owner_path_text
+                result.recovery_command = (
+                    f"{_workspace_cli_invoke(target_root)} planning integration-propose --proposal-id {proposal_slug} "
+                    f"--owner-ref {owner_path_text} --requested-transition {transition} "
+                    f"--expect-subject-revision {current_subject_revision} --target . --format json"
+                )
+                return result
+            if expected_subject_revision.strip() != current_subject_revision:
+                result.add(
+                    "manual review",
+                    target_root / owner_path_text,
+                    f"feature-head owner revision changed: expected {expected_subject_revision.strip()}, found {current_subject_revision}",
+                )
+                result.reason_code = "stale-feature-completion-subject-revision"
+                result.conflict_owner = owner_path_text
+                return result
+            feature_owner_update = copy.deepcopy(owner_record)
+            feature_owner_update["phase"] = "closeout"
+            feature_owner_update["revision"] = int(feature_owner_update.get("revision", 0) or 0) + 1
+            feature_owner_update["next_action"] = f"Apply integration proposal '{proposal_slug}' from admitted target authority."
+            relationships = feature_owner_update.setdefault("relationships", {})
+            if not isinstance(relationships, dict):
+                relationships = {}
+                feature_owner_update["relationships"] = relationships
+            relationships["integration"] = {
+                "status": "feature-complete-integration-pending",
+                "proposal_id": proposal_slug,
+                "proposal_ref": _planning_surface_relative(target_root, proposal_path),
+                "requested_transition": transition,
+                "proof_refs": proof_refs,
+                "authority": "feature-head declaration; target integration remains terminal authority",
+            }
+            feature_owner_path = target_root / owner_path_text
+            owner_findings = _json_schema_findings(payload=feature_owner_update, schema_path=EXECPLAN_RECORD_SCHEMA_PATH)
+            if owner_findings:
+                result.add(
+                    "manual review",
+                    feature_owner_path,
+                    f"feature-complete owner update did not validate: {'; '.join(owner_findings)}",
+                )
+                result.reason_code = "feature-completion-owner-validation-failed"
+                result.conflict_owner = owner_path_text
+                return result
+        elif not feature_proven and (proof or expected_subject_revision):
+            result.add(
+                "manual review",
+                target_root / owner_path_text,
+                "feature-head completion requires an accepted owner proof posture with canonical proof refs",
+            )
+            result.reason_code = "feature-completion-proof-required"
+            result.conflict_owner = owner_path_text
+            return result
     preserved_invariants = _csv_items(invariant) or [
         "feature branch does not select current work",
         "feature branch does not rewrite aggregate Planning indexes",
         "feature branch does not close parent/lane lifecycle truth",
         "integration apply is target-branch authoritative",
     ]
-    subject_revision = (expected_subject_revision or expected_target_revision).strip() or _integration_subject_revision(
-        target_root=target_root,
-        owner_ref=owner_path_text,
-        external_ref=external,
+    subject_revision = (
+        _integration_subject_revision_after_record(
+            target_root=target_root,
+            owner_ref=owner_path_text,
+            owner_record=feature_owner_update,
+            external_ref=external,
+        )
+        if feature_owner_update is not None
+        else (expected_subject_revision or expected_target_revision).strip()
+        or _integration_subject_revision(target_root=target_root, owner_ref=owner_path_text, external_ref=external)
     )
-    target_authority_revision = expected_planning_revision.strip() or str(
-        _planning_target_authority_revision(target_root).get("revision_id", "")
+    target_authority_revision = (
+        str(
+            _planning_target_authority_revision_after_record(
+                target_root=target_root,
+                owner_ref=owner_path_text,
+                owner_record=feature_owner_update,
+            ).get("revision_id", "")
+        )
+        if feature_owner_update is not None
+        else expected_planning_revision.strip() or str(_planning_target_authority_revision(target_root).get("revision_id", ""))
     )
-    admission = _git_branch_admission(target_root)
     now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     proof_refs = _csv_items(proof)
     if not proof_refs and transition == "archive-owner" and owner_record is not None:
@@ -14862,28 +14975,43 @@ def propose_integration_transition(
         "outcome": "dry-run" if dry_run else "proposed",
         "proposal_id": proposal_slug,
         "proposal_revision": proposal["proposal_revision"],
-        "changed_fields": ["integration_proposal"],
+        "changed_fields": (["owner.feature_completion", "integration_proposal"] if feature_owner_update else ["integration_proposal"]),
         "preserved_invariants": preserved_invariants,
         "expected_subject_revision": subject_revision,
         "expected_planning_revision": target_authority_revision,
     }
     if dry_run:
+        if feature_owner_path is not None:
+            result.add("would update", feature_owner_path, "record feature-head complete and target integration pending")
         result.add("would create", proposal_path, "schema-valid pending integration proposal")
         result.add("would preserve", target_root / PLANNING_STATE_PATH, "; ".join(preserved_invariants))
         return result
     try:
-        _apply_planning_writes_atomically(
-            [proposal_path],
-            lambda: _write_schema_backed_planning_record(
+        write_paths = [proposal_path, *([feature_owner_path] if feature_owner_path is not None else [])]
+
+        def write_feature_completion_transaction() -> None:
+            if feature_owner_path is not None and feature_owner_update is not None:
+                _write_schema_backed_planning_record(
+                    record_path=feature_owner_path,
+                    record=feature_owner_update,
+                    schema_path=EXECPLAN_RECORD_SCHEMA_PATH,
+                )
+            _write_schema_backed_planning_record(
                 record_path=proposal_path,
                 record=proposal,
                 schema_path=INTEGRATION_PROPOSAL_SCHEMA_PATH,
-            ),
+            )
+
+        _apply_planning_writes_atomically(
+            write_paths,
+            write_feature_completion_transaction,
         )
     except OSError as exc:
         result.add("manual review", proposal_path, f"integration proposal write rolled back after failure: {exc}")
         result.reason_code = "integration-proposal-rolled-back"
         return result
+    if feature_owner_path is not None:
+        result.add("updated", feature_owner_path, "feature-head complete; terminal lifecycle remains target-authoritative")
     result.add("created", proposal_path, "schema-valid pending integration proposal")
     result.add(
         "preserved", target_root / PLANNING_STATE_PATH, "proposal did not select, close, archive, or rewrite aggregate Planning state"
