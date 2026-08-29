@@ -588,6 +588,7 @@ def test_complete_intake_distinguishes_stale_blocker_hosted_failure_and_clean_st
     )
     assert stale["review_intake"]["classification"] == "stale_superseded_comment"
     assert stale["items"][0]["implementation_posture"] == "stale_superseded_comment"
+    assert stale["items"][0]["action_required"] is False
 
     failed = module.build_packet(_complete_review_payload(checks=[{"name": "windows", "status": "COMPLETED", "conclusion": "FAILURE"}]))
     assert failed["review_intake"]["classification"] == "hosted_check_failure"
@@ -596,6 +597,88 @@ def test_complete_intake_distinguishes_stale_blocker_hosted_failure_and_clean_st
     clean = module.build_packet(_complete_review_payload())
     assert clean["review_intake"]["classification"] == "no_current_blocker"
     assert clean["review_intake"]["status"] == "complete"
+
+
+def test_exact_head_resolution_notes_link_prior_findings_without_reopening_actions() -> None:
+    module = _load_module()
+    old_head = "b" * 40
+    payload = _complete_review_payload(
+        comments=[
+            {
+                "databaseId": 21,
+                "url": "https://example.test/comment/21",
+                "body": f"Please update src/app.py. <!-- aw-chatgpt-review pr=99 head={old_head} policy=pr-review-recheck-v1 decision=blocked -->",
+                "createdAt": "2026-08-25T11:00:00Z",
+                "author": {"login": "reviewer"},
+            },
+            {
+                "databaseId": 22,
+                "url": "https://example.test/comment/22",
+                "body": f"Addressed at this head; ready for re-review. <!-- aw-chatgpt-review pr=99 head={REVIEW_HEAD} policy=pr-review-recheck-v1 decision=merge-ready -->",
+                "createdAt": "2026-08-26T11:00:00Z",
+                "author": {"login": "author"},
+            },
+        ],
+        reviews=[
+            {
+                "databaseId": 23,
+                "url": "https://example.test/review/23",
+                "body": f"Resolved at this head; no remaining review blocker. <!-- aw-chatgpt-review pr=99 head={REVIEW_HEAD} policy=pr-review-recheck-v1 decision=merge-ready -->",
+                "state": "COMMENTED",
+                "submittedAt": "2026-08-26T11:01:00Z",
+                "author": {"login": "author"},
+                "commit": {"oid": REVIEW_HEAD},
+            }
+        ],
+        threads=[
+            {
+                "isResolved": False,
+                "isOutdated": False,
+                "comments": {
+                    "pageInfo": {"hasNextPage": False},
+                    "nodes": [
+                        {
+                            "databaseId": 24,
+                            "url": "https://example.test/thread/24",
+                            "body": "Fixed at this head; ready for re-review.",
+                            "createdAt": "2026-08-26T11:02:00Z",
+                            "path": "src/app.py",
+                            "author": {"login": "author"},
+                            "replyTo": {"databaseId": 21},
+                            "commit": {"oid": REVIEW_HEAD},
+                        }
+                    ],
+                },
+            }
+        ],
+    )
+
+    packet = module.build_packet(payload)
+    assert packet["category_counts"]["actionable_code_doc_body_change"] == 0
+    assert all(item["action_required"] is False for item in packet["items"])
+    resolutions = [item for item in packet["items"] if item.get("resolution_of")]
+    assert {item["kind"] for item in resolutions} == {"issue_comment", "review", "review_thread_comment"}
+    assert all(item["addressing_status"] == "already_addressed" for item in resolutions)
+
+
+def test_exact_head_resolution_wording_with_new_request_remains_actionable() -> None:
+    module = _load_module()
+    packet = module.build_packet(
+        _complete_review_payload(
+            comments=[
+                {
+                    "databaseId": 25,
+                    "url": "https://example.test/comment/25",
+                    "body": f"Decision: blocked\nUnresolved: Addressed at this head; please also update src/new.py.\n<!-- aw-chatgpt-review pr=99 head={REVIEW_HEAD} policy=pr-review-recheck-v1 decision=blocked -->",
+                    "createdAt": "2026-08-26T11:00:00Z",
+                    "author": {"login": "reviewer"},
+                }
+            ]
+        )
+    )
+
+    assert packet["items"][0]["addressing_status"] == "unresolved_action"
+    assert packet["items"][0]["action_required"] is True
 
 
 def test_complete_intake_treats_markerless_top_level_blocker_after_head_as_current() -> None:

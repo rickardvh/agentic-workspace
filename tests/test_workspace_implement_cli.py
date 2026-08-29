@@ -858,8 +858,8 @@ def test_start_and_implement_use_registry_owned_context_authority_guardrails(tmp
             "pr-issue",
             "Review PR #12 issue using the registered skill and proof",
             "src/review.py",
-            {"scoped-instructions", "ownership", "planning", "skills", "target-guidance"},
-            {"memory"},
+            {"scoped-instructions", "ownership", "skills", "target-guidance"},
+            {"memory", "planning"},
         ),
         (
             "package-generated",
@@ -871,9 +871,9 @@ def test_start_and_implement_use_registry_owned_context_authority_guardrails(tmp
         (
             "memory-planning",
             "Continue planning with memory, the registered skill, and proof",
-            ".agentic-workspace/planning/state.toml",
-            {"scoped-instructions", "ownership", "planning", "memory", "skills", "target-guidance"},
-            {"system-intent"},
+            ".agentic-workspace/planning/execplans/context-authority.plan.json",
+            {"scoped-instructions", "ownership", "memory", "skills", "target-guidance"},
+            {"planning", "system-intent"},
         ),
         (
             "command-generated-target",
@@ -903,6 +903,7 @@ def test_start_and_implement_route_representative_context_classes_from_one_regis
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
     capsys.readouterr()
+    mark_configuration_readiness_current(tmp_path)
     _write_architecture_principles(tmp_path)
     if not (tmp_path / changed_path).exists():
         _write(tmp_path / changed_path, "fixture\n")
@@ -5696,6 +5697,7 @@ def test_start_runs_bounded_shape_study_before_high_assurance_plan_mutation(tmp_
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
     capsys.readouterr()
+    mark_configuration_readiness_current(tmp_path)
 
     assert (
         cli.main(
@@ -5909,6 +5911,7 @@ def test_start_replays_2143_unknown_to_lane_before_plan_creation(tmp_path: Path,
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
     capsys.readouterr()
+    mark_configuration_readiness_current(tmp_path)
 
     task = "Implement all child issues under #2143 with high assurance"
     detail = "next_safe_action,planning_safety_gate"
@@ -5947,6 +5950,7 @@ def test_start_replays_2143_unknown_to_lane_before_plan_creation(tmp_path: Path,
 def test_start_asks_for_shape_decision_when_bounded_evidence_stays_ambiguous(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    mark_configuration_readiness_current(tmp_path)
     _write(
         tmp_path / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json",
         json.dumps(
@@ -6240,6 +6244,7 @@ queued_items = []
 def test_start_default_output_surfaces_parent_lane_shape_study(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    mark_configuration_readiness_current(tmp_path)
     _write(
         tmp_path / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json",
         json.dumps(
@@ -6337,6 +6342,7 @@ def test_implement_custody_only_planning_blocks_parent_closure_claims_not_edits(
 def test_start_keeps_narrow_direct_issue_quiet_without_custody_noise(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    mark_configuration_readiness_current(tmp_path)
     _write(
         tmp_path / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json",
         json.dumps(

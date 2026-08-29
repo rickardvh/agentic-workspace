@@ -42,9 +42,7 @@ ACTIONABLE_CATEGORIES = (
     "pr_metadata_body_only_change",
     "ci_label_only_issue",
 )
-_STRUCTURED_REVIEW_SECTION_RE = re.compile(
-    r"(?mi)^(decision|what_landed|intent_served|proof|unresolved|closure_honest|next_action)\s*:\s*"
-)
+_STRUCTURED_REVIEW_SECTION_RE = re.compile(r"(?mi)^(decision|what_landed|intent_served|proof|unresolved|closure_honest|next_action)\s*:\s*")
 _STRUCTURED_REVIEW_MARKER_RE = re.compile(r"<!--\s*aw-chatgpt-review\b[^>]*\bdecision=([a-z_-]+)", re.IGNORECASE)
 _STRUCTURED_REVIEW_SUPPORTED_DECISIONS = {"blocked", "merge-ready"}
 
@@ -234,13 +232,12 @@ def _baseline_seen_urls(path: Path | None) -> set[str]:
 def _requests_source_change(body: str) -> bool:
     lower = body.lower()
     source_evidence = (
-        re.search(r"(?:^|[\s`])(?:[\w.-]+/)+[\w.-]+\.(?:py|pyi|js|mjs|ts|tsx|json|toml|ya?ml|md)(?:[\s`]|$)", body)
+        re.search(r"(?:^|[\s`])(?:[\w.-]+/)+[\w.-]+\.(?:py|pyi|js|mjs|ts|tsx|json|toml|ya?ml|md)(?=[\s`.,;:)]|$)", body)
         or re.search(r"`?[A-Za-z_][A-Za-z0-9_.]*\(\)`?", body)
         or any(token in lower for token in ("source code", "code change", "implementation", "focused test", "regression test"))
     )
     requested_change = any(
-        token in lower
-        for token in ("fix", "change", "update", "add ", "remove", "replace", "quarantine", "correct", "must ", "should ")
+        token in lower for token in ("fix", "change", "update", "add ", "remove", "replace", "quarantine", "correct", "must ", "should ")
     )
     return bool(source_evidence and requested_change)
 
@@ -283,13 +280,7 @@ def _classify_structured_review_status(body: str) -> tuple[str, str, str] | None
 
     decision = fields.get("decision", "").lower()
     unresolved = fields.get("unresolved")
-    if (
-        "decision" in duplicates
-        or "unresolved" in duplicates
-        or not decision
-        or unresolved is None
-        or len(marker_decisions) != 1
-    ):
+    if "decision" in duplicates or "unresolved" in duplicates or not decision or unresolved is None or len(marker_decisions) != 1:
         return (
             "ambiguous_needs_human",
             "structured review-status signal is missing required fields or is inconsistent",
@@ -338,7 +329,9 @@ def _classify_structured_review_status(body: str) -> tuple[str, str, str] | None
             "structured blocked review status identifies CI, labels, draft state, or mergeability",
             "Inspect PR checks/metadata; run local proof only if CI points to a reproducible failure.",
         )
-    if any(token in unresolved_lower for token in ("pr body", "pull request body", "description", "title", "close #", "closes #", "closing #")):
+    if any(
+        token in unresolved_lower for token in ("pr body", "pull request body", "description", "title", "close #", "closes #", "closing #")
+    ):
         return (
             "pr_metadata_body_only_change",
             "structured blocked review status identifies PR metadata or closure text",
@@ -442,6 +435,63 @@ def _marker_head(body: str) -> str:
     return match.group(1).lower() if match else ""
 
 
+def _is_exact_head_resolution_note(item: dict[str, Any], *, current_head: str) -> bool:
+    body = _text(item.get("body"))
+    lower = body.lower()
+    item_head = (_text(item.get("head_sha")) or _marker_head(body)).lower()
+    resolution_signal = any(
+        token in lower
+        for token in (
+            "addressed at this head",
+            "addressed on this head",
+            "resolved at this head",
+            "fixed at this head",
+            "ready for re-review",
+            "ready for rereview",
+            "no remaining review blocker",
+        )
+    )
+    new_request_signal = any(
+        token in lower
+        for token in ("new request", "also please", "please also", "remaining blocker", "still needs", "still need", "however, please")
+    )
+    return bool(current_head and item_head == current_head.lower() and resolution_signal and not new_request_signal)
+
+
+def _resolution_note_links(raw_comments: list[dict[str, Any]], *, current_head: str) -> dict[str, list[str]]:
+    stale_findings = []
+    for item in raw_comments:
+        item_head = (_text(item.get("head_sha")) or _marker_head(_text(item.get("body")))).lower()
+        category, _reason, _proof = _classify(item)
+        if (
+            current_head
+            and item_head
+            and item_head != current_head.lower()
+            and (category in ACTIONABLE_CATEGORIES or _requests_source_change(_text(item.get("body"))))
+        ):
+            stale_findings.append(item)
+    links: dict[str, list[str]] = {}
+    for note in raw_comments:
+        if not _is_exact_head_resolution_note(note, current_head=current_head):
+            continue
+        reply_to = _text(note.get("reply_to_database_id"))
+        path = _text(note.get("path"))
+        body = _text(note.get("body"))
+        linked = [
+            finding
+            for finding in stale_findings
+            if (reply_to and reply_to == _database_id(finding))
+            or (path and path == _text(finding.get("path")))
+            or (_database_id(finding) and _database_id(finding) in body)
+            or (_text(finding.get("url")) and _text(finding.get("url")) in body)
+        ]
+        if not linked and stale_findings:
+            linked = stale_findings
+        if linked:
+            links[_item_identity(note)] = [_item_identity(item) for item in linked]
+    return links
+
+
 def _comment_currentness(
     item: dict[str, Any],
     *,
@@ -465,8 +515,7 @@ def _comment_currentness(
         return "current", "ordinary top-level comment was created after the observed head commit"
 
     later_current_head_evidence = any(
-        (_timestamp_value(evidence) or datetime.min.replace(tzinfo=timezone.utc)) > created_at
-        for evidence in current_head_evidence
+        (_timestamp_value(evidence) or datetime.min.replace(tzinfo=timezone.utc)) > created_at for evidence in current_head_evidence
     )
     if later_current_head_evidence:
         return "stale", "ordinary top-level comment predates the head and later review evidence is bound to the current head"
@@ -483,11 +532,9 @@ def _implementation_posture(item: dict[str, Any], *, currentness: str) -> str:
         return "stale_superseded_comment"
     if currentness == "currentness_unresolved" and item.get("addressing_status") in {"unresolved_action", "reply_only"}:
         return "currentness_unresolved"
-    if (
-        "no further implementation" in lower
-        or "no further patch" in lower
-        or "ready for re-review" in lower
-    ) and any(term in lower for term in ("distinct configured review authority", "distinct review authority", "review approval separation")):
+    if ("no further implementation" in lower or "no further patch" in lower or "ready for re-review" in lower) and any(
+        term in lower for term in ("distinct configured review authority", "distinct review authority", "review approval separation")
+    ):
         return "ready_for_re_review_distinct_authority"
     if item.get("addressing_status") == "unresolved_action" and item.get("category") == "actionable_code_doc_body_change":
         return "patch_changes_requested"
@@ -618,10 +665,9 @@ def build_packet(
     current_head = _text(normalized.get("pr_head_sha"))
     head_committed_at = _parse_timestamp(_text(normalized.get("pr_head_committed_at")))
     current_head_evidence = [
-        raw
-        for raw in raw_comments
-        if (_text(raw.get("head_sha")) or _marker_head(_text(raw.get("body")))).lower() == current_head.lower()
+        raw for raw in raw_comments if (_text(raw.get("head_sha")) or _marker_head(_text(raw.get("body")))).lower() == current_head.lower()
     ]
+    resolution_links = _resolution_note_links(raw_comments, current_head=current_head)
     for raw in raw_comments:
         if not isinstance(raw, dict):
             continue
@@ -634,13 +680,23 @@ def build_packet(
             skipped_seen += 1
             continue
         category, reason, proof_hint = _classify(raw)
-        addressing_status = _addressing_status(raw, category)
+        resolution_of = resolution_links.get(_item_identity(raw), [])
+        if resolution_of:
+            category = "informational_no_local_change"
+            reason = "exact-head resolution note is linked to prior-head review finding(s)"
+            proof_hint = "Treat this note as resolution history unless it contains a genuinely new request."
+        addressing_status = "already_addressed" if resolution_of else _addressing_status(raw, category)
         currentness, currentness_reason = _comment_currentness(
             raw,
             current_head=current_head,
             head_committed_at=head_committed_at,
             current_head_evidence=current_head_evidence,
         )
+        if currentness == "stale" and addressing_status not in {"already_addressed", "outdated"}:
+            category = "informational_no_local_change"
+            addressing_status = "outdated"
+            reason = "prior-head review finding is superseded by the observed PR head"
+            proof_hint = "Inspect only if a current-head review reopens the finding."
         item = {
             "id": _item_identity(raw),
             "kind": _text(raw.get("kind") or "comment"),
@@ -660,6 +716,7 @@ def build_packet(
                 {**raw, "addressing_status": addressing_status, "category": category},
                 currentness=currentness,
             ),
+            **({"resolution_of": resolution_of} if resolution_of else {}),
         }
         for key in ("path", "line", "is_resolved", "is_outdated"):
             if key in raw and raw.get(key) not in (None, ""):

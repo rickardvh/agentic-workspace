@@ -595,6 +595,110 @@ def test_feature_branch_closeout_rejection_is_non_mutating(tmp_path: Path) -> No
     assert json.loads((tmp_path / owner_ref).read_text(encoding="utf-8"))["lifecycle"] == "live"
 
 
+def test_feature_complete_integration_proposal_updates_owner_and_applies_on_target(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    owner_ref = _write_owner(tmp_path, "issue-2851")
+    owner_path = tmp_path / owner_ref
+    owner = json.loads(owner_path.read_text(encoding="utf-8"))
+    owner["relationships"]["proof_posture"] = {"state": "accepted", "refs": ["proof://feature-head/2851"]}
+    owner["proof"]["refs"] = ["proof://feature-head/2851"]
+    owner_path.write_text(json.dumps(owner, indent=2) + "\n", encoding="utf-8")
+    _init_git(tmp_path)
+    _commit_all(tmp_path, "baseline proven owner")
+    _git(tmp_path, "checkout", "-b", "feature/2851-complete")
+    before_subject = installer._integration_subject_revision(target_root=tmp_path, owner_ref=owner_ref, external_ref="")
+    before_planning = installer._planning_target_authority_revision(tmp_path)["revision_id"]
+
+    proposed = propose_integration_transition(
+        proposal_id="issue-2851-archive",
+        owner="issue-2851",
+        owner_ref=owner_ref,
+        requested_transition="archive-owner",
+        expected_subject_revision=before_subject,
+        expected_planning_revision=before_planning,
+        target=tmp_path,
+    )
+
+    assert proposed.reason_code == ""
+    feature_owner = json.loads(owner_path.read_text(encoding="utf-8"))
+    proposal = _proposal_record(tmp_path, "issue-2851-archive")
+    assert feature_owner["lifecycle"] == "live"
+    assert feature_owner["phase"] == "closeout"
+    assert feature_owner["relationships"]["integration"]["status"] == "feature-complete-integration-pending"
+    assert "Apply integration proposal" in feature_owner["next_action"]
+    assert proposal["proof_refs"] == ["proof://feature-head/2851"]
+    assert proposal["expected_subject_revision"] == installer._integration_subject_revision(
+        target_root=tmp_path, owner_ref=owner_ref, external_ref=""
+    )
+    assert proposal["expected_planning_revision"] == installer._planning_target_authority_revision(tmp_path)["revision_id"]
+
+    replay = propose_integration_transition(
+        proposal_id="issue-2851-archive",
+        owner="issue-2851",
+        owner_ref=owner_ref,
+        requested_transition="archive-owner",
+        expected_subject_revision=proposal["expected_subject_revision"],
+        target=tmp_path,
+    )
+    assert replay.mutation_expected is False
+    assert [action.kind for action in replay.actions] == ["no-op"]
+
+    _commit_all(tmp_path, "feature complete proposal")
+    _git(tmp_path, "checkout", "main")
+    _git(tmp_path, "merge", "--no-ff", "feature/2851-complete", "-m", "merge feature completion")
+    applied = apply_integration_proposal(proposal="issue-2851-archive", target=tmp_path)
+    assert applied.reason_code == ""
+    integrated_owner = json.loads(owner_path.read_text(encoding="utf-8"))
+    assert integrated_owner["lifecycle"] == "archived"
+    assert integrated_owner["phase"] == "complete"
+
+
+def test_feature_completion_rejects_stale_or_unproven_owner(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    owner_ref = _write_owner(tmp_path, "issue-2851-negative")
+    _init_git(tmp_path)
+    _commit_all(tmp_path, "baseline unproven owner")
+    _git(tmp_path, "checkout", "-b", "feature/2851-negative")
+    before = _planning_persistent_snapshot(tmp_path)
+
+    unproven = propose_integration_transition(
+        proposal_id="issue-2851-negative",
+        owner_ref=owner_ref,
+        requested_transition="archive-owner",
+        proof="proof://caller-asserted",
+        expected_subject_revision="stale",
+        target=tmp_path,
+    )
+
+    assert unproven.reason_code == "feature-completion-proof-required"
+    assert _planning_persistent_snapshot(tmp_path) == before
+
+    owner_path = tmp_path / owner_ref
+    owner = json.loads(owner_path.read_text(encoding="utf-8"))
+    owner["relationships"]["proof_posture"] = {"state": "accepted", "refs": ["proof://feature-head/2851"]}
+    owner["proof"]["refs"] = ["proof://feature-head/2851"]
+    owner_path.write_text(json.dumps(owner, indent=2) + "\n", encoding="utf-8")
+    current_subject = installer._integration_subject_revision(target_root=tmp_path, owner_ref=owner_ref, external_ref="")
+    stale_planning = propose_integration_transition(
+        proposal_id="issue-2851-negative",
+        owner_ref=owner_ref,
+        requested_transition="archive-owner",
+        expected_subject_revision=current_subject,
+        expected_planning_revision="stale",
+        target=tmp_path,
+    )
+    assert stale_planning.reason_code == "stale-feature-completion-planning-revision"
+    stale = propose_integration_transition(
+        proposal_id="issue-2851-negative",
+        owner_ref=owner_ref,
+        requested_transition="archive-owner",
+        expected_subject_revision="stale",
+        target=tmp_path,
+    )
+    assert stale.reason_code == "stale-feature-completion-subject-revision"
+    assert not (tmp_path / ".agentic-workspace/planning/integration-proposals/issue-2851-negative.integration-proposal.json").exists()
+
+
 def test_pending_integration_proposal_blocks_closeout_before_mutation(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     owner_ref = _write_owner(tmp_path, "issue-2491")

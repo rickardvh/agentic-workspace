@@ -298,9 +298,64 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
         full_payload["projection_progress"] = progress_contract
         _emit_payload(payload=full_payload, format_name=args.format)
         return 0
+    transition_command = command_text(
+        "agentic-workspace", ["implement", *sum((["--changed", path] for path in changed_paths), []), "--format", "json"]
+    )
+    transition_preview: dict[str, Any] = {"status": "skipped", "reason": "no changed paths"}
+    if changed_paths and not selected_fields:
+        transition_preview = record_review_stack_transition(
+            target_root=target_root,
+            phase="review-correction",
+            phase_after="review-proof",
+            command=transition_command,
+            outcome="executed",
+            next_action_id="run-focused-proof",
+            changed_paths=changed_paths,
+            command_exit_code=0,
+            dry_run=True,
+        )
+    gate = _as_dict(full_payload.get("planning_safety_gate"))
+    envelope = _as_dict(full_payload.get("authority_envelope"))
+    baseline = _as_dict(envelope.get("mutation_baseline"))
+    baseline_status = str(baseline.get("status") or "not-observed")
+    derived_admitted = (
+        transition_preview.get("status") == "dry-run"
+        and gate.get("implementation_allowed") is True
+        and baseline_status not in {"not-observed", "stale", "rejected", "blocked"}
+    )
+    derived_effect_closure = {
+        "kind": "agentic-workspace/derived-effect-closure/v1",
+        "status": "admitted" if derived_admitted else "no-derived-write" if transition_preview.get("status") != "dry-run" else "denied",
+        "phase": "pre-mutation-admission",
+        "effects": (
+            [
+                {
+                    "owner": "review-stack.lifecycle",
+                    "operation": "review-stack-transition.record",
+                    "path": str(transition_preview.get("path") or ""),
+                    "path_rule": ".agentic-workspace/planning/reviews/*-review-stack-<current-pr>-lifecycle.review.json",
+                    "persistence": "repository-persistent",
+                    "baseline_authority": baseline.get("baseline_id") or "unavailable",
+                    "claim_effect": "records review-correction continuity; does not prove review completion",
+                    "decision": "allow" if derived_admitted else "deny",
+                }
+            ]
+            if transition_preview.get("status") == "dry-run"
+            else []
+        ),
+        "actual_written_paths": [],
+        "recovery": (
+            "rerun implement after current owner and mutation baseline are admitted"
+            if transition_preview.get("status") == "dry-run" and not derived_admitted
+            else ""
+        ),
+        "rule": "Actual package-owned writes must be a subset of this pre-mutation effect closure.",
+    }
+    full_payload["derived_effect_closure"] = derived_effect_closure
     payload: dict[str, Any] = full_payload
     if profile == "tiny":
         payload = _tiny_implement_payload(full_payload)
+        payload["derived_effect_closure"] = copy.deepcopy(derived_effect_closure)
         full_context = _as_dict(full_payload.get("context"))
         input_consumption = _as_dict(full_context.get("projection_decision_input_consumption"))
         if input_consumption:
@@ -377,14 +432,12 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
         for field in ("projection_decision_input_consumption", "projection_decision_input_revalidation"):
             if value := _as_dict(decision_context.get(field)):
                 payload.setdefault("context", {})[field] = value
-    if changed_paths and not getattr(args, "select", None):
+    if changed_paths and not getattr(args, "select", None) and derived_admitted:
         transition = record_review_stack_transition(
             target_root=target_root,
             phase="review-correction",
             phase_after="review-proof",
-            command=command_text(
-                "agentic-workspace", ["implement", *sum((["--changed", path] for path in changed_paths), []), "--format", "json"]
-            ),
+            command=transition_command,
             outcome="executed",
             next_action_id="run-focused-proof",
             changed_paths=changed_paths,
@@ -392,6 +445,11 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
         )
         if transition.get("status") not in {"skipped", ""}:
             payload["review_stack_transition"] = transition
+            actual_paths = [str(transition.get("path"))] if transition.get("status") in {"written", "updated"} else []
+            derived_effect_closure["actual_written_paths"] = actual_paths
+            derived_effect_closure["status"] = "applied" if actual_paths else "admitted-no-op"
+            payload["derived_effect_closure"] = copy.deepcopy(derived_effect_closure)
+            full_payload["derived_effect_closure"] = copy.deepcopy(derived_effect_closure)
             payload["calibration_admissions"] = [
                 _record_trusted_assignment_outcome_from_ordinary_boundary(
                     target_root=target_root,
@@ -1874,6 +1932,7 @@ def _ordinary_implement_decision_payload(*, selected: dict[str, Any], source_pay
     operating_decision = _as_dict(operation_authority.get("operating_decision"))
     typed_invocation = _as_dict(operation_authority.get("typed_invocation"))
     review_transition = _as_dict(selected.get("review_stack_transition"))
+    derived_effect_closure = _as_dict(selected.get("derived_effect_closure")) or _as_dict(source_payload.get("derived_effect_closure"))
     calibration_admissions = [item for item in _list_payload(selected.get("calibration_admissions")) if isinstance(item, dict)]
     memory_packet = _as_dict(source_payload.get("memory_decision_packet"))
     memory_pull = _as_dict(memory_packet.get("pull"))
@@ -2076,6 +2135,7 @@ def _ordinary_implement_decision_payload(*, selected: dict[str, Any], source_pay
             "allowed_claims": allowed_claims,
             "blocked_claims": blocked_claims,
             "outside_working_set": "requires-explicit-authority",
+            **({"derived": copy.deepcopy(derived_effect_closure)} if derived_effect_closure else {}),
         },
         "owner": owner,
         "proof": {

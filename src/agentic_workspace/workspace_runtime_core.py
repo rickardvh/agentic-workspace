@@ -29603,7 +29603,12 @@ def _next_safe_action_packet(
         "reassign-blocked-assignment",
     }:
         skill = "planning-orchestrator-workflow"
-    elif not skill and action in {"produce-bounded-reflection-report", "archive-or-retire-completed-plan", "inspect-current-task"}:
+    elif not skill and action in {
+        "produce-bounded-reflection-report",
+        "archive-or-retire-completed-plan",
+        "inspect-current-task",
+        "continue-active-plan",
+    }:
         skill = ""
     elif not skill and action != "choose-smallest-workflow-shape" and isinstance(preferred_routes, list):
         for route in preferred_routes:
@@ -34325,7 +34330,7 @@ def _start_tiny_payload_fast(
     ) and route_transition != "inspect-current-task-scope":
         payload["planning_safety_gate"] = planning_safety_gate
     payload.update(_as_dict(_as_dict(planning_safety_gate.get("bounded_external_effect")).get("start_projection")))
-    if route_applies and (route_transition != "none" or route_relation == "bounded-independent"):
+    if route_applies and (route_transition != "none" or route_relation in {"bounded-independent", "continues-selected-owner"}):
         next_packet = route_decision.get("next_safe_action", {})
         if isinstance(next_packet, dict):
             evidence_required = (
@@ -37920,6 +37925,67 @@ def _local_chat_checkpoint_projection(*, target_root: Path, cli_invoke: str) -> 
         }
     durable_sources = _list_payload(checkpoint.get("durable_sources"))
     status = "present" if checkpoint.get("kind") == LOCAL_CHAT_CHECKPOINT_KIND else "stale"
+    observations = _as_dict(checkpoint.get("volatile_observations"))
+
+    def observed_value(key: str, fallback: Any = "") -> Any:
+        return _as_dict(observations.get(key)).get("value") or checkpoint.get(key) or fallback
+
+    live_identity = {
+        **_checkpoint_git_snapshot(target_root=target_root),
+        "branch": _checkpoint_git_value(target_root=target_root, args=["branch", "--show-current"]),
+        "worktree": target_root.resolve().as_posix(),
+    }
+    checkpoint_identity = {
+        "repo_root": str(observed_value("repo_root")),
+        "remote_origin_url": str(observed_value("remote_origin_url")),
+        "head_commit": str(observed_value("head_commit")),
+        "branch": str(observed_value("branch")),
+        "worktree": str(observed_value("worktree", observed_value("repo_root"))),
+        "current_pr": str(observed_value("current_pr")),
+    }
+    different_work_fields = [
+        field
+        for field in ("repo_root", "remote_origin_url", "branch", "worktree")
+        if checkpoint_identity[field] and live_identity[field] and checkpoint_identity[field] != live_identity[field]
+    ]
+    head_stale = bool(
+        checkpoint_identity["head_commit"]
+        and live_identity["head_commit"]
+        and checkpoint_identity["head_commit"] != live_identity["head_commit"]
+    )
+    if different_work_fields:
+        control = {
+            "relation": "historical-mismatch",
+            "control_allowed": False,
+            "mismatched_fields": different_work_fields,
+            "required_action": "none",
+            "rule": "A checkpoint from different current work remains inspectable history and cannot gate this owner.",
+        }
+    elif head_stale:
+        durable_source = str(durable_sources[0]) if durable_sources else ".agentic-workspace/local/chat-checkpoint.json"
+        task = str(checkpoint.get("task") or "Refresh current-work checkpoint").replace('"', "'")
+        recovery = _command_with_cli_invoke(
+            command=(
+                f'agentic-workspace checkpoint write --target . --task "{task}" --durable-source "{durable_source}" --replace --format json'
+            ),
+            cli_invoke=cli_invoke,
+        )
+        control = {
+            "relation": "stale-same-work",
+            "control_allowed": True,
+            "mismatched_fields": ["head_commit"],
+            "required_action": "refresh-checkpoint",
+            "command": recovery,
+            "rule": "A same-work checkpoint may constrain continuation only through this exact refresh route.",
+        }
+    else:
+        control = {
+            "relation": "current-match",
+            "control_allowed": True,
+            "mismatched_fields": [],
+            "required_action": "none",
+            "rule": "Checkpoint identity matches current local work; its advisory claim limits remain applicable.",
+        }
     payload = {
         **base,
         "status": status,
@@ -37944,6 +38010,8 @@ def _local_chat_checkpoint_projection(*, target_root: Path, cli_invoke: str) -> 
         "proof_state": _as_dict(checkpoint.get("proof_state")),
         "resume_checklist": _list_payload(checkpoint.get("resume_checklist"))[:5],
         "limits": _as_dict(checkpoint.get("limits")),
+        "current_work_control": control,
+        "identity_comparison": {"checkpoint": checkpoint_identity, "current": live_identity},
         "rule": "Local checkpoints are advisory continuity hints; fresh local/remote truth and durable sources remain authoritative.",
     }
     candidate_routes = _local_checkpoint_planning_candidate_routes(

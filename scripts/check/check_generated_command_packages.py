@@ -334,9 +334,7 @@ GENERATED_CLI_COMPATIBILITY_VOCABULARY_ALLOWLIST = {
     "src/agentic_workspace/workspace_runtime_primitives.py": "legacy parser helper compatibility wrapper",
     "scripts/check/check_generated_command_packages.py": "static compatibility allowlist and obsolete-layout guards",
     "tests/test_workspace_packaging.py": "installed private bridge compatibility proof",
-    "tests/test_runtime_compatibility.py": (
-        "black-box installed-runtime compatibility proof at the generated handler import boundary"
-    ),
+    "tests/test_runtime_compatibility.py": ("black-box installed-runtime compatibility proof at the generated handler import boundary"),
     "tests/test_external_consumer_profile.py": "isolated wheel profile-resource compatibility proof",
     "tests/fixtures/external_consumer/consumer.py": "isolated installed-consumer package-resource proof",
     "packages/planning/tests/test_packaging.py": "installed private bridge compatibility proof",
@@ -790,6 +788,7 @@ def _format_generated_adapter_retry_recovery(
     case: AdapterConformanceCase,
     command: list[str],
     first_returncode: int,
+    retry_returncode: int | None = None,
 ) -> str:
     _classification, detail = _exit_failure_classification(first_returncode)
     command_name = case.success_args[0] if case.success_args else "<entrypoint>"
@@ -805,6 +804,12 @@ def _format_generated_adapter_retry_recovery(
         "fixture": case.fixture_id,
         "adapter_entrypoint": command[0],
         "first_exit": first_returncode,
+        "final_exit": retry_returncode,
+        "final_result": "admitted-pass",
+        "attempts": [
+            {"attempt": 1, "exit": first_returncode, "result": "runtime-crash"},
+            {"attempt": 2, "exit": retry_returncode, "result": "admitted-pass"},
+        ],
         "detail": detail,
         "strict_fail": _strict_retry_recovery_enabled(),
     }
@@ -815,6 +820,55 @@ def _format_generated_adapter_retry_recovery(
         f"conformance_ref={case.conformance_ref}; command={command_name}; command_args={case.success_args!r}; "
         f"fixture={case.fixture_id}; adapter_entrypoint={command[0]!r}; first_exit={first_returncode}; detail={detail}; "
         f"recovery_record={json.dumps(record, sort_keys=True)}"
+    )
+
+
+def _format_generated_adapter_retry_failure(
+    *,
+    language: str,
+    package_id: str,
+    case: AdapterConformanceCase,
+    command: list[str],
+    first_returncode: int,
+    retry_result: subprocess.CompletedProcess[str] | None,
+    retry_failures: list[object],
+) -> str:
+    command_name = case.success_args[0] if case.success_args else "<entrypoint>"
+    retry_exit = retry_result.returncode if retry_result is not None else None
+    final_result = (
+        "retry-runtime-crash"
+        if retry_exit is not None and _is_runtime_crash_exit(retry_exit)
+        else "retry-validation-failed"
+        if retry_result is not None
+        else "retry-result-unavailable"
+    )
+    record = {
+        "kind": "generated-adapter-retry-recovery/v1",
+        "status": "recovery-failed" if retry_result is not None else "ambiguous",
+        "classification": "runtime-crash-or-proof-environment-residue",
+        "proof_surface": _generated_adapter_proof_surface(language=language),
+        "package": package_id,
+        "conformance_ref": case.conformance_ref,
+        "command": command_name,
+        "command_args": case.success_args,
+        "fixture": case.fixture_id,
+        "adapter_entrypoint": command[0],
+        "first_exit": first_returncode,
+        "final_exit": retry_exit,
+        "final_result": final_result,
+        "retry_failure_count": len(retry_failures),
+        "attempts": [
+            {"attempt": 1, "exit": first_returncode, "result": "runtime-crash"},
+            {"attempt": 2, "exit": retry_exit, "result": final_result},
+        ],
+        "strict_fail": True,
+    }
+    RECOVERED_CONFORMANCE_RETRIES.append(record)
+    return (
+        f"generated {language} adapter runtime crash retry did not recover: "
+        f"proof_surface={record['proof_surface']}; package={package_id}; conformance_ref={case.conformance_ref}; "
+        f"command={command_name}; first_exit={first_returncode}; final_exit={retry_exit}; "
+        f"retry_outcome_record={json.dumps(record, sort_keys=True)}"
     )
 
 
@@ -1088,9 +1142,7 @@ def _validate_generated_operation_cli_inputs(ir: dict[str, object]) -> list[str]
     return errors
 
 
-def _case_from_conformance_contract(
-    *, contract: dict[str, object], package_id: str, target_kind: str = "python"
-) -> AdapterConformanceCase:
+def _case_from_conformance_contract(*, contract: dict[str, object], package_id: str, target_kind: str = "python") -> AdapterConformanceCase:
     projected_contract = contract
     if target_kind == "typescript":
         expectations = contract.get("expectations", {})
@@ -1109,9 +1161,7 @@ def _case_from_conformance_contract(
     )
 
 
-def _adapter_conformance_cases_by_package(
-    *, target_kind: str = "python"
-) -> tuple[dict[str, dict[str, AdapterConformanceCase]], list[str]]:
+def _adapter_conformance_cases_by_package(*, target_kind: str = "python") -> tuple[dict[str, dict[str, AdapterConformanceCase]], list[str]]:
     registry = _load_json("conformance_contracts.json")
     contracts_by_id: dict[str, dict[str, object]] = {}
     errors: list[str] = []
@@ -1212,6 +1262,7 @@ def _run_python_adapter_conformance() -> list[str]:
                                 case=case,
                                 command=command,
                                 first_returncode=result.returncode,
+                                retry_returncode=retry_result.returncode,
                             )
                             print(recovery_message)
                             if _strict_retry_recovery_enabled():
@@ -1220,19 +1271,14 @@ def _run_python_adapter_conformance() -> list[str]:
                             failures = []
                         else:
                             errors.append(
-                                _format_generated_adapter_exit_failure(
+                                _format_generated_adapter_retry_failure(
                                     language="python",
                                     package_id=package_id,
                                     case=case,
                                     command=command,
-                                    returncode=result.returncode,
-                                    expected_exit=case.expected_exit,
-                                    stderr=result.stderr,
-                                )
-                                + (
-                                    f"; retry_exit={retry_result.returncode}; retry_stderr={retry_result.stderr!r}"
-                                    if retry_result is not None
-                                    else "; retry_result=missing"
+                                    first_returncode=result.returncode,
+                                    retry_result=retry_result,
+                                    retry_failures=retry_failures,
                                 )
                             )
                             continue

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import json
-import tomllib
 from pathlib import Path
+
+from repo_planning_bootstrap.installer import planning_summary_query
 
 from agentic_workspace.reconciliation import compile_reconciliation
 
@@ -12,7 +13,6 @@ CLOSURE_REVIEW_PATH = REPO_ROOT / "docs" / "reviews" / "open-issues-closure-2026
 DOGFOOD_DISPOSITION_PATH = (
     REPO_ROOT / "tools" / "model-cli-harness" / "external-agent-evaluation" / "open-issues-dogfood-disposition-2026-08-28.json"
 )
-PLANNING_STATE_PATH = REPO_ROOT / ".agentic-workspace" / "planning" / "state.toml"
 
 
 def _planning_json(relative_path: str) -> dict[str, object]:
@@ -40,19 +40,17 @@ def test_original_open_issue_inventory_has_exactly_one_closure_route() -> None:
 
 
 def test_issue_2562_integrated_prerequisites_are_not_current_planning_work() -> None:
-    state = tomllib.loads(PLANNING_STATE_PATH.read_text(encoding="utf-8"))
-    todo = state["todo"]
-    active_ids = [item["id"] for item in todo["active_items"]]
-    queued_ids = {item["id"] for item in todo["queued_items"]}
-
-    assert active_ids.count("configured-orchestration-ordinary-action") == 1
-    assert "configured-orchestration-ordinary-action" not in queued_ids
-    assert queued_ids.isdisjoint(
-        {
+    live = planning_summary_query(target=REPO_ROOT, selectors=["execplans"])
+    assert live["status"] == "present"
+    active_paths = {item["path"] for item in live["payload"]["execplans"]["active_execplans"]}
+    assert not any(
+        owner_id in path
+        for owner_id in {
             "open-issues-nonlocal-delegation-implementation",
             "open-issues-enforcement-ratchet",
             "open-issues-lifecycle-composition-slice",
         }
+        for path in active_paths
     )
 
     integrations = {
