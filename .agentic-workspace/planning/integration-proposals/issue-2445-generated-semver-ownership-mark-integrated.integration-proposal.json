@@ -1,8 +1,8 @@
 {
   "kind": "planning-integration-proposal/v1",
   "id": "issue-2445-generated-semver-ownership-mark-integrated",
-  "status": "pending",
-  "phase": "integration-pending",
+  "status": "integrated",
+  "phase": "integrated-lifecycle-truth",
   "requested_transition": "mark-integrated",
   "owner": {
     "id": "issue-2445-generated-semver-ownership",
@@ -17,10 +17,10 @@
     "feature branch does not close parent/lane lifecycle truth",
     "integration apply is target-branch authoritative"
   ],
-  "expected_subject_revision": "eaf07e354dc98239",
-  "expected_planning_revision": "51ff13cafd7770cb",
+  "expected_subject_revision": "002e557b59672f87",
+  "expected_planning_revision": "3ebd504defe1d51f",
   "created_at": "2026-08-09T17:01:22.984731Z",
-  "updated_at": "2026-08-09T17:01:22.984731Z",
+  "updated_at": "2026-08-29T08:46:55.462923Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -36,5 +36,7 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "223e009d6ea30ec5"
+  "proposal_revision": "b5b4c6dd9bc57412",
+  "integrated_at": "2026-08-29T08:46:55.462923Z",
+  "integration_receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2445-generated-semver-ownership-mark-integrated.integration-receipt.json"
 }

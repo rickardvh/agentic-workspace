@@ -3,9 +3,9 @@
   "id": "issue-2456-strict-health-policy",
   "title": "Make strict health fail on broken current state",
   "owner_level": "slice",
-  "lifecycle": "closed",
+  "lifecycle": "archived",
   "phase": "complete",
-  "revision": 2,
+  "revision": 3,
   "intent": {
     "outcome": "Give strict health a versioned current-state policy, compact failure receipt, deterministic non-zero exit, and Make/CI enforcement without treating archive history as current failure.",
     "non_goals": [
@@ -44,6 +44,18 @@
     "external_posture": {
       "state": "unobserved",
       "refs": []
+    },
+    "integration": {
+      "status": "integrated",
+      "transition": "archive-owner",
+      "applied_at": "2026-08-29T08:47:13.488688Z",
+      "proof_refs": [
+        "strict-health-focused-tests",
+        "workspace-typecheck",
+        "contract-tooling",
+        "proof-route-tests"
+      ],
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2456-strict-health-policy-archive-owner.integration-receipt.json"
     }
   },
   "references": [
@@ -77,7 +89,7 @@
   },
   "specialist_contracts": [],
   "active_milestone": {
-    "status": "completed",
+    "status": "archived",
     "ready": "ready",
     "blocked": "none"
   },
@@ -128,7 +140,9 @@
   "proof_report": {
     "validation proof": "uv run pytest -q tests/test_workspace_cli.py -k strict_health: 4 passed; uv run ty check src: passed; uv run pytest tests/test_workspace_proof_cli.py focused route selectors: 33 passed; contract tooling: passed; runtime mirror consistency: in sync",
     "proof achieved now": "yes; planning closeout recorded explicit proof input.",
-    "evidence for \"proof achieved\" state": "uv run pytest -q tests/test_workspace_cli.py -k strict_health: 4 passed; uv run ty check src: passed; uv run pytest tests/test_workspace_proof_cli.py focused route selectors: 33 passed; contract tooling: passed; runtime mirror consistency: in sync"
+    "evidence for \"proof achieved\" state": "uv run pytest -q tests/test_workspace_cli.py -k strict_health: 4 passed; uv run ty check src: passed; uv run pytest tests/test_workspace_proof_cli.py focused route selectors: 33 passed; contract tooling: passed; runtime mirror consistency: in sync",
+    "integration proof": "strict-health-focused-tests, workspace-typecheck, contract-tooling, proof-route-tests",
+    "integration applied at": "2026-08-29T08:47:13.488688Z"
   },
   "intent_continuity": {
     "this slice completes the larger intended outcome": "no",

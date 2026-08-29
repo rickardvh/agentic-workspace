@@ -3,9 +3,9 @@
   "id": "open-issues-lifecycle-implementation",
   "title": "Implement lifecycle and reconciliation lane",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "closeout",
-  "revision": 4,
+  "lifecycle": "archived",
+  "phase": "complete",
+  "revision": 5,
   "intent": {
     "outcome": "Make Planning mutation authority effect-scoped, reconcile stale external state and result/claim/continuation generically, and close #2613/#2638/#2639 with a five-field scoped-Markdown authoring surface compiled through the existing operating decision."
   },
@@ -41,6 +41,17 @@
     "external_posture": {
       "state": "unobserved",
       "refs": []
+    },
+    "integration": {
+      "status": "integrated",
+      "transition": "archive-owner",
+      "applied_at": "2026-08-29T08:46:37.540080Z",
+      "proof_refs": [
+        "focused:85",
+        "summary:47",
+        "typecheck:passed"
+      ],
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/github-pr-2627-archive-owner.integration-receipt.json"
     }
   },
   "references": [
@@ -78,5 +89,14 @@
     "owner": ".agentic-workspace/planning/lanes/open-issues-assurance.lane.json",
     "residual_intent": "After this lane PR is published, activate the assurance lane and stack it on this branch."
   },
-  "specialist_contracts": []
+  "specialist_contracts": [],
+  "active_milestone": {
+    "status": "archived",
+    "ready": "ready",
+    "blocked": "none"
+  },
+  "proof_report": {
+    "integration proof": "focused:85, summary:47, typecheck:passed",
+    "integration applied at": "2026-08-29T08:46:37.540080Z"
+  }
 }

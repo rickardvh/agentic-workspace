@@ -1,8 +1,8 @@
 {
   "kind": "planning-integration-proposal/v1",
   "id": "p0-distribution-legal-identity-archive-owner",
-  "status": "pending",
-  "phase": "integration-pending",
+  "status": "integrated",
+  "phase": "integrated-lifecycle-truth",
   "requested_transition": "archive-owner",
   "owner": {
     "id": "p0-distribution-legal-identity",
@@ -20,10 +20,10 @@
     "feature branch does not close parent/lane lifecycle truth",
     "integration apply is target-branch authoritative"
   ],
-  "expected_subject_revision": "9ff44aa131afaca4",
-  "expected_planning_revision": "9b44feca55b86de7",
+  "expected_subject_revision": "9c454a91d383e1d7",
+  "expected_planning_revision": "9a2d3869327f9c7f",
   "created_at": "2026-08-10T05:34:34.623653Z",
-  "updated_at": "2026-08-10T05:34:34.623653Z",
+  "updated_at": "2026-08-29T08:48:43.970745Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -39,5 +39,7 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "e50cbf2f1c92f8c9"
+  "proposal_revision": "bf017d3cb10976a3",
+  "integrated_at": "2026-08-29T08:48:43.970745Z",
+  "integration_receipt_ref": ".agentic-workspace/planning/integration-receipts/p0-distribution-legal-identity-archive-owner.integration-receipt.json"
 }

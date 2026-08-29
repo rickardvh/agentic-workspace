@@ -3,9 +3,9 @@
   "id": "p2-closed-lane-residue",
   "title": "P2 closed lane residue",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "closeout",
-  "revision": 3,
+  "lifecycle": "archived",
+  "phase": "complete",
+  "revision": 4,
   "intent": {
     "outcome": "Classify closed-lane live references as non-authoritative maintenance residue.",
     "non_goals": [
@@ -33,11 +33,22 @@
     },
     "proof_posture": {
       "state": "satisfied",
-      "refs": ["packages/planning/tests/test_lanes.py focused lane lifecycle proof"]
+      "refs": [
+        "packages/planning/tests/test_lanes.py focused lane lifecycle proof"
+      ]
     },
     "external_posture": {
       "state": "current",
-      "refs": ["https://github.com/rickardvh/agentic-workspace/issues/2560"]
+      "refs": [
+        "https://github.com/rickardvh/agentic-workspace/issues/2560"
+      ]
+    },
+    "integration": {
+      "status": "integrated",
+      "transition": "archive-owner",
+      "applied_at": "2026-08-29T08:49:11.222654Z",
+      "proof_refs": [],
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/p2-closed-lane-residue-archive-owner.integration-receipt.json"
     }
   },
   "references": [
@@ -60,7 +71,9 @@
     "requirements": [
       "Run the focused Planning lane lifecycle test."
     ],
-    "refs": ["packages/planning/tests/test_lanes.py::test_lane_close_and_archive_preserve_parent_contribution"]
+    "refs": [
+      "packages/planning/tests/test_lanes.py::test_lane_close_and_archive_preserve_parent_contribution"
+    ]
   },
   "execution_run": {
     "what_happened": "Classified closed-lane live references as maintenance-only residue with no live-owner, proof, or claim authority.",
@@ -71,5 +84,14 @@
     "owner": "GitHub #2560 through target-branch integration",
     "residual_intent": "Apply the checked-in archive-owner proposal after merge. The separate live-owner admission problem remains open and is not treated as closed by this lane."
   },
-  "specialist_contracts": []
+  "specialist_contracts": [],
+  "active_milestone": {
+    "status": "archived",
+    "ready": "ready",
+    "blocked": "none"
+  },
+  "proof_report": {
+    "integration proof": "integration proposal applied",
+    "integration applied at": "2026-08-29T08:49:11.222654Z"
+  }
 }

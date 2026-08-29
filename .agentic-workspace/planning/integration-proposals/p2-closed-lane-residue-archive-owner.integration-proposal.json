@@ -1,8 +1,8 @@
 {
   "kind": "planning-integration-proposal/v1",
   "id": "p2-closed-lane-residue-archive-owner",
-  "status": "pending",
-  "phase": "integration-pending",
+  "status": "integrated",
+  "phase": "integrated-lifecycle-truth",
   "requested_transition": "archive-owner",
   "owner": {
     "id": "p2-closed-lane-residue",
@@ -17,10 +17,10 @@
     "feature branch does not close parent/lane lifecycle truth",
     "integration apply is target-branch authoritative"
   ],
-  "expected_subject_revision": "06e2df6e07976533",
-  "expected_planning_revision": "f76e5e872fff3cc2",
+  "expected_subject_revision": "132c994dc1d9128a",
+  "expected_planning_revision": "26ecea62cf403cd2",
   "created_at": "2026-08-15T15:50:25.286960Z",
-  "updated_at": "2026-08-15T15:50:25.286960Z",
+  "updated_at": "2026-08-29T08:49:11.222654Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -36,5 +36,7 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "7e7dee0225791045"
+  "proposal_revision": "411944d7b50f9c6c",
+  "integrated_at": "2026-08-29T08:49:11.222654Z",
+  "integration_receipt_ref": ".agentic-workspace/planning/integration-receipts/p2-closed-lane-residue-archive-owner.integration-receipt.json"
 }

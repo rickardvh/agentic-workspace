@@ -3,9 +3,9 @@
   "id": "issue-2556-decision-reuse",
   "title": "Issue 2556 revision-keyed projection reuse and budgets",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "closeout",
-  "revision": 8,
+  "lifecycle": "archived",
+  "phase": "complete",
+  "revision": 9,
   "intent": {
     "outcome": "Make start, summary, implement, proof, and ordinary report projections reuse the canonical operating-decision revision with bounded computation, serialization, progress, and cancellation behavior.",
     "non_goals": [
@@ -56,6 +56,13 @@
       "refs": [
         "https://github.com/rickardvh/agentic-workspace/issues/2556"
       ]
+    },
+    "integration": {
+      "status": "integrated",
+      "transition": "archive-owner",
+      "applied_at": "2026-08-29T08:47:49.747843Z",
+      "proof_refs": [],
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2556-decision-reuse-archive-owner.integration-receipt.json"
     }
   },
   "references": [
@@ -95,12 +102,48 @@
     "benchmark": {
       "computation_budget_ms": 10000,
       "serialization_budget_bytes": 65536,
-      "cold_elapsed_ms": {"start": 1671, "summary_selected": 251, "implement": 952, "proof": 871, "closeout_trust": 685},
-      "warm_elapsed_ms": {"start": 157, "summary_selected": 158, "implement": 391, "proof": 235, "closeout_trust": 375},
-      "cold_output_bytes": {"start": 46210, "summary_selected": 1599, "implement": 22261, "proof": 4617, "closeout_trust": 55676},
-      "warm_output_bytes": {"start": 46224, "summary_selected": 1598, "implement": 22260, "proof": 4616, "closeout_trust": 55675},
-      "cold_state_read_count": {"start": 56, "summary_selected": 56, "implement": 56, "proof": 56, "closeout_trust": 56},
-      "warm_state_read_count": {"start": 56, "summary_selected": 56, "implement": 56, "proof": 56, "closeout_trust": 56},
+      "cold_elapsed_ms": {
+        "start": 1671,
+        "summary_selected": 251,
+        "implement": 952,
+        "proof": 871,
+        "closeout_trust": 685
+      },
+      "warm_elapsed_ms": {
+        "start": 157,
+        "summary_selected": 158,
+        "implement": 391,
+        "proof": 235,
+        "closeout_trust": 375
+      },
+      "cold_output_bytes": {
+        "start": 46210,
+        "summary_selected": 1599,
+        "implement": 22261,
+        "proof": 4617,
+        "closeout_trust": 55676
+      },
+      "warm_output_bytes": {
+        "start": 46224,
+        "summary_selected": 1598,
+        "implement": 22260,
+        "proof": 4616,
+        "closeout_trust": 55675
+      },
+      "cold_state_read_count": {
+        "start": 56,
+        "summary_selected": 56,
+        "implement": 56,
+        "proof": 56,
+        "closeout_trust": 56
+      },
+      "warm_state_read_count": {
+        "start": 56,
+        "summary_selected": 56,
+        "implement": 56,
+        "proof": 56,
+        "closeout_trust": 56
+      },
       "captured_entry_count": 164,
       "captured_repeated_command_shape_count": 20,
       "captured_output_approx_mib": 4.48,
@@ -121,5 +164,14 @@
     "owner": "issue-2562-operating-decision",
     "residual_intent": "Continue #2558 and #2563 as later bounded slices; retain #2560 for the closed-residue slice."
   },
-  "specialist_contracts": []
+  "specialist_contracts": [],
+  "active_milestone": {
+    "status": "archived",
+    "ready": "ready",
+    "blocked": "none"
+  },
+  "proof_report": {
+    "integration proof": "integration proposal applied",
+    "integration applied at": "2026-08-29T08:47:49.747843Z"
+  }
 }

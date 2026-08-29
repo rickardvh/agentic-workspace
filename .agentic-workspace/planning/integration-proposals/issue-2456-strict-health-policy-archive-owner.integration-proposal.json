@@ -1,8 +1,8 @@
 {
   "kind": "planning-integration-proposal/v1",
   "id": "issue-2456-strict-health-policy-archive-owner",
-  "status": "pending",
-  "phase": "integration-pending",
+  "status": "integrated",
+  "phase": "integrated-lifecycle-truth",
   "requested_transition": "archive-owner",
   "owner": {
     "id": "issue-2456-strict-health-policy",
@@ -20,10 +20,10 @@
     "default-branch-truth-applies-transition",
     "exact-current-health-receipt-required"
   ],
-  "expected_subject_revision": "01aa9efaf63afc9a",
-  "expected_planning_revision": "792e827407310623",
+  "expected_subject_revision": "91f8bfdd5259da73",
+  "expected_planning_revision": "0a15668468425b0d",
   "created_at": "2026-08-09T17:53:56.399536Z",
-  "updated_at": "2026-08-09T17:53:56.399536Z",
+  "updated_at": "2026-08-29T08:47:13.488688Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -39,5 +39,7 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "a99d7967cf295dca"
+  "proposal_revision": "cca5341599736a01",
+  "integrated_at": "2026-08-29T08:47:13.488688Z",
+  "integration_receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2456-strict-health-policy-archive-owner.integration-receipt.json"
 }

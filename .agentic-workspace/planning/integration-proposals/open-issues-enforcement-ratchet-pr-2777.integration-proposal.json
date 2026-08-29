@@ -1,8 +1,8 @@
 {
   "kind": "planning-integration-proposal/v1",
   "id": "open-issues-enforcement-ratchet-pr-2777",
-  "status": "pending",
-  "phase": "integration-pending",
+  "status": "integrated",
+  "phase": "integrated-lifecycle-truth",
   "requested_transition": "archive-owner",
   "owner": {
     "id": "open-issues-enforcement-ratchet",
@@ -32,10 +32,10 @@
     "non-local delegation remains a separate lane",
     "parent closure remains separate"
   ],
-  "expected_subject_revision": "0c248dd611af16a9",
-  "expected_planning_revision": "c5e72c599936ebad",
+  "expected_subject_revision": "279e46cfe774b46b",
+  "expected_planning_revision": "35f504916dec92b5",
   "created_at": "2026-08-27T09:54:49.619955Z",
-  "updated_at": "2026-08-27T09:54:49.619955Z",
+  "updated_at": "2026-08-29T08:48:25.871157Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -51,5 +51,7 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "a2b0cd547e8d78c5"
+  "proposal_revision": "5c3d7fa26b1cd1af",
+  "integrated_at": "2026-08-29T08:48:25.871157Z",
+  "integration_receipt_ref": ".agentic-workspace/planning/integration-receipts/open-issues-enforcement-ratchet-pr-2777.integration-receipt.json"
 }

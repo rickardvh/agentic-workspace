@@ -3,9 +3,9 @@
   "id": "issue-2455-runtime-owner",
   "title": "Collapse workspace runtime mirror to one owner and ratchet review-scale complexity",
   "owner_level": "slice",
-  "lifecycle": "closed",
+  "lifecycle": "archived",
   "phase": "complete",
-  "revision": 4,
+  "revision": 5,
   "intent": {
     "outcome": "Make workspace_runtime_core.py the sole hand-maintained runtime behavior owner, reduce workspace_runtime_primitives.py to a mechanically checkable compatibility facade, and enforce duplicate/review-scale ratchets.",
     "non_goals": [
@@ -52,6 +52,18 @@
       "refs": [
         "GitHub issue #2455 is open and priority:P1"
       ]
+    },
+    "integration": {
+      "status": "integrated",
+      "transition": "archive-owner",
+      "applied_at": "2026-08-29T08:47:04.486469Z",
+      "proof_refs": [
+        "ownership-checker",
+        "focused-tests",
+        "typecheck",
+        "full-workspace-proof"
+      ],
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2455-runtime-owner-archive-owner.integration-receipt.json"
     }
   },
   "references": [
@@ -90,7 +102,7 @@
   },
   "specialist_contracts": [],
   "active_milestone": {
-    "status": "completed",
+    "status": "archived",
     "ready": "ready",
     "blocked": "none"
   },
@@ -141,7 +153,9 @@
   "proof_report": {
     "validation proof": "runtime ownership tests: 5 passed; ownership checker ready; ruff passed; ty passed; full workspace proof recorded in plan",
     "proof achieved now": "yes; planning closeout recorded explicit proof input.",
-    "evidence for \"proof achieved\" state": "runtime ownership tests: 5 passed; ownership checker ready; ruff passed; ty passed; full workspace proof recorded in plan"
+    "evidence for \"proof achieved\" state": "runtime ownership tests: 5 passed; ownership checker ready; ruff passed; ty passed; full workspace proof recorded in plan",
+    "integration proof": "ownership-checker, focused-tests, typecheck, full-workspace-proof",
+    "integration applied at": "2026-08-29T08:47:04.486469Z"
   },
   "intent_continuity": {
     "this slice completes the larger intended outcome": "no",

@@ -1,8 +1,8 @@
 {
   "kind": "planning-integration-proposal/v1",
   "id": "pr-2766-consume-candidate-2590",
-  "status": "pending",
-  "phase": "integration-pending",
+  "status": "integrated",
+  "phase": "integrated-lifecycle-truth",
   "requested_transition": "keep-open",
   "owner": {
     "id": "github-2590-bug-planning-make-archive-owner-integration-dire",
@@ -18,10 +18,10 @@
     "active-execplan-remains-canonical-owner",
     "unrelated-queue-order-is-preserved"
   ],
-  "expected_subject_revision": "4e6254dc55a76fb9",
-  "expected_planning_revision": "de3c6036867b4be4",
+  "expected_subject_revision": "b64c8bbe85f542ab",
+  "expected_planning_revision": "2ae144159ce4a724",
   "created_at": "2026-08-27T12:45:24.801006Z",
-  "updated_at": "2026-08-27T12:45:24.801006Z",
+  "updated_at": "2026-08-29T08:49:29.376457Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -37,5 +37,7 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "a9f8fe142d75d4b1"
+  "proposal_revision": "f5d8c4c199c762c4",
+  "integrated_at": "2026-08-29T08:49:29.376457Z",
+  "integration_receipt_ref": ".agentic-workspace/planning/integration-receipts/pr-2766-consume-candidate-2590.integration-receipt.json"
 }

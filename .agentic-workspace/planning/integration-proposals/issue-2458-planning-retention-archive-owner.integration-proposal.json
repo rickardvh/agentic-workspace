@@ -1,8 +1,8 @@
 {
   "kind": "planning-integration-proposal/v1",
   "id": "issue-2458-planning-retention-archive-owner",
-  "status": "pending",
-  "phase": "integration-pending",
+  "status": "integrated",
+  "phase": "integrated-lifecycle-truth",
   "requested_transition": "archive-owner",
   "owner": {
     "id": "issue-2458-planning-retention",
@@ -21,10 +21,10 @@
     "ordinary-route-bounded",
     "compact-receipt-queryable"
   ],
-  "expected_subject_revision": "f9c992d09d233a03",
-  "expected_planning_revision": "94ec282b91e7411a",
+  "expected_subject_revision": "ec51322610f311f3",
+  "expected_planning_revision": "80184e1e2a2a27dd",
   "created_at": "2026-08-09T18:01:19.063601Z",
-  "updated_at": "2026-08-09T18:01:19.063601Z",
+  "updated_at": "2026-08-29T08:47:22.530957Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -40,5 +40,7 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "ae5cb2918c5061cc"
+  "proposal_revision": "0094eed1f17439e0",
+  "integrated_at": "2026-08-29T08:47:22.530957Z",
+  "integration_receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2458-planning-retention-archive-owner.integration-receipt.json"
 }

@@ -3,9 +3,9 @@
   "id": "issue-2461-supply-chain-security",
   "title": "Establish a threat model and supply-chain baseline for mutation-capable releases",
   "owner_level": "slice",
-  "lifecycle": "closed",
+  "lifecycle": "archived",
   "phase": "complete",
-  "revision": 3,
+  "revision": 4,
   "intent": {
     "outcome": "Mutation-capable releases state and enforce their trust boundary, use immutable least-privilege CI, block on security scans, and publish SBOM/provenance bound to exact artifacts.",
     "non_goals": [
@@ -45,6 +45,19 @@
       "state": "recorded",
       "route": "keep-local",
       "reason": "User requested continuous implementation without authorizing subagents; security policy, CI controls, and readiness proof must remain one reviewable trust boundary."
+    },
+    "integration": {
+      "status": "integrated",
+      "transition": "archive-owner",
+      "applied_at": "2026-08-29T08:47:31.551144Z",
+      "proof_refs": [
+        "security-tests",
+        "release-tests",
+        "trusted-execution-tests",
+        "typecheck",
+        "ruff"
+      ],
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2461-supply-chain-security-archive-owner.integration-receipt.json"
     }
   },
   "references": [
@@ -84,7 +97,7 @@
     }
   ],
   "active_milestone": {
-    "status": "completed",
+    "status": "archived",
     "ready": "ready",
     "blocked": "none"
   },
@@ -135,7 +148,9 @@
   "proof_report": {
     "validation proof": "security/release/trusted execution tests passed; ruff passed; ty passed",
     "proof achieved now": "yes; planning closeout recorded explicit proof input.",
-    "evidence for \"proof achieved\" state": "security/release/trusted execution tests passed; ruff passed; ty passed"
+    "evidence for \"proof achieved\" state": "security/release/trusted execution tests passed; ruff passed; ty passed",
+    "integration proof": "security-tests, release-tests, trusted-execution-tests, typecheck, ruff",
+    "integration applied at": "2026-08-29T08:47:31.551144Z"
   },
   "intent_continuity": {
     "this slice completes the larger intended outcome": "no",

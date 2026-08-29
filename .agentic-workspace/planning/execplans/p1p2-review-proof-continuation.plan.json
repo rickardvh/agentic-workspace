@@ -3,9 +3,9 @@
   "id": "p1p2-review-proof-continuation",
   "title": "P1/P2 review and proof continuation",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "closeout",
-  "revision": 3,
+  "lifecycle": "archived",
+  "phase": "complete",
+  "revision": 4,
   "intent": {
     "outcome": "Continue #2557 and #2561 through existing review polling and proof-tier contracts without adding broader review or proof concepts.",
     "non_goals": [
@@ -25,7 +25,9 @@
       "tests/test_chatgpt_review_loop.py",
       "tests/test_workspace_implement_cli.py"
     ],
-    "effects": ["No new mutation authority; existing exact-head and proof requirements remain fail-closed."]
+    "effects": [
+      "No new mutation authority; existing exact-head and proof requirements remain fail-closed."
+    ]
   },
   "relationships": {
     "selection": {
@@ -35,7 +37,11 @@
     },
     "proof_posture": {
       "state": "satisfied",
-      "refs": ["81 review-loop tests passed", "focused proof-tier tests passed", "ruff checks passed"]
+      "refs": [
+        "81 review-loop tests passed",
+        "focused proof-tier tests passed",
+        "ruff checks passed"
+      ]
     },
     "external_posture": {
       "state": "current",
@@ -43,9 +49,19 @@
         "https://github.com/rickardvh/agentic-workspace/issues/2557",
         "https://github.com/rickardvh/agentic-workspace/issues/2561"
       ]
+    },
+    "integration": {
+      "status": "integrated",
+      "transition": "archive-owner",
+      "applied_at": "2026-08-29T08:49:02.117105Z",
+      "proof_refs": [],
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/p1p2-review-proof-continuation-archive-owner.integration-receipt.json"
     }
   },
-  "references": ["https://github.com/rickardvh/agentic-workspace/issues/2557", "https://github.com/rickardvh/agentic-workspace/issues/2561"],
+  "references": [
+    "https://github.com/rickardvh/agentic-workspace/issues/2557",
+    "https://github.com/rickardvh/agentic-workspace/issues/2561"
+  ],
   "next_action": "Apply the archive-owner integration proposal on an admitted target branch after merge; retain broader issue residue.",
   "blockers": [
     "None."
@@ -57,7 +73,10 @@
     "requirements": [
       "Run review-loop tests and focused proof-tier tests."
     ],
-    "refs": ["tests/test_chatgpt_review_loop.py", "tests/test_workspace_implement_cli.py"]
+    "refs": [
+      "tests/test_chatgpt_review_loop.py",
+      "tests/test_workspace_implement_cli.py"
+    ]
   },
   "execution_run": {
     "what_happened": "Kept exact-head one-shot review polling narrow and derived focused-local, exhaustive-local, exhaustive-CI-owned, optional, required, and already-satisfied proof posture from ordinary route metadata and receipt reconciliation.",
@@ -68,5 +87,14 @@
     "owner": "GitHub issues #2557 and #2561 through target-branch integration",
     "residual_intent": "Apply the checked-in archive-owner proposal after merge. Stack restacking and broader receipt/cost admission remain outside this narrow continuation."
   },
-  "specialist_contracts": []
+  "specialist_contracts": [],
+  "active_milestone": {
+    "status": "archived",
+    "ready": "ready",
+    "blocked": "none"
+  },
+  "proof_report": {
+    "integration proof": "integration proposal applied",
+    "integration applied at": "2026-08-29T08:49:02.117105Z"
+  }
 }

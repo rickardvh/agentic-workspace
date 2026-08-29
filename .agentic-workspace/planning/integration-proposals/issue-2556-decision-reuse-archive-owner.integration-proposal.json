@@ -1,8 +1,8 @@
 {
   "kind": "planning-integration-proposal/v1",
   "id": "issue-2556-decision-reuse-archive-owner",
-  "status": "pending",
-  "phase": "integration-pending",
+  "status": "integrated",
+  "phase": "integrated-lifecycle-truth",
   "requested_transition": "archive-owner",
   "owner": {
     "id": "issue-2556-decision-reuse",
@@ -17,10 +17,10 @@
     "feature branch does not close parent/lane lifecycle truth",
     "integration apply is target-branch authoritative"
   ],
-  "expected_subject_revision": "62fcc07fedd77593",
-  "expected_planning_revision": "7f2f63741be22e70",
+  "expected_subject_revision": "f47573b305d94ecd",
+  "expected_planning_revision": "cee49db0d73f361e",
   "created_at": "2026-08-15T14:35:59.083510Z",
-  "updated_at": "2026-08-15T14:35:59.083510Z",
+  "updated_at": "2026-08-29T08:47:49.747843Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -36,5 +36,7 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "e1aab6e9c64269cc"
+  "proposal_revision": "e2cd2209a74b9348",
+  "integrated_at": "2026-08-29T08:47:49.747843Z",
+  "integration_receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2556-decision-reuse-archive-owner.integration-receipt.json"
 }

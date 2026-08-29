@@ -3,9 +3,9 @@
   "id": "p1-planning-skill-regressions",
   "title": "P1 Planning and skill routing regressions",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "closeout",
-  "revision": 3,
+  "lifecycle": "archived",
+  "phase": "complete",
+  "revision": 4,
   "intent": {
     "outcome": "Add narrow P1 regressions for executable child adoption, conservative skill routing, compact recommendation payloads, and selector-error exit consistency.",
     "non_goals": [
@@ -51,10 +51,23 @@
     },
     "external_posture": {
       "state": "current",
-      "refs": ["https://github.com/rickardvh/agentic-workspace/pull/2575#issuecomment-5302611741"]
+      "refs": [
+        "https://github.com/rickardvh/agentic-workspace/pull/2575#issuecomment-5302611741"
+      ]
+    },
+    "integration": {
+      "status": "integrated",
+      "transition": "archive-owner",
+      "applied_at": "2026-08-29T08:48:53.028787Z",
+      "proof_refs": [],
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/p1-planning-skill-regressions-archive-owner.integration-receipt.json"
     }
   },
-  "references": ["GitHub #2566", "GitHub #2567", "GitHub #2564"],
+  "references": [
+    "GitHub #2566",
+    "GitHub #2567",
+    "GitHub #2564"
+  ],
   "next_action": "Apply the archive-owner integration proposal on an admitted target branch after merge.",
   "blockers": [
     "None."
@@ -80,5 +93,14 @@
     "owner": "target-branch integration and GitHub issues #2564, #2566, and #2567",
     "residual_intent": "Apply the checked-in archive-owner proposal after merge; retain the broader issue completion rules for later bounded work."
   },
-  "specialist_contracts": []
+  "specialist_contracts": [],
+  "active_milestone": {
+    "status": "archived",
+    "ready": "ready",
+    "blocked": "none"
+  },
+  "proof_report": {
+    "integration proof": "integration proposal applied",
+    "integration applied at": "2026-08-29T08:48:53.028787Z"
+  }
 }

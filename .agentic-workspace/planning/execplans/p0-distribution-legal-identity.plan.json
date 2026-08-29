@@ -3,9 +3,9 @@
   "id": "p0-distribution-legal-identity",
   "title": "P0 distribution and legal identity",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "closeout",
-  "revision": 5,
+  "lifecycle": "archived",
+  "phase": "complete",
+  "revision": 6,
   "intent": {
     "outcome": "Close #2452 and #2453 with an exact verified GitHub-release distribution path, unambiguous coordinated Python identities, and owner-approved MIT metadata in every artifact family.",
     "non_goals": [
@@ -49,6 +49,16 @@
       "state": "recorded",
       "route": "keep-local",
       "reason": "Session instructions prohibit sub-agent delegation unless the user explicitly requests it."
+    },
+    "integration": {
+      "status": "integrated",
+      "transition": "archive-owner",
+      "applied_at": "2026-08-29T08:48:43.970745Z",
+      "proof_refs": [
+        "uv run pytest tests/test_package_identity.py -q",
+        "uv run ruff check scripts/check/check_package_identity.py tests/test_package_identity.py"
+      ],
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/p0-distribution-legal-identity-archive-owner.integration-receipt.json"
     }
   },
   "references": [
@@ -162,7 +172,7 @@
     }
   ],
   "active_milestone": {
-    "status": "completed",
+    "status": "archived",
     "ready": "ready",
     "blocked": "none"
   },
@@ -213,7 +223,9 @@
   "proof_report": {
     "validation proof": "Package identity/artifact/install tests: 22 passed; release workflow: 13 passed; packaging: 33 passed; operation conformance: 149 pass, 0 fail; module test/lint/typecheck green; workspace suite: 1012 passed with two reconciled fixture failures, both focused reruns passed; generated Python/TypeScript proof green.",
     "proof achieved now": "yes; planning closeout recorded explicit proof input.",
-    "evidence for \"proof achieved\" state": "Package identity/artifact/install tests: 22 passed; release workflow: 13 passed; packaging: 33 passed; operation conformance: 149 pass, 0 fail; module test/lint/typecheck green; workspace suite: 1012 passed with two reconciled fixture failures, both focused reruns passed; generated Python/TypeScript proof green."
+    "evidence for \"proof achieved\" state": "Package identity/artifact/install tests: 22 passed; release workflow: 13 passed; packaging: 33 passed; operation conformance: 149 pass, 0 fail; module test/lint/typecheck green; workspace suite: 1012 passed with two reconciled fixture failures, both focused reruns passed; generated Python/TypeScript proof green.",
+    "integration proof": "uv run pytest tests/test_package_identity.py -q, uv run ruff check scripts/check/check_package_identity.py tests/test_package_identity.py",
+    "integration applied at": "2026-08-29T08:48:43.970745Z"
   },
   "required_continuation": {
     "required follow-on for the larger intended outcome": "yes",

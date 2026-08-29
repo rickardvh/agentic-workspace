@@ -1,8 +1,8 @@
 {
   "kind": "planning-integration-proposal/v1",
   "id": "issues-2587-2590-stacked-fixes-archive",
-  "status": "pending",
-  "phase": "integration-pending",
+  "status": "integrated",
+  "phase": "integrated-lifecycle-truth",
   "requested_transition": "archive-owner",
   "owner": {
     "id": "issues-2587-2590-stacked-fixes",
@@ -22,10 +22,10 @@
     "issue-closure-boundaries-preserved",
     "proof-admitted-before-closeout"
   ],
-  "expected_subject_revision": "521be60c82ced9cd",
-  "expected_planning_revision": "b5e6753522142ee2",
+  "expected_subject_revision": "81bd261cca58f979",
+  "expected_planning_revision": "4ee5a2b441377031",
   "created_at": "2026-08-16T18:11:14.487763Z",
-  "updated_at": "2026-08-16T18:11:14.487763Z",
+  "updated_at": "2026-08-29T08:48:07.771885Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -41,5 +41,7 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "7f1bc2f59c594375"
+  "proposal_revision": "fea79c6d66a8527c",
+  "integrated_at": "2026-08-29T08:48:07.771885Z",
+  "integration_receipt_ref": ".agentic-workspace/planning/integration-receipts/issues-2587-2590-stacked-fixes-archive.integration-receipt.json"
 }
