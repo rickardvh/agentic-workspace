@@ -13,6 +13,7 @@ from datetime import date, datetime, timedelta, timezone
 from types import SimpleNamespace
 from typing import Any
 
+from repo_planning_bootstrap import installer as planning_installer
 from repo_verification_bootstrap import runtime_primitives as verification_runtime_primitives
 from tests.workspace_cli_support import *
 
@@ -10470,6 +10471,172 @@ candidates = []
     assert route["implementation_allowed"] is False
     assert route["non_interference_boundary"]["status"] == "overlap-blocked"
     assert route["non_interference_boundary"]["overlap_paths"] == ["src/owned.py"]
+
+
+def test_start_allows_selected_owner_to_mutate_its_declared_scope(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "active-plan", title = "Implement parser cache eviction for issue routing", status = "active", surface = ".agentic-workspace/planning/execplans/active-plan.plan.json" },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write_json(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "active-plan.plan.json",
+        {
+            "kind": "planning-execplan/v1",
+            "id": "active-plan",
+            "title": "Implement parser cache eviction for issue routing",
+            "scope": {"owned": ["src/owned.py"]},
+        },
+    )
+    _write(tmp_path / "src" / "owned.py", "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Implement parser cache eviction for issue routing",
+                "--changed",
+                "src/owned.py",
+                "--select",
+                "planning_safety_gate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    route = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]["route_decision"]
+
+    assert route["task_relation"] == "continues-selected-owner"
+    assert route["required_transition"] == "none"
+    assert route["implementation_allowed"] is True
+    assert "non_interference_boundary" not in route
+
+
+def test_target_authority_reconciliation_ignores_empty_preview(tmp_path: Path, monkeypatch) -> None:
+    proposal_root = tmp_path / ".agentic-workspace" / "planning" / "integration-proposals"
+    proposal_root.mkdir(parents=True)
+    _write_json(proposal_root / "integrated.integration-proposal.json", {"status": "integrated"})
+    monkeypatch.setattr(
+        planning_installer,
+        "planning_reconcile",
+        lambda **_: {
+            "transaction_class": "target-authority-integration",
+            "status": "preview",
+            "proposal": {
+                "proposal_id": "empty-preview",
+                "source": {"planning_revision": "planning-a"},
+                "operations": [],
+                "eligible_proposals": [],
+                "refreshed_proposals": [],
+            },
+        },
+    )
+
+    result = workspace_runtime_planning._compiled_target_authority_reconciliation(target_root=tmp_path, cli_invoke="agentic-workspace")
+
+    assert result == {"status": "absent", "reason": "no-target-authority-reconciliation-work"}
+
+
+def test_current_reconciliation_proposal_ignores_noop_current_and_stale_cache(tmp_path: Path) -> None:
+    proposal_root = tmp_path / ".agentic-workspace" / "local" / "planning" / "reconciliation-proposals"
+    proposal_root.mkdir(parents=True)
+    for proposal_id, revision in (("current-noop", "planning-a"), ("stale-noop", "planning-old")):
+        _write_json(
+            proposal_root / f"{proposal_id}.json",
+            {
+                "proposal_id": proposal_id,
+                "source": {"planning_revision": revision},
+                "apply_command": f"agentic-workspace planning reconcile --apply --proposal {proposal_id}",
+                "operations": [],
+                "owner_transitions": [{"owner_id": "owner", "transition": "remain-live"}],
+            },
+        )
+    _write_json(
+        proposal_root / "stale-target-authority.json",
+        {
+            "proposal_id": "stale-target-authority",
+            "transaction_class": "target-authority-integration",
+            "source": {"planning_revision": "planning-old"},
+            "apply_command": "agentic-workspace planning reconcile --apply --proposal stale-target-authority",
+            "operations": [{"operation": "apply-current-proposal"}],
+        },
+    )
+
+    result = workspace_runtime_planning._current_reconciliation_proposal(
+        target_root=tmp_path, planning_revision={"revision_id": "planning-a"}
+    )
+
+    assert result == {"status": "absent"}
+
+
+def test_current_reconciliation_proposal_preserves_actionable_stale_cache(tmp_path: Path) -> None:
+    proposal_root = tmp_path / ".agentic-workspace" / "local" / "planning" / "reconciliation-proposals"
+    proposal_root.mkdir(parents=True)
+    _write_json(
+        proposal_root / "stale-actionable.json",
+        {
+            "proposal_id": "stale-actionable",
+            "source": {"planning_revision": "planning-old"},
+            "apply_command": "agentic-workspace planning reconcile --apply --proposal stale-actionable",
+            "operations": [{"operation": "archive-owner"}],
+        },
+    )
+
+    result = workspace_runtime_planning._current_reconciliation_proposal(
+        target_root=tmp_path, planning_revision={"revision_id": "planning-a"}
+    )
+
+    assert result == {"status": "stale", "freshness": "stale", "proposal_id": "stale-actionable"}
+
+
+def test_target_authority_reconciliation_preserves_actionable_preview(tmp_path: Path, monkeypatch) -> None:
+    proposal_root = tmp_path / ".agentic-workspace" / "planning" / "integration-proposals"
+    proposal_root.mkdir(parents=True)
+    _write_json(proposal_root / "pending.integration-proposal.json", {"status": "pending"})
+    monkeypatch.setattr(
+        planning_installer,
+        "planning_reconcile",
+        lambda **_: {
+            "transaction_class": "target-authority-integration",
+            "status": "preview",
+            "proposal": {
+                "proposal_id": "actionable-preview",
+                "source": {"planning_revision": "planning-a"},
+                "preview_command": "agentic-workspace planning reconcile --preview",
+                "apply_command": "agentic-workspace planning reconcile --apply",
+                "current_target_authority_revision": "target-a",
+                "affected_owner_refs": ["owner.plan.json"],
+                "operations": [{"operation": "apply-current-proposal"}],
+                "eligible_proposals": ["pending"],
+                "refreshed_proposals": [],
+            },
+        },
+    )
+
+    result = workspace_runtime_planning._compiled_target_authority_reconciliation(target_root=tmp_path, cli_invoke="agentic-workspace")
+
+    assert result["status"] == "preview-available"
+    assert result["operations"] == [{"operation": "apply-current-proposal"}]
+    assert result["eligible_proposals"] == ["pending"]
 
 
 def test_start_routes_completed_active_plan_to_archive_before_new_reflection(tmp_path: Path, capsys) -> None:
