@@ -1,8 +1,8 @@
 {
   "kind": "planning-integration-proposal/v1",
   "id": "issue-2455-runtime-owner-archive-owner",
-  "status": "pending",
-  "phase": "integration-pending",
+  "status": "integrated",
+  "phase": "integrated-lifecycle-truth",
   "requested_transition": "archive-owner",
   "owner": {
     "id": "issue-2455-runtime-owner",
@@ -21,10 +21,10 @@
     "review-working-set-ratchet",
     "durable-exception-owner"
   ],
-  "expected_subject_revision": "574d525db5e00029",
-  "expected_planning_revision": "982deeb170119489",
+  "expected_subject_revision": "802b7159d8a61798",
+  "expected_planning_revision": "00ff7c198347392c",
   "created_at": "2026-08-09T18:13:20.868370Z",
-  "updated_at": "2026-08-09T18:13:20.868370Z",
+  "updated_at": "2026-08-29T08:47:04.486469Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -40,5 +40,7 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "b45fb59430417d41"
+  "proposal_revision": "b0972fa34c40fd30",
+  "integrated_at": "2026-08-29T08:47:04.486469Z",
+  "integration_receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2455-runtime-owner-archive-owner.integration-receipt.json"
 }

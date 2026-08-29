@@ -5,7 +5,7 @@
   "owner_level": "slice",
   "lifecycle": "archived",
   "phase": "complete",
-  "revision": 4,
+  "revision": 5,
   "canonical_core": {
     "requested_outcome": "Implement #2800, #2801, and #2802 together so Planning durable state is owner/integration scoped, ordinary disjoint work does not rewrite a shared aggregate, and legacy planning-state/v1 is retired through an idempotent compatibility path.",
     "hard_constraints": "Do not replace state.toml with another global database, registry, ledger, or committed derived index; preserve same-owner revision conflicts, existing bounded owner/integration records, and provider-neutral external evidence.",
@@ -84,14 +84,9 @@
     "integration": {
       "status": "integrated",
       "transition": "archive-owner",
-      "applied_at": "2026-08-28T18:56:51.395306Z",
-      "proof_refs": [
-        "398 Planning package tests passed",
-        "500 combined workspace regression tests passed",
-        "315 focused Planning route tests passed",
-        "generated command package adapter conformance passed"
-      ],
-      "receipt_ref": ".agentic-workspace/planning/integration-receipts/issues-2800-2802-owner-scoped-planning-archive-owner-refresh.integration-receipt.json"
+      "applied_at": "2026-08-29T08:48:16.779537Z",
+      "proof_refs": [],
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/issues-2800-2802-owner-scoped-planning-archive-owner.integration-receipt.json"
     }
   },
   "references": [
@@ -184,8 +179,8 @@
     "validation proof": "398 Planning package tests, 500 combined workspace regression tests, 315 focused Planning route tests, generated adapter conformance, contract tooling, source-payload strict, structured inventory, lint, and typecheck passed.",
     "proof achieved now": "yes; executable proof covers migration, absence, merge-order, bounded ownership, generated parity, and root runtime behavior.",
     "evidence for \"proof achieved\" state": "Focused route coverage reports covered with no missing or overlapping paths; all selected executable commands passed.",
-    "integration proof": "398 Planning package tests passed, 500 combined workspace regression tests passed, 315 focused Planning route tests passed, generated command package adapter conformance passed",
-    "integration applied at": "2026-08-28T18:56:51.395306Z"
+    "integration proof": "integration proposal applied",
+    "integration applied at": "2026-08-29T08:48:16.779537Z"
   },
   "intent_satisfaction": {
     "original intent": "Implement #2800, #2801, and #2802 in one PR by removing repository-global Planning aggregate authority while preserving bounded continuity and same-owner conflict safety.",

@@ -1,8 +1,8 @@
 {
   "kind": "planning-integration-proposal/v1",
   "id": "issue-2461-supply-chain-security-archive-owner",
-  "status": "pending",
-  "phase": "integration-pending",
+  "status": "integrated",
+  "phase": "integrated-lifecycle-truth",
   "requested_transition": "archive-owner",
   "owner": {
     "id": "issue-2461-supply-chain-security",
@@ -22,10 +22,10 @@
     "semantic-controls",
     "fail-closed-promotion"
   ],
-  "expected_subject_revision": "67920699015581ee",
-  "expected_planning_revision": "47353463132fa402",
+  "expected_subject_revision": "1b52fabf97370e8a",
+  "expected_planning_revision": "ed5561d008d96ccd",
   "created_at": "2026-08-09T18:06:59.548729Z",
-  "updated_at": "2026-08-09T18:06:59.548729Z",
+  "updated_at": "2026-08-29T08:47:31.551144Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -41,5 +41,7 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "2b40ba74403e0208"
+  "proposal_revision": "4828e945900d618b",
+  "integrated_at": "2026-08-29T08:47:31.551144Z",
+  "integration_receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2461-supply-chain-security-archive-owner.integration-receipt.json"
 }

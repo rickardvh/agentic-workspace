@@ -3,9 +3,9 @@
   "id": "issue-2458-planning-retention",
   "title": "Bound Planning archive growth through retention, distillation, and compact receipts",
   "owner_level": "slice",
-  "lifecycle": "closed",
+  "lifecycle": "archived",
   "phase": "complete",
-  "revision": 3,
+  "revision": 4,
   "intent": {
     "outcome": "Planning closes work into compact, queryable Git receipts and can incrementally export and remove bulky retained archives with exact loss accounting, while enforcing host growth budgets.",
     "non_goals": [
@@ -46,6 +46,18 @@
       "state": "recorded",
       "route": "keep-local",
       "reason": "User requested continuous implementation without authorizing subagents; archive lifecycle, command projection, and proof are one tightly coupled slice."
+    },
+    "integration": {
+      "status": "integrated",
+      "transition": "archive-owner",
+      "applied_at": "2026-08-29T08:47:22.530957Z",
+      "proof_refs": [
+        "planning-retention-tests",
+        "ordinary-route-proof",
+        "typecheck",
+        "ruff"
+      ],
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2458-planning-retention-archive-owner.integration-receipt.json"
     }
   },
   "references": [
@@ -85,7 +97,7 @@
     }
   ],
   "active_milestone": {
-    "status": "completed",
+    "status": "archived",
     "ready": "ready",
     "blocked": "none"
   },
@@ -136,7 +148,9 @@
   "proof_report": {
     "validation proof": "planning archive focused tests: 4 passed; ordinary route tests: 2 passed; ty check planning and workspace: passed; ruff: passed",
     "proof achieved now": "yes; planning closeout recorded explicit proof input.",
-    "evidence for \"proof achieved\" state": "planning archive focused tests: 4 passed; ordinary route tests: 2 passed; ty check planning and workspace: passed; ruff: passed"
+    "evidence for \"proof achieved\" state": "planning archive focused tests: 4 passed; ordinary route tests: 2 passed; ty check planning and workspace: passed; ruff: passed",
+    "integration proof": "planning-retention-tests, ordinary-route-proof, typecheck, ruff",
+    "integration applied at": "2026-08-29T08:47:22.530957Z"
   },
   "intent_continuity": {
     "this slice completes the larger intended outcome": "no",

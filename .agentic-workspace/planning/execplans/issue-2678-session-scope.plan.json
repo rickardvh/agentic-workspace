@@ -3,9 +3,9 @@
   "id": "issue-2678-session-scope",
   "title": "Remove identityless session-log capture",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "closeout",
-  "revision": 4,
+  "lifecycle": "archived",
+  "phase": "complete",
+  "revision": 5,
   "canonical_core": {
     "requested_outcome": "Close #2678 by removing every identityless session-log path and requiring a host-provided logical identity before capture or implicit inspection.",
     "hard_constraints": "Do not preserve, migrate, expose, or recreate identityless log state; keep identified logs local and non-authoritative; preserve explicit path/id inspection of identified artifacts.",
@@ -57,17 +57,58 @@
     ]
   },
   "relationships": {
-    "selection": {"state": "selected", "owner": "open-issues-future-context"},
-    "proof_posture": {"state": "passed", "refs": ["tests/test_workspace_session_logging.py: 66 passed", "operation conformance: 296 passed, 0 failed, 8 expected unavailable", "CI run 32698831737", "Security run 32698831710"]},
-    "external_posture": {"state": "integration-pending", "refs": ["GitHub #2678", "PR #2692", ".agentic-workspace/planning/integration-proposals/issue-2678-session-scope-archive-owner.integration-proposal.json"]}
+    "selection": {
+      "state": "selected",
+      "owner": "open-issues-future-context"
+    },
+    "proof_posture": {
+      "state": "passed",
+      "refs": [
+        "tests/test_workspace_session_logging.py: 66 passed",
+        "operation conformance: 296 passed, 0 failed, 8 expected unavailable",
+        "CI run 32698831737",
+        "Security run 32698831710"
+      ]
+    },
+    "external_posture": {
+      "state": "integration-pending",
+      "refs": [
+        "GitHub #2678",
+        "PR #2692",
+        ".agentic-workspace/planning/integration-proposals/issue-2678-session-scope-archive-owner.integration-proposal.json"
+      ]
+    },
+    "integration": {
+      "status": "integrated",
+      "transition": "archive-owner",
+      "applied_at": "2026-08-29T08:47:58.788488Z",
+      "proof_refs": [
+        "tests/test_workspace_session_logging.py:66-passed",
+        "tests/test_workspace_cli.py:session-improvement-intake-passed",
+        "operation-conformance:296-pass-0-fail-8-expected-unavailable",
+        "CI:32698831737",
+        "Security:32698831710"
+      ],
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2678-session-scope-archive-owner.integration-receipt.json"
+    }
   },
   "references": [
-    {"kind": "source", "target": "GitHub #2678; master-based PR #2692", "label": "GitHub #2678; master-based PR #2692", "role": "intake", "locator": ""}
+    {
+      "kind": "source",
+      "target": "GitHub #2678; master-based PR #2692",
+      "label": "GitHub #2678; master-based PR #2692",
+      "role": "intake",
+      "locator": ""
+    }
   ],
   "next_action": "Apply the checked-in archive-owner proposal after merge; no implementation or proof work remains in this slice.",
-  "blockers": ["Terminal archive truth is integration-target authoritative and is represented by the pending archive-owner proposal."],
+  "blockers": [
+    "Terminal archive truth is integration-target authoritative and is represented by the pending archive-owner proposal."
+  ],
   "proof": {
-    "claims": ["Identityless session logging is absent and identified logging remains isolated."],
+    "claims": [
+      "Identityless session logging is absent and identified logging remains isolated."
+    ],
     "requirements": [
       "Run focused capture, status, analysis, and export tests.",
       "Run generated command synchronization and routed changed-path proof."
@@ -80,7 +121,10 @@
       "Security run 32698831710: baseline, CodeQL, dependency review, and secret scan passed"
     ]
   },
-  "continuation": {"owner": "open-issues-future-context lane", "residual_intent": "Continue with #2680/#2690 after publishing this stack member."},
+  "continuation": {
+    "owner": "open-issues-future-context lane",
+    "residual_intent": "Continue with #2680/#2690 after publishing this stack member."
+  },
   "validation_commands": [
     "uv run pytest tests/test_workspace_session_logging.py -q",
     "make sync-all",
@@ -94,9 +138,9 @@
   ],
   "specialist_contracts": [],
   "active_milestone": {
-    "status": "completed",
+    "status": "archived",
     "ready": "ready",
-    "blocked": "merge-time archive application only"
+    "blocked": "none"
   },
   "execution_run": {
     "run status": "completed",
@@ -145,7 +189,9 @@
   "proof_report": {
     "validation proof": "66 focused tests; workspace integration test; 296/0 operation conformance; full CI and Security green.",
     "proof achieved now": "yes; exact implementation-head evidence and merge-time lifecycle proposal are recorded.",
-    "evidence for \"proof achieved\" state": "PR #2692 implementation head 5a0651402 and runs 32698831737, 32698831710, 32698831715."
+    "evidence for \"proof achieved\" state": "PR #2692 implementation head 5a0651402 and runs 32698831737, 32698831710, 32698831715.",
+    "integration proof": "tests/test_workspace_session_logging.py:66-passed, tests/test_workspace_cli.py:session-improvement-intake-passed, operation-conformance:296-pass-0-fail-8-expected-unavailable, CI:32698831737, Security:32698831710",
+    "integration applied at": "2026-08-29T08:47:58.788488Z"
   },
   "intent_continuity": {
     "this slice completes the larger intended outcome": "no",

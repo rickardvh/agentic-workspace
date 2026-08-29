@@ -5,7 +5,7 @@
   "owner_level": "slice",
   "lifecycle": "closed",
   "phase": "complete",
-  "revision": 5,
+  "revision": 6,
   "intent": {
     "outcome": "Release ownership distinguishes exact integrity-only generated metadata from semver-bearing generated output, and every semver consumer applies the same strongest-change classification.",
     "non_goals": [
@@ -50,6 +50,13 @@
       "state": "recorded",
       "route": "keep-local",
       "reason": "The user requested implementation in this task, and multi-agent delegation is not authorized for this turn."
+    },
+    "integration": {
+      "status": "integrated",
+      "transition": "mark-integrated",
+      "applied_at": "2026-08-29T08:46:55.462923Z",
+      "proof_refs": [],
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2445-generated-semver-ownership-mark-integrated.integration-receipt.json"
     }
   },
   "references": [
@@ -138,6 +145,8 @@
   "proof_report": {
     "validation proof": "uv run pytest tests/test_release_workflows.py tests/test_workspace_release_recovery_cli.py -q; uv run python scripts/check/check_generated_command_packages.py",
     "proof achieved now": "yes; planning closeout recorded explicit proof input.",
-    "evidence for \"proof achieved\" state": "uv run pytest tests/test_release_workflows.py tests/test_workspace_release_recovery_cli.py -q; uv run python scripts/check/check_generated_command_packages.py"
+    "evidence for \"proof achieved\" state": "uv run pytest tests/test_release_workflows.py tests/test_workspace_release_recovery_cli.py -q; uv run python scripts/check/check_generated_command_packages.py",
+    "integration proof": "integration proposal applied",
+    "integration applied at": "2026-08-29T08:46:55.462923Z"
   }
 }

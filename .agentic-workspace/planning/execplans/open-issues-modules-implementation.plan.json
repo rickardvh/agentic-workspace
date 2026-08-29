@@ -3,9 +3,9 @@
   "id": "open-issues-modules-implementation",
   "title": "Implement capability-first module lane",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "implementation",
-  "revision": 4,
+  "lifecycle": "archived",
+  "phase": "complete",
+  "revision": 5,
   "intent": {
     "outcome": "Deliver a minimal capability-first public module contract, prove it with an independently shaped module, make admission/removal fail closed, and complete #2624/#2629 by removing fixed SkillSpec/module-slot topology while compiling retained hard controls through the bounded clause IR.",
     "non_goals": [
@@ -52,6 +52,17 @@
       "state": "recorded",
       "route": "keep-local",
       "reason": "The active Codex coordination policy forbids spawning subagents unless the user explicitly requests them; the user requested stacked PRs but did not request delegation."
+    },
+    "integration": {
+      "status": "integrated",
+      "transition": "archive-owner",
+      "applied_at": "2026-08-29T08:46:28.557094Z",
+      "proof_refs": [
+        "focused-tests:151",
+        "workspace-cli:394",
+        "typecheck:passed"
+      ],
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/github-pr-2626-archive-owner.integration-receipt.json"
     }
   },
   "references": [
@@ -96,5 +107,14 @@
       "target": "planning://delegation/keep-local",
       "revision": 1
     }
-  ]
+  ],
+  "active_milestone": {
+    "status": "archived",
+    "ready": "ready",
+    "blocked": "none"
+  },
+  "proof_report": {
+    "integration proof": "focused-tests:151, workspace-cli:394, typecheck:passed",
+    "integration applied at": "2026-08-29T08:46:28.557094Z"
+  }
 }

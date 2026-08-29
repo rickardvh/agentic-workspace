@@ -5,7 +5,7 @@
   "owner_level": "slice",
   "lifecycle": "archived",
   "phase": "complete",
-  "revision": 9,
+  "revision": 10,
   "intent": {
     "outcome": "Implement #2345, #2590, #2729, and #2765 as one independently reviewable Planning lifecycle-composition PR: disjoint owner integration makes progress without weakening same-owner conflicts, archive-owner integration carries canonical subject proof directly into atomic closeout, admitted material external observations reconcile stale selected-owner actions, and the Workspace reconcile facade cannot drift from the canonical Planning operation it projects.",
     "non_goals": [
@@ -81,11 +81,22 @@
     "integration": {
       "status": "integrated",
       "transition": "archive-owner",
-      "applied_at": "2026-08-28T14:22:25.407832Z",
+      "applied_at": "2026-08-29T08:48:34.867701Z",
       "proof_refs": [
-        "PR #2766 merged; exact-head CI passed; .agentic-workspace/planning/closeout-evidence/issue-2562-parent-closeout.closeout.json"
+        "uv run --active pytest packages/planning/tests/test_branch_safe_planning.py packages/planning/tests/test_closeout_completion_policy.py packages/planning/tests/test_installer.py packages/planning/tests/test_runtime_projection.py tests/test_workspace_cli.py tests/test_workspace_planning_help_cli.py tests/test_workspace_summary_cli.py -q",
+        "make lint-planning",
+        "make typecheck-planning",
+        "make typecheck",
+        "make lint-workspace",
+        "uv run --active python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+        "uv run --active python scripts/check/check_generated_command_packages.py --conformance --require-node",
+        "uv run --active python scripts/check/check_generated_command_packages.py --docker --require-docker",
+        "uv run --active python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
+        "pytest lifecycle-composition suite: 548 passed, 2 skipped",
+        "Planning and Workspace lint/typecheck targets passed",
+        "generated command package local, Node, conformance, Docker, and Docker-conformance proofs passed"
       ],
-      "receipt_ref": ".agentic-workspace/planning/integration-receipts/pr-2793-refresh-lifecycle-pr-2766.integration-receipt.json"
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/open-issues-lifecycle-composition-pr-2766.integration-receipt.json"
     }
   },
   "references": [
@@ -179,7 +190,7 @@
     "blocked": "none"
   },
   "proof_report": {
-    "integration proof": "PR #2766 merged; exact-head CI passed; .agentic-workspace/planning/closeout-evidence/issue-2562-parent-closeout.closeout.json",
-    "integration applied at": "2026-08-28T14:22:25.407832Z"
+    "integration proof": "uv run --active pytest packages/planning/tests/test_branch_safe_planning.py packages/planning/tests/test_closeout_completion_policy.py packages/planning/tests/test_installer.py packages/planning/tests/test_runtime_projection.py tests/test_workspace_cli.py tests/test_workspace_planning_help_cli.py tests/test_workspace_summary_cli.py -q, make lint-planning, make typecheck-planning, make typecheck, make lint-workspace, uv run --active python scripts/check/check_contract_tooling_surfaces.py --quiet-success, uv run --active python scripts/check/check_generated_command_packages.py --conformance --require-node, uv run --active python scripts/check/check_generated_command_packages.py --docker --require-docker, uv run --active python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker, pytest lifecycle-composition suite: 548 passed, 2 skipped, Planning and Workspace lint/typecheck targets passed, generated command package local, Node, conformance, Docker, and Docker-conformance proofs passed",
+    "integration applied at": "2026-08-29T08:48:34.867701Z"
   }
 }

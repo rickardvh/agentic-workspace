@@ -3,9 +3,9 @@
   "id": "open-issues-assurance-implementation",
   "title": "Implement assurance authority and evidence lane",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "implementation",
-  "revision": 3,
+  "lifecycle": "archived",
+  "phase": "complete",
+  "revision": 4,
   "intent": {
     "outcome": "Close GitHub issues #2618 through #2622 in a draft PR stacked on #2627.",
     "non_goals": [
@@ -31,16 +31,33 @@
   },
   "relationships": {
     "selection": {
-        "state": "selected",
-        "owner": "open-issues-assurance"
+      "state": "selected",
+      "owner": "open-issues-assurance"
     },
     "proof_posture": {
-        "state": "active",
-        "refs": ["focused assurance, proof-subject, operating-decision, config, and Verification tests"]
+      "state": "active",
+      "refs": [
+        "focused assurance, proof-subject, operating-decision, config, and Verification tests"
+      ]
     },
     "external_posture": {
-        "state": "current",
-        "refs": ["GitHub issues #2618 #2619 #2620 #2621 #2622", "PR #2627"]
+      "state": "current",
+      "refs": [
+        "GitHub issues #2618 #2619 #2620 #2621 #2622",
+        "PR #2627"
+      ]
+    },
+    "integration": {
+      "status": "integrated",
+      "transition": "archive-owner",
+      "applied_at": "2026-08-29T08:46:46.470482Z",
+      "proof_refs": [
+        "assurance:13",
+        "focused:108",
+        "verification:50",
+        "typecheck:passed"
+      ],
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/github-pr-2628-archive-owner.integration-receipt.json"
     }
   },
   "references": [
@@ -82,5 +99,14 @@
     "owner": "open-issues-product-closure",
     "residual_intent": "Publish exact generated references, public docs, and product maturity/adoption evidence."
   },
-  "specialist_contracts": []
+  "specialist_contracts": [],
+  "active_milestone": {
+    "status": "archived",
+    "ready": "ready",
+    "blocked": "none"
+  },
+  "proof_report": {
+    "integration proof": "assurance:13, focused:108, verification:50, typecheck:passed",
+    "integration applied at": "2026-08-29T08:46:46.470482Z"
+  }
 }

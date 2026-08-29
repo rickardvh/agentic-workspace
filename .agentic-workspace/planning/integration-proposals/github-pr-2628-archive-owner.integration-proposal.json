@@ -1,8 +1,8 @@
 {
   "kind": "planning-integration-proposal/v1",
   "id": "github-pr-2628-archive-owner",
-  "status": "pending",
-  "phase": "integration-pending",
+  "status": "integrated",
+  "phase": "integrated-lifecycle-truth",
   "requested_transition": "archive-owner",
   "owner": {
     "id": "open-issues-assurance-implementation",
@@ -20,10 +20,10 @@
     "parent-current-slice",
     "issue-relation"
   ],
-  "expected_subject_revision": "ba8ebf2bb9c2830c",
-  "expected_planning_revision": "cd74bb1cb06fa74f",
+  "expected_subject_revision": "13176b8d692dd0e6",
+  "expected_planning_revision": "ce6cc41790ae69f8",
   "created_at": "2026-08-20T21:33:26.519286Z",
-  "updated_at": "2026-08-20T21:33:26.519286Z",
+  "updated_at": "2026-08-29T08:46:46.470482Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -39,5 +39,7 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "9828fc31e5c3d2ba"
+  "proposal_revision": "4fd38452feea1873",
+  "integrated_at": "2026-08-29T08:46:46.470482Z",
+  "integration_receipt_ref": ".agentic-workspace/planning/integration-receipts/github-pr-2628-archive-owner.integration-receipt.json"
 }

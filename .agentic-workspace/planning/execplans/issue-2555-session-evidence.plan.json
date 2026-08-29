@@ -3,9 +3,9 @@
   "id": "issue-2555-session-evidence",
   "title": "Issue 2555 compact normalized session evidence",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "closeout",
-  "revision": 4,
+  "lifecycle": "archived",
+  "phase": "complete",
+  "revision": 5,
   "intent": {
     "outcome": "Make long session evidence summary-first, reference-normalized, episode-grouped, self-admitting for reviewed improvement intake, and explicitly routed to share-safe export.",
     "non_goals": [
@@ -49,7 +49,18 @@
     },
     "external_posture": {
       "state": "current",
-      "refs": ["https://github.com/rickardvh/agentic-workspace/issues/2555"]
+      "refs": [
+        "https://github.com/rickardvh/agentic-workspace/issues/2555"
+      ]
+    },
+    "integration": {
+      "status": "integrated",
+      "transition": "archive-owner",
+      "applied_at": "2026-08-29T08:47:40.645812Z",
+      "proof_refs": [
+        "proof://receipts/5ae77eca70306629"
+      ],
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2555-session-evidence-archive-owner.integration-receipt.json"
     }
   },
   "references": [
@@ -89,5 +100,14 @@
     "owner": "target-branch integration",
     "residual_intent": "Apply the checked-in archive-owner proposal after merge; the feature branch does not select current work or rewrite aggregate Planning indexes."
   },
-  "specialist_contracts": []
+  "specialist_contracts": [],
+  "active_milestone": {
+    "status": "archived",
+    "ready": "ready",
+    "blocked": "none"
+  },
+  "proof_report": {
+    "integration proof": "proof://receipts/5ae77eca70306629",
+    "integration applied at": "2026-08-29T08:47:40.645812Z"
+  }
 }

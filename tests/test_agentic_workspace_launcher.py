@@ -129,7 +129,7 @@ def test_launcher_does_not_refresh_generated_cli_for_start(monkeypatch) -> None:
     assert observed == [["start", "--target", ".", "--format", "json"]]
 
 
-def test_launcher_maps_codex_thread_to_portable_session_identity(monkeypatch) -> None:
+def test_launcher_maps_codex_thread_to_portable_session_identity_without_output_leak(monkeypatch, capsys) -> None:
     module = _load_module()
     monkeypatch.setenv(module.CODEX_SESSION_IDENTITY_ENV, "private-codex-thread")
     monkeypatch.delenv(module.AW_SESSION_IDENTITY_ENV, raising=False)
@@ -141,6 +141,9 @@ def test_launcher_maps_codex_thread_to_portable_session_identity(monkeypatch) ->
     )
 
     assert module.main(["start", "--target", ".", "--format", "json"]) == 0
+    captured = capsys.readouterr()
+    assert "private-codex-thread" not in captured.out
+    assert "private-codex-thread" not in captured.err
 
 
 def test_launcher_preserves_existing_portable_session_identity(monkeypatch) -> None:
@@ -169,6 +172,22 @@ def test_launcher_leaves_session_identity_unset_outside_codex(monkeypatch) -> No
     )
 
     assert module.main(["start", "--target", ".", "--format", "json"]) == 0
+
+
+def test_codex_identity_vocabulary_stays_outside_portable_aw_surfaces() -> None:
+    module = _load_module()
+    repo_root = SCRIPT_PATH.parents[1]
+    portable_roots = [repo_root / "src", repo_root / "packages", repo_root / "generated"]
+    text_suffixes = {".json", ".md", ".mjs", ".py", ".toml", ".ts"}
+
+    leaked_paths = []
+    for root in portable_roots:
+        for path in root.rglob("*"):
+            if path.is_file() and path.suffix in text_suffixes:
+                if module.CODEX_SESSION_IDENTITY_ENV in path.read_text(encoding="utf-8-sig"):
+                    leaked_paths.append(path.relative_to(repo_root).as_posix())
+
+    assert leaked_paths == []
 
 
 def test_runtime_identity_rejects_editable_distribution_from_sibling_checkout(tmp_path: Path) -> None:
