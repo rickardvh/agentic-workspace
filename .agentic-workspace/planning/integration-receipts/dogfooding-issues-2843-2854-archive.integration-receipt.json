@@ -1,8 +1,8 @@
 {
-  "kind": "planning-integration-proposal/v1",
+  "kind": "planning-integration-receipt/v1",
   "id": "dogfooding-issues-2843-2854-archive",
-  "status": "integrated",
-  "phase": "integrated-lifecycle-truth",
+  "proposal_ref": ".agentic-workspace/planning/integration-proposals/dogfooding-issues-2843-2854-archive.integration-proposal.json",
+  "outcome": "integrated",
   "requested_transition": "archive-owner",
   "owner": {
     "id": "dogfooding-issues-2843-2854",
@@ -30,26 +30,38 @@
     "integration apply is target-branch authoritative",
     "#2858 remains independently disclosed"
   ],
-  "expected_subject_revision": "897ded58433fc3ab",
-  "expected_planning_revision": "e390f9a988a66481",
-  "created_at": "2026-08-29T15:28:32.662924Z",
-  "updated_at": "2026-08-29T18:41:01.583423Z",
+  "changed_fields": [
+    "integration_proposal.status",
+    "integration_proposal.phase",
+    "owner.relationships.integration",
+    "owner.lifecycle",
+    "owner.phase",
+    "owner.revision",
+    "owner.active_milestone.status",
+    "owner.proof_report",
+    "integration_receipt"
+  ],
+  "revisions": {
+    "expected_subject": "897ded58433fc3ab",
+    "subject_before": "897ded58433fc3ab",
+    "subject_after": "0b038ae4380386ae",
+    "proposal_before": "23796353e937dc90",
+    "proposal_after": "623a1ce33f529ac7",
+    "expected_planning_revision": "e390f9a988a66481",
+    "target_authority_before": "e390f9a988a66481",
+    "target_authority_after": "74f10e48d5c94b42"
+  },
   "authority_boundary": {
-    "proposal": "feature-branch declaration",
-    "integrated_truth": "integration receipt after apply",
-    "non_authority": [
-      "current selection",
-      "aggregate indexes",
-      "unrelated owners",
-      "terminal parent truth"
-    ],
+    "integrated_truth": "this receipt",
+    "proposal_status": "proposal marked integrated by the same transaction",
+    "owner_body": "updated by this transaction",
+    "aggregate_indexes": "derived-regenerated-not-mutated",
     "branch_admission": {
       "status": "inside-git",
-      "branch": "codex/dogfooding-issues-2843-2854",
-      "phase": "feature"
+      "branch": "master",
+      "phase": "target"
     }
   },
-  "proposal_revision": "623a1ce33f529ac7",
-  "integrated_at": "2026-08-29T18:41:01.583423Z",
-  "integration_receipt_ref": ".agentic-workspace/planning/integration-receipts/dogfooding-issues-2843-2854-archive.integration-receipt.json"
+  "created_at": "2026-08-29T18:41:01.583423Z",
+  "receipt_revision": "2c44bbb79742354f"
 }

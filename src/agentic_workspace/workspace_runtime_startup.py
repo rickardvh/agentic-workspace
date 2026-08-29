@@ -20,6 +20,7 @@ from agentic_workspace.current_work_context import startup_route_identity
 from agentic_workspace.operating_decision import (
     admit_projection_surface_decision_input,
     attach_projection_surface_decision_input_consumption,
+    compose_claim_authority,
     finalize_projection_surface_operating_decision,
     materialize_projection_under_decision_input,
     project_startup_claim_effect_authority,
@@ -2407,6 +2408,17 @@ def _ordinary_start_decision_payload(
     if memory_pull.get("status") == "relevant_notes_found" and memory_routes:
         action["read_first"] = list(dict.fromkeys(memory_routes))[:3]
 
+    claim_authority = compose_claim_authority(
+        allowed=_list_payload(route.get("allowed_claims")),
+        blocked=_list_payload(route.get("blocked_claims")),
+    )
+    claim_effects = {
+        "allowed_claims": claim_authority["allowed_claims"],
+        "blocked_claims": claim_authority["blocked_claims"],
+    }
+    for diagnostic in ("overridden_allowed_claims", "non_authoritative_allowed_claims"):
+        if claim_authority[diagnostic]:
+            claim_effects[diagnostic] = claim_authority[diagnostic]
     effects = {
         "workflow_required": bounded_external_effect.get("status") != "direct-route-admitted",
         "implementation_allowed": bool(next_action.get("implementation_allowed"))
@@ -2420,8 +2432,7 @@ def _ordinary_start_decision_payload(
         "forbidden_actions": [
             str(item) for item in _list_payload(next_action.get("forbidden_actions") or signals.get("hard_blockers")) if str(item).strip()
         ],
-        "allowed_claims": [str(item) for item in _list_payload(route.get("allowed_claims")) if str(item).strip()],
-        "blocked_claims": [str(item) for item in _list_payload(route.get("blocked_claims")) if str(item).strip()],
+        **claim_effects,
     }
     claim_boundary = next_action.get("claim_boundary", legacy_decision.get("claim_boundary", "not-evaluated"))
 
@@ -3403,7 +3414,11 @@ def _fast_start_selected_decision_payload(
     changed_signals = [f"planning_safety={planning_gate.get('status')}:{planning_gate.get('gate_result') or planning_gate.get('decision')}"]
     if dogfooding.get("status") not in {None, "", "not_applicable"}:
         changed_signals.append(f"dogfooding_signal_status={dogfooding.get('status')}")
-    blocked_claims = [str(item) for item in _list_payload(route.get("blocked_claims")) if str(item).strip()]
+    claim_authority = compose_claim_authority(
+        allowed=_list_payload(route.get("allowed_claims")),
+        blocked=_list_payload(route.get("blocked_claims")),
+    )
+    blocked_claims = claim_authority["blocked_claims"]
     action_signals = _compact_action_signals_payload(
         surface="start",
         allowed_next_action=str(route_action.get("action") or planning_gate.get("required_next_action") or ""),
@@ -3421,11 +3436,15 @@ def _fast_start_selected_decision_payload(
         "selected_owner": route.get("selected_owner"),
         "selected_owner_revision": _as_dict(route.get("selected_owner_identity")).get("revision"),
     }
-    action_signals["claim_boundary"] = {
-        "allowed_claims": _list_payload(route.get("allowed_claims")),
+    claim_boundary_signal = {
+        "allowed_claims": claim_authority["allowed_claims"],
         "blocked_claims": blocked_claims,
         "mutation_authority": route.get("mutation_authority"),
     }
+    for diagnostic in ("overridden_allowed_claims", "non_authoritative_allowed_claims"):
+        if claim_authority[diagnostic]:
+            claim_boundary_signal[diagnostic] = claim_authority[diagnostic]
+    action_signals["claim_boundary"] = claim_boundary_signal
     action_signals["construction_profile"] = {
         "id": "start-selected-decision/v1",
         "broad_start_payload_constructed": False,

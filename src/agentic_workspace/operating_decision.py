@@ -48,6 +48,52 @@ BLOCKER_PRECEDENCE = [
 
 _CONTEXT_AUTHORITY_REGISTRY_RESOURCE = "context_authority_registry.json"
 
+_CLAIM_IDENTITY_ALIASES = {
+    "active-plan-progress": "claim-active-plan-progress",
+    "bounded-task-progress": "claim-bounded-task-progress",
+}
+
+
+def compose_claim_authority(*, allowed: list[Any] | None = None, blocked: list[Any] | None = None) -> dict[str, Any]:
+    """Compose semantic claim identities once, with blocking authority winning."""
+
+    def canonicalize(value: Any) -> tuple[str, bool]:
+        raw = str(value or "").strip()
+        if not raw:
+            return "", False
+        if raw in _CLAIM_IDENTITY_ALIASES:
+            return _CLAIM_IDENTITY_ALIASES[raw], True
+        return raw, raw.startswith("claim-")
+
+    canonical_blocked: list[str] = []
+    for value in blocked or []:
+        identity, _known = canonicalize(value)
+        if identity and identity not in canonical_blocked:
+            canonical_blocked.append(identity)
+
+    canonical_allowed: list[str] = []
+    non_authoritative_allowed: list[str] = []
+    for value in allowed or []:
+        identity, known = canonicalize(value)
+        if not identity:
+            continue
+        if not known:
+            if identity not in non_authoritative_allowed:
+                non_authoritative_allowed.append(identity)
+            continue
+        if identity not in canonical_allowed:
+            canonical_allowed.append(identity)
+
+    overridden = [identity for identity in canonical_allowed if identity in canonical_blocked]
+    canonical_allowed = [identity for identity in canonical_allowed if identity not in canonical_blocked]
+    return {
+        "allowed_claims": canonical_allowed,
+        "blocked_claims": canonical_blocked,
+        "overridden_allowed_claims": overridden,
+        "non_authoritative_allowed_claims": non_authoritative_allowed,
+        "rule": "Claim aliases are normalized before composition; a block for a semantic identity overrides an allow, and unknown aliases cannot mint authority.",
+    }
+
 
 def _as_dict(value: Any) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
@@ -2761,6 +2807,10 @@ def project_startup_claim_effect_authority(*, route_decision: dict[str, Any]) ->
     """Mechanically project the canonical Planning route claim/effect fact."""
 
     boundary = _as_dict(route_decision.get("claim_effect_boundary"))
+    claims = compose_claim_authority(
+        allowed=_as_list(boundary.get("allowed_claims")),
+        blocked=_as_list(boundary.get("blocked_claims")),
+    )
     return {
         "kind": "agentic-workspace/startup-claim-effect-projection/v1",
         "status": "projected",
@@ -2768,6 +2818,7 @@ def project_startup_claim_effect_authority(*, route_decision: dict[str, Any]) ->
         "input_revision": str(route_decision.get("input_revision") or ""),
         "action_identity": copy.deepcopy(_as_dict(route_decision.get("action_identity"))),
         **copy.deepcopy(boundary),
+        **claims,
         "authority": "planning_safety_gate.route_decision",
         "rule": "Startup triage and gates project the canonical route decision; consumers do not reclassify task wording.",
     }

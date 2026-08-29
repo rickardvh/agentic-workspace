@@ -1,0 +1,238 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "dogfooding-issues-2856-2860",
+  "title": "Resolve next refined dogfooding batch 2856-2860",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "closeout",
+  "revision": 3,
+  "intent": {
+    "outcome": "Close the next refined dogfooding batch by making Planning scaffolds supportably implementation-ready, canonicalizing claim identities before permission composition, assigning focused proof ownership to PR comment-delta tooling, and making integration proposal revision guards mechanically self-identifying.",
+    "non_goals": [
+      "Do not make every activated or prep-only scaffold executable by default.",
+      "Do not collapse progress and completion claims or add a second claim authority.",
+      "Do not broaden PR-comment proof ownership to unrelated GitHub scripts.",
+      "Do not weaken Planning CAS, erase distinct revision identities, or add another revision registry."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "Repair the four constructibility and proof-routing defects discovered while closing PR #2859.",
+    "closure_boundary": "Issues #2856, #2857, #2858, and #2860 only."
+  },
+  "scope": {
+    "owned": [
+      "Planning owner-scaffold tightening operation, readiness diagnostics, revision guards, and public/generated parity.",
+      "Canonical semantic claim identity composition across ordinary start and implement decisions.",
+      "Repository-focused proof mapping for scripts/github/pr_comment_delta.py.",
+      "Integration-propose guard-to-revision authority metadata, recovery guidance, and replay semantics."
+    ],
+    "effects": [
+      "Planning package source, operation contracts, bootstrap/public surfaces, and focused tests.",
+      "Workspace operating-decision claim composition and projection tests.",
+      "Repo-local proof-lane authority and route-regression fixtures.",
+      "Generated contract/reference surfaces and release metadata when externally visible behavior changes."
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected-local",
+      "owner": "dogfooding-issues-2856-2860"
+    },
+    "proof_posture": {
+      "state": "accepted",
+      "refs": [
+        "local://make-check-planning-nosync/2026-08-29",
+        "local://planning-branch-safe/46-passed",
+        "local://generated-command-conformance",
+        "github://pull/2863/checks"
+      ]
+    },
+    "external_posture": {
+      "state": "issues-refreshed",
+      "refs": [
+        "https://github.com/rickardvh/agentic-workspace/issues/2856",
+        "https://github.com/rickardvh/agentic-workspace/issues/2857",
+        "https://github.com/rickardvh/agentic-workspace/issues/2858",
+        "https://github.com/rickardvh/agentic-workspace/issues/2860"
+      ]
+    },
+    "integration": {
+      "status": "feature-complete-integration-pending",
+      "proposal_id": "dogfooding-issues-2856-2860-archive",
+      "proposal_ref": ".agentic-workspace/planning/integration-proposals/dogfooding-issues-2856-2860-archive.integration-proposal.json",
+      "requested_transition": "archive-owner",
+      "proof_refs": [
+        "local://make-check-planning-nosync/2026-08-29",
+        "local://planning-branch-safe/46-passed",
+        "local://generated-command-conformance",
+        "github://pull/2863/checks"
+      ],
+      "authority": "feature-head declaration; target integration remains terminal authority"
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2856",
+      "label": "supported Planning scaffold tightening",
+      "role": "intake",
+      "locator": ""
+    },
+    {
+      "kind": "source",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2857",
+      "label": "canonical Planning claim identities",
+      "role": "intake",
+      "locator": ""
+    },
+    {
+      "kind": "source",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2858",
+      "label": "focused PR comment-delta proof owner",
+      "role": "intake",
+      "locator": ""
+    },
+    {
+      "kind": "source",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2860",
+      "label": "self-identifying integration proposal revision guard",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Apply integration proposal 'dogfooding-issues-2856-2860-archive' from admitted target authority.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Resolve next refined dogfooding batch 2856-2860 is implemented, validated, and closed out honestly."
+    ],
+    "requirements": [
+      "Activated and prep-only scaffold tightening, missing-input, revision-conflict, unrelated-owner preservation, and start/implement continuation fixtures.",
+      "Canonical claim alias, stronger restriction, progress-versus-completion, unknown claim, and projection parity fixtures.",
+      "Exact changed-path proof selection for PR comment-delta tooling plus unrelated-script and legitimate multi-owner escalation cases.",
+      "Integration guard field mapping, differing revision values, correct/stale/idempotent replay, Workspace/direct/generated parity, and recovery guidance.",
+      "Planning package checks, generated/public contract parity, affected Workspace tests, lint/typecheck, and exact changed-path AW proof."
+    ],
+    "refs": [
+      "local://make-check-planning-nosync/2026-08-29",
+      "local://planning-branch-safe/46-passed",
+      "local://generated-command-conformance",
+      "github://pull/2863/checks"
+    ]
+  },
+  "intent_satisfaction": {
+    "original intent": "Close issues #2856, #2857, #2858, and #2860 without weakening their stated authority boundaries.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "local://make-check-planning-nosync/2026-08-29, local://planning-branch-safe/46-passed, local://generated-command-conformance, github://pull/2863/checks",
+    "unsolved intent passed to": "none"
+  },
+  "execution_bounds": {
+    "allowed": [
+      "Existing Planning owner mutation and operation-contract seams.",
+      "Existing operating-decision claim authority and compatibility projections.",
+      "Existing repository assurance.domain_proof_lanes authority.",
+      "Generated surfaces mechanically derived from canonical sources."
+    ],
+    "stop_conditions": [
+      "Stop if implementation requires a second owner, claim, proof, or revision authority.",
+      "Stop if prep-only scaffolds would gain implicit implementation authority.",
+      "Stop if the focused proof mapping would cover unrelated GitHub tooling."
+    ]
+  },
+  "touched_paths": [
+    "packages/planning/src/repo_planning_bootstrap/**",
+    "packages/planning/tests/**",
+    "packages/planning/skills/planning-new-plan-tighten/**",
+    "src/agentic_workspace/workspace_runtime_*.py",
+    "src/agentic_workspace/contracts/**",
+    "tests/test_workspace_*.py",
+    ".agentic-workspace/config.toml",
+    "tests/test_pr_comment_delta.py",
+    "generated/**",
+    "docs/reference/**",
+    ".release/changes/*.toml"
+  ],
+  "validation_commands": [
+    "uv run --frozen --active --no-sync pytest <focused #2856/#2857/#2858/#2860 regressions> -q",
+    "uv run --frozen --active --no-sync pytest packages/planning/tests/test_branch_safe_planning.py tests/test_workspace_cli.py tests/test_workspace_implement_cli.py tests/test_workspace_proof_cli.py -q",
+    "make check-planning-nosync",
+    "uv run --frozen --active --no-sync python scripts/check/check_generated_command_packages.py --conformance --require-node",
+    "uv run --frozen --active --no-sync python scripts/run_agentic_workspace.py proof --target . --changed <paths> --format json"
+  ],
+  "completion_criteria": [
+    "Each issue acceptance criterion has implementation and focused executable evidence.",
+    "The new tightening path is the supported way to make this class of scaffold implementation-ready.",
+    "Allowed and blocked claim sets are semantically disjoint across ordinary projections.",
+    "PR comment-delta tooling has narrow focused proof ownership without directory-wide spillover.",
+    "Integration proposal guards name and consume the same revision authority across all public surfaces.",
+    "Generated/public parity, affected broad checks, and exact changed-path proof are reconciled before closure."
+  ],
+  "adaptive_assurance": {
+    "level": "high",
+    "reason": "The batch changes mutation authority, claim permission, proof selection, and CAS constructibility.",
+    "agent_may_escalate": true,
+    "agent_may_deescalate": false,
+    "strict_closeout": true,
+    "required_refs": [
+      "https://github.com/rickardvh/agentic-workspace/issues/2856",
+      "https://github.com/rickardvh/agentic-workspace/issues/2857",
+      "https://github.com/rickardvh/agentic-workspace/issues/2858",
+      "https://github.com/rickardvh/agentic-workspace/issues/2860"
+    ],
+    "proof_profiles": [
+      "planning lifecycle",
+      "claim authority",
+      "proof routing",
+      "generated parity"
+    ],
+    "required_gates": [
+      "revision-guarded mutation",
+      "semantic claim disjointness",
+      "focused route ownership",
+      "fail-closed CAS",
+      "generated/public parity"
+    ]
+  },
+  "continuation": {
+    "owner": "none",
+    "residual_intent": "none"
+  },
+  "specialist_contracts": [],
+  "proof_report": {
+    "validation proof": "local://make-check-planning-nosync/2026-08-29, local://planning-branch-safe/46-passed, local://generated-command-conformance, github://pull/2863/checks",
+    "proof achieved now": "yes; integration-propose recorded accepted feature-head proof.",
+    "evidence for \"proof achieved\" state": "local://make-check-planning-nosync/2026-08-29, local://planning-branch-safe/46-passed, local://generated-command-conformance, github://pull/2863/checks"
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "current planning owner",
+    "handoff source": "dogfooding-issues-2856-2860",
+    "what happened": "Close the next refined dogfooding batch by making Planning scaffolds supportably implementation-ready, canonicalizing claim identities before permission composition, assigning focused proof ownership to PR comment-delta tooling, and making integration proposal revision guards mechanically self-identifying.",
+    "scope touched": "Planning owner-scaffold tightening operation, readiness diagnostics, revision guards, and public/generated parity.; Canonical semantic claim identity composition across ordinary start and implement decisions.; Repository-focused proof mapping for scripts/github/pr_comment_delta.py.; Integration-propose guard-to-revision authority metadata, recovery guidance, and replay semantics.",
+    "changed surfaces": "Planning owner-scaffold tightening operation, readiness diagnostics, revision guards, and public/generated parity.; Canonical semantic claim identity composition across ordinary start and implement decisions.; Repository-focused proof mapping for scripts/github/pr_comment_delta.py.; Integration-propose guard-to-revision authority metadata, recovery guidance, and replay semantics.",
+    "validations run": "local://make-check-planning-nosync/2026-08-29, local://planning-branch-safe/46-passed, local://generated-command-conformance, github://pull/2863/checks",
+    "result for continuation": "feature-head complete; terminal lifecycle remains target-authoritative",
+    "next step": "Apply integration proposal 'dogfooding-issues-2856-2860-archive' from admitted target authority."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; bounded feature-head scope and proof were reviewed.",
+    "proof status": "passed",
+    "intent served": "yes; target integration remains the terminal lifecycle authority.",
+    "config compliance": "used planning integration-propose command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": ".agentic-workspace/planning/integration-proposals/dogfooding-issues-2856-2860-archive.integration-proposal.json"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "Feature-head proof is accepted; terminal lifecycle truth awaits target integration.",
+    "evidence carried forward": "local://make-check-planning-nosync/2026-08-29, local://planning-branch-safe/46-passed, local://generated-command-conformance, github://pull/2863/checks",
+    "reopen trigger": "New contradictory evidence or rejected target integration."
+  }
+}

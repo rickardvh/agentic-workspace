@@ -1651,6 +1651,14 @@ const commandDefinitions = [
         {
           "action": "store_true",
           "flags": [
+            "--record-feature-completion"
+          ],
+          "help": "Atomically record accepted feature-head proof and non-terminal closeout posture before creating the guarded integration proposal.",
+          "name": "record_feature_completion"
+        },
+        {
+          "action": "store_true",
+          "flags": [
             "--refresh-existing"
           ],
           "help": "Refresh revision guards on an existing pending proposal without changing lifecycle semantics.",
@@ -1676,7 +1684,7 @@ const commandDefinitions = [
           "flags": [
             "--expect-planning-revision"
           ],
-          "help": "Advisory Planning revision captured in the proposal.",
+          "help": "Target-authority guard from planning_revision.target_authority_revision; do not use planning_revision.revision_id.",
           "name": "expect_planning_revision"
         },
         {

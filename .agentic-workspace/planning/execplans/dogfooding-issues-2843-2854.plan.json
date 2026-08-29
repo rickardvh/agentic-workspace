@@ -3,9 +3,9 @@
   "id": "dogfooding-issues-2843-2854",
   "title": "Resolve refined dogfooding issues 2843-2854",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "closeout",
-  "revision": 6,
+  "lifecycle": "archived",
+  "phase": "complete",
+  "revision": 7,
   "intent": {
     "outcome": "Close the nine refined dogfooding issues from the #2817 review cycle in one coordinated repository lane while preserving each issue's distinct authority and proof boundary.",
     "non_goals": [
@@ -65,7 +65,7 @@
       ]
     },
     "integration": {
-      "status": "feature-complete-integration-pending",
+      "status": "integrated",
       "proposal_id": "dogfooding-issues-2843-2854-archive",
       "proposal_ref": ".agentic-workspace/planning/integration-proposals/dogfooding-issues-2843-2854-archive.integration-proposal.json",
       "requested_transition": "archive-owner",
@@ -84,7 +84,10 @@
         "aw-proof:route-refinement-required:scripts/github/pr_comment_delta.py",
         "https://github.com/rickardvh/agentic-workspace/issues/2858"
       ],
-      "authority": "feature-head declaration; target integration remains terminal authority"
+      "authority": "feature-head declaration; target integration remains terminal authority",
+      "transition": "archive-owner",
+      "applied_at": "2026-08-29T18:41:01.583423Z",
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/dogfooding-issues-2843-2854-archive.integration-receipt.json"
     }
   },
   "references": [
@@ -238,5 +241,14 @@
       "review convergence"
     ]
   },
-  "specialist_contracts": []
+  "specialist_contracts": [],
+  "active_milestone": {
+    "status": "archived",
+    "ready": "ready",
+    "blocked": "none"
+  },
+  "proof_report": {
+    "integration proof": "pytest:dogfooding-focused:passed, pytest:workspace-broad:469-passed-after-refined-fixture-corrections, pytest:planning-branch-safe:44-passed, generated-command-packages:conformance-passed, make:check-planning-nosync-passed, make:typecheck-passed, ruff:changed-python-passed, github:pr:2859:head:ba8d6e5e49a903091cf1cbdb039dd777d09774c3, https://github.com/rickardvh/agentic-workspace/actions/runs/33258720517, https://github.com/rickardvh/agentic-workspace/actions/runs/33258720508, https://github.com/rickardvh/agentic-workspace/actions/runs/33258736487, aw-proof:route-refinement-required:scripts/github/pr_comment_delta.py, https://github.com/rickardvh/agentic-workspace/issues/2858",
+    "integration applied at": "2026-08-29T18:41:01.583423Z"
+  }
 }

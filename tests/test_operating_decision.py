@@ -30,6 +30,7 @@ from agentic_workspace.operating_decision import (
     compile_projection_surface_operating_decision,
     compile_repo_improvement_action,
     compile_repo_improvement_execution,
+    compose_claim_authority,
     context_authority_coverage,
     context_authority_declarations,
     context_authority_obligations,
@@ -45,6 +46,29 @@ from agentic_workspace.operating_decision import (
     ordinary_decision_enforcement_findings,
     resolve_context_authority_projection,
 )
+
+
+def test_claim_authority_normalizes_aliases_before_block_precedence() -> None:
+    result = compose_claim_authority(
+        allowed=["active-plan-progress", "claim-active-plan-complete", "bounded-task-progress"],
+        blocked=["claim-active-plan-progress"],
+    )
+
+    assert result["allowed_claims"] == ["claim-active-plan-complete", "claim-bounded-task-progress"]
+    assert result["blocked_claims"] == ["claim-active-plan-progress"]
+    assert result["overridden_allowed_claims"] == ["claim-active-plan-progress"]
+
+
+def test_claim_authority_keeps_unknown_allowed_alias_non_authoritative() -> None:
+    result = compose_claim_authority(
+        allowed=["unknown-progress-alias"],
+        blocked=["unknown-blocking-alias"],
+    )
+
+    assert result["allowed_claims"] == []
+    assert result["non_authoritative_allowed_claims"] == ["unknown-progress-alias"]
+    assert result["blocked_claims"] == ["unknown-blocking-alias"]
+
 
 SCHEMA_ROOT = Path("src/agentic_workspace/contracts/schemas")
 
@@ -1644,7 +1668,7 @@ def test_operating_decision_blocks_action_when_required_context_is_unadmitted() 
 
 
 def _write_context_authority_sources(root: Path) -> None:
-    (root / ".agentic-workspace/planning").mkdir(parents=True)
+    (root / ".agentic-workspace/planning/execplans").mkdir(parents=True)
     (root / ".agentic-workspace/memory/repo").mkdir(parents=True)
     (root / ".agentic-workspace/skills/workspace-startup").mkdir(parents=True)
     (root / ".agentic-workspace/verification").mkdir(parents=True)
@@ -1684,6 +1708,7 @@ concern = "startup-instructions"
         encoding="utf-8",
     )
     (root / ".agentic-workspace/planning/state.toml").write_text("schema_version = 1\n", encoding="utf-8")
+    (root / ".agentic-workspace/planning/execplans/README.md").write_text("# Execplans\n", encoding="utf-8")
     (root / ".agentic-workspace/memory/repo/index.md").write_text("# Memory\n", encoding="utf-8")
     (root / ".agentic-workspace/memory/repo/manifest.toml").write_text(
         """

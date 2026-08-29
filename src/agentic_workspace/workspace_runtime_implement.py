@@ -23,6 +23,7 @@ from agentic_workspace.operating_decision import (
     admit_projection_surface_decision_input,
     attach_projection_surface_decision_input_consumption,
     compile_implement_context_operating_decision,
+    compose_claim_authority,
     finalize_projection_surface_operating_decision,
     materialize_projection_under_decision_input,
     projection_surface_builder_inputs,
@@ -1986,20 +1987,16 @@ def _ordinary_implement_decision_payload(*, selected: dict[str, Any], source_pay
         if str(item.get("decision") or "") != "allow"
     ]
 
-    blocked_claims = list(
-        dict.fromkeys(
-            [
-                *[str(item) for item in _list_payload(route.get("blocked_claims")) if str(item).strip()],
-                *[str(item) for item in _list_payload(reliance_effect.get("blocked_until_reconciled")) if str(item).strip()],
-                *[
-                    str(item)
-                    for item in _as_dict(source_payload.get("applicable_intent_status")).get("blocked_claims", [])
-                    if str(item).strip()
-                ],
-            ]
-        )
+    claim_authority = compose_claim_authority(
+        allowed=_list_payload(route.get("allowed_claims")),
+        blocked=[
+            *_list_payload(route.get("blocked_claims")),
+            *_list_payload(reliance_effect.get("blocked_until_reconciled")),
+            *_list_payload(_as_dict(source_payload.get("applicable_intent_status")).get("blocked_claims")),
+        ],
     )
-    allowed_claims = [str(item) for item in _list_payload(route.get("allowed_claims")) if str(item).strip()]
+    blocked_claims = claim_authority["blocked_claims"]
+    allowed_claims = claim_authority["allowed_claims"]
     claim_boundary = (
         _as_dict(source_payload.get("parent_intent_status")).get("proof_boundary")
         or reliance_effect.get("claim_boundary")
@@ -2134,6 +2131,16 @@ def _ordinary_implement_decision_payload(*, selected: dict[str, Any], source_pay
             "restricted": restricted_effects,
             "allowed_claims": allowed_claims,
             "blocked_claims": blocked_claims,
+            **(
+                {"overridden_allowed_claims": claim_authority["overridden_allowed_claims"]}
+                if claim_authority["overridden_allowed_claims"]
+                else {}
+            ),
+            **(
+                {"non_authoritative_allowed_claims": claim_authority["non_authoritative_allowed_claims"]}
+                if claim_authority["non_authoritative_allowed_claims"]
+                else {}
+            ),
             "outside_working_set": "requires-explicit-authority",
             **({"derived": copy.deepcopy(derived_effect_closure)} if derived_effect_closure else {}),
         },

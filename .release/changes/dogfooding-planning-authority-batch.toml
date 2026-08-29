@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Add supported Planning scaffold tightening, canonical claim composition, focused PR comment proof routing, and self-identifying integration revision guards."
+issues = [2856, 2857, 2858, 2860]

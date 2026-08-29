@@ -6203,6 +6203,7 @@ def test_planning_front_door_preserves_integration_propose_contract(monkeypatch,
         "subject-revision",
         "--expect-target-revision",
         "target-revision",
+        "--record-feature-completion",
         "--refresh-existing",
         "--expect-proposal-revision",
         "proposal-revision",
@@ -6238,6 +6239,7 @@ def test_planning_front_door_preserves_integration_propose_contract(monkeypatch,
     ]:
         assert actual[actual.index(option) + 1] == expected[expected.index(option) + 1]
     assert "--refresh-existing" in actual
+    assert "--record-feature-completion" in actual
     assert "--dry-run" in actual
     assert forwarded == [actual]
 
@@ -6278,6 +6280,55 @@ def test_planning_front_door_forwards_integration_apply_proposal(monkeypatch, tm
     assert actual[actual.index("--expect-planning-revision") + 1] == "planning-revision"
     assert "--dry-run" in actual
     assert actual[actual.index("--format") + 1] == "json"
+    assert forwarded == [actual]
+
+
+def test_planning_front_door_forwards_targeted_owner_write(monkeypatch, tmp_path: Path, capsys) -> None:
+    forwarded: list[list[str]] = []
+
+    def fake_planning_main(argv: list[str]) -> int:
+        forwarded.append(argv)
+        print(json.dumps({"argv": argv}))
+        return 0
+
+    monkeypatch.setattr("repo_planning_bootstrap.cli.main", fake_planning_main)
+    patch = json.dumps({"touched_paths": ["src/example.py"]}, separators=(",", ":"))
+
+    assert (
+        cli.main(
+            [
+                "planning",
+                "targeted-write",
+                "--plan",
+                "example-owner",
+                "--patch",
+                patch,
+                "--expect-planning-revision",
+                "planning-revision",
+                "--expect-owner-revision",
+                "3",
+                "--target",
+                str(tmp_path),
+                "--apply",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    actual = json.loads(capsys.readouterr().out)["argv"]
+    assert actual[0] == "targeted-write"
+    for option, value in {
+        "--plan": "example-owner",
+        "--patch": patch,
+        "--target": str(tmp_path),
+        "--expect-planning-revision": "planning-revision",
+        "--expect-owner-revision": "3",
+        "--format": "json",
+    }.items():
+        assert actual[actual.index(option) + 1] == value
+    assert "--apply" in actual
     assert forwarded == [actual]
 
 

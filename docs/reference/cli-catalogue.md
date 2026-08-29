@@ -3,9 +3,9 @@
 
 Exact current command values generated from `cli_commands.json` and `cli_option_groups.json`. The schema-shape references remain at `cli-commands.md` and `cli-option-groups.md`.
 
-- Contract digest: `sha256:d0d56655611782e20bb1208993de4865e1b0e6dd2606591ed39e17f5a051e888`
+- Contract digest: `sha256:fbf78b334523a06d0d1386e75cb976826bd3e78601eb350179849660465d961e`
 - Program: `agentic-workspace`
-- Command/subcommand count: 126
+- Command/subcommand count: 127
 
 Shared-state mutability and ignored local diagnostics are separate. A `no` below means the command contract does not mutate shared workspace state. When local session logging is enabled, any command may still write ignored machine-local diagnostics:
 
@@ -27,6 +27,7 @@ Shared-state mutability and ignored local diagnostics are separate. A `no` below
 | `agentic-workspace summary` | `core_context_router` | `ordinary_host_repo` | no | 6 | Show the active execution summary from the planning module. |
 | `agentic-workspace planning` | `core_context_router` | `ordinary_host_repo` | no | 2 | Show planning workflow help or run Planning operations through the workspace front door. |
 | `agentic-workspace planning new-plan` | `core_context_router` | `ordinary_host_repo` | yes | 12 | Create a schema-valid execplan scaffold and optionally register it. |
+| `agentic-workspace planning targeted-write` | `core_context_router` | `ordinary_host_repo` | yes | 8 | Preview or apply a guarded patch to exactly one canonical execplan. |
 | `agentic-workspace planning promote-to-plan` | `core_context_router` | `ordinary_host_repo` | yes | 5 | Promote a planning item into an execplan scaffold. |
 | `agentic-workspace planning owner-select` | `core_context_router` | `ordinary_host_repo` | yes | 10 | Select an existing Planning owner without creating or overwriting it. |
 | `agentic-workspace planning decomposition-create` | `core_context_router` | `ordinary_host_repo` | yes | 7 | Create a first-class Planning decomposition record. |
@@ -253,6 +254,21 @@ Planning mutation front door
 | `--prep-only` | no | `—` | — | `store_true` | Mark this scaffold as a planning-only handoff slice. |
 | `--overwrite` | no | `—` | — | `store_true` | Replace an existing scaffold with the same id. |
 | `--dry-run` | no | `—` | — | `store_true` | Show planned changes without mutating files. |
+
+## `agentic-workspace planning targeted-write`
+
+Revision-guarded Planning owner mutation front door
+
+| Flags | Required | Default | Choices | Action / nargs | Description |
+| --- | --- | --- | --- | --- | --- |
+| `--format` | no | `text` | text, json | `value` | Output format. |
+| `--plan` | yes | `—` | — | `value` | Exact live execplan id or repo-relative owner path. |
+| `--patch` | yes | `—` | — | `value` | JSON object containing only supported owner-scoped fields. |
+| `--expect-planning-revision` | yes | `—` | — | `value` | Planning revision guard emitted by summary or targeted-write preview. |
+| `--expect-owner-revision` | yes | `—` | — | `value` | Integer revision of the selected execplan owner. |
+| `--expect-lane-revision` | no | `—` | — | `value` | Lane revision guard when the execplan is an active lane slice. |
+| `--apply` | no | `—` | — | `store_true` | Apply after rerunning the operation's sealed internal preflight. |
+| `--target` | no | `—` | — | `value` | Optional repository path. |
 
 ## `agentic-workspace planning promote-to-plan`
 

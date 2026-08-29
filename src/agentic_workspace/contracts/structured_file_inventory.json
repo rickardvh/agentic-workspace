@@ -2454,7 +2454,7 @@
     {
       "checked_in_justification": "Generated TypeScript command-package resources are kept as files so executable adapter source stays thin and does not embed large JSON blocks.",
       "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
-      "max_bytes": 420000,
+      "max_bytes": 430000,
       "named_consumer": "generated TypeScript command-package resource loader",
       "ordinary_agent_route": "generated-surface drill-down only: agentic-workspace defaults --section root_cli_authority --format json",
       "pattern": "generated/*/typescript/resources/command_package.json",

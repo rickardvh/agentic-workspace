@@ -1389,6 +1389,14 @@
                 "attr": "owner_ref"
               },
               {
+                "option": "--plan",
+                "attr": "targeted_write_plan"
+              },
+              {
+                "option": "--patch",
+                "attr": "patch"
+              },
+              {
                 "option": "--mode",
                 "attr": "mode"
               },
@@ -1517,6 +1525,14 @@
                 "attr": "expect_planning_revision"
               },
               {
+                "option": "--expect-owner-revision",
+                "attr": "expect_owner_revision"
+              },
+              {
+                "option": "--expect-lane-revision",
+                "attr": "expect_lane_revision"
+              },
+              {
                 "option": "--activate",
                 "attr": "activate",
                 "kind": "flag"
@@ -1549,6 +1565,11 @@
               {
                 "option": "--dry-run",
                 "attr": "dry_run",
+                "kind": "flag"
+              },
+              {
+                "option": "--apply",
+                "attr": "apply",
                 "kind": "flag"
               },
               {
@@ -2387,6 +2408,79 @@
                 ]
               },
               {
+                "help": "Preview or apply a guarded patch to exactly one canonical execplan.",
+                "name": "targeted-write",
+                "options": [
+                  {
+                    "flags": [
+                      "--plan"
+                    ],
+                    "help": "Exact live execplan id or repo-relative owner path.",
+                    "name": "targeted_write_plan",
+                    "required": true
+                  },
+                  {
+                    "flags": [
+                      "--patch"
+                    ],
+                    "help": "JSON object containing only supported owner-scoped fields.",
+                    "name": "patch",
+                    "required": true
+                  },
+                  {
+                    "flags": [
+                      "--expect-planning-revision"
+                    ],
+                    "help": "Planning revision guard emitted by summary or targeted-write preview.",
+                    "name": "expect_planning_revision",
+                    "required": true
+                  },
+                  {
+                    "flags": [
+                      "--expect-owner-revision"
+                    ],
+                    "help": "Integer revision of the selected execplan owner.",
+                    "name": "expect_owner_revision",
+                    "required": true
+                  },
+                  {
+                    "default": "",
+                    "flags": [
+                      "--expect-lane-revision"
+                    ],
+                    "help": "Lane revision guard when the execplan is an active lane slice.",
+                    "name": "expect_lane_revision"
+                  },
+                  {
+                    "action": "store_true",
+                    "flags": [
+                      "--apply"
+                    ],
+                    "help": "Apply after rerunning the operation's sealed internal preflight.",
+                    "name": "apply"
+                  },
+                  {
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Optional repository path.",
+                    "name": "target"
+                  },
+                  {
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "flags": [
+                      "--format"
+                    ],
+                    "help": "Output format.",
+                    "name": "format"
+                  }
+                ]
+              },
+              {
                 "help": "Promote a planning item into an execplan scaffold.",
                 "name": "promote-to-plan",
                 "options": [
@@ -2821,6 +2915,14 @@
                   {
                     "action": "store_true",
                     "flags": [
+                      "--record-feature-completion"
+                    ],
+                    "help": "Atomically record accepted feature-head proof and non-terminal closeout posture before creating the guarded integration proposal.",
+                    "name": "record_feature_completion"
+                  },
+                  {
+                    "action": "store_true",
+                    "flags": [
                       "--refresh-existing"
                     ],
                     "help": "Refresh revision guards on an existing pending proposal without changing lifecycle semantics.",
@@ -2846,7 +2948,7 @@
                     "flags": [
                       "--expect-planning-revision"
                     ],
-                    "help": "Advisory Planning revision captured in the proposal.",
+                    "help": "Target-authority guard from planning_revision.target_authority_revision; do not use planning_revision.revision_id.",
                     "name": "expect_planning_revision"
                   },
                   {
@@ -16113,6 +16215,14 @@
                 "option": "--owner-ref"
               },
               {
+                "attr": "targeted_write_plan",
+                "option": "--plan"
+              },
+              {
+                "attr": "patch",
+                "option": "--patch"
+              },
+              {
                 "attr": "mode",
                 "option": "--mode"
               },
@@ -16273,6 +16383,14 @@
                 "option": "--expect-planning-revision"
               },
               {
+                "attr": "expect_owner_revision",
+                "option": "--expect-owner-revision"
+              },
+              {
+                "attr": "expect_lane_revision",
+                "option": "--expect-lane-revision"
+              },
+              {
                 "attr": "activate",
                 "kind": "flag",
                 "option": "--activate"
@@ -16308,9 +16426,19 @@
                 "option": "--refresh-existing"
               },
               {
+                "attr": "record_feature_completion",
+                "kind": "flag",
+                "option": "--record-feature-completion"
+              },
+              {
                 "attr": "dry_run",
                 "kind": "flag",
                 "option": "--dry-run"
+              },
+              {
+                "attr": "apply",
+                "kind": "flag",
+                "option": "--apply"
               },
               {
                 "attr": "render_markdown",
@@ -19278,6 +19406,14 @@
               {
                 "action": "store_true",
                 "flags": [
+                  "--record-feature-completion"
+                ],
+                "help": "Atomically record accepted feature-head proof and non-terminal closeout posture before creating the guarded integration proposal.",
+                "name": "record_feature_completion"
+              },
+              {
+                "action": "store_true",
+                "flags": [
                   "--refresh-existing"
                 ],
                 "help": "Refresh revision guards on an existing pending proposal without changing lifecycle semantics.",
@@ -19303,7 +19439,7 @@
                 "flags": [
                   "--expect-planning-revision"
                 ],
-                "help": "Advisory Planning revision captured in the proposal.",
+                "help": "Target-authority guard from planning_revision.target_authority_revision; do not use planning_revision.revision_id.",
                 "name": "expect_planning_revision"
               },
               {
@@ -21550,6 +21686,11 @@
               "arg": "expect_target_revision",
               "default": "",
               "name": "expect_target_revision"
+            },
+            {
+              "arg": "record_feature_completion",
+              "default": false,
+              "name": "record_feature_completion"
             },
             {
               "arg": "proposal",

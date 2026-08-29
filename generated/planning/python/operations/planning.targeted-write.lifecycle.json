@@ -17,7 +17,8 @@
     "preview returns owner/state/lane revisions and changed fields without writes",
     "preview projects the exact delta while apply reruns a sealed internal preflight bound to target/worktree mutation baseline, Planning, owner, lane, request revisions, and expiry",
     "apply rejects caller-built timestamp/lookalike bearer tokens and writes owner/projection updates and the admitted preflight evidence atomically",
-    "replay is idempotent only while the recorded owner/state/lane postcondition remains live"
+    "replay is idempotent only while the recorded owner/state/lane postcondition remains live",
+    "scaffold tightening supports goal, non-goals, intent continuity, execution bounds, touched paths, validation commands, completion criteria, and adaptive assurance while preserving canonical projections"
   ],
   "id": "planning.targeted-write.lifecycle",
   "inputs": [
@@ -62,7 +63,7 @@
       "source": "cli-option"
     }
   ],
-  "intent": "Support the #2283 targeted-writer path without delete/recreate behavior or broad plan rewrites.",
+  "intent": "Support targeted owner mutation and implementation-scaffold tightening without delete/recreate behavior, broad plan rewrites, or raw JSON as the ordinary bridge.",
   "ir_plan": {
     "status": "complete",
     "steps": [
