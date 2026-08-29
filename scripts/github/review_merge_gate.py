@@ -18,7 +18,6 @@ if str(TOOLS_ROOT) not in sys.path:
 from chatgpt_review_loop import REVIEW_POLICY, parse_reviews  # noqa: E402
 
 CHECK_NAME = "Review approval"
-REVIEWER_APP_SLUG = "chatgpt-codex-connector"
 
 
 @dataclass(frozen=True)
@@ -37,16 +36,11 @@ class CarryForwardVerdict:
 
 
 def _comment_order(comment: dict[str, Any]) -> tuple[str, int]:
-    timestamp = str(comment.get("updated_at") or comment.get("created_at") or "")
+    timestamp = str(
+        comment.get("updated_at") or comment.get("submitted_at") or comment.get("created_at") or ""
+    )
     identifier = int(comment.get("id") or comment.get("databaseId") or 0)
     return timestamp, identifier
-
-
-def _reviewer_app_slug(payload: dict[str, Any]) -> str:
-    app = payload.get("performed_via_github_app")
-    if not isinstance(app, dict):
-        return ""
-    return str(app.get("slug") or "").strip().lower()
 
 
 def review_gate_decision(
@@ -57,21 +51,18 @@ def review_gate_decision(
     carry_forward: Callable[[str, str], CarryForwardVerdict] | None = None,
 ) -> GateDecision:
     associated = [comment for comment in comments if "aw-chatgpt-review" in str(comment.get("body", ""))]
-    candidates = [comment for comment in associated if _reviewer_app_slug(comment) == REVIEWER_APP_SLUG]
-    if not candidates:
-        latest = max(associated, key=_comment_order) if associated else None
+    if not associated:
         return GateDecision(
             status="review-missing",
             conclusion="failure",
             title="Pull request has no authoritative review",
             summary=(
                 f"Run {REVIEW_POLICY} for head {head_sha}; green CI is not merge authority. "
-                f"Only review markers produced by the configured {REVIEWER_APP_SLUG} reviewer app are authoritative."
+                "An exact-head terminal review marker is required."
             ),
-            review_url=str((latest or {}).get("html_url") or (latest or {}).get("url") or ""),
         )
 
-    latest = max(candidates, key=_comment_order)
+    latest = max(associated, key=_comment_order)
     matches, rejected = parse_reviews([latest], expected_pr=pr_number, expected_head=head_sha)
     if not matches:
         reason = str((rejected or [{}])[0].get("reason") or "invalid-review-marker")
@@ -162,6 +153,23 @@ def _gh_json(args: Sequence[str]) -> Any:
     return json.loads(completed.stdout)
 
 
+def _review_records(*, repository: str, pr_number: int) -> list[dict[str, Any]]:
+    comment_pages = _gh_json(
+        ["api", "--paginate", "--slurp", f"repos/{repository}/issues/{pr_number}/comments?per_page=100"]
+    )
+    review_pages = _gh_json(
+        ["api", "--paginate", "--slurp", f"repos/{repository}/pulls/{pr_number}/reviews?per_page=100"]
+    )
+    comments = [comment for page in comment_pages for comment in page]
+    reviews = [
+        review
+        for page in review_pages
+        for review in page
+        if str(review.get("state") or "").upper() != "DISMISSED"
+    ]
+    return [*comments, *reviews]
+
+
 def _git(args: Sequence[str], *, input_text: str | None = None, check: bool = True) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         ["git", *args], cwd=REPO_ROOT, check=check, capture_output=True, text=True, input=input_text
@@ -250,8 +258,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
     pull_request = _gh_json(["api", f"repos/{args.repository}/pulls/{pr_number}"])
     head_sha = str(pull_request["head"]["sha"])
-    pages = _gh_json(["api", "--paginate", "--slurp", f"repos/{args.repository}/issues/{pr_number}/comments?per_page=100"])
-    comments = [comment for page in pages for comment in page]
+    comments = _review_records(repository=args.repository, pr_number=pr_number)
     decision = review_gate_decision(
         pr_number=pr_number,
         head_sha=head_sha,

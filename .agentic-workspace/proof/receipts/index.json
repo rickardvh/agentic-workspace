@@ -148,6 +148,13 @@
       "source_ref": "proof://receipts/12f4856b0975e4d3",
       "status": "current"
     },
+    "1343f41c7bb709ee": {
+      "path": "1343f41c7bb709ee.json",
+      "producer_class": "aw-proof",
+      "revision": "2026-08-29T07:05:39+00:00",
+      "source_ref": "proof://receipts/1343f41c7bb709ee",
+      "status": "current"
+    },
     "137ff0488d8555bb": {
       "path": "137ff0488d8555bb.json",
       "producer_class": "aw-proof",
@@ -680,6 +687,13 @@
       "source_ref": "proof://receipts/4d52983f9bd7ef5b",
       "status": "current"
     },
+    "4d909779d6a7499e": {
+      "path": "4d909779d6a7499e.json",
+      "producer_class": "aw-proof",
+      "revision": "2026-08-29T07:05:31+00:00",
+      "source_ref": "proof://receipts/4d909779d6a7499e",
+      "status": "current"
+    },
     "4f517e185cf787be": {
       "path": "4f517e185cf787be.json",
       "producer_class": "aw-proof",
@@ -699,6 +713,13 @@
       "producer_class": "aw-proof",
       "revision": "2026-08-27T22:36:56+00:00",
       "source_ref": "proof://receipts/50d5e8d43d2fc3e7",
+      "status": "current"
+    },
+    "5170e9c471719375": {
+      "path": "5170e9c471719375.json",
+      "producer_class": "aw-proof",
+      "revision": "2026-08-29T07:05:14+00:00",
+      "source_ref": "proof://receipts/5170e9c471719375",
       "status": "current"
     },
     "5276254d8cbaf961": {
@@ -1317,6 +1338,13 @@
       "source_ref": "proof://receipts/8cb109eefc00b184",
       "status": "current"
     },
+    "8fd618d8cecbde04": {
+      "path": "8fd618d8cecbde04.json",
+      "producer_class": "aw-proof",
+      "revision": "2026-08-29T07:05:06+00:00",
+      "source_ref": "proof://receipts/8fd618d8cecbde04",
+      "status": "current"
+    },
     "90150e02964ce4c1": {
       "path": "90150e02964ce4c1.json",
       "producer_class": "aw-proof",
@@ -1765,6 +1793,13 @@
       "source_ref": "proof://receipts/c289e22143675310",
       "status": "current"
     },
+    "c28e5cf68021529a": {
+      "path": "c28e5cf68021529a.json",
+      "producer_class": "aw-proof",
+      "revision": "2026-08-29T07:04:58+00:00",
+      "source_ref": "proof://receipts/c28e5cf68021529a",
+      "status": "current"
+    },
     "c5410b38108319e7": {
       "path": "c5410b38108319e7.json",
       "producer_class": "aw-proof",
@@ -1833,6 +1868,13 @@
       "producer_class": "aw-proof",
       "revision": "2026-08-26T11:19:27+00:00",
       "source_ref": "proof://receipts/ce9ddfa5323c952f",
+      "status": "current"
+    },
+    "cee823af272f5c15": {
+      "path": "cee823af272f5c15.json",
+      "producer_class": "aw-proof",
+      "revision": "2026-08-29T07:05:23+00:00",
+      "source_ref": "proof://receipts/cee823af272f5c15",
       "status": "current"
     },
     "cf0db72b8dc85a24": {
