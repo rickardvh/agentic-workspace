@@ -5,7 +5,7 @@
   "owner_level": "slice",
   "lifecycle": "live",
   "phase": "closeout",
-  "revision": 4,
+  "revision": 6,
   "intent": {
     "outcome": "Close the nine refined dogfooding issues from the #2817 review cycle in one coordinated repository lane while preserving each issue's distinct authority and proof boundary.",
     "non_goals": [
@@ -39,7 +39,7 @@
       "owner": "dogfooding-issues-2843-2854"
     },
     "proof_posture": {
-      "state": "recorded-with-route-gap",
+      "state": "accepted",
       "refs": [
         "pytest:dogfooding-focused:passed",
         "pytest:workspace-broad:469-passed-after-refined-fixture-corrections",
@@ -48,27 +48,111 @@
         "make:check-planning-nosync-passed",
         "make:typecheck-passed",
         "ruff:changed-python-passed",
+        "github:pr:2859:head:ba8d6e5e49a903091cf1cbdb039dd777d09774c3",
+        "https://github.com/rickardvh/agentic-workspace/actions/runs/33258720517",
+        "https://github.com/rickardvh/agentic-workspace/actions/runs/33258720508",
+        "https://github.com/rickardvh/agentic-workspace/actions/runs/33258736487",
         "aw-proof:route-refinement-required:scripts/github/pr_comment_delta.py",
         "https://github.com/rickardvh/agentic-workspace/issues/2858"
       ]
     },
     "external_posture": {
-      "state": "unobserved",
-      "refs": []
+      "state": "pull-request-open-awaiting-target-integration",
+      "refs": [
+        "https://github.com/rickardvh/agentic-workspace/pull/2859",
+        "github:pr:2859:head:ba8d6e5e49a903091cf1cbdb039dd777d09774c3",
+        "github:pr:2859:review:blocked-on-owner-lifecycle-handoff"
+      ]
+    },
+    "integration": {
+      "status": "feature-complete-integration-pending",
+      "proposal_id": "dogfooding-issues-2843-2854-archive",
+      "proposal_ref": ".agentic-workspace/planning/integration-proposals/dogfooding-issues-2843-2854-archive.integration-proposal.json",
+      "requested_transition": "archive-owner",
+      "proof_refs": [
+        "pytest:dogfooding-focused:passed",
+        "pytest:workspace-broad:469-passed-after-refined-fixture-corrections",
+        "pytest:planning-branch-safe:44-passed",
+        "generated-command-packages:conformance-passed",
+        "make:check-planning-nosync-passed",
+        "make:typecheck-passed",
+        "ruff:changed-python-passed",
+        "github:pr:2859:head:ba8d6e5e49a903091cf1cbdb039dd777d09774c3",
+        "https://github.com/rickardvh/agentic-workspace/actions/runs/33258720517",
+        "https://github.com/rickardvh/agentic-workspace/actions/runs/33258720508",
+        "https://github.com/rickardvh/agentic-workspace/actions/runs/33258736487",
+        "aw-proof:route-refinement-required:scripts/github/pr_comment_delta.py",
+        "https://github.com/rickardvh/agentic-workspace/issues/2858"
+      ],
+      "authority": "feature-head declaration; target integration remains terminal authority"
     }
   },
   "references": [
-    {"kind": "source", "target": "https://github.com/rickardvh/agentic-workspace/issues/2843", "label": "truthful Windows retry reporting", "role": "intake", "locator": ""},
-    {"kind": "source", "target": "https://github.com/rickardvh/agentic-workspace/issues/2844", "label": "deterministic parser backtracking guard", "role": "intake", "locator": ""},
-    {"kind": "source", "target": "https://github.com/rickardvh/agentic-workspace/issues/2845", "label": "explicit empty review scopes", "role": "intake", "locator": ""},
-    {"kind": "source", "target": "https://github.com/rickardvh/agentic-workspace/issues/2848", "label": "checkpoint current-work scoping", "role": "intake", "locator": ""},
-    {"kind": "source", "target": "https://github.com/rickardvh/agentic-workspace/issues/2849", "label": "derived implement write authority", "role": "intake", "locator": ""},
-    {"kind": "source", "target": "https://github.com/rickardvh/agentic-workspace/issues/2851", "label": "feature-head Planning completion", "role": "intake", "locator": ""},
-    {"kind": "source", "target": "https://github.com/rickardvh/agentic-workspace/issues/2852", "label": "owner-scoped Planning test authority", "role": "intake", "locator": ""},
-    {"kind": "source", "target": "https://github.com/rickardvh/agentic-workspace/issues/2853", "label": "configuration-readiness fixtures", "role": "intake", "locator": ""},
-    {"kind": "source", "target": "https://github.com/rickardvh/agentic-workspace/issues/2854", "label": "review resolution-note convergence", "role": "intake", "locator": ""}
+    {
+      "kind": "source",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2843",
+      "label": "truthful Windows retry reporting",
+      "role": "intake",
+      "locator": ""
+    },
+    {
+      "kind": "source",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2844",
+      "label": "deterministic parser backtracking guard",
+      "role": "intake",
+      "locator": ""
+    },
+    {
+      "kind": "source",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2845",
+      "label": "explicit empty review scopes",
+      "role": "intake",
+      "locator": ""
+    },
+    {
+      "kind": "source",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2848",
+      "label": "checkpoint current-work scoping",
+      "role": "intake",
+      "locator": ""
+    },
+    {
+      "kind": "source",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2849",
+      "label": "derived implement write authority",
+      "role": "intake",
+      "locator": ""
+    },
+    {
+      "kind": "source",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2851",
+      "label": "feature-head Planning completion",
+      "role": "intake",
+      "locator": ""
+    },
+    {
+      "kind": "source",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2852",
+      "label": "owner-scoped Planning test authority",
+      "role": "intake",
+      "locator": ""
+    },
+    {
+      "kind": "source",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2853",
+      "label": "configuration-readiness fixtures",
+      "role": "intake",
+      "locator": ""
+    },
+    {
+      "kind": "source",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2854",
+      "label": "review resolution-note convergence",
+      "role": "intake",
+      "locator": ""
+    }
   ],
-  "next_action": "Open the combined PR with executable proof green and the unrelated AW proof-route coverage gap disclosed as #2858; target-branch integration remains merge-authoritative.",
+  "next_action": "Apply integration proposal 'dogfooding-issues-2843-2854-archive' from admitted target authority.",
   "blockers": [
     "None."
   ],
@@ -140,8 +224,19 @@
       "https://github.com/rickardvh/agentic-workspace/issues/2849",
       "https://github.com/rickardvh/agentic-workspace/issues/2851"
     ],
-    "proof_profiles": ["workspace behavior", "planning lifecycle", "generated command packages", "review trust"],
-    "required_gates": ["effect authority", "current-work freshness", "branch-safe lifecycle", "generated parity", "review convergence"]
+    "proof_profiles": [
+      "workspace behavior",
+      "planning lifecycle",
+      "generated command packages",
+      "review trust"
+    ],
+    "required_gates": [
+      "effect authority",
+      "current-work freshness",
+      "branch-safe lifecycle",
+      "generated parity",
+      "review convergence"
+    ]
   },
   "specialist_contracts": []
 }
