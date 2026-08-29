@@ -230,7 +230,7 @@ allowed_composition = ["maintenance", "evidence"]
 
 [assurance.domain_proof_lanes.generated_command_packages]
 purpose = "Focused generated command package and adapter conformance."
-applies_to_paths = ["src/agentic_workspace/__init__.py", "src/agentic_workspace/client.py", "src/agentic_workspace/conformance.py", "src/agentic_workspace/contracts/command_package_ir.json", "src/agentic_workspace/contracts/conformance/implement.context.process.json", "src/agentic_workspace/contracts/conformance/planning.handoff.process.json", "src/agentic_workspace/contracts/conformance/proof.report.process.json", "src/agentic_workspace/contracts/conformance/start.context.process.json", "src/agentic_workspace/contracts/external_consumer_profile.json", "src/agentic_workspace/contracts/external_operation_conformance_receipts.json", "src/agentic_workspace/contracts/operation_conformance_test_ir.json", "src/agentic_workspace/contracts/schemas/conformance.schema.json", "src/agentic_workspace/contracts/schemas/operation_conformance_test_ir.schema.json", "src/agentic_workspace/contracts/schemas/operation_failure.schema.json", "src/agentic_workspace/contracts/typescript_primitive_support.mjs", "docs/reference/conformance.md", "scripts/check/check_generated_command_packages.py", "scripts/check/run_generated_command_package_proof.py", "scripts/check/run_operation_conformance_tests.py", "scripts/generate/generate_command_packages.py", "scripts/generate/generate_external_consumer_profile.py", "scripts/generate/templates/external_client.mjs", "scripts/generate/workspace_command_generation.py", ".github/workflows/ci.yml", ".github/workflows/release.yml", "generated/workspace/.agentic-workspace-cli-fingerprint.json", "generated/planning/.agentic-workspace-cli-fingerprint.json", "generated/memory/.agentic-workspace-cli-fingerprint.json", "generated/verification/.agentic-workspace-cli-fingerprint.json", "generated/workspace/python/**", "generated/workspace/typescript/**", "generated/planning/python/**", "generated/planning/typescript/**", "generated/memory/python/**", "generated/memory/typescript/**", "generated/verification/python/**", "generated/verification/typescript/**", "tests/test_external_operation_clients.py", "tests/test_generated_command_package_proof_runner.py"]
+applies_to_paths = ["src/agentic_workspace/__init__.py", "src/agentic_workspace/client.py", "src/agentic_workspace/conformance.py", "src/agentic_workspace/contracts/command_package_ir.json", "src/agentic_workspace/contracts/conformance/implement.context.process.json", "src/agentic_workspace/contracts/conformance/planning.handoff.process.json", "src/agentic_workspace/contracts/conformance/proof.report.process.json", "src/agentic_workspace/contracts/conformance/start.context.process.json", "src/agentic_workspace/contracts/external_consumer_profile.json", "src/agentic_workspace/contracts/external_operation_conformance_receipts.json", "src/agentic_workspace/contracts/operation_conformance_test_ir.json", "src/agentic_workspace/contracts/python_primitive_support.py", "src/agentic_workspace/contracts/schemas/conformance.schema.json", "src/agentic_workspace/contracts/schemas/operation_conformance_test_ir.schema.json", "src/agentic_workspace/contracts/schemas/operation_failure.schema.json", "src/agentic_workspace/contracts/typescript_primitive_support.mjs", "docs/reference/conformance.md", "scripts/check/check_generated_command_packages.py", "scripts/check/run_generated_command_package_proof.py", "scripts/check/run_operation_conformance_tests.py", "scripts/generate/generate_command_packages.py", "scripts/generate/generate_external_consumer_profile.py", "scripts/generate/templates/external_client.mjs", "scripts/generate/workspace_command_generation.py", ".github/workflows/ci.yml", ".github/workflows/release.yml", "generated/workspace/.agentic-workspace-cli-fingerprint.json", "generated/planning/.agentic-workspace-cli-fingerprint.json", "generated/memory/.agentic-workspace-cli-fingerprint.json", "generated/verification/.agentic-workspace-cli-fingerprint.json", "generated/workspace/python/**", "generated/workspace/typescript/**", "generated/planning/python/**", "generated/planning/typescript/**", "generated/memory/python/**", "generated/memory/typescript/**", "generated/verification/python/**", "generated/verification/typescript/**", "tests/test_external_operation_clients.py", "tests/test_generated_command_package_proof_runner.py"]
 commands = ["uv run python scripts/check/check_generated_command_packages.py --require-node", "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node"]
 review_aids = ["Use the Verification generated-adapter protocol to decide whether Docker proof is required or an environment gap must be recorded."]
 evidence_concepts = ["generated-package-freshness", "generated-adapter-conformance"]
@@ -472,6 +472,38 @@ proof_profiles = ["workspace_behavior"]
 purpose = "Focused root Workspace startup, report, defaults, generated-guidance, and diagnostic-intake behavior."
 review_aids = ["Confirm host-target localization, diagnostic intake, maintained proof discovery, output budgets, type posture, and runtime mirror parity remain covered without the broad workspace CLI suite."]
 route_role = "behavior"
+
+[assurance.domain_proof_lanes.workspace_local_override_contract]
+purpose = "Focused workspace-local override documentation, schema, and configuration contract proof."
+applies_to_paths = ["docs/reference/workspace-local-override.md", "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json"]
+commands = ["uv run pytest tests/test_workspace_config_cli.py -k \"local_override or assignment_policy\" -q", "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success"]
+review_aids = ["Confirm local-only transport configuration remains schema-backed, source-attributed, non-portable, and separate from portable assignment semantics."]
+evidence_concepts = ["workspace-local-override-contract", "configuration-source-attribution"]
+proof_profiles = ["workspace_behavior"]
+authority_refs = ["src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json", "docs/reference/workspace-local-override.md"]
+escalation = ["the change alters portable assignment semantics, generated adapter behavior, or secret custody rather than the local override contract"]
+escalation_conditions = ["cross-owner", "cross-claim-boundary", "focused-route-insufficient"]
+claim_boundary = "focused-local-override-contract-proof-required-before-configuration-claim"
+owner = "workspace-cli-runtime"
+route_role = "behavior"
+precedence = "66"
+allowed_composition = ["maintenance", "evidence"]
+
+[assurance.domain_proof_lanes.maintained_external_evaluation_evidence]
+purpose = "Focused contract proof for maintained external-agent evaluation evidence."
+applies_to_paths = ["tools/model-cli-harness/external-agent-evaluation/*.json"]
+commands = ["uv run pytest tests/test_external_agent_evaluation_lane.py -q"]
+review_aids = ["Confirm maintained evidence is current, structured, inspectable, and bounded to the observed supported-host result rather than a generalized model-quality claim."]
+evidence_concepts = ["maintained-external-evaluation-evidence", "durable-real-session-proof"]
+proof_profiles = ["workspace_behavior"]
+authority_refs = ["tools/model-cli-harness/external-agent-evaluation", "tests/test_external_agent_evaluation_lane.py"]
+escalation = ["the artifact changes Evaluation runtime semantics, provider authority, or model-harness execution behavior"]
+escalation_conditions = ["cross-owner", "cross-claim-boundary", "focused-route-insufficient"]
+claim_boundary = "focused-maintained-evaluation-evidence-proof-required-before-supported-host-claim"
+owner = "workspace-cli-runtime"
+route_role = "evidence"
+precedence = "72"
+allowed_composition = ["behavior", "maintenance"]
 
 [assurance.domain_proof_lanes.evaluation_conclusion_evidence]
 allowed_composition = ["behavior", "maintenance", "broad"]

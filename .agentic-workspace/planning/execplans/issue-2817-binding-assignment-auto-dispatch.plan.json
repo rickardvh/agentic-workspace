@@ -5,7 +5,7 @@
   "owner_level": "lane",
   "lifecycle": "live",
   "phase": "closeout",
-  "revision": 3,
+  "revision": 4,
   "canonical_core": {
     "requested_outcome": "A binding non-local Planning assignment with an authorized automatic transport compiles to and executes one revision-bound typed dispatch action in the ordinary path, while manual handoff remains an explicit fallback and returned work retains the existing admission, integration, proof, and reconciliation boundary.",
     "hard_constraints": "Do not add a scheduler, worker registry, orchestration database, second assignment authority, provider-specific fields to portable assignment semantics, silent local fallback, or completion authority for worker output.",
@@ -26,6 +26,8 @@
       "tests/test_operating_decision.py",
       "tests/test_external_operation_clients.py",
       "tools/model-cli-harness/external-agent-evaluation/**",
+      ".agentic-workspace/config.toml",
+      "tests/test_workspace_proof_cli.py",
       "docs/reviews/**",
       "docs/releases/**",
       ".agentic-workspace/planning/execplans/issue-2817-binding-assignment-auto-dispatch.plan.json"
@@ -155,6 +157,10 @@
         "pytest:assignment-adapter-focused:6-passed",
         "pytest:external-operation-clients:77-passed",
         "conformance:external-operations:302-passed-9-declared-unavailable",
+        "proof-decision:1b50f105bcd9841c:sufficient-recorded",
+        "proof-subject:85ddaed8a3494784097fd5677755f6c76e4bd82a827daa9928ecb31ac21f2b00",
+        "pytest:assignment-adapter-proof-routing:2-passed",
+        "pytest:workspace-proof-changed-selector:37-passed",
         "tools/model-cli-harness/external-agent-evaluation/binding-assignment-auto-dispatch-dogfood-2026-08-29.json",
         ".agentic-workspace/proof/receipts/ordinary-5d0fa2519b31223661416637c86b27af802a63ca98a2ca9b26ee8944887a7089.assignment-proof.json"
       ]
@@ -180,6 +186,10 @@
       "pytest:assignment-adapter-focused:6-passed",
       "pytest:external-operation-clients:77-passed",
       "conformance:external-operations:302-passed-9-declared-unavailable",
+      "proof-decision:1b50f105bcd9841c:sufficient-recorded",
+      "proof-subject:85ddaed8a3494784097fd5677755f6c76e4bd82a827daa9928ecb31ac21f2b00",
+      "pytest:assignment-adapter-proof-routing:2-passed",
+      "pytest:workspace-proof-changed-selector:37-passed",
       "tools/model-cli-harness/external-agent-evaluation/binding-assignment-auto-dispatch-dogfood-2026-08-29.json",
       ".agentic-workspace/proof/receipts/ordinary-5d0fa2519b31223661416637c86b27af802a63ca98a2ca9b26ee8944887a7089.assignment-proof.json"
     ]
@@ -194,24 +204,24 @@
     "handoff source": "issue-2817-binding-assignment-auto-dispatch",
     "what happened": "Delivered the selected-owner admission fix, typed assignment dispatch contract, configured provider-neutral adapter execution, returned-work lifecycle preservation, and maintained supported-host dogfood evidence across PRs #2841, #2842, and #2846.",
     "scope touched": "Planning assignment disposition and dispatch operation contracts; configured process and host-native adapters; local override schema and docs; generated Python and TypeScript consumers; assignment lifecycle tests and evidence.",
-    "changed surfaces": "Workspace runtime and contracts, generated package projections, assignment/config/external-client tests, supported-host evaluation evidence, release metadata, and this owner/proposal pair.",
-    "validations run": "6 focused adapter fixtures passed; 77 external-operation client tests passed; operation conformance passed 302 cases with 9 declared unavailable; supported-host no-keyword dispatch completed return admit, integrate, proof, close, and reconcile.",
+    "changed surfaces": "Workspace runtime and contracts, generated package projections, assignment/config/external-client tests, supported-host evaluation evidence, focused proof-route authority and regressions, release metadata, and this owner/proposal pair.",
+    "validations run": "6 focused adapter fixtures passed; 77 external-operation client tests passed; operation conformance passed 302 cases with 9 declared unavailable; supported-host no-keyword dispatch completed return admit, integrate, proof, close, and reconcile; the four assignment-adapter support classes compose a 9-command focused route with zero uncovered paths and sufficient recorded proof.",
     "result for continuation": "Feature-branch implementation and proof are complete; target-branch archive integration remains.",
     "next step": "Merge PRs #2841, #2842, and #2846 in order, then apply the archive-owner proposal on the target branch."
   },
   "finished_run_review": {
     "review status": "complete",
     "scope respected": "Yes; #2818 cost/context work, provider-specific portable semantics, scheduler/registry work, silent local fallback, and worker completion authority remain out of scope.",
-    "proof status": "passed with routed-proof coverage gap tracked in #2850",
+    "proof status": "passed; routed proof decision 1b50f105bcd9841c is sufficient-recorded for proof subject 85ddaed8a3494784097fd5677755f6c76e4bd82a827daa9928ecb31ac21f2b00",
     "intent served": "yes on the feature stack; target-branch lifecycle integration is intentionally pending",
     "config compliance": "Used AW start, implement, focused tests, full operation conformance, supported-host assignment lifecycle proof, and integration-proposal routing.",
     "misinterpretation risk": "low",
     "follow-on decision": "Apply the checked-in archive-owner proposal after ordered stack integration."
   },
   "proof_report": {
-    "validation proof": "6 focused adapter fixtures; 77 external-operation client tests; 302 passing operation-conformance cases with 9 declared unavailable; maintained supported-host no-keyword dispatch and returned-work lifecycle trace.",
+    "validation proof": "6 focused adapter fixtures; 77 external-operation client tests; 302 passing operation-conformance cases with 9 declared unavailable; maintained supported-host no-keyword dispatch and returned-work lifecycle trace; 2 focused proof-owner regressions and 37 changed-selector tests; exact four-class support route sufficient-recorded with 9 accepted receipts.",
     "proof achieved now": "yes for feature-branch implementation and behavior; target-branch lifecycle apply remains pending",
-    "evidence for \"proof achieved\" state": "Checked-in operation receipts and assignment proof, the maintained dogfood trace, and current focused/conformance runs; #2850 tracks the missing narrow routed-proof mapping."
+    "evidence for \"proof achieved\" state": "Checked-in operation receipts and assignment proof, the maintained dogfood trace, current focused/conformance runs, proof decision 1b50f105bcd9841c, and exact proof-subject fingerprint 85ddaed8a3494784097fd5677755f6c76e4bd82a827daa9928ecb31ac21f2b00. The four formerly uncovered support classes now have focused owners, no manual-fallback residue, and a negative fixture retains a genuinely additional owner."
   },
   "specialist_contracts": []
 }

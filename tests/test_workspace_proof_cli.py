@@ -7927,6 +7927,83 @@ def test_proof_routes_root_generated_fingerprint_through_existing_generated_pack
     assert classification["regeneration_path"] == "uv run python scripts/check/check_generated_command_packages.py"
 
 
+def test_assignment_adapter_support_surfaces_compose_focused_proof_owners(capsys) -> None:
+    changed = [
+        "docs/reference/workspace-local-override.md",
+        "src/agentic_workspace/contracts/python_primitive_support.py",
+        "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
+        "tools/model-cli-harness/external-agent-evaluation/representative-result.json",
+    ]
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(ROOT),
+                "--changed",
+                *changed,
+                "--select",
+                "proof_route_strategy_decision,focused_route_coverage_audit,route_refinement_required,required_commands,selected_lanes",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["values"]
+    lane_ids = {lane["id"] for lane in answer["selected_lanes"]}
+    assert answer["proof_route_strategy_decision"]["outcome"] == "focused"
+    assert answer["focused_route_coverage_audit"]["status"] == "covered"
+    assert answer["route_refinement_required"]["uncovered_paths"] == []
+    assert {
+        "domain:generated_command_packages",
+        "domain:maintained_external_evaluation_evidence",
+        "domain:workspace_local_override_contract",
+    }.issubset(lane_ids)
+    assert "domain:correction_guidance_authority" not in lane_ids
+    assert "domain:session_logging_friction" not in lane_ids
+    assert "domain:workspace_root_guidance" not in lane_ids
+    assert len(answer["required_commands"]) <= 9
+    assert not any("-k correction" in command for command in answer["required_commands"])
+    assert not any("session_logging" in command for command in answer["required_commands"])
+
+
+def test_assignment_adapter_support_route_retains_genuine_additional_owner(capsys) -> None:
+    changed = [
+        "docs/reference/workspace-local-override.md",
+        "src/agentic_workspace/contracts/python_primitive_support.py",
+        "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
+        "tools/model-cli-harness/external-agent-evaluation/representative-result.json",
+        "src/agentic_workspace/session_logging.py",
+    ]
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(ROOT),
+                "--changed",
+                *changed,
+                "--select",
+                "proof_route_strategy_decision,route_refinement_required,required_commands,selected_lanes",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["values"]
+    lane_ids = {lane["id"] for lane in answer["selected_lanes"]}
+    assert answer["proof_route_strategy_decision"]["outcome"] == "focused"
+    assert answer["route_refinement_required"]["uncovered_paths"] == []
+    assert "domain:session_logging_friction" in lane_ids
+    assert any("tests/test_workspace_session_logging.py -k slow_commands -q" in command for command in answer["required_commands"])
+
+
 def test_generated_fingerprint_route_reports_typed_node_gap_without_losing_ownership(capsys, monkeypatch) -> None:
     from agentic_workspace import workspace_runtime_proof
 
