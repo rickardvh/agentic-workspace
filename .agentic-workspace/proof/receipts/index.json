@@ -22,6 +22,13 @@
       "source_ref": "proof://receipts/05c8e2e8dd7c2e61",
       "status": "current"
     },
+    "0846c572339d5425": {
+      "path": "0846c572339d5425.json",
+      "producer_class": "aw-proof",
+      "revision": "2026-08-29T06:21:11+00:00",
+      "source_ref": "proof://receipts/0846c572339d5425",
+      "status": "current"
+    },
     "09078386b9a06f54": {
       "path": "09078386b9a06f54.json",
       "producer_class": "aw-proof",
@@ -393,6 +400,13 @@
       "source_ref": "proof://receipts/32a651272980e78b",
       "status": "current"
     },
+    "33288d9711c6a30c": {
+      "path": "33288d9711c6a30c.json",
+      "producer_class": "aw-proof",
+      "revision": "2026-08-29T06:20:29+00:00",
+      "source_ref": "proof://receipts/33288d9711c6a30c",
+      "status": "current"
+    },
     "333e43d3144c6526": {
       "path": "333e43d3144c6526.json",
       "producer_class": "aw-proof",
@@ -603,6 +617,13 @@
       "source_ref": "proof://receipts/476b54226461ba25",
       "status": "current"
     },
+    "477544a8dec4e769": {
+      "path": "477544a8dec4e769.json",
+      "producer_class": "aw-proof",
+      "revision": "2026-08-29T06:16:49+00:00",
+      "source_ref": "proof://receipts/477544a8dec4e769",
+      "status": "current"
+    },
     "47951b2eeb705387": {
       "path": "47951b2eeb705387.json",
       "producer_class": "aw-proof",
@@ -720,6 +741,13 @@
       "producer_class": "aw-proof",
       "revision": "2026-08-25T20:23:38+00:00",
       "source_ref": "proof://receipts/55a1a8713a681676",
+      "status": "current"
+    },
+    "58533f92e17883f5": {
+      "path": "58533f92e17883f5.json",
+      "producer_class": "aw-proof",
+      "revision": "2026-08-29T06:29:12+00:00",
+      "source_ref": "proof://receipts/58533f92e17883f5",
       "status": "current"
     },
     "59877afc51fdc7fd": {
@@ -1247,6 +1275,13 @@
       "source_ref": "proof://receipts/89c262995cb0e04f",
       "status": "current"
     },
+    "8a018d745ca240c7": {
+      "path": "8a018d745ca240c7.json",
+      "producer_class": "aw-proof",
+      "revision": "2026-08-29T06:16:28+00:00",
+      "source_ref": "proof://receipts/8a018d745ca240c7",
+      "status": "current"
+    },
     "8a5e8cc06621a1e1": {
       "path": "8a5e8cc06621a1e1.json",
       "producer_class": "aw-proof",
@@ -1518,6 +1553,13 @@
       "producer_class": "aw-proof",
       "revision": "2026-08-25T22:01:48+00:00",
       "source_ref": "proof://receipts/aeef71fe1dc59be4",
+      "status": "current"
+    },
+    "b0bcc0c4a337a37f": {
+      "path": "b0bcc0c4a337a37f.json",
+      "producer_class": "aw-proof",
+      "revision": "2026-08-29T06:28:31+00:00",
+      "source_ref": "proof://receipts/b0bcc0c4a337a37f",
       "status": "current"
     },
     "b0ec2b91bcd9e6dd": {
@@ -1828,6 +1870,13 @@
       "source_ref": "proof://receipts/d08c3425037bb5fb",
       "status": "current"
     },
+    "d10a2a9b7b0419ae": {
+      "path": "d10a2a9b7b0419ae.json",
+      "producer_class": "aw-proof",
+      "revision": "2026-08-29T06:28:52+00:00",
+      "source_ref": "proof://receipts/d10a2a9b7b0419ae",
+      "status": "current"
+    },
     "d15d4343d5619631": {
       "path": "d15d4343d5619631.json",
       "producer_class": "aw-proof",
@@ -1982,6 +2031,13 @@
       "source_ref": "proof://receipts/e3977da0b6653e31",
       "status": "current"
     },
+    "e52fac48c806ecc6": {
+      "path": "e52fac48c806ecc6.json",
+      "producer_class": "aw-proof",
+      "revision": "2026-08-29T06:19:50+00:00",
+      "source_ref": "proof://receipts/e52fac48c806ecc6",
+      "status": "current"
+    },
     "e565999c909c809f": {
       "path": "e565999c909c809f.json",
       "producer_class": "aw-proof",
@@ -2064,6 +2120,11 @@
       "producer_class": "aw-proof",
       "revision": "2026-08-24T10:45:46+00:00",
       "source_ref": "proof://receipts/ee60beb375adb70a",
+      "status": "current"
+    },
+    "evaluation-proof:0f5cc1e90313b783ec81bfdc": {
+      "path": "evaluation-proof-0f5cc1e90313b783ec81bfdc.json",
+      "revision": "sha256:0f5cc1e90313b783ec81bfdc",
       "status": "current"
     },
     "evaluation-proof:2528308565d97011c4520934": {

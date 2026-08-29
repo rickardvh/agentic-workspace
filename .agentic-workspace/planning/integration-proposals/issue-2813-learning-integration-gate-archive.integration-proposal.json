@@ -11,20 +11,25 @@
   "external_ref": "https://github.com/rickardvh/agentic-workspace/issues/2813",
   "proof_refs": [
     "37 heterogeneous integration tests passed",
-    "Evaluation concluded satisfied",
-    "full routed proof recorded on branch"
+    "Evaluation refreshed and reconcluded satisfied",
+    "502 broad workspace tests passed",
+    "16 of 16 routed proof commands passed",
+    "lint passed",
+    "typecheck passed",
+    "contract schema inventory and maintainer checks passed",
+    "PR #2833 CI and Security passed"
   ],
-  "parent_boundary": "Archive #2813 slice only after merge; lane #2809 closes only after all four stacked PRs are integrated in order.",
+  "parent_boundary": "Archive #2813 only after target-branch integration; close lane #2809 only after all four repaired PRs and proposals integrate in order.",
   "preserved_invariants": [
     "ordinary prompts remain subsystem-neutral",
     "source and semantic authority stay distinct",
     "no-signal work remains quiet",
     "no parallel learning store"
   ],
-  "expected_subject_revision": "eb25d43b5f9360a7",
-  "expected_planning_revision": "b11b2eb687c28182",
-  "created_at": "2026-08-28T23:49:31.075925Z",
-  "updated_at": "2026-08-28T23:49:31.075925Z",
+  "expected_subject_revision": "b887c0440d01a7cb",
+  "expected_planning_revision": "cfd3f61dbc76687c",
+  "created_at": "2026-08-29T06:12:20.487454Z",
+  "updated_at": "2026-08-29T06:12:20.487454Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -40,5 +45,5 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "45af9b2ce7c67aae"
+  "proposal_revision": "031237b66caf0c09"
 }

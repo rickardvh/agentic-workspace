@@ -542,8 +542,8 @@
       "id": "consequential-learning-convergence-2813",
       "last_transition": {
         "from": "enough-signal",
-        "reason": "All three required current criteria are supported; maintained traces cover three producer classes, two or more cost reductions, selective routing, promotion proof, subtraction, and no-signal controls.",
-        "recorded_at": "2026-08-28T23:47:53Z",
+        "reason": "Owner review confirms the refreshed current results preserve cross-producer cost reduction, selective routing, stronger-owner proof, subtraction, and quiet controls; external issue closure remains integration-gated.",
+        "recorded_at": "2026-08-29T06:11:14Z",
         "to": "satisfied"
       },
       "lifecycle": "satisfied",
@@ -574,7 +574,7 @@
         "ref": "#2813",
         "type": "github-issue"
       },
-      "updated_at": "2026-08-28T23:47:53Z"
+      "updated_at": "2026-08-29T06:11:14Z"
     }
   ],
   "kind": "agentic-workspace/evaluations/v1"

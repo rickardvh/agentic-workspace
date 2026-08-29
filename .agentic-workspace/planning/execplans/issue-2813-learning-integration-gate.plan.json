@@ -4,8 +4,8 @@
   "title": "Prove AW learns from mistakes and shortcuts in ordinary work",
   "owner_level": "slice",
   "lifecycle": "live",
-  "phase": "implementation",
-  "revision": 2,
+  "phase": "closeout",
+  "revision": 3,
   "intent": {
     "outcome": "Current ordinary-path integration evidence proves heterogeneous consequential outcomes become selectively projected learning, later outcomes correct it, stronger owners absorb proven value, provisional residue shrinks, and direct/no-signal work stays quiet under one satisfied owner-bound Evaluation.",
     "non_goals": [
@@ -40,8 +40,15 @@
       "owner": "issue-2813-learning-integration-gate"
     },
     "proof_posture": {
-      "state": "pending",
-      "refs": []
+      "state": "passed",
+      "refs": [
+        "pytest:consequential-learning-integration-matrix:37-passed",
+        "pytest:routed-workspace-proof:502-passed",
+        "evaluation:consequential-learning-convergence-2813:refreshed-and-satisfied",
+        "check:lint-typecheck-contracts-inventory:passed",
+        "proof:agentic-workspace:16-of-16-passed",
+        "github:pr-2833-ci-security:passed"
+      ]
     },
     "external_posture": {
       "state": "unobserved",
@@ -62,7 +69,7 @@
       "locator": ""
     }
   ],
-  "next_action": "Add end-to-end ordinary-path integration fixtures, register and conclude the owner-bound Evaluation, aggregate lane proof, and validate the full stack.",
+  "next_action": "Merge PRs #2830 through #2833 in order and apply their archive-owner proposals on the target branch; do not close #2813 or parent #2809 before integration.",
   "blockers": [
     "None."
   ],
@@ -76,11 +83,28 @@
       "make typecheck",
       "make maintainer-surfaces"
     ],
-    "refs": []
+    "refs": [
+      "pytest:consequential-learning-integration-matrix:37-passed",
+      "pytest:routed-workspace-proof:502-passed",
+      "evaluation:consequential-learning-convergence-2813:refreshed-and-satisfied",
+      "check:lint-typecheck-contracts-inventory:passed",
+      "proof:agentic-workspace:16-of-16-passed",
+      "github:pr-2833-ci-security:passed"
+    ]
   },
   "continuation": {
-    "owner": "none",
-    "residual_intent": "none"
+    "owner": ".agentic-workspace/planning/integration-proposals/issue-2813-learning-integration-gate-archive.integration-proposal.json",
+    "residual_intent": "Merge the repaired four-PR stack, apply all archive-owner proposals on the target branch, and only then reconcile closure of #2813 and parent #2809."
+  },
+  "active_milestone": {
+    "status": "completed",
+    "ready": "ready",
+    "blocked": "merge-time archive application only"
+  },
+  "proof_report": {
+    "validation proof": "37 heterogeneous integration/focused tests; 502 routed workspace tests; lint, typecheck, contract, schema, inventory, maintainer, and no-sync checks passed; Agentic Workspace proof passed 16/16.",
+    "proof achieved now": "yes for the feature-stack implementation; Evaluation authority is refreshed after restacking and target-branch lifecycle integration remains pending.",
+    "evidence for \"proof achieved\" state": "PR #2833 exact-head validation, maintained convergence traces, and refreshed owner-bound Evaluation results."
   },
   "specialist_contracts": [
     {
