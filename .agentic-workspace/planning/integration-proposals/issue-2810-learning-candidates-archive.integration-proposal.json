@@ -16,18 +16,19 @@
     "typecheck passed",
     "contract tooling passed",
     "structured inventory passed",
-    "schema reference passed"
+    "schema reference passed",
+    "PR #2830 required check passed"
   ],
-  "parent_boundary": "Close #2810 only; keep lane #2809 and slices #2811-#2813 open.",
+  "parent_boundary": "Close #2810 only after target-branch integration; keep lane #2809 and slices #2811-#2813 open.",
   "preserved_invariants": [
     "no parallel learning store",
     "candidate authority does not exceed source authority",
     "no-signal path stays quiet"
   ],
-  "expected_subject_revision": "06d6b364d5b75bb7",
-  "expected_planning_revision": "5a33213decc40e4a",
-  "created_at": "2026-08-28T22:33:16.895149Z",
-  "updated_at": "2026-08-28T22:33:16.895149Z",
+  "expected_subject_revision": "1d6a201c92af9fed",
+  "expected_planning_revision": "1deb2091e275dd86",
+  "created_at": "2026-08-29T06:00:53.769123Z",
+  "updated_at": "2026-08-29T06:00:53.769123Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -43,5 +44,5 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "f2986994d9f740cb"
+  "proposal_revision": "9a64373bc8c95e13"
 }

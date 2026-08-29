@@ -4,8 +4,8 @@
   "title": "Convert consequential outcomes into bounded future-learning candidates",
   "owner_level": "slice",
   "lifecycle": "live",
-  "phase": "implementation",
-  "revision": 2,
+  "phase": "closeout",
+  "revision": 3,
   "intent": {
     "outcome": "Supported source-owned outcome evidence compiles into bounded advisory future-context candidates that reconciliation cannot silently lose, while one-off and already-absorbed evidence stays artifact-free.",
     "non_goals": [
@@ -41,8 +41,15 @@
       "owner": "issue-2810-learning-candidates"
     },
     "proof_posture": {
-      "state": "pending",
-      "refs": []
+      "state": "passed",
+      "refs": [
+        "pytest:future-learning-reconciliation-operating-decision:24-passed",
+        "pytest:routed-workspace-proof:502-passed",
+        "check:operating-decision-contract:passed",
+        "check:architecture-imports:passed",
+        "check:lint-typecheck-inventory:passed",
+        "github:pr-2830-required-check:passed"
+      ]
     },
     "external_posture": {
       "state": "unobserved",
@@ -60,7 +67,7 @@
     "src/agentic_workspace/reconciliation.py",
     "src/agentic_workspace/operating_decision.py"
   ],
-  "next_action": "Implement the generic outcome-evidence compiler, compose it into operating decisions, and prove heterogeneous sources plus no-learning controls.",
+  "next_action": "Merge PR #2830, then apply the checked-in archive-owner integration proposal on the target branch; no implementation or proof work remains in this slice.",
   "blockers": [
     "None."
   ],
@@ -73,11 +80,28 @@
       "uv run --frozen --active --no-sync python scripts/check_operating_decision_contract.py",
       "uv run --frozen --active --no-sync python scripts/check_architecture_imports.py"
     ],
-    "refs": []
+    "refs": [
+      "pytest:future-learning-reconciliation-operating-decision:24-passed",
+      "pytest:routed-workspace-proof:502-passed",
+      "check:operating-decision-contract:passed",
+      "check:architecture-imports:passed",
+      "check:lint-typecheck-inventory:passed",
+      "github:pr-2830-required-check:passed"
+    ]
   },
   "continuation": {
-    "owner": "none",
-    "residual_intent": "none"
+    "owner": ".agentic-workspace/planning/integration-proposals/issue-2810-learning-candidates-archive.integration-proposal.json",
+    "residual_intent": "Apply the archive-owner transition after PR #2830 reaches the target branch; keep parent lane #2809 open."
+  },
+  "active_milestone": {
+    "status": "completed",
+    "ready": "ready",
+    "blocked": "merge-time archive application only"
+  },
+  "proof_report": {
+    "validation proof": "24 focused future-learning, reconciliation, and operating-decision tests; 502 routed workspace tests; contract, architecture, lint, typecheck, and inventory checks passed.",
+    "proof achieved now": "yes; exact feature-head implementation and merge-time lifecycle proposal are recorded.",
+    "evidence for \"proof achieved\" state": "PR #2830 exact-head validation and required hosted check."
   },
   "specialist_contracts": [
     {
