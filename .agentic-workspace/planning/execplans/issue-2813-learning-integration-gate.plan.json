@@ -3,9 +3,9 @@
   "id": "issue-2813-learning-integration-gate",
   "title": "Prove AW learns from mistakes and shortcuts in ordinary work",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "closeout",
-  "revision": 3,
+  "lifecycle": "archived",
+  "phase": "complete",
+  "revision": 4,
   "intent": {
     "outcome": "Current ordinary-path integration evidence proves heterogeneous consequential outcomes become selectively projected learning, later outcomes correct it, stronger owners absorb proven value, provisional residue shrinks, and direct/no-signal work stays quiet under one satisfied owner-bound Evaluation.",
     "non_goals": [
@@ -58,6 +58,22 @@
       "state": "recorded",
       "route": "keep-local",
       "reason": "Session policy explicitly prohibits spawning sub-agents; the final gate must exercise the exact sequential stack in one canonical decision surface."
+    },
+    "integration": {
+      "status": "integrated",
+      "transition": "archive-owner",
+      "applied_at": "2026-08-29T07:19:10.523924Z",
+      "proof_refs": [
+        "37 heterogeneous integration tests passed",
+        "Evaluation refreshed and reconcluded satisfied",
+        "502 broad workspace tests passed",
+        "16 of 16 routed proof commands passed",
+        "lint passed",
+        "typecheck passed",
+        "contract schema inventory and maintainer checks passed",
+        "PR #2833 CI and Security passed"
+      ],
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2813-learning-integration-gate-archive.integration-receipt.json"
     }
   },
   "references": [
@@ -97,14 +113,16 @@
     "residual_intent": "Merge the repaired four-PR stack, apply all archive-owner proposals on the target branch, and only then reconcile closure of #2813 and parent #2809."
   },
   "active_milestone": {
-    "status": "completed",
+    "status": "archived",
     "ready": "ready",
-    "blocked": "merge-time archive application only"
+    "blocked": "none"
   },
   "proof_report": {
     "validation proof": "37 heterogeneous integration/focused tests; 502 routed workspace tests; lint, typecheck, contract, schema, inventory, maintainer, and no-sync checks passed; Agentic Workspace proof passed 16/16.",
     "proof achieved now": "yes for the feature-stack implementation; Evaluation authority is refreshed after restacking and target-branch lifecycle integration remains pending.",
-    "evidence for \"proof achieved\" state": "PR #2833 exact-head validation, maintained convergence traces, and refreshed owner-bound Evaluation results."
+    "evidence for \"proof achieved\" state": "PR #2833 exact-head validation, maintained convergence traces, and refreshed owner-bound Evaluation results.",
+    "integration proof": "37 heterogeneous integration tests passed, Evaluation refreshed and reconcluded satisfied, 502 broad workspace tests passed, 16 of 16 routed proof commands passed, lint passed, typecheck passed, contract schema inventory and maintainer checks passed, PR #2833 CI and Security passed",
+    "integration applied at": "2026-08-29T07:19:10.523924Z"
   },
   "specialist_contracts": [
     {

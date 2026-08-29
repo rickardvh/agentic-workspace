@@ -3,9 +3,9 @@
   "id": "issue-2811-learning-effectiveness",
   "title": "Make learned lessons self-correct from later outcomes",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "closeout",
-  "revision": 3,
+  "lifecycle": "archived",
+  "phase": "complete",
+  "revision": 4,
   "intent": {
     "outcome": "Admitted learning from Memory, target guidance, repo improvement, and aids joins later authoritative outcomes through its existing owner revision and the canonical operating-decision identity; material results reuse existing consequence owners while inconclusive and ordinary uses stay quiet.",
     "non_goals": [
@@ -57,6 +57,23 @@
       "state": "recorded",
       "route": "keep-local",
       "reason": "Session policy explicitly prohibits spawning sub-agents; the sequential stacked slice also shares the canonical operating-decision contract."
+    },
+    "integration": {
+      "status": "integrated",
+      "transition": "archive-owner",
+      "applied_at": "2026-08-29T07:19:10.523924Z",
+      "proof_refs": [
+        "40 focused tests passed",
+        "502 broad workspace tests passed",
+        "14 of 14 routed proof commands passed",
+        "lint passed",
+        "typecheck passed",
+        "contract tooling passed",
+        "structured inventory passed",
+        "schema parity passed",
+        "PR #2831 CI and Security passed"
+      ],
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2811-learning-effectiveness-archive.integration-receipt.json"
     }
   },
   "references": [
@@ -96,14 +113,16 @@
     "residual_intent": "Apply the archive-owner transition after PR #2831 reaches the target branch; keep parent lane #2809 and later slices open."
   },
   "active_milestone": {
-    "status": "completed",
+    "status": "archived",
     "ready": "ready",
-    "blocked": "merge-time archive application only"
+    "blocked": "none"
   },
   "proof_report": {
     "validation proof": "40 focused learning-effectiveness tests; 502 routed workspace tests; operating-decision schema parity, lint, typecheck, contract, and inventory checks passed; Agentic Workspace proof passed 14/14.",
     "proof achieved now": "yes; exact feature-head implementation and merge-time lifecycle proposal are recorded.",
-    "evidence for \"proof achieved\" state": "PR #2831 exact-head CI and Security results plus owner-specific effectiveness traces."
+    "evidence for \"proof achieved\" state": "PR #2831 exact-head CI and Security results plus owner-specific effectiveness traces.",
+    "integration proof": "40 focused tests passed, 502 broad workspace tests passed, 14 of 14 routed proof commands passed, lint passed, typecheck passed, contract tooling passed, structured inventory passed, schema parity passed, PR #2831 CI and Security passed",
+    "integration applied at": "2026-08-29T07:19:10.523924Z"
   },
   "specialist_contracts": [
     {

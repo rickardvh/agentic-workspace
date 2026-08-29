@@ -3,9 +3,9 @@
   "id": "issue-2810-learning-candidates",
   "title": "Convert consequential outcomes into bounded future-learning candidates",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "closeout",
-  "revision": 3,
+  "lifecycle": "archived",
+  "phase": "complete",
+  "revision": 4,
   "intent": {
     "outcome": "Supported source-owned outcome evidence compiles into bounded advisory future-context candidates that reconciliation cannot silently lose, while one-off and already-absorbed evidence stays artifact-free.",
     "non_goals": [
@@ -59,6 +59,22 @@
       "state": "recorded",
       "route": "keep-local",
       "reason": "The stacked slices are sequential and share the same contract surface; current runtime policy does not permit agent delegation."
+    },
+    "integration": {
+      "status": "integrated",
+      "transition": "archive-owner",
+      "applied_at": "2026-08-29T07:19:10.523924Z",
+      "proof_refs": [
+        "24 focused tests passed",
+        "502 broad workspace tests passed",
+        "lint passed",
+        "typecheck passed",
+        "contract tooling passed",
+        "structured inventory passed",
+        "schema reference passed",
+        "PR #2830 required check passed"
+      ],
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2810-learning-candidates-archive.integration-receipt.json"
     }
   },
   "references": [
@@ -94,14 +110,16 @@
     "residual_intent": "Apply the archive-owner transition after PR #2830 reaches the target branch; keep parent lane #2809 open."
   },
   "active_milestone": {
-    "status": "completed",
+    "status": "archived",
     "ready": "ready",
-    "blocked": "merge-time archive application only"
+    "blocked": "none"
   },
   "proof_report": {
     "validation proof": "24 focused future-learning, reconciliation, and operating-decision tests; 502 routed workspace tests; contract, architecture, lint, typecheck, and inventory checks passed.",
     "proof achieved now": "yes; exact feature-head implementation and merge-time lifecycle proposal are recorded.",
-    "evidence for \"proof achieved\" state": "PR #2830 exact-head validation and required hosted check."
+    "evidence for \"proof achieved\" state": "PR #2830 exact-head validation and required hosted check.",
+    "integration proof": "24 focused tests passed, 502 broad workspace tests passed, lint passed, typecheck passed, contract tooling passed, structured inventory passed, schema reference passed, PR #2830 required check passed",
+    "integration applied at": "2026-08-29T07:19:10.523924Z"
   },
   "specialist_contracts": [
     {
