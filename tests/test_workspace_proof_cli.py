@@ -15,6 +15,46 @@ _INDEPENDENT_REVIEW_HOST_FIXTURE_KEYS: dict[str, dict[str, object]] = {}
 
 
 @contextmanager
+def _test_owned_proof_local_state(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    canonical_root: Path,
+    local_state_root: Path,
+):
+    """Keep canonical repo inputs while making mutable local proof state test-owned."""
+
+    import agentic_workspace.workspace_runtime_proof as proof_runtime
+
+    original_receipt_reader = proof_runtime._read_proof_receipt_records
+    original_consequence_summary = proof_runtime._improvement_consequence_summary
+    original_consequence_history = proof_runtime.read_consequence_history
+    canonical_resolved = canonical_root.resolve()
+
+    def reroot(target_root: Path | None) -> Path | None:
+        if target_root is not None and target_root.resolve() == canonical_resolved:
+            return local_state_root
+        return target_root
+
+    def read_receipts(target_root: Path):
+        return original_receipt_reader(reroot(target_root) or target_root)
+
+    def consequence_summary(*, target_root: Path | None, active_finding_ids: set[str]):
+        return original_consequence_summary(
+            target_root=reroot(target_root),
+            active_finding_ids=active_finding_ids,
+        )
+
+    def read_history(*, target_root: Path | None):
+        return original_consequence_history(target_root=reroot(target_root))
+
+    with monkeypatch.context() as local_state_patch:
+        local_state_patch.setattr(proof_runtime, "_read_proof_receipt_records", read_receipts)
+        local_state_patch.setattr(proof_runtime, "_improvement_consequence_summary", consequence_summary)
+        local_state_patch.setattr(proof_runtime, "read_consequence_history", read_history)
+        yield
+
+
+@contextmanager
 def _verified_host_fixture(monkeypatch: pytest.MonkeyPatch, host_result_ref: str):
     import agentic_workspace.workspace_runtime_proof as proof_runtime
 
@@ -3325,7 +3365,7 @@ def test_proof_changed_release_package_surface_names_exact_package_dependency(ca
     assert "agentic-workspace-planning package" in dependency["distinct_claim"]
 
 
-def test_coordinated_release_replay_removes_unrelated_planning_runs_and_preserves_claim_coverage(capsys) -> None:
+def _coordinated_release_projection(capsys) -> dict[str, object]:
     repo_root = Path(__file__).resolve().parents[1]
     changed_paths = [
         "scripts/release/coordinated_release.py",
@@ -3349,8 +3389,44 @@ def test_coordinated_release_replay_removes_unrelated_planning_runs_and_preserve
         )
         == 0
     )
+    return json.loads(capsys.readouterr().out)["values"]
 
-    values = json.loads(capsys.readouterr().out)["values"]
+
+def _write_unrelated_failed_proof_receipt(target_root: Path) -> None:
+    receipt = {
+        "kind": "agentic-workspace/proof-receipt/v1",
+        "command": "make lint-workspace",
+        "result": "failed",
+        "recorded_at": "2026-08-28T10:03:34+00:00",
+        "changed_paths": ["src/agentic_workspace/config.py", "tests/test_workspace_cli.py"],
+        "execution": {
+            "command_identity": "unrelated-lint-workspace",
+            "command_id": "unrelated-lint-workspace",
+            "result": "failed",
+            "exit_state": "failed",
+            "claim_sufficiency": "not-reviewed",
+            "route_id": "workspace_cli",
+            "route_identity_source": "test-fixture",
+        },
+    }
+    receipt_root = target_root / ".agentic-workspace" / "local" / "proof-receipts"
+    _write(receipt_root / "last.json", json.dumps(receipt, indent=2) + "\n")
+    _write(receipt_root / "history.jsonl", json.dumps(receipt, sort_keys=True) + "\n")
+
+
+def test_coordinated_release_replay_removes_unrelated_planning_runs_and_preserves_claim_coverage(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    with _test_owned_proof_local_state(
+        monkeypatch,
+        canonical_root=repo_root,
+        local_state_root=tmp_path / "owned-local-state",
+    ):
+        values = _coordinated_release_projection(capsys)
+
     assert "make test-planning" not in values["required_commands"]
     assert values["focused_route_coverage_audit"]["status"] == "covered"
     assert values["focused_route_coverage_audit"]["missing_focused_route_paths"] == []
@@ -3379,6 +3455,36 @@ def test_coordinated_release_replay_removes_unrelated_planning_runs_and_preserve
         "reused",
         "excluded-unrelated",
     }
+
+
+def test_coordinated_release_replay_isolated_from_unrelated_failed_local_receipt(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    failed_state_root = tmp_path / "failed-local-state"
+    _write_unrelated_failed_proof_receipt(failed_state_root)
+
+    with _test_owned_proof_local_state(
+        monkeypatch,
+        canonical_root=repo_root,
+        local_state_root=failed_state_root,
+    ):
+        receipt_aware = _coordinated_release_projection(capsys)
+    assert {finding["finding_class"] for finding in receipt_aware["proof_route_maintenance"]["route_health"]["findings"]} == {
+        "route_execution_failure"
+    }
+
+    with _test_owned_proof_local_state(
+        monkeypatch,
+        canonical_root=repo_root,
+        local_state_root=tmp_path / "owned-empty-local-state",
+    ):
+        isolated = _coordinated_release_projection(capsys)
+    assert isolated["proof_route_maintenance"]["route_health"]["findings"] == []
+    assert isolated["required_commands"] == receipt_aware["required_commands"]
+    assert isolated["release_proof_profile"] == receipt_aware["release_proof_profile"]
 
 
 def test_unrelated_planning_timing_route_emits_generic_bound_improvement_signal() -> None:
