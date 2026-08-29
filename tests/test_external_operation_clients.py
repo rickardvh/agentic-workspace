@@ -93,7 +93,26 @@ def test_assignment_cli_transport_invokes_allow_listed_adapter_and_returns_untru
             "assignment_identity": {
                 "role": "implementer",
                 "dispatch_adapter": {
-                    "provider": "codex",
+                    "kind": "process",
+                    "command": [
+                        "codex",
+                        "exec",
+                        "--ephemeral",
+                        "--ignore-rules",
+                        "--sandbox",
+                        "read-only",
+                        "--cd",
+                        "{target_root}",
+                        "--model",
+                        "{model}",
+                        "--output-schema",
+                        "{output_schema}",
+                        "--output-last-message",
+                        "{output_file}",
+                        "-",
+                    ],
+                    "output_mode": "stdout",
+                    "timeout_seconds": 1800,
                     "model": "gpt-5.6-terra",
                     "execution_methods": ["cli"],
                 },
@@ -160,7 +179,10 @@ def test_assignment_cli_transport_accepts_explicit_no_change_implementer_return(
             "assignment_identity": {
                 "role": "implementer",
                 "dispatch_adapter": {
-                    "provider": "codex",
+                    "kind": "process",
+                    "command": ["codex", "exec", "--output-last-message", "{output_file}", "-"],
+                    "output_mode": "json-file",
+                    "timeout_seconds": 1800,
                     "model": "gpt-5.6-luna",
                     "execution_methods": ["internal"],
                 },
@@ -173,6 +195,109 @@ def test_assignment_cli_transport_accepts_explicit_no_change_implementer_return(
 
     assert receipt["status"] == "returned"
     assert receipt["returned_work"] == returned
+
+
+def test_assignment_process_and_host_native_adapters_share_one_prompt_and_return_contract(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from agentic_workspace.contracts import python_primitive_support
+
+    returned = {
+        "assignment_revision": "sha256:assignment",
+        "run_id": "run-peer",
+        "target": "worker",
+        "changed_paths": [],
+        "summary": "Validated the bounded assignment.",
+        "stop_conditions_hit": [],
+    }
+    observed_prompts: list[str] = []
+
+    def fake_run(command: list[str], **kwargs: object) -> SimpleNamespace:
+        observed_prompts.append(str(kwargs["input"]))
+        return SimpleNamespace(returncode=0, stdout=json.dumps(returned), stderr="")
+
+    monkeypatch.setattr(python_primitive_support.subprocess, "run", fake_run)
+    base_identity = {
+        "role": "validator",
+        "target": "worker",
+        "allowed_paths": ["docs/reference.md"],
+        "return_contract": {"kind": "agentic-workspace/delegated-return/v1"},
+    }
+    packet = {"kind": "agentic-workspace/assignment-export-packet/v1", "assignment_identity": base_identity}
+    prompt = python_primitive_support._assignment_export_prompt(packet)
+    receipts = []
+    for adapter_kind, transport in (("process", "cli"), ("host-native", "internal")):
+        receipts.append(
+            python_primitive_support._dispatch_assignment_packet(
+                packet={
+                    **packet,
+                    "assignment_identity": {
+                        **base_identity,
+                        "dispatch_adapter": {
+                            "kind": adapter_kind,
+                            "command": ["configured-worker-bridge", "--root", "{target_root}"],
+                            "output_mode": "stdout",
+                            "timeout_seconds": 60,
+                            "execution_methods": [transport],
+                        },
+                    },
+                },
+                prompt=prompt,
+                target_root=tmp_path,
+                transport=transport,
+            )
+        )
+
+    assert observed_prompts == [prompt, prompt]
+    assert [receipt["status"] for receipt in receipts] == ["returned", "returned"]
+    assert [receipt["adapter_kind"] for receipt in receipts] == ["process", "host-native"]
+    assert all(receipt["returned_work"] == returned for receipt in receipts)
+    assert all(receipt["claim_boundary"].startswith("transport-only") for receipt in receipts)
+
+
+def test_assignment_dispatch_fails_closed_without_configured_adapter(tmp_path: Path) -> None:
+    from agentic_workspace.contracts import python_primitive_support
+
+    receipt = python_primitive_support._dispatch_assignment_packet(
+        packet={
+            "assignment_identity": {
+                "role": "validator",
+                "dispatch_adapter": {"execution_methods": ["cli"]},
+            }
+        },
+        prompt="sealed packet",
+        target_root=tmp_path,
+        transport="cli",
+    )
+
+    assert receipt["status"] == "blocked"
+    assert receipt["reason"] == "configured-dispatch-adapter-unavailable"
+
+
+@pytest.mark.parametrize("timeout", [0, -1, True, 1.5])
+def test_assignment_dispatch_rejects_non_positive_or_non_integer_timeout(tmp_path: Path, timeout: object) -> None:
+    from agentic_workspace.contracts import python_primitive_support
+
+    receipt = python_primitive_support._dispatch_assignment_packet(
+        packet={
+            "assignment_identity": {
+                "role": "validator",
+                "dispatch_adapter": {
+                    "kind": "process",
+                    "command": ["configured-worker-bridge"],
+                    "output_mode": "stdout",
+                    "timeout_seconds": timeout,
+                    "execution_methods": ["cli"],
+                },
+            }
+        },
+        prompt="sealed packet",
+        target_root=tmp_path,
+        transport="cli",
+    )
+
+    assert receipt["status"] == "blocked"
+    assert receipt["reason"] == "configured-dispatch-timeout-invalid"
 
 
 def test_assignment_admission_accepts_no_change_but_rejects_changed_paths_without_patch(

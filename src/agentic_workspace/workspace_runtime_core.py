@@ -70,6 +70,8 @@ from agentic_workspace.config import (
     SUPPORTED_CAPABILITY_LOCATIONS,
     SUPPORTED_CLARIFICATION_CONTROL_MODES,
     SUPPORTED_DELEGATION_CONTROL_MODES,
+    SUPPORTED_DELEGATION_DISPATCH_ADAPTER_KINDS,
+    SUPPORTED_DELEGATION_DISPATCH_OUTPUT_MODES,
     SUPPORTED_DELEGATION_OUTCOMES,
     SUPPORTED_DELEGATION_TARGET_CONTEXT_CAPACITIES,
     SUPPORTED_DELEGATION_TARGET_COST_CLASSES,
@@ -42938,8 +42940,8 @@ def _effective_orchestration_posture_payload(
         {},
     )
     execution_methods = [str(item) for item in _list_payload(matching_profile.get("execution_methods")) if str(item)]
-    provider = str(matching_profile.get("provider") or "")
-    automatic_methods = [item for item in execution_methods if provider == "codex" and item in {"internal", "cli"}]
+    adapter_configured = bool(_list_payload(matching_profile.get("dispatch_command")))
+    automatic_methods = [item for item in execution_methods if adapter_configured and item in {"internal", "cli", "api"}]
     current_target_ready = target_status == "known-profile"
     binding_requested = policy == "required-best-fit"
     orchestrator_role = role == "orchestrator"
@@ -44068,7 +44070,10 @@ def _assignment_implementation_gate_payload(
     selected_route_target = selected_profile or str(assignment_decision.get("selected_target") or "") or current_target
     execution_methods = [str(method) for method in _list_payload((selected_target or {}).get("execution_methods"))]
     automatic_methods = [method for method in execution_methods if method != "manual"]
-    automatic_transport_authorized = bool(automatic_methods and _as_dict(delegation_control).get("execution_permitted") is True)
+    configured_dispatch_command = [str(part) for part in _list_payload((selected_target or {}).get("dispatch_command"))]
+    automatic_transport_authorized = bool(
+        automatic_methods and configured_dispatch_command and _as_dict(delegation_control).get("execution_permitted") is True
+    )
     manual_transport = _manual_transport_admission_payload(
         assignment_policy=assignment_policy,
         target_execution_methods=execution_methods,
@@ -44110,7 +44115,11 @@ def _assignment_implementation_gate_payload(
             status = "blocked-transport-unavailable"
             implementation_allowed = False
             required_next_action = (
-                "authorize-configured-automatic-transport" if automatic_methods else "configure-assignment-transport-or-human-override"
+                "configure-assignment-transport-adapter"
+                if automatic_methods and not configured_dispatch_command
+                else "authorize-configured-automatic-transport"
+                if automatic_methods
+                else "configure-assignment-transport-or-human-override"
             )
             enforcement = "hard-block"
             executor_disposition = "blocked-recovery"
@@ -44167,6 +44176,7 @@ def _assignment_implementation_gate_payload(
             "selected_target": selected_route_target or None,
             "transport": transport,
             "automatic_methods": automatic_methods,
+            "adapter_configured": bool(configured_dispatch_command),
             "decision_revision": assignment_decision.get("assignment_decision_revision"),
             "rule": "One binding assignment resolves retained-local, executable dispatch, admitted manual handoff, or exact blocked recovery before implementation.",
         },
@@ -44805,6 +44815,9 @@ def _execution_posture_payload(
         current_work = resolve_current_work_context(root=target_root, task=str(task_text or ""), relation_hint="plan-continuation")
         plan_id = str(current_work.get("selected_plan_id") or current_work.get("plan_id") or "").strip()
         plan_ref = f".agentic-workspace/planning/execplans/{plan_id}.plan.json" if plan_id else ""
+        if not plan_ref:
+            active_plan_ref, _active_plan = _active_execplan_record_payload(target_root=target_root)
+            plan_ref = str(active_plan_ref or "").strip()
         plan_path = target_root / plan_ref if plan_ref else None
         plan_record: dict[str, Any] = {}
         if plan_path is not None:
@@ -44871,7 +44884,10 @@ def _execution_posture_payload(
             "allowed_effects": allowed_effects,
             "allowed_paths": list(changed_paths),
             "dispatch_adapter": {
-                "provider": str((target or {}).get("provider") or ""),
+                "kind": str((target or {}).get("dispatch_adapter_kind") or ""),
+                "command": list((target or {}).get("dispatch_command") or []),
+                "output_mode": str((target or {}).get("dispatch_output_mode") or "stdout"),
+                "timeout_seconds": int((target or {}).get("dispatch_timeout_seconds") or 1800),
                 "model": str((target or {}).get("model_family") or ""),
                 "execution_methods": list((target or {}).get("execution_methods") or []),
             },
@@ -60202,6 +60218,10 @@ def _runtime_resolution_payload(*, config: WorkspaceConfig, capability_posture: 
                 "execution_methods": list(profile.execution_methods),
                 "model_family": profile.model_family,
                 "provider": profile.provider,
+                "dispatch_adapter_kind": profile.dispatch_adapter_kind,
+                "dispatch_command": list(profile.dispatch_command),
+                "dispatch_output_mode": profile.dispatch_output_mode,
+                "dispatch_timeout_seconds": profile.dispatch_timeout_seconds,
                 "context_capacity": profile.context_capacity,
                 "reasoning_profile": profile.reasoning_profile,
                 "cost_class": profile.cost_class,
@@ -60605,6 +60625,10 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
                 "execution_methods": list(profile.execution_methods),
                 "model_family": profile.model_family,
                 "provider": profile.provider,
+                "dispatch_adapter_kind": profile.dispatch_adapter_kind,
+                "dispatch_command": list(profile.dispatch_command),
+                "dispatch_output_mode": profile.dispatch_output_mode,
+                "dispatch_timeout_seconds": profile.dispatch_timeout_seconds,
                 "context_capacity": profile.context_capacity,
                 "reasoning_profile": profile.reasoning_profile,
                 "cost_class": profile.cost_class,
@@ -60690,6 +60714,10 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
                 "delegation_targets.<target>.task_fit",
                 "delegation_targets.<target>.capability_classes",
                 "delegation_targets.<target>.execution_methods",
+                "delegation_targets.<target>.dispatch_adapter_kind",
+                "delegation_targets.<target>.dispatch_command",
+                "delegation_targets.<target>.dispatch_output_mode",
+                "delegation_targets.<target>.dispatch_timeout_seconds",
                 "delegation_targets.<target>.model_family",
                 "delegation_targets.<target>.provider",
                 "delegation_targets.<target>.context_capacity",
@@ -60707,6 +60735,8 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             "supported_locations": list(SUPPORTED_CAPABILITY_LOCATIONS),
             "supported_capability_classes": list(SUPPORTED_CAPABILITY_EXECUTION_CLASSES),
             "supported_execution_methods": list(SUPPORTED_DELEGATION_TARGET_EXECUTION_METHODS),
+            "supported_dispatch_adapter_kinds": list(SUPPORTED_DELEGATION_DISPATCH_ADAPTER_KINDS),
+            "supported_dispatch_output_modes": list(SUPPORTED_DELEGATION_DISPATCH_OUTPUT_MODES),
             "supported_context_capacities": list(SUPPORTED_DELEGATION_TARGET_CONTEXT_CAPACITIES),
             "supported_reasoning_profiles": list(SUPPORTED_DELEGATION_TARGET_REASONING_PROFILES),
             "supported_cost_classes": list(SUPPORTED_DELEGATION_TARGET_COST_CLASSES),
@@ -64021,7 +64051,8 @@ def _executor_availability(
             "repair": "Resolve an authoritative executor target before running Autopilot.",
         }
     execution_methods = [str(method) for method in _list_payload(selected_target.get("execution_methods")) if str(method).strip()]
-    automatic_methods = [method for method in execution_methods if method in {"internal", "cli", "api"}]
+    adapter_configured = bool(_list_payload(selected_target.get("dispatch_command")))
+    automatic_methods = [method for method in execution_methods if adapter_configured and method in {"internal", "cli", "api"}]
     if not execution_methods:
         return {
             "status": "unavailable",

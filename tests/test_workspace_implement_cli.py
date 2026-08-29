@@ -9144,6 +9144,9 @@ def test_implement_required_best_fit_compiles_authorized_automatic_dispatch(tmp_
                 'provider = "codex"',
                 'capability_classes = ["boundary-shaping", "reasoning-heavy"]',
                 'execution_methods = ["cli"]',
+                'dispatch_adapter_kind = "process"',
+                'dispatch_command = ["worker-bridge", "--output", "{output_file}"]',
+                'dispatch_output_mode = "json-file"',
             ]
         ),
     )
@@ -9271,7 +9274,12 @@ def test_configured_orchestrator_compiles_current_nonlocal_and_returned_assignme
             "binding": {"enforceable": True},
         },
         assignment_decision={**decision, "selected_target": "worker"},
-        selected_target={"name": "worker", "target_id": "target:worker", "execution_methods": ["cli"]},
+        selected_target={
+            "name": "worker",
+            "target_id": "target:worker",
+            "execution_methods": ["cli"],
+            "dispatch_command": ["worker-bridge", "--output", "{output_file}"],
+        },
         delegation_control={"execution_permitted": True},
     )
     assert automatic_gate["status"] == "dispatch-required"
@@ -9282,6 +9290,7 @@ def test_configured_orchestrator_compiles_current_nonlocal_and_returned_assignme
         "selected_target": "worker",
         "transport": "cli",
         "automatic_methods": ["cli"],
+        "adapter_configured": True,
         "decision_revision": "decision-rev-1",
         "rule": "One binding assignment resolves retained-local, executable dispatch, admitted manual handoff, or exact blocked recovery before implementation.",
     }
@@ -9295,7 +9304,12 @@ def test_configured_orchestrator_compiles_current_nonlocal_and_returned_assignme
             "binding": {"enforceable": True},
         },
         assignment_decision={**decision, "selected_target": "worker"},
-        selected_target={"name": "worker", "target_id": "target:worker", "execution_methods": ["cli"]},
+        selected_target={
+            "name": "worker",
+            "target_id": "target:worker",
+            "execution_methods": ["cli"],
+            "dispatch_command": ["worker-bridge"],
+        },
         delegation_control={"execution_permitted": False},
     )
     assert blocked_gate["status"] == "blocked-transport-unavailable"

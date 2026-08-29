@@ -18,7 +18,7 @@
     ],
     "payload_digest": "sha256:1ca1720ca3f5cfb3d2833a709843f55a8bd80e713604befe3061fb9e63753e36",
     "previous_digest": "74c9909afb01ec4c42350cbaafbecdccb3f97a102df2583b4ed9286e85425873",
-    "publisher_pid": 33664,
+    "publisher_pid": 23948,
     "reader_rule": "Readers must verify payload_digest before consuming receipts and reject stores without one published generation.",
     "status": "published"
   },
