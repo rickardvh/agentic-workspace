@@ -885,6 +885,8 @@ def _patch_workspace_python_operation_inputs(output: GeneratedOutput, *, repo_ro
 
 
 def _patch_planning_python_runtime_values(output: GeneratedOutput, *, repo_root: Path) -> GeneratedOutput:
+    """Preserve contract-declared Planning inputs through parser and callable dispatch."""
+
     path = output.path if output.path.is_absolute() else repo_root / output.path
     relative = path.relative_to(repo_root).as_posix()
     if relative != "generated/planning/python/primitives/operation_executor.py":
@@ -895,17 +897,27 @@ def _patch_planning_python_runtime_values(output: GeneratedOutput, *, repo_root:
         args_anchor
         + "                'preflight_token': getattr(args, 'preflight_token', ''),\n"
         + "                'preflight_max_age_seconds': getattr(args, 'preflight_max_age_seconds', 900),\n"
+        + "                **{name: value for name, value in vars(args).items() if not name.startswith('_')},\n"
     )
     if args_anchor in content and "'preflight_token': getattr(args, 'preflight_token', '')," not in content:
         content = content.replace(args_anchor, args_insert, 1)
+    if args_anchor in content and "value in vars(args).items()" not in content:
+        content = content.replace(
+            args_anchor,
+            args_anchor + "                **{name: value for name, value in vars(args).items() if not name.startswith('_')},\n",
+            1,
+        )
     values_anchor = "                'expect_planning_revision': values.get('expect_planning_revision', ''),\n"
     values_insert = (
         values_anchor
         + "                'preflight_token': values.get('preflight_token', ''),\n"
         + "                'preflight_max_age_seconds': values.get('preflight_max_age_seconds', 900),\n"
+        + "                **dict(values),\n"
     )
     if values_anchor in content and "'preflight_token': values.get('preflight_token', '')," not in content:
         content = content.replace(values_anchor, values_insert, 1)
+    if values_anchor in content and "                **dict(values),\n" not in content:
+        content = content.replace(values_anchor, values_anchor + "                **dict(values),\n", 1)
     reconcile_values = (
         ("apply_lane_current_slice_reconcile", "False"),
         ("owner_surface", "''"),

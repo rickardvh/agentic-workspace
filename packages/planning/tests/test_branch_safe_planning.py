@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import subprocess
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -813,6 +814,226 @@ def test_integration_apply_rejects_stale_subject_revision(tmp_path: Path) -> Non
     assert any(warning["warning_class"] == "planning_integration_proposal_stale" for warning in summary["warnings"])
 
 
+def test_integration_proposal_refresh_updates_only_freshness_and_unblocks_reconcile(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    owner_ref = _write_owner(tmp_path, "issue-refresh")
+    propose_integration_transition(
+        proposal_id="issue-refresh-archive",
+        owner="issue-refresh",
+        owner_ref=owner_ref,
+        requested_transition="archive-owner",
+        proof="proof://stable",
+        parent_boundary="parent remains independently owned",
+        invariant="do not widen lifecycle authority",
+        target=tmp_path,
+    )
+    proposal_before = _proposal_record(tmp_path, "issue-refresh-archive")
+    owner_path = tmp_path / owner_ref
+    owner = json.loads(owner_path.read_text(encoding="utf-8"))
+    owner["next_action"] = "current target-branch closeout state"
+    owner_path.write_text(json.dumps(owner, indent=2) + "\n", encoding="utf-8")
+    subject_revision = installer._integration_subject_revision(target_root=tmp_path, owner_ref=owner_ref)
+    target_revision = planning_revision(tmp_path)["target_authority_revision"]
+
+    refreshed = propose_integration_transition(
+        proposal_id="issue-refresh-archive",
+        refresh_existing=True,
+        expected_proposal_revision=proposal_before["proposal_revision"],
+        expected_subject_revision=subject_revision,
+        expected_planning_revision=target_revision,
+        target=tmp_path,
+    )
+
+    assert [action.kind for action in refreshed.actions] == ["updated", "preserved", "proof", "proof"]
+    proposal_after = _proposal_record(tmp_path, "issue-refresh-archive")
+    immutable_fields = (
+        "status",
+        "phase",
+        "requested_transition",
+        "owner",
+        "external_ref",
+        "proof_refs",
+        "parent_boundary",
+        "preserved_invariants",
+        "created_at",
+        "authority_boundary",
+    )
+    assert {field: proposal_after[field] for field in immutable_fields} == {field: proposal_before[field] for field in immutable_fields}
+    assert proposal_after["expected_subject_revision"] == subject_revision
+    assert proposal_after["expected_planning_revision"] == target_revision
+    assert proposal_after["proposal_revision"] != proposal_before["proposal_revision"]
+    assert refreshed.operation_receipt["outcome"] == "refreshed"
+    assert refreshed.operation_receipt["changed_fields"] == [
+        "expected_planning_revision",
+        "expected_subject_revision",
+        "proposal_revision",
+        "updated_at",
+    ]
+
+    preview = planning_reconcile(target=tmp_path, preview=True)
+    assert preview["status"] == "preview"
+    assert preview["proposal"]["eligible_proposals"] == ["issue-refresh-archive"]
+    assert preview["proposal"]["semantic_conflicts"] == []
+
+    replay = propose_integration_transition(
+        proposal_id="issue-refresh-archive",
+        refresh_existing=True,
+        expected_proposal_revision=proposal_after["proposal_revision"],
+        expected_subject_revision=subject_revision,
+        expected_planning_revision=target_revision,
+        target=tmp_path,
+    )
+    assert [action.kind for action in replay.actions] == ["no-op"]
+    assert replay.mutation_expected is False
+    assert replay.operation_receipt["outcome"] == "no-op"
+
+
+@pytest.mark.parametrize(
+    ("guard", "reason_code"),
+    (
+        ("proposal", "stale-integration-proposal-revision"),
+        ("subject", "stale-integration-refresh-subject-revision"),
+        ("planning", "stale-integration-refresh-planning-revision"),
+    ),
+)
+def test_integration_proposal_refresh_rejects_stale_guards_without_mutation(tmp_path: Path, guard: str, reason_code: str) -> None:
+    install_bootstrap(target=tmp_path)
+    owner_ref = _write_owner(tmp_path, "issue-refresh-guard")
+    propose_integration_transition(
+        proposal_id="issue-refresh-guard",
+        owner="issue-refresh-guard",
+        owner_ref=owner_ref,
+        target=tmp_path,
+    )
+    proposal_path = tmp_path / ".agentic-workspace/planning/integration-proposals/issue-refresh-guard.integration-proposal.json"
+    proposal = _proposal_record(tmp_path, "issue-refresh-guard")
+    before = proposal_path.read_bytes()
+    values = {
+        "expected_proposal_revision": proposal["proposal_revision"],
+        "expected_subject_revision": proposal["expected_subject_revision"],
+        "expected_planning_revision": planning_revision(tmp_path)["target_authority_revision"],
+    }
+    values[f"expected_{guard}_revision"] = "stale-guard"
+
+    rejected = propose_integration_transition(
+        proposal_id="issue-refresh-guard",
+        refresh_existing=True,
+        target=tmp_path,
+        **values,
+    )
+
+    assert rejected.reason_code == reason_code
+    assert proposal_path.read_bytes() == before
+
+
+def test_integration_proposal_refresh_rejects_non_pending_or_semantic_input(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    owner_ref = _write_owner(tmp_path, "issue-refresh-closed")
+    propose_integration_transition(
+        proposal_id="issue-refresh-closed",
+        owner="issue-refresh-closed",
+        owner_ref=owner_ref,
+        target=tmp_path,
+    )
+    proposal = _proposal_record(tmp_path, "issue-refresh-closed")
+    guards = {
+        "expected_proposal_revision": proposal["proposal_revision"],
+        "expected_subject_revision": proposal["expected_subject_revision"],
+        "expected_planning_revision": planning_revision(tmp_path)["target_authority_revision"],
+    }
+
+    semantic = propose_integration_transition(
+        proposal_id="issue-refresh-closed",
+        refresh_existing=True,
+        requested_transition="archive-owner",
+        target=tmp_path,
+        **guards,
+    )
+    assert semantic.reason_code == "integration-refresh-semantic-input-rejected"
+
+    apply_integration_proposal(proposal="issue-refresh-closed", target=tmp_path)
+    integrated = _proposal_record(tmp_path, "issue-refresh-closed")
+    rejected = propose_integration_transition(
+        proposal_id="issue-refresh-closed",
+        refresh_existing=True,
+        expected_proposal_revision=integrated["proposal_revision"],
+        expected_subject_revision=integrated["expected_subject_revision"],
+        expected_planning_revision=planning_revision(tmp_path)["target_authority_revision"],
+        target=tmp_path,
+    )
+    assert rejected.reason_code == "integration-refresh-pending-required"
+
+
+def test_integration_proposal_refresh_allows_external_keep_open_subject_with_legacy_owner_ref(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    propose_integration_transition(
+        proposal_id="external-keep-open",
+        owner="legacy-state",
+        owner_ref=".agentic-workspace/planning/state.toml",
+        external_ref="2345",
+        requested_transition="keep-open",
+        target=tmp_path,
+    )
+    proposal = _proposal_record(tmp_path, "external-keep-open")
+    relation_path = tmp_path / ".agentic-workspace/planning/issue-relations/2345.issue-relation.json"
+    relation_path.parent.mkdir(parents=True, exist_ok=True)
+    relation_path.write_text('{"external_ref": "2345", "changed": true}\n', encoding="utf-8")
+    subject_revision = installer._integration_subject_revision(
+        target_root=tmp_path,
+        owner_ref=".agentic-workspace/planning/state.toml",
+        external_ref="2345",
+    )
+
+    refreshed = propose_integration_transition(
+        proposal_id="external-keep-open",
+        refresh_existing=True,
+        expected_proposal_revision=proposal["proposal_revision"],
+        expected_subject_revision=subject_revision,
+        expected_planning_revision=planning_revision(tmp_path)["target_authority_revision"],
+        target=tmp_path,
+    )
+
+    assert refreshed.reason_code == ""
+    assert refreshed.operation_receipt["outcome"] == "refreshed"
+
+
+def test_integration_proposal_refresh_rolls_back_write_failure(tmp_path: Path, monkeypatch) -> None:
+    install_bootstrap(target=tmp_path)
+    owner_ref = _write_owner(tmp_path, "issue-refresh-rollback")
+    propose_integration_transition(
+        proposal_id="issue-refresh-rollback",
+        owner="issue-refresh-rollback",
+        owner_ref=owner_ref,
+        target=tmp_path,
+    )
+    proposal_path = tmp_path / ".agentic-workspace/planning/integration-proposals/issue-refresh-rollback.integration-proposal.json"
+    proposal = _proposal_record(tmp_path, "issue-refresh-rollback")
+    owner_path = tmp_path / owner_ref
+    owner = json.loads(owner_path.read_text(encoding="utf-8"))
+    owner["next_action"] = "force a freshness refresh"
+    owner_path.write_text(json.dumps(owner, indent=2) + "\n", encoding="utf-8")
+    before = proposal_path.read_bytes()
+
+    def fail_after_partial_write(*, record_path: Path, record: dict[str, Any], schema_path: Path) -> None:
+        del record, schema_path
+        record_path.write_text("partial\n", encoding="utf-8")
+        raise OSError("simulated write failure")
+
+    monkeypatch.setattr(installer, "_write_schema_backed_planning_record", fail_after_partial_write)
+    refreshed = propose_integration_transition(
+        proposal_id="issue-refresh-rollback",
+        refresh_existing=True,
+        expected_proposal_revision=proposal["proposal_revision"],
+        expected_subject_revision=installer._integration_subject_revision(target_root=tmp_path, owner_ref=owner_ref),
+        expected_planning_revision=planning_revision(tmp_path)["target_authority_revision"],
+        target=tmp_path,
+    )
+
+    assert refreshed.reason_code == "integration-refresh-rolled-back"
+    assert refreshed.operation_receipt == {}
+    assert proposal_path.read_bytes() == before
+
+
 def test_integration_apply_rejects_stale_planning_revision(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     owner_ref = _write_owner(tmp_path, "issue-2345")
@@ -965,14 +1186,14 @@ def test_stale_disjoint_proposal_is_skipped_while_current_owner_applies(tmp_path
     assert applied["status"] == "applied"
     assert applied["applied_count"] == 1
     assert applied["receipts"] == ["issue-current-owner-integrated"]
-    assert applied["skipped_proposals"] == [
-        {
-            "proposal_id": "issue-stale-owner-integrated",
-            "owner_ref": stale_owner_ref,
-            "reason_code": "stale-integration-subject-revision",
-            "detail": applied["skipped_proposals"][0]["detail"],
-        }
-    ]
+    assert len(applied["skipped_proposals"]) == 1
+    conflict = applied["skipped_proposals"][0]
+    assert conflict["proposal_id"] == "issue-stale-owner-integrated"
+    assert conflict["owner_ref"] == stale_owner_ref
+    assert conflict["reason_code"] == "stale-integration-subject-revision"
+    assert conflict["expected_subject_revision"] != conflict["current_subject_revision"]
+    assert conflict["proposal_revision"]
+    assert conflict["current_target_authority_revision"] == applied["target_authority_before"]
     assert _proposal_record(tmp_path, "issue-stale-owner-integrated")["status"] == "pending"
     assert _proposal_record(tmp_path, "issue-current-owner-integrated")["status"] == "integrated"
     assert json.loads((tmp_path / current_owner_ref).read_text(encoding="utf-8"))["relationships"]["integration"]["status"] == "integrated"

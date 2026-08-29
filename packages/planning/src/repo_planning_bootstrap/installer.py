@@ -3416,6 +3416,7 @@ def _planning_target_authority_reconciliation_transaction(
             "status": "blocked",
             "reason": "semantic-integration-conflict" if skipped_proposals else "no-eligible-integration-proposals",
             "semantic_conflicts": skipped_proposals,
+            "current_target_authority_revision": str(compiled_batch.get("target_authority_before") or ""),
         }
 
     revision = planning_revision(target_root)
@@ -14504,6 +14505,193 @@ def _canonical_owner_subject_proof_refs(owner_record: dict[str, Any]) -> list[st
     return _dedupe(refs)
 
 
+def _refresh_existing_integration_proposal(
+    *,
+    result: InstallResult,
+    target_root: Path,
+    proposal_path: Path,
+    proposal_id: str,
+    expected_proposal_revision: str,
+    expected_subject_revision: str,
+    expected_planning_revision: str,
+    dry_run: bool,
+) -> InstallResult:
+    existing = _load_integration_proposal(proposal_path) if proposal_path.exists() else None
+    if existing is None:
+        result.add("manual review", proposal_path, "integration refresh requires an existing valid proposal")
+        result.reason_code = "integration-refresh-proposal-required"
+        result.conflict_owner = proposal_path.relative_to(target_root).as_posix()
+        return result
+    if str(existing.get("status") or "").strip().lower() != "pending" or str(existing.get("phase") or "").strip().lower() != (
+        "integration-pending"
+    ):
+        result.add("manual review", proposal_path, "integration refresh is allowed only for pending proposals")
+        result.reason_code = "integration-refresh-pending-required"
+        result.conflict_owner = proposal_path.relative_to(target_root).as_posix()
+        return result
+
+    observed_proposal_revision = str(expected_proposal_revision or "").strip()
+    current_proposal_revision = str(existing.get("proposal_revision") or "").strip()
+    if not observed_proposal_revision:
+        result.add("manual review", proposal_path, "integration refresh requires --expect-proposal-revision")
+        result.reason_code = "integration-refresh-proposal-revision-required"
+        result.conflict_owner = proposal_path.relative_to(target_root).as_posix()
+        return result
+    if observed_proposal_revision != current_proposal_revision:
+        result.add(
+            "manual review",
+            proposal_path,
+            f"integration proposal revision changed: expected {observed_proposal_revision}, found {current_proposal_revision}",
+        )
+        result.reason_code = "stale-integration-proposal-revision"
+        result.conflict_owner = proposal_path.relative_to(target_root).as_posix()
+        return result
+
+    owner: dict[str, Any] = {}
+    existing_owner = existing.get("owner")
+    if isinstance(existing_owner, dict):
+        owner = existing_owner
+    owner_ref = str(owner.get("ref") or "").strip()
+    transition = str(existing.get("requested_transition") or "").strip()
+    external_ref = str(existing.get("external_ref") or "").strip()
+    if owner_ref and transition != "keep-open":
+        owner_path, owner_path_error = _integration_owner_path(target_root, owner_ref)
+        if owner_path_error or owner_path is None:
+            result.add("manual review", proposal_path, "integration refresh owner reference is invalid")
+            result.reason_code = owner_path_error or "integration-refresh-owner-not-found"
+            result.conflict_owner = proposal_path.relative_to(target_root).as_posix()
+            return result
+        owner_record = _load_schema_backed_json_record(owner_path, kind=EXECPLAN_RECORD_KIND)
+        if owner_record is None:
+            owner_record = _load_schema_backed_json_record(owner_path, kind=LANE_RECORD_KIND)
+        if owner_record is None:
+            result.add("manual review", owner_path, "integration refresh owner record was not found or is invalid")
+            result.reason_code = "integration-refresh-owner-not-found"
+            result.conflict_owner = owner_path.relative_to(target_root).as_posix()
+            return result
+        expected_owner_id = str(owner.get("id") or "").strip()
+        current_owner_id = str(owner_record.get("id") or "").strip()
+        if expected_owner_id and current_owner_id and expected_owner_id != current_owner_id:
+            result.add(
+                "manual review",
+                owner_path,
+                f"integration refresh owner id mismatch: expected {expected_owner_id}, found {current_owner_id}",
+            )
+            result.reason_code = "integration-refresh-owner-id-mismatch"
+            result.conflict_owner = owner_path.relative_to(target_root).as_posix()
+            return result
+    elif transition != "keep-open" or not external_ref:
+        result.add("manual review", proposal_path, "integration refresh requires the proposal's existing owner or external subject")
+        result.reason_code = "integration-refresh-owner-not-found"
+        result.conflict_owner = proposal_path.relative_to(target_root).as_posix()
+        return result
+
+    observed_subject_revision = str(expected_subject_revision or "").strip()
+    current_subject_revision = _integration_subject_revision(
+        target_root=target_root,
+        owner_ref=owner_ref,
+        external_ref=external_ref,
+    )
+    if not observed_subject_revision:
+        result.add("manual review", proposal_path, "integration refresh requires --expect-subject-revision")
+        result.reason_code = "integration-refresh-subject-revision-required"
+        result.conflict_owner = proposal_path.relative_to(target_root).as_posix()
+        return result
+    if observed_subject_revision != current_subject_revision:
+        result.add(
+            "manual review",
+            proposal_path,
+            f"integration refresh subject revision changed: expected {observed_subject_revision}, found {current_subject_revision}",
+        )
+        result.reason_code = "stale-integration-refresh-subject-revision"
+        result.conflict_owner = proposal_path.relative_to(target_root).as_posix()
+        return result
+
+    observed_planning_revision = str(expected_planning_revision or "").strip()
+    current_planning_revision = str(_planning_target_authority_revision(target_root).get("revision_id") or "")
+    if not observed_planning_revision:
+        result.add("manual review", proposal_path, "integration refresh requires --expect-planning-revision")
+        result.reason_code = "integration-refresh-planning-revision-required"
+        result.conflict_owner = PLANNING_STATE_PATH.as_posix()
+        return result
+    if observed_planning_revision != current_planning_revision:
+        result.add(
+            "manual review",
+            proposal_path,
+            f"integration refresh target authority changed: expected {observed_planning_revision}, found {current_planning_revision}",
+        )
+        result.reason_code = "stale-integration-refresh-planning-revision"
+        result.conflict_owner = PLANNING_STATE_PATH.as_posix()
+        return result
+
+    if (
+        str(existing.get("expected_subject_revision") or "").strip() == current_subject_revision
+        and str(existing.get("expected_planning_revision") or "").strip() == current_planning_revision
+    ):
+        result.mutation_expected = False
+        result.operation_receipt = {
+            "kind": "planning-integration-proposal-receipt/v1",
+            "operation": "planning.integration-propose.lifecycle",
+            "outcome": "no-op",
+            "proposal_id": proposal_id,
+            "proposal_revision": current_proposal_revision,
+            "changed_fields": [],
+        }
+        result.add("no-op", proposal_path, "pending integration proposal is already current")
+        return result
+
+    refreshed = copy.deepcopy(existing)
+    refreshed["expected_subject_revision"] = current_subject_revision
+    refreshed["expected_planning_revision"] = current_planning_revision
+    refreshed["updated_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    refreshed["proposal_revision"] = _record_revision(refreshed)
+    findings = _json_schema_findings(payload=refreshed, schema_path=INTEGRATION_PROPOSAL_SCHEMA_PATH)
+    if findings:
+        result.add("manual review", proposal_path, f"refreshed integration proposal did not validate: {'; '.join(findings)}")
+        result.reason_code = "integration-refresh-validation-failed"
+        result.conflict_owner = proposal_path.relative_to(target_root).as_posix()
+        return result
+
+    result.operation_receipt = {
+        "kind": "planning-integration-proposal-receipt/v1",
+        "operation": "planning.integration-propose.lifecycle",
+        "outcome": "dry-run" if dry_run else "refreshed",
+        "proposal_id": proposal_id,
+        "proposal_revision": refreshed["proposal_revision"],
+        "changed_fields": [
+            "expected_planning_revision",
+            "expected_subject_revision",
+            "proposal_revision",
+            "updated_at",
+        ],
+        "expected_subject_revision": current_subject_revision,
+        "expected_planning_revision": current_planning_revision,
+    }
+    result.add("would update" if dry_run else "updated", proposal_path, "refreshed pending integration proposal revision guards")
+    if not dry_run:
+
+        def write_refreshed_proposal() -> None:
+            _write_schema_backed_planning_record(
+                record_path=proposal_path,
+                record=refreshed,
+                schema_path=INTEGRATION_PROPOSAL_SCHEMA_PATH,
+            )
+
+        try:
+            _apply_planning_writes_atomically([proposal_path], write_refreshed_proposal)
+        except OSError as exc:
+            result.add("manual review", proposal_path, f"integration proposal refresh rolled back: {exc}")
+            result.reason_code = "integration-refresh-rolled-back"
+            result.conflict_owner = proposal_path.relative_to(target_root).as_posix()
+            result.operation_receipt = {}
+            return result
+    result.add(
+        "preserved", target_root / PLANNING_STATE_PATH, "refresh did not change owner, lifecycle intent, or aggregate Planning state"
+    )
+    _add_planning_mutation_proof_actions(result)
+    return result
+
+
 def propose_integration_transition(
     *,
     proposal_id: str = "",
@@ -14517,6 +14705,8 @@ def propose_integration_transition(
     invariant: str | Iterable[str] | None = None,
     expected_subject_revision: str = "",
     expected_target_revision: str = "",
+    refresh_existing: bool = False,
+    expected_proposal_revision: str = "",
     target: str | Path | None = None,
     expected_planning_revision: str = "",
     dry_run: bool = False,
@@ -14541,6 +14731,37 @@ def propose_integration_transition(
     proposal_slug = _slugify(proposal_id or f"{external or owner_id or owner_path_text}-{transition}")
     proposal_path = _integration_proposal_path(target_root, proposal_slug)
     result = InstallResult(target_root=target_root, message=f"Propose Planning integration transition '{proposal_slug}'", dry_run=dry_run)
+    if refresh_existing:
+        semantic_inputs = {
+            "owner": owner,
+            "owner_ref": owner_ref,
+            "issue": issue,
+            "external_ref": external_ref,
+            "requested_transition": requested_transition,
+            "proof": proof,
+            "parent_boundary": parent_boundary,
+            "invariant": invariant,
+        }
+        provided_semantic_inputs = sorted(key for key, value in semantic_inputs.items() if _csv_items(value))
+        if provided_semantic_inputs:
+            result.add(
+                "manual review",
+                proposal_path,
+                f"integration refresh derives immutable semantics from the existing proposal; remove: {', '.join(provided_semantic_inputs)}",
+            )
+            result.reason_code = "integration-refresh-semantic-input-rejected"
+            result.conflict_owner = proposal_path.relative_to(target_root).as_posix()
+            return result
+        return _refresh_existing_integration_proposal(
+            result=result,
+            target_root=target_root,
+            proposal_path=proposal_path,
+            proposal_id=proposal_slug,
+            expected_proposal_revision=expected_proposal_revision,
+            expected_subject_revision=(expected_subject_revision or expected_target_revision),
+            expected_planning_revision=expected_planning_revision,
+            dry_run=dry_run,
+        )
     if not external and not owner_path_text and not owner_id:
         result.add(
             "manual review", target_root / PLANNING_INTEGRATION_PROPOSAL_ROOT, "provide --issue, --external-ref, --owner, or --owner-ref"
@@ -14775,11 +14996,27 @@ def _apply_pending_integration_proposals(
     owner_overrides: dict[Path, bytes] = {}
     receipts: list[dict[str, Any]] = []
     proposals_applied: list[str] = []
-    skipped_proposals: list[dict[str, str]] = []
+    skipped_proposals: list[dict[str, Any]] = []
 
-    def skip(proposal_path: Path, *, proposal_id: str, owner_ref: str, reason_code: str, detail: str) -> None:
+    def skip(
+        proposal_path: Path,
+        *,
+        proposal_id: str,
+        owner_ref: str,
+        reason_code: str,
+        detail: str,
+        evidence: Mapping[str, Any] | None = None,
+    ) -> None:
         result.add("skipped", proposal_path, detail)
-        skipped_proposals.append({"proposal_id": proposal_id, "owner_ref": owner_ref, "reason_code": reason_code, "detail": detail})
+        skipped_proposals.append(
+            {
+                "proposal_id": proposal_id,
+                "owner_ref": owner_ref,
+                "reason_code": reason_code,
+                "detail": detail,
+                **dict(evidence or {}),
+            }
+        )
 
     for proposal_path in pending_paths:
         record = _load_integration_proposal(proposal_path)
@@ -14900,6 +15137,12 @@ def _apply_pending_integration_proposals(
                 owner_ref=owner_ref,
                 reason_code="stale-integration-subject-revision",
                 detail=f"integration subject revision changed: expected {expected_subject_revision}, found {current_subject_revision}",
+                evidence={
+                    "proposal_revision": str(record.get("proposal_revision", "")).strip(),
+                    "expected_subject_revision": expected_subject_revision,
+                    "current_subject_revision": current_subject_revision,
+                    "current_target_authority_revision": current_target_id,
+                },
             )
             continue
         receipt_path = _integration_receipt_path(target_root, proposal_id)
@@ -15000,6 +15243,7 @@ def _apply_pending_integration_proposals(
         payload["kind"] = "planning-pending-integration-apply/v1"
         payload["status"] = "skipped"
         payload["applied_count"] = 0
+        payload["target_authority_before"] = current_target_id
         payload["skipped_proposals"] = skipped_proposals
         payload["recovery_command"] = _integration_apply_recovery_command(target_root)
         return payload
@@ -15028,7 +15272,7 @@ def _finalize_pending_integration_batch(
     owner_overrides: dict[Path, bytes],
     proposals_applied: list[str],
     receipts: list[dict[str, Any]],
-    skipped_proposals: list[dict[str, str]],
+    skipped_proposals: list[dict[str, Any]],
     proposal_dir: Path,
     current_target_id: str,
     dry_run: bool,

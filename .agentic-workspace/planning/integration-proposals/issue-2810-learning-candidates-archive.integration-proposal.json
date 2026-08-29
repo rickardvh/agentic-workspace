@@ -1,8 +1,8 @@
 {
   "kind": "planning-integration-proposal/v1",
   "id": "issue-2810-learning-candidates-archive",
-  "status": "pending",
-  "phase": "integration-pending",
+  "status": "integrated",
+  "phase": "integrated-lifecycle-truth",
   "requested_transition": "archive-owner",
   "owner": {
     "id": "issue-2810-learning-candidates",
@@ -28,7 +28,7 @@
   "expected_subject_revision": "1d6a201c92af9fed",
   "expected_planning_revision": "1deb2091e275dd86",
   "created_at": "2026-08-29T06:00:53.769123Z",
-  "updated_at": "2026-08-29T06:00:53.769123Z",
+  "updated_at": "2026-08-29T07:19:10.523924Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -44,5 +44,7 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "9a64373bc8c95e13"
+  "proposal_revision": "5619362c7d3fe891",
+  "integrated_at": "2026-08-29T07:19:10.523924Z",
+  "integration_receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2810-learning-candidates-archive.integration-receipt.json"
 }

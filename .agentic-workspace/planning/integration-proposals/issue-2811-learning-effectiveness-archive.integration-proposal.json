@@ -1,8 +1,8 @@
 {
   "kind": "planning-integration-proposal/v1",
   "id": "issue-2811-learning-effectiveness-archive",
-  "status": "pending",
-  "phase": "integration-pending",
+  "status": "integrated",
+  "phase": "integrated-lifecycle-truth",
   "requested_transition": "archive-owner",
   "owner": {
     "id": "issue-2811-learning-effectiveness",
@@ -30,7 +30,7 @@
   "expected_subject_revision": "14053f975851594d",
   "expected_planning_revision": "4241f71b85556c67",
   "created_at": "2026-08-29T06:06:23.824829Z",
-  "updated_at": "2026-08-29T06:06:23.824829Z",
+  "updated_at": "2026-08-29T07:19:10.523924Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -46,5 +46,7 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "f1f28505a63ce6bc"
+  "proposal_revision": "04a239c25e1a5319",
+  "integrated_at": "2026-08-29T07:19:10.523924Z",
+  "integration_receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2811-learning-effectiveness-archive.integration-receipt.json"
 }

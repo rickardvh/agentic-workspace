@@ -3,9 +3,9 @@
   "id": "issue-2812-learning-promotion",
   "title": "Promote proven learning into stronger repo-native owners",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "closeout",
-  "revision": 3,
+  "lifecycle": "archived",
+  "phase": "complete",
+  "revision": 4,
   "intent": {
     "outcome": "Proven learning selects one stronger existing repo-native owner operation under evidence, authority, latitude, revision, and cost constraints; completed promotion proves the owner and subtracts duplicate provisional residue while unsafe or target-specific cases remain correctly bounded.",
     "non_goals": [
@@ -58,6 +58,22 @@
       "state": "recorded",
       "route": "keep-local",
       "reason": "Session policy explicitly prohibits spawning sub-agents; promotion builds sequentially on the same operating-decision contract."
+    },
+    "integration": {
+      "status": "integrated",
+      "transition": "archive-owner",
+      "applied_at": "2026-08-29T07:19:10.523924Z",
+      "proof_refs": [
+        "24 focused tests passed",
+        "502 broad workspace tests passed",
+        "17 of 17 routed proof commands passed",
+        "lint passed",
+        "typecheck passed",
+        "contract and schema checks passed",
+        "structured inventory passed",
+        "PR #2832 CI and Security passed"
+      ],
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2812-learning-promotion-archive.integration-receipt.json"
     }
   },
   "references": [
@@ -97,14 +113,16 @@
     "residual_intent": "Apply the archive-owner transition after PR #2832 reaches the target branch; keep parent lane #2809 and integration gate #2813 open."
   },
   "active_milestone": {
-    "status": "completed",
+    "status": "archived",
     "ready": "ready",
-    "blocked": "merge-time archive application only"
+    "blocked": "none"
   },
   "proof_report": {
     "validation proof": "24 focused promotion and subtraction tests; 502 routed workspace tests; authority counterexamples, lint, typecheck, contract, schema, and inventory checks passed; Agentic Workspace proof passed 17/17.",
     "proof achieved now": "yes; exact feature-head implementation and merge-time lifecycle proposal are recorded.",
-    "evidence for \"proof achieved\" state": "PR #2832 exact-head CI and Security results plus reviewed promotion/subtraction traces."
+    "evidence for \"proof achieved\" state": "PR #2832 exact-head CI and Security results plus reviewed promotion/subtraction traces.",
+    "integration proof": "24 focused tests passed, 502 broad workspace tests passed, 17 of 17 routed proof commands passed, lint passed, typecheck passed, contract and schema checks passed, structured inventory passed, PR #2832 CI and Security passed",
+    "integration applied at": "2026-08-29T07:19:10.523924Z"
   },
   "specialist_contracts": [
     {

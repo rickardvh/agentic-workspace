@@ -2770,7 +2770,7 @@
                       "archive-owner",
                       "keep-open"
                     ],
-                    "default": "mark-integrated",
+                    "default": "",
                     "flags": [
                       "--requested-transition"
                     ],
@@ -2816,6 +2816,22 @@
                     ],
                     "help": "Alias for --expect-subject-revision.",
                     "name": "expect_target_revision"
+                  },
+                  {
+                    "action": "store_true",
+                    "flags": [
+                      "--refresh-existing"
+                    ],
+                    "help": "Refresh revision guards on an existing pending proposal without changing lifecycle semantics.",
+                    "name": "refresh_existing"
+                  },
+                  {
+                    "default": "",
+                    "flags": [
+                      "--expect-proposal-revision"
+                    ],
+                    "help": "Optimistic revision of the pending proposal being refreshed.",
+                    "name": "expect_proposal_revision"
                   },
                   {
                     "flags": [
@@ -16100,6 +16116,10 @@
                 "option": "--expect-target-revision"
               },
               {
+                "attr": "expect_proposal_revision",
+                "option": "--expect-proposal-revision"
+              },
+              {
                 "attr": "parent_lane_closeout",
                 "option": "--parent-lane-closeout"
               },
@@ -16212,6 +16232,11 @@
                 "attr": "remove_source",
                 "kind": "flag",
                 "option": "--remove-source"
+              },
+              {
+                "attr": "refresh_existing",
+                "kind": "flag",
+                "option": "--refresh-existing"
               },
               {
                 "attr": "dry_run",
@@ -19134,7 +19159,7 @@
                   "archive-owner",
                   "keep-open"
                 ],
-                "default": "mark-integrated",
+                "default": "",
                 "flags": [
                   "--requested-transition"
                 ],
@@ -19182,6 +19207,22 @@
                 "name": "expect_target_revision"
               },
               {
+                "action": "store_true",
+                "flags": [
+                  "--refresh-existing"
+                ],
+                "help": "Refresh revision guards on an existing pending proposal without changing lifecycle semantics.",
+                "name": "refresh_existing"
+              },
+              {
+                "default": "",
+                "flags": [
+                  "--expect-proposal-revision"
+                ],
+                "help": "Optimistic revision of the pending proposal being refreshed.",
+                "name": "expect_proposal_revision"
+              },
+              {
                 "flags": [
                   "--target"
                 ],
@@ -19225,6 +19266,7 @@
           "projection_boundary": {
             "runtime_owned": [
               "integration proposal policy",
+              "revision-guarded pending proposal refresh",
               "subject revision identity",
               "non-authoritative feature branch transition"
             ],

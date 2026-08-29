@@ -647,7 +647,7 @@ const commandDefinitions = [
                 "archive-owner",
                 "keep-open"
               ],
-              "default": "mark-integrated",
+              "default": "",
               "flags": [
                 "--requested-transition"
               ],
@@ -693,6 +693,22 @@ const commandDefinitions = [
               ],
               "help": "Alias for --expect-subject-revision.",
               "name": "expect_target_revision"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--refresh-existing"
+              ],
+              "help": "Refresh revision guards on an existing pending proposal without changing lifecycle semantics.",
+              "name": "refresh_existing"
+            },
+            {
+              "default": "",
+              "flags": [
+                "--expect-proposal-revision"
+              ],
+              "help": "Optimistic revision of the pending proposal being refreshed.",
+              "name": "expect_proposal_revision"
             },
             {
               "flags": [
