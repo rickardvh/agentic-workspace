@@ -3,7 +3,7 @@
   "authority": "command_package_ir.json",
   "compatibility": {
     "protocol": "1.0.0",
-    "fingerprint": "sha256:655503d37273497c28f89303a780fd772a26f68933963471b980614024c141a4",
+    "fingerprint": "sha256:f3efbc3ff0fd7045e5ce986303cc163452d9c59b75e78c345d4313e0c1bc3035",
     "additive_fields": "allowed"
   },
   "support_rule": "Operations fail closed unless generated status, effects, conformance, and Python/TypeScript target accounting are present.",
@@ -9784,7 +9784,7 @@
       "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.integration-propose.lifecycle.json",
       "operation_compatibility": {
         "schema_version": "agentic-workspace/operation/v1",
-        "fingerprint": "sha256:78bc66fcd8a96f008403f4e2bce0051b3d0966cd07b649d70a5fe11b915c92d2"
+        "fingerprint": "sha256:057569c4f9434163ae36913616d48ac9ff699e42f5338c2a2b1eaa088dfbdb5b"
       },
       "operation_resources": {
         "python": {
@@ -9834,6 +9834,15 @@
           {
             "owner": "planning-bootstrap",
             "scope": "integration proposal policy",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "planning.integration-propose.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "planning-bootstrap",
+            "scope": "revision-guarded pending proposal refresh",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
               "planning.integration-propose.lifecycle.process"

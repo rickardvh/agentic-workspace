@@ -3338,7 +3338,7 @@ def _current_reconciliation_proposal(*, target_root: Path, planning_revision: di
     return {"status": "stale", "freshness": "stale", "proposal_id": stale_proposal_id} if stale_proposal_id else {"status": "absent"}
 
 
-def _compiled_target_authority_reconciliation(*, target_root: Path) -> dict[str, Any]:
+def _compiled_target_authority_reconciliation(*, target_root: Path, cli_invoke: str) -> dict[str, Any]:
     """Project a bounded stale-target transaction without persisting it."""
     proposal_root = target_root / ".agentic-workspace/planning/integration-proposals"
     if not proposal_root.is_dir() or not any(proposal_root.glob("*.integration-proposal.json")):
@@ -3356,11 +3356,37 @@ def _compiled_target_authority_reconciliation(*, target_root: Path) -> dict[str,
     if transaction.get("transaction_class") != "target-authority-integration":
         return {"status": "absent"}
     if transaction.get("status") != "preview":
+        semantic_conflicts = [copy.deepcopy(item) for item in _as_list(transaction.get("semantic_conflicts")) if isinstance(item, dict)]
+        current_target_revision = str(transaction.get("current_target_authority_revision") or "")
+        refresh_command = ""
+        stale_conflict = next(
+            (item for item in semantic_conflicts if str(item.get("reason_code") or "") == "stale-integration-subject-revision"),
+            None,
+        )
+        if stale_conflict is not None:
+            proposal_id = str(stale_conflict.get("proposal_id") or "")
+            proposal_revision = str(stale_conflict.get("proposal_revision") or "")
+            subject_revision = str(stale_conflict.get("current_subject_revision") or "")
+            target_revision = str(stale_conflict.get("current_target_authority_revision") or current_target_revision)
+            if proposal_id and proposal_revision and subject_revision and target_revision:
+                refresh_command = _command_with_cli_invoke(
+                    command=(
+                        "agentic-workspace planning integration-propose "
+                        f"--proposal-id {proposal_id} --refresh-existing "
+                        f"--expect-proposal-revision {proposal_revision} "
+                        f"--expect-subject-revision {subject_revision} "
+                        f"--expect-planning-revision {target_revision} --target . --format json"
+                    ),
+                    cli_invoke=cli_invoke,
+                )
         return {
             "status": str(transaction.get("status") or "blocked"),
             "reason": str(transaction.get("reason") or "target-authority-reconciliation-blocked"),
             "affected_owner_refs": [str(item) for item in _as_list(transaction.get("affected_owner_refs"))],
             "target_prerequisite": str(transaction.get("target_prerequisite") or ""),
+            "semantic_conflicts": semantic_conflicts,
+            "current_target_authority_revision": current_target_revision,
+            "refresh_command": refresh_command,
         }
     proposal = _as_dict(transaction.get("proposal"))
     source = _as_dict(proposal.get("source"))
@@ -3766,7 +3792,10 @@ def _planning_safety_gate_payload(
         path_classification=path_classification,
     )
     reconciliation_proposal = _current_reconciliation_proposal(target_root=target_root, planning_revision=planning_revision)
-    reconciliation_transaction = _compiled_target_authority_reconciliation(target_root=target_root)
+    reconciliation_transaction = _compiled_target_authority_reconciliation(
+        target_root=target_root,
+        cli_invoke=config.cli_invoke,
+    )
     external_reconciliation = _active_owner_external_reconciliation(
         target_root=target_root,
         active_summary=active_summary,
@@ -3778,7 +3807,10 @@ def _planning_safety_gate_payload(
         "admitted_external_observation": external_reconciliation,
         "external_refresh_command": str(external_reconciliation.get("refresh_command") or ""),
         "reconciliation_preview_command": str(
-            reconciliation_transaction.get("preview_command") or external_reconciliation.get("reconcile_command") or ""
+            reconciliation_transaction.get("preview_command")
+            or reconciliation_transaction.get("refresh_command")
+            or external_reconciliation.get("reconcile_command")
+            or ""
         ),
         "reconciliation_transaction": reconciliation_transaction,
         **_structured_route_inputs(

@@ -153,6 +153,7 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'quality_concern': getattr(args, 'quality_concern', ''),
                 'decomposition_adjustment': getattr(args, 'decomposition_adjustment', ''),
                 'expect_planning_revision': getattr(args, 'expect_planning_revision', ''),
+                **{name: value for name, value in vars(args).items() if not name.startswith('_')},
                 'paths': getattr(args, 'paths', []),
         },
     )
@@ -287,6 +288,7 @@ def run_operation_callable(operation: dict[str, Any], values: Mapping[str, Any])
                 'quality_concern': values.get('quality_concern', ''),
                 'decomposition_adjustment': values.get('decomposition_adjustment', ''),
                 'expect_planning_revision': values.get('expect_planning_revision', ''),
+                **dict(values),
                 'paths': values.get('paths', []),
             },
         ).get('result')

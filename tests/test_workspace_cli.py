@@ -165,6 +165,44 @@ def test_planning_route_decision_surfaces_exact_target_authority_transaction() -
     assert decision["reconciliation_transaction"] == transaction
 
 
+def test_compiled_target_authority_reconciliation_surfaces_guarded_refresh_command(tmp_path: Path, monkeypatch) -> None:
+    from repo_planning_bootstrap import installer as planning_installer
+
+    proposal_root = tmp_path / ".agentic-workspace/planning/integration-proposals"
+    _write(proposal_root / "stale.integration-proposal.json", "{}\n")
+    transaction = {
+        "transaction_class": "target-authority-integration",
+        "status": "blocked",
+        "reason": "semantic-integration-conflict",
+        "current_target_authority_revision": "target-rev-3",
+        "semantic_conflicts": [
+            {
+                "proposal_id": "stale-proposal",
+                "owner_ref": ".agentic-workspace/planning/execplans/stale.plan.json",
+                "reason_code": "stale-integration-subject-revision",
+                "proposal_revision": "proposal-rev-3",
+                "expected_subject_revision": "old-subject-rev-3",
+                "current_subject_revision": "subject-rev-3",
+                "current_target_authority_revision": "target-rev-3",
+            }
+        ],
+    }
+    monkeypatch.setattr(planning_installer, "planning_reconcile", lambda **_kwargs: transaction)
+
+    compiled = workspace_runtime_planning._compiled_target_authority_reconciliation(
+        target_root=tmp_path,
+        cli_invoke="uv run aw-dev",
+    )
+
+    assert compiled["semantic_conflicts"] == transaction["semantic_conflicts"]
+    assert compiled["current_target_authority_revision"] == "target-rev-3"
+    assert compiled["refresh_command"] == (
+        "uv run aw-dev planning integration-propose --proposal-id stale-proposal --refresh-existing "
+        "--expect-proposal-revision proposal-rev-3 --expect-subject-revision subject-rev-3 "
+        "--expect-planning-revision target-rev-3 --target . --format json"
+    )
+
+
 def test_successful_completion_cost_discovers_manifest_indexed_custom_output_root(tmp_path: Path) -> None:
     subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True, check=True)
     _write(tmp_path / "README.md", "fixture\n")
@@ -6171,6 +6209,9 @@ def test_planning_front_door_preserves_integration_propose_contract(monkeypatch,
         "subject-revision",
         "--expect-target-revision",
         "target-revision",
+        "--refresh-existing",
+        "--expect-proposal-revision",
+        "proposal-revision",
         "--target",
         str(tmp_path),
         "--expect-planning-revision",
@@ -6196,11 +6237,13 @@ def test_planning_front_door_preserves_integration_propose_contract(monkeypatch,
         "--invariant",
         "--expect-subject-revision",
         "--expect-target-revision",
+        "--expect-proposal-revision",
         "--target",
         "--expect-planning-revision",
         "--format",
     ]:
         assert actual[actual.index(option) + 1] == expected[expected.index(option) + 1]
+    assert "--refresh-existing" in actual
     assert "--dry-run" in actual
     assert forwarded == [actual]
 
@@ -6245,6 +6288,8 @@ def test_planning_front_door_forwards_integration_apply_proposal(monkeypatch, tm
 
 
 def test_planning_front_door_matches_direct_integration_propose_semantics(tmp_path: Path) -> None:
+    from repo_planning_bootstrap import installer as planning_installer
+
     repo_root = Path(__file__).resolve().parents[1]
     workspace_target = tmp_path / "workspace-front-door"
     direct_target = tmp_path / "direct-planning"
@@ -6363,6 +6408,64 @@ def test_planning_front_door_matches_direct_integration_propose_semantics(tmp_pa
         "expected_subject_revision": "subject-revision",
         "expected_planning_revision": planning_revision,
     }
+
+    external_target = tmp_path / "workspace-refresh"
+    external_target.mkdir()
+    invoke(
+        "agentic-workspace",
+        [
+            "planning",
+            "integration-propose",
+            "--proposal-id",
+            "keep-open-2479",
+            "--external-ref",
+            "2479",
+            "--requested-transition",
+            "keep-open",
+            "--target",
+            str(external_target),
+            "--format",
+            "json",
+        ],
+    )
+    external_proposal_path = external_target / ".agentic-workspace/planning/integration-proposals/keep-open-2479.integration-proposal.json"
+    external_before = json.loads(external_proposal_path.read_text(encoding="utf-8"))
+    planning_installer.shape_issue_relation(issue="2479", lane="refresh", priority="p1", target=external_target)
+    current_subject_revision = planning_installer._integration_subject_revision(
+        target_root=external_target,
+        owner_ref="",
+        external_ref="2479",
+    )
+    current_target_revision = planning_installer.planning_revision(external_target)["target_authority_revision"]
+
+    refreshed = invoke(
+        "agentic-workspace",
+        [
+            "planning",
+            "integration-propose",
+            "--proposal-id",
+            "keep-open-2479",
+            "--refresh-existing",
+            "--expect-proposal-revision",
+            external_before["proposal_revision"],
+            "--expect-subject-revision",
+            current_subject_revision,
+            "--expect-planning-revision",
+            current_target_revision,
+            "--target",
+            str(external_target),
+            "--format",
+            "json",
+        ],
+    )
+
+    external_after = json.loads(external_proposal_path.read_text(encoding="utf-8"))
+    assert "operation_receipt" in refreshed, refreshed
+    assert refreshed["operation_receipt"]["outcome"] == "refreshed"
+    assert external_after["requested_transition"] == external_before["requested_transition"] == "keep-open"
+    assert external_after["external_ref"] == external_before["external_ref"] == "2479"
+    assert external_after["expected_subject_revision"] == current_subject_revision
+    assert external_after["expected_planning_revision"] == current_target_revision
 
 
 def test_planning_front_door_integration_archive_closeout_is_transactional_and_idempotent(tmp_path: Path, capsys) -> None:
