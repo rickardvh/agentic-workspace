@@ -8,10 +8,17 @@ import tomllib
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+GENERATOR_ROOT = Path(__file__).resolve().parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
+if str(GENERATOR_ROOT) not in sys.path:
+    sys.path.insert(0, str(GENERATOR_ROOT))
 
 from scripts.check.run_operation_conformance_tests import build_external_operation_conformance_receipts  # noqa: E402
+from workspace_command_generation import (  # noqa: E402
+    load_workspace_command_package_ir,
+    render_workspace_command_package_outputs,
+)
 
 IR_PATH = REPO_ROOT / "src/agentic_workspace/contracts/command_package_ir.json"
 OPERATION_CONFORMANCE_IR_PATH = REPO_ROOT / "src/agentic_workspace/contracts/operation_conformance_test_ir.json"
@@ -99,17 +106,7 @@ GUIDANCE_OPERATION_IDS = (
     "agent-guidance.suppress",
     "agent-guidance.weaken",
 )
-OPERATION_RESOURCE_OUTPUTS = {
-    REPO_ROOT / f"generated/workspace/python/operations/{operation_id}.json": REPO_ROOT
-    / f"src/agentic_workspace/contracts/operations/{operation_id}.json"
-    for operation_id in (
-        *ASSIGNMENT_OPERATION_IDS,
-        *ASSURANCE_OPERATION_IDS,
-        *CORRECTION_OPERATION_IDS,
-        *EVALUATION_OPERATION_IDS,
-        *GUIDANCE_OPERATION_IDS,
-    )
-}
+PYTHON_OPERATION_RESOURCE_ROOT = REPO_ROOT / "generated/workspace/python/operations"
 SCHEMA_RESOURCE_OUTPUTS = {
     REPO_ROOT / "generated/workspace/python/_contracts/scoped_instruction_operation_input.schema.json": REPO_ROOT
     / "src/agentic_workspace/contracts/schemas/scoped_instruction_operation_input.schema.json",
@@ -230,6 +227,18 @@ def _operation_resource_path(target_id: str, target: dict[str, object], operatio
     return Path(str(target.get("generated_root", ""))) / resource_root / Path(operation_path).name
 
 
+def expected_canonical_operation_resources() -> dict[Path, str]:
+    """Read shared operation resources from the command-package rendering authority."""
+
+    manifest = load_workspace_command_package_ir(repo_root=REPO_ROOT)
+    resources: dict[Path, str] = {}
+    for output in render_workspace_command_package_outputs(manifest, repo_root=REPO_ROOT):
+        path = output.path if output.path.is_absolute() else REPO_ROOT / output.path
+        if path.parent == PYTHON_OPERATION_RESOURCE_ROOT:
+            resources[path] = output.content
+    return resources
+
+
 def _artifact_revision(repo_root: Path, relative_path: str) -> str:
     path = repo_root / relative_path
     if not path.is_file():
@@ -311,8 +320,7 @@ def build_profile(ir: dict[str, object], *, repo_root: Path | None = None) -> di
                 operation_conformance = [
                     conformance_id
                     for conformance_id in conformance
-                    if conformance_id in conformance_by_id
-                    and conformance_by_id[conformance_id].get("operation_id") == ref["id"]
+                    if conformance_id in conformance_by_id and conformance_by_id[conformance_id].get("operation_id") == ref["id"]
                 ]
                 if operation_conformance:
                     conformance = operation_conformance
@@ -882,16 +890,20 @@ def main() -> int:
     profile = build_profile(json.loads(IR_PATH.read_text(encoding="utf-8")), repo_root=REPO_ROOT)
     expected = json.dumps(profile, indent=2) + "\n"
     bundle = render_bundle(profile)
+    operation_resources = expected_canonical_operation_resources()
     rendered = {
         **{path: expected for path in OUTPUTS},
         **{path: bundle for path in BUNDLE_OUTPUTS},
-        **{output: source.read_text(encoding="utf-8") for output, source in OPERATION_RESOURCE_OUTPUTS.items()},
         **{output: source.read_text(encoding="utf-8") for output, source in SCHEMA_RESOURCE_OUTPUTS.items()},
         PYTHON_CLIENT: render_python_client(),
         TYPESCRIPT_CLIENT: render_typescript_client(),
         PYTHON_TYPED_OPERATIONS: render_python_typed_operations(profile),
     }
-    stale = [path for path, content in rendered.items() if not path.is_file() or path.read_text(encoding="utf-8") != content]
+    stale = [
+        path
+        for path, content in {**rendered, **operation_resources}.items()
+        if not path.is_file() or path.read_text(encoding="utf-8") != content
+    ]
     if args.check:
         for path in stale:
             print(f"{path.relative_to(REPO_ROOT).as_posix()} is stale")

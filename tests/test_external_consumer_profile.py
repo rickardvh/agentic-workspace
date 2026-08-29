@@ -39,6 +39,20 @@ def test_profile_is_fresh_and_fail_closed() -> None:
     assert all(entry["external_consumption"]["status"] in {"supported", "runtime-backed", "internal"} for entry in profile["operations"])
 
 
+def test_operation_resources_share_the_command_package_rendering_authority() -> None:
+    module = _module()
+
+    resources = module.expected_canonical_operation_resources()
+
+    assert resources
+    assert all(path.parent == module.PYTHON_OPERATION_RESOURCE_ROOT for path in resources)
+    assert all(path.read_text(encoding="utf-8") == content for path, content in resources.items())
+    assert {
+        module.PYTHON_OPERATION_RESOURCE_ROOT / "assignment.dispatch.json",
+        module.PYTHON_OPERATION_RESOURCE_ROOT / "correction-event.submit.json",
+    } <= resources.keys()
+
+
 def test_incomplete_operation_is_not_advertised_as_supported() -> None:
     module = _module()
     ir = {

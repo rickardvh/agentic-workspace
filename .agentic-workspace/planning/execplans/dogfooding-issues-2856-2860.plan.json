@@ -3,9 +3,9 @@
   "id": "dogfooding-issues-2856-2860",
   "title": "Resolve next refined dogfooding batch 2856-2860",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "closeout",
-  "revision": 3,
+  "lifecycle": "archived",
+  "phase": "complete",
+  "revision": 4,
   "intent": {
     "outcome": "Close the next refined dogfooding batch by making Planning scaffolds supportably implementation-ready, canonicalizing claim identities before permission composition, assigning focused proof ownership to PR comment-delta tooling, and making integration proposal revision guards mechanically self-identifying.",
     "non_goals": [
@@ -58,7 +58,7 @@
       ]
     },
     "integration": {
-      "status": "feature-complete-integration-pending",
+      "status": "integrated",
       "proposal_id": "dogfooding-issues-2856-2860-archive",
       "proposal_ref": ".agentic-workspace/planning/integration-proposals/dogfooding-issues-2856-2860-archive.integration-proposal.json",
       "requested_transition": "archive-owner",
@@ -68,7 +68,10 @@
         "local://generated-command-conformance",
         "github://pull/2863/checks"
       ],
-      "authority": "feature-head declaration; target integration remains terminal authority"
+      "authority": "feature-head declaration; target integration remains terminal authority",
+      "transition": "archive-owner",
+      "applied_at": "2026-08-29T21:36:06.806107Z",
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/dogfooding-issues-2856-2860-archive.integration-receipt.json"
     }
   },
   "references": [
@@ -204,7 +207,9 @@
   "proof_report": {
     "validation proof": "local://make-check-planning-nosync/2026-08-29, local://planning-branch-safe/46-passed, local://generated-command-conformance, github://pull/2863/checks",
     "proof achieved now": "yes; integration-propose recorded accepted feature-head proof.",
-    "evidence for \"proof achieved\" state": "local://make-check-planning-nosync/2026-08-29, local://planning-branch-safe/46-passed, local://generated-command-conformance, github://pull/2863/checks"
+    "evidence for \"proof achieved\" state": "local://make-check-planning-nosync/2026-08-29, local://planning-branch-safe/46-passed, local://generated-command-conformance, github://pull/2863/checks",
+    "integration proof": "local://make-check-planning-nosync/2026-08-29, local://planning-branch-safe/46-passed, local://generated-command-conformance, github://pull/2863/checks",
+    "integration applied at": "2026-08-29T21:36:06.806107Z"
   },
   "execution_run": {
     "run status": "completed",
@@ -234,5 +239,10 @@
     "why this decision is honest": "Feature-head proof is accepted; terminal lifecycle truth awaits target integration.",
     "evidence carried forward": "local://make-check-planning-nosync/2026-08-29, local://planning-branch-safe/46-passed, local://generated-command-conformance, github://pull/2863/checks",
     "reopen trigger": "New contradictory evidence or rejected target integration."
+  },
+  "active_milestone": {
+    "status": "archived",
+    "ready": "ready",
+    "blocked": "none"
   }
 }

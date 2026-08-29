@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Make packaged external operation resources consume the canonical command-package renderer so all supported generators share one deterministic fixed point."
+issues = [2197]
