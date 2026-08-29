@@ -628,7 +628,19 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
     del arguments
     operation_id = str(values.get("operation_id") or "")
     transition = str(values.get("assignment_command") or operation_id.rsplit(".", 1)[-1])
-    supported = {"export", "import", "admit", "reject", "repair", "reassign", "integrate", "close", "cleanup", "override"}
+    supported = {
+        "dispatch",
+        "export",
+        "import",
+        "admit",
+        "reject",
+        "repair",
+        "reassign",
+        "integrate",
+        "close",
+        "cleanup",
+        "override",
+    }
     if transition not in supported:
         raise PrimitiveExecutionError(f"unsupported assignment lifecycle transition: {transition!r}")
     target_root = Path(str(values.get("target_root") or values.get("target") or context.cwd)).resolve()
@@ -637,7 +649,7 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
 
     assignment_id = _optional_text(values.get("assignment_id"))
     assignment_revision = _optional_text(values.get("assignment_revision"))
-    if transition == "export" and not assignment_id:
+    if transition in {"dispatch", "export"} and not assignment_id:
         from agentic_workspace import config as config_lib
         from agentic_workspace.workspace_runtime_core import _execution_posture_payload
 
@@ -716,7 +728,7 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             else None,
         }
 
-    if transition == "export":
+    if transition in {"dispatch", "export"}:
         assignment_id = require("assignment_id")
         current_authorities = _assignment_current_authorities_from_store(
             target_root=target_root,
@@ -792,6 +804,14 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
         }
         artifact_paths.extend([packet_path, prompt_path, manifest_path])
         transport = _optional_text(values.get("transport")) or "manual"
+        if transition == "dispatch" and transport == "manual":
+            failures.append(
+                {
+                    "reason": "automatic-transport-required",
+                    "field": "transport",
+                    "recovery": "Use assignment export for manual handoff or retry dispatch with an authorized automatic transport.",
+                }
+            )
         state.update(
             {
                 "assignment": packet,
@@ -824,6 +844,79 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
                     }
                 )
             else:
+                required_return_fields = (
+                    "assignment_revision",
+                    "run_id",
+                    "target",
+                    "changed_paths",
+                    "summary",
+                    "stop_conditions_hit",
+                ) + (("patch",) if identity.get("role") == "implementer" else ())
+                missing_return_fields = [field for field in required_return_fields if field not in returned]
+                if missing_return_fields:
+                    failures.append(
+                        {
+                            "reason": "malformed-return",
+                            "field": "returned_work." + ",".join(missing_return_fields),
+                            "recovery": "Repair the configured target adapter so it returns every required contract field.",
+                        }
+                    )
+                returned_changed_paths = returned.get("changed_paths")
+                patch_text = str(returned.get("patch") or "")
+                if identity.get("role") == "implementer" and bool(returned_changed_paths) and not patch_text.strip():
+                    failures.append(
+                        {
+                            "reason": "malformed-return",
+                            "field": "returned_work.patch",
+                            "recovery": "Repair the configured target adapter so implementer returns include a non-empty unified diff.",
+                        }
+                    )
+                elif identity.get("role") == "implementer" and patch_text.strip():
+                    if not _assignment_patch_paths(patch_text):
+                        failures.append(
+                            {
+                                "reason": "malformed-return",
+                                "field": "returned_work.patch",
+                                "recovery": "Repair the configured target adapter so the patch is a complete git-compatible unified diff.",
+                            }
+                        )
+                    else:
+                        patch_check = subprocess.run(
+                            ["git", "apply", "--check", "-"],
+                            cwd=target_root,
+                            input=patch_text,
+                            text=True,
+                            capture_output=True,
+                            check=False,
+                        )
+                        if patch_check.returncode != 0:
+                            failures.append(
+                                {
+                                    "reason": "malformed-return",
+                                    "field": "returned_work.patch",
+                                    "recovery": "Repair the configured target adapter so the patch applies cleanly to the current checkout.",
+                                    "detail": _optional_text(patch_check.stderr),
+                                }
+                            )
+                if returned.get("assignment_revision") != assignment_revision:
+                    failures.append(
+                        {
+                            "reason": "return-revision-mismatch",
+                            "field": "returned_work.assignment_revision",
+                            "recovery": "Return work for the exported assignment revision only.",
+                        }
+                    )
+                if returned.get("run_id") != run_id or returned.get("target") != target_name:
+                    failures.append(
+                        {
+                            "reason": "return-identity-mismatch",
+                            "field": "returned_work.run_id|target",
+                            "recovery": "Return work for the exported run and selected target only.",
+                        }
+                    )
+                if failures:
+                    returned = {}
+            if returned:
                 return_id = _assignment_digest(returned).removeprefix("sha256:")[:16]
                 return_path = artifact(f"received/awaiting-admission/{return_id}.json")
                 artifact_paths.append(return_path)
@@ -872,7 +965,11 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
                     "recovery": "Return every required field from the exported return contract.",
                 }
             )
-        if assignment_identity.get("role") == "implementer" and not str(returned.get("patch") or "").strip():
+        if (
+            assignment_identity.get("role") == "implementer"
+            and bool(returned.get("changed_paths"))
+            and not str(returned.get("patch") or "").strip()
+        ):
             failures.append(
                 {
                     "reason": "malformed-return",
@@ -1775,6 +1872,7 @@ def _assignment_export_prompt(packet: Any) -> str:
             "Use only the bounded scope and return contract in the JSON below.",
             "Return a structured result for `agentic-workspace assignment import`; do not claim AW proof or integration.",
             "Do not edit the host checkout. For repo-write assignments, return the proposed unified diff in a `patch` field.",
+            "The patch must be a complete git-compatible unified diff beginning with `diff --git`; generate or verify it with diff tooling so hunk counts are exact, and never use apply_patch markers, ellipses, placeholder `@@` markers, or omitted context.",
             "",
             "```json",
             json.dumps(packet, indent=2, sort_keys=True, default=str),
@@ -1784,7 +1882,7 @@ def _assignment_export_prompt(packet: Any) -> str:
 
 
 def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, target_root: Path, transport: str) -> dict[str, Any]:
-    """Execute a sealed packet through an allow-listed provider adapter.
+    """Execute a sealed packet through its configured adapter command.
 
     Adapters own transport only.  The packet remains semantic authority and
     the returned JSON remains untrusted until assignment admission.
@@ -1792,7 +1890,10 @@ def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, targe
 
     identity = _assignment_mapping(packet.get("assignment_identity"))
     adapter = _assignment_mapping(identity.get("dispatch_adapter"))
-    provider = _optional_text(adapter.get("provider"))
+    adapter_kind = _optional_text(adapter.get("kind"))
+    command_template = _assignment_list(adapter.get("command"))
+    output_mode = _optional_text(adapter.get("output_mode")) or "stdout"
+    timeout_seconds = adapter.get("timeout_seconds", 1800)
     methods = set(_assignment_list(adapter.get("execution_methods")))
     if transport not in methods:
         return {
@@ -1800,26 +1901,50 @@ def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, targe
             "status": "blocked",
             "reason": "transport-not-admitted-by-target",
             "transport": transport,
-            "provider": provider or None,
+            "adapter_kind": adapter_kind or None,
         }
-    if provider != "codex" or transport not in {"internal", "cli"}:
+    if adapter_kind not in {"process", "host-native"} or not command_template:
         return {
             "kind": "agentic-workspace/assignment-dispatch-receipt/v1",
             "status": "blocked",
-            "reason": "unsupported-automatic-target-adapter",
+            "reason": "configured-dispatch-adapter-unavailable",
             "transport": transport,
-            "provider": provider or None,
+            "adapter_kind": adapter_kind or None,
+        }
+    if output_mode not in {"stdout", "json-file"}:
+        return {
+            "kind": "agentic-workspace/assignment-dispatch-receipt/v1",
+            "status": "blocked",
+            "reason": "configured-dispatch-output-mode-unsupported",
+            "transport": transport,
+            "adapter_kind": adapter_kind,
+        }
+    if not isinstance(timeout_seconds, int) or isinstance(timeout_seconds, bool) or timeout_seconds <= 0:
+        return {
+            "kind": "agentic-workspace/assignment-dispatch-receipt/v1",
+            "status": "blocked",
+            "reason": "configured-dispatch-timeout-invalid",
+            "transport": transport,
+            "adapter_kind": adapter_kind,
         }
     role = _optional_text(identity.get("role"))
-    sandbox = "read-only"
-    command = ["codex", "exec", "--ephemeral", "--ignore-rules", "--sandbox", sandbox, "--cd", str(target_root)]
     model = _optional_text(adapter.get("model"))
-    if model:
-        command.extend(["--model", model])
+    completed: subprocess.CompletedProcess[str]
+    output = ""
     try:
         with tempfile.TemporaryDirectory(prefix="aw-assignment-dispatch-") as temporary_directory:
             last_message_path = Path(temporary_directory) / "last-message.json"
             output_schema_path = Path(temporary_directory) / "delegated-return.schema.json"
+            required_fields = [
+                "assignment_revision",
+                "run_id",
+                "target",
+                "changed_paths",
+                "summary",
+                "stop_conditions_hit",
+            ]
+            if role == "implementer":
+                required_fields.append("patch")
             output_schema_path.write_text(
                 json.dumps(
                     {
@@ -1833,28 +1958,25 @@ def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, targe
                             "stop_conditions_hit": {"type": "array", "items": {"type": "string"}},
                             "patch": {"type": "string"},
                         },
-                        "required": [
-                            "assignment_revision",
-                            "run_id",
-                            "target",
-                            "changed_paths",
-                            "summary",
-                            "stop_conditions_hit",
-                            "patch",
-                        ],
+                        "required": required_fields,
                         "additionalProperties": False,
                     }
                 ),
                 encoding="utf-8",
             )
-            dispatch_command = [
-                *command,
-                "--output-schema",
-                str(output_schema_path),
-                "--output-last-message",
-                str(last_message_path),
-                "-",
-            ]
+            placeholders = {
+                "{target_root}": str(target_root),
+                "{output_schema}": str(output_schema_path),
+                "{output_file}": str(last_message_path),
+                "{model}": model,
+            }
+            dispatch_command = []
+            for template_part in command_template:
+                rendered_part = template_part
+                for placeholder, value in placeholders.items():
+                    rendered_part = rendered_part.replace(placeholder, value)
+                if rendered_part:
+                    dispatch_command.append(rendered_part)
             completed = subprocess.run(
                 dispatch_command,
                 input=prompt,
@@ -1864,11 +1986,11 @@ def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, targe
                 errors="replace",
                 capture_output=True,
                 check=False,
-                timeout=1800,
+                timeout=timeout_seconds,
             )
             output = (
                 last_message_path.read_text(encoding="utf-8", errors="replace").strip()
-                if last_message_path.is_file()
+                if output_mode == "json-file" and last_message_path.is_file()
                 else completed.stdout.strip()
             )
     except (OSError, subprocess.SubprocessError) as exc:
@@ -1877,7 +1999,7 @@ def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, targe
             "status": "blocked",
             "reason": "target-adapter-execution-failed",
             "transport": transport,
-            "provider": provider,
+            "adapter_kind": adapter_kind,
             "detail": str(exc),
         }
     if output.startswith("```json") and output.endswith("```"):
@@ -1897,7 +2019,15 @@ def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, targe
         "status": "returned" if returned else "blocked",
         "reason": "worker-returned-untrusted-evidence" if returned else "target-adapter-return-invalid",
         "transport": transport,
-        "provider": provider,
+        "adapter_kind": adapter_kind,
+        "adapter_revision": _assignment_digest(
+            {
+                "kind": adapter_kind,
+                "command": command_template,
+                "output_mode": output_mode,
+                "timeout_seconds": timeout_seconds,
+            }
+        ),
         "model": model or None,
         "exit_code": completed.returncode,
         "returned_work": returned,

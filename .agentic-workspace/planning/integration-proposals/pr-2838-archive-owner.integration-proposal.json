@@ -1,8 +1,8 @@
 {
   "kind": "planning-integration-proposal/v1",
   "id": "pr-2838-archive-owner",
-  "status": "pending",
-  "phase": "integration-pending",
+  "status": "integrated",
+  "phase": "integrated-lifecycle-truth",
   "requested_transition": "archive-owner",
   "owner": {
     "id": "issue-2805-codex-session-identity-bridge",
@@ -28,7 +28,7 @@
   "expected_subject_revision": "9460f50ec0aedf82",
   "expected_planning_revision": "49b921d5f552c114",
   "created_at": "2026-08-29T10:00:56.543840Z",
-  "updated_at": "2026-08-29T10:00:56.543840Z",
+  "updated_at": "2026-08-29T10:11:07.309854Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -44,5 +44,7 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "fd2c0e5af3a26c74"
+  "proposal_revision": "088af6bb906a50e8",
+  "integrated_at": "2026-08-29T10:11:07.309854Z",
+  "integration_receipt_ref": ".agentic-workspace/planning/integration-receipts/pr-2838-archive-owner.integration-receipt.json"
 }

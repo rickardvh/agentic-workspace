@@ -70,6 +70,8 @@ from agentic_workspace.config import (
     SUPPORTED_CAPABILITY_LOCATIONS,
     SUPPORTED_CLARIFICATION_CONTROL_MODES,
     SUPPORTED_DELEGATION_CONTROL_MODES,
+    SUPPORTED_DELEGATION_DISPATCH_ADAPTER_KINDS,
+    SUPPORTED_DELEGATION_DISPATCH_OUTPUT_MODES,
     SUPPORTED_DELEGATION_OUTCOMES,
     SUPPORTED_DELEGATION_TARGET_CONTEXT_CAPACITIES,
     SUPPORTED_DELEGATION_TARGET_COST_CLASSES,
@@ -42938,8 +42940,8 @@ def _effective_orchestration_posture_payload(
         {},
     )
     execution_methods = [str(item) for item in _list_payload(matching_profile.get("execution_methods")) if str(item)]
-    provider = str(matching_profile.get("provider") or "")
-    automatic_methods = [item for item in execution_methods if provider == "codex" and item in {"internal", "cli"}]
+    adapter_configured = bool(_list_payload(matching_profile.get("dispatch_command")))
+    automatic_methods = [item for item in execution_methods if adapter_configured and item in {"internal", "cli", "api"}]
     current_target_ready = target_status == "known-profile"
     binding_requested = policy == "required-best-fit"
     orchestrator_role = role == "orchestrator"
@@ -43481,6 +43483,17 @@ def _delegation_next_action_decision(
                 or "required-best-fit selected an escalation route that must be prepared before implementation"
             )
         ]
+    elif assignment_gate.get("status") == "dispatch-required":
+        decision = "assignment-dispatch-required"
+        required_next_action = "dispatch-assigned-target"
+        target_name = str(assignment_gate.get("selected_target") or "") or target_name
+        reasons = [
+            str(
+                assignment_gate.get("claim_boundary")
+                or "required-best-fit selected a configured automatic transport that must execute before local implementation"
+            )
+        ]
+        handoff_command = None
     decomposition_only_delegation = decision == "suggest-delegation" and decomposition_status == "available-without-active-planning"
     if decomposition_only_delegation:
         required_next_action = "select-or-promote-bounded-lane"
@@ -43497,8 +43510,9 @@ def _delegation_next_action_decision(
         "manual-handoff",
         "delegate-bounded-slice",
         "assignment-handoff-required",
+        "assignment-dispatch-required",
     }:
-        if not decomposition_only_delegation:
+        if not decomposition_only_delegation and decision != "assignment-dispatch-required":
             handoff_command = _command_with_cli_invoke(
                 command="agentic-workspace planning handoff --target . --format json", cli_invoke=config.cli_invoke
             )
@@ -43557,19 +43571,20 @@ def _delegation_next_action_decision(
         "manual-handoff",
         "delegate-bounded-slice",
         "assignment-handoff-required",
+        "assignment-dispatch-required",
     }:
         delegation_next_step = {
             "kind": "agentic-workspace/delegation-next-step/v1",
             "status": "blocked-transport-disabled"
             if transport_blocked_action
             else "executable"
-            if required_next_action == "execute-when-safe"
+            if required_next_action in {"execute-when-safe", "dispatch-assigned-target"}
             else "prepare-or-report",
             "action": required_next_action,
             "target": target_name,
             "command": handoff_command,
             "execution_methods": target_execution_methods,
-            "must_report_if_not_run": required_next_action in {"execute-when-safe", "prepare-manual-handoff"},
+            "must_report_if_not_run": required_next_action in {"execute-when-safe", "dispatch-assigned-target", "prepare-manual-handoff"},
             "scope_rule": "Delegate only a bounded slice with unchanged proof expectations; otherwise stay local and state why.",
             "manual_external_relay": {
                 key: manual_external_relay.get(key)
@@ -43593,6 +43608,7 @@ def _delegation_next_action_decision(
                     "assignment_policy",
                     "selected_target",
                     "claim_boundary",
+                    "executor_disposition",
                 )
             }
         if transport_blocked_action:
@@ -43617,6 +43633,9 @@ def _delegation_next_action_decision(
     elif required_next_action == "prepare-assigned-handoff":
         must = "Prepare the selected assignment handoff before implementation continues."
         must_not = "Do not implement locally while required-best-fit has selected an escalation or delegated target."
+    elif required_next_action == "dispatch-assigned-target":
+        must = "Execute the revision-bound assignment.dispatch operation through the configured automatic transport."
+        must_not = "Do not reinterpret the binding assignment as optional delegation or silently implement the slice locally."
     elif required_next_action == "resolve-current-target-profile":
         must = "Resolve delegation.current_target to a configured profile before implementation continues."
         must_not = "Do not claim required-best-fit assignment was enforced with an unknown current target."
@@ -43727,6 +43746,7 @@ def _delegation_next_action_decision(
             if required_next_action in {"resolve-current-target-profile", "select-configured-current-target"}
             else "",
             "prepare selected assignment handoff before implementation" if required_next_action == "prepare-assigned-handoff" else "",
+            "execute selected assignment dispatch before implementation" if required_next_action == "dispatch-assigned-target" else "",
         ],
         observed_by_aw=[
             f"delegation_mode={mode}",
@@ -44027,6 +44047,7 @@ def _assignment_implementation_gate_payload(
     assignment_policy: dict[str, Any],
     assignment_decision: dict[str, Any],
     selected_target: dict[str, Any] | None,
+    delegation_control: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     policy_value = str(_as_dict(assignment_policy.get("assignment_policy")).get("value") or "local-preferred")
     current_target = str(_as_dict(assignment_policy.get("current_target")).get("value") or "")
@@ -44047,6 +44068,19 @@ def _assignment_implementation_gate_payload(
         and (current_target in selected_profile_refs or (selected_decision_target == current_target and not selected_profile))
     )
     selected_route_target = selected_profile or str(assignment_decision.get("selected_target") or "") or current_target
+    execution_methods = [str(method) for method in _list_payload((selected_target or {}).get("execution_methods"))]
+    automatic_methods = [method for method in execution_methods if method != "manual"]
+    configured_dispatch_command = [str(part) for part in _list_payload((selected_target or {}).get("dispatch_command"))]
+    automatic_transport_authorized = bool(
+        automatic_methods and configured_dispatch_command and _as_dict(delegation_control).get("execution_permitted") is True
+    )
+    manual_transport = _manual_transport_admission_payload(
+        assignment_policy=assignment_policy,
+        target_execution_methods=execution_methods,
+        handoff_required=True,
+    )
+    executor_disposition = "retained-local"
+    transport = None
     if decision == "blocked" or assignment_policy.get("status") == "blocked-unknown-current-target":
         status = "blocked"
         implementation_allowed = False
@@ -44062,26 +44096,51 @@ def _assignment_implementation_gate_payload(
         implementation_allowed = True
         required_next_action = "continue-with-selected-target"
         enforcement = "selected-target-boundary"
-    elif decision in {"assign-or-escalate", "assign-best-fit", "manual-handoff"}:
-        status = "handoff-required"
+    elif decision in {"assign-or-escalate", "assign-best-fit"} and automatic_transport_authorized:
+        status = "dispatch-required"
         implementation_allowed = False
-        required_next_action = "prepare-assigned-handoff"
-        enforcement = "must-route-before-implementation"
+        required_next_action = "dispatch-assigned-target"
+        enforcement = "must-dispatch-before-implementation"
+        executor_disposition = "executable-nonlocal-dispatch"
+        transport = automatic_methods[0]
+    elif decision in {"assign-or-escalate", "assign-best-fit", "manual-handoff"}:
+        if manual_transport.get("export_allowed") is True:
+            status = "handoff-required"
+            implementation_allowed = False
+            required_next_action = "prepare-assigned-handoff"
+            enforcement = "must-route-before-implementation"
+            executor_disposition = "admitted-manual-handoff"
+            transport = "manual"
+        else:
+            status = "blocked-transport-unavailable"
+            implementation_allowed = False
+            required_next_action = (
+                "configure-assignment-transport-adapter"
+                if automatic_methods and not configured_dispatch_command
+                else "authorize-configured-automatic-transport"
+                if automatic_methods
+                else "configure-assignment-transport-or-human-override"
+            )
+            enforcement = "hard-block"
+            executor_disposition = "blocked-recovery"
     elif decision == "no-safe-route":
         status = "blocked-no-safe-route"
         implementation_allowed = False
         required_next_action = "resolve-assignment-route"
         enforcement = "hard-block"
+        executor_disposition = "blocked-recovery"
     elif decision == "shape-before-assignment":
         status = "blocked-shaping-required"
         implementation_allowed = False
         required_next_action = "shape-current-task-before-assignment"
         enforcement = "must-shape-before-implementation"
+        executor_disposition = "blocked-recovery"
     elif decision in {"tie", "policy-conflict"}:
         status = "blocked-human-decision"
         implementation_allowed = False
         required_next_action = "resolve-assignment-decision"
         enforcement = "must-resolve-before-implementation"
+        executor_disposition = "blocked-recovery"
     elif decision == "assign-current-target":
         status = "assigned-current-target"
         implementation_allowed = True
@@ -44111,6 +44170,16 @@ def _assignment_implementation_gate_payload(
         "current_target_status": assignment_policy.get("current_target_status"),
         "enforceable": binding.get("enforceable"),
         "enforcement": enforcement,
+        "executor_disposition": {
+            "kind": "agentic-workspace/assignment-executor-disposition/v1",
+            "status": executor_disposition,
+            "selected_target": selected_route_target or None,
+            "transport": transport,
+            "automatic_methods": automatic_methods,
+            "adapter_configured": bool(configured_dispatch_command),
+            "decision_revision": assignment_decision.get("assignment_decision_revision"),
+            "rule": "One binding assignment resolves retained-local, executable dispatch, admitted manual handoff, or exact blocked recovery before implementation.",
+        },
         "claim_boundary": assignment_decision.get("claim_boundary") or binding.get("claim_boundary"),
         "rule": "required-best-fit is an implementation gate: unresolved or mismatched selected assignments block local implementation until routed or explicitly resolved.",
     }
@@ -44123,7 +44192,10 @@ def _delegated_run_lifecycle_payload(
     delegation_decision: dict[str, Any],
 ) -> dict[str, Any]:
     next_step = _as_dict(delegation_decision.get("delegation_next_step"))
-    handoff_required = assignment_gate.get("implementation_allowed") is False or delegation_decision.get("handoff_command")
+    dispatch_required = assignment_gate.get("status") == "dispatch-required"
+    handoff_required = (
+        assignment_gate.get("implementation_allowed") is False or delegation_decision.get("handoff_command")
+    ) and not dispatch_required
     manual_transport = _manual_transport_admission_payload(
         assignment_policy=assignment_policy,
         target_execution_methods=[str(method) for method in next_step.get("execution_methods", [])]
@@ -44138,7 +44210,7 @@ def _delegated_run_lifecycle_payload(
         execution_state = "blocked"
     elif handoff_required and not manual_export_allowed:
         execution_state = "blocked"
-    elif delegation_decision.get("required_next_action") == "execute-when-safe":
+    elif dispatch_required or delegation_decision.get("required_next_action") == "execute-when-safe":
         execution_state = "ready"
     elif handoff_required:
         execution_state = "waiting-for-handoff"
@@ -44383,7 +44455,13 @@ def _assignment_primary_action_payload(
             mutation_boundary={"writes_repo_state": False, "implementation_allowed": False},
         )
         return {**base, "status": "shaping-required", "action": "shape-current-task-before-assignment", "operation_invocation": invocation}
-    if gate_status in {"blocked-human-decision", "blocked", "blocked-target-mismatch", "blocked-no-safe-route"}:
+    if gate_status in {
+        "blocked-human-decision",
+        "blocked",
+        "blocked-target-mismatch",
+        "blocked-no-safe-route",
+        "blocked-transport-unavailable",
+    }:
         action = "resolve-assignment-decision" if gate_status == "blocked-human-decision" else "resolve-assignment-route"
         return {
             **base,
@@ -44396,7 +44474,7 @@ def _assignment_primary_action_payload(
                 "repair": assignment_gate.get("required_next_action"),
             },
         }
-    if gate_status != "handoff-required" or target_root is None:
+    if gate_status not in {"dispatch-required", "handoff-required"} or target_root is None:
         return base
 
     assignment = _current_assignment_lifecycle_record(target_root=target_root)
@@ -44407,10 +44485,11 @@ def _assignment_primary_action_payload(
     attempt = _as_dict(assignment.get("current_attempt"))
     run_id = str(attempt.get("run_id") or "")
     assignment_decision_ref = str(_as_dict(assignment.get("assignment_gate")).get("assignment_decision_revision") or "")
-    methods = [str(method) for method in _list_payload((selected_target or {}).get("execution_methods")) if str(method)]
-    provider = str((selected_target or {}).get("provider") or "")
-    automatic = [method for method in methods if provider == "codex" and method in {"internal", "cli"}]
-    transport = automatic[0] if automatic and delegation_control.get("execution_permitted") is True else "manual"
+    disposition = _as_dict(assignment_gate.get("executor_disposition"))
+    transport = str(disposition.get("transport") or "manual")
+    dispatch = gate_status == "dispatch-required"
+    operation_id = "assignment.dispatch" if dispatch else "assignment.export"
+    operation_name = "dispatch" if dispatch else "export"
     assignment_current = (
         str(assignment.get("status") or "") == "current"
         and bool(assignment_id and assignment_revision and run_id)
@@ -44421,7 +44500,7 @@ def _assignment_primary_action_payload(
         prepare_paths = list(changed_paths or [])
         prepare_command = _command_with_cli_invoke(
             command=(
-                "agentic-workspace assignment export --target . "
+                f"agentic-workspace assignment {operation_name} --target . "
                 f"--task {_shell_quote(task_text)} "
                 + " ".join(f"--changed {_shell_quote(path)}" for path in prepare_paths)
                 + f" --transport {_shell_quote(transport)} --format json"
@@ -44429,7 +44508,7 @@ def _assignment_primary_action_payload(
             cli_invoke=cli_invoke,
         )
         invocation = operation_invocation(
-            operation_id="assignment.export",
+            operation_id=operation_id,
             arguments={
                 "target": ".",
                 "task": task_text,
@@ -44438,7 +44517,7 @@ def _assignment_primary_action_payload(
                 "format": "json",
             },
             effect_class="planning-state-mutation",
-            expected_transition="assignment-selected",
+            expected_transition="awaiting-admission" if dispatch else "assignment-selected",
             command_rendering=prepare_command,
             owner_context_revision={"assignment_decision_revision": decision_revision},
             mutation_boundary={"writes_repo_state": True, "implementation_allowed": False},
@@ -44550,7 +44629,7 @@ def _assignment_primary_action_payload(
 
     command = _command_with_cli_invoke(
         command=(
-            "agentic-workspace assignment export --target . "
+            f"agentic-workspace assignment {operation_name} --target . "
             f"--assignment-id {_shell_quote(assignment_id)} --assignment-revision {_shell_quote(assignment_revision)} "
             f"--run-id {_shell_quote(run_id)} --target-name {_shell_quote(assignment_target)} "
             f"--transport {_shell_quote(transport)} --format json"
@@ -44558,7 +44637,7 @@ def _assignment_primary_action_payload(
         cli_invoke=cli_invoke,
     )
     invocation = operation_invocation(
-        operation_id="assignment.export",
+        operation_id=operation_id,
         arguments={
             "target": ".",
             "assignment_id": assignment_id,
@@ -44569,7 +44648,7 @@ def _assignment_primary_action_payload(
             "format": "json",
         },
         effect_class="assignment-lifecycle-mutation",
-        expected_transition="handoff-prepared",
+        expected_transition="awaiting-admission" if dispatch else "handoff-prepared",
         command_rendering=command,
         preconditions={"assignment_status": "current", "assignment_decision_revision": decision_revision},
         owner_context_revision={"assignment_id": assignment_id, "assignment_revision": assignment_revision},
@@ -44584,8 +44663,8 @@ def _assignment_primary_action_payload(
     return {
         **base,
         "status": "ready",
-        "action": "export-assigned-handoff" if transport == "manual" else "dispatch-assigned-target",
-        "expected_transition": "handoff-prepared",
+        "action": "dispatch-assigned-target" if dispatch else "export-assigned-handoff",
+        "expected_transition": "awaiting-admission" if dispatch else "handoff-prepared",
         "transport": transport,
         "operation_invocation": invocation,
         "command": command,
@@ -44670,6 +44749,7 @@ def _execution_posture_payload(
         assignment_policy=assignment_policy,
         assignment_decision=assignment_decision,
         selected_target=target,
+        delegation_control=delegation_control,
     )
     recommendation = runtime_resolution["recommendation"]
     if recommendation == "stay-local":
@@ -44723,10 +44803,21 @@ def _execution_posture_payload(
         changed_paths=changed_paths,
     )
     assignment_materialization: dict[str, Any] = {}
-    if materialize_assignment and target_root is not None and assignment_gate.get("status") == "handoff-required":
+    if (
+        materialize_assignment
+        and target_root is not None
+        and assignment_gate.get("status")
+        in {
+            "dispatch-required",
+            "handoff-required",
+        }
+    ):
         current_work = resolve_current_work_context(root=target_root, task=str(task_text or ""), relation_hint="plan-continuation")
         plan_id = str(current_work.get("selected_plan_id") or current_work.get("plan_id") or "").strip()
         plan_ref = f".agentic-workspace/planning/execplans/{plan_id}.plan.json" if plan_id else ""
+        if not plan_ref:
+            active_plan_ref, _active_plan = _active_execplan_record_payload(target_root=target_root)
+            plan_ref = str(active_plan_ref or "").strip()
         plan_path = target_root / plan_ref if plan_ref else None
         plan_record: dict[str, Any] = {}
         if plan_path is not None:
@@ -44793,7 +44884,10 @@ def _execution_posture_payload(
             "allowed_effects": allowed_effects,
             "allowed_paths": list(changed_paths),
             "dispatch_adapter": {
-                "provider": str((target or {}).get("provider") or ""),
+                "kind": str((target or {}).get("dispatch_adapter_kind") or ""),
+                "command": list((target or {}).get("dispatch_command") or []),
+                "output_mode": str((target or {}).get("dispatch_output_mode") or "stdout"),
+                "timeout_seconds": int((target or {}).get("dispatch_timeout_seconds") or 1800),
                 "model": str((target or {}).get("model_family") or ""),
                 "execution_methods": list((target or {}).get("execution_methods") or []),
             },
@@ -60124,6 +60218,10 @@ def _runtime_resolution_payload(*, config: WorkspaceConfig, capability_posture: 
                 "execution_methods": list(profile.execution_methods),
                 "model_family": profile.model_family,
                 "provider": profile.provider,
+                "dispatch_adapter_kind": profile.dispatch_adapter_kind,
+                "dispatch_command": list(profile.dispatch_command),
+                "dispatch_output_mode": profile.dispatch_output_mode,
+                "dispatch_timeout_seconds": profile.dispatch_timeout_seconds,
                 "context_capacity": profile.context_capacity,
                 "reasoning_profile": profile.reasoning_profile,
                 "cost_class": profile.cost_class,
@@ -60527,6 +60625,10 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
                 "execution_methods": list(profile.execution_methods),
                 "model_family": profile.model_family,
                 "provider": profile.provider,
+                "dispatch_adapter_kind": profile.dispatch_adapter_kind,
+                "dispatch_command": list(profile.dispatch_command),
+                "dispatch_output_mode": profile.dispatch_output_mode,
+                "dispatch_timeout_seconds": profile.dispatch_timeout_seconds,
                 "context_capacity": profile.context_capacity,
                 "reasoning_profile": profile.reasoning_profile,
                 "cost_class": profile.cost_class,
@@ -60612,6 +60714,10 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
                 "delegation_targets.<target>.task_fit",
                 "delegation_targets.<target>.capability_classes",
                 "delegation_targets.<target>.execution_methods",
+                "delegation_targets.<target>.dispatch_adapter_kind",
+                "delegation_targets.<target>.dispatch_command",
+                "delegation_targets.<target>.dispatch_output_mode",
+                "delegation_targets.<target>.dispatch_timeout_seconds",
                 "delegation_targets.<target>.model_family",
                 "delegation_targets.<target>.provider",
                 "delegation_targets.<target>.context_capacity",
@@ -60629,6 +60735,8 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             "supported_locations": list(SUPPORTED_CAPABILITY_LOCATIONS),
             "supported_capability_classes": list(SUPPORTED_CAPABILITY_EXECUTION_CLASSES),
             "supported_execution_methods": list(SUPPORTED_DELEGATION_TARGET_EXECUTION_METHODS),
+            "supported_dispatch_adapter_kinds": list(SUPPORTED_DELEGATION_DISPATCH_ADAPTER_KINDS),
+            "supported_dispatch_output_modes": list(SUPPORTED_DELEGATION_DISPATCH_OUTPUT_MODES),
             "supported_context_capacities": list(SUPPORTED_DELEGATION_TARGET_CONTEXT_CAPACITIES),
             "supported_reasoning_profiles": list(SUPPORTED_DELEGATION_TARGET_REASONING_PROFILES),
             "supported_cost_classes": list(SUPPORTED_DELEGATION_TARGET_COST_CLASSES),
@@ -63943,7 +64051,8 @@ def _executor_availability(
             "repair": "Resolve an authoritative executor target before running Autopilot.",
         }
     execution_methods = [str(method) for method in _list_payload(selected_target.get("execution_methods")) if str(method).strip()]
-    automatic_methods = [method for method in execution_methods if method in {"internal", "cli", "api"}]
+    adapter_configured = bool(_list_payload(selected_target.get("dispatch_command")))
+    automatic_methods = [method for method in execution_methods if adapter_configured and method in {"internal", "cli", "api"}]
     if not execution_methods:
         return {
             "status": "unavailable",

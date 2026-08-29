@@ -6200,6 +6200,18 @@
         {
           "audience": "advanced_host_repo",
           "classification_note": "assignment lifecycle subcommand",
+          "help": "Run assignment.dispatch.",
+          "mutates_state": false,
+          "name": "dispatch",
+          "options": [],
+          "role": "core_context_router",
+          "uses_option_groups": [
+            "format"
+          ]
+        },
+        {
+          "audience": "advanced_host_repo",
+          "classification_note": "assignment lifecycle subcommand",
           "help": "Run assignment.export.",
           "mutates_state": false,
           "name": "export",

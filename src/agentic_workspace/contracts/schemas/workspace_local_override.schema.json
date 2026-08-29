@@ -446,6 +446,38 @@
               "minLength": 1,
               "description": "Optional provider or runtime name for this local target."
             },
+            "dispatch_adapter_kind": {
+              "type": "string",
+              "enum": [
+                "process",
+                "host-native"
+              ],
+              "description": "Configured transport adapter class. Both kinds consume the same canonical assignment packet; host-native identifies a host bridge rather than changing assignment semantics."
+            },
+            "dispatch_command": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "Argument-vector template for the configured adapter. Supported placeholders are {target_root}, {output_schema}, {output_file}, and {model}; the sealed prompt is supplied on stdin."
+            },
+            "dispatch_output_mode": {
+              "type": "string",
+              "enum": [
+                "stdout",
+                "json-file"
+              ],
+              "default": "stdout",
+              "description": "Where the adapter returns its delegated-return JSON."
+            },
+            "dispatch_timeout_seconds": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1800,
+              "description": "Maximum configured adapter execution time in seconds."
+            },
             "context_capacity": {
               "type": "string",
               "enum": [

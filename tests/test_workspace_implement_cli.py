@@ -9111,6 +9111,82 @@ candidates = []
     assert lifecycle["manual_transport"]["import_requires_review"] is True
 
 
+def test_implement_required_best_fit_compiles_authorized_automatic_dispatch(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.local.toml",
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[runtime]",
+                "strong_planner_available = true",
+                "",
+                "[safety]",
+                "safe_to_auto_run_commands = true",
+                "",
+                "[delegation]",
+                'execution_role = "orchestrator"',
+                'assignment_policy = "required-best-fit"',
+                'current_target = "orchestrator"',
+                'mode = "auto"',
+                'manual_transport_policy = "disabled"',
+                "",
+                "[delegation_targets.orchestrator]",
+                'strength = "medium"',
+                'location = "local"',
+                'capability_classes = ["mechanical-follow-through"]',
+                'execution_methods = ["internal"]',
+                "",
+                "[delegation_targets.planner]",
+                'strength = "strong"',
+                'location = "local"',
+                'provider = "codex"',
+                'capability_classes = ["boundary-shaping", "reasoning-heavy"]',
+                'execution_methods = ["cli"]',
+                'dispatch_adapter_kind = "process"',
+                'dispatch_command = ["worker-bridge", "--output", "{output_file}"]',
+                'dispatch_output_mode = "json-file"',
+            ]
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
+                "--task",
+                "update assignment config schema",
+                "--verbose",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    posture = payload["execution_posture"]
+    decision = payload["delegation_decision"]
+    assert posture["assignment_gate"]["status"] == "dispatch-required"
+    assert posture["assignment_gate"]["implementation_allowed"] is False
+    assert posture["assignment_gate"]["executor_disposition"]["status"] == "executable-nonlocal-dispatch"
+    assert decision["recommended_route"] == "assignment-dispatch-required"
+    assert decision["required_next_action"] == "dispatch-assigned-target"
+    assert decision["handoff_command"] is None
+    assert decision["delegation_next_step"]["status"] == "executable"
+    assert posture["delegated_run_lifecycle"]["status"] == "ready"
+    action = posture["assignment_action"]
+    assert action["action"] == "materialize-canonical-assignment"
+    assert action["operation_invocation"]["operation_id"] == "assignment.dispatch"
+    assert action["operation_invocation"]["arguments"]["transport"] == "cli"
+    assert "assignment dispatch" in action["command"]
+
+
 def test_assignment_role_and_effects_use_resolved_task_class_not_task_wording() -> None:
     assert workspace_runtime_core._assignment_role_and_effects(task_class="validation") == ("validator", ["read-only"])
     assert workspace_runtime_core._assignment_role_and_effects(task_class="mechanical-follow-through") == (
@@ -9187,6 +9263,58 @@ def test_configured_orchestrator_compiles_current_nonlocal_and_returned_assignme
     assert current_gate["status"] == "assigned-current-target"
     assert current_gate["implementation_allowed"] is True
     assert current_gate["required_next_action"] == "continue-with-selected-target"
+    assert current_gate["executor_disposition"]["status"] == "retained-local"
+
+    automatic_gate = workspace_runtime_core._assignment_implementation_gate_payload(
+        assignment_policy={
+            **policy,
+            "current_target": {"value": "orchestrator"},
+            "current_target_status": "known-profile",
+            "manual_transport_policy": {"value": "disabled"},
+            "binding": {"enforceable": True},
+        },
+        assignment_decision={**decision, "selected_target": "worker"},
+        selected_target={
+            "name": "worker",
+            "target_id": "target:worker",
+            "execution_methods": ["cli"],
+            "dispatch_command": ["worker-bridge", "--output", "{output_file}"],
+        },
+        delegation_control={"execution_permitted": True},
+    )
+    assert automatic_gate["status"] == "dispatch-required"
+    assert automatic_gate["required_next_action"] == "dispatch-assigned-target"
+    assert automatic_gate["executor_disposition"] == {
+        "kind": "agentic-workspace/assignment-executor-disposition/v1",
+        "status": "executable-nonlocal-dispatch",
+        "selected_target": "worker",
+        "transport": "cli",
+        "automatic_methods": ["cli"],
+        "adapter_configured": True,
+        "decision_revision": "decision-rev-1",
+        "rule": "One binding assignment resolves retained-local, executable dispatch, admitted manual handoff, or exact blocked recovery before implementation.",
+    }
+
+    blocked_gate = workspace_runtime_core._assignment_implementation_gate_payload(
+        assignment_policy={
+            **policy,
+            "current_target": {"value": "orchestrator"},
+            "current_target_status": "known-profile",
+            "manual_transport_policy": {"value": "disabled"},
+            "binding": {"enforceable": True},
+        },
+        assignment_decision={**decision, "selected_target": "worker"},
+        selected_target={
+            "name": "worker",
+            "target_id": "target:worker",
+            "execution_methods": ["cli"],
+            "dispatch_command": ["worker-bridge"],
+        },
+        delegation_control={"execution_permitted": False},
+    )
+    assert blocked_gate["status"] == "blocked-transport-unavailable"
+    assert blocked_gate["required_next_action"] == "authorize-configured-automatic-transport"
+    assert blocked_gate["executor_disposition"]["status"] == "blocked-recovery"
 
     current = workspace_runtime_core._assignment_primary_action_payload(
         target_root=tmp_path,
@@ -9211,10 +9339,14 @@ def test_configured_orchestrator_compiles_current_nonlocal_and_returned_assignme
         assignment_policy=policy,
         assignment_decision=decision,
         assignment_gate={
-            "status": "handoff-required",
+            "status": "dispatch-required",
             "implementation_allowed": False,
             "selected_target": "worker",
             "target_identity_ref": "target:worker",
+            "executor_disposition": {
+                "status": "executable-nonlocal-dispatch",
+                "transport": "cli",
+            },
         },
         selected_target={"name": "worker", "provider": "codex", "execution_methods": ["cli"]},
         delegation_control={"execution_permitted": True},
@@ -9224,6 +9356,8 @@ def test_configured_orchestrator_compiles_current_nonlocal_and_returned_assignme
     )
     assert materialize["action"] == "materialize-canonical-assignment"
     assert materialize["operation_invocation"]["arguments"]["transport"] == "cli"
+    assert materialize["operation_invocation"]["operation_id"] == "assignment.dispatch"
+    assert "assignment dispatch" in materialize["command"]
     assert '--transport "cli"' in materialize["command"]
 
     assignment_dir = tmp_path / ".agentic-workspace" / "planning" / "assignments"
@@ -9241,11 +9375,15 @@ def test_configured_orchestrator_compiles_current_nonlocal_and_returned_assignme
         },
     )
     gate = {
-        "status": "handoff-required",
+        "status": "dispatch-required",
         "implementation_allowed": False,
         "selected_target": "worker",
         "target_identity_ref": "target:worker",
         "target_revision": "target-rev-1",
+        "executor_disposition": {
+            "status": "executable-nonlocal-dispatch",
+            "transport": "cli",
+        },
     }
     automatic = workspace_runtime_core._assignment_primary_action_payload(
         target_root=tmp_path,
@@ -9259,7 +9397,7 @@ def test_configured_orchestrator_compiles_current_nonlocal_and_returned_assignme
     invocation = automatic["operation_invocation"]
     assert automatic["action"] == "dispatch-assigned-target"
     assert automatic["transport"] == "cli"
-    assert invocation["operation_id"] == "assignment.export"
+    assert invocation["operation_id"] == "assignment.dispatch"
     assert invocation["arguments"] == {
         "target": ".",
         "assignment_id": "assign-1",
@@ -9273,6 +9411,7 @@ def test_configured_orchestrator_compiles_current_nonlocal_and_returned_assignme
         "assignment_id": "assign-1",
         "assignment_revision": "assignment-rev-1",
     }
+    assert automatic["expected_transition"] == "awaiting-admission"
 
     state_path = tmp_path / ".agentic-workspace" / "local" / "assignment-runs" / "run-1" / "state.json"
     _write_json(state_path, {"current_state": "handoff-prepared", "run_id": "run-1"})
@@ -9361,6 +9500,10 @@ def test_configured_orchestrator_uses_manual_export_when_automatic_transport_is_
             "implementation_allowed": False,
             "selected_target": "external-reviewer",
             "target_identity_ref": "target:external-reviewer",
+            "executor_disposition": {
+                "status": "admitted-manual-handoff",
+                "transport": "manual",
+            },
         },
         selected_target={"name": "external-reviewer", "execution_methods": ["cli", "manual"]},
         delegation_control={"execution_permitted": False},

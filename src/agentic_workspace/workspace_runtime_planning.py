@@ -3277,7 +3277,9 @@ def _structured_route_inputs(
                 "closure_status": str(closure.get("slice status") or ""),
             },
             "non_interference_boundary": {
-                "status": "protected"
+                "status": "selected-owner"
+                if active_owner and task_relation == "continues-selected-owner"
+                else "protected"
                 if active_owner and task_relation == "bounded-independent"
                 else "overlap-blocked"
                 if owner_scope_overlap
@@ -3291,7 +3293,9 @@ def _structured_route_inputs(
                 },
                 "overlap_paths": owner_scope_overlap,
                 "restriction": (
-                    "Do not mutate or claim the selected owner's protected scope from this independent task."
+                    ""
+                    if task_relation == "continues-selected-owner"
+                    else "Do not mutate or claim the selected owner's protected scope from this independent task."
                     if task_relation == "bounded-independent"
                     else "Resolve the active-owner overlap before mutation."
                     if owner_scope_overlap
@@ -3320,9 +3324,18 @@ def _current_reconciliation_proposal(*, target_root: Path, planning_revision: di
             proposal = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             continue
+        if str(_as_dict(proposal).get("transaction_class") or "") == "target-authority-integration":
+            continue
         source = _as_dict(_as_dict(proposal).get("source"))
         proposal_id = str(_as_dict(proposal).get("proposal_id") or "")
         apply_command = str(_as_dict(proposal).get("apply_command") or "")
+        operations = [item for item in _as_list(proposal.get("operations")) if isinstance(item, dict)]
+        owner_transitions = [item for item in _as_list(proposal.get("owner_transitions")) if isinstance(item, dict)]
+        actionable_transitions = [
+            item for item in owner_transitions if str(item.get("transition") or "") not in {"", "none", "not-applicable", "remain-live"}
+        ]
+        if not operations and not actionable_transitions:
+            continue
         if source.get("planning_revision") != expected_revision:
             stale_proposal_id = stale_proposal_id or proposal_id
             continue
@@ -3390,6 +3403,11 @@ def _compiled_target_authority_reconciliation(*, target_root: Path, cli_invoke: 
         }
     proposal = _as_dict(transaction.get("proposal"))
     source = _as_dict(proposal.get("source"))
+    operations = [copy.deepcopy(item) for item in _as_list(proposal.get("operations")) if isinstance(item, dict)]
+    eligible_proposals = [str(item) for item in _as_list(proposal.get("eligible_proposals"))]
+    refreshed_proposals = [str(item) for item in _as_list(proposal.get("refreshed_proposals"))]
+    if not operations and not eligible_proposals and not refreshed_proposals:
+        return {"status": "absent", "reason": "no-target-authority-reconciliation-work"}
     return {
         "status": "preview-available",
         "transaction_class": "target-authority-integration",
@@ -3399,9 +3417,9 @@ def _compiled_target_authority_reconciliation(*, target_root: Path, cli_invoke: 
         "planning_revision": str(source.get("planning_revision") or ""),
         "current_target_authority_revision": str(proposal.get("current_target_authority_revision") or ""),
         "affected_owner_refs": [str(item) for item in _as_list(proposal.get("affected_owner_refs"))],
-        "eligible_proposals": [str(item) for item in _as_list(proposal.get("eligible_proposals"))],
-        "refreshed_proposals": [str(item) for item in _as_list(proposal.get("refreshed_proposals"))],
-        "operations": [copy.deepcopy(item) for item in _as_list(proposal.get("operations")) if isinstance(item, dict)],
+        "eligible_proposals": eligible_proposals,
+        "refreshed_proposals": refreshed_proposals,
+        "operations": operations,
     }
 
 

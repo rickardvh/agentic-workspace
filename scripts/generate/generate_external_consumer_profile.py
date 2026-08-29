@@ -56,6 +56,7 @@ ASSIGNMENT_OPERATION_IDS = (
     "assignment.admit",
     "assignment.cleanup",
     "assignment.close",
+    "assignment.dispatch",
     "assignment.export",
     "assignment.import",
     "assignment.integrate",

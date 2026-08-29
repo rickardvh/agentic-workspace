@@ -3,9 +3,9 @@
 
 Exact current command values generated from `cli_commands.json` and `cli_option_groups.json`. The schema-shape references remain at `cli-commands.md` and `cli-option-groups.md`.
 
-- Contract digest: `sha256:206b7669ac5fe9469a9fff55aa7f805beb459aba6c3c4bf24fd9510f7e5f00c7`
+- Contract digest: `sha256:d0d56655611782e20bb1208993de4865e1b0e6dd2606591ed39e17f5a051e888`
 - Program: `agentic-workspace`
-- Command/subcommand count: 125
+- Command/subcommand count: 126
 
 Shared-state mutability and ignored local diagnostics are separate. A `no` below means the command contract does not mutate shared workspace state. When local session logging is enabled, any command may still write ignored machine-local diagnostics:
 
@@ -128,6 +128,7 @@ Shared-state mutability and ignored local diagnostics are separate. A `no` below
 | `agentic-workspace assignment admit` | `core_context_router` | `advanced_host_repo` | no | 11 | Run assignment.admit. |
 | `agentic-workspace assignment cleanup` | `core_context_router` | `advanced_host_repo` | no | 6 | Run assignment.cleanup. |
 | `agentic-workspace assignment close` | `core_context_router` | `advanced_host_repo` | no | 6 | Run assignment.close. |
+| `agentic-workspace assignment dispatch` | `core_context_router` | `advanced_host_repo` | no | 1 | Run assignment.dispatch. |
 | `agentic-workspace assignment export` | `core_context_router` | `advanced_host_repo` | no | 6 | Run assignment.export. |
 | `agentic-workspace assignment import` | `core_context_router` | `advanced_host_repo` | no | 6 | Run assignment.import. |
 | `agentic-workspace assignment integrate` | `core_context_router` | `advanced_host_repo` | no | 6 | Run assignment.integrate. |
@@ -1710,6 +1711,14 @@ assignment lifecycle subcommand
 | `--delegation-decision-json` | no | `—` | — | `value` | Serialized current delegation decision authority. |
 | `--aw-proof-receipt-json` | no | `—` | — | `value` | Serialized AW proof receipt authority. |
 | `--run-state-json` | no | `—` | — | `value` | Serialized current assignment run state authority. |
+
+## `agentic-workspace assignment dispatch`
+
+assignment lifecycle subcommand
+
+| Flags | Required | Default | Choices | Action / nargs | Description |
+| --- | --- | --- | --- | --- | --- |
+| `--format` | no | `text` | text, json | `value` | Output format. |
 
 ## `agentic-workspace assignment export`
 

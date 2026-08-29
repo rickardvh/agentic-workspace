@@ -27,8 +27,8 @@ jobs:
 
       - name: Validate semver label
         env:
-          BASE_REF: ${{ github.base_ref }}
-          HEAD_REF: ${{ github.head_ref }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
           EVENT_PATH: ${{ github.event_path }}
         run: |
           python - <<'PY'

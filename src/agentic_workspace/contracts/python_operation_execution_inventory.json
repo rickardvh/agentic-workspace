@@ -2379,6 +2379,28 @@
     },
     {
       "command": "assignment",
+      "conformance_ref": "assignment.dispatch.process",
+      "domain_runtime_primitive_refs": [
+        "workspace.target-root.resolve",
+        "assignment.lifecycle.apply"
+      ],
+      "generated_transport": "generated/workspace/python/cli.py",
+      "generic_behavior_audit": "Classified as mutation-orchestration; this is not accepted as generic deterministic runtime debt because the primitive owns AW-specific assignment/run lifecycle safety, configured transport execution, current-authority boundaries, and untrusted return capture.",
+      "hand_owned_runtime_code": [
+        "workspace.target-root.resolve",
+        "assignment lifecycle configured transport transition"
+      ],
+      "operation_contract": "operations/assignment.dispatch.json",
+      "operation_id": "assignment.dispatch",
+      "primitive_executor": "command_generation/primitive_executor.py",
+      "program": "agentic-workspace",
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Generated parser, operation IR, client negotiation, and output emission own the command shape; assignment.lifecycle.apply remains a package-domain lifecycle primitive for revision-bound configured transport execution and return capture.",
+      "status": "domain-runtime-primitive-via-ir",
+      "what_would_make_portable_later": "Split prompt projection, configured process invocation, local artifact IO, and transition validation into schema-backed portable primitives after the assignment dispatch schema is stable."
+    },
+    {
+      "command": "assignment",
       "conformance_ref": "assignment.export.process",
       "domain_runtime_primitive_refs": [
         "workspace.target-root.resolve",

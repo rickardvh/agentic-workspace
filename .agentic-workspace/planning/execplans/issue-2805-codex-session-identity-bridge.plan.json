@@ -3,9 +3,9 @@
   "id": "issue-2805-codex-session-identity-bridge",
   "title": "Bridge Codex session identity in canonical repo invocation",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "closeout",
-  "revision": 4,
+  "lifecycle": "archived",
+  "phase": "complete",
+  "revision": 5,
   "intent": {
     "outcome": "Close #2805 by making the existing canonical repo launcher the sole Codex identity bridge, removing the peer candidate aid, and recording a privacy-safe fresh-session dogfood trace.",
     "non_goals": [
@@ -25,27 +25,67 @@
       "Retirement of the obsolete codex-session-identity candidate aid and its validation-list entries.",
       "A share-safe dogfood evidence record for the canonical configured invocation."
     ],
-    "effects": ["Repository files only; raw provider identity remains local and is never recorded."]
+    "effects": [
+      "Repository files only; raw provider identity remains local and is never recorded."
+    ]
   },
   "relationships": {
-    "selection": {"state": "selected-local", "owner": "issue-2805-codex-session-identity-bridge"},
+    "selection": {
+      "state": "selected-local",
+      "owner": "issue-2805-codex-session-identity-bridge"
+    },
     "proof_posture": {
       "state": "passed",
       "refs": [
-      "55 canonical-launcher and agent-aid tests passed",
-      "11 focused session identity/capture tests passed",
-      "503 Planning/workspace regression tests passed",
-      "workspace lint and cross-package typecheck passed",
-      "validation runtime plan check passed",
+        "55 canonical-launcher and agent-aid tests passed",
+        "11 focused session identity/capture tests passed",
+        "503 Planning/workspace regression tests passed",
+        "workspace lint and cross-package typecheck passed",
+        "validation runtime plan check passed",
         "structured file inventory and agent-aid checks passed",
         "fresh target-local real-host-identity dogfood reported ready capture with zero missing invocations"
       ]
     },
-    "external_posture": {"state": "current", "refs": ["GitHub #2805", "GitHub PR #2720", "GitHub PR #2838"]}
+    "external_posture": {
+      "state": "current",
+      "refs": [
+        "GitHub #2805",
+        "GitHub PR #2720",
+        "GitHub PR #2838"
+      ]
+    },
+    "integration": {
+      "status": "integrated",
+      "transition": "archive-owner",
+      "applied_at": "2026-08-29T10:11:07.309854Z",
+      "proof_refs": [
+        "docs/reviews/codex-session-identity-canonical-invocation-2805.md",
+        "55 focused launcher/agent-aid tests passed",
+        "11 focused session capture tests passed",
+        "503 Planning/workspace regression tests passed",
+        "make check-planning-nosync passed",
+        "workspace lint and cross-package typecheck passed",
+        "validation runtime plan check passed",
+        "structured file inventory check passed"
+      ],
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/pr-2838-archive-owner.integration-receipt.json"
+    }
   },
   "references": [
-    {"kind": "issue", "target": "2805", "label": "GitHub #2805", "role": "intent", "locator": "https://github.com/rickardvh/agentic-workspace/issues/2805"},
-    {"kind": "pull-request", "target": "2720", "label": "GitHub PR #2720", "role": "existing-core-implementation", "locator": "https://github.com/rickardvh/agentic-workspace/pull/2720"}
+    {
+      "kind": "issue",
+      "target": "2805",
+      "label": "GitHub #2805",
+      "role": "intent",
+      "locator": "https://github.com/rickardvh/agentic-workspace/issues/2805"
+    },
+    {
+      "kind": "pull-request",
+      "target": "2720",
+      "label": "GitHub PR #2720",
+      "role": "existing-core-implementation",
+      "locator": "https://github.com/rickardvh/agentic-workspace/pull/2720"
+    }
   ],
   "next_action": "Merge PR #2838 after its stacked base, then apply the checked-in archive-owner integration proposal on the target branch; no implementation or proof work remains in this slice.",
   "blockers": [],
@@ -111,23 +151,37 @@
     "agent_may_escalate": true,
     "agent_may_deescalate": false,
     "strict_closeout": true,
-    "required_refs": ["GitHub #2805", "GitHub PR #2720"],
-    "proof_profiles": ["configured invocation", "identity privacy", "fresh-session dogfood", "subtraction"],
-    "required_gates": ["focused tests", "structured inventory", "routed proof"]
+    "required_refs": [
+      "GitHub #2805",
+      "GitHub PR #2720"
+    ],
+    "proof_profiles": [
+      "configured invocation",
+      "identity privacy",
+      "fresh-session dogfood",
+      "subtraction"
+    ],
+    "required_gates": [
+      "focused tests",
+      "structured inventory",
+      "routed proof"
+    ]
   },
   "continuation": {
     "owner": ".agentic-workspace/planning/integration-proposals/pr-2838-archive-owner.integration-proposal.json",
     "residual_intent": "Apply the archive-owner transition after PR #2838 reaches the target branch; the issue implementation and behavioral proof are complete."
   },
   "active_milestone": {
-    "status": "completed",
+    "status": "archived",
     "ready": "ready",
-    "blocked": "merge-time archive application only"
+    "blocked": "none"
   },
   "proof_report": {
     "validation proof": "55 canonical-launcher and agent-aid tests; 11 focused session identity/capture tests; 503 Planning/workspace regression tests; Planning nosync, lint, cross-package typecheck, validation-runtime, structured inventory, and agent-aid checks passed.",
     "proof achieved now": "yes; exact feature-branch implementation, privacy-safe fresh-session dogfood, and merge-time lifecycle proposal are recorded.",
-    "evidence for \"proof achieved\" state": "docs/reviews/codex-session-identity-canonical-invocation-2805.md and the retained focused proof refs on PR #2838."
+    "evidence for \"proof achieved\" state": "docs/reviews/codex-session-identity-canonical-invocation-2805.md and the retained focused proof refs on PR #2838.",
+    "integration proof": "docs/reviews/codex-session-identity-canonical-invocation-2805.md, 55 focused launcher/agent-aid tests passed, 11 focused session capture tests passed, 503 Planning/workspace regression tests passed, make check-planning-nosync passed, workspace lint and cross-package typecheck passed, validation runtime plan check passed, structured file inventory check passed",
+    "integration applied at": "2026-08-29T10:11:07.309854Z"
   },
   "specialist_contracts": []
 }

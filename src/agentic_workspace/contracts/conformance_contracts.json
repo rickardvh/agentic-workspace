@@ -770,6 +770,12 @@
     },
     {
       "adapter_kind": "process",
+      "id": "assignment.dispatch.process",
+      "operation_id": "assignment.dispatch",
+      "path": "conformance/assignment.dispatch.process.json"
+    },
+    {
+      "adapter_kind": "process",
       "id": "assignment.export.process",
       "operation_id": "assignment.export",
       "path": "conformance/assignment.export.process.json"

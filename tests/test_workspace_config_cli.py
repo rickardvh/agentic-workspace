@@ -33,7 +33,14 @@ def test_effective_orchestration_posture_separates_assignment_from_transport(
     posture = workspace_runtime_core._effective_orchestration_posture_payload(
         assignment_policy=assignment_policy,
         delegation_control=delegation_control,
-        profile_payloads=[{"name": "worker", "target_id": "worker", "execution_methods": ["internal"]}],
+        profile_payloads=[
+            {
+                "name": "worker",
+                "target_id": "worker",
+                "execution_methods": ["internal"],
+                "dispatch_command": ["worker-bridge"],
+            }
+        ],
         cli_invoke="uv run agentic-workspace",
     )
 
@@ -1394,6 +1401,10 @@ def test_config_command_reports_local_delegation_target_profiles(tmp_path: Path,
         "confidence = 0.92\n"
         'model_family = "gpt-5.5"\n'
         'provider = "openai"\n'
+        'dispatch_adapter_kind = "host-native"\n'
+        'dispatch_command = ["host-worker", "--schema", "{output_schema}", "--output", "{output_file}"]\n'
+        'dispatch_output_mode = "json-file"\n'
+        "dispatch_timeout_seconds = 90\n"
         'context_capacity = "large"\n'
         'reasoning_profile = "strong"\n'
         'cost_class = "premium"\n'
@@ -1431,6 +1442,16 @@ def test_config_command_reports_local_delegation_target_profiles(tmp_path: Path,
     assert planner["location"] == "local"
     assert planner["model_family"] == "gpt-5.5"
     assert planner["provider"] == "openai"
+    assert planner["dispatch_adapter_kind"] == "host-native"
+    assert planner["dispatch_command"] == [
+        "host-worker",
+        "--schema",
+        "{output_schema}",
+        "--output",
+        "{output_file}",
+    ]
+    assert planner["dispatch_output_mode"] == "json-file"
+    assert planner["dispatch_timeout_seconds"] == 90
     assert planner["context_capacity"] == "large"
     assert planner["reasoning_profile"] == "strong"
     assert planner["cost_class"] == "premium"

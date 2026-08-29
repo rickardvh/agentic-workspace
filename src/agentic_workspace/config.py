@@ -143,6 +143,14 @@ SUPPORTED_DELEGATION_TARGET_EXECUTION_METHODS = (
     "api",
     "manual",
 )
+SUPPORTED_DELEGATION_DISPATCH_ADAPTER_KINDS = (
+    "process",
+    "host-native",
+)
+SUPPORTED_DELEGATION_DISPATCH_OUTPUT_MODES = (
+    "stdout",
+    "json-file",
+)
 SUPPORTED_DELEGATION_TARGET_CONTEXT_CAPACITIES = (
     "small",
     "medium",
@@ -374,6 +382,10 @@ class DelegationTargetProfile:
     capability_classes: tuple[str, ...]
     model_family: str | None
     provider: str | None
+    dispatch_adapter_kind: str | None
+    dispatch_command: tuple[str, ...]
+    dispatch_output_mode: str
+    dispatch_timeout_seconds: int
     context_capacity: str
     reasoning_profile: str
     cost_class: str
@@ -1661,6 +1673,10 @@ def load_delegation_target_profiles(
             "execution_methods",
             "model_family",
             "provider",
+            "dispatch_adapter_kind",
+            "dispatch_command",
+            "dispatch_output_mode",
+            "dispatch_timeout_seconds",
             "context_capacity",
             "reasoning_profile",
             "cost_class",
@@ -1693,6 +1709,31 @@ def load_delegation_target_profiles(
         )
         if not execution_methods:
             raise WorkspaceUsageError(f"{target_path.as_posix()} execution_methods must list at least one supported method.")
+        dispatch_command = require_optional_string_list(
+            payload=raw_profile,
+            key="dispatch_command",
+            config_path=target_path,
+        )
+        dispatch_adapter_kind = require_optional_enum_or_none(
+            payload=raw_profile,
+            key="dispatch_adapter_kind",
+            config_path=target_path,
+            allowed=SUPPORTED_DELEGATION_DISPATCH_ADAPTER_KINDS,
+        )
+        dispatch_output_mode = require_optional_enum(
+            payload=raw_profile,
+            key="dispatch_output_mode",
+            config_path=target_path,
+            allowed=SUPPORTED_DELEGATION_DISPATCH_OUTPUT_MODES,
+            default="stdout",
+        )
+        raw_dispatch_timeout = raw_profile.get("dispatch_timeout_seconds", 1800)
+        if not isinstance(raw_dispatch_timeout, int) or isinstance(raw_dispatch_timeout, bool) or raw_dispatch_timeout <= 0:
+            raise WorkspaceUsageError(f"{target_path.as_posix()} dispatch_timeout_seconds must be a positive integer.")
+        if dispatch_command and dispatch_adapter_kind is None:
+            dispatch_adapter_kind = "process"
+        if dispatch_adapter_kind is not None and not dispatch_command:
+            raise WorkspaceUsageError(f"{target_path.as_posix()} dispatch_command is required when dispatch_adapter_kind is configured.")
         profiles.append(
             DelegationTargetProfile(
                 name=target_name,
@@ -1734,6 +1775,10 @@ def load_delegation_target_profiles(
                 ),
                 model_family=require_optional_string(payload=raw_profile, key="model_family", config_path=target_path),
                 provider=require_optional_string(payload=raw_profile, key="provider", config_path=target_path),
+                dispatch_adapter_kind=dispatch_adapter_kind,
+                dispatch_command=dispatch_command,
+                dispatch_output_mode=dispatch_output_mode,
+                dispatch_timeout_seconds=raw_dispatch_timeout,
                 context_capacity=require_optional_enum(
                     payload=raw_profile,
                     key="context_capacity",
