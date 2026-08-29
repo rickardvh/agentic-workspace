@@ -139,8 +139,16 @@ def test_latest_current_head_merge_ready_decision_admits_merge() -> None:
     assert decision.review_url == "https://example.test/review/2"
 
 
-@pytest.mark.parametrize("association", ["OWNER", "MEMBER", "COLLABORATOR", "NONE"])
-def test_configured_reviewer_app_is_authoritative_with_shared_login(association: str) -> None:
+@pytest.mark.parametrize(
+    ("association", "app_slug"),
+    [
+        ("OWNER", REVIEWER_APP),
+        ("MEMBER", None),
+        ("COLLABORATOR", "some-other-app"),
+        ("NONE", None),
+    ],
+)
+def test_exact_marker_authority_does_not_depend_on_transport_provenance(association: str, app_slug: str | None) -> None:
     decision = _module().review_gate_decision(
         pr_number=2501,
         head_sha=HEAD_A,
@@ -149,7 +157,7 @@ def test_configured_reviewer_app_is_authoritative_with_shared_login(association:
                 decision="merge-ready",
                 association=association,
                 login="implementation-owner",
-                app_slug=REVIEWER_APP,
+                app_slug=app_slug,
             )
         ],
     )
@@ -158,27 +166,7 @@ def test_configured_reviewer_app_is_authoritative_with_shared_login(association:
     assert decision.conclusion == "success"
 
 
-@pytest.mark.parametrize("app_slug", [None, "some-other-app"])
-def test_marker_without_configured_reviewer_app_cannot_authorize_merge(app_slug: str | None) -> None:
-    decision = _module().review_gate_decision(
-        pr_number=2501,
-        head_sha=HEAD_A,
-        comments=[
-            _comment(
-                decision="merge-ready",
-                association="OWNER",
-                login="implementation-owner",
-                app_slug=app_slug,
-            )
-        ],
-    )
-
-    assert decision.status == "review-missing"
-    assert decision.conclusion == "failure"
-    assert REVIEWER_APP in decision.summary
-
-
-def test_unconfigured_app_marker_cannot_supersede_authoritative_review() -> None:
+def test_latest_well_formed_marker_wins_regardless_of_transport_provenance() -> None:
     decision = _module().review_gate_decision(
         pr_number=2501,
         head_sha=HEAD_A,
@@ -188,9 +176,9 @@ def test_unconfigured_app_marker_cannot_supersede_authoritative_review() -> None
         ],
     )
 
-    assert decision.status == "merge-ready"
-    assert decision.conclusion == "success"
-    assert decision.review_url == "https://example.test/review/1"
+    assert decision.status == "review-blocked"
+    assert decision.conclusion == "failure"
+    assert decision.review_url == "https://example.test/review/2"
 
 
 def test_prior_merge_ready_decision_admits_patch_preserving_base_merge() -> None:
@@ -334,6 +322,7 @@ def test_server_side_workflow_and_ruleset_consume_the_same_required_check() -> N
     assert "workflow_run:" in workflow
     assert "pull_request_target:" not in workflow
     assert "issue_comment:" in workflow
+    assert "pull_request_review:" in workflow
     assert "scripts/github/review_merge_gate.py" in workflow
     assert '"context": "Review approval"' in ruleset
 
@@ -342,6 +331,26 @@ def test_workflow_run_resolves_its_pull_request() -> None:
     event = {"workflow_run": {"pull_requests": [{"number": 2501}]}}
 
     assert _module()._pr_number(event) == 2501
+
+
+def test_review_records_include_conversation_comments_and_active_formal_reviews(monkeypatch) -> None:
+    module = _module()
+    calls: list[list[str]] = []
+    conversation = _comment(decision="blocked", identifier=1)
+    formal = {**_comment(decision="merge-ready", identifier=2), "state": "COMMENTED"}
+    dismissed = {**_comment(decision="merge-ready", identifier=3), "state": "DISMISSED"}
+
+    def fake_gh_json(args: list[str]) -> list[list[dict[str, object]]]:
+        calls.append(args)
+        return [[conversation]] if "/issues/" in args[-1] else [[formal, dismissed]]
+
+    monkeypatch.setattr(module, "_gh_json", fake_gh_json)
+
+    records = module._review_records(repository="owner/repo", pr_number=2501)
+
+    assert [record["id"] for record in records] == [1, 2]
+    assert "/issues/2501/comments" in calls[0][-1]
+    assert "/pulls/2501/reviews" in calls[1][-1]
 
 
 def test_check_run_posts_the_review_link_at_the_supported_top_level(monkeypatch) -> None:

@@ -3,9 +3,9 @@
   "id": "issue-2708-owner-proof-sufficiency",
   "title": "Require proof sufficiency for every affected owner",
   "owner_level": "slice",
-  "lifecycle": "live",
+  "lifecycle": "archived",
   "phase": "complete",
-  "revision": 3,
+  "revision": 4,
   "intent": {
     "outcome": "Proof decisions retain every affected semantic owner and block sufficiency when its current owner-maintained acceptance evidence is missing.",
     "non_goals": [
@@ -47,6 +47,18 @@
     "external_posture": {
       "state": "unobserved",
       "refs": []
+    },
+    "integration": {
+      "status": "integrated",
+      "transition": "archive-owner",
+      "applied_at": "2026-08-28T22:03:23.450287Z",
+      "proof_refs": [
+        "make check-planning-nosync passed",
+        "Workspace invariant lane 501 passed",
+        "focused proof regressions 38 passed",
+        "typecheck and contract checks passed"
+      ],
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/2708-archive-owner.integration-receipt.json"
     }
   },
   "references": [
@@ -89,7 +101,7 @@
   ],
   "active_milestone": {
     "id": "owner-proof-coverage",
-    "status": "complete",
+    "status": "archived",
     "scope": "Generic matched-subsystem coverage plus repository-owned package gates.",
     "ready": "Issue acceptance and current counterexample are explicit.",
     "blocked": "none"
@@ -141,5 +153,9 @@
       "workspace typecheck"
     ]
   },
-  "specialist_contracts": []
+  "specialist_contracts": [],
+  "proof_report": {
+    "integration proof": "make check-planning-nosync passed, Workspace invariant lane 501 passed, focused proof regressions 38 passed, typecheck and contract checks passed",
+    "integration applied at": "2026-08-28T22:03:23.450287Z"
+  }
 }

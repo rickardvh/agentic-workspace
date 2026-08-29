@@ -35,11 +35,14 @@ Derived internal decision composed from admitted AW authority surfaces. It emits
 | `context_effects.convergence_rule` | string | yes |  | Rule for deduplication, terminal lifecycle, and continuation convergence. |  |  |
 | `intent_feedback` | object | no |  | Revision-bound applicable intent expectations, evidence evaluation, material findings, and quiet/rescope posture composed before the final decision. |  |  |
 | `memory_effectiveness` | object | no |  | Decision-bound Memory contributions, sparse outcome attribution, material findings, and stronger-owner lifecycle review. |  |  |
+| `learning_effectiveness` | object | no |  | Sparse cross-owner later-outcome attribution joined through each destination's existing revision identity and the canonical operating-decision identity; omitted when no later outcome applies. |  |  |
+| `learning_promotion` | object | no |  | Evidence-, authority-, latitude-, revision-, and proof-bounded selection of existing stronger-owner operations plus post-promotion subtraction; omitted on quiet paths. |  |  |
 | `bounded_adaptations` | object | no |  | Deduplicated currentness or missing-coverage candidates derived from existing improvement evidence and routed to canonical owner operations or explicit decisions. |  |  |
 | `maintenance_decision` | object | no |  | At most one compact semantic currentness or coverage decision with source-bound alternatives and canonical owner apply operations. |  |  |
 | `source_guidance` | object | no |  | Compact references for admitted source-owned guidance whose registry contract declares a material decision dimension. |  |  |
 | `future_context_signals` | array of object | no |  | Relevant source-owned post-action signals carried to existing consequence and reconciliation owners; empty when no signal applies. |  |  |
 | `future_context_capture` | object | no |  | Optional host-owned capability posture; unsupported feedback sources are reported as unavailable rather than claimed captured. |  |  |
+| `future_learning` | object | no |  | Ephemeral composition receipt for source-owned outcome evidence assessed into existing future-context and reconciliation custody; never a durable learning-event store. |  |  |
 | `repo_improvement_action` | object | no |  | Mode-constrained initiative consequence for one admitted material repo-improvement candidate; empty when no candidate exists. Mutation still requires an existing owner operation. |  |  |
 | `repo_improvement_execution` | object | no |  | Existing-owner implementation, Planning promotion, review, or disposition mapping for the admitted repo-improvement action; empty when no candidate exists. |  |  |
 | `repo_improvement_effectiveness` | object | no |  | Sparse recurrence, shifted-cost, Evaluation, and retirement result for a completed improvement claim; empty before a claim exists. |  |  |

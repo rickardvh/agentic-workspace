@@ -1069,6 +1069,42 @@
       "storage_class": "diagnostic-fixture"
     },
     {
+      "checked_in_justification": "Maintained before-learning-later-work traces prove sparse cross-owner attribution while preserving explicit causal uncertainty.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "notes": "The focused effectiveness test validates cost change, canonical decision identity, compactness, and non-causal attribution.",
+      "owner": "workspace-evaluation",
+      "pattern": "docs/reviews/consequential-learning-effectiveness-traces-2811.json",
+      "schema_or_validator": "validator: uv run pytest tests/test_learning_effectiveness.py::test_maintained_traces_show_cost_change_without_claiming_causality",
+      "status": "typed-validator-backed",
+      "storage_class": "diagnostic-fixture"
+    },
+    {
+      "checked_in_justification": "Maintainer-reviewed promotion replays and authority controls prove stronger-owner selection and provisional subtraction without becoming runtime authority.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "notes": "The focused promotion test validates deterministic replay, aid staging, authority controls, and subtraction posture.",
+      "owner": "workspace-evaluation",
+      "pattern": "docs/reviews/consequential-learning-promotion-2812.json",
+      "schema_or_validator": "validator: uv run pytest tests/test_learning_promotion.py::test_deterministic_promotion_selects_existing_operation_and_replay_no_longer_needs_lesson",
+      "status": "typed-validator-backed",
+      "storage_class": "diagnostic-fixture"
+    },
+    {
+      "checked_in_justification": "Maintainer-reviewed heterogeneous integration evidence supports the owner-bound #2813 Evaluation without becoming runtime decision authority.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "notes": "The focused integration test validates producer coverage, maintained cost reductions, no-signal footprint, and subtraction review.",
+      "owner": "workspace-evaluation",
+      "pattern": "docs/reviews/consequential-learning-integration-2813.json",
+      "schema_or_validator": "validator: uv run pytest tests/test_consequential_learning_integration.py::test_current_integration_review_has_two_producer_classes_cost_reduction_and_satisfied_conclusion",
+      "status": "typed-validator-backed",
+      "storage_class": "diagnostic-fixture"
+    },
+    {
       "checked_in_justification": "Maintainer-reviewed dogfooding evidence used to prioritize product work; not package runtime authority.",
       "editable_by_agents": true,
       "format": "json",

@@ -172,6 +172,35 @@ def test_future_context_custody_survives_partial_waiting_handoff_and_full_closeo
         assert result["future_context_reconciliation"]["custody_transfer_safe"] is False
 
 
+def test_assessed_no_retention_candidate_allows_terminal_closeout_without_memory_residue() -> None:
+    result = compile_reconciliation(
+        {
+            "result": {"status": "succeeded"},
+            "intent": {"status": "satisfied"},
+            "proof": {"status": "passed"},
+            "future_context_capture": {"status": "assessed"},
+            "future_context_signals": [
+                {
+                    "signal_id": "validation:typo",
+                    "source_class": "validation-result",
+                    "authority_state": "owner-admitted",
+                    "relevant": True,
+                    "disposition": {
+                        "outcome": "dismiss",
+                        "owner": "none",
+                        "rationale": "One-off typo with no reusable decision value.",
+                    },
+                }
+            ],
+        }
+    )
+
+    assert result["status"] == "terminal"
+    disposition = result["future_context_reconciliation"]["dispositions"][0]
+    assert disposition["outcome"] == "dismiss"
+    assert disposition["duplicate_memory_record_required"] is False
+
+
 def test_admitted_memory_disposition_can_contribute_to_a_later_decision_without_authority_upgrade() -> None:
     contribution = {
         "kind": "agentic-memory/decision-contribution/v1",

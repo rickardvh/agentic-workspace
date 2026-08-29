@@ -129,6 +129,30 @@ Startup, implementation, proof, handoff, closeout, and continuation are not inde
 
 Closeout is terminal reconciliation.
 
+Consequential outcome evidence follows the same loop. Source owners retain what
+happened and its authority; an AW-aware host may contribute a bounded assessment
+of future decision value. Workspace compiles only the decision effect,
+applicability, provenance, uncertainty, and owner hints into existing
+`future_context_signals`. Reconciliation then requires an existing-owner
+disposition, explicit already-absorbed/no-retention result, or one unresolved
+continuation before custody is lost. This composition is deliberately ephemeral:
+there is no generic learning-event store, transcript archive, or mandatory
+retrospective.
+
+Representative producers remain owner-specific while sharing that generic seam:
+
+- trusted correction custody supplies human-correction evidence without copying
+  the correction into Memory;
+- review and Evaluation owners supply findings independently of provider UI;
+- proof, validation, test, and lint owners distinguish material recurring or
+  non-obvious repair from ordinary one-off failure;
+- aid, skill, command, and adaptation owners supply reusable-success evidence
+  without promoting one success into doctrine.
+
+Semantic generalization by an agent is always an advisory candidate. It cannot
+manufacture human, policy, proof, or canonical repository authority; only the
+selected destination owner can admit or strengthen it.
+
 ## Module boundary
 
 Modules are peer domain capabilities. They extend what the generic loop can know and do without redefining the loop.

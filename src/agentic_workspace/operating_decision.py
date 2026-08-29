@@ -25,8 +25,11 @@ from agentic_workspace.context_authority_owner_operations import (
     registered_context_owner_result_status,
 )
 from agentic_workspace.control_inputs import compile_control_inputs
+from agentic_workspace.future_learning import compile_future_learning
 from agentic_workspace.instruction_clause_ir import compile_instruction_program, instruction_program_from_existing_mechanisms
 from agentic_workspace.intent_feedback import compile_intent_feedback, intent_evidence_from_observed_behavior
+from agentic_workspace.learning_effectiveness import compile_learning_effectiveness
+from agentic_workspace.learning_promotion import compile_learning_promotion
 from agentic_workspace.memory_effectiveness import compile_memory_effectiveness
 from agentic_workspace.reconciliation import compile_reconciliation
 from agentic_workspace.repo_improvement_effectiveness import compile_repo_improvement_effectiveness
@@ -3295,6 +3298,15 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
     """Return one primary typed action or one typed external blocker."""
 
     future_context_signals = [_as_dict(item) for item in _as_list(inputs.get("future_context_signals")) if isinstance(item, dict)]
+    future_learning = compile_future_learning(
+        [item for item in _as_list(inputs.get("outcome_evidence")) if isinstance(item, dict)],
+        existing_signals=future_context_signals,
+    )
+    future_context_signals = [
+        _as_dict(item)
+        for item in _as_list(future_learning.get("signals"))
+        if isinstance(item, dict) and item.get("relevant", True) is not False
+    ]
     intent_feedback = compile_intent_feedback(
         expectations=[item for item in _as_list(inputs.get("intent_expectations")) if isinstance(item, dict)],
         evidence=[item for item in _as_list(inputs.get("intent_evidence")) if isinstance(item, dict)],
@@ -3314,6 +3326,14 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         ],
         outcomes=[item for item in _as_list(inputs.get("memory_outcomes")) if isinstance(item, dict)],
     )
+    learning_effectiveness = compile_learning_effectiveness(
+        [item for item in _as_list(inputs.get("learning_projections")) if isinstance(item, dict)],
+        [item for item in _as_list(inputs.get("learning_outcomes")) if isinstance(item, dict)],
+    )
+    learning_promotion = compile_learning_promotion(
+        [item for item in _as_list(inputs.get("learning_promotion_candidates")) if isinstance(item, dict)],
+        improvement_latitude=str(inputs.get("improvement_latitude") or "conservative"),
+    )
     adaptation_signals = [item for item in _as_list(inputs.get("adaptation_signals")) if isinstance(item, dict)]
     adaptation_signals.extend(
         machine_observed_coverage_signals([item for item in _as_list(inputs.get("structured_coverage_records")) if isinstance(item, dict)])
@@ -3323,6 +3343,14 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
     )
     bounded_adaptations = bounded_adaptation_projection(adaptation_signals)
     future_context_capture = _as_dict(inputs.get("future_context_capture"))
+    if not future_context_capture and future_learning.get("evidence_count"):
+        future_context_capture = {
+            "status": "not-evaluated" if future_learning.get("unassessed_count") else "assessed",
+            "evidence_count": future_learning.get("evidence_count", 0),
+            "assessed_count": future_learning.get("assessed_count", 0),
+            "owner": "outcome evidence producers",
+            "rule": "Known evidence must be assessed or explicitly reported unavailable before none-found is allowed.",
+        }
     if inputs.get("target_root"):
         future_context_signals.extend(
             unresolved_correction_signals(
@@ -3429,6 +3457,10 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         revisions = {**revisions, "intent_feedback_revision": intent_feedback["input_revision"]}
     if memory_effectiveness["projected_contributions"]:
         revisions = {**revisions, "memory_effectiveness_revision": memory_effectiveness["input_revision"]}
+    if learning_effectiveness["later_outcome_count"]:
+        revisions = {**revisions, "learning_effectiveness_revision": learning_effectiveness["input_revision"]}
+    if learning_promotion["candidate_count"] and learning_promotion["status"] != "quiet":
+        revisions = {**revisions, "learning_promotion_revision": learning_promotion["input_revision"]}
     if bounded_adaptations["candidate_count"]:
         revisions = {**revisions, "coverage_candidate_revision": "sha256:" + _digest(bounded_adaptations)}
     if source_guidance["contributions"]:
@@ -3528,6 +3560,8 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
             *_as_list(inputs.get("context_findings")),
             *_as_list(intent_feedback.get("findings")),
             *_as_list(memory_effectiveness.get("findings")),
+            *_as_list(learning_effectiveness.get("findings")),
+            *_as_list(learning_promotion.get("findings")),
             *coverage_candidate_findings(bounded_adaptations),
             *future_context_findings(future_context_signals),
         ]
@@ -3702,11 +3736,14 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         "context_effects": context_effects,
         "intent_feedback": intent_feedback,
         "memory_effectiveness": memory_effectiveness,
+        **({"learning_effectiveness": learning_effectiveness} if learning_effectiveness["later_outcome_count"] else {}),
+        **({"learning_promotion": learning_promotion} if learning_promotion["status"] != "quiet" else {}),
         "bounded_adaptations": bounded_adaptations,
         "maintenance_decision": maintenance_decision,
         "source_guidance": source_guidance,
         **({"future_context_signals": future_context_signals} if future_context_signals else {}),
         **({"future_context_capture": future_context_capture} if future_context_capture else {}),
+        **({"future_learning": future_learning} if future_learning.get("status") != "quiet" else {}),
         "repo_improvement_action": repo_improvement_action,
         "repo_improvement_execution": repo_improvement_execution,
         "repo_improvement_effectiveness": repo_improvement_effectiveness,
