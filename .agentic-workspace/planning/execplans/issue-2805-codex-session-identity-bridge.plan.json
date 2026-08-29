@@ -4,8 +4,8 @@
   "title": "Bridge Codex session identity in canonical repo invocation",
   "owner_level": "slice",
   "lifecycle": "live",
-  "phase": "validation",
-  "revision": 3,
+  "phase": "closeout",
+  "revision": 4,
   "intent": {
     "outcome": "Close #2805 by making the existing canonical repo launcher the sole Codex identity bridge, removing the peer candidate aid, and recording a privacy-safe fresh-session dogfood trace.",
     "non_goals": [
@@ -30,7 +30,7 @@
   "relationships": {
     "selection": {"state": "selected-local", "owner": "issue-2805-codex-session-identity-bridge"},
     "proof_posture": {
-      "state": "focused-proof-passed",
+      "state": "passed",
       "refs": [
       "55 canonical-launcher and agent-aid tests passed",
       "11 focused session identity/capture tests passed",
@@ -41,13 +41,13 @@
         "fresh target-local real-host-identity dogfood reported ready capture with zero missing invocations"
       ]
     },
-    "external_posture": {"state": "current", "refs": ["GitHub #2805", "GitHub PR #2720"]}
+    "external_posture": {"state": "current", "refs": ["GitHub #2805", "GitHub PR #2720", "GitHub PR #2838"]}
   },
   "references": [
     {"kind": "issue", "target": "2805", "label": "GitHub #2805", "role": "intent", "locator": "https://github.com/rickardvh/agentic-workspace/issues/2805"},
     {"kind": "pull-request", "target": "2720", "label": "GitHub PR #2720", "role": "existing-core-implementation", "locator": "https://github.com/rickardvh/agentic-workspace/pull/2720"}
   ],
-  "next_action": "Run routed changed-path proof, commit the completed #2805 slice, and publish the stacked pull request.",
+  "next_action": "Merge PR #2838 after its stacked base, then apply the checked-in archive-owner integration proposal on the target branch; no implementation or proof work remains in this slice.",
   "blockers": [],
   "proof": {
     "claims": [
@@ -74,7 +74,7 @@
   "intent_continuity": {
     "larger intended outcome": "Codex work in this repository is captured from the first AW command through the normal configured invocation.",
     "this slice completes the larger intended outcome": "yes",
-    "continuation surface": "none after #2805 closes",
+    "continuation surface": ".agentic-workspace/planning/integration-proposals/pr-2838-archive-owner.integration-proposal.json",
     "parent lane": "none"
   },
   "execution_bounds": {
@@ -115,6 +115,19 @@
     "proof_profiles": ["configured invocation", "identity privacy", "fresh-session dogfood", "subtraction"],
     "required_gates": ["focused tests", "structured inventory", "routed proof"]
   },
-  "continuation": {"owner": "none", "residual_intent": "none"},
+  "continuation": {
+    "owner": ".agentic-workspace/planning/integration-proposals/pr-2838-archive-owner.integration-proposal.json",
+    "residual_intent": "Apply the archive-owner transition after PR #2838 reaches the target branch; the issue implementation and behavioral proof are complete."
+  },
+  "active_milestone": {
+    "status": "completed",
+    "ready": "ready",
+    "blocked": "merge-time archive application only"
+  },
+  "proof_report": {
+    "validation proof": "55 canonical-launcher and agent-aid tests; 11 focused session identity/capture tests; 503 Planning/workspace regression tests; Planning nosync, lint, cross-package typecheck, validation-runtime, structured inventory, and agent-aid checks passed.",
+    "proof achieved now": "yes; exact feature-branch implementation, privacy-safe fresh-session dogfood, and merge-time lifecycle proposal are recorded.",
+    "evidence for \"proof achieved\" state": "docs/reviews/codex-session-identity-canonical-invocation-2805.md and the retained focused proof refs on PR #2838."
+  },
   "specialist_contracts": []
 }
