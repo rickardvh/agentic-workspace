@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import shlex
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -519,6 +521,44 @@ def test_integration_proposal_is_pending_until_guarded_apply(tmp_path: Path) -> 
     no_op = apply_integration_proposal(proposal="issue-2345-merged", target=tmp_path)
     assert [action.kind for action in no_op.actions] == ["no-op"]
     assert no_op.mutation_expected is False
+
+
+def test_integration_proposal_dry_run_projects_the_typed_apply_invocation(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    owner_ref = _write_owner(tmp_path, "issue-2865")
+
+    preview = propose_integration_transition(
+        proposal_id="issue-2865-archive",
+        owner="issue-2865",
+        owner_ref=owner_ref,
+        issue="#2865",
+        requested_transition="archive-owner",
+        target=tmp_path,
+        dry_run=True,
+    )
+
+    lifecycle_plan = installer._lifecycle_plan_payload(preview)
+    invocation = lifecycle_plan["operation_invocation"]
+    assert lifecycle_plan["operation"] == "integration-propose"
+    assert invocation["operation_id"] == "planning.integration-propose.lifecycle"
+    assert invocation["arguments"]["proposal_id"] == "issue-2865-archive"
+    assert invocation["arguments"]["requested_transition"] == "archive-owner"
+    assert invocation["arguments"]["expected_subject_revision"]
+    assert invocation["arguments"]["expected_planning_revision"]
+    assert lifecycle_plan["next_safe_command"] == invocation["renderings"]["cli"]
+    assert "archive-plan" not in lifecycle_plan["next_safe_command"]
+
+    command = shlex.split(lifecycle_plan["next_safe_command"])
+    executable = shutil.which(command[0])
+    assert executable is not None
+    applied = subprocess.run([executable, *command[1:]], text=True, capture_output=True, check=False)
+    assert applied.returncode == 0, applied.stderr
+    payload = json.loads(applied.stdout)
+    assert payload["operation_receipt"]["proposal_id"] == "issue-2865-archive"
+    proposal = _proposal_record(tmp_path, "issue-2865-archive")
+    assert proposal["requested_transition"] == "archive-owner"
+    assert proposal["expected_subject_revision"] == invocation["arguments"]["expected_subject_revision"]
+    assert proposal["expected_planning_revision"] == invocation["arguments"]["expected_planning_revision"]
 
 
 def test_integration_apply_supports_close_archive_and_keep_open(tmp_path: Path) -> None:

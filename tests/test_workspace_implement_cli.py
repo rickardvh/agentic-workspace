@@ -4006,6 +4006,14 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     assert decision["absence_states"]["peer_decision_projections"] == "selector-routed"
     _assert_json_payload_under(payload, 10_000, label="implement generated-surface decision packet", sort_keys=False)
 
+    rendered = shlex.split(decision["action"]["command"])
+    assert rendered[0] == "agentic-workspace"
+    assert "--target" not in rendered
+    assert cli.main(rendered[1:]) == 0
+    rendered_result = json.loads(capsys.readouterr().out)
+    assert rendered_result["selector"] == {"section": "root_cli_authority"}
+    assert rendered_result["answer"]["command"] == decision["action"]["command"]
+
 
 def test_implement_tiny_proof_tiers_explain_required_single_tier() -> None:
     packet = workspace_runtime_implement._tiny_proof_command_tiers_payload({}, required_commands=["uv run pytest tests/test_a.py"])
