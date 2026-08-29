@@ -11,21 +11,25 @@
   "external_ref": "https://github.com/rickardvh/agentic-workspace/issues/2812",
   "proof_refs": [
     "24 focused tests passed",
+    "502 broad workspace tests passed",
+    "17 of 17 routed proof commands passed",
     "lint passed",
     "typecheck passed",
-    "contract and schema checks passed"
+    "contract and schema checks passed",
+    "structured inventory passed",
+    "PR #2832 CI and Security passed"
   ],
-  "parent_boundary": "Close #2812 only; keep lane #2809 and integration gate #2813 open.",
+  "parent_boundary": "Close #2812 only after target-branch integration; keep lane #2809 and integration gate #2813 open.",
   "preserved_invariants": [
     "existing owner operations only",
     "explicit human semantic admission",
     "revision-bound proof before subtraction",
     "no-signal path quiet"
   ],
-  "expected_subject_revision": "a81e4d7dbbcb66f8",
-  "expected_planning_revision": "925c18d3130e6267",
-  "created_at": "2026-08-28T23:18:37.278721Z",
-  "updated_at": "2026-08-28T23:18:37.278721Z",
+  "expected_subject_revision": "0578cc2be2fc9e4f",
+  "expected_planning_revision": "fcc76fc5ad4e2e45",
+  "created_at": "2026-08-29T06:07:40.257928Z",
+  "updated_at": "2026-08-29T06:07:40.257928Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -41,5 +45,5 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "a394c59dc28030e6"
+  "proposal_revision": "5a0a7f6faff9e618"
 }

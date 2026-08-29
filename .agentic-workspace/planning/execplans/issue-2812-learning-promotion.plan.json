@@ -4,8 +4,8 @@
   "title": "Promote proven learning into stronger repo-native owners",
   "owner_level": "slice",
   "lifecycle": "live",
-  "phase": "implementation",
-  "revision": 2,
+  "phase": "closeout",
+  "revision": 3,
   "intent": {
     "outcome": "Proven learning selects one stronger existing repo-native owner operation under evidence, authority, latitude, revision, and cost constraints; completed promotion proves the owner and subtracts duplicate provisional residue while unsafe or target-specific cases remain correctly bounded.",
     "non_goals": [
@@ -40,8 +40,15 @@
       "owner": "issue-2812-learning-promotion"
     },
     "proof_posture": {
-      "state": "pending",
-      "refs": []
+      "state": "passed",
+      "refs": [
+        "pytest:learning-promotion-subtraction:24-passed",
+        "pytest:routed-workspace-proof:502-passed",
+        "check:authority-counterexamples:passed",
+        "check:lint-typecheck-contracts-inventory:passed",
+        "proof:agentic-workspace:17-of-17-passed",
+        "github:pr-2832-ci-security:passed"
+      ]
     },
     "external_posture": {
       "state": "unobserved",
@@ -62,7 +69,7 @@
       "locator": ""
     }
   ],
-  "next_action": "Implement the promotion and subtraction compiler, compose it into operating decisions, and prove deterministic, procedural, human-authority, target-specific, durable-advisory, unsafe, and quiet cases.",
+  "next_action": "Merge PR #2832 after PRs #2830 and #2831, then apply the checked-in archive-owner integration proposal on the target branch; no implementation or proof work remains in this slice.",
   "blockers": [
     "None."
   ],
@@ -76,11 +83,28 @@
       "make typecheck",
       "make maintainer-surfaces"
     ],
-    "refs": []
+    "refs": [
+      "pytest:learning-promotion-subtraction:24-passed",
+      "pytest:routed-workspace-proof:502-passed",
+      "check:authority-counterexamples:passed",
+      "check:lint-typecheck-contracts-inventory:passed",
+      "proof:agentic-workspace:17-of-17-passed",
+      "github:pr-2832-ci-security:passed"
+    ]
   },
   "continuation": {
-    "owner": "none",
-    "residual_intent": "none"
+    "owner": ".agentic-workspace/planning/integration-proposals/issue-2812-learning-promotion-archive.integration-proposal.json",
+    "residual_intent": "Apply the archive-owner transition after PR #2832 reaches the target branch; keep parent lane #2809 and integration gate #2813 open."
+  },
+  "active_milestone": {
+    "status": "completed",
+    "ready": "ready",
+    "blocked": "merge-time archive application only"
+  },
+  "proof_report": {
+    "validation proof": "24 focused promotion and subtraction tests; 502 routed workspace tests; authority counterexamples, lint, typecheck, contract, schema, and inventory checks passed; Agentic Workspace proof passed 17/17.",
+    "proof achieved now": "yes; exact feature-head implementation and merge-time lifecycle proposal are recorded.",
+    "evidence for \"proof achieved\" state": "PR #2832 exact-head CI and Security results plus reviewed promotion/subtraction traces."
   },
   "specialist_contracts": [
     {
