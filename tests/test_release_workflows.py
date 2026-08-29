@@ -160,6 +160,9 @@ def test_pr_semver_label_workflow_uses_release_ownership_manifest() -> None:
     assert "pull_request:" in workflow
     assert "labeled" in workflow
     assert "unlabeled" in workflow
+    assert "BASE_REF: ${{ github.event.pull_request.base.ref }}" in workflow
+    assert "HEAD_REF: ${{ github.event.pull_request.head.ref }}" in workflow
+    assert "BASE_REF: ${{ github.base_ref }}" not in workflow
     assert ".github/release-ownership.json" in workflow
     assert "classify_changed_paths(changed, ownership)" in workflow
     assert 'ownership["semver_labels"]' in workflow
