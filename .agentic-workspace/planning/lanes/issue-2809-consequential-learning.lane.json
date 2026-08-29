@@ -45,40 +45,50 @@
     {
       "id": "issue-2812-learning-promotion",
       "title": "Promote proven learning into stronger repo-native owners",
-      "status": "active",
+      "status": "completed",
       "execplan_ref": ".agentic-workspace/planning/execplans/issue-2812-learning-promotion.plan.json",
       "depends_on": [
         "issue-2811-learning-effectiveness"
       ],
-      "purpose_for_lane": "Promote proven learning and subtract provisional residue."
+      "purpose_for_lane": "Promote proven learning and subtract provisional residue.",
+      "proof": "PR #2832; 24 focused tests, 502 routed broad tests, and all 17 selected proof receipts passed.",
+      "residual_after_slice": "Merge after #2831 and apply the issue-2812 archive integration proposal; final integration gate proceeds on this stack."
     },
     {
       "id": "issue-2813-learning-integration-gate",
       "title": "Prove AW learns from mistakes and shortcuts in ordinary work",
-      "status": "planned",
+      "status": "completed",
       "execplan_ref": ".agentic-workspace/planning/execplans/issue-2813-learning-integration-gate.plan.json",
       "depends_on": [
         "issue-2812-learning-promotion"
       ],
-      "purpose_for_lane": "Run the heterogeneous integration and Evaluation gate."
+      "purpose_for_lane": "Run the heterogeneous integration and Evaluation gate.",
+      "proof": "37 heterogeneous integration/focused tests and Evaluation consequential-learning-convergence-2813 concluded satisfied; final routed repository proof is recorded on the gate branch.",
+      "residual_after_slice": "Merge the four-PR stack in order; issue closure and target-branch Planning archive remain integration-owner work."
     }
   ],
-  "current_slice": "issue-2812-learning-promotion",
+  "current_slice": "issue-2813-learning-integration-gate",
   "acceptance_boundary": "All four GitHub children are satisfied, heterogeneous sources traverse the full learning loop, current Evaluation concludes satisfied, no-signal controls stay quiet, and subtraction review finds no parallel store or phase.",
   "proof_strategy": "Each stacked PR proves one owner boundary; the final gate runs heterogeneous before/learning/later-work fixtures, authority and no-signal controls, package validation, and criteria-by-criteria review.",
   "proof_aggregation": {
-    "status": "not-started",
-    "evidence": [],
+    "status": "satisfied",
+    "evidence": [
+      "PR #2830 candidate production",
+      "PR #2831 later-outcome effectiveness",
+      "PR #2832 stronger-owner promotion",
+      "docs/reviews/consequential-learning-integration-2813.json",
+      ".agentic-workspace/evaluations/issue-2813-disposition.json"
+    ],
     "known_gaps": []
   },
-  "residual_lane_work": "not evaluated",
-  "lane_to_epic_contribution": "not evaluated",
-  "parent_close_permission": "not-evaluated",
+  "residual_lane_work": "Merge the stacked PRs in order and apply their archive integration proposals on the target branch.",
+  "lane_to_epic_contribution": "The complete implementation stack proves outcome capture, later effectiveness, stronger-owner promotion/subtraction, heterogeneous convergence, and quiet direct work.",
+  "parent_close_permission": "do-not-close-parent",
   "closeout_state": {
     "status": "open",
-    "summary": "",
-    "residual_work": "",
-    "next_owner": ""
+    "summary": "Implementation and current Evaluation are satisfied on the reviewed stack; external integration is pending.",
+    "residual_work": "Merge #2830, #2831, #2832, then the final integration-gate PR before closing #2809/#2813.",
+    "next_owner": "stack integration reviewer"
   },
   "references": [
     {

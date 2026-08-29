@@ -115,6 +115,7 @@ def _signal_from_evidence(evidence: dict[str, Any]) -> dict[str, Any] | None:
             ),
         }
 
+    decision_contribution = _as_dict(assessment.get("decision_contribution") or evidence.get("decision_contribution"))
     return {
         "kind": "agentic-workspace/future-context-signal/v1",
         "signal_id": signal_id,
@@ -136,6 +137,7 @@ def _signal_from_evidence(evidence: dict[str, Any]) -> dict[str, Any] | None:
         "relevant": True,
         "status": "unresolved" if disposition.get("outcome") == "unresolved" else "assessed",
         "disposition": disposition,
+        **({"decision_contribution": decision_contribution} if decision_contribution else {}),
         "authority_rule": "Candidate authority never exceeds source authority; semantic generalization remains agent-proposed until a destination owner admits it.",
     }
 

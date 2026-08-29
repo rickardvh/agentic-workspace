@@ -1,0 +1,44 @@
+{
+  "kind": "planning-integration-proposal/v1",
+  "id": "issue-2813-learning-integration-gate-archive",
+  "status": "pending",
+  "phase": "integration-pending",
+  "requested_transition": "archive-owner",
+  "owner": {
+    "id": "issue-2813-learning-integration-gate",
+    "ref": ".agentic-workspace/planning/execplans/issue-2813-learning-integration-gate.plan.json"
+  },
+  "external_ref": "https://github.com/rickardvh/agentic-workspace/issues/2813",
+  "proof_refs": [
+    "37 heterogeneous integration tests passed",
+    "Evaluation concluded satisfied",
+    "full routed proof recorded on branch"
+  ],
+  "parent_boundary": "Archive #2813 slice only after merge; lane #2809 closes only after all four stacked PRs are integrated in order.",
+  "preserved_invariants": [
+    "ordinary prompts remain subsystem-neutral",
+    "source and semantic authority stay distinct",
+    "no-signal work remains quiet",
+    "no parallel learning store"
+  ],
+  "expected_subject_revision": "eb25d43b5f9360a7",
+  "expected_planning_revision": "b11b2eb687c28182",
+  "created_at": "2026-08-28T23:49:31.075925Z",
+  "updated_at": "2026-08-28T23:49:31.075925Z",
+  "authority_boundary": {
+    "proposal": "feature-branch declaration",
+    "integrated_truth": "integration receipt after apply",
+    "non_authority": [
+      "current selection",
+      "aggregate indexes",
+      "unrelated owners",
+      "terminal parent truth"
+    ],
+    "branch_admission": {
+      "status": "inside-git",
+      "branch": "codex/2813-learning-integration-gate",
+      "phase": "feature"
+    }
+  },
+  "proposal_revision": "45af9b2ce7c67aae"
+}

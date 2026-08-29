@@ -3302,7 +3302,11 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         [item for item in _as_list(inputs.get("outcome_evidence")) if isinstance(item, dict)],
         existing_signals=future_context_signals,
     )
-    future_context_signals = [_as_dict(item) for item in _as_list(future_learning.get("signals")) if isinstance(item, dict)]
+    future_context_signals = [
+        _as_dict(item)
+        for item in _as_list(future_learning.get("signals"))
+        if isinstance(item, dict) and item.get("relevant", True) is not False
+    ]
     intent_feedback = compile_intent_feedback(
         expectations=[item for item in _as_list(inputs.get("intent_expectations")) if isinstance(item, dict)],
         evidence=[item for item in _as_list(inputs.get("intent_evidence")) if isinstance(item, dict)],

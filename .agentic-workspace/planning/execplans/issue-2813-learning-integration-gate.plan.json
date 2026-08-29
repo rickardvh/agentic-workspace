@@ -1,0 +1,92 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2813-learning-integration-gate",
+  "title": "Prove AW learns from mistakes and shortcuts in ordinary work",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "implementation",
+  "revision": 2,
+  "intent": {
+    "outcome": "Current ordinary-path integration evidence proves heterogeneous consequential outcomes become selectively projected learning, later outcomes correct it, stronger owners absorb proven value, provisional residue shrinks, and direct/no-signal work stays quiet under one satisfied owner-bound Evaluation.",
+    "non_goals": [
+      "Merge the stacked PRs or close their issues before review.",
+      "Use subsystem-naming prompts as ordinary-path evidence.",
+      "Claim unavailable host feedback or agent self-report as authoritative success."
+    ]
+  },
+  "parent": {
+    "owner_id": "issue-2809-consequential-learning",
+    "contribution": "Aggregate heterogeneous end-to-end proof and a satisfied Evaluation for final lane review.",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "src/agentic_workspace/future_learning.py",
+      "tests/test_consequential_learning_integration.py",
+      ".agentic-workspace/evaluations.json",
+      ".agentic-workspace/evaluations/issue-2813-disposition.json",
+      "docs/reviews/consequential-learning-integration-2813.json",
+      "src/agentic_workspace/contracts/structured_file_inventory.json",
+      ".agentic-workspace/planning/lanes/issue-2809-consequential-learning.lane.json"
+    ],
+    "effects": [
+      "Admitted owner contributions produced from consequential outcomes participate in later canonical operating decisions without specialist rituals.",
+      "Maintained heterogeneous traces and no-signal controls support a current satisfied Evaluation and final subtraction review."
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected-local",
+      "owner": "issue-2813-learning-integration-gate"
+    },
+    "proof_posture": {
+      "state": "pending",
+      "refs": []
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    },
+    "delegation": {
+      "state": "recorded",
+      "route": "keep-local",
+      "reason": "Session policy explicitly prohibits spawning sub-agents; the final gate must exercise the exact sequential stack in one canonical decision surface."
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2813",
+      "label": "https://github.com/rickardvh/agentic-workspace/issues/2813",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Add end-to-end ordinary-path integration fixtures, register and conclude the owner-bound Evaluation, aggregate lane proof, and validate the full stack.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Prove AW learns from mistakes and shortcuts in ordinary work is implemented, validated, and closed out honestly."
+    ],
+    "requirements": [
+      "uv run --active pytest tests/test_consequential_learning_integration.py tests/test_future_learning.py tests/test_learning_effectiveness.py tests/test_learning_promotion.py -q",
+      "make lint-workspace",
+      "make typecheck",
+      "make maintainer-surfaces"
+    ],
+    "refs": []
+  },
+  "continuation": {
+    "owner": "none",
+    "residual_intent": "none"
+  },
+  "specialist_contracts": [
+    {
+      "kind": "planning-delegation/v1",
+      "target": "planning://delegation/keep-local",
+      "revision": 1
+    }
+  ]
+}
