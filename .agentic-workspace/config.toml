@@ -115,6 +115,38 @@ route_role = "behavior"
 precedence = "70"
 allowed_composition = ["maintenance", "evidence"]
 
+[assurance.domain_proof_lanes.pr_comment_delta]
+purpose = "Focused GitHub PR comment-delta behavior."
+applies_to_paths = ["scripts/github/pr_comment_delta.py", "tests/test_pr_comment_delta.py"]
+commands = ["uv run pytest tests/test_pr_comment_delta.py -q", "uv run ruff check scripts/github/pr_comment_delta.py tests/test_pr_comment_delta.py"]
+review_aids = ["Confirm comment identity, pagination, and delta classification remain covered without widening proof to unrelated GitHub tooling."]
+evidence_concepts = ["regression_prevention", "scenario_coverage", "focused-serial-proof"]
+proof_profiles = ["workspace_behavior"]
+authority_refs = [".agentic-workspace/config.toml", "tests/test_pr_comment_delta.py"]
+escalation = ["the change alters shared GitHub transport, review merge gates, or publication authority"]
+escalation_conditions = ["cross-owner", "cross-claim-boundary", "focused-route-insufficient"]
+claim_boundary = "focused-pr-comment-delta-proof-required-before-comment-delta-claim"
+owner = "workspace-cli-runtime"
+route_role = "behavior"
+precedence = "72"
+allowed_composition = ["maintenance", "evidence"]
+
+[assurance.domain_proof_lanes.generated_cli_catalogue]
+purpose = "Focused freshness proof for the generated CLI contract catalogue."
+applies_to_paths = ["docs/reference/cli-catalogue.md"]
+commands = ["uv run python scripts/generate/generate_contract_catalogues.py --check"]
+review_aids = ["Confirm the CLI catalogue is an exact generated projection of the current canonical command contracts."]
+evidence_concepts = ["generated_surface_freshness", "contract_parity"]
+proof_profiles = ["workspace_behavior"]
+authority_refs = ["src/agentic_workspace/contracts/cli_commands.json", "scripts/generate/generate_contract_catalogues.py"]
+escalation = ["the catalogue generator or canonical command authority changes"]
+escalation_conditions = ["cross-owner", "cross-claim-boundary", "focused-route-insufficient"]
+claim_boundary = "generated-cli-catalogue-freshness-required-before-catalogue-claim"
+owner = "workspace-cli-runtime"
+route_role = "evidence"
+precedence = "72"
+allowed_composition = ["behavior", "maintenance"]
+
 [assurance.domain_proof_lanes.correction_guidance_authority]
 purpose = "Focused trusted-correction custody, normalization, canonical-owner disposition, and guidance authority behavior."
 applies_to_paths = ["src/agentic_workspace/agent_guidance.py", "src/agentic_workspace/contracts/operations/correction-event*.json", "src/agentic_workspace/contracts/schemas/correction_event*.json", "tests/test_external_operation_clients.py", "tests/test_workspace_config_cli.py"]

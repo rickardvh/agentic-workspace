@@ -5878,6 +5878,10 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
         f"agentic-workspace planning new-plan --id <id> --title <title>{target_arg} --activate --prep-only --format json"
     )
     promote_command = f"agentic-workspace planning promote-to-plan --item-id <item-id>{target_arg} --format json"
+    targeted_write_command = (
+        "agentic-workspace planning targeted-write --plan <owner-ref> --patch <json> "
+        f"--expect-planning-revision <revision> --expect-owner-revision <revision>{target_arg} --format json"
+    )
     lane_create_command = f"agentic-workspace planning lane-create --id <lane-id> --title <title>{target_arg} --format json"
     lane_promote_command = f"agentic-workspace planning lane-promote <lane-id>{target_arg} --format json"
     lane_activate_command = f"agentic-workspace planning lane-activate <lane-id>{target_arg} --format json"
@@ -5899,6 +5903,7 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
         "lifecycle_commands": [
             new_plan_command,
             promote_command,
+            targeted_write_command,
             lane_create_command,
             lane_promote_command,
             lane_activate_command,
@@ -5933,6 +5938,8 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
         },
         "post_new_plan_tightening": {
             "rule": "new-plan creates a schema-valid scaffold, not an implementation-ready contract.",
+            "supported_mutation": targeted_write_command,
+            "mutation_source": "summary.execution_readiness.implementation_tightening",
             "tighten_before_implementation": [
                 "goal",
                 "non_goals",

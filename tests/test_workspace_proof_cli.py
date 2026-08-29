@@ -2057,6 +2057,44 @@ def test_proof_changed_selector_uses_focused_domain_route(tmp_path: Path, capsys
     assert answer["focused_route_coverage_audit"]["status"] == "covered"
 
 
+def test_pr_comment_delta_maps_to_its_focused_proof_owner_only() -> None:
+    target_root = Path(__file__).resolve().parents[1]
+    selection = workspace_runtime_proof._proof_selection_for_changed_paths(
+        changed_paths=["scripts/github/pr_comment_delta.py"],
+        target_root=target_root,
+        include_durable_intent=False,
+        include_assurance_requirements=False,
+        include_routine_work_context=False,
+        include_runtime_diagnostics=False,
+        include_test_strategy_check=False,
+    )
+
+    lane_ids = {lane["id"] for lane in selection["selected_lanes"]}
+    assert "domain:pr_comment_delta" in lane_ids
+    assert "domain:review_stack_operations" not in lane_ids
+    assert "uv run --active pytest tests/test_pr_comment_delta.py -q" in selection["required_commands"]
+    assert "make test-workspace" not in selection["required_commands"]
+    assert selection["focused_route_coverage_audit"]["status"] == "covered"
+
+
+def test_generated_cli_catalogue_maps_to_its_freshness_owner() -> None:
+    target_root = Path(__file__).resolve().parents[1]
+    selection = workspace_runtime_proof._proof_selection_for_changed_paths(
+        changed_paths=["docs/reference/cli-catalogue.md"],
+        target_root=target_root,
+        include_durable_intent=False,
+        include_assurance_requirements=False,
+        include_routine_work_context=False,
+        include_runtime_diagnostics=False,
+        include_test_strategy_check=False,
+    )
+
+    lane_ids = {lane["id"] for lane in selection["selected_lanes"]}
+    assert "domain:generated_cli_catalogue" in lane_ids
+    assert "uv run --active python scripts/generate/generate_contract_catalogues.py --check" in selection["required_commands"]
+    assert selection["focused_route_coverage_audit"]["status"] == "covered"
+
+
 def test_proof_receipt_resolves_selected_route_identity_when_caller_omits_it(tmp_path: Path, capsys) -> None:
     _write_repo_local_proof_target(tmp_path)
     _append_focused_proof_runtime_lane(tmp_path)

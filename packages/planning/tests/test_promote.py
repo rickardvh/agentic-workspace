@@ -810,7 +810,9 @@ def test_planning_cli_new_plan_creates_valid_active_scaffold(tmp_path: Path, cap
     assert payload["recovery_command"] is None
     assert any(action["kind"] == "created" and action["path"].endswith("plan-alpha.plan.json") for action in payload["actions"])
     assert any(
-        action["kind"] == "next" and "tighten scaffold fields" in action["detail"] and "adaptive_assurance" in action["detail"]
+        action["kind"] == "next"
+        and "implementation_tightening.preview_argv/apply_argv" in action["detail"]
+        and "adaptive_assurance" in action["detail"]
         for action in payload["actions"]
     )
     assert record_path.exists()
@@ -830,6 +832,51 @@ def test_planning_cli_new_plan_creates_valid_active_scaffold(tmp_path: Path, cap
     summary = planning_summary(target=tmp_path, profile="compact")
     assert summary["todo"]["active_items"][0]["id"] == "plan-alpha"
     assert summary["execplans"]["active_execplans"][0]["path"].endswith("plan-alpha.plan.json")
+    tightening = summary["execution_readiness"]["implementation_tightening"]
+    assert tightening["status"] == "scaffold-tightening-required"
+    assert tightening["missing_requirements"] == [
+        "goal",
+        "non_goals",
+        "intent_continuity",
+        "execution_bounds",
+        "touched_paths",
+        "validation_commands",
+        "completion_criteria",
+    ]
+    assert "targeted-write" in tightening["preview_argv"]
+    assert "--apply" in tightening["apply_argv"]
+
+    patch = {
+        "goal": ["Implement Plan Alpha through the supported owner mutation."],
+        "non_goals": ["Do not change unrelated Planning owners."],
+        "intent_continuity": {
+            "larger intended outcome": "Make Plan Alpha executable.",
+            "this slice completes the larger intended outcome": "yes",
+            "continuation surface": "none",
+        },
+        "execution_bounds": {
+            "allowed paths": "src/alpha.py and tests/test_alpha.py",
+            "max changed files": "2",
+            "required validation commands": "uv run pytest tests/test_alpha.py -q",
+            "ask-before-refactor threshold": "any third file",
+            "stop before touching": "unrelated owners",
+        },
+        "touched_paths": ["src/alpha.py", "tests/test_alpha.py"],
+        "validation_commands": ["uv run pytest tests/test_alpha.py -q"],
+        "completion_criteria": ["Plan Alpha behavior is implemented and its focused test passes."],
+    }
+    applied = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="plan-alpha",
+        patch=patch,
+        expected_planning_revision=planning_revision(tmp_path)["revision_id"],
+        expected_owner_revision=record["revision"],
+        apply=True,
+    )
+    assert applied["status"] == "applied"
+    tightened_summary = planning_summary(target=tmp_path, profile="compact")
+    assert tightened_summary["execution_readiness"]["implementation_tightening"]["status"] == "implementation-ready"
+    assert tightened_summary["execution_readiness"]["broad_work_allowed"] is True
 
 
 def test_compact_owner_rejects_unknown_lifecycle_and_phase(tmp_path: Path) -> None:
@@ -1347,6 +1394,9 @@ def test_planning_cli_new_plan_prep_only_scopes_to_planning_surfaces(tmp_path: P
     assert prep_only_contract["halt_after_summary"] is True
     assert "HALT: prep-only mode active" in prep_only_contract["halt_instruction"]
     assert "src" in prep_only_contract["forbidden_outputs"]
+    assert summary["execution_readiness"]["status"] == "prep-only-non-executable"
+    assert summary["execution_readiness"]["implementation_tightening"]["status"] == "prep-only-non-executable"
+    assert summary["execution_readiness"]["broad_work_allowed"] is False
 
     (tmp_path / "README.md").write_text("# Drift\n", encoding="utf-8")
     summary_with_drift = planning_summary(target=tmp_path, profile="compact")

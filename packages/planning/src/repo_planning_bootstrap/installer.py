@@ -434,6 +434,7 @@ class InstallResult:
     conflict_owner: str = ""
     recovery_command: str = ""
     operation_receipt: dict[str, Any] = field(default_factory=dict)
+    revision_guards: dict[str, Any] = field(default_factory=dict)
 
     def add(self, kind: str, path: Path, detail: str) -> None:
         self.actions.append(Action(kind=kind, path=path, detail=detail))
@@ -2541,6 +2542,8 @@ def planning_summary(
     )
     work_maturity = _planning_work_maturity_projection(state=None, active_execplans=active_execplans)
     execution_readiness = _execution_readiness_payload(
+        target_root=target_root,
+        planning_record=planning_record,
         active_items=active_items,
         active_execplans=active_execplans,
         roadmap_lanes=roadmap_lanes,
@@ -5390,8 +5393,110 @@ def _machine_first_planning_payload(*, active_execplans: list[dict[str, str]]) -
     }
 
 
+def _implementation_tightening_payload(*, target_root: Path, planning_record: dict[str, Any]) -> dict[str, Any]:
+    task_value = planning_record.get("task")
+    task = task_value if isinstance(task_value, dict) else {}
+    owner_ref = str(task.get("surface") or "").strip()
+    owner_path = _resolve_repo_relative_file(target_root, owner_ref) if owner_ref else None
+    owner = _load_execplan_record(owner_path) if owner_path is not None else None
+    if not isinstance(owner, dict):
+        return {"status": "unavailable", "missing_requirements": [], "reason": "selected canonical owner is unavailable"}
+    prep_only = _execplan_prep_only_contract(owner_path) if owner_path is not None else {}
+    if prep_only.get("is_prep_only") is True:
+        return {
+            "status": "prep-only-non-executable",
+            "missing_requirements": [],
+            "rule": "Prep-only state remains a durable handoff and must not be tightened into execution authority implicitly.",
+        }
+
+    def values(field: str) -> list[str]:
+        value = owner.get(field)
+        if isinstance(value, list):
+            return [str(item).strip() for item in value if str(item).strip()]
+        if isinstance(value, dict):
+            return [str(item).strip() for item in value.values() if str(item).strip()]
+        return [str(value).strip()] if str(value or "").strip() else []
+
+    requirements = {
+        "goal": lambda items: bool(items) and not any(item.startswith("Create a bounded plan for ") for item in items),
+        "non_goals": lambda items: bool(items) and items != ["Leave adjacent backlog or follow-on work out of this plan."],
+        "intent_continuity": lambda items: bool(items) and not any(item.startswith("Create a bounded plan for ") for item in items),
+        "execution_bounds": lambda items: bool(items) and not any("Fill in" in item for item in items),
+        "touched_paths": lambda items: bool(items) and not any("Fill in" in item for item in items),
+        "validation_commands": lambda items: bool(items) and not any("Fill in" in item for item in items),
+        "completion_criteria": lambda items: (
+            bool(items) and not any("is implemented, validated, and closed out honestly" in item for item in items)
+        ),
+    }
+    profile_value = owner.get("execplan_profile")
+    profile = profile_value if isinstance(profile_value, dict) else {}
+    if str(profile.get("task_shape") or "") == "high-assurance":
+        requirements["adaptive_assurance"] = lambda items: bool(items)
+    missing = [field for field, admitted in requirements.items() if not admitted(values(field))]
+    if not missing:
+        return {
+            "status": "implementation-ready",
+            "missing_requirements": [],
+            "owner": owner_ref,
+            "owner_revision": owner.get("revision"),
+            "rule": "The selected owner carries concrete implementation bounds and proof semantics.",
+        }
+    templates: dict[str, Any] = {
+        "goal": ["<concrete requested outcome>"],
+        "non_goals": ["<explicit adjacent work excluded from this owner>"],
+        "intent_continuity": {
+            "larger intended outcome": "<larger outcome>",
+            "this slice completes the larger intended outcome": "yes|no",
+            "continuation surface": "none|<durable owner>",
+        },
+        "execution_bounds": {
+            "allowed paths": "<repo-relative write scope>",
+            "max changed files": "<expected bound>",
+            "required validation commands": "<focused proof>",
+            "ask-before-refactor threshold": "<scope threshold>",
+            "stop before touching": "<excluded authority>",
+        },
+        "touched_paths": ["<repo-relative path or glob>"],
+        "validation_commands": ["<focused validation command>"],
+        "completion_criteria": ["<observable completion criterion>"],
+        "adaptive_assurance": {"mode": "<risk-proportionate mode>", "reason": "<why this assurance is sufficient>"},
+    }
+    patch_template = {field: templates[field] for field in missing}
+    revision = str(planning_revision(target_root).get("revision_id") or "")
+    base_argv = [
+        *_workspace_cli_invoke(target_root).split(),
+        "planning",
+        "targeted-write",
+        "--plan",
+        owner_ref,
+        "--patch",
+        json.dumps(patch_template, ensure_ascii=False, separators=(",", ":")),
+        "--expect-planning-revision",
+        revision,
+        "--expect-owner-revision",
+        str(owner.get("revision") or ""),
+        "--target",
+        ".",
+        "--format",
+        "json",
+    ]
+    return {
+        "status": "scaffold-tightening-required",
+        "missing_requirements": missing,
+        "owner": owner_ref,
+        "owner_revision": owner.get("revision"),
+        "planning_revision": revision,
+        "patch_template": patch_template,
+        "preview_argv": base_argv,
+        "apply_argv": [*base_argv[:-4], "--apply", *base_argv[-4:]],
+        "rule": "Replace template markers with task semantics, preview the owner-scoped mutation, then apply it with the same revision guards.",
+    }
+
+
 def _execution_readiness_payload(
     *,
+    target_root: Path,
+    planning_record: dict[str, Any],
     active_items: list[dict[str, str]],
     active_execplans: list[dict[str, str]],
     roadmap_lanes: list[dict[str, Any]],
@@ -5469,10 +5574,12 @@ def _execution_readiness_payload(
     }
     ordered_batch = _roadmap_ordered_batch_guidance(roadmap_lanes=roadmap_lanes, roadmap_candidates=roadmap_candidates)
     if active_execplans:
+        tightening = _implementation_tightening_payload(target_root=target_root, planning_record=planning_record)
+        implementation_ready = tightening.get("status") == "implementation-ready"
         return {
-            "status": "planning-backed",
-            "broad_work_allowed": True,
-            "direct_work_allowed": True,
+            "status": "planning-backed" if implementation_ready else str(tightening.get("status") or "planning-backed"),
+            "broad_work_allowed": implementation_ready,
+            "direct_work_allowed": implementation_ready,
             "active_execplan_count": len(active_execplans),
             "roadmap_candidate_count": len(roadmap_candidates),
             "recommendation": {
@@ -5480,7 +5587,11 @@ def _execution_readiness_payload(
                 "summary": "Use the active planning record as the execution authority for broad work.",
                 "next_step": "Continue from planning_record, resumable_contract, or handoff_contract before implementation.",
             },
-            "broad_work_planning_guard": {**broad_work_planning_guard, "status": "satisfied"},
+            "implementation_tightening": tightening,
+            "broad_work_planning_guard": {
+                **broad_work_planning_guard,
+                "status": "satisfied" if implementation_ready else "tightening-required-before-implementation",
+            },
             "rule": "Broad planned work should execute from the active checked-in planning record.",
         }
     if active_items:
@@ -8216,6 +8327,9 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
         "broad_work_planning_guard": compact_broad_work_guard,
         "rule": execution_readiness.get("rule", ""),
     }
+    implementation_tightening = execution_readiness.get("implementation_tightening")
+    if isinstance(implementation_tightening, dict):
+        compact_execution_readiness["implementation_tightening"] = implementation_tightening
     ordered_batch = execution_readiness.get("ordered_batch")
     if isinstance(ordered_batch, dict) and ordered_batch.get("status") == "present":
         compact_execution_readiness["ordered_batch"] = ordered_batch
@@ -8469,6 +8583,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
                 for key in ("task", "next_action", "proof_expectations", "prep_only_contract", "minimal_refs")
                 if key in compact_summary["planning_record"]
             },
+            "execution_readiness": compact_summary["execution_readiness"],
             "current_execution_pressure": compact_summary["current_execution_pressure"],
             "stop_now": {
                 "status": "required",
@@ -14610,18 +14725,33 @@ def _refresh_existing_integration_proposal(
     observed_planning_revision = str(expected_planning_revision or "").strip()
     current_planning_revision = str(_planning_target_authority_revision(target_root).get("revision_id") or "")
     if not observed_planning_revision:
-        result.add("manual review", proposal_path, "integration refresh requires --expect-planning-revision")
+        result.add(
+            "manual review",
+            proposal_path,
+            "integration refresh requires --expect-planning-revision from planning_revision.target_authority_revision",
+        )
         result.reason_code = "integration-refresh-planning-revision-required"
         result.conflict_owner = PLANNING_STATE_PATH.as_posix()
+        result.recovery_command = (
+            f"{_workspace_cli_invoke(target_root)} planning integration-propose --proposal-id {proposal_id} --refresh-existing "
+            f"--expect-proposal-revision {current_proposal_revision} --expect-subject-revision {current_subject_revision} "
+            f"--expect-planning-revision {current_planning_revision} --target . --format json"
+        )
         return result
     if observed_planning_revision != current_planning_revision:
         result.add(
             "manual review",
             proposal_path,
-            f"integration refresh target authority changed: expected {observed_planning_revision}, found {current_planning_revision}",
+            "integration refresh target authority changed: --expect-planning-revision expected "
+            f"{observed_planning_revision}, but planning_revision.target_authority_revision is {current_planning_revision}",
         )
         result.reason_code = "stale-integration-refresh-planning-revision"
         result.conflict_owner = PLANNING_STATE_PATH.as_posix()
+        result.recovery_command = (
+            f"{_workspace_cli_invoke(target_root)} planning integration-propose --proposal-id {proposal_id} --refresh-existing "
+            f"--expect-proposal-revision {current_proposal_revision} --expect-subject-revision {current_subject_revision} "
+            f"--expect-planning-revision {current_planning_revision} --target . --format json"
+        )
         return result
 
     if (
@@ -14731,6 +14861,21 @@ def propose_integration_transition(
     proposal_slug = _slugify(proposal_id or f"{external or owner_id or owner_path_text}-{transition}")
     proposal_path = _integration_proposal_path(target_root, proposal_slug)
     result = InstallResult(target_root=target_root, message=f"Propose Planning integration transition '{proposal_slug}'", dry_run=dry_run)
+    target_authority_revision = str(_planning_target_authority_revision(target_root).get("revision_id") or "")
+    result.revision_guards = {
+        "expect_planning_revision": {
+            "cli_option": "--expect-planning-revision",
+            "authority": "target-authority",
+            "source_field": "planning_revision.target_authority_revision",
+            "current_value": target_authority_revision,
+        },
+        "expect_subject_revision": {
+            "cli_option": "--expect-subject-revision",
+            "authority": "integration-subject",
+            "source_field": "operation_receipt.expected_subject_revision",
+        },
+        "rule": "--expect-planning-revision consumes planning_revision.target_authority_revision, not planning_revision.revision_id.",
+    }
     if refresh_existing:
         semantic_inputs = {
             "owner": owner,
@@ -14808,12 +14953,18 @@ def propose_integration_transition(
                     "manual review",
                     target_root / owner_path_text,
                     (
-                        "feature-head Planning authority changed: expected "
-                        f"{expected_planning_revision.strip()}, found {current_planning_revision}"
+                        "feature-head Planning target authority changed: --expect-planning-revision expected "
+                        f"{expected_planning_revision.strip()}, but planning_revision.target_authority_revision is "
+                        f"{current_planning_revision}"
                     ),
                 )
                 result.reason_code = "stale-feature-completion-planning-revision"
                 result.conflict_owner = owner_path_text
+                result.recovery_command = (
+                    f"{_workspace_cli_invoke(target_root)} planning integration-propose --proposal-id {proposal_slug} "
+                    f"--owner-ref {owner_path_text} --requested-transition {transition} "
+                    f"--expect-planning-revision {current_planning_revision} --target . --format json"
+                )
                 return result
             if not expected_subject_revision.strip():
                 result.add(
@@ -17250,8 +17401,9 @@ def _new_plan_tightening_checklist(*, prep_only: bool) -> str:
             "product files, or handoff docs unless summary reports a blocking Planning problem"
         )
     return (
-        "before implementation, tighten scaffold fields: goal, non_goals, intent_continuity, execution_bounds, "
-        "touched_paths, validation_commands, completion_criteria, and adaptive_assurance when risk or scope requires it"
+        "before implementation, run summary and use execution_readiness.implementation_tightening.preview_argv/apply_argv "
+        "to tighten the exact missing goal, non_goals, intent_continuity, execution_bounds, touched_paths, "
+        "validation_commands, completion_criteria, and risk-required adaptive_assurance fields"
     )
 
 
@@ -18023,7 +18175,25 @@ def targeted_execplan_write(
         }
     if lane_path is not None and str(expected_lane_revision) != lane_revision:
         return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "stale-lane-revision", "lane_revision": lane_revision}
-    allowed = {"intent", "parent", "scope", "blockers", "next_action", "proof", "continuation", "lifecycle", "phase"}
+    allowed = {
+        "intent",
+        "parent",
+        "scope",
+        "blockers",
+        "next_action",
+        "proof",
+        "continuation",
+        "lifecycle",
+        "phase",
+        "goal",
+        "non_goals",
+        "intent_continuity",
+        "execution_bounds",
+        "touched_paths",
+        "validation_commands",
+        "completion_criteria",
+        "adaptive_assurance",
+    }
     unknown = sorted(set(patch).difference(allowed))
     if unknown or not patch:
         return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "invalid-patch", "unknown_fields": unknown}
@@ -18043,8 +18213,32 @@ def targeted_execplan_write(
     updated = copy.deepcopy(record)
     for key, value in patch.items():
         updated[key] = copy.deepcopy(value)
-    if "next_action" in patch and isinstance(updated.get("canonical_core"), dict):
-        updated["canonical_core"]["next_action"] = str(patch["next_action"])
+    canonical_core = updated.get("canonical_core")
+    if isinstance(canonical_core, dict):
+        if "next_action" in patch:
+            canonical_core["next_action"] = str(patch["next_action"])
+        if "goal" in patch and isinstance(patch["goal"], list) and patch["goal"]:
+            canonical_core["requested_outcome"] = str(patch["goal"][0])
+        if "touched_paths" in patch and isinstance(patch["touched_paths"], list):
+            canonical_core["touched_scope"] = copy.deepcopy(patch["touched_paths"])
+        if "validation_commands" in patch and isinstance(patch["validation_commands"], list):
+            canonical_core["proof_expectations"] = copy.deepcopy(patch["validation_commands"])
+        if "completion_criteria" in patch and isinstance(patch["completion_criteria"], list):
+            canonical_core["completion_criteria"] = copy.deepcopy(patch["completion_criteria"])
+    machine_contract = updated.get("machine_readable_contract")
+    if isinstance(machine_contract, dict):
+        if "goal" in patch and isinstance(patch["goal"], list) and patch["goal"]:
+            intent_contract = machine_contract.get("intent")
+            if isinstance(intent_contract, dict):
+                intent_contract["outcome"] = str(patch["goal"][0])
+        if "touched_paths" in patch and isinstance(patch["touched_paths"], list):
+            scope_contract = machine_contract.get("scope")
+            if isinstance(scope_contract, dict):
+                scope_contract["touched"] = copy.deepcopy(patch["touched_paths"])
+        if "validation_commands" in patch and isinstance(patch["validation_commands"], list):
+            execution_contract = machine_contract.get("execution")
+            if isinstance(execution_contract, dict) and patch["validation_commands"]:
+                execution_contract["proof"] = str(patch["validation_commands"][0])
     updated["revision"] = int(record.get("revision") or 0) + 1
     findings = _json_schema_findings(payload=updated, schema_path=EXECPLAN_RECORD_SCHEMA_PATH)
     if findings:
@@ -23142,6 +23336,8 @@ def format_result_json(result: InstallResult) -> str:
         payload["completion_options"] = result.completion_options
     if result.operation_receipt:
         payload["operation_receipt"] = result.operation_receipt
+    if result.revision_guards:
+        payload["revision_guards"] = result.revision_guards
     if result.dry_run:
         payload["lifecycle_plan"] = _lifecycle_plan_payload(result)
     return json.dumps(payload, ensure_ascii=False, indent=2)

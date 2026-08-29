@@ -19,7 +19,7 @@
     {"name": "refresh_existing", "source": "cli-option", "required": false},
     {"name": "expect_proposal_revision", "source": "cli-option", "required": false},
     {"name": "target", "source": "cli-option", "required": false},
-    {"name": "expect_planning_revision", "source": "cli-option", "required": false},
+    {"name": "expect_planning_revision", "source": "cli-option", "required": false, "description": "Target-authority guard from planning_revision.target_authority_revision; do not use planning_revision.revision_id."},
     {"name": "dry_run", "source": "cli-option", "required": false},
     {"name": "format", "source": "cli-option", "required": false}
   ],
@@ -41,7 +41,8 @@
     "Feature branches write proposals, not integrated lifecycle truth.",
     "Do not select current work, rewrite aggregate collections, close unrelated owners, or claim terminal parent truth.",
     "Record a subject revision so target-branch apply can reject stale proposals.",
-    "Refresh only an existing pending proposal, require proposal/subject/target revision guards, and preserve immutable lifecycle semantics."
+    "Refresh only an existing pending proposal, require proposal/subject/target revision guards, and preserve immutable lifecycle semantics.",
+    "--expect-planning-revision is self-identifying as planning_revision.target_authority_revision in help, structured output, and stale recovery."
   ],
   "proof": ["planning branch-safe tests cover pending proposal non-authority, stale detection, idempotence, and generated command exposure"],
   "migration_status": "runtime-consumed",

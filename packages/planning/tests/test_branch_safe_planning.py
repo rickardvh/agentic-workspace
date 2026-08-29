@@ -620,6 +620,16 @@ def test_feature_complete_integration_proposal_updates_owner_and_applies_on_targ
     )
 
     assert proposed.reason_code == ""
+    guard = proposed.revision_guards["expect_planning_revision"]
+    assert guard == {
+        "cli_option": "--expect-planning-revision",
+        "authority": "target-authority",
+        "source_field": "planning_revision.target_authority_revision",
+        "current_value": before_planning,
+    }
+    assert proposed.to_dict()["revision_guards"]["rule"].startswith(
+        "--expect-planning-revision consumes planning_revision.target_authority_revision"
+    )
     feature_owner = json.loads(owner_path.read_text(encoding="utf-8"))
     proposal = _proposal_record(tmp_path, "issue-2851-archive")
     assert feature_owner["lifecycle"] == "live"
@@ -688,6 +698,10 @@ def test_feature_completion_rejects_stale_or_unproven_owner(tmp_path: Path) -> N
         target=tmp_path,
     )
     assert stale_planning.reason_code == "stale-feature-completion-planning-revision"
+    current_target_authority = planning_revision(tmp_path)["target_authority_revision"]
+    assert current_target_authority in stale_planning.actions[0].detail
+    assert "planning_revision.target_authority_revision" in stale_planning.actions[0].detail
+    assert f"--expect-planning-revision {current_target_authority}" in stale_planning.recovery_command
     stale = propose_integration_transition(
         proposal_id="issue-2851-negative",
         owner_ref=owner_ref,

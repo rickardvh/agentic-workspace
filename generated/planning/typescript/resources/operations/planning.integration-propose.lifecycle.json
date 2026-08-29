@@ -16,7 +16,8 @@
     "Feature branches write proposals, not integrated lifecycle truth.",
     "Do not select current work, rewrite aggregate collections, close unrelated owners, or claim terminal parent truth.",
     "Record a subject revision so target-branch apply can reject stale proposals.",
-    "Refresh only an existing pending proposal, require proposal/subject/target revision guards, and preserve immutable lifecycle semantics."
+    "Refresh only an existing pending proposal, require proposal/subject/target revision guards, and preserve immutable lifecycle semantics.",
+    "--expect-planning-revision is self-identifying as planning_revision.target_authority_revision in help, structured output, and stale recovery."
   ],
   "id": "planning.integration-propose.lifecycle",
   "inputs": [
@@ -91,6 +92,7 @@
       "source": "cli-option"
     },
     {
+      "description": "Target-authority guard from planning_revision.target_authority_revision; do not use planning_revision.revision_id.",
       "name": "expect_planning_revision",
       "required": false,
       "source": "cli-option"

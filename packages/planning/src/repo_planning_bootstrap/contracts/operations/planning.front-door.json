@@ -21,7 +21,8 @@
       "new-plan",
       "owner-select",
       "promote-to-plan",
-      "reconcile"
+      "reconcile",
+      "targeted-write"
     ]
   },
   "summary": "Show Planning help or dispatch Planning subcommands through the workspace front door.",
