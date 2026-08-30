@@ -5,7 +5,7 @@
   "owner_level": "slice",
   "lifecycle": "live",
   "phase": "implementation",
-  "revision": 3,
+  "revision": 5,
   "intent": {
     "outcome": "Ensure an applicable enforcing workflow obligation targeting work completion survives bounded-clause compilation into the authoritative operating decision and mechanically narrows every derived completion projection.",
     "non_goals": [
@@ -22,14 +22,16 @@
   "scope": {
     "owned": [
       "src/agentic_workspace/operating_decision.py",
+      "src/agentic_workspace/workspace_runtime_startup.py",
       "tests/test_operating_decision.py",
       "tests/test_workspace_cli.py",
       ".release/changes/issue-2629-enforcing-obligation-compilation.toml",
       ".agentic-workspace/planning/execplans/issue-2629-enforcing-obligation-compilation.plan.json"
     ],
     "effects": [
+      "Ordinary startup carries source-owned workflow obligations privately through final operating-decision compilation and removes the transport field before output.",
       "The completion claim is an explicit current instruction target on ordinary projection surfaces.",
-      "Unsatisfied enforcing requirements become authoritative blockers with source provenance and a bounded satisfier route.",
+      "Unsatisfied enforcing requirements become authoritative claim blockers with source provenance and a bounded satisfier route.",
       "Derived start/implement completion fields cannot re-allow a claim blocked by the operating decision.",
       "Advisory and non-applicable obligations remain non-blocking."
     ]
@@ -54,25 +56,34 @@
     }
   },
   "references": [],
-  "next_action": "Implement the generic claim-target and peer-projection enforcement path, add source-neutral and live workflow regression tests, validate, and open one patch PR for fresh independent review.",
+  "next_action": "Publish the patch PR and stop at the fresh independent review boundary; after merge, resume the blocked #2806 selected-proof lane.",
   "blockers": [
     "Fresh independent review is required after the PR is opened."
   ],
   "proof": {
     "claims": [
-      "An unsatisfied enforcing workflow requirement blocks claim-work-complete in the sole operating decision.",
-      "The derived ordinary surface reports completion unavailable and exposes the same blocker and satisfier route.",
-      "Satisfied, advisory, and non-applicable cases stay unblocked."
+      "An unsatisfied enforcing workflow requirement blocks claim-work-complete in the sole operating decision without suppressing unrelated implementation.",
+      "The derived ordinary start surface reports completion unavailable and exposes the same source-owned blocker and satisfier route.",
+      "Advisory and non-applicable obligations remain non-blocking."
     ],
     "requirements": [
       "A source-neutral operating-decision test proves target-scoped require/restrict composition.",
-      "A workflow-config startup regression reproduces and fixes the contradictory completion output.",
-      "Focused IR, operating-decision, and workspace CLI tests pass.",
+      "A workflow-config startup regression proves the contradictory completion output cannot recur.",
+      "Focused and broad routed validation pass.",
       "Fresh independent review accepts the current PR head before merge or issue closure."
     ],
     "refs": [
       "#2629",
-      "#2870"
+      "#2870",
+      "tests/test_operating_decision.py + tests/test_instruction_clause_ir.py: 147 passed",
+      "workflow/dogfooding focused workspace CLI: 3 passed",
+      "routed proof/defaults/maintainer/workspace subsets: 53 passed",
+      "packages/planning/tests/test_promote.py + tests/test_reconciliation.py + tests/test_workspace_cli.py: 513 passed",
+      "make lint-workspace: passed",
+      "make typecheck: passed",
+      "make check-planning-nosync: passed",
+      "contract tooling and structured inventory: passed",
+      "live start replay: implementation_allowed=true, completion_claim_allowed=false, claim-work-complete blockers carry owner and satisfier provenance"
     ]
   },
   "continuation": {

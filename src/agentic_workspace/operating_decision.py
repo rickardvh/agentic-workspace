@@ -2382,7 +2382,12 @@ def _projection_instruction_mechanisms(payload: dict[str, Any], posture: dict[st
         }
         for claim in blocked_claims
     ]
+    task_posture_packet = _as_dict(payload.get("task_posture_packet")) or _as_dict(context.get("task_posture_packet"))
     workflow_obligations = _as_dict(payload.get("workflow_obligations"))
+    if not _as_list(workflow_obligations.get("relevant_to_current_work")):
+        workflow_obligations = {
+            "relevant_to_current_work": _as_list(task_posture_packet.get("workflow_obligations")),
+        }
     workflow_revision = "sha256:" + _digest(workflow_obligations) if workflow_obligations else ""
     bounded_controls: list[dict[str, Any]] = []
     for obligation in [_as_dict(item) for item in _as_list(workflow_obligations.get("relevant_to_current_work"))]:
@@ -2422,7 +2427,6 @@ def _projection_instruction_mechanisms(payload: dict[str, Any], posture: dict[st
                     "target": f"surface:workflow-obligation:{obligation_id}",
                 }
             )
-    task_posture_packet = _as_dict(payload.get("task_posture_packet")) or _as_dict(context.get("task_posture_packet"))
     module_contributions = [
         *_as_list(payload.get("module_contributions")),
         *_as_list(task_posture_packet.get("module_contributions")),
@@ -2441,6 +2445,60 @@ def _projection_instruction_mechanisms(payload: dict[str, Any], posture: dict[st
         },
         capabilities,
     )
+
+
+def _instruction_claim_blockers(decision: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return target-scoped instruction blockers owned by the claim envelope."""
+
+    return [
+        copy.deepcopy(item)
+        for item in _as_list(_as_dict(decision.get("instruction_clause_projection")).get("blockers"))
+        if isinstance(item, dict) and str(item.get("target") or "").startswith("claim:")
+    ]
+
+
+def _bind_instruction_claim_effects_to_projection(*, payload: dict[str, Any], decision: dict[str, Any]) -> None:
+    """Derive peer claim permissions from the canonical operating decision.
+
+    Claim-targeted requirements narrow completion without suppressing an
+    unrelated current action. Legacy peer fields remain compatibility
+    projections and therefore cannot re-allow a claim blocked by the decision.
+    """
+
+    claim_blockers = _instruction_claim_blockers(decision)
+    if not claim_blockers or "claim-work-complete" not in _as_list(decision.get("blocked_claim_classes")):
+        return
+
+    repairs = [
+        f"{str(item.get('owner') or 'instruction-source')}: {str(item.get('repair') or 'resolve the source-owned requirement')}"
+        for item in claim_blockers
+    ]
+
+    def narrow_next_action(value: Any) -> None:
+        packet = _as_dict(value)
+        if not packet:
+            return
+        packet["completion_claim_allowed"] = False
+        packet["closure_blockers"] = list(dict.fromkeys([*_as_list(packet.get("closure_blockers")), *repairs]))
+        boundary = _as_dict(packet.get("claim_boundary"))
+        if boundary:
+            boundary["completion_claim"] = "blocked-until-proof-and-acceptance"
+
+    narrow_next_action(payload.get("next_safe_action"))
+    narrow_next_action(_as_dict(payload.get("values")).get("next_safe_action"))
+    narrow_next_action(_as_dict(payload.get("answer")).get("next_safe_action"))
+
+    decision_packet = _as_dict(payload.get("decision_packet"))
+    if not decision_packet:
+        return
+    effects = _as_dict(decision_packet.get("effects"))
+    effects["completion_claim_allowed"] = False
+    effects["blocked_claims"] = list(dict.fromkeys([*_as_list(effects.get("blocked_claims")), "claim-work-complete"]))
+    boundary = _as_dict(decision_packet.get("claim_boundary"))
+    if boundary:
+        boundary["completion_claim"] = "blocked-until-proof-and-acceptance"
+    decision_packet["claim_blockers"] = claim_blockers
+    decision_packet["reasons"] = list(dict.fromkeys([*_as_list(decision_packet.get("reasons")), "instruction_requirement_unsatisfied"]))
 
 
 def compile_projection_surface_operating_decision(
@@ -2527,6 +2585,7 @@ def compile_projection_surface_operating_decision(
             "instruction_mechanisms": instruction_mechanisms,
             "instruction_capabilities": instruction_capabilities,
             "instruction_program": instruction_program,
+            "requested_claim_classes": ["claim-work-complete"],
             "improvement_candidate": improvement_candidate,
             "improvement_latitude": str(initiative_posture.get("mode") or "conservative"),
             "adaptation_signals": [
@@ -2631,6 +2690,10 @@ def bind_projection_surface_operating_decision(
         "mismatch_reason": "" if valid else "decision posture or admitted projection input does not match the materialized payload",
         "rule": "The final decision is authoritative only when it derives from this pre-admitted input and the materialized purpose posture.",
     }
+    if valid:
+        _bind_instruction_claim_effects_to_projection(payload=payload, decision=operating_decision)
+    if _as_dict(payload.get("decision_packet")).get("kind") == "agentic-workspace/ordinary-start-decision/v1":
+        payload.pop("task_posture_packet", None)
     return payload
 
 
@@ -3561,7 +3624,11 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
     )
     blockers = [item for item in _as_list(inputs.get("blockers")) if isinstance(item, dict)]
     blockers.extend(_as_dict(item) for item in _as_list(reconciliation.get("blockers")))
-    blockers.extend(_as_dict(item) for item in _as_list(instruction_clause_projection.get("blockers")))
+    instruction_blockers = [_as_dict(item) for item in _as_list(instruction_clause_projection.get("blockers")) if isinstance(item, dict)]
+    instruction_claim_blockers = [item for item in instruction_blockers if str(item.get("target") or "").startswith("claim:")]
+    blockers.extend(item for item in instruction_blockers if item not in instruction_claim_blockers)
+    if not invocation:
+        blockers.extend(instruction_claim_blockers)
     if instruction_clause_projection["status"] == "invalid":
         blockers.append(
             {
@@ -3758,6 +3825,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
                     for item in _as_list(_as_dict(instruction_clause_projection.get("effects")).get("restrict"))
                     if str(_as_dict(item).get("target") or "").startswith("claim:")
                 ],
+                *[str(item.get("target") or "").removeprefix("claim:") for item in instruction_claim_blockers],
             ]
         )
     )
