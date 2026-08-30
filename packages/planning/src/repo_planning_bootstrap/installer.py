@@ -18396,6 +18396,7 @@ def targeted_execplan_write(
         "blockers",
         "next_action",
         "proof",
+        "relationships",
         "continuation",
         "lifecycle",
         "phase",
@@ -18411,6 +18412,49 @@ def targeted_execplan_write(
     unknown = sorted(set(patch).difference(allowed))
     if unknown or not patch:
         return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "invalid-patch", "unknown_fields": unknown}
+    if "relationships" in patch:
+        current_relationships = record.get("relationships")
+        proposed_relationships = patch.get("relationships")
+        if not isinstance(current_relationships, dict) or not isinstance(proposed_relationships, dict):
+            return {
+                "kind": "agentic-planning/targeted-execplan-write/v1",
+                "status": "invalid-relationships-patch",
+                "reason": "relationships must be a complete object copied from the guarded owner",
+            }
+        changed_relationships = sorted(
+            key
+            for key in set(current_relationships) | set(proposed_relationships)
+            if current_relationships.get(key) != proposed_relationships.get(key)
+        )
+        if changed_relationships not in ([], ["external_posture"]):
+            return {
+                "kind": "agentic-planning/targeted-execplan-write/v1",
+                "status": "unsupported-relationships-patch",
+                "changed_relationships": changed_relationships,
+                "reason": "targeted-write may reconcile only relationships.external_posture; lifecycle owners retain all other relationship authority",
+            }
+        external_posture = proposed_relationships.get("external_posture")
+        if not isinstance(external_posture, dict):
+            return {
+                "kind": "agentic-planning/targeted-execplan-write/v1",
+                "status": "invalid-external-posture",
+                "reason": "relationships.external_posture must be an object",
+            }
+        external_state = str(external_posture.get("state") or "").strip()
+        external_refs = external_posture.get("refs")
+        valid_refs = isinstance(external_refs, list) and all(isinstance(item, str) and item.strip() for item in external_refs)
+        if external_state not in {"observed", "unobserved"} or not valid_refs or (external_state == "observed" and not external_refs):
+            return {
+                "kind": "agentic-planning/targeted-execplan-write/v1",
+                "status": "invalid-external-posture",
+                "reason": "external posture must be observed with refs or unobserved with an empty refs list",
+            }
+        if external_state == "unobserved" and external_refs:
+            return {
+                "kind": "agentic-planning/targeted-execplan-write/v1",
+                "status": "invalid-external-posture",
+                "reason": "unobserved external posture cannot carry refs",
+            }
     unsupported_projection_fields = sorted(field for field in patch if field in {"parent"})
     lifecycle_value = str(patch.get("lifecycle") or "").strip().lower()
     terminal_lifecycle = lifecycle_value in {"completed", "complete", "closed", "archived", "superseded"}

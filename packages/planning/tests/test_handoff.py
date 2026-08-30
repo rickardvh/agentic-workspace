@@ -877,6 +877,58 @@ def test_targeted_execplan_writer_migrates_supported_fields_and_preserves_unrela
     assert replay["receipt"]["request"]["owner_revision"] == 1
 
 
+def test_targeted_execplan_writer_reconciles_only_external_posture_relationship(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    plan_path = tmp_path / ".agentic-workspace/planning/execplans/active-plan.plan.json"
+    _write_live_execplan_state(tmp_path, item_id="active-plan")
+    _write_execplan_record(plan_path, item_id="active-plan", status="in-progress")
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    record["revision"] = 1
+    record["relationships"] = {
+        "proof_posture": {"state": "accepted", "refs": ["proof://accepted"]},
+        "external_posture": {"state": "unobserved", "refs": []},
+        "integration": {"status": "feature-complete-integration-pending", "proposal_id": "active-plan-archive"},
+    }
+    plan_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    relationships = json.loads(json.dumps(record["relationships"]))
+    relationships["external_posture"] = {"state": "observed", "refs": ["github:pr#2871", "github:pr#2872"]}
+    revision = planning_revision(tmp_path)["revision_id"]
+
+    preview = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="active-plan",
+        patch={"relationships": relationships},
+        expected_planning_revision=revision,
+        expected_owner_revision=1,
+    )
+    assert preview["status"] == "preview"
+    assert set(preview["changes"]) == {"relationships"}
+
+    applied = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="active-plan",
+        patch={"relationships": relationships},
+        expected_planning_revision=revision,
+        expected_owner_revision=1,
+        apply=True,
+    )
+    assert applied["status"] == "applied"
+    updated = json.loads(plan_path.read_text(encoding="utf-8"))
+    assert updated["relationships"] == relationships
+
+    unauthorized = json.loads(json.dumps(relationships))
+    unauthorized["proof_posture"] = {"state": "unobserved", "refs": []}
+    rejected = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="active-plan",
+        patch={"relationships": unauthorized},
+        expected_planning_revision=planning_revision(tmp_path)["revision_id"],
+        expected_owner_revision=updated["revision"],
+    )
+    assert rejected["status"] == "unsupported-relationships-patch"
+    assert rejected["changed_relationships"] == ["proof_posture"]
+
+
 def test_targeted_execplan_writer_preview_delta_matches_apply_delta(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     plan_path = tmp_path / ".agentic-workspace/planning/execplans/active-plan.plan.json"

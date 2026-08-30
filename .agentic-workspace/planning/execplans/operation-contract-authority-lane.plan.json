@@ -5,7 +5,7 @@
   "owner_level": "slice",
   "lifecycle": "live",
   "phase": "closeout",
-  "revision": 5,
+  "revision": 7,
   "intent": {
     "outcome": "Close issues #2197 and #2298 through one operation-contract authority lane: first make packaged external operation resources deterministic from one canonical generator, then make ordinary routed actions derive identity, arguments, effects, preconditions, transitions, retry identity, claim effects, and exact manual renderings from typed invocations.",
     "non_goals": [
@@ -45,8 +45,12 @@
       ]
     },
     "external_posture": {
-      "state": "unobserved",
-      "refs": []
+      "state": "observed",
+      "refs": [
+        "github:pr#2871",
+        "github:pr#2872",
+        "github:pr#2872/review#5060024297"
+      ]
     },
     "integration": {
       "status": "feature-complete-integration-pending",
