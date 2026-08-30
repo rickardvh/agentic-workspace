@@ -1998,19 +1998,21 @@ def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, targe
             ]
             if role == "implementer":
                 required_fields.append("patch")
+            return_properties = {
+                "assignment_revision": {"type": "string"},
+                "run_id": {"type": "string"},
+                "target": {"type": "string"},
+                "changed_paths": {"type": "array", "items": {"type": "string"}},
+                "summary": {"type": "string"},
+                "stop_conditions_hit": {"type": "array", "items": {"type": "string"}},
+            }
+            if role == "implementer":
+                return_properties["patch"] = {"type": "string"}
             output_schema_path.write_text(
                 json.dumps(
                     {
                         "type": "object",
-                        "properties": {
-                            "assignment_revision": {"type": "string"},
-                            "run_id": {"type": "string"},
-                            "target": {"type": "string"},
-                            "changed_paths": {"type": "array", "items": {"type": "string"}},
-                            "summary": {"type": "string"},
-                            "stop_conditions_hit": {"type": "array", "items": {"type": "string"}},
-                            "patch": {"type": "string"},
-                        },
+                        "properties": return_properties,
                         "required": required_fields,
                         "additionalProperties": False,
                     }

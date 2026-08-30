@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Make delegated return schemas role-exact and preserve current supported-host context-inflation evidence with an honest local baseline."
+issues = [2818]

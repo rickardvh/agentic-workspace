@@ -4,14 +4,14 @@
   "title": "Issue 2818 bounded worker context and transport cost",
   "owner_level": "lane",
   "lifecycle": "live",
-  "phase": "implementation",
-  "revision": 3,
+  "phase": "validation",
+  "revision": 4,
   "canonical_core": {
     "requested_outcome": "Bound delegated execution to an assignment-derived worker-context projection, record observable transport context cost, and let admitted cost evidence influence the existing best-fit decision without weakening capability or proof constraints.",
     "hard_constraints": "Do not add a prompt registry, transcript store, telemetry ledger, scheduler, provider-specific portable fields, peer ranking authority, or parent-conversation inheritance.",
     "agent_may_decide": "Choose the smallest versioned projection and contextual evidence shape, exact transport parsing seams, fixtures, and stacked PR boundaries while preserving assignment and target-evidence authority.",
     "escalate_when": "The work requires provider secrets, a new persistent owner, weakened capability/proof priority, fabricated token metrics, or cannot produce honest supported-host evidence.",
-    "next_action": "Implement PR 3: check in current supported-host context-cost evidence and a substantive baseline comparison.",
+    "next_action": "Review and merge the three-PR stack, then close #2818 only after fresh target-authority review accepts the current supported-host evidence.",
     "proof_expectations": [
       "Projection fixtures prove no authority widening and no parent/broad-state default context.",
       "Cost fixtures preserve unknown metrics and change best-fit selection only among equally safe and capable candidates.",
@@ -66,14 +66,14 @@
   },
   "active_milestone": {
     "id": "supported-host-evidence",
-    "status": "in-progress",
+    "status": "completed",
     "scope": "PR 3 checks in the historical inflation regression, current supported-host evidence, and a substantive all-strong-local baseline comparison.",
     "ready": "PR 1 provides bounded semantic projection and PR 2 records provider-neutral cost with capability-first target and transport ranking.",
     "blocked": "none",
     "optional_deps": "Unavailable supported-host metrics must remain explicit unknowns and may support an honest retain-local decision rather than a savings claim."
   },
   "immediate_next_action": [
-    "Capture current supported-host evidence and compare the cost-aware route with a plausible all-strong local baseline on the next stacked branch."
+    "Request fresh review of the complete three-PR stack and preserve merge order."
   ],
   "blockers": [
     "None."
@@ -154,6 +154,13 @@
       "label": "Historical context-inflation fixture",
       "role": "regression baseline",
       "locator": ""
+    },
+    {
+      "kind": "evidence",
+      "target": "tools/model-cli-harness/external-agent-evaluation/assignment-context-cost-dogfood-2026-08-30.json",
+      "label": "Current supported-host cost and baseline evidence",
+      "role": "acceptance proof",
+      "locator": ""
     }
   ],
   "relationships": {
@@ -162,8 +169,10 @@
       "owner": "issue-2818-worker-context-cost"
     },
     "proof_posture": {
-      "state": "pending",
-      "refs": []
+      "state": "current",
+      "refs": [
+        "tools/model-cli-harness/external-agent-evaluation/assignment-context-cost-dogfood-2026-08-30.json"
+      ]
     },
     "external_posture": {
       "state": "observed-current",
@@ -172,7 +181,7 @@
       ]
     }
   },
-  "next_action": "Implement PR 3: capture supported-host evidence and the substantive baseline comparison.",
+  "next_action": "Review and merge the ordered stack; close #2818 only after fresh review accepts the evidence.",
   "proof": {
     "claims": [
       "Delegated worker context is bounded by canonical assignment authority and transport cost participates in existing best-fit selection.",
@@ -182,11 +191,13 @@
       "Focused projection, adapter, target-selection, schema/conformance, and external-evaluation tests pass.",
       "Current supported-host evidence distinguishes assignment/prompt bytes from observable effective context and states unknowns honestly."
     ],
-    "refs": []
+    "refs": [
+      "tools/model-cli-harness/external-agent-evaluation/assignment-context-cost-dogfood-2026-08-30.json"
+    ]
   },
   "continuation": {
     "owner": "issue-2818-worker-context-cost",
-    "residual_intent": "Complete PRs 1-3 in order, then propose target-authority closeout after fresh review."
+    "residual_intent": "Merge PRs 1-3 in order, then propose target-authority closeout after fresh review."
   },
   "specialist_contracts": []
 }

@@ -329,9 +329,12 @@ def test_assignment_process_and_host_native_adapters_share_one_prompt_and_return
         "stop_conditions_hit": [],
     }
     observed_prompts: list[str] = []
+    observed_schemas: list[dict[str, object]] = []
 
     def fake_run(command: list[str], **kwargs: object) -> SimpleNamespace:
         observed_prompts.append(str(kwargs["input"]))
+        schema_path = Path(command[command.index("--schema") + 1])
+        observed_schemas.append(json.loads(schema_path.read_text(encoding="utf-8")))
         return SimpleNamespace(returncode=0, stdout=json.dumps(returned), stderr="")
 
     monkeypatch.setattr(python_primitive_support.subprocess, "run", fake_run)
@@ -353,7 +356,13 @@ def test_assignment_process_and_host_native_adapters_share_one_prompt_and_return
                         **base_identity,
                         "dispatch_adapter": {
                             "kind": adapter_kind,
-                            "command": ["configured-worker-bridge", "--root", "{target_root}"],
+                            "command": [
+                                "configured-worker-bridge",
+                                "--root",
+                                "{target_root}",
+                                "--schema",
+                                "{output_schema}",
+                            ],
                             "output_mode": "stdout",
                             "timeout_seconds": 60,
                             "execution_methods": [transport],
@@ -371,6 +380,8 @@ def test_assignment_process_and_host_native_adapters_share_one_prompt_and_return
     assert [receipt["adapter_kind"] for receipt in receipts] == ["process", "host-native"]
     assert all(receipt["returned_work"] == returned for receipt in receipts)
     assert all(receipt["claim_boundary"].startswith("transport-only") for receipt in receipts)
+    assert all("patch" not in schema["properties"] for schema in observed_schemas)
+    assert all(set(schema["required"]) == set(schema["properties"]) for schema in observed_schemas)
 
 
 def test_assignment_worker_context_projects_only_canonical_bounded_authority() -> None:

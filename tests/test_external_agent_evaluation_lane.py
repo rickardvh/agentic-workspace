@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import importlib.util
 import json
 import os
@@ -12,6 +13,7 @@ import tomllib
 from pathlib import Path
 
 import pytest
+from jsonschema import Draft202012Validator
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 LANE_DIR = REPO_ROOT / "tools" / "model-cli-harness" / "external-agent-evaluation"
@@ -19,6 +21,8 @@ SCRIPT = REPO_ROOT / "scripts" / "model_cli_harness" / "external_agent_evaluatio
 HARNESS_SCRIPT = REPO_ROOT / "scripts" / "model_cli_harness" / "run_model_cli_harness.py"
 SBX_ADAPTER_SCRIPT = REPO_ROOT / "scripts" / "model_cli_harness" / "run_sbx_codex_adapter.py"
 CONFIGURED_FIXTURE_SCRIPT = LANE_DIR / "prepare_configured_orchestration_fixture.py"
+CONTEXT_COST_BRIDGE_SCRIPT = LANE_DIR / "codex_context_cost_bridge.py"
+CONTEXT_COST_CAPTURE_SCRIPT = LANE_DIR / "capture_issue_2818_context_cost.py"
 
 
 def _load_module():
@@ -59,6 +63,97 @@ def _load_configured_fixture_module():
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module
+
+
+def _load_context_cost_bridge_module():
+    spec = importlib.util.spec_from_file_location("codex_context_cost_bridge", CONTEXT_COST_BRIDGE_SCRIPT)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_codex_context_cost_bridge_projects_only_neutral_metrics() -> None:
+    module = _load_context_cost_bridge_module()
+    metrics = module.parse_codex_jsonl(
+        "\n".join(
+            [
+                '{"type":"thread.started","thread_id":"secret-thread"}',
+                '{"type":"item.completed","item":{"type":"command_execution","command":"secret command"}}',
+                '{"type":"item.completed","item":{"type":"agent_message","text":"private transcript"}}',
+                '{"type":"turn.completed","usage":{"input_tokens":13117,"cached_input_tokens":8960,"output_tokens":134,"reasoning_output_tokens":118}}',
+            ]
+        )
+    )
+
+    assert metrics == {
+        "kind": "agentic-workspace/assignment-transport-metrics/v1",
+        "effective_input_tokens": 13117,
+        "cached_input_tokens": 8960,
+        "output_tokens": 134,
+        "orientation_command_count": 1,
+    }
+    assert "thread" not in json.dumps(metrics)
+    assert "secret" not in json.dumps(metrics)
+    assert "transcript" not in json.dumps(metrics)
+
+
+def test_issue_2818_supported_host_cost_evidence_is_bounded_honest_and_actionable() -> None:
+    evidence = _read_json("assignment-context-cost-dogfood-2026-08-30.json")
+    historical = evidence["historical_regression"]
+    host = evidence["supported_host"]
+    runs = {run["target"]: run for run in evidence["runs"]}
+    comparison = evidence["before_after"]
+
+    assert historical == {
+        "source": "tools/model-cli-harness/external-agent-evaluation/nonlocal-delegation-dogfood-2026-08-27.json",
+        "assignment_packet_bytes": 3662,
+        "rendered_prompt_bytes": 3913,
+        "effective_input_tokens": 81752,
+        "cached_input_tokens": 62464,
+        "output_tokens": 1591,
+        "inflation_boundary": "between AW semantic prompt rendering and effective supported-host worker input",
+        "token_savings_claimed": False,
+    }
+    assert host["cli_version"] == "codex-cli 0.151.0"
+    assert host["raw_transcript_checked_in"] is False
+    assert host["workspace_mutation_observed"] is False
+    assert host["provider_event_projection_sha256"] == hashlib.sha256(CONTEXT_COST_BRIDGE_SCRIPT.read_bytes()).hexdigest()
+    assert CONTEXT_COST_CAPTURE_SCRIPT.is_file()
+
+    schema = json.loads(
+        (REPO_ROOT / "src/agentic_workspace/contracts/schemas/assignment_context_cost.schema.json").read_text(encoding="utf-8")
+    )
+    Draft202012Validator.check_schema(schema)
+    for run in runs.values():
+        Draft202012Validator(schema).validate(run["context_cost"])
+        assert run["status"] == "returned"
+        assert run["return_boundary"]["changed_paths"] == []
+        assert run["return_boundary"]["stop_conditions_hit"] == []
+        assert run["return_boundary"]["worker_proof_authority"] is False
+        assert run["return_boundary"]["worker_completion_authority"] is False
+        assert run["workspace_mutation_observed"] is False
+        assert run["raw_transcript_checked_in"] is False
+        assert run["context_cost"]["effective_input_tokens"] > run["context_cost"]["rendered_prompt_bytes"] * 50
+        assert run["context_cost"]["unknown_fields"] == ["retry_count", "repair_loop_count"]
+
+    assert comparison["delegated_bounded_luna_total_tokens"] == 491854
+    assert comparison["all_strong_local_sol_total_tokens"] == 473287
+    assert comparison["delegated_minus_local_tokens"] == 18567
+    assert comparison["luna_minus_sol_elapsed_ms"] == -10802
+    assert comparison["comparison_posture"] == "luna-more-tokens-but-cheaper-and-faster-profile"
+    assert comparison["economic_context"] == {
+        "codex_luna": {"cost_class": "cheap", "latency_class": "fast"},
+        "codex_sol": {"cost_class": "premium", "latency_class": "slow"},
+        "authority": "maintainer-confirmed target-profile classification",
+        "portable_price_normalization": None,
+    }
+    assert comparison["token_savings_claimed"] is False
+    assert evidence["decision_replay"]["decision"] == "assign-best-fit"
+    assert evidence["decision_replay"]["selected_target"] == "codex_luna"
+    assert evidence["decision_replay"]["selected_transport"] == "cli"
 
 
 def _read_json(name: str) -> dict:

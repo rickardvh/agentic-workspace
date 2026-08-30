@@ -616,6 +616,8 @@ def assignment_decision_from_policy(
     candidate_scores: list[dict[str, Any]] = []
     hard_reject_actions = {"escalate-before-execution"}
     recommendation_score = {"recommended": 40, "acceptable": 20, "poor-fit": -30}
+    target_cost_score = {"cheap": 10, "standard": 0, "premium": -10, "unknown": 0}
+    target_latency_score = {"fast": 5, "standard": 0, "slow": -5, "unknown": 0}
     evidence_score = {
         "preferred-for-matching-task-class": 15,
         "advisory-only": 3,
@@ -657,6 +659,10 @@ def assignment_decision_from_policy(
         eligible = not hard_rejection_reasons
         declared_fit_score = int(profile.get("score") or 0)
         recommendation_component = recommendation_score.get(str(profile.get("recommendation") or ""), 0)
+        cost_class = str(profile.get("cost_class") or "unknown")
+        latency_class = str(profile.get("latency_class") or "unknown")
+        target_cost_component = target_cost_score.get(cost_class, 0)
+        target_latency_component = target_latency_score.get(latency_class, 0)
         contextual_evidence_component = 0
         matching_evidence = evidence_by_target.get(target_identity_ref, []) or evidence_by_target.get(target, [])
         for evidence in matching_evidence:
@@ -690,7 +696,8 @@ def assignment_decision_from_policy(
             else {}
         )
         selected_transport = str(selected_transport_option.get("transport") or "")
-        burden_component = int(selected_transport_option.get("expected_burden") or 0)
+        transport_burden_component = int(selected_transport_option.get("expected_burden") or 0)
+        burden_component = transport_burden_component + target_cost_component + target_latency_component
         for evidence in matching_evidence:
             if evidence.get("route_effect") == "strong-review-required":
                 burden_component -= 10
@@ -747,12 +754,17 @@ def assignment_decision_from_policy(
                     "runtime_recommendation": recommendation_component,
                     "contextual_evidence": contextual_evidence_component,
                     "current_target_retention": current_target_component,
+                    "target_cost_class": target_cost_component,
+                    "target_latency_class": target_latency_component,
+                    "transport_context_cost": transport_burden_component,
                     "expected_burden": burden_component,
                     "uncertainty": uncertainty_component,
                     "probe_value": probe_value_component,
                     "total": score,
                 },
                 "runtime_recommendation": profile.get("recommendation"),
+                "cost_class": cost_class,
+                "latency_class": latency_class,
                 "selected_transport": selected_transport or None,
                 "transport_options": transport_options,
                 "required_action": required_action or "none",

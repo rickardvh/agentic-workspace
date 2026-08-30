@@ -4777,6 +4777,78 @@ def test_assignment_context_cost_breaks_equal_fit_but_does_not_override_stronger
     assert decide(stronger_score=40)["selected_target"] == "expensive"
 
 
+def test_assignment_combines_observed_context_with_declared_price_and_latency_classes() -> None:
+    from agentic_workspace.target_evidence import assignment_decision_from_policy
+
+    decision = assignment_decision_from_policy(
+        assignment_policy={
+            "assignment_policy": {"value": "required-best-fit"},
+            "current_target": {"value": "sol"},
+            "binding": {"enforceable": True},
+        },
+        runtime_resolution={
+            "recommendation": "stay-local",
+            "capability_context": {"task_class": "validation", "scope_class": "multi-slice"},
+            "profile_recommendations": [
+                {
+                    "name": "sol",
+                    "recommendation": "recommended",
+                    "score": 10,
+                    "cost_class": "premium",
+                    "latency_class": "slow",
+                    "capability_mismatch": False,
+                    "execution_methods": ["cli"],
+                    "human_control_modes": ["auto"],
+                },
+                {
+                    "name": "luna",
+                    "recommendation": "recommended",
+                    "score": 10,
+                    "cost_class": "cheap",
+                    "latency_class": "fast",
+                    "capability_mismatch": False,
+                    "execution_methods": ["cli"],
+                    "human_control_modes": ["auto"],
+                },
+            ],
+        },
+        target_evidence={
+            "status": "present",
+            "record_count": 2,
+            "suitability": [
+                {
+                    "target": target,
+                    "context_key": "validation::multi-slice",
+                    "route_effect": "no-change",
+                    "transport_costs": [{"transport": "cli", "record_count": 1, "expected_burden_component": -40}],
+                }
+                for target in ("sol", "luna")
+            ],
+        },
+    )
+
+    assert decision["selected_target"] == "luna"
+    candidates = {candidate["target"]: candidate for candidate in decision["candidate_scores"]}
+    assert {
+        key: candidates["sol"]["ranking_components"][key]
+        for key in ("target_cost_class", "target_latency_class", "transport_context_cost", "expected_burden")
+    } == {
+        "target_cost_class": -10,
+        "target_latency_class": -5,
+        "transport_context_cost": -40,
+        "expected_burden": -55,
+    }
+    assert {
+        key: candidates["luna"]["ranking_components"][key]
+        for key in ("target_cost_class", "target_latency_class", "transport_context_cost", "expected_burden")
+    } == {
+        "target_cost_class": 10,
+        "target_latency_class": 5,
+        "transport_context_cost": -40,
+        "expected_burden": -25,
+    }
+
+
 def test_assignment_transport_cost_unknown_is_explicit_and_preserves_configured_order() -> None:
     from agentic_workspace.target_evidence import assignment_decision_from_policy
 
