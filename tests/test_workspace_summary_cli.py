@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 import subprocess
 import time
 import tomllib
@@ -11,7 +12,7 @@ from typing import Any
 import pytest
 from repo_planning_bootstrap import installer as planning_installer
 from repo_planning_bootstrap.installer import install_bootstrap
-from tests.workspace_cli_support import cli
+from tests.workspace_cli_support import _init_git_repo, cli
 
 from agentic_workspace import workspace_runtime_core
 from agentic_workspace.workspace_runtime_primitives import _memory_decision_packet_payload, _operating_loop_decision_payload
@@ -77,6 +78,97 @@ candidates = [
     expected_target = f"--target {tmp_path.as_posix()}"
     assert all(expected_target in command for command in continuation["detail_routes"].values())
     assert all("--target ." not in command for command in continuation["detail_routes"].values())
+
+
+def _assert_advertised_selector_route_round_trips(*, command: str, route_id: str, capsys) -> bool:
+    from agentic_workspace.workspace_selector_validation import _detail_route_command_validation
+
+    if "--select" not in shlex.split(command):
+        return False
+    validation = _detail_route_command_validation(command)
+    assert validation["status"] == "valid", route_id
+    if not validation["executable"] or not validation["selectors"]:
+        return False
+
+    argv = shlex.split(command)[validation["command_index"] :]
+    assert cli.main(argv) == 0, route_id
+    selected = json.loads(capsys.readouterr().out)
+    assert selected["kind"] == "agentic-workspace/selected-output/v1", route_id
+    returned = set(selected["values"]) | set(selected.get("missing", []))
+    assert returned == set(validation["selectors"]), route_id
+    return True
+
+
+def _selected_output_command(*, inventory: dict[str, Any], selectors: list[str]) -> str:
+    command = str(inventory["invocation"]["command"])
+    return command.replace("--select selector_inventory", f"--select {','.join(selectors)}")
+
+
+def test_representative_advertised_selector_routes_round_trip_through_each_emitting_surface(tmp_path: Path, capsys, monkeypatch) -> None:
+    install_bootstrap(target=tmp_path)
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "README.md", "# Selector route fixture\n")
+    monkeypatch.chdir(tmp_path)
+
+    emitted_route_maps: list[tuple[str, dict[str, str]]] = []
+
+    assert cli.main(["start", "--target", ".", "--task", "Inspect selector routes", "--format", "json"]) == 0
+    start = json.loads(capsys.readouterr().out)
+    emitted_route_maps.append(("start", start["decision_packet"]["detail_routes"]))
+
+    assert cli.main(["summary", "--target", ".", "--format", "json"]) == 0
+    summary = json.loads(capsys.readouterr().out)
+    summary_routes = summary["continuation_view"]["detail_routes"]
+    emitted_route_maps.append(("summary", summary_routes))
+    assert "planning_record.proof_report" in summary_routes["proof"]
+    assert "planning_record.completion_gate" in summary_routes["claim_boundary"]
+
+    assert cli.main(["implement", "--target", ".", "--changed", "README.md", "--format", "json"]) == 0
+    implement = json.loads(capsys.readouterr().out)
+    emitted_route_maps.append(("implement", implement["decision_packet"]["detail_routes"]))
+
+    assert cli.main(["report", "--target", ".", "--format", "json"]) == 0
+    report = json.loads(capsys.readouterr().out)
+    emitted_route_maps.append(("report", report["decision_packet"]["detail_routes"]))
+
+    assert cli.main(["proof", "--target", ".", "--changed", "README.md", "--format", "json"]) == 0
+    proof = json.loads(capsys.readouterr().out)
+    emitted_route_maps.append(("proof", proof["detail_routes"]))
+
+    exercised_surfaces: set[str] = set()
+    for surface, routes in emitted_route_maps:
+        for route_id, command in routes.items():
+            if _assert_advertised_selector_route_round_trips(
+                command=command,
+                route_id=f"{surface}.{route_id}",
+                capsys=capsys,
+            ):
+                exercised_surfaces.add(surface)
+
+    for surface, selectors in {
+        "report": ["decision_packet"],
+        "config": ["mixed_agent.target_identity", "mixed_agent.target_evidence"],
+    }.items():
+        assert cli.main([surface, "--target", ".", "--select", "selector_inventory", "--format", "json"]) == 0
+        inventory = json.loads(capsys.readouterr().out)["values"]["selector_inventory"]
+        assert set(selectors) <= set(inventory["selectors"])
+        assert _assert_advertised_selector_route_round_trips(
+            command=_selected_output_command(inventory=inventory, selectors=selectors),
+            route_id=f"{surface}.selector_inventory",
+            capsys=capsys,
+        )
+        exercised_surfaces.add(surface)
+
+    assert exercised_surfaces == {"start", "summary", "implement", "report", "proof", "config"}
+
+    assert cli.main(["config", "--target", ".", "--select", "workspace.feature_tier", "--format", "json"]) == 2
+    stale = json.loads(capsys.readouterr().out)
+    assert stale["replacement_selectors"] == {"workspace.feature_tier": "workspace.enabled_modules"}
+    assert _assert_advertised_selector_route_round_trips(
+        command=stale["replacement_command"],
+        route_id="config.stale-selector-replacement",
+        capsys=capsys,
+    )
 
 
 def test_summary_default_continuation_view_is_handoff_complete(tmp_path: Path, capsys) -> None:

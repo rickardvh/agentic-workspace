@@ -247,6 +247,7 @@ from agentic_workspace.workspace_selector_validation import (
     _selector_inventory_selected_payload,
     _selector_prevalidation_error,
     _selector_tokens,
+    _validated_detail_route_command,
 )
 
 _workspace_runtime_core = sys.modules[__name__]
@@ -53129,7 +53130,7 @@ def _ordinary_summary_continuation_payload(*, summary: dict[str, Any], target_ro
     view["residue_owner"] = decision.get("residue_owner") or ("active continuation state" if active_owner else "none")
     target_value = target_root.as_posix()
     target_arg = json.dumps(target_value) if any(character.isspace() for character in target_value) else target_value
-    view["detail_routes"] = {
+    detail_routes = {
         "planning_record": _command_with_cli_invoke(
             command=f"agentic-workspace summary --target {target_arg} --select planning_record --format json", cli_invoke=cli_invoke
         ),
@@ -53162,6 +53163,7 @@ def _ordinary_summary_continuation_payload(*, summary: dict[str, Any], target_ro
             command=f"agentic-workspace summary --target {target_arg} --verbose --format json", cli_invoke=cli_invoke
         ),
     }
+    view["detail_routes"] = {route_id: _validated_detail_route_command(command) for route_id, command in detail_routes.items()}
     view["absence_states"] = {
         **_as_dict(view.get("absence_states")),
         "peer_summary_projections": "selector-routed",

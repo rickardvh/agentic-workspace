@@ -7644,6 +7644,19 @@ def test_detail_route_validation_rejects_cross_command_selector() -> None:
         _validated_detail_route_command(invalid_route)
 
 
+def test_detail_route_validation_accepts_selector_templates_without_treating_them_as_declared_selectors() -> None:
+    from agentic_workspace.workspace_selector_validation import _detail_route_command_validation, _validated_detail_route_command
+
+    template_route = "agentic-workspace summary --target . --select <field.path> --format json"
+    validation = _detail_route_command_validation(template_route)
+
+    assert validation["status"] == "valid"
+    assert validation["selectors"] == ["<field.path>"]
+    assert validation["unknown_selectors"] == []
+    assert validation["executable"] is False
+    assert _validated_detail_route_command(template_route) == template_route
+
+
 def test_start_surfaces_configured_pre_test_guardrail_without_universal_bug_keyword(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0

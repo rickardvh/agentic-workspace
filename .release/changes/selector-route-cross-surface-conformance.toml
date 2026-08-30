@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Round-trip advertised selector routes across representative Workspace surfaces and preserve multi-field selector templates as non-executable routes."
+issues = [2723]
