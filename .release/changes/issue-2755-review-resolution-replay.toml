@@ -1,6 +1,4 @@
-schema_version = 1
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
 summary = "Treat exact-head resolution notes and merge-ready verdicts as non-actionable PR review evidence."
 issues = [2755]
-
-[bump]
-level = "patch"
