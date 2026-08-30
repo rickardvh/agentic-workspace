@@ -1,0 +1,132 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "remaining-nonresearch-issues-2629-2804-1891",
+  "title": "Complete remaining non-research issues 2629 2804 and 1891",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "implementation",
+  "revision": 4,
+  "intent": {
+    "outcome": "Close issues #2804, #1891, and #2629 outside the larger research lane, using current executable acceptance evidence and the smallest ordered PR stack.",
+    "non_goals": [
+      "Do not enter or alter the larger research lane.",
+      "Do not weaken Planning, review-authority, or instruction-compilation guards.",
+      "Do not create product changes for acceptance boundaries already satisfied on the current target head."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "Create a bounded plan for Complete remaining non-research issues 2629 2804 and 1891.",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "Replay #2804 stale-proposal refresh and close it only if the reopened regression is absent.",
+      "Fix #1891 so closeout evidence is selected by current lineage and task relevance rather than unrelated recency.",
+      "Complete or prove #2629 bounded clause-IR compilation and subtract superseded parallel instruction paths.",
+      "Maintain the explicit stacked-PR base chain and current-head proof."
+    ],
+    "effects": [
+      "Planning closeout selection and instruction compilation may change only where required by the three issue boundaries."
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected-local",
+      "owner": "remaining-nonresearch-issues-2629-2804-1891"
+    },
+    "proof_posture": {
+      "state": "pending",
+      "refs": []
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    }
+  },
+  "references": [],
+  "next_action": "Implement and validate #1891 closeout-evidence precedence, then complete or prove #2629 bounded clause-IR closure.",
+  "blockers": [
+    "Fresh independent review is required before merging each implementation stack layer."
+  ],
+  "proof": {
+    "claims": [
+      "#2804 stale target-authority proposals can be refreshed and applied without id conflicts.",
+      "#1891 closeout evidence selection prefers current lineage and task relevance rather than unrelated recency.",
+      "#2629 repository instructions compile through one bounded clause IR with no divergent parallel enforcement path."
+    ],
+    "requirements": [
+      "Focused current-head regressions for each issue.",
+      "Affected broad Planning and workspace validation.",
+      "Exact changed-path routed proof and fresh independent review."
+    ],
+    "refs": []
+  },
+  "continuation": {
+    "owner": "none",
+    "residual_intent": "none"
+  },
+  "specialist_contracts": [],
+  "intent_continuity": {
+    "larger intended outcome": "All open issues outside the larger research lane are safely closable.",
+    "this slice completes the larger intended outcome": "yes; #2804, #1891, and #2629 are the remaining non-research issues",
+    "continuation surface": "small ordered pull-request stack",
+    "parent lane": "none"
+  },
+  "execution_bounds": {
+    "allowed": [
+      "Canonical Planning closeout/evidence selection seams and focused tests.",
+      "Canonical bounded instruction clause IR, its source adapters, compatibility projections, generated surfaces, and focused tests.",
+      "Planning records and release fragments required by these three issues."
+    ],
+    "stop_conditions": [
+      "Stop if a change would enter the larger research lane.",
+      "Stop if a fix requires weakening independent review authority, Planning CAS, or fail-closed instruction enforcement.",
+      "Stop if an issue lacks current acceptance evidence and its remaining intent cannot be bounded safely."
+    ]
+  },
+  "touched_paths": [
+    ".agentic-workspace/planning/**",
+    ".release/changes/**",
+    "src/agentic_workspace/**",
+    "packages/planning/**",
+    "tests/**",
+    "generated/**",
+    "docs/reference/**"
+  ],
+  "validation_commands": [
+    "uv run --frozen --active --no-sync pytest <focused #2804/#1891/#2629 regressions> -q",
+    "make check-planning-nosync",
+    "uv run --frozen --active --no-sync python scripts/check/check_generated_command_packages.py --conformance --require-node",
+    "uv run --frozen --active --no-sync python scripts/run_agentic_workspace.py proof --target . --changed <paths> --format json"
+  ],
+  "completion_criteria": [
+    "Each reopened or remaining acceptance boundary in #2804, #1891, and #2629 has current executable evidence.",
+    "No unrelated retained evidence is promoted to closeout authority.",
+    "No superseded parallel instruction-enforcement path remains authoritative beside the bounded clause IR.",
+    "All three issues are closed only after current target-head proof; implementation PRs receive fresh independent review."
+  ],
+  "adaptive_assurance": {
+    "level": "high",
+    "reason": "The lane changes Planning authority selection and repository instruction enforcement.",
+    "agent_may_escalate": true,
+    "agent_may_deescalate": false,
+    "strict_closeout": true,
+    "required_refs": [
+      "GitHub #2804",
+      "GitHub #1891",
+      "GitHub #2629"
+    ],
+    "proof_profiles": [
+      "stale proposal refresh",
+      "lineage-relevant closeout evidence",
+      "bounded clause IR no-divergence"
+    ],
+    "required_gates": [
+      "focused regressions",
+      "affected broad checks",
+      "routed proof",
+      "fresh independent review"
+    ]
+  }
+}

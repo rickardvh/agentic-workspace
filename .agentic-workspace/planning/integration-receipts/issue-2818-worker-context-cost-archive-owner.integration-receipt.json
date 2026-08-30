@@ -1,0 +1,59 @@
+{
+  "kind": "planning-integration-receipt/v1",
+  "id": "issue-2818-worker-context-cost-archive-owner",
+  "proposal_ref": ".agentic-workspace/planning/integration-proposals/issue-2818-worker-context-cost-archive-owner.integration-proposal.json",
+  "outcome": "integrated",
+  "requested_transition": "archive-owner",
+  "owner": {
+    "id": "issue-2818-worker-context-cost",
+    "ref": ".agentic-workspace/planning/execplans/issue-2818-worker-context-cost.plan.json"
+  },
+  "external_ref": "https://github.com/rickardvh/agentic-workspace/issues/2818",
+  "proof_refs": [
+    "merged PRs #2878 #2879 #2880",
+    "434 focused projection transport ranking and evaluation tests passed",
+    "maintainer surfaces passed",
+    "assignment-context-cost-dogfood-2026-08-30.json validated"
+  ],
+  "parent_boundary": "Archive only the completed #2818 worker-context/cost lane; do not alter the separate #2821-#2827 research lane or other issue owners.",
+  "preserved_invariants": [
+    "Canonical assignment remains the worker-context authority",
+    "Capability and proof eligibility precede cost ranking",
+    "Unknown metrics never become zero",
+    "No transcript or telemetry ledger is introduced"
+  ],
+  "changed_fields": [
+    "integration_proposal.status",
+    "integration_proposal.phase",
+    "owner.relationships.integration",
+    "owner.lifecycle",
+    "owner.phase",
+    "owner.revision",
+    "owner.active_milestone.status",
+    "owner.proof_report",
+    "integration_receipt"
+  ],
+  "revisions": {
+    "expected_subject": "e384b300adcade35",
+    "subject_before": "e384b300adcade35",
+    "subject_after": "7d4554361673ba56",
+    "proposal_before": "9b5942fb3fdee622",
+    "proposal_after": "e0dcb666f14508f3",
+    "expected_planning_revision": "6aa2d2d3e913b828",
+    "target_authority_before": "6aa2d2d3e913b828",
+    "target_authority_after": "e00e22ae086e7c6c"
+  },
+  "authority_boundary": {
+    "integrated_truth": "this receipt",
+    "proposal_status": "proposal marked integrated by the same transaction",
+    "owner_body": "updated by this transaction",
+    "aggregate_indexes": "derived-regenerated-not-mutated",
+    "branch_admission": {
+      "status": "inside-git",
+      "branch": "master",
+      "phase": "target"
+    }
+  },
+  "created_at": "2026-08-30T18:16:31.866490Z",
+  "receipt_revision": "b86a71a2e3fb5843"
+}

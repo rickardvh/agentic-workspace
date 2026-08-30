@@ -12811,7 +12811,9 @@ def _pending_feature_integrations(*, target_root: Path) -> dict[str, dict[str, s
             and owner.get("ref")
         ):
             refs[str(owner["ref"]).replace("\\", "/")] = {
+                "owner_id": str(owner.get("id") or ""),
                 "proposal_id": str(proposal.get("id") or ""),
+                "proposal_ref": path.relative_to(target_root).as_posix(),
                 "expected_subject_revision": str(proposal["expected_subject_revision"]),
                 "expected_planning_revision": str(proposal["expected_planning_revision"]),
             }
@@ -24906,6 +24908,10 @@ def _report_closeout_trust_payload(
             "owner_kind": evidence_source.get("authority", "archived-planning-evidence"),
             "evidence_relationship": evidence_source.get("relationship")
             or ("retained-archive-evidence" if evidence_source.get("authority") == "archived-planning-evidence" else "closeout-evidence"),
+            "relationship": evidence_source.get("integration_relationship", ""),
+            "integration_proposal_id": evidence_source.get("integration_proposal_id", ""),
+            "integration_proposal_ref": evidence_source.get("integration_proposal_ref", ""),
+            "historical_fallback_suppressed": evidence_source.get("historical_fallback_suppressed", False),
             "relevance": relevance
             or {
                 "status": "relevant",
@@ -26651,13 +26657,16 @@ def _closeout_evidence_relevance_summary(*, lineage: dict[str, Any], mtime: floa
     }
 
 
-def _recent_retained_closeout_evidence_for_report(*, target_root: Path | None) -> dict[str, Any]:
+def _recent_retained_closeout_evidence_for_report(
+    *, target_root: Path | None, lineage_anchor: dict[str, str] | None = None
+) -> dict[str, Any]:
     if target_root is None:
         return {}
     evidence_root = target_root / ".agentic-workspace" / "planning" / "closeout-evidence"
     if not evidence_root.is_dir():
         return {}
     candidates: list[tuple[int, float, Path, dict[str, Any], dict[str, Any]]] = []
+    excluded_count = 0
     target_resolved = target_root.resolve()
     for record_path in evidence_root.glob("*.closeout.json"):
         try:
@@ -26684,7 +26693,12 @@ def _recent_retained_closeout_evidence_for_report(*, target_root: Path | None) -
         except OSError:
             mtime = 0.0
         lineage = _closeout_evidence_lineage(payload)
+        if lineage_anchor and not _closeout_evidence_matches_pending_anchor(payload=payload, lineage=lineage, anchor=lineage_anchor):
+            excluded_count += 1
+            continue
         relevance = _closeout_evidence_relevance_summary(lineage=lineage, mtime=mtime)
+        if lineage_anchor and relevance["relationship"] in {"retained-closeout-evidence", "older-related"}:
+            relevance = _closeout_evidence_relevance_summary(lineage={**lineage, "relationship": "same-lineage"}, mtime=mtime)
         candidates.append((int(relevance["priority"]), mtime, resolved, payload, relevance))
     if not candidates:
         return {}
@@ -26706,9 +26720,12 @@ def _recent_retained_closeout_evidence_for_report(*, target_root: Path | None) -
             candidates, key=lambda item: (item[0], item[1]), reverse=True
         )[:5]
     ]
+    selection_basis = "relevance-then-mtime"
+    if lineage_anchor:
+        selection_basis = "integration-pending-lineage-then-relevance-mtime"
     payload["_closeout_evidence_source"] = {
         "authority": "retained-closeout-evidence",
-        "evidence_source_class": "fresh-closeout-evidence",
+        "evidence_source_class": "integration-pending-lineage" if lineage_anchor else "fresh-closeout-evidence",
         "path": relative,
         "source_plan": str(payload.get("source_plan") or ""),
         "intended_archive": str(payload.get("intended_archive") or ""),
@@ -26716,10 +26733,11 @@ def _recent_retained_closeout_evidence_for_report(*, target_root: Path | None) -
         "relationship": relationship,
         "relevance": relevance,
         "selection": {
-            "basis": "relevance-then-mtime",
+            "basis": selection_basis,
             "selected_source_class": "fresh-closeout-evidence",
             "selected_priority": priority,
             "candidate_count": len(candidates),
+            "excluded_non_lineage_count": excluded_count,
             "newer_unrelated_count": sum(
                 1
                 for _candidate_priority, candidate_mtime, _path, _candidate_payload, candidate_relevance in candidates
@@ -26732,6 +26750,15 @@ def _recent_retained_closeout_evidence_for_report(*, target_root: Path | None) -
         "last_modified": datetime.fromtimestamp(mtime, timezone.utc).isoformat() if mtime else "",
         "rule": "Retained closeout evidence may inform user-facing reports when full archive retention was skipped; it does not restore active planning state.",
     }
+    if lineage_anchor:
+        payload["_closeout_evidence_source"].update(
+            {
+                "integration_relationship": "current-integration-pending",
+                "integration_proposal_id": lineage_anchor.get("proposal_id", ""),
+                "integration_proposal_ref": lineage_anchor.get("proposal_ref", ""),
+                "historical_fallback_suppressed": excluded_count > 0,
+            }
+        )
     return payload
 
 
@@ -26758,6 +26785,84 @@ def _explicit_closeout_candidate_match(*, payload: dict[str, Any], task_text: st
     return bool(normalized and (normalized in identity.replace("_", "-") or identity.replace("_", "-") in normalized))
 
 
+def _closeout_evidence_matches_pending_anchor(*, payload: dict[str, Any], lineage: dict[str, Any], anchor: dict[str, str]) -> bool:
+    owner_id = str(anchor.get("plan_id") or "").strip()
+    owner_surface = str(anchor.get("owner_surface") or "").replace("\\", "/").strip()
+    return bool(
+        owner_id
+        and (
+            str(payload.get("plan_id") or "").strip() == owner_id
+            or str(lineage.get("lineage_id") or "").strip() == owner_id
+            or (owner_surface and str(payload.get("source_plan") or "").replace("\\", "/").strip() == owner_surface)
+        )
+    )
+
+
+def _pending_feature_integration_closeout_resolution(*, target_root: Path, task_text: str | None) -> dict[str, Any]:
+    pending = _pending_feature_integrations(target_root=target_root)
+    if not pending:
+        return {}
+    candidates: list[dict[str, str]] = []
+    requested_task = str(task_text or "").strip()
+    for owner_ref, proposal in sorted(pending.items()):
+        owner_id = str(proposal.get("owner_id") or Path(owner_ref).stem.removesuffix(".plan")).strip()
+        identity = {
+            "plan_id": owner_id,
+            "source_plan": owner_ref,
+            "lineage": {"lineage_id": owner_id},
+        }
+        if requested_task and not _explicit_closeout_candidate_match(payload=identity, task_text=requested_task):
+            continue
+        candidates.append(
+            {
+                "plan_id": owner_id,
+                "owner_surface": owner_ref,
+                "proposal_id": str(proposal.get("proposal_id") or ""),
+                "proposal_ref": str(proposal.get("proposal_ref") or ""),
+            }
+        )
+    if not candidates:
+        return {}
+    if len(candidates) > 1:
+        return {
+            "_closeout_evidence_resolution": {
+                "status": "ambiguous",
+                "trust": "not-applicable",
+                "relationship": "current-integration-pending",
+                "candidates": candidates[:5],
+                "recovery_command": (
+                    'agentic-workspace report --target ./repo --section closeout_trust --task "<exact plan id>" --format json'
+                ),
+                "rule": (
+                    "Multiple current feature-head integration subjects are present; none may borrow authority "
+                    "from retained historical closeout evidence."
+                ),
+            }
+        }
+    return {"_closeout_evidence_anchor": candidates[0]}
+
+
+def _pending_feature_integration_absence(anchor: dict[str, str]) -> dict[str, Any]:
+    return {
+        "_closeout_evidence_resolution": {
+            "status": "no-relevant-evidence",
+            "trust": "not-applicable",
+            "relationship": "current-integration-pending",
+            "selected_plan_id": anchor["plan_id"],
+            "owner_surface": anchor["owner_surface"],
+            "integration_proposal_id": anchor["proposal_id"],
+            "integration_proposal_ref": anchor["proposal_ref"],
+            "candidates": [],
+            "historical_fallback_suppressed": True,
+            "recovery_command": ("Wait for target-authority integration or retain command-owned closeout evidence for this exact owner."),
+            "rule": (
+                "The current feature-head owner is integration-pending and has no command-owned closeout evidence; "
+                "unrelated retained history cannot control the current claim."
+            ),
+        }
+    }
+
+
 def _closeout_planning_record_for_report(
     *, active_planning_record: dict[str, Any], target_root: Path | None, task_text: str | None = None
 ) -> dict[str, Any]:
@@ -26776,6 +26881,16 @@ def _closeout_planning_record_for_report(
     if target_root is None:
         return {}
     target_resolved = target_root.resolve()
+    integration_pending = _pending_feature_integration_closeout_resolution(target_root=target_root, task_text=task_text)
+    integration_resolution = _as_dict(integration_pending.get("_closeout_evidence_resolution"))
+    if integration_resolution:
+        return integration_pending
+    integration_anchor = {str(key): str(value) for key, value in _as_dict(integration_pending.get("_closeout_evidence_anchor")).items()}
+    if integration_anchor:
+        retained = _recent_retained_closeout_evidence_for_report(target_root=target_root, lineage_anchor=integration_anchor)
+        if retained:
+            return retained
+        return _pending_feature_integration_absence(integration_anchor)
     context_path = target_root / ".agentic-workspace" / "local" / "planning-last-closeout.json"
     if context_path.is_file() and not str(task_text or "").strip():
         try:
