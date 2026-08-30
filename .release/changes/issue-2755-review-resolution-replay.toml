@@ -1,0 +1,6 @@
+schema_version = 1
+summary = "Treat exact-head resolution notes and merge-ready verdicts as non-actionable PR review evidence."
+issues = [2755]
+
+[bump]
+level = "patch"

@@ -435,10 +435,22 @@ def _marker_head(body: str) -> str:
     return match.group(1).lower() if match else ""
 
 
+def _body_head(body: str) -> str:
+    heads = {
+        head.lower()
+        for head in (
+            _marker_head(body),
+            *(match.group(1) for match in re.finditer(r"\bexact\s+head\s+[`'\"]?([0-9a-f]{40})", body, re.IGNORECASE)),
+        )
+        if head
+    }
+    return heads.pop() if len(heads) == 1 else ""
+
+
 def _is_exact_head_resolution_note(item: dict[str, Any], *, current_head: str) -> bool:
     body = _text(item.get("body"))
     lower = body.lower()
-    item_head = (_text(item.get("head_sha")) or _marker_head(body)).lower()
+    item_head = (_text(item.get("head_sha")) or _body_head(body)).lower()
     resolution_signal = any(
         token in lower
         for token in (
@@ -447,6 +459,7 @@ def _is_exact_head_resolution_note(item: dict[str, Any], *, current_head: str) -
             "resolved at this head",
             "fixed at this head",
             "ready for re-review",
+            "ready for fresh re-review",
             "ready for rereview",
             "no remaining review blocker",
         )
@@ -458,10 +471,23 @@ def _is_exact_head_resolution_note(item: dict[str, Any], *, current_head: str) -
     return bool(current_head and item_head == current_head.lower() and resolution_signal and not new_request_signal)
 
 
+def _is_exact_head_merge_ready_verdict(item: dict[str, Any], *, current_head: str) -> bool:
+    body = _text(item.get("body"))
+    item_head = (_text(item.get("head_sha")) or _body_head(body)).lower()
+    _fields, _duplicates, marker_decisions = _parse_structured_review_sections(body)
+    decisions = re.findall(r"(?mi)^decision\s*:\s*([a-z_-]+)[ \t]*$", body)
+    return bool(
+        current_head
+        and item_head == current_head.lower()
+        and [decision.lower() for decision in decisions] == ["merge-ready"]
+        and marker_decisions == ["merge-ready"]
+    )
+
+
 def _resolution_note_links(raw_comments: list[dict[str, Any]], *, current_head: str) -> dict[str, list[str]]:
     stale_findings = []
     for item in raw_comments:
-        item_head = (_text(item.get("head_sha")) or _marker_head(_text(item.get("body")))).lower()
+        item_head = (_text(item.get("head_sha")) or _body_head(_text(item.get("body")))).lower()
         category, _reason, _proof = _classify(item)
         if (
             current_head
@@ -500,7 +526,7 @@ def _comment_currentness(
     current_head_evidence: list[dict[str, Any]],
 ) -> tuple[str, str]:
     body = _text(item.get("body"))
-    item_head = _text(item.get("head_sha")) or _marker_head(body)
+    item_head = _text(item.get("head_sha")) or _body_head(body)
     if item_head and current_head:
         if item_head.lower() == current_head.lower():
             return "current", "comment or review is explicitly bound to the observed PR head"
@@ -665,7 +691,7 @@ def build_packet(
     current_head = _text(normalized.get("pr_head_sha"))
     head_committed_at = _parse_timestamp(_text(normalized.get("pr_head_committed_at")))
     current_head_evidence = [
-        raw for raw in raw_comments if (_text(raw.get("head_sha")) or _marker_head(_text(raw.get("body")))).lower() == current_head.lower()
+        raw for raw in raw_comments if (_text(raw.get("head_sha")) or _body_head(_text(raw.get("body")))).lower() == current_head.lower()
     ]
     resolution_links = _resolution_note_links(raw_comments, current_head=current_head)
     for raw in raw_comments:
@@ -681,10 +707,15 @@ def build_packet(
             continue
         category, reason, proof_hint = _classify(raw)
         resolution_of = resolution_links.get(_item_identity(raw), [])
+        merge_ready_verdict = _is_exact_head_merge_ready_verdict(raw, current_head=current_head)
         if resolution_of:
             category = "informational_no_local_change"
             reason = "exact-head resolution note is linked to prior-head review finding(s)"
             proof_hint = "Treat this note as resolution history unless it contains a genuinely new request."
+        elif merge_ready_verdict:
+            category = "informational_no_local_change"
+            reason = "exact-head merge-ready review verdict is evidence, not an implementation action"
+            proof_hint = "Keep independent review authority separate; act only if a later review opens a new request."
         addressing_status = "already_addressed" if resolution_of else _addressing_status(raw, category)
         currentness, currentness_reason = _comment_currentness(
             raw,
