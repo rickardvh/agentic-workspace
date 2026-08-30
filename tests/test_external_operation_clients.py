@@ -128,6 +128,21 @@ def test_assignment_cli_transport_invokes_allow_listed_adapter_and_returns_untru
     assert receipt["returned_work"] == returned
     assert receipt["stdout_tail"] == json.dumps(returned)
     assert receipt["claim_boundary"].startswith("transport-only")
+    context_cost = receipt["context_cost"]
+    assert context_cost["kind"] == "agentic-workspace/assignment-context-cost/v1"
+    assert context_cost["transport"] == "cli"
+    assert context_cost["assignment_packet_bytes"] > 0
+    assert context_cost["rendered_prompt_bytes"] == len("sealed packet".encode("utf-8"))
+    assert context_cost["effective_input_tokens"] is None
+    assert context_cost["unknown_fields"] == [
+        "effective_input_tokens",
+        "cached_input_tokens",
+        "output_tokens",
+        "orientation_command_count",
+        "retry_count",
+        "repair_loop_count",
+    ]
+    assert context_cost["raw_transcript_stored"] is False
     command = observed["command"]
     assert isinstance(command, list)
     assert command[:10] == [
@@ -154,6 +169,108 @@ def test_assignment_cli_transport_invokes_allow_listed_adapter_and_returns_untru
     assert python_primitive_support._assignment_patch_paths(
         "diff --git a/src/feature.py b/outside.py\nsimilarity index 100%\nrename from src/feature.py\nrename to outside.py\n"
     ) == ["outside.py", "src/feature.py"]
+
+
+def test_assignment_transport_metrics_sidecar_is_validated_and_admitted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentic_workspace.contracts import python_primitive_support
+
+    returned = {
+        "assignment_revision": "sha256:assignment",
+        "run_id": "run-metrics",
+        "target": "worker",
+        "changed_paths": [],
+        "summary": "Completed the bounded assignment.",
+        "stop_conditions_hit": [],
+    }
+    metrics = {
+        "kind": "agentic-workspace/assignment-transport-metrics/v1",
+        "effective_input_tokens": 1234,
+        "cached_input_tokens": 1000,
+        "output_tokens": 55,
+        "orientation_command_count": 2,
+        "retry_count": 1,
+        "repair_loop_count": 0,
+    }
+
+    def fake_run(command: list[str], **kwargs: object) -> SimpleNamespace:
+        metrics_path = Path(command[command.index("--metrics") + 1])
+        metrics_path.write_text(json.dumps(metrics), encoding="utf-8")
+        return SimpleNamespace(returncode=0, stdout=json.dumps(returned), stderr="")
+
+    monkeypatch.setattr(python_primitive_support.subprocess, "run", fake_run)
+    receipt = python_primitive_support._dispatch_assignment_packet(
+        packet={
+            "assignment_identity": {
+                "role": "implementer",
+                "dispatch_adapter": {
+                    "kind": "process",
+                    "command": ["worker-bridge", "--metrics", "{metrics_file}"],
+                    "output_mode": "stdout",
+                    "timeout_seconds": 60,
+                    "execution_methods": ["cli"],
+                },
+            }
+        },
+        prompt="sealed packet",
+        target_root=tmp_path,
+        transport="cli",
+    )
+
+    metrics_schema = json.loads((ROOT / "src/agentic_workspace/contracts/schemas/assignment_transport_metrics.schema.json").read_text())
+    cost_schema = json.loads((ROOT / "src/agentic_workspace/contracts/schemas/assignment_context_cost.schema.json").read_text())
+    Draft202012Validator.check_schema(metrics_schema)
+    Draft202012Validator(metrics_schema).validate(metrics)
+    Draft202012Validator.check_schema(cost_schema)
+    Draft202012Validator(cost_schema).validate(receipt["context_cost"])
+    assert receipt["context_cost"] | {"elapsed_ms": 0} == {
+        "kind": "agentic-workspace/assignment-context-cost/v1",
+        "transport": "cli",
+        "adapter_revision": receipt["adapter_revision"],
+        "assignment_packet_bytes": receipt["context_cost"]["assignment_packet_bytes"],
+        "rendered_prompt_bytes": len("sealed packet".encode("utf-8")),
+        "effective_input_tokens": 1234,
+        "cached_input_tokens": 1000,
+        "output_tokens": 55,
+        "orientation_command_count": 2,
+        "retry_count": 1,
+        "repair_loop_count": 0,
+        "elapsed_ms": 0,
+        "unknown_fields": [],
+        "observation_authority": "adapter-sidecar-or-host-measurement",
+        "raw_transcript_stored": False,
+    }
+
+
+def test_assignment_transport_rejects_unrecognized_metrics_sidecar_without_fabricating_zeroes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from agentic_workspace.contracts import python_primitive_support
+
+    def fake_run(command: list[str], **kwargs: object) -> SimpleNamespace:
+        metrics_path = Path(command[command.index("--metrics") + 1])
+        metrics_path.write_text('{"kind":"provider-private-metrics/v1","effective_input_tokens":0}', encoding="utf-8")
+        return SimpleNamespace(returncode=0, stdout="{}", stderr="")
+
+    monkeypatch.setattr(python_primitive_support.subprocess, "run", fake_run)
+    receipt = python_primitive_support._dispatch_assignment_packet(
+        packet={
+            "assignment_identity": {
+                "dispatch_adapter": {
+                    "kind": "process",
+                    "command": ["worker-bridge", "--metrics", "{metrics_file}"],
+                    "output_mode": "stdout",
+                    "timeout_seconds": 60,
+                    "execution_methods": ["cli"],
+                }
+            }
+        },
+        prompt="sealed packet",
+        target_root=tmp_path,
+        transport="cli",
+    )
+
+    assert receipt["context_cost"]["effective_input_tokens"] is None
+    assert "effective_input_tokens" in receipt["context_cost"]["unknown_fields"]
 
 
 def test_assignment_cli_transport_accepts_explicit_no_change_implementer_return(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -2807,6 +2924,62 @@ def test_generated_operation_specific_wrapper_uses_public_contract() -> None:
     )
     assert payload["kind"] == "agentic-workspace/config-tiny/v1"
     assert callable(delegation_outcome_append)
+
+
+def test_public_delegation_outcome_append_persists_validated_context_cost(tmp_path: Path) -> None:
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.parent.mkdir()
+    config.write_text("[workspace]\nenabled = true\n", encoding="utf-8")
+    context_cost = {
+        "kind": "agentic-workspace/assignment-context-cost/v1",
+        "transport": "cli",
+        "adapter_revision": "sha256:adapter",
+        "assignment_packet_bytes": 3662,
+        "rendered_prompt_bytes": 3913,
+        "effective_input_tokens": 81752,
+        "cached_input_tokens": 62464,
+        "output_tokens": 1591,
+        "orientation_command_count": 3,
+        "retry_count": 0,
+        "repair_loop_count": 0,
+        "elapsed_ms": 1000,
+        "unknown_fields": [],
+        "observation_authority": "adapter-sidecar-or-host-measurement",
+        "raw_transcript_stored": False,
+    }
+    values = {
+        "delegation_target": "worker",
+        "task_class": "implementation",
+        "scope_class": "bounded",
+        "outcome": "success",
+        "context_cost_json": json.dumps(context_cost),
+    }
+
+    payload = invoke_operation(
+        "delegation-outcome.append",
+        values,
+        target=tmp_path,
+        invocation=[sys.executable, str(ROOT / "scripts/run_agentic_workspace.py")],
+        allow_runtime_backed=True,
+    )
+
+    assert payload["recorded"]["context_cost"] == context_cost
+    stored_path = tmp_path / ".agentic-workspace/delegation-outcomes.json"
+    stored = json.loads(stored_path.read_text(encoding="utf-8"))
+    assert stored["records"][0]["context_cost"] == context_cost
+
+    invalid = {**context_cost, "effective_input_tokens": -1}
+    with pytest.raises(AWClientError) as error:
+        invoke_operation(
+            "delegation-outcome.append",
+            {**values, "context_cost_json": json.dumps(invalid)},
+            target=tmp_path,
+            invocation=[sys.executable, str(ROOT / "scripts/run_agentic_workspace.py")],
+            allow_runtime_backed=True,
+        )
+    assert error.value.kind == "rejected"
+    unchanged = json.loads(stored_path.read_text(encoding="utf-8"))
+    assert len(unchanged["records"]) == 1
 
 
 def test_public_client_classifies_disabled_and_invocation_unavailable(tmp_path: Path) -> None:

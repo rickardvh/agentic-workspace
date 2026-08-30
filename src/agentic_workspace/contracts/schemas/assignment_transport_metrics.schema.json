@@ -1,0 +1,19 @@
+{
+  "$id": "agentic-workspace/assignment_transport_metrics.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Optional adapter-owned sidecar for observable assignment transport metrics. Core preserves absent fields as unknown.",
+  "properties": {
+    "kind": {"const": "agentic-workspace/assignment-transport-metrics/v1", "description": "Versioned adapter sidecar discriminator."},
+    "effective_input_tokens": {"type": "integer", "minimum": 0, "description": "Effective worker input tokens exposed by the transport."},
+    "cached_input_tokens": {"type": "integer", "minimum": 0, "description": "Cached input tokens exposed by the transport."},
+    "output_tokens": {"type": "integer", "minimum": 0, "description": "Output tokens exposed by the transport."},
+    "orientation_command_count": {"type": "integer", "minimum": 0, "description": "Observed worker orientation or reread commands."},
+    "retry_count": {"type": "integer", "minimum": 0, "description": "Observed transport or worker retries."},
+    "repair_loop_count": {"type": "integer", "minimum": 0, "description": "Observed repair loops attributable to the route."}
+  },
+  "required": ["kind"],
+  "title": "Assignment transport metrics",
+  "type": "object",
+  "x-agentic-workspace-doc-role": "contract-reference"
+}

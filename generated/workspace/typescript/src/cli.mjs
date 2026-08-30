@@ -5875,6 +5875,13 @@ const commandDefinitions = [
         },
         {
           "flags": [
+            "--context-cost-json"
+          ],
+          "help": "Provider-neutral assignment context-cost observation encoded as JSON.",
+          "name": "context_cost_json"
+        },
+        {
+          "flags": [
             "--scope-drift"
           ],
           "help": "Scope drift state.",

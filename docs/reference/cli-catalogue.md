@@ -3,7 +3,7 @@
 
 Exact current command values generated from `cli_commands.json` and `cli_option_groups.json`. The schema-shape references remain at `cli-commands.md` and `cli-option-groups.md`.
 
-- Contract digest: `sha256:fbf78b334523a06d0d1386e75cb976826bd3e78601eb350179849660465d961e`
+- Contract digest: `sha256:54d1e6fd7200ecf6708f82ce0d1927b3caaee1724152eda81305452b5d9c4d52`
 - Program: `agentic-workspace`
 - Command/subcommand count: 127
 
@@ -95,7 +95,7 @@ Shared-state mutability and ignored local diagnostics are separate. A `no` below
 | `agentic-workspace config` | `core_context_router` | `ordinary_host_repo` | no | 4 | Show the resolved repo-owned workspace config layered onto product defaults. |
 | `agentic-workspace config-policy` | `core_context_router` | `advanced_host_repo` | yes | 6 | Apply one structured shared or local workspace policy decision without replacing unrelated configuration. |
 | `agentic-workspace system-intent` | `core_context_router` | `ordinary_host_repo` | no | 3 | Show or refresh the workspace-owned compiled system-intent declaration. |
-| `agentic-workspace note-delegation-outcome` | `reusable_host_repo_diagnostics` | `local_only` | yes | 13 | Append one local-only delegation outcome record for target-profile tuning. |
+| `agentic-workspace note-delegation-outcome` | `reusable_host_repo_diagnostics` | `local_only` | yes | 14 | Append one local-only delegation outcome record for target-profile tuning. |
 | `agentic-workspace skills` | `module_delegation_front_door` | `ordinary_host_repo` | no | 4 | List registered workspace skills from installed package registries and repo-owned skill registries. |
 | `agentic-workspace report` | `core_context_router` | `ordinary_host_repo` | no | 11 | Show a compact combined workspace report for installed modules, mixed-agent posture, and next-action guidance. |
 | `agentic-workspace reconcile` | `reusable_host_repo_diagnostics` | `advanced_host_repo` | yes | 4 | Show stale planning state against provider-agnostic external work evidence. |
@@ -1201,6 +1201,7 @@ local-only delegation calibration record
 | `--predecessor-id` | no | `—` | — | `value` | Existing record id required for lifecycle transition operations. |
 | `--authority` | no | `local-outcome-ledger` | — | `value` | Authority class for the admitted evidence. |
 | `--confidence` | no | `medium` | low, medium, high | `value` | Confidence classification for the admitted evidence. |
+| `--context-cost-json` | no | `—` | — | `value` | Provider-neutral assignment context-cost observation encoded as JSON. |
 | `--outcome` | yes | `—` | SUPPORTED_DELEGATION_OUTCOMES | `value` | High-level delegated execution outcome. |
 | `--handoff-sufficiency` | no | `sufficient` | SUPPORTED_HANDOFF_SUFFICIENCY | `value` | Whether the checked-in handoff was enough for the delegated worker. |
 | `--review-burden` | no | `normal` | SUPPORTED_REVIEW_BURDENS | `value` | How much review/rework burden remained after delegation. |

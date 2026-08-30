@@ -127,6 +127,11 @@
       "source": "cli-option"
     },
     {
+      "name": "context_cost_json",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
       "name": "scope_drift",
       "required": false,
       "source": "cli-option"

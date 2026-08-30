@@ -9309,6 +9309,26 @@ def test_configured_orchestrator_compiles_current_nonlocal_and_returned_assignme
         "rule": "One binding assignment resolves retained-local, executable dispatch, admitted manual handoff, or exact blocked recovery before implementation.",
     }
 
+    cost_selected_gate = workspace_runtime_core._assignment_implementation_gate_payload(
+        assignment_policy={
+            **policy,
+            "current_target": {"value": "orchestrator"},
+            "current_target_status": "known-profile",
+            "manual_transport_policy": {"value": "disabled"},
+            "binding": {"enforceable": True},
+        },
+        assignment_decision={**decision, "selected_target": "worker", "selected_transport": "api"},
+        selected_target={
+            "name": "worker",
+            "target_id": "target:worker",
+            "execution_methods": ["cli", "api"],
+            "dispatch_command": ["worker-bridge", "--output", "{output_file}"],
+        },
+        delegation_control={"execution_permitted": True},
+    )
+    assert cost_selected_gate["executor_disposition"]["transport"] == "api"
+    assert cost_selected_gate["executor_disposition"]["cost_selected_transport"] == "api"
+
     blocked_gate = workspace_runtime_core._assignment_implementation_gate_payload(
         assignment_policy={
             **policy,

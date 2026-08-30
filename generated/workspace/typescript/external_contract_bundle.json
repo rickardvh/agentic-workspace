@@ -1,7 +1,7 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:eb00b74d977a349bf02bd4abf04352a44a198ef53a459c6c176d97636a6e28a2",
+  "profile_fingerprint": "sha256:36a86ac0d57dcdc2413db6ca891d91fe631baeb46cf2025c4c4d69404df01816",
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",
@@ -16648,8 +16648,8 @@
     "delegation-outcome.append": {
       "identity": "delegation-outcome.append",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:4fbf0d6e4552aa718abf46b8ff3b8111b3d24f63aad6f86d36c9f7980137d032",
-      "compatibility_fingerprint": "sha256:0189933116401dd52b6174a81c7a0afa142c66b66bc8b015db27c0b74813d3f2",
+      "fingerprint": "sha256:b6d6d7df451b6faa4b249bb055ebc8aa42912f6d983caf751e6d10b837ed32b2",
+      "compatibility_fingerprint": "sha256:c8dbf6ebacd66bb9674008f0faa0da14f00048fc389def33e95275e3fbde378f",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
         "id": "delegation-outcome.append",
@@ -16762,6 +16762,11 @@
           },
           {
             "name": "observed_burden",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "context_cost_json",
             "source": "cli-option",
             "required": false
           },
@@ -17097,6 +17102,11 @@
               "required": false
             },
             {
+              "name": "context_cost_json",
+              "source": "cli-option",
+              "required": false
+            },
+            {
               "name": "scope_drift",
               "source": "cli-option",
               "required": false
@@ -17244,6 +17254,9 @@
                   "type": "string"
                 },
                 "observed_burden": {
+                  "type": "string"
+                },
+                "context_cost_json": {
                   "type": "string"
                 },
                 "scope_drift": {
@@ -23973,6 +23986,10 @@
           "observed_burden": {
             "type": "string",
             "description": "Observed burden after execution."
+          },
+          "context_cost_json": {
+            "type": "string",
+            "description": "JSON-encoded assignment-context-cost/v1 observation produced by an admitted adapter or host measurement."
           },
           "scope_drift": {
             "type": "string",

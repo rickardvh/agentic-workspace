@@ -4235,6 +4235,13 @@
           "name": "confidence"
         },
         {
+          "flags": [
+            "--context-cost-json"
+          ],
+          "help": "Provider-neutral assignment context-cost observation encoded as JSON.",
+          "name": "context_cost_json"
+        },
+        {
           "choices_ref": "SUPPORTED_DELEGATION_OUTCOMES",
           "flags": [
             "--outcome"

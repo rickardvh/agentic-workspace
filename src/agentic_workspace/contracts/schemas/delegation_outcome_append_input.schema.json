@@ -29,6 +29,7 @@
     "restart_burden": {"type": "string", "description": "Restart burden observation."},
     "expected_burden": {"type": "string", "description": "Expected burden before execution."},
     "observed_burden": {"type": "string", "description": "Observed burden after execution."},
+    "context_cost_json": {"type": "string", "description": "JSON-encoded assignment-context-cost/v1 observation produced by an admitted adapter or host measurement."},
     "scope_drift": {"type": "string", "description": "Scope drift state."},
     "contradiction_state": {"type": "string", "description": "Contradiction or dispute state."},
     "uncertainty_state": {"type": "string", "description": "Uncertainty state preserved for non-routing evidence."},

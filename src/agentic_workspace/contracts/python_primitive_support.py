@@ -6,6 +6,7 @@ import re
 import shlex
 import subprocess
 import tempfile
+import time
 import tomllib
 from collections.abc import Mapping, Sequence
 from pathlib import Path
@@ -1970,12 +1971,23 @@ def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, targe
         }
     role = _optional_text(identity.get("role"))
     model = _optional_text(adapter.get("model"))
+    adapter_revision = _assignment_digest(
+        {
+            "kind": adapter_kind,
+            "command": command_template,
+            "output_mode": output_mode,
+            "timeout_seconds": timeout_seconds,
+        }
+    )
     completed: subprocess.CompletedProcess[str]
     output = ""
+    observed_metrics: dict[str, Any] = {}
+    started_at = time.perf_counter()
     try:
         with tempfile.TemporaryDirectory(prefix="aw-assignment-dispatch-") as temporary_directory:
             last_message_path = Path(temporary_directory) / "last-message.json"
             output_schema_path = Path(temporary_directory) / "delegated-return.schema.json"
+            metrics_path = Path(temporary_directory) / "transport-metrics.json"
             required_fields = [
                 "assignment_revision",
                 "run_id",
@@ -2009,6 +2021,7 @@ def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, targe
                 "{target_root}": str(target_root),
                 "{output_schema}": str(output_schema_path),
                 "{output_file}": str(last_message_path),
+                "{metrics_file}": str(metrics_path),
                 "{model}": model,
             }
             dispatch_command = []
@@ -2034,6 +2047,12 @@ def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, targe
                 if output_mode == "json-file" and last_message_path.is_file()
                 else completed.stdout.strip()
             )
+            if metrics_path.is_file():
+                try:
+                    loaded_metrics = json.loads(metrics_path.read_text(encoding="utf-8", errors="replace"))
+                except json.JSONDecodeError:
+                    loaded_metrics = {}
+                observed_metrics = _assignment_mapping(loaded_metrics)
     except (OSError, subprocess.SubprocessError) as exc:
         return {
             "kind": "agentic-workspace/assignment-dispatch-receipt/v1",
@@ -2042,6 +2061,13 @@ def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, targe
             "transport": transport,
             "adapter_kind": adapter_kind,
             "detail": str(exc),
+            "context_cost": _assignment_context_cost(
+                packet=packet,
+                prompt=prompt,
+                transport=transport,
+                adapter_revision=adapter_revision,
+                elapsed_ms=round((time.perf_counter() - started_at) * 1000),
+            ),
         }
     if output.startswith("```json") and output.endswith("```"):
         output = output[7:-3].strip()
@@ -2061,20 +2087,62 @@ def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, targe
         "reason": "worker-returned-untrusted-evidence" if returned else "target-adapter-return-invalid",
         "transport": transport,
         "adapter_kind": adapter_kind,
-        "adapter_revision": _assignment_digest(
-            {
-                "kind": adapter_kind,
-                "command": command_template,
-                "output_mode": output_mode,
-                "timeout_seconds": timeout_seconds,
-            }
-        ),
+        "adapter_revision": adapter_revision,
         "model": model or None,
         "exit_code": completed.returncode,
         "returned_work": returned,
         "stdout_tail": completed.stdout[-4000:] if completed.stdout else "",
         "stderr": completed.stderr[-4000:] if completed.stderr else "",
+        "context_cost": _assignment_context_cost(
+            packet=packet,
+            prompt=prompt,
+            transport=transport,
+            adapter_revision=adapter_revision,
+            elapsed_ms=round((time.perf_counter() - started_at) * 1000),
+            observed=observed_metrics,
+        ),
         "claim_boundary": "transport-only; return still requires AW admission, integration, proof, and closeout",
+    }
+
+
+_ASSIGNMENT_CONTEXT_COST_METRICS = (
+    "effective_input_tokens",
+    "cached_input_tokens",
+    "output_tokens",
+    "orientation_command_count",
+    "retry_count",
+    "repair_loop_count",
+)
+
+
+def _assignment_context_cost(
+    *,
+    packet: Mapping[str, Any],
+    prompt: str,
+    transport: str,
+    adapter_revision: str,
+    elapsed_ms: int,
+    observed: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    observed_mapping = _assignment_mapping(observed)
+    if observed_mapping.get("kind") != "agentic-workspace/assignment-transport-metrics/v1":
+        observed_mapping = {}
+    metrics: dict[str, int | None] = {}
+    for field in _ASSIGNMENT_CONTEXT_COST_METRICS:
+        value = observed_mapping.get(field)
+        metrics[field] = value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else None
+    packet_text = json.dumps(packet, indent=2, sort_keys=True, default=str).rstrip() + "\n"
+    return {
+        "kind": "agentic-workspace/assignment-context-cost/v1",
+        "transport": transport,
+        "adapter_revision": adapter_revision,
+        "assignment_packet_bytes": len(packet_text.encode("utf-8")),
+        "rendered_prompt_bytes": len(prompt.encode("utf-8")),
+        **metrics,
+        "elapsed_ms": max(0, elapsed_ms),
+        "unknown_fields": [field for field, value in metrics.items() if value is None],
+        "observation_authority": "adapter-sidecar-or-host-measurement",
+        "raw_transcript_stored": False,
     }
 
 

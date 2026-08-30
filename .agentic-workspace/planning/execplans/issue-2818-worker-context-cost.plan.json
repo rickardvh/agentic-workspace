@@ -5,13 +5,13 @@
   "owner_level": "lane",
   "lifecycle": "live",
   "phase": "implementation",
-  "revision": 2,
+  "revision": 3,
   "canonical_core": {
     "requested_outcome": "Bound delegated execution to an assignment-derived worker-context projection, record observable transport context cost, and let admitted cost evidence influence the existing best-fit decision without weakening capability or proof constraints.",
     "hard_constraints": "Do not add a prompt registry, transcript store, telemetry ledger, scheduler, provider-specific portable fields, peer ranking authority, or parent-conversation inheritance.",
     "agent_may_decide": "Choose the smallest versioned projection and contextual evidence shape, exact transport parsing seams, fixtures, and stacked PR boundaries while preserving assignment and target-evidence authority.",
     "escalate_when": "The work requires provider secrets, a new persistent owner, weakened capability/proof priority, fabricated token metrics, or cannot produce honest supported-host evidence.",
-    "next_action": "Implement PR 1: the assignment-derived worker-context projection and transport-neutral prompt boundary.",
+    "next_action": "Implement PR 3: check in current supported-host context-cost evidence and a substantive baseline comparison.",
     "proof_expectations": [
       "Projection fixtures prove no authority widening and no parent/broad-state default context.",
       "Cost fixtures preserve unknown metrics and change best-fit selection only among equally safe and capable candidates.",
@@ -65,15 +65,15 @@
     "stop before touching": "Provider credentials, raw transcripts, central prompt/telemetry stores, unrelated Planning owners, or #2821 research-runtime code."
   },
   "active_milestone": {
-    "id": "worker-context-projection",
+    "id": "supported-host-evidence",
     "status": "in-progress",
-    "scope": "PR 1 derives one bounded worker-context projection from canonical assignment authority and renders transport-neutral prompt/context from it.",
-    "ready": "Existing assignment packet, prompt renderer, dispatch adapters, and focused external-client fixtures are present.",
+    "scope": "PR 3 checks in the historical inflation regression, current supported-host evidence, and a substantive all-strong-local baseline comparison.",
+    "ready": "PR 1 provides bounded semantic projection and PR 2 records provider-neutral cost with capability-first target and transport ranking.",
     "blocked": "none",
-    "optional_deps": "Supported-host token metrics may remain explicit unknowns when the adapter cannot observe them."
+    "optional_deps": "Unavailable supported-host metrics must remain explicit unknowns and may support an honest retain-local decision rather than a savings claim."
   },
   "immediate_next_action": [
-    "Add the versioned worker-context projection and no-authority-widening tests on codex/2818-worker-context-projection."
+    "Capture current supported-host evidence and compare the cost-aware route with a plausible all-strong local baseline on the next stacked branch."
   ],
   "blockers": [
     "None."
@@ -172,7 +172,7 @@
       ]
     }
   },
-  "next_action": "Implement PR 1: derive bounded worker context from canonical assignment authority.",
+  "next_action": "Implement PR 3: capture supported-host evidence and the substantive baseline comparison.",
   "proof": {
     "claims": [
       "Delegated worker context is bounded by canonical assignment authority and transport cost participates in existing best-fit selection.",
