@@ -5,6 +5,7 @@ import hashlib
 import importlib.util
 import json
 import re
+import shlex
 import shutil
 import subprocess
 import time
@@ -15221,6 +15222,12 @@ def propose_integration_transition(
         "feature branch does not close parent/lane lifecycle truth",
         "integration apply is target-branch authoritative",
     ]
+    invocation_subject_revision = (expected_subject_revision or expected_target_revision).strip() or _integration_subject_revision(
+        target_root=target_root, owner_ref=owner_path_text, external_ref=external
+    )
+    invocation_planning_revision = expected_planning_revision.strip() or str(
+        _planning_target_authority_revision(target_root).get("revision_id", "")
+    )
     subject_revision = (
         _integration_subject_revision_after_record(
             target_root=target_root,
@@ -15275,6 +15282,21 @@ def propose_integration_transition(
         result.add("manual review", proposal_path, f"integration proposal did not validate: {'; '.join(findings)}")
         result.reason_code = "integration-proposal-validation-failed"
         return result
+    invocation_arguments = {
+        "proposal_id": proposal_slug,
+        "owner": owner_id,
+        "owner_ref": owner_path_text,
+        "issue": issue.strip(),
+        "external_ref": external,
+        "requested_transition": transition,
+        "proof": proof_refs,
+        "parent_boundary": proposal["parent_boundary"],
+        "invariant": preserved_invariants,
+        "expected_subject_revision": invocation_subject_revision,
+        "expected_planning_revision": invocation_planning_revision,
+        "record_feature_completion": bool(record_feature_completion),
+    }
+    invocation_arguments = {key: value for key, value in invocation_arguments.items() if value not in ("", [], None, False)}
     existing = _load_integration_proposal(proposal_path) if proposal_path.exists() else None
     if proposal_path.exists() and existing is None:
         result.add("manual review", proposal_path, "existing integration proposal is not valid JSON for this record kind")
@@ -15314,6 +15336,8 @@ def propose_integration_transition(
         "kind": "planning-integration-proposal-receipt/v1",
         "operation": "planning.integration-propose.lifecycle",
         "outcome": "dry-run" if dry_run else "proposed",
+        "arguments": invocation_arguments,
+        "expected_transition": "pending-integration-proposal-created",
         "proposal_id": proposal_slug,
         "proposal_revision": proposal["proposal_revision"],
         "changed_fields": (["owner.feature_completion", "integration_proposal"] if feature_owner_update else ["integration_proposal"]),
@@ -18372,6 +18396,7 @@ def targeted_execplan_write(
         "blockers",
         "next_action",
         "proof",
+        "relationships",
         "continuation",
         "lifecycle",
         "phase",
@@ -18387,6 +18412,49 @@ def targeted_execplan_write(
     unknown = sorted(set(patch).difference(allowed))
     if unknown or not patch:
         return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "invalid-patch", "unknown_fields": unknown}
+    if "relationships" in patch:
+        current_relationships = record.get("relationships")
+        proposed_relationships = patch.get("relationships")
+        if not isinstance(current_relationships, dict) or not isinstance(proposed_relationships, dict):
+            return {
+                "kind": "agentic-planning/targeted-execplan-write/v1",
+                "status": "invalid-relationships-patch",
+                "reason": "relationships must be a complete object copied from the guarded owner",
+            }
+        changed_relationships = sorted(
+            key
+            for key in set(current_relationships) | set(proposed_relationships)
+            if current_relationships.get(key) != proposed_relationships.get(key)
+        )
+        if changed_relationships not in ([], ["external_posture"]):
+            return {
+                "kind": "agentic-planning/targeted-execplan-write/v1",
+                "status": "unsupported-relationships-patch",
+                "changed_relationships": changed_relationships,
+                "reason": "targeted-write may reconcile only relationships.external_posture; lifecycle owners retain all other relationship authority",
+            }
+        external_posture = proposed_relationships.get("external_posture")
+        if not isinstance(external_posture, dict):
+            return {
+                "kind": "agentic-planning/targeted-execplan-write/v1",
+                "status": "invalid-external-posture",
+                "reason": "relationships.external_posture must be an object",
+            }
+        external_state = str(external_posture.get("state") or "").strip()
+        external_refs = external_posture.get("refs")
+        valid_refs = isinstance(external_refs, list) and all(isinstance(item, str) and item.strip() for item in external_refs)
+        if external_state not in {"observed", "unobserved"} or not valid_refs or (external_state == "observed" and not external_refs):
+            return {
+                "kind": "agentic-planning/targeted-execplan-write/v1",
+                "status": "invalid-external-posture",
+                "reason": "external posture must be observed with refs or unobserved with an empty refs list",
+            }
+        if external_state == "unobserved" and external_refs:
+            return {
+                "kind": "agentic-planning/targeted-execplan-write/v1",
+                "status": "invalid-external-posture",
+                "reason": "unobserved external posture cannot carry refs",
+            }
     unsupported_projection_fields = sorted(field for field in patch if field in {"parent"})
     lifecycle_value = str(patch.get("lifecycle") or "").strip().lower()
     terminal_lifecycle = lifecycle_value in {"completed", "complete", "closed", "archived", "superseded"}
@@ -23558,10 +23626,11 @@ def _lifecycle_plan_payload(result: InstallResult) -> dict[str, Any]:
         elif "review" in kind or "warning" in kind:
             grouped["review_required"].append(path)
 
+    invocation = _lifecycle_operation_invocation(result)
     payload = {
         "schema_version": "planning-lifecycle-plan/v1",
         "target": str(result.target_root),
-        "operation": _lifecycle_operation_name(result.message),
+        "operation": _lifecycle_operation_name(result.message, operation_receipt=result.operation_receipt),
         "selected_modules": ["planning"],
         "summary": {
             "create_count": len(grouped["create"]),
@@ -23578,6 +23647,8 @@ def _lifecycle_plan_payload(result: InstallResult) -> dict[str, Any]:
             "rule": "Lifecycle dry-run plans do not inspect or mutate ignored local-only integration or memory state.",
         },
     }
+    if invocation:
+        payload["operation_invocation"] = invocation
     next_safe_command = _lifecycle_next_safe_command(result)
     if next_safe_command:
         payload["next_safe_command"] = next_safe_command
@@ -23586,7 +23657,10 @@ def _lifecycle_plan_payload(result: InstallResult) -> dict[str, Any]:
     return payload
 
 
-def _lifecycle_operation_name(message: str) -> str:
+def _lifecycle_operation_name(message: str, *, operation_receipt: dict[str, Any] | None = None) -> str:
+    operation_id = str((operation_receipt or {}).get("operation") or "").strip()
+    if operation_id.startswith("planning.") and operation_id.endswith(".lifecycle"):
+        return operation_id.removeprefix("planning.").removesuffix(".lifecycle")
     lowered = message.lower()
     if "close out execplan" in lowered or "closeout" in lowered:
         return "closeout"
@@ -23609,8 +23683,83 @@ def _lifecycle_operation_name(message: str) -> str:
     return "unknown"
 
 
+def _render_lifecycle_invocation(operation_id: str, arguments: dict[str, Any]) -> str:
+    if operation_id != "planning.integration-propose.lifecycle":
+        return ""
+    tokens = ["agentic-planning", "integration-propose"]
+    option_names = (
+        ("proposal_id", "--proposal-id"),
+        ("owner", "--owner"),
+        ("owner_ref", "--owner-ref"),
+        ("issue", "--issue"),
+        ("external_ref", "--external-ref"),
+        ("requested_transition", "--requested-transition"),
+        ("proof", "--proof"),
+        ("parent_boundary", "--parent-boundary"),
+        ("invariant", "--invariant"),
+        ("expected_subject_revision", "--expect-subject-revision"),
+        ("expected_planning_revision", "--expect-planning-revision"),
+    )
+    for name, option in option_names:
+        value = arguments.get(name)
+        if isinstance(value, list):
+            value = ",".join(str(item) for item in value if str(item).strip())
+        if str(value or "").strip():
+            tokens.extend([option, str(value)])
+    if arguments.get("record_feature_completion") is True:
+        tokens.append("--record-feature-completion")
+    tokens.extend(["--target", str(arguments.get("target") or "."), "--format", str(arguments.get("format") or "json")])
+    return shlex.join(tokens)
+
+
+def _lifecycle_operation_invocation(result: InstallResult) -> dict[str, Any]:
+    receipt = result.operation_receipt if isinstance(result.operation_receipt, dict) else {}
+    operation_id = str(receipt.get("operation") or "").strip()
+    raw_arguments = receipt.get("arguments")
+    arguments: dict[str, Any] = dict(raw_arguments) if isinstance(raw_arguments, dict) else {}
+    if arguments:
+        arguments.update({"target": str(result.target_root), "format": "json"})
+    rendering = _render_lifecycle_invocation(operation_id, arguments)
+    if not operation_id or not arguments or not rendering:
+        return {}
+    expected_transition = str(receipt.get("expected_transition") or "").strip()
+    revision_input = {
+        "operation_id": operation_id,
+        "arguments": arguments,
+        "expected_transition": expected_transition,
+    }
+    revision = "sha256:" + hashlib.sha256(json.dumps(revision_input, sort_keys=True).encode()).hexdigest()
+    idempotency_key = hashlib.sha256(json.dumps({**revision_input, "input_revision": revision}, sort_keys=True).encode()).hexdigest()[:16]
+    return {
+        "kind": "agentic-workspace/operation-invocation/v1",
+        "producer_module": "repo_planning_bootstrap.installer",
+        "producer_function": "_lifecycle_operation_invocation",
+        "producer_revision": revision,
+        "operation_id": operation_id,
+        "contract_version": "agentic-workspace/operation/v1",
+        "arguments": arguments,
+        "effect_class": "planning-owner-and-integration-proposal-mutation",
+        "authority_class": "planning-operation-contract",
+        "required_authority": "planning target and owner revision guards",
+        "preconditions": {
+            "expected_subject_revision": arguments.get("expected_subject_revision", ""),
+            "expected_planning_revision": arguments.get("expected_planning_revision", ""),
+        },
+        "expected_input_revision": revision,
+        "expected_transition": expected_transition,
+        "idempotency_key": idempotency_key,
+        "claim_effect": "records a pending integration proposal; terminal integration authority remains unchanged",
+        "renderings": {"cli": rendering},
+        "rule": "Lifecycle operation identity and continuation render from these typed arguments; message text is not action authority.",
+    }
+
+
 def _lifecycle_next_safe_command(result: InstallResult) -> str | None:
-    operation = _lifecycle_operation_name(result.message)
+    invocation = _lifecycle_operation_invocation(result)
+    rendering = invocation.get("renderings", {}).get("cli") if invocation else ""
+    if isinstance(rendering, str) and rendering:
+        return rendering
+    operation = _lifecycle_operation_name(result.message, operation_receipt=result.operation_receipt)
     if operation in {"closeout", "unknown"}:
         return None
     return f"agentic-planning {operation} --target {result.target_root}"

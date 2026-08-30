@@ -1,0 +1,117 @@
+{
+  "kind": "agentic-workspace/proof-receipt/v1",
+  "command": "uv run --active pytest packages/planning/tests/test_promote.py tests/test_reconciliation.py tests/test_workspace_cli.py -q",
+  "result": "passed",
+  "recorded_at": "2026-08-29T22:32:29+00:00",
+  "changed_paths": [
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_branch_safe_planning.py",
+    "tests/test_workspace_implement_cli.py",
+    ".release/changes/typed-routed-action-rendering.toml"
+  ],
+  "plan_id": "",
+  "rule": "This receipt records actual validation evidence supplied by the caller; proof recommendations alone must not create receipts.",
+  "execution": {
+    "command_identity": "e79a2c27bcf2aca3",
+    "result": "passed",
+    "claim_sufficiency": "not-reviewed",
+    "route_id": "domain:planning_reconciliation_runtime",
+    "command_id": "e79a2c27bcf2aca3",
+    "route_identity_source": "proof_selection.selected_commands"
+  },
+  "proof_subject": {
+    "kind": "agentic-workspace/proof-subject/v1",
+    "id": "proof-subject:5ca6a2d5b5e99f90f048",
+    "fingerprint": "5ca6a2d5b5e99f90f0487764b2d9d06e788a1cd8b469b5dd209d7330caceb9ad",
+    "claim_classes": [
+      "executable-validation"
+    ],
+    "effect_scope": [
+      ".release/changes/typed-routed-action-rendering.toml",
+      "packages/planning/src/repo_planning_bootstrap/installer.py",
+      "packages/planning/tests/test_branch_safe_planning.py",
+      "tests/test_workspace_implement_cli.py"
+    ],
+    "source_inputs": [
+      {
+        "path": ".release/changes/typed-routed-action-rendering.toml",
+        "sha256": "68b77ed06e4c8f0464c663852efae14a31606eac1ba3551738cefc19b2e4c72a"
+      },
+      {
+        "path": "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "sha256": "2a1530a14628f784f26fcace53ede628beddc899b9f29cb0575f8e2ae4ce310f"
+      },
+      {
+        "path": "packages/planning/tests/test_branch_safe_planning.py",
+        "sha256": "5f4e491b8fe56185bc6697351e7bfca569d00a1a7f204b38d84875d1e1201c14"
+      },
+      {
+        "path": "tests/test_workspace_implement_cli.py",
+        "sha256": "4d8fd1f17a2ad2140be5f51ec68bc40050fb00c2b2b2b4e9d88c73cbf7f8bdda"
+      }
+    ],
+    "command_sha256": "e79a2c27bcf2aca3734773399dda5d73209a531bb40476becd35c8ce47f94acf",
+    "runtime": {
+      "implementation": "CPython",
+      "version": "3.13.9"
+    },
+    "identity_complete": true,
+    "unavailable_inputs": [],
+    "dependency_roles": [
+      {
+        "path": ".release/changes/typed-routed-action-rendering.toml",
+        "owner": "claim",
+        "role": "semantic-input",
+        "reason": "declared-proof-subject-input"
+      },
+      {
+        "path": "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "owner": "claim",
+        "role": "semantic-input",
+        "reason": "declared-proof-subject-input"
+      },
+      {
+        "path": "packages/planning/tests/test_branch_safe_planning.py",
+        "owner": "claim",
+        "role": "semantic-input",
+        "reason": "declared-proof-subject-input"
+      },
+      {
+        "path": "tests/test_workspace_implement_cli.py",
+        "owner": "claim",
+        "role": "semantic-input",
+        "reason": "declared-proof-subject-input"
+      }
+    ],
+    "evidence_outputs": [],
+    "dependency_scope": "declared-path-and-command",
+    "fallback": "not-required",
+    "rule": "Only declared semantic inputs participate in proof freshness; proof-owned publication outputs are diagnostic unless this claim explicitly declares them as semantic inputs."
+  },
+  "producer_class": "aw-proof",
+  "authority": "aw-proof",
+  "admission": {
+    "kind": "agentic-workspace/proof-receipt-admission/v1",
+    "status": "admitted",
+    "admitted": true,
+    "result_class": "passed",
+    "proof_sufficient": true,
+    "failures": [],
+    "reason": "admissible",
+    "safe_recovery": "none",
+    "rule": "Only admitted receipts may be persisted, selected, or counted as trusted proof state."
+  },
+  "calibration": {
+    "status": "non-calibrating",
+    "reason": "missing-current-assignment-context",
+    "source_ref": ".agentic-workspace/local/assignment-context.json",
+    "rule": "Trusted producer receipts calibrate target evidence only when a current assignment/run authority supplies target/task/scope."
+  },
+  "publication_id": "9c4fa159cd6855c2",
+  "receipt_id": "9c4fa159cd6855c2",
+  "source_type": "aw-proof-receipt",
+  "confidence": "high",
+  "source_ref": "proof://receipts/9c4fa159cd6855c2",
+  "status": "current",
+  "revision": "2026-08-29T22:32:29+00:00"
+}

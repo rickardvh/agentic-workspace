@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Project planning lifecycle continuations from typed operation invocations and keep ordinary routed commands executable without unsupported target arguments."
+issues = [2298]

@@ -4,8 +4,8 @@
   "title": "Unify packaged operation contracts and typed routed actions",
   "owner_level": "slice",
   "lifecycle": "live",
-  "phase": "implementation",
-  "revision": 3,
+  "phase": "closeout",
+  "revision": 7,
   "intent": {
     "outcome": "Close issues #2197 and #2298 through one operation-contract authority lane: first make packaged external operation resources deterministic from one canonical generator, then make ordinary routed actions derive identity, arguments, effects, preconditions, transitions, retry identity, claim effects, and exact manual renderings from typed invocations.",
     "non_goals": [
@@ -34,18 +34,44 @@
       "owner": "operation-contract-authority-lane"
     },
     "proof_posture": {
-      "state": "pending",
-      "refs": []
+      "state": "accepted",
+      "refs": [
+        "proof:selected-proof:b95d5633578c6bc3",
+        "github:pr#2871",
+        "github:pr#2872",
+        "tests:planning-47-passed",
+        "tests:workspace-broad-511-passed",
+        "tests:operation-actionability-and-clients-209-passed"
+      ]
     },
     "external_posture": {
-      "state": "unobserved",
-      "refs": []
+      "state": "observed",
+      "refs": [
+        "github:pr#2871",
+        "github:pr#2872",
+        "github:pr#2872/review#5060024297"
+      ]
+    },
+    "integration": {
+      "status": "feature-complete-integration-pending",
+      "proposal_id": "operation-contract-authority-lane-archive",
+      "proposal_ref": ".agentic-workspace/planning/integration-proposals/operation-contract-authority-lane-archive.integration-proposal.json",
+      "requested_transition": "archive-owner",
+      "proof_refs": [
+        "proof:selected-proof:b95d5633578c6bc3",
+        "github:pr#2871",
+        "github:pr#2872",
+        "tests:planning-47-passed",
+        "tests:workspace-broad-511-passed",
+        "tests:operation-actionability-and-clients-209-passed"
+      ],
+      "authority": "feature-head declaration; target integration remains terminal authority"
     }
   },
   "references": [],
-  "next_action": "Implement the #2197 canonical generator fixed point as PR 1, then implement #2298 typed routed-action authority as PR 2.",
+  "next_action": "Apply integration proposal 'operation-contract-authority-lane-archive' from admitted target authority.",
   "blockers": [
-    "None."
+    "Awaiting review and ordered merge of PRs #2871 and #2872."
   ],
   "proof": {
     "claims": [
@@ -58,7 +84,14 @@
       "Actionability same-state loop tests without shell parsing.",
       "Planning package checks, generated conformance, focused Workspace tests, and exact changed-path proof."
     ],
-    "refs": []
+    "refs": [
+      "proof:selected-proof:b95d5633578c6bc3",
+      "github:pr#2871",
+      "github:pr#2872",
+      "tests:planning-47-passed",
+      "tests:workspace-broad-511-passed",
+      "tests:operation-actionability-and-clients-209-passed"
+    ]
   },
   "continuation": {
     "owner": "none",
@@ -100,10 +133,10 @@
     ".agentic-workspace/planning/execplans/operation-contract-authority-lane.plan.json"
   ],
   "validation_commands": [
-    "uv run --frozen --active --no-sync python scripts/generate_command_packages.py --check",
-    "uv run --frozen --active --no-sync python scripts/generate_external_consumer_profile.py --check",
+    "uv run --frozen --active --no-sync python scripts/generate/generate_command_packages.py --check",
+    "uv run --frozen --active --no-sync python scripts/generate/generate_external_consumer_profile.py --check",
     "uv run --frozen --active --no-sync python scripts/check/check_contract_tooling_surfaces.py",
-    "uv run --frozen --active --no-sync pytest tests/test_actionability.py tests/test_external_operation_clients.py -q",
+    "uv run --frozen --active --no-sync pytest tests/test_operating_decision.py tests/test_external_operation_clients.py -q",
     "make check-planning-nosync",
     "uv run --frozen --active --no-sync python scripts/run_agentic_workspace.py proof --target . --changed <paths> --format json"
   ],
@@ -113,5 +146,45 @@
     "The #2864 invalid defaults rendering and #2865 integration preview/continuation divergence are covered by regression tests generated from the same typed source.",
     "Compact machine projections remain executable without command text, while explicit human projections render exact supported commands.",
     "Focused, package-wide, generated parity, and exact changed-path proof pass; both issues have PR-linked closure evidence."
-  ]
+  ],
+  "proof_report": {
+    "validation proof": "proof:selected-proof:b95d5633578c6bc3, github:pr#2871, github:pr#2872, tests:planning-47-passed, tests:workspace-broad-511-passed, tests:operation-actionability-and-clients-209-passed",
+    "proof achieved now": "yes; integration-propose recorded accepted feature-head proof.",
+    "evidence for \"proof achieved\" state": "proof:selected-proof:b95d5633578c6bc3, github:pr#2871, github:pr#2872, tests:planning-47-passed, tests:workspace-broad-511-passed, tests:operation-actionability-and-clients-209-passed"
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "current planning owner",
+    "handoff source": "operation-contract-authority-lane",
+    "what happened": "Close issues #2197 and #2298 through one operation-contract authority lane: first make packaged external operation resources deterministic from one canonical generator, then make ordinary routed actions derive identity, arguments, effects, preconditions, transitions, retry identity, claim effects, and exact manual renderings from typed invocations.",
+    "scope touched": "Canonical external operation-resource generation and packaged contract fixed-point behavior for #2197.; Typed routed-action identity, argument, effect, precondition, transition, retry, claim, and rendering behavior for #2298.",
+    "changed surfaces": "Canonical external operation-resource generation and packaged contract fixed-point behavior for #2197.; Typed routed-action identity, argument, effect, precondition, transition, retry, claim, and rendering behavior for #2298.",
+    "validations run": "proof:selected-proof:b95d5633578c6bc3, github:pr#2871, github:pr#2872, tests:planning-47-passed, tests:workspace-broad-511-passed, tests:operation-actionability-and-clients-209-passed",
+    "result for continuation": "feature-head complete; terminal lifecycle remains target-authoritative",
+    "next step": "Apply integration proposal 'operation-contract-authority-lane-archive' from admitted target authority."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; bounded feature-head scope and proof were reviewed.",
+    "proof status": "passed",
+    "intent served": "yes; target integration remains the terminal lifecycle authority.",
+    "config compliance": "used planning integration-propose command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": ".agentic-workspace/planning/integration-proposals/operation-contract-authority-lane-archive.integration-proposal.json"
+  },
+  "intent_satisfaction": {
+    "original intent": "Close issues #2197 and #2298 through one operation-contract authority lane: first make packaged external operation resources deterministic from one canonical generator, then make ordinary routed actions derive identity, arguments, effects, preconditions, transitions, retry identity, claim effects, and exact manual renderings from typed invocations.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "proof:selected-proof:b95d5633578c6bc3, github:pr#2871, github:pr#2872, tests:planning-47-passed, tests:workspace-broad-511-passed, tests:operation-actionability-and-clients-209-passed",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "Feature-head proof is accepted; terminal lifecycle truth awaits target integration.",
+    "evidence carried forward": "proof:selected-proof:b95d5633578c6bc3, github:pr#2871, github:pr#2872, tests:planning-47-passed, tests:workspace-broad-511-passed, tests:operation-actionability-and-clients-209-passed",
+    "reopen trigger": "New contradictory evidence or rejected target integration."
+  }
 }
