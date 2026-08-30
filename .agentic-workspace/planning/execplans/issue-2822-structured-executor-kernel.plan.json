@@ -4,8 +4,8 @@
   "title": "Issue 2822 deterministic Structured Executor kernel",
   "owner_level": "slice",
   "lifecycle": "live",
-  "phase": "validation",
-  "revision": 8,
+  "phase": "closeout",
+  "revision": 9,
   "intent": {
     "outcome": "Build the maintainer-only deterministic Structured Executor kernel for #2822 with versioned contracts, a pure reducer, atomic local persistence, deterministic replay, revision binding, and bounded cycle/no-progress recovery.",
     "non_goals": [
@@ -36,8 +36,10 @@
       "owner": "issue-2822-structured-executor-kernel"
     },
     "proof_posture": {
-      "state": "pending",
-      "refs": []
+      "state": "accepted",
+      "refs": [
+        "Merged target replay: 15 structured-executor tests passed; ruff passed; structured inventory passed; make check-planning-nosync passed."
+      ]
     },
     "external_posture": {
       "state": "observed",
@@ -49,10 +51,25 @@
       "state": "recorded",
       "route": "keep-local",
       "reason": "The user did not request subagents; PR1 contracts and reducer are one tightly coupled domain-neutral slice and proof burden remains local."
+    },
+    "integration": {
+      "status": "feature-complete-integration-pending",
+      "proposal_id": "issue-2822-structured-executor-kernel-archive-owner",
+      "proposal_ref": ".agentic-workspace/planning/integration-proposals/issue-2822-structured-executor-kernel-archive-owner.integration-proposal.json",
+      "requested_transition": "archive-owner",
+      "proof_refs": [
+        "tests/test_structured_executor_contracts.py",
+        "tests/test_structured_executor_replay.py",
+        "tests/test_structured_executor_safety.py",
+        "make check-planning-nosync",
+        "574 cross-surface tests passed",
+        "Merged target replay: 15 structured-executor tests passed; ruff passed; structured inventory passed; make check-planning-nosync passed."
+      ],
+      "authority": "feature-head declaration; target integration remains terminal authority"
     }
   },
   "references": [],
-  "next_action": "Open PR 3, obtain fresh independent review across the three-PR stack, merge in order, and close #2822 only when current-head acceptance evidence is complete.",
+  "next_action": "Apply integration proposal 'issue-2822-structured-executor-kernel-archive-owner' from admitted target authority.",
   "blockers": [
     "None."
   ],
@@ -70,7 +87,8 @@
       "tests/test_structured_executor_replay.py",
       "tests/test_structured_executor_safety.py",
       "make check-planning-nosync",
-      "574 cross-surface tests passed"
+      "574 cross-surface tests passed",
+      "Merged target replay: 15 structured-executor tests passed; ruff passed; structured inventory passed; make check-planning-nosync passed."
     ]
   },
   "continuation": {
@@ -124,5 +142,45 @@
     "Stale revisions fail without mutation; repeated state/action and no-progress loops become explicit blocked/recovery state.",
     "Atomic persistence and interrupted-write recovery are proven; restart requires authoritative domain re-observation.",
     "Three small stacked PRs cover the full #2822 child without claiming #2821 or stage-2 readiness."
-  ]
+  ],
+  "proof_report": {
+    "validation proof": "Merged target replay: 15 structured-executor tests passed; ruff passed; structured inventory passed; make check-planning-nosync passed.",
+    "proof achieved now": "yes; integration-propose recorded accepted feature-head proof.",
+    "evidence for \"proof achieved\" state": "Merged target replay: 15 structured-executor tests passed; ruff passed; structured inventory passed; make check-planning-nosync passed."
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "current planning owner",
+    "handoff source": "issue-2822-structured-executor-kernel",
+    "what happened": "Build the maintainer-only deterministic Structured Executor kernel for #2822 with versioned contracts, a pure reducer, atomic local persistence, deterministic replay, revision binding, and bounded cycle/no-progress recovery.",
+    "scope touched": "Maintainer-only Structured Executor contracts and fixtures.; Pure domain-neutral reducer and deterministic transition identity.; Ignored local scratch persistence, validate/replay maintainer entrypoint, recovery and safety proof.",
+    "changed surfaces": "Maintainer-only Structured Executor contracts and fixtures.; Pure domain-neutral reducer and deterministic transition identity.; Ignored local scratch persistence, validate/replay maintainer entrypoint, recovery and safety proof.",
+    "validations run": "Merged target replay: 15 structured-executor tests passed; ruff passed; structured inventory passed; make check-planning-nosync passed.",
+    "result for continuation": "feature-head complete; terminal lifecycle remains target-authoritative",
+    "next step": "Apply integration proposal 'issue-2822-structured-executor-kernel-archive-owner' from admitted target authority."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; bounded feature-head scope and proof were reviewed.",
+    "proof status": "passed",
+    "intent served": "yes; target integration remains the terminal lifecycle authority.",
+    "config compliance": "used planning integration-propose command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": ".agentic-workspace/planning/integration-proposals/issue-2822-structured-executor-kernel-archive-owner.integration-proposal.json"
+  },
+  "intent_satisfaction": {
+    "original intent": "Build the maintainer-only deterministic Structured Executor kernel for #2822 with versioned contracts, a pure reducer, atomic local persistence, deterministic replay, revision binding, and bounded cycle/no-progress recovery.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Merged target replay: 15 structured-executor tests passed; ruff passed; structured inventory passed; make check-planning-nosync passed.",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "Feature-head proof is accepted; terminal lifecycle truth awaits target integration.",
+    "evidence carried forward": "Merged target replay: 15 structured-executor tests passed; ruff passed; structured inventory passed; make check-planning-nosync passed.",
+    "reopen trigger": "New contradictory evidence or rejected target integration."
+  }
 }
