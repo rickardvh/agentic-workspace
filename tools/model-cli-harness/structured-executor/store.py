@@ -9,12 +9,13 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-from kernel import canonical_json_bytes, semantic_digest, state_digest
+from kernel import TRANSITION_INPUT_KIND, canonical_json_bytes, reduce_transition, semantic_digest, state_digest
 
 MARKER_NAME = ".aw-scratch.toml"
 STATE_NAME = "state.json"
 TRANSITIONS_NAME = "transitions.jsonl"
 ARTIFACTS_NAME = "artifacts"
+PENDING_NAME = "pending-commit.json"
 
 
 class StoreError(ValueError):
@@ -37,6 +38,8 @@ def _atomic_write(path: Path, payload: bytes) -> None:
 
 
 def initialize_run(run_root: Path, state: Mapping[str, Any]) -> None:
+    if state.get("revision") != 0:
+        raise StoreError("run initialization requires revision zero")
     run_root.mkdir(parents=True, exist_ok=True)
     marker = b'kind = "agentic-workspace/structured-executor-scratch/v1"\n'
     _atomic_write(run_root / MARKER_NAME, marker)
@@ -98,10 +101,76 @@ def save_transitions(run_root: Path, transitions: Sequence[Mapping[str, Any]]) -
 
 def commit(run_root: Path, state: Mapping[str, Any], transition: Mapping[str, Any]) -> None:
     transitions = load_transitions(run_root)
+    current_state = load_state(run_root)
     expected_sequence = len(transitions) + 1
     if transition.get("sequence") != expected_sequence:
         raise StoreError("transition sequence is not contiguous")
     if transitions and transitions[-1].get("after_digest") != transition.get("before_digest"):
         raise StoreError("transition lineage is not contiguous")
+    if (
+        transition.get("before_revision") != current_state.get("revision")
+        or transition.get("before_digest") != current_state.get("state_digest")
+    ):
+        raise StoreError("transition does not extend the current state snapshot")
+    if (
+        transition.get("after_revision") != state.get("revision")
+        or transition.get("after_digest") != state.get("state_digest")
+    ):
+        raise StoreError("transition does not describe the proposed state snapshot")
+    pending = {"kind": "agentic-workspace/structured-executor-pending-commit/v1", "state": state, "transition": transition}
+    _atomic_write(run_root / PENDING_NAME, canonical_json_bytes(pending) + b"\n")
     save_transitions(run_root, [*transitions, transition])
     save_state(run_root, state)
+    (run_root / PENDING_NAME).unlink(missing_ok=True)
+
+
+def recover(run_root: Path) -> bool:
+    pending_path = run_root / PENDING_NAME
+    if not pending_path.exists():
+        return False
+    try:
+        pending = json.loads(pending_path.read_text(encoding="utf-8"))
+        pending_state = pending["state"]
+        pending_transition = pending["transition"]
+    except (OSError, json.JSONDecodeError, KeyError, TypeError) as exc:
+        raise StoreError("pending commit is malformed") from exc
+    if pending.get("kind") != "agentic-workspace/structured-executor-pending-commit/v1":
+        raise StoreError("pending commit kind is unsupported")
+    transitions = load_transitions(run_root)
+    sequence = pending_transition.get("sequence")
+    if len(transitions) == sequence - 1:
+        if transitions and transitions[-1].get("after_digest") != pending_transition.get("before_digest"):
+            raise StoreError("pending transition does not extend current lineage")
+        save_transitions(run_root, [*transitions, pending_transition])
+    elif len(transitions) != sequence or transitions[-1] != pending_transition:
+        raise StoreError("pending transition conflicts with current log")
+    current_state = load_state(run_root)
+    if current_state.get("state_digest") == pending_transition.get("before_digest"):
+        save_state(run_root, pending_state)
+    elif current_state != pending_state:
+        raise StoreError("pending state conflicts with current snapshot")
+    pending_path.unlink(missing_ok=True)
+    return True
+
+
+def restart(run_root: Path) -> tuple[dict[str, Any], dict[str, Any]]:
+    recover(run_root)
+    state = load_state(run_root)
+    trigger_payload = {"kind": "structured-executor/restart/v1", "run_id": state["run_id"], "revision": state["revision"]}
+    trigger_ref = write_artifact(run_root, trigger_payload)
+    transition_input = {
+        "kind": TRANSITION_INPUT_KIND,
+        "expected_revision": state["revision"],
+        "expected_state_digest": state["state_digest"],
+        "trigger_ref": trigger_ref,
+        "classification": "deterministic",
+        "selected_action_ref": None,
+        "result": None,
+        "observation": {"require_authoritative_reobservation": True},
+        "made_progress": True,
+        "budget_delta": {"execution": 0, "semantic": 0, "context_tokens": 0},
+        "cost_observations": {"elapsed_ms": None, "effective_input_tokens": None, "output_tokens": None},
+    }
+    restarted_state, record = reduce_transition(state, transition_input)
+    commit(run_root, restarted_state, record)
+    return restarted_state, record

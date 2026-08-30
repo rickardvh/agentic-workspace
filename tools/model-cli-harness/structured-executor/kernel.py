@@ -104,6 +104,10 @@ def _apply_observation(state: dict[str, Any], observation: Mapping[str, Any]) ->
         if observation["authoritative_reobservation"] is not True:
             raise TransitionRejected("authoritative_reobservation must be true when present")
         state["authoritative_reobservation_required"] = False
+    if "require_authoritative_reobservation" in observation:
+        if observation["require_authoritative_reobservation"] is not True:
+            raise TransitionRejected("require_authoritative_reobservation must be true when present")
+        state["authoritative_reobservation_required"] = True
     if "terminal_disposition" in observation:
         state["terminal_disposition"] = copy.deepcopy(observation["terminal_disposition"])
 
@@ -157,6 +161,10 @@ def reduce_transition(state: Mapping[str, Any], transition_input: Mapping[str, A
     next_state = copy.deepcopy(dict(state))
     selected_action_ref = transition_input.get("selected_action_ref")
     if selected_action_ref is not None:
+        if state.get("authoritative_reobservation_required") and not (transition_input.get("observation") or {}).get(
+            "authoritative_reobservation"
+        ):
+            raise TransitionRejected("authoritative domain re-observation is required before action selection")
         candidate_ids = {item["id"] for item in next_state["action_candidates"]}
         if selected_action_ref not in candidate_ids:
             raise TransitionRejected("selected action is not an admitted candidate")

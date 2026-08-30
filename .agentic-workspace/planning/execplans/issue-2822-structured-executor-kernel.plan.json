@@ -4,8 +4,8 @@
   "title": "Issue 2822 deterministic Structured Executor kernel",
   "owner_level": "slice",
   "lifecycle": "live",
-  "phase": "implementation",
-  "revision": 6,
+  "phase": "validation",
+  "revision": 8,
   "intent": {
     "outcome": "Build the maintainer-only deterministic Structured Executor kernel for #2822 with versioned contracts, a pure reducer, atomic local persistence, deterministic replay, revision binding, and bounded cycle/no-progress recovery.",
     "non_goals": [
@@ -52,7 +52,7 @@
     }
   },
   "references": [],
-  "next_action": "Implement PR 2: atomic local persistence, content-addressed artifacts, deterministic replay, and maintainer-only validate/replay entrypoints.",
+  "next_action": "Open PR 3, obtain fresh independent review across the three-PR stack, merge in order, and close #2822 only when current-head acceptance evidence is complete.",
   "blockers": [
     "None."
   ],
@@ -63,9 +63,15 @@
     "requirements": [
       "Focused contract/reducer/replay/safety tests pass.",
       "Replay side-effect isolation and atomic recovery tests pass.",
-      "Structured inventory, lint, and changed-path proof are reconciled."
+      "Structured inventory, lint, planning, contract-tooling, reconciliation, and workspace CLI checks pass."
     ],
-    "refs": []
+    "refs": [
+      "tests/test_structured_executor_contracts.py",
+      "tests/test_structured_executor_replay.py",
+      "tests/test_structured_executor_safety.py",
+      "make check-planning-nosync",
+      "574 cross-surface tests passed"
+    ]
   },
   "continuation": {
     "owner": "GitHub #2821 / #2823",
