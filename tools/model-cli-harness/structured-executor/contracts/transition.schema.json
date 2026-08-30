@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentic-workspace.dev/schemas/structured-executor-transition-v1.json",
+  "title": "Structured Executor transition input or record",
+  "oneOf": [
+    {"$ref": "#/$defs/transition_input"},
+    {"$ref": "#/$defs/transition_record"}
+  ],
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "artifact_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref", "digest", "media_type"],
+      "properties": {
+        "ref": {"type": "string", "minLength": 1},
+        "digest": {"$ref": "#/$defs/digest"},
+        "media_type": {"type": "string", "minLength": 1}
+      }
+    },
+    "cost_observations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["elapsed_ms", "effective_input_tokens", "output_tokens"],
+      "properties": {
+        "elapsed_ms": {"type": ["integer", "null"], "minimum": 0},
+        "effective_input_tokens": {"type": ["integer", "null"], "minimum": 0},
+        "output_tokens": {"type": ["integer", "null"], "minimum": 0}
+      }
+    },
+    "transition_input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "expected_revision", "expected_state_digest", "trigger_ref", "classification", "made_progress", "budget_delta", "cost_observations"],
+      "properties": {
+        "kind": {"const": "agentic-workspace/structured-executor-transition-input/v1"},
+        "expected_revision": {"type": "integer", "minimum": 0},
+        "expected_state_digest": {"$ref": "#/$defs/digest"},
+        "trigger_ref": {"$ref": "#/$defs/artifact_ref"},
+        "classification": {"enum": ["deterministic", "semantic", "human"]},
+        "selected_action_ref": {"type": ["string", "null"]},
+        "result": {"type": ["object", "null"]},
+        "observation": {"type": "object"},
+        "made_progress": {"type": "boolean"},
+        "budget_delta": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["execution", "semantic", "context_tokens"],
+          "properties": {
+            "execution": {"type": "integer", "maximum": 0},
+            "semantic": {"type": "integer", "maximum": 0},
+            "context_tokens": {"type": "integer", "maximum": 0}
+          }
+        },
+        "cost_observations": {"$ref": "#/$defs/cost_observations"}
+      }
+    },
+    "transition_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "transition_id", "sequence", "before_revision", "before_digest", "trigger_ref", "validation", "selected_action_ref", "result_ref", "after_revision", "after_digest", "classification", "cost_observations"],
+      "properties": {
+        "kind": {"const": "agentic-workspace/structured-executor-transition/v1"},
+        "transition_id": {"$ref": "#/$defs/digest"},
+        "sequence": {"type": "integer", "minimum": 1},
+        "before_revision": {"type": "integer", "minimum": 0},
+        "before_digest": {"$ref": "#/$defs/digest"},
+        "trigger_ref": {"$ref": "#/$defs/artifact_ref"},
+        "validation": {"enum": ["accepted"]},
+        "selected_action_ref": {"type": ["string", "null"]},
+        "result_ref": {"type": ["string", "null"]},
+        "after_revision": {"type": "integer", "minimum": 1},
+        "after_digest": {"$ref": "#/$defs/digest"},
+        "classification": {"enum": ["deterministic", "semantic", "human"]},
+        "cost_observations": {"$ref": "#/$defs/cost_observations"}
+      }
+    }
+  }
+}
