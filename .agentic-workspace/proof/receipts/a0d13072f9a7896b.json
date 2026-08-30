@@ -1,0 +1,119 @@
+{
+  "kind": "agentic-workspace/proof-receipt/v1",
+  "command": "make check-planning-nosync",
+  "result": "passed",
+  "recorded_at": "2026-08-30T08:46:58+00:00",
+  "changed_paths": [
+    "src/agentic_workspace/workspace_selector_validation.py",
+    "tests/test_workspace_summary_cli.py",
+    ".agentic-workspace/planning/execplans/issue-2723-selector-route-roundtrip.plan.json",
+    ".agentic-workspace/planning/integration-proposals/issue-2723-archive.integration-proposal.json"
+  ],
+  "plan_id": "",
+  "rule": "This receipt records actual validation evidence supplied by the caller; proof recommendations alone must not create receipts.",
+  "execution": {
+    "command_identity": "3ca29698d5517c63",
+    "result": "passed",
+    "claim_sufficiency": "not-reviewed",
+    "duration_seconds": 175.31,
+    "exit_state": "passed",
+    "route_id": "subsystem:planning",
+    "command_id": "3ca29698d5517c63",
+    "route_identity_source": "proof_selection.selected_commands"
+  },
+  "proof_subject": {
+    "kind": "agentic-workspace/proof-subject/v1",
+    "id": "proof-subject:1539fd066ce5a990d136",
+    "fingerprint": "1539fd066ce5a990d136c315b03eac23602b71183c9032029ecea9ea1876cf4a",
+    "claim_classes": [
+      "executable-validation"
+    ],
+    "effect_scope": [
+      ".agentic-workspace/planning/execplans/issue-2723-selector-route-roundtrip.plan.json",
+      ".agentic-workspace/planning/integration-proposals/issue-2723-archive.integration-proposal.json",
+      "src/agentic_workspace/workspace_selector_validation.py",
+      "tests/test_workspace_summary_cli.py"
+    ],
+    "source_inputs": [
+      {
+        "path": ".agentic-workspace/planning/execplans/issue-2723-selector-route-roundtrip.plan.json",
+        "sha256": "d376ed26dc0c38641a4ac96717fdd87e3a02eba8fc473fc52de3e43ef95c2b84"
+      },
+      {
+        "path": ".agentic-workspace/planning/integration-proposals/issue-2723-archive.integration-proposal.json",
+        "sha256": "b93550d746623f771a4da17f6f5f20f62d7abea0ad7a25886ab5cec23a575a9e"
+      },
+      {
+        "path": "src/agentic_workspace/workspace_selector_validation.py",
+        "sha256": "cbf0b0bb10c1238c58d9a379d3d9cbebc216e075e829eeeb80647407b038677d"
+      },
+      {
+        "path": "tests/test_workspace_summary_cli.py",
+        "sha256": "210aacbfa8f9e66a293f310755eae04e59e103e4883aecaffb09d461754b1eec"
+      }
+    ],
+    "command_sha256": "3ca29698d5517c6316b963c7c166496497a781323488a9d1282a9c60e1ab661f",
+    "runtime": {
+      "implementation": "CPython",
+      "version": "3.13.9"
+    },
+    "identity_complete": true,
+    "unavailable_inputs": [],
+    "dependency_roles": [
+      {
+        "path": ".agentic-workspace/planning/execplans/issue-2723-selector-route-roundtrip.plan.json",
+        "owner": "claim",
+        "role": "semantic-input",
+        "reason": "declared-proof-subject-input"
+      },
+      {
+        "path": ".agentic-workspace/planning/integration-proposals/issue-2723-archive.integration-proposal.json",
+        "owner": "claim",
+        "role": "semantic-input",
+        "reason": "declared-proof-subject-input"
+      },
+      {
+        "path": "src/agentic_workspace/workspace_selector_validation.py",
+        "owner": "claim",
+        "role": "semantic-input",
+        "reason": "declared-proof-subject-input"
+      },
+      {
+        "path": "tests/test_workspace_summary_cli.py",
+        "owner": "claim",
+        "role": "semantic-input",
+        "reason": "declared-proof-subject-input"
+      }
+    ],
+    "evidence_outputs": [],
+    "dependency_scope": "declared-path-and-command",
+    "fallback": "not-required",
+    "rule": "Only declared semantic inputs participate in proof freshness; proof-owned publication outputs are diagnostic unless this claim explicitly declares them as semantic inputs."
+  },
+  "producer_class": "aw-proof",
+  "authority": "aw-proof",
+  "admission": {
+    "kind": "agentic-workspace/proof-receipt-admission/v1",
+    "status": "admitted",
+    "admitted": true,
+    "result_class": "passed",
+    "proof_sufficient": true,
+    "failures": [],
+    "reason": "admissible",
+    "safe_recovery": "none",
+    "rule": "Only admitted receipts may be persisted, selected, or counted as trusted proof state."
+  },
+  "calibration": {
+    "status": "non-calibrating",
+    "reason": "missing-current-assignment-context",
+    "source_ref": ".agentic-workspace/local/assignment-context.json",
+    "rule": "Trusted producer receipts calibrate target evidence only when a current assignment/run authority supplies target/task/scope."
+  },
+  "publication_id": "a0d13072f9a7896b",
+  "receipt_id": "a0d13072f9a7896b",
+  "source_type": "aw-proof-receipt",
+  "confidence": "high",
+  "source_ref": "proof://receipts/a0d13072f9a7896b",
+  "status": "current",
+  "revision": "2026-08-30T08:46:58+00:00"
+}

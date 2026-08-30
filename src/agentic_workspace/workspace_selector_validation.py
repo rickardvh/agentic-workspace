@@ -469,7 +469,12 @@ def _detail_route_command_validation(command: str) -> dict[str, Any]:
     if select_index < len(tokens):
         if select_index + 1 >= len(tokens):
             return {"status": "invalid", "reason": "missing-selector-value", "source_command": source_command}
-        selectors = [item.strip() for item in tokens[select_index + 1].split(",") if item.strip()]
+        selector_argument = tokens[select_index + 1]
+        selectors = (
+            [selector_argument]
+            if "<" in selector_argument and ">" in selector_argument
+            else [item.strip() for item in selector_argument.split(",") if item.strip()]
+        )
     concrete_selectors = [selector for selector in selectors if not ("<" in selector and ">" in selector)]
     missing = [
         selector for selector in concrete_selectors if not _declared_selector_for_command(source_command=source_command, selector=selector)
