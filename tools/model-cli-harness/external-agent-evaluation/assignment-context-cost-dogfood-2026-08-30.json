@@ -114,8 +114,8 @@
     }
   ],
   "decision_replay": {
-    "decision": "assign-best-fit",
-    "selected_target": "codex_luna",
+    "decision": "assign-current-target",
+    "selected_target": "codex_sol",
     "selected_transport": "cli",
     "candidate_scores": [
       {
@@ -132,7 +132,14 @@
             "expected_burden": -40,
             "evidence_state": "admitted-contextual",
             "record_count": 1,
-            "configured_order": 0
+            "configured_order": 0,
+            "observed_context_cost": {
+              "assignment_packet_bytes": 7016,
+              "rendered_prompt_bytes": 3952,
+              "effective_input_tokens": 470683,
+              "output_tokens": 2604,
+              "elapsed_ms": 125438
+            }
           }
         ]
       },
@@ -143,25 +150,48 @@
         "target_cost_class": 10,
         "target_latency_class": 5,
         "transport_context_cost": -40,
-        "total": 35,
+        "context_inflation_guard": -26,
+        "total": 9,
         "transport_options": [
           {
             "transport": "cli",
             "expected_burden": -40,
             "evidence_state": "admitted-contextual",
             "record_count": 1,
-            "configured_order": 0
+            "configured_order": 0,
+            "observed_context_cost": {
+              "assignment_packet_bytes": 7024,
+              "rendered_prompt_bytes": 3955,
+              "effective_input_tokens": 488645,
+              "output_tokens": 3209,
+              "elapsed_ms": 114636
+            }
           }
         ]
       }
-    ]
+    ],
+    "context_inflation_guard": {
+      "status": "applied",
+      "cases": [
+        {
+          "candidate": "codex_luna",
+          "retained_target": "codex_sol",
+          "candidate_total_tokens": 491854,
+          "current_total_tokens": 473287,
+          "observed_increase_tokens": 18567,
+          "threshold_tokens": 9466,
+          "ranking_adjustment": -26,
+          "reason": "materially-higher-observed-context-without-stronger-declared-fit"
+        }
+      ]
+    }
   },
   "before_after": {
     "delegated_bounded_luna_total_tokens": 491854,
     "all_strong_local_sol_total_tokens": 473287,
     "delegated_minus_local_tokens": 18567,
     "luna_minus_sol_elapsed_ms": -10802,
-    "comparison_posture": "luna-more-tokens-but-cheaper-and-faster-profile",
+    "comparison_posture": "observed-context-inflation-retains-current-target",
     "economic_context": {
       "codex_luna": {"cost_class": "cheap", "latency_class": "fast"},
       "codex_sol": {"cost_class": "premium", "latency_class": "slow"},
@@ -170,7 +200,7 @@
     },
     "plausibility": "The Sol run is a conservative all-strong/current-target baseline using the same bounded assignment and host. It excludes the orchestrator's already-spent shaping and integration tokens, so it cannot overstate local cost.",
     "token_savings_claimed": false,
-    "claim_limit": "Luna used more observed tokens but completed 10,802 ms faster and has a significantly cheaper/faster target profile. Without a portable current price table, the evidence supports selecting Luna through declared economic priors but does not convert that into a numeric savings claim."
+    "claim_limit": "Luna used more observed tokens while completing 10,802 ms faster and carrying cheaper/faster declared priors. Without portable price normalization or stronger declared fit, the replay retains the current Sol target and makes no numeric savings claim."
   },
   "claim_boundary": "This evidence proves a current supported-host measurement and cost-aware replay. It does not generalize model quality, treat worker output as proof, retain raw transcripts, or claim savings unsupported by total successful-completion cost."
 }

@@ -5,7 +5,7 @@
   "owner_level": "slice",
   "lifecycle": "live",
   "phase": "implementation",
-  "revision": 3,
+  "revision": 4,
   "intent": {
     "outcome": "Resolve open issues #2280, #2727, #2817, #2818, #2900, and #2901 and publish the work as a reviewed stacked PR series from master.",
     "non_goals": [
@@ -42,8 +42,12 @@
       "owner": "non-research-issue-stack"
     },
     "proof_posture": {
-      "state": "pending",
-      "refs": []
+      "state": "partial",
+      "refs": [
+        "https://github.com/rickardvh/agentic-workspace/pull/2902",
+        "https://github.com/rickardvh/agentic-workspace/pull/2903",
+        "https://github.com/rickardvh/agentic-workspace/pull/2904"
+      ]
     },
     "external_posture": {
       "state": "unobserved",
@@ -51,20 +55,24 @@
     }
   },
   "references": [],
-  "next_action": "Inspect the six issue regressions, implement the smallest owner-local fixes, validate each stack layer, and publish stacked PRs.",
+  "next_action": "Obtain explicit authorization for one unrelated substantive non-local agent dispatch, capture the natural orchestrator/transport evidence required by #2817, then close the remaining issue without changing the research epic.",
   "blockers": [
-    "None."
+    "Issue #2817 requires a real non-local agent dispatch for its final acceptance evidence; current agent policy prohibits delegation unless the user explicitly authorizes it."
   ],
   "proof": {
     "claims": [
-      "The six non-research issues are satisfied without changing the #2821-#2827 research epic.",
+      "Five non-research issues are satisfied without changing the #2821-#2827 research epic; #2817 remains open pending an explicitly authorized non-local dispatch.",
       "Each stack layer is focused, validated, review-ready, and correctly based."
     ],
     "requirements": [
       "Run focused regression tests for Planning selection, proof execution/persistence, and orchestration cost behavior.",
       "Replay the issue-specific fixtures and use the repository-selected proof route before closeout."
     ],
-    "refs": []
+    "refs": [
+      "https://github.com/rickardvh/agentic-workspace/pull/2902",
+      "https://github.com/rickardvh/agentic-workspace/pull/2903",
+      "https://github.com/rickardvh/agentic-workspace/pull/2904"
+    ]
   },
   "continuation": {
     "owner": "none",
@@ -81,8 +89,8 @@
   ],
   "intent_continuity": {
     "larger intended outcome": "All open non-research issues are genuinely satisfied and represented by a minimal coherent stack.",
-    "this slice completes the larger intended outcome": "yes",
-    "continuation surface": "none"
+    "this slice completes the larger intended outcome": "no; #2817 still requires an explicitly authorized non-local dispatch",
+    "continuation surface": "Issue #2817 acceptance run and resulting evidence"
   },
   "execution_bounds": {
     "allowed paths": "src/agentic_workspace/**; tests/**; packages/planning/**; packages/verification/**; .agentic-workspace/planning/**; .agentic-workspace/proof/**; tools/model-cli-harness/**; docs/**; .changeset/**",

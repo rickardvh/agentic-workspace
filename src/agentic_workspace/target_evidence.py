@@ -29,6 +29,10 @@ ASSIGNMENT_OUTCOME_MATRIX = [
 ]
 
 
+def _as_dict(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
 def _profile_identity_keys(profile: DelegationTargetProfile) -> set[str]:
     return {key for key in (profile.target_id, profile.name, *profile.aliases) if key}
 
@@ -164,6 +168,21 @@ def _transport_cost_summaries(records: list[DelegationOutcomeRecord]) -> list[di
     for transport in sorted(by_transport):
         costs = by_transport[transport]
         penalties = [_context_cost_penalty(cost) for cost in costs]
+        observed_context_cost = {
+            field: round(
+                sum(int(cost[field]) for cost in costs if isinstance(cost.get(field), int) and not isinstance(cost.get(field), bool))
+                / sum(1 for cost in costs if isinstance(cost.get(field), int) and not isinstance(cost.get(field), bool))
+            )
+            for field in (
+                "assignment_packet_bytes",
+                "rendered_prompt_bytes",
+                "effective_input_tokens",
+                "cached_input_tokens",
+                "output_tokens",
+                "elapsed_ms",
+            )
+            if any(isinstance(cost.get(field), int) and not isinstance(cost.get(field), bool) for cost in costs)
+        }
         observable_fields = sorted(
             {
                 field
@@ -184,6 +203,7 @@ def _transport_cost_summaries(records: list[DelegationOutcomeRecord]) -> list[di
                 "transport": transport,
                 "record_count": len(costs),
                 "expected_burden_component": round(sum(penalties) / len(penalties)),
+                "observed_context_cost": observed_context_cost,
                 "observable_fields": observable_fields,
                 "unknown_metric_state": "partial-or-unobserved" if any(cost.get("unknown_fields") for cost in costs) else "observed",
                 "supporting_adapter_revisions": sorted(
@@ -676,20 +696,33 @@ def assignment_decision_from_policy(
                 for cost in evidence.get("transport_costs", [])
                 if isinstance(cost, dict) and str(cost.get("transport") or "") == method
             ]
-            transport_options.append(
-                {
-                    "transport": method,
-                    "expected_burden": round(
-                        sum(int(cost.get("expected_burden_component") or 0) for cost in matching_transport_costs)
-                        / len(matching_transport_costs)
+            transport_option: dict[str, Any] = {
+                "transport": method,
+                "expected_burden": round(
+                    sum(int(cost.get("expected_burden_component") or 0) for cost in matching_transport_costs)
+                    / len(matching_transport_costs)
+                )
+                if matching_transport_costs
+                else 0,
+                "evidence_state": "admitted-contextual" if matching_transport_costs else "unknown",
+                "record_count": sum(int(cost.get("record_count") or 0) for cost in matching_transport_costs),
+                "configured_order": method_index,
+            }
+            observed_fields = {field for cost in matching_transport_costs for field in _as_dict(cost.get("observed_context_cost"))}
+            observed_context_cost = {}
+            for field in sorted(observed_fields):
+                weighted_values = [
+                    (int(_as_dict(cost.get("observed_context_cost"))[field]), max(1, int(cost.get("record_count") or 1)))
+                    for cost in matching_transport_costs
+                    if isinstance(_as_dict(cost.get("observed_context_cost")).get(field), int)
+                ]
+                if weighted_values:
+                    observed_context_cost[field] = round(
+                        sum(value * weight for value, weight in weighted_values) / sum(weight for _, weight in weighted_values)
                     )
-                    if matching_transport_costs
-                    else 0,
-                    "evidence_state": "admitted-contextual" if matching_transport_costs else "unknown",
-                    "record_count": sum(int(cost.get("record_count") or 0) for cost in matching_transport_costs),
-                    "configured_order": method_index,
-                }
-            )
+            if observed_context_cost:
+                transport_option["observed_context_cost"] = observed_context_cost
+            transport_options.append(transport_option)
         selected_transport_option = (
             max(transport_options, key=lambda item: (int(item["expected_burden"]), -int(item["configured_order"])))
             if transport_options
@@ -792,9 +825,6 @@ def assignment_decision_from_policy(
                 ],
             }
         )
-    eligible_candidates = [item for item in candidate_scores if item["eligible"]]
-    eligible_candidates.sort(key=lambda item: (-int(item["score"]), str(item["target"])))
-    selected_target = eligible_candidates[0]["target"] if eligible_candidates else None
     current_candidate = next(
         (
             item
@@ -810,6 +840,72 @@ def assignment_decision_from_policy(
         ),
         None,
     )
+
+    def candidate_observed_context(candidate: dict[str, Any]) -> dict[str, Any]:
+        selected_transport = str(candidate.get("selected_transport") or "")
+        option = next(
+            (
+                item
+                for item in candidate.get("transport_options", [])
+                if isinstance(item, dict) and str(item.get("transport") or "") == selected_transport
+            ),
+            {},
+        )
+        return _as_dict(option.get("observed_context_cost"))
+
+    context_inflation_guard: list[dict[str, Any]] = []
+    current_observed = candidate_observed_context(current_candidate or {})
+    current_total_tokens = int(current_observed.get("effective_input_tokens") or 0) + int(current_observed.get("output_tokens") or 0)
+    current_prompt_bytes = int(current_observed.get("rendered_prompt_bytes") or 0)
+    recommendation_rank = {"poor-fit": 0, "acceptable": 1, "recommended": 2}
+    if (
+        current_candidate
+        and current_candidate.get("eligible")
+        and current_total_tokens > 0
+        and current_prompt_bytes > 0
+        and current_total_tokens > current_prompt_bytes * 50
+        and current_candidate.get("required_action") != "delegate-down-when-safe"
+    ):
+        for candidate in candidate_scores:
+            if candidate is current_candidate or not candidate.get("eligible"):
+                continue
+            candidate_observed = candidate_observed_context(candidate)
+            candidate_total_tokens = int(candidate_observed.get("effective_input_tokens") or 0) + int(
+                candidate_observed.get("output_tokens") or 0
+            )
+            candidate_prompt_bytes = int(candidate_observed.get("rendered_prompt_bytes") or 0)
+            material_increase = candidate_total_tokens > current_total_tokens + max(5_000, round(current_total_tokens * 0.02))
+            stronger_fit = int(_as_dict(candidate.get("ranking_components")).get("declared_fit") or 0) > int(
+                _as_dict(current_candidate.get("ranking_components")).get("declared_fit") or 0
+            ) or recommendation_rank.get(str(candidate.get("runtime_recommendation") or ""), 0) > recommendation_rank.get(
+                str(current_candidate.get("runtime_recommendation") or ""), 0
+            )
+            if (
+                material_increase
+                and candidate_prompt_bytes > 0
+                and candidate_total_tokens > candidate_prompt_bytes * 50
+                and not stronger_fit
+            ):
+                penalty = max(1, int(candidate["score"]) - int(current_candidate["score"]) + 1)
+                candidate["score"] = int(candidate["score"]) - penalty
+                ranking = _as_dict(candidate.get("ranking_components"))
+                ranking["context_inflation_guard"] = -penalty
+                ranking["total"] = candidate["score"]
+                context_inflation_guard.append(
+                    {
+                        "candidate": candidate["target"],
+                        "retained_target": current_candidate["target"],
+                        "candidate_total_tokens": candidate_total_tokens,
+                        "current_total_tokens": current_total_tokens,
+                        "observed_increase_tokens": candidate_total_tokens - current_total_tokens,
+                        "threshold_tokens": max(5_000, round(current_total_tokens * 0.02)),
+                        "ranking_adjustment": -penalty,
+                        "reason": "materially-higher-observed-context-without-stronger-declared-fit",
+                    }
+                )
+    eligible_candidates = [item for item in candidate_scores if item["eligible"]]
+    eligible_candidates.sort(key=lambda item: (-int(item["score"]), str(item["target"])))
+    selected_target = eligible_candidates[0]["target"] if eligible_candidates else None
     current_is_eligible = bool(current_candidate and current_candidate["eligible"])
     downroute_required = bool(current_candidate and current_candidate.get("required_action") == "delegate-down-when-safe")
     downroute_candidates = [
@@ -947,6 +1043,11 @@ def assignment_decision_from_policy(
             "requested_context_key": requested_context_key or None,
             "tie_breaker": "ties are surfaced as a non-executable tie outcome; no lexical tie-break selects an executor",
             "current_target_eligible": current_is_eligible,
+            "context_inflation_guard": {
+                "status": "applied" if context_inflation_guard else "not-applied",
+                "cases": context_inflation_guard,
+                "rule": "Retain an equally capable current target when supported-host evidence shows a material token increase and declared price/latency priors lack portable normalization.",
+            },
             "downroute_required": downroute_required,
             "downroute_applied": downroute_required and bool(downroute_candidates),
             "manual_transport_policy": manual_transport_policy,

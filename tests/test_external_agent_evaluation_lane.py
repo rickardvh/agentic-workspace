@@ -143,7 +143,7 @@ def test_issue_2818_supported_host_cost_evidence_is_bounded_honest_and_actionabl
     assert comparison["all_strong_local_sol_total_tokens"] == 473287
     assert comparison["delegated_minus_local_tokens"] == 18567
     assert comparison["luna_minus_sol_elapsed_ms"] == -10802
-    assert comparison["comparison_posture"] == "luna-more-tokens-but-cheaper-and-faster-profile"
+    assert comparison["comparison_posture"] == "observed-context-inflation-retains-current-target"
     assert comparison["economic_context"] == {
         "codex_luna": {"cost_class": "cheap", "latency_class": "fast"},
         "codex_sol": {"cost_class": "premium", "latency_class": "slow"},
@@ -151,9 +151,11 @@ def test_issue_2818_supported_host_cost_evidence_is_bounded_honest_and_actionabl
         "portable_price_normalization": None,
     }
     assert comparison["token_savings_claimed"] is False
-    assert evidence["decision_replay"]["decision"] == "assign-best-fit"
-    assert evidence["decision_replay"]["selected_target"] == "codex_luna"
+    assert evidence["decision_replay"]["decision"] == "assign-current-target"
+    assert evidence["decision_replay"]["selected_target"] == "codex_sol"
     assert evidence["decision_replay"]["selected_transport"] == "cli"
+    assert evidence["decision_replay"]["context_inflation_guard"]["status"] == "applied"
+    assert evidence["decision_replay"]["context_inflation_guard"]["cases"][0]["observed_increase_tokens"] == 18567
 
 
 def _read_json(name: str) -> dict:
