@@ -1,0 +1,129 @@
+{
+  "kind": "agentic-workspace/proof-receipt/v1",
+  "command": "uv run --frozen --active --no-sync python scripts/run_agentic_workspace.py summary --target \".\" --format json",
+  "result": "passed",
+  "recorded_at": "2026-08-30T16:09:00+00:00",
+  "changed_paths": [
+    "src/agentic_workspace/workspace_runtime_core.py",
+    "tests/test_workspace_proof_cli.py",
+    "tests/test_workspace_proof_generated_packages_cli.py",
+    ".agentic-workspace/planning/execplans/issue-2806-bounded-selected-proof.plan.json",
+    ".agentic-workspace/planning/integration-proposals/issue-2806-bounded-selected-proof-archive.integration-proposal.json"
+  ],
+  "plan_id": "",
+  "rule": "This receipt records actual validation evidence supplied by the caller; proof recommendations alone must not create receipts.",
+  "execution": {
+    "command_identity": "277349f14ce2e27a",
+    "result": "passed",
+    "claim_sufficiency": "not-reviewed",
+    "route_id": "planning_surfaces",
+    "command_id": "277349f14ce2e27a",
+    "route_identity_source": "proof_selection.selected_commands"
+  },
+  "proof_subject": {
+    "kind": "agentic-workspace/proof-subject/v1",
+    "id": "proof-subject:b816874e4a1b3759fefb",
+    "fingerprint": "b816874e4a1b3759fefb227e95a0fa807b4a86f7764862af7485a42acfc039bb",
+    "claim_classes": [
+      "executable-validation"
+    ],
+    "effect_scope": [
+      ".agentic-workspace/planning/execplans/issue-2806-bounded-selected-proof.plan.json",
+      ".agentic-workspace/planning/integration-proposals/issue-2806-bounded-selected-proof-archive.integration-proposal.json",
+      "src/agentic_workspace/workspace_runtime_core.py",
+      "tests/test_workspace_proof_cli.py",
+      "tests/test_workspace_proof_generated_packages_cli.py"
+    ],
+    "source_inputs": [
+      {
+        "path": ".agentic-workspace/planning/execplans/issue-2806-bounded-selected-proof.plan.json",
+        "sha256": "f7a7fdf462fc672afc9e7b5606057d8113073d1e04ad228f6a5ef651214eb232"
+      },
+      {
+        "path": ".agentic-workspace/planning/integration-proposals/issue-2806-bounded-selected-proof-archive.integration-proposal.json",
+        "sha256": "8e29c796733c23a98e200eea29c2d1591df02cbee195663b26ce576a48aad4b5"
+      },
+      {
+        "path": "src/agentic_workspace/workspace_runtime_core.py",
+        "sha256": "25c1d27f8b36d9dda00fcbdb4b2b3351049bc413cfbe156fe50daf22f75de7ec"
+      },
+      {
+        "path": "tests/test_workspace_proof_cli.py",
+        "sha256": "7a1b3d3d8bb3814eaafdf6754da9bc57ad7055bbe9d4fa10581c6e38055843ab"
+      },
+      {
+        "path": "tests/test_workspace_proof_generated_packages_cli.py",
+        "sha256": "f74b04614ebbb59c2dafe8734baed26edfd6aa6d774ff0b5347833a0c3d03064"
+      }
+    ],
+    "command_sha256": "277349f14ce2e27a6fc0cf7064281ada8edcf011efd1d12c3b895b4d7b1a42c3",
+    "runtime": {
+      "implementation": "CPython",
+      "version": "3.13.9"
+    },
+    "identity_complete": true,
+    "unavailable_inputs": [],
+    "dependency_roles": [
+      {
+        "path": ".agentic-workspace/planning/execplans/issue-2806-bounded-selected-proof.plan.json",
+        "owner": "claim",
+        "role": "semantic-input",
+        "reason": "declared-proof-subject-input"
+      },
+      {
+        "path": ".agentic-workspace/planning/integration-proposals/issue-2806-bounded-selected-proof-archive.integration-proposal.json",
+        "owner": "claim",
+        "role": "semantic-input",
+        "reason": "declared-proof-subject-input"
+      },
+      {
+        "path": "src/agentic_workspace/workspace_runtime_core.py",
+        "owner": "claim",
+        "role": "semantic-input",
+        "reason": "declared-proof-subject-input"
+      },
+      {
+        "path": "tests/test_workspace_proof_cli.py",
+        "owner": "claim",
+        "role": "semantic-input",
+        "reason": "declared-proof-subject-input"
+      },
+      {
+        "path": "tests/test_workspace_proof_generated_packages_cli.py",
+        "owner": "claim",
+        "role": "semantic-input",
+        "reason": "declared-proof-subject-input"
+      }
+    ],
+    "evidence_outputs": [],
+    "dependency_scope": "declared-path-and-command",
+    "fallback": "not-required",
+    "rule": "Only declared semantic inputs participate in proof freshness; proof-owned publication outputs are diagnostic unless this claim explicitly declares them as semantic inputs."
+  },
+  "producer_class": "aw-proof",
+  "authority": "aw-proof",
+  "admission": {
+    "kind": "agentic-workspace/proof-receipt-admission/v1",
+    "status": "admitted",
+    "admitted": true,
+    "result_class": "passed",
+    "proof_sufficient": true,
+    "failures": [],
+    "reason": "admissible",
+    "safe_recovery": "none",
+    "rule": "Only admitted receipts may be persisted, selected, or counted as trusted proof state."
+  },
+  "calibration": {
+    "status": "non-calibrating",
+    "reason": "missing-current-assignment-context",
+    "source_ref": ".agentic-workspace/local/assignment-context.json",
+    "rule": "Trusted producer receipts calibrate target evidence only when a current assignment/run authority supplies target/task/scope."
+  },
+  "publication_id": "9fd04a1997332fe6",
+  "receipt_id": "9fd04a1997332fe6",
+  "source_type": "aw-proof-receipt",
+  "confidence": "high",
+  "source_ref": "proof://receipts/9fd04a1997332fe6",
+  "status": "current",
+  "revision": "2026-08-30T16:09:00+00:00"
+}

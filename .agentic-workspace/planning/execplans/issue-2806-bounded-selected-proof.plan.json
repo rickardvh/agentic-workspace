@@ -1,0 +1,168 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2806-bounded-selected-proof",
+  "title": "Issue 2806 bounded selected-proof projection",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "closeout",
+  "revision": 8,
+  "intent": {
+    "outcome": "Fail fast with a bounded corrective envelope when scope-dependent proof selectors are requested without changed or current scope, avoiding construction of the full proof world.",
+    "non_goals": [
+      "Do not create a second proof API.",
+      "Do not weaken proof authority or completion gates.",
+      "Do not redesign unrelated proof selectors."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "Create a bounded plan for Issue 2806 bounded selected-proof projection.",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "src/agentic_workspace/workspace_runtime_core.py",
+      "tests/test_workspace_proof_cli.py",
+      "tests/test_workspace_proof_generated_packages_cli.py",
+      ".release/changes/issue-2806-bounded-selected-proof.toml",
+      ".agentic-workspace/planning/execplans/issue-2806-bounded-selected-proof.plan.json"
+    ],
+    "effects": [
+      "Unscoped scope-dependent selector requests return bounded correction guidance before broad proof construction.",
+      "Changed-path proof remains authoritative and compact selected commands preserve executable action, weak-agent proof responsibility, and exact full-detail routing."
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected-local",
+      "owner": "issue-2806-bounded-selected-proof"
+    },
+    "proof_posture": {
+      "state": "accepted",
+      "refs": [
+        "PR #2887 review correction: exact hosted command 457 passed; full proof CLI 258 passed; compact/full-detail parity and weak-agent proof responsibility regressions passed; original unscoped replay remains bounded before full construction"
+      ]
+    },
+    "external_posture": {
+      "state": "observed",
+      "refs": [
+        "PR #2887 blocked review on head 56990c0358c3f3888bce4e20d7caddad61d8cce1",
+        "https://github.com/rickardvh/agentic-workspace/pull/2887#issuecomment-5469542472"
+      ]
+    },
+    "delegation": {
+      "state": "recorded",
+      "route": "keep-local",
+      "reason": "This is a narrow single-file runtime guard plus focused regression; keeping one local owner preserves the proof and review boundary."
+    },
+    "integration": {
+      "status": "feature-complete-integration-pending",
+      "proposal_id": "issue-2806-bounded-selected-proof-archive",
+      "proposal_ref": ".agentic-workspace/planning/integration-proposals/issue-2806-bounded-selected-proof-archive.integration-proposal.json",
+      "requested_transition": "archive-owner",
+      "proof_refs": [
+        "#2806",
+        "unscoped original selector replay: 2042 bytes, 26 recursive fields, 0 selected commands, 952.9 ms, full_proof_payload_built=false",
+        "unscoped focused-audit replay: 1938 bytes, 26 recursive fields, 0 selected commands, 915.7 ms, full_proof_payload_built=false",
+        "current selected replay: 2122 bytes, 26 recursive fields, 0 selected commands, 901.9 ms, scope=current-insufficient, full_proof_payload_built=false",
+        "scoped selected replay: 36259 bytes for 22 commands with at most 18 flat fields each; no nested subject or mutation payload; one compact template authority identity; handoff claim gate preserved",
+        "tests/test_workspace_proof_cli.py: 258 passed",
+        "focused proof routing selections: 42 passed",
+        "packages/planning/tests/test_promote.py + tests/test_reconciliation.py + tests/test_workspace_cli.py: 513 passed",
+        "make lint-workspace: passed",
+        "make typecheck: passed",
+        "make check-planning-nosync: passed",
+        "contract tooling and structured inventory: passed",
+        "defaults + maintainer + workspace focused checks: 48 passed",
+        "PR #2887 review correction: exact hosted command 457 passed; full proof CLI 258 passed; compact/full-detail parity and weak-agent proof responsibility regressions passed; original unscoped replay remains bounded before full construction"
+      ],
+      "authority": "feature-head declaration; target integration remains terminal authority"
+    }
+  },
+  "references": [],
+  "next_action": "Apply integration proposal 'issue-2806-bounded-selected-proof-archive' from admitted target authority.",
+  "blockers": [
+    "Fresh independent review must accept the corrected current PR head before merge or issue closure."
+  ],
+  "proof": {
+    "claims": [
+      "Unscoped scope-dependent selected-proof requests do not construct the full proof payload.",
+      "The response is bounded and gives an explicit changed-path retry route; current status is classified as insufficient for changed-path proof subjects without broad construction.",
+      "Scoped selected output preserves actionable command and claim fields plus compact template authority identity while routing nested subject, receipt, provenance, mutation payload, and diagnostics to full detail."
+    ],
+    "requirements": [
+      "Focused CLI regression tests prove the full proof builder is not called.",
+      "Both exact issue commands complete quickly with bounded output.",
+      "Scoped selected output remains decision-sized and full verbose detail remains available.",
+      "Routed changed-path proof and repository checks pass.",
+      "A fresh independent review accepts the current PR head before merge or closure."
+    ],
+    "refs": [
+      "#2806",
+      "unscoped original selector replay: 2042 bytes, 26 recursive fields, 0 selected commands, 952.9 ms, full_proof_payload_built=false",
+      "unscoped focused-audit replay: 1938 bytes, 26 recursive fields, 0 selected commands, 915.7 ms, full_proof_payload_built=false",
+      "current selected replay: 2122 bytes, 26 recursive fields, 0 selected commands, 901.9 ms, scope=current-insufficient, full_proof_payload_built=false",
+      "scoped selected replay: 36259 bytes for 22 commands with at most 18 flat fields each; no nested subject or mutation payload; one compact template authority identity; handoff claim gate preserved",
+      "tests/test_workspace_proof_cli.py: 258 passed",
+      "focused proof routing selections: 42 passed",
+      "packages/planning/tests/test_promote.py + tests/test_reconciliation.py + tests/test_workspace_cli.py: 513 passed",
+      "make lint-workspace: passed",
+      "make typecheck: passed",
+      "make check-planning-nosync: passed",
+      "contract tooling and structured inventory: passed",
+      "defaults + maintainer + workspace focused checks: 48 passed",
+      "PR #2887 review correction: exact hosted command 457 passed; full proof CLI 258 passed; compact/full-detail parity and weak-agent proof responsibility regressions passed; original unscoped replay remains bounded before full construction"
+    ]
+  },
+  "continuation": {
+    "owner": "issue-2806-bounded-selected-proof",
+    "residual_intent": "After implementation and validation, stop at the review boundary and resume only after a fresh independent review."
+  },
+  "specialist_contracts": [
+    {
+      "kind": "planning-delegation/v1",
+      "target": "planning://delegation/keep-local",
+      "revision": 1
+    }
+  ],
+  "proof_report": {
+    "validation proof": "PR #2887 review correction: exact hosted command 457 passed; full proof CLI 258 passed; compact/full-detail parity and weak-agent proof responsibility regressions passed; original unscoped replay remains bounded before full construction",
+    "proof achieved now": "yes; integration-propose recorded accepted feature-head proof.",
+    "evidence for \"proof achieved\" state": "PR #2887 review correction: exact hosted command 457 passed; full proof CLI 258 passed; compact/full-detail parity and weak-agent proof responsibility regressions passed; original unscoped replay remains bounded before full construction"
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "current planning owner",
+    "handoff source": "issue-2806-bounded-selected-proof",
+    "what happened": "Fail fast with a bounded corrective envelope when scope-dependent proof selectors are requested without changed or current scope, avoiding construction of the full proof world.",
+    "scope touched": "src/agentic_workspace/workspace_runtime_core.py; tests/test_workspace_proof_cli.py; tests/test_workspace_proof_generated_packages_cli.py; .release/changes/issue-2806-bounded-selected-proof.toml; .agentic-workspace/planning/execplans/issue-2806-bounded-selected-proof.plan.json",
+    "changed surfaces": "src/agentic_workspace/workspace_runtime_core.py; tests/test_workspace_proof_cli.py; tests/test_workspace_proof_generated_packages_cli.py; .release/changes/issue-2806-bounded-selected-proof.toml; .agentic-workspace/planning/execplans/issue-2806-bounded-selected-proof.plan.json",
+    "validations run": "PR #2887 review correction: exact hosted command 457 passed; full proof CLI 258 passed; compact/full-detail parity and weak-agent proof responsibility regressions passed; original unscoped replay remains bounded before full construction",
+    "result for continuation": "feature-head complete; terminal lifecycle remains target-authoritative",
+    "next step": "Apply integration proposal 'issue-2806-bounded-selected-proof-archive' from admitted target authority."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; bounded feature-head scope and proof were reviewed.",
+    "proof status": "passed",
+    "intent served": "yes; target integration remains the terminal lifecycle authority.",
+    "config compliance": "used planning integration-propose command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": ".agentic-workspace/planning/integration-proposals/issue-2806-bounded-selected-proof-archive.integration-proposal.json"
+  },
+  "intent_satisfaction": {
+    "original intent": "Fail fast with a bounded corrective envelope when scope-dependent proof selectors are requested without changed or current scope, avoiding construction of the full proof world.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "PR #2887 review correction: exact hosted command 457 passed; full proof CLI 258 passed; compact/full-detail parity and weak-agent proof responsibility regressions passed; original unscoped replay remains bounded before full construction",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "Feature-head proof is accepted; terminal lifecycle truth awaits target integration.",
+    "evidence carried forward": "PR #2887 review correction: exact hosted command 457 passed; full proof CLI 258 passed; compact/full-detail parity and weak-agent proof responsibility regressions passed; original unscoped replay remains bounded before full construction",
+    "reopen trigger": "New contradictory evidence or rejected target integration."
+  }
+}

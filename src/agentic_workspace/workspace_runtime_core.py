@@ -52787,6 +52787,128 @@ def _emit_proof_next_decision_text(payload: dict[str, Any]) -> None:
         print(f"detail: {routes['select']}")
 
 
+_PROOF_UNSCOPED_SELECTOR_ROOTS = frozenset({"selector_inventory"})
+_BOUNDED_SELECTED_PROOF_COMMAND_FIELDS = (
+    "kind",
+    "command",
+    "command_identity",
+    "route_id",
+    "cwd",
+    "run",
+    "selected_from",
+    "route_authority",
+    "lane",
+    "required",
+    "proof_requirement",
+    "execution_mode",
+    "execution_class",
+    "execution_owner",
+    "requirement_posture",
+    "proof_responsibility",
+    "duration_class",
+)
+
+
+def _proof_scope_dependent_selectors(select: str | None) -> list[str]:
+    return [selector for selector in _selector_tokens(select) if selector.split(".", 1)[0] not in _PROOF_UNSCOPED_SELECTOR_ROOTS]
+
+
+def _proof_scope_required_payload(
+    *, target_root: Path, select: str, cli_invoke: str, selectors: list[str], current_only: bool
+) -> dict[str, Any]:
+    selected = ",".join(_selector_tokens(select))
+    changed_command = _command_with_cli_invoke(
+        command=f"agentic-workspace proof --target . --changed <paths> --select {selected} --format json",
+        cli_invoke=cli_invoke,
+    )
+    current_status_command = _command_with_cli_invoke(
+        command="agentic-workspace proof --target . --current --format json",
+        cli_invoke=cli_invoke,
+    )
+    scope_status = "current-insufficient" if current_only else "missing"
+    why = (
+        "Current mode reports installed/active proof posture but does not bind changed-path proof subjects required by these fields."
+        if current_only
+        else "The requested proof fields depend on changed-path scope."
+    )
+    return {
+        "kind": "agentic-workspace/proof-scope-required/v1",
+        "surface": "proof",
+        "target": target_root.as_posix(),
+        "selector": {
+            "requested": _selector_tokens(select),
+            "scope_dependent": selectors,
+            "scope": scope_status,
+        },
+        "status": "scope-required",
+        "next": {
+            "action": "provide-proof-scope",
+            "command": changed_command,
+            "alternatives": [current_status_command],
+            "why": why,
+        },
+        "claim_boundary": {
+            "status": "blocked",
+            "completion_claim_allowed": False,
+            "effect": "proof-scope-required",
+            "rule": "No proof or completion claim is available until the selected projection is bound to explicit scope.",
+        },
+        "construction": {
+            "status": "not-started",
+            "full_proof_payload_built": False,
+            "rule": "Scope admission happens before lifecycle health, proof-route, subject, provenance, or diagnostic construction.",
+        },
+        "detail_routes": {
+            "changed": changed_command,
+            "current_status": current_status_command,
+            "selector_inventory": _command_with_cli_invoke(
+                command="agentic-workspace proof --target . --select selector_inventory --format json",
+                cli_invoke=cli_invoke,
+            ),
+        },
+    }
+
+
+def _bounded_selected_proof_projection(payload: dict[str, Any], *, select: str, cli_invoke: str) -> dict[str, Any]:
+    selectors = set(_selector_tokens(select))
+    if "selected_commands" not in selectors:
+        return payload
+    projected = dict(payload)
+    detail_command = _command_with_cli_invoke(
+        command="agentic-workspace proof --target . --changed <paths> --verbose --format json",
+        cli_invoke=cli_invoke,
+    )
+    projected["selected_commands"] = [
+        {
+            **{field: command[field] for field in _BOUNDED_SELECTED_PROOF_COMMAND_FIELDS if field in command},
+            **_bounded_template_authority_resolution(command),
+            "detail_route": detail_command,
+        }
+        for command in _list_payload(payload.get("selected_commands"))
+        if isinstance(command, dict)
+    ]
+    return projected
+
+
+def _bounded_template_authority_resolution(command: dict[str, Any]) -> dict[str, Any]:
+    if "<paths>" not in str(command.get("command") or ""):
+        return {}
+    resolution = _as_dict(command.get("authority_resolution"))
+    if not resolution:
+        return {}
+    authority_states = {
+        key: {field: state[field] for field in ("status", "revision", "source", "provenance") if field in state}
+        for key, raw_state in _as_dict(resolution.get("authority_states")).items()
+        if (state := _as_dict(raw_state))
+    }
+    return {
+        "authority_resolution": {
+            key: resolution[key] for key in ("kind", "status", "source", "current_identity", "changed_paths", "rule") if key in resolution
+        }
+        | {"authority_states": authority_states}
+    }
+
+
 def _emit_proof(
     *,
     format_name: str,
@@ -52839,6 +52961,17 @@ def _emit_proof(
         return int(prevalidation_error["exit_status"])
     if inventory_payload := _selector_inventory_selected_payload(select=select, source_command="proof"):
         _emit_payload(payload=inventory_payload, format_name=format_name)
+        return 0
+    scope_dependent_selectors = _proof_scope_dependent_selectors(select)
+    if select and scope_dependent_selectors and not normalized_paths:
+        payload = _proof_scope_required_payload(
+            target_root=target_root,
+            select=select,
+            cli_invoke=config.cli_invoke,
+            selectors=scope_dependent_selectors,
+            current_only=current_only,
+        )
+        _emit_payload(payload=payload, format_name=format_name)
         return 0
     if execute_selected:
         if not normalized_paths:
@@ -53013,7 +53146,12 @@ def _emit_proof(
         if select:
             full_payload.setdefault("sufficiency", payload.get("sufficiency", answer.get("sufficiency")))
             full_payload.setdefault("next", payload.get("next"))
-            payload = _select_payload_fields(full_payload, select=select, source_command="proof")
+            selected_projection = _bounded_selected_proof_projection(
+                full_payload,
+                select=select,
+                cli_invoke=config.cli_invoke,
+            )
+            payload = _select_payload_fields(selected_projection, select=select, source_command="proof")
         if (
             progress_contract["status"] == "cancel-requested"
             or progress_contract["elapsed_ms"] > progress_contract["long_command_threshold_ms"]
@@ -53064,7 +53202,12 @@ def _emit_proof(
     if profile == "tiny":
         payload = _tiny_proof_payload(payload, cli_invoke=config.cli_invoke)
     if select:
-        payload = _select_payload_fields(payload, select=select, source_command="proof")
+        selectable_payload = _bounded_selected_proof_projection(
+            payload,
+            select=select,
+            cli_invoke=config.cli_invoke,
+        )
+        payload = _select_payload_fields(selectable_payload, select=select, source_command="proof")
     if format_name == "json":
         print(json.dumps(serialise_value(payload), indent=2))
         return 0

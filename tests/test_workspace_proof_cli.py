@@ -637,6 +637,206 @@ def test_proof_current_selector_returns_compact_contract_answer(tmp_path: Path, 
     assert payload["answer"]["status_health"] == "healthy"
 
 
+@pytest.mark.parametrize(
+    "select",
+    [
+        "selected_commands,route_refinement_required,proof_route_strategy_claim_gate",
+        "focused_route_coverage_audit,route_refinement_required",
+    ],
+)
+def test_proof_unscoped_scope_dependent_selectors_fail_before_full_construction(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], select: str
+) -> None:
+    _init_git_repo(tmp_path)
+
+    def fail_full_construction(**_: object) -> dict[str, object]:
+        raise AssertionError("unscoped selected proof must not construct the full proof payload")
+
+    monkeypatch.setattr(cli, "_proof_payload", fail_full_construction)
+
+    assert cli.main(["proof", "--target", str(tmp_path), "--select", select, "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    encoded = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    assert payload["kind"] == "agentic-workspace/proof-scope-required/v1"
+    assert payload["status"] == "scope-required"
+    assert payload["selector"] == {
+        "requested": select.split(","),
+        "scope_dependent": select.split(","),
+        "scope": "missing",
+    }
+    assert payload["next"]["action"] == "provide-proof-scope"
+    assert "--changed <paths>" in payload["next"]["command"]
+    assert f"--select {select}" in payload["next"]["command"]
+    assert payload["construction"] == {
+        "status": "not-started",
+        "full_proof_payload_built": False,
+        "rule": "Scope admission happens before lifecycle health, proof-route, subject, provenance, or diagnostic construction.",
+    }
+    assert payload["claim_boundary"]["completion_claim_allowed"] is False
+    assert len(encoded) < 4000
+
+
+def test_proof_current_scope_dependent_selectors_require_changed_path_subject_before_construction(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _init_git_repo(tmp_path)
+
+    def fail_full_construction(**_: object) -> dict[str, object]:
+        raise AssertionError("current status must not construct changed-path selected proof")
+
+    monkeypatch.setattr(cli, "_proof_payload", fail_full_construction)
+    select = "selected_commands,route_refinement_required,proof_route_strategy_claim_gate"
+
+    assert cli.main(["proof", "--target", str(tmp_path), "--current", "--select", select, "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["selector"]["scope"] == "current-insufficient"
+    assert payload["construction"]["full_proof_payload_built"] is False
+    assert "--changed <paths>" in payload["next"]["command"]
+    assert "--current --format json" in payload["next"]["alternatives"][0]
+
+
+def test_proof_unscoped_scope_independent_selector_remains_available(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    _init_git_repo(tmp_path)
+
+    assert cli.main(["proof", "--target", str(tmp_path), "--select", "selector_inventory", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["values"]["selector_inventory"]["source_command"] == "proof"
+
+
+def test_bounded_selected_proof_projection_routes_nested_command_and_claim_detail() -> None:
+    payload = {
+        "selected_commands": [
+            {
+                "kind": "proof-command/v1",
+                "command": "agentic-workspace implement --changed <paths> --format json",
+                "command_identity": "command-1",
+                "route_id": "focused",
+                "required": True,
+                "proof_requirement": "exercise changed behavior",
+                "proof_responsibility": "local-closeout",
+                "subject_contract": {"changed_paths": ["src/app.py"]},
+                "authority_resolution": {
+                    "kind": "agentic-workspace/proof-template-obligation-resolution/v1",
+                    "status": "resolved",
+                    "source": "repo-proof-obligation-resolver",
+                    "current_identity": {"lane_id": "focused", "lane_revision": "lane-1"},
+                    "authority_states": {
+                        "lane_id": {
+                            "status": "current",
+                            "revision": "focused",
+                            "source": "repo-proof-obligation-resolver",
+                            "provenance": "selected proof lane",
+                            "payload": {"large": "omitted"},
+                        }
+                    },
+                },
+                "receipt_contract": {"binds": ["operation"]},
+            }
+        ],
+        "proof_route_strategy_claim_gate": {
+            "kind": "agentic-workspace/proof-route-strategy-claim-gate/v1",
+            "status": "allowed-after-selected-proof",
+            "decision_id": "decision-1",
+            "route_health_id": "health-1",
+            "claim_effect": "focused-proof-required",
+            "selected_requirement": "focused-proof",
+            "completion_claim_authorized": True,
+            "consumer_gate": {
+                "kind": "agentic-workspace/proof-route-strategy-consumer-gate/v1",
+                "status": "current",
+                "mismatch_effect": "claim-blocked",
+                "required_consumers": ["proof", "closeout"],
+                "large_diagnostic": {"omitted": True},
+            },
+            "handoff": {"large": "omitted"},
+            "closeout": {"large": "omitted"},
+        },
+    }
+
+    projected = cli._bounded_selected_proof_projection(
+        payload,
+        select="selected_commands,proof_route_strategy_claim_gate",
+        cli_invoke="agentic-workspace",
+    )
+
+    command = projected["selected_commands"][0]
+    assert command["command"] == "agentic-workspace implement --changed <paths> --format json"
+    assert command["proof_requirement"] == "exercise changed behavior"
+    assert command["proof_responsibility"] == "local-closeout"
+    assert "--changed <paths> --verbose" in command["detail_route"]
+    assert set(command).isdisjoint({"subject_contract", "receipt_contract"})
+    authority = command["authority_resolution"]
+    assert authority["current_identity"] == {"lane_id": "focused", "lane_revision": "lane-1"}
+    assert authority["authority_states"]["lane_id"]["revision"] == "focused"
+    assert "payload" not in authority["authority_states"]["lane_id"]
+    assert projected["proof_route_strategy_claim_gate"]["handoff"] == {"large": "omitted"}
+    assert projected["proof_route_strategy_claim_gate"]["consumer_gate"]["large_diagnostic"] == {"omitted": True}
+    assert payload["selected_commands"][0]["authority_resolution"]["status"] == "resolved"
+    assert payload["proof_route_strategy_claim_gate"]["handoff"] == {"large": "omitted"}
+
+
+def test_proof_scoped_selected_projection_is_decision_sized_and_actionable(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    changed = "src/agentic_workspace/workspace_runtime_core.py"
+    select = "selected_commands,route_refinement_required,proof_route_strategy_claim_gate"
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                changed,
+                "--select",
+                select,
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    encoded = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    commands = payload["values"]["selected_commands"]
+    assert commands
+    assert all(command["command"] and command["proof_requirement"] for command in commands)
+    assert all("--changed <paths> --verbose" in command["detail_route"] for command in commands)
+    assert all(set(command).isdisjoint({"subject_contract", "authority_resolution", "receipt_contract"}) for command in commands)
+    gate = payload["values"]["proof_route_strategy_claim_gate"]
+    assert gate["claim_effect"]
+    assert gate["consumer_gate"]["mismatch_effect"] == "claim-blocked"
+    assert gate["handoff"]["required_identity_field"] == "proof_route_strategy_preservation.decision_id"
+    assert gate["proof_route_health"]["surface"] == "proof_route_maintenance.route_health"
+    assert payload["values"]["route_refinement_required"]["status"] in {"not-required", "required"}
+    assert len(encoded) < 20000
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                changed,
+                "--verbose",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    full = json.loads(capsys.readouterr().out)["answer"]
+    full_commands = {command["command_identity"]: command for command in full["selected_commands"]}
+    assert set(full_commands) == {command["command_identity"] for command in commands}
+    assert all(full_commands[command["command_identity"]]["command"] == command["command"] for command in commands)
+    assert any("subject_contract" in command and "receipt_contract" in command for command in full_commands.values())
+
+
 def test_proof_route_selector_smoke_works_without_mocked_lifecycle(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
