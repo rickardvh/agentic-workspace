@@ -1,4 +1,4 @@
 schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
+bump = "patch"
 summary = "Prefer current feature-head integration lineage over unrelated retained closeout evidence and report explicit evidence absence."
 issues = [1891]

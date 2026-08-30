@@ -3877,6 +3877,147 @@ def test_closeout_trust_prefers_integration_pending_lineage_over_unrelated_termi
     assert "#2793" not in answer["completion_gate"].get("claim_authorization", {}).get("issue_refs", [])
 
 
+def _write_pending_feature_integration(target: Path, *, plan_id: str, branch: str = "feature/closeout-lineage") -> tuple[str, str]:
+    owner_ref = f".agentic-workspace/planning/execplans/{plan_id}.plan.json"
+    proposal_id = f"{plan_id}-archive"
+    proposal_ref = f".agentic-workspace/planning/integration-proposals/{proposal_id}.integration-proposal.json"
+    _write(
+        target / owner_ref,
+        json.dumps(
+            {
+                "kind": "planning-execplan/v1",
+                "id": plan_id,
+                "lifecycle": "live",
+                "phase": "closeout",
+                "revision": 2,
+                "relationships": {
+                    "integration": {
+                        "status": "feature-complete-integration-pending",
+                        "proposal_id": proposal_id,
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    _write(
+        target / proposal_ref,
+        json.dumps(
+            {
+                "kind": "planning-integration-proposal/v1",
+                "id": proposal_id,
+                "status": "pending",
+                "phase": "integration-pending",
+                "requested_transition": "archive-owner",
+                "owner": {"id": plan_id, "ref": owner_ref},
+                "expected_subject_revision": f"subject-{plan_id}",
+                "expected_planning_revision": f"planning-{plan_id}",
+                "authority_boundary": {"branch_admission": {"phase": "feature", "branch": branch}},
+            }
+        ),
+        encoding="utf-8",
+    )
+    return owner_ref, proposal_ref
+
+
+def _write_retained_closeout_evidence(target: Path, *, plan_id: str, relationship: str) -> Path:
+    evidence_path = target / ".agentic-workspace/planning/closeout-evidence" / f"{plan_id}.closeout.json"
+    _write(
+        evidence_path,
+        json.dumps(
+            {
+                "kind": "planning-closeout-evidence/v1",
+                "plan_id": plan_id,
+                "source_plan": f".agentic-workspace/planning/execplans/{plan_id}.plan.json",
+                "lineage": {"lineage_id": plan_id, "relationship": relationship},
+                "proof_report": {"validation proof": "passed", "proof achieved now": "yes"},
+                "closure_check": {
+                    "slice status": "completed",
+                    "larger-intent status": "closed",
+                    "closure decision": "archive-and-close",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    return evidence_path
+
+
+def test_closeout_trust_selects_older_exact_pending_lineage_over_newer_similar_and_unrelated_evidence(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--format", "json"]) == 0
+    capsys.readouterr()
+    branch = "feature/closeout-lineage"
+    _set_git_branch(target, current=branch, default="master")
+    owner_ref, proposal_ref = _write_pending_feature_integration(target, plan_id="issue-1891", branch=branch)
+    same_lineage = _write_retained_closeout_evidence(target, plan_id="issue-1891", relationship="same-lineage")
+    similar = _write_retained_closeout_evidence(target, plan_id="issue-18910", relationship="same-lineage")
+    unrelated = _write_retained_closeout_evidence(target, plan_id="pr-2793", relationship="unrelated")
+    os.utime(same_lineage, (1000, 1000))
+    os.utime(similar, (2000, 2000))
+    os.utime(unrelated, (3000, 3000))
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
+
+    evidence = json.loads(capsys.readouterr().out)["answer"]["archived_slice_closeout_evidence"]
+    assert evidence["status"] == "present"
+    assert evidence["trust"] == "normal"
+    assert evidence["owner_surface"] == same_lineage.relative_to(target).as_posix()
+    assert evidence["evidence_relationship"] == "same-lineage"
+    assert evidence["relationship"] == "current-integration-pending"
+    assert evidence["integration_proposal_id"] == "issue-1891-archive"
+    assert evidence["integration_proposal_ref"] == proposal_ref
+    assert evidence["source_plan"] == owner_ref
+    assert evidence["historical_fallback_suppressed"] is True
+    assert evidence["evidence_selection"]["basis"] == "integration-pending-lineage-then-relevance-mtime"
+    assert evidence["evidence_selection"]["excluded_non_lineage_count"] == 2
+
+
+def test_closeout_trust_explicit_task_selects_one_pending_lineage(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--format", "json"]) == 0
+    capsys.readouterr()
+    branch = "feature/closeout-lineage"
+    _set_git_branch(target, current=branch, default="master")
+    _write_pending_feature_integration(target, plan_id="issue-1891", branch=branch)
+    _write_pending_feature_integration(target, plan_id="issue-2049", branch=branch)
+    _write_retained_closeout_evidence(target, plan_id="issue-1891", relationship="same-lineage")
+    selected = _write_retained_closeout_evidence(target, plan_id="issue-2049", relationship="same-lineage")
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--task", "#2049", "--format", "json"]) == 0
+
+    evidence = json.loads(capsys.readouterr().out)["answer"]["archived_slice_closeout_evidence"]
+    assert evidence["status"] == "present"
+    assert evidence["owner_surface"] == selected.relative_to(target).as_posix()
+    assert evidence["integration_proposal_id"] == "issue-2049-archive"
+    assert evidence["evidence_selection"]["excluded_non_lineage_count"] == 1
+
+
+def test_closeout_trust_multiple_pending_lineages_remain_ambiguous_without_task(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--format", "json"]) == 0
+    capsys.readouterr()
+    branch = "feature/closeout-lineage"
+    _set_git_branch(target, current=branch, default="master")
+    _write_pending_feature_integration(target, plan_id="issue-1891", branch=branch)
+    _write_pending_feature_integration(target, plan_id="issue-2049", branch=branch)
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
+
+    resolution = json.loads(capsys.readouterr().out)["answer"]["archived_slice_closeout_evidence"]
+    assert resolution["status"] == "ambiguous"
+    assert resolution["trust"] == "not-applicable"
+    assert resolution["relationship"] == "current-integration-pending"
+    assert {candidate["plan_id"] for candidate in resolution["candidates"]} == {"issue-1891", "issue-2049"}
+    assert "--task" in resolution["recovery_command"]
+
+
 def _write_issue_1981_closeout_fixture(
     target: Path,
     *,
