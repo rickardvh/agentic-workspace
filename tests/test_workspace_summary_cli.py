@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 import subprocess
 import time
 import tomllib
@@ -77,6 +78,28 @@ candidates = [
     expected_target = f"--target {tmp_path.as_posix()}"
     assert all(expected_target in command for command in continuation["detail_routes"].values())
     assert all("--target ." not in command for command in continuation["detail_routes"].values())
+
+
+def test_summary_advertised_selector_routes_round_trip_through_the_emitting_surface(tmp_path: Path, capsys) -> None:
+    from agentic_workspace.workspace_selector_validation import _detail_route_command_validation
+
+    install_bootstrap(target=tmp_path)
+
+    assert cli.main(["summary", "--target", str(tmp_path), "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    for route_id, command in payload["continuation_view"]["detail_routes"].items():
+        validation = _detail_route_command_validation(command)
+        assert validation["status"] == "valid", route_id
+        if not validation["executable"] or not validation["selectors"]:
+            continue
+
+        argv = shlex.split(command)[validation["command_index"] :]
+        assert cli.main(argv) == 0, route_id
+        selected = json.loads(capsys.readouterr().out)
+        assert selected["kind"] == "agentic-workspace/selected-output/v1", route_id
+        returned = set(selected["values"]) | set(selected.get("missing", []))
+        assert returned == set(validation["selectors"]), route_id
 
 
 def test_summary_default_continuation_view_is_handoff_complete(tmp_path: Path, capsys) -> None:

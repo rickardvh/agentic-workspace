@@ -1,0 +1,119 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2723-selector-route-roundtrip",
+  "title": "Issue 2723 selector route round-trip",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "validation",
+  "revision": 3,
+  "intent": {
+    "outcome": "Make every selector advertised by a current AW route executable on that emitting command, with canonical shared selector metadata, bounded round-trip conformance, and exact stale-selector recovery.",
+    "non_goals": [
+      "Do not accept arbitrary undeclared nested selectors or return broad payloads for selector errors.",
+      "Do not create a second selector or compatibility registry.",
+      "Do not broaden this lane into selected-projection performance work owned by #2806."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "Create a bounded plan for Issue 2723 selector route round-trip.",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "Canonical selector declaration, route validation, and advertised detail-route agreement for Workspace startup, summary, implement, report, proof, config, and representative module contributions.",
+      "Regression and conformance coverage for mixed-agent selectors plus continuation/claim-boundary routed selectors."
+    ],
+    "effects": [
+      "Current selector inventories and emitted detail commands round-trip mechanically; stale selectors retain bounded replacement/discovery behavior."
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected-local",
+      "owner": "issue-2723-selector-route-roundtrip"
+    },
+    "proof_posture": {
+      "state": "pending",
+      "refs": []
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    }
+  },
+  "references": [],
+  "next_action": "Review and merge the two-PR selector route round-trip stack.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Issue #2723 is fully satisfied without a second selector authority."
+    ],
+    "requirements": [
+      "Captured mixed-agent and continuation/claim-boundary routes execute on their advertised commands.",
+      "Representative startup, summary, implement, report, proof, config, and module routes round-trip.",
+      "Stale-selector recovery and compact output behavior remain intact.",
+      "Generated Python/TypeScript selector behavior remains equivalent."
+    ],
+    "refs": [
+      "local://aw-selected-proof/19-of-19-passed",
+      "local://selector-route-roundtrip/focused-tests-passed",
+      "local://generated-command-conformance/node-passed",
+      "local://manual-review/canonical-authority-and-test-evidence"
+    ]
+  },
+  "continuation": {
+    "owner": "none",
+    "residual_intent": "none"
+  },
+  "specialist_contracts": [],
+  "goal": [
+    "Make current advertised selector routes mechanically executable across representative Workspace and module surfaces."
+  ],
+  "non_goals": [
+    "Do not accept arbitrary undeclared nested selectors or return broad payloads for selector errors.",
+    "Do not create a second selector or compatibility registry.",
+    "Do not absorb #2806 selected-projection construction cost into this lane."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "Agents can trust copyable AW detail routes without manual discovery.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "execution_bounds": {
+    "allowed paths": "selector metadata/validation, detail-route producers, representative Workspace/module selector tests, generated parity surfaces, release note, and this execplan",
+    "max changed files": "bounded by canonical/generated parity, expected under 15",
+    "required validation commands": "focused selector round-trip tests, Workspace selector suites, TypeScript/generated conformance, lint/typecheck, exact changed-path proof",
+    "ask-before-refactor threshold": "a new selector registry, public command, or non-selector issue is required",
+    "stop before touching": "unrelated Planning owners, credentials, release publication, or review authority"
+  },
+  "touched_paths": [
+    "src/agentic_workspace/workspace_selector_validation.py",
+    "src/agentic_workspace/workspace_runtime_core.py",
+    "src/agentic_workspace/workspace_runtime_startup.py",
+    "src/agentic_workspace/workspace_runtime_implement.py",
+    "src/agentic_workspace/contracts/typescript_primitive_support.mjs",
+    "tests/test_workspace_cli.py",
+    "tests/test_workspace_summary_cli.py",
+    "tests/test_workspace_implement_cli.py",
+    "tests/test_workspace_proof_cli.py",
+    ".release/changes/*.toml",
+    ".agentic-workspace/planning/execplans/issue-2723-selector-route-roundtrip.plan.json"
+  ],
+  "validation_commands": [
+    "uv run --frozen --active --no-sync pytest tests/test_workspace_cli.py tests/test_workspace_summary_cli.py tests/test_workspace_implement_cli.py tests/test_workspace_proof_cli.py -q",
+    "uv run --frozen --active --no-sync python scripts/check/run_operation_conformance_tests.py",
+    "make lint",
+    "make typecheck",
+    "uv run --frozen --active --no-sync python scripts/run_agentic_workspace.py proof --target . --changed <paths> --format json"
+  ],
+  "completion_criteria": [
+    "The two captured mixed-agent selectors execute on the command that advertises them or are no longer advertised there.",
+    "Continuation/claim-boundary detail routes and representative startup, summary, implement, report, proof, config, and module routes round-trip through one canonical declaration/validation path.",
+    "Genuinely stale selectors retain exact replacement or bounded discovery behavior.",
+    "Ordinary packets remain compact and generated Python/TypeScript behavior agrees.",
+    "Exact changed-path proof is sufficient with no known gaps and the PR closes #2723."
+  ]
+}
