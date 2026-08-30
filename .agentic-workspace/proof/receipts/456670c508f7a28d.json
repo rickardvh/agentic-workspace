@@ -1,0 +1,1009 @@
+{
+  "kind": "agentic-workspace/proof-receipt/v1",
+  "command": "uv run --active python scripts/run_agentic_workspace.py implement --changed src/agentic_workspace/operating_decision.py src/agentic_workspace/workspace_runtime_startup.py tests/test_operating_decision.py tests/test_workspace_cli.py .release/changes/issue-2629-enforcing-obligation-compilation.toml .agentic-workspace/planning/execplans/issue-2629-enforcing-obligation-compilation.plan.json --select requirement_grounding,context.delegation_decision,context.plan_delegation_packet --format json",
+  "result": "passed",
+  "recorded_at": "2026-08-30T14:03:42+00:00",
+  "changed_paths": [
+    "src/agentic_workspace/operating_decision.py",
+    "src/agentic_workspace/workspace_runtime_startup.py",
+    "tests/test_operating_decision.py",
+    "tests/test_workspace_cli.py",
+    ".release/changes/issue-2629-enforcing-obligation-compilation.toml",
+    ".agentic-workspace/planning/execplans/issue-2629-enforcing-obligation-compilation.plan.json"
+  ],
+  "plan_id": "",
+  "rule": "This receipt records actual validation evidence supplied by the caller; proof recommendations alone must not create receipts.",
+  "execution": {
+    "command_identity": "6e87248f2eff644c",
+    "result": "passed",
+    "claim_sufficiency": "not-reviewed",
+    "route_id": "verification:requirement_grounding_delegation",
+    "command_id": "b0eb948335ac67a5",
+    "route_identity_source": "proof_selection.selected_commands"
+  },
+  "proof_subject": {
+    "kind": "agentic-workspace/proof-subject/v1",
+    "id": "proof-subject:a12b9c294c13778aef68",
+    "fingerprint": "a12b9c294c13778aef689e7cf666026164b987f6584564712bcbfed1f84b5310",
+    "claim_classes": [
+      "executable-validation"
+    ],
+    "effect_scope": [
+      ".agentic-workspace/planning/execplans/issue-2629-enforcing-obligation-compilation.plan.json",
+      ".release/changes/issue-2629-enforcing-obligation-compilation.toml",
+      "src/agentic_workspace/operating_decision.py",
+      "src/agentic_workspace/workspace_runtime_startup.py",
+      "tests/test_operating_decision.py",
+      "tests/test_workspace_cli.py"
+    ],
+    "source_inputs": [
+      {
+        "path": ".agentic-workspace/planning/execplans/issue-2629-enforcing-obligation-compilation.plan.json",
+        "sha256": "b686fa3b7243069edcea23f3c5cc781a201271b14bdd155f3464f41dab28e810"
+      },
+      {
+        "path": ".release/changes/issue-2629-enforcing-obligation-compilation.toml",
+        "sha256": "69c00fe61dd1b697ac8ee365a0f96441fee2369e76d8888c10cf3fa4716f8d4f"
+      },
+      {
+        "path": "src/agentic_workspace/operating_decision.py",
+        "sha256": "2c3e542865a7a283fb2e0e7eb0517286cd5900890d857f321306a00e38028f57"
+      },
+      {
+        "path": "src/agentic_workspace/workspace_runtime_startup.py",
+        "sha256": "6b596cf1ecceceb4c5a3e36912dccc82de8140963bc8ef0cdeac124a1d3c5406"
+      },
+      {
+        "path": "tests/test_operating_decision.py",
+        "sha256": "1b2bc625e794a502bf10528add53434b0881ce5fb9ea24cd094a5145d03bb1cf"
+      },
+      {
+        "path": "tests/test_workspace_cli.py",
+        "sha256": "bd1438c28797265f75a302e176c0960b75f97def2bccef514ce2c9abc96a1a7f"
+      }
+    ],
+    "command_sha256": "6e87248f2eff644c00bae5322ace5b091e5f6c623108685faca30c9f42c2821a",
+    "runtime": {
+      "implementation": "CPython",
+      "version": "3.13.9"
+    },
+    "identity_complete": true,
+    "unavailable_inputs": [],
+    "dependency_roles": [
+      {
+        "path": ".agentic-workspace/planning/execplans/issue-2629-enforcing-obligation-compilation.plan.json",
+        "owner": "claim",
+        "role": "semantic-input",
+        "reason": "declared-proof-subject-input"
+      },
+      {
+        "path": ".release/changes/issue-2629-enforcing-obligation-compilation.toml",
+        "owner": "claim",
+        "role": "semantic-input",
+        "reason": "declared-proof-subject-input"
+      },
+      {
+        "path": "src/agentic_workspace/operating_decision.py",
+        "owner": "claim",
+        "role": "semantic-input",
+        "reason": "declared-proof-subject-input"
+      },
+      {
+        "path": "src/agentic_workspace/workspace_runtime_startup.py",
+        "owner": "claim",
+        "role": "semantic-input",
+        "reason": "declared-proof-subject-input"
+      },
+      {
+        "path": "tests/test_operating_decision.py",
+        "owner": "claim",
+        "role": "semantic-input",
+        "reason": "declared-proof-subject-input"
+      },
+      {
+        "path": "tests/test_workspace_cli.py",
+        "owner": "claim",
+        "role": "semantic-input",
+        "reason": "declared-proof-subject-input"
+      }
+    ],
+    "evidence_outputs": [],
+    "dependency_scope": "declared-path-and-command",
+    "fallback": "not-required",
+    "rule": "Only declared semantic inputs participate in proof freshness; proof-owned publication outputs are diagnostic unless this claim explicitly declares them as semantic inputs."
+  },
+  "producer_class": "aw-proof",
+  "authority": "aw-proof",
+  "proof_template_binding": {
+    "kind": "agentic-workspace/proof-template-binding/v1",
+    "status": "current",
+    "live_obligation_id": "proof-template-obligation:a5c92726b86e8fb80329",
+    "command": {
+      "template": "uv run --active python scripts/run_agentic_workspace.py implement --changed <paths> --select requirement_grounding,context.delegation_decision,context.plan_delegation_packet --format json",
+      "concrete": "uv run --active python scripts/run_agentic_workspace.py implement --changed src/agentic_workspace/operating_decision.py src/agentic_workspace/workspace_runtime_startup.py tests/test_operating_decision.py tests/test_workspace_cli.py .release/changes/issue-2629-enforcing-obligation-compilation.toml .agentic-workspace/planning/execplans/issue-2629-enforcing-obligation-compilation.plan.json --select requirement_grounding,context.delegation_decision,context.plan_delegation_packet --format json",
+      "selector_parameters": {
+        "selectors": [
+          "context.delegation_decision",
+          "context.plan_delegation_packet",
+          "requirement_grounding"
+        ]
+      }
+    },
+    "owner_identity": {
+      "lane_id": "verification:requirement_grounding_delegation",
+      "owner_ref": "verification:requirement_grounding_delegation"
+    },
+    "assignment": {
+      "target_identity_ref": "changed-paths:636f3ab29fbdc44d",
+      "context_key": "proof-command:22eb7e8c653404e2"
+    },
+    "authority_revisions": {
+      "lane_id": "verification:requirement_grounding_delegation",
+      "lane_revision": "573b7b0f6648e0da",
+      "owner_ref": "verification:requirement_grounding_delegation",
+      "owner_revision": "0bd86070d62953c2",
+      "assignment_target": "changed-paths:636f3ab29fbdc44d",
+      "assignment_context_key": "proof-command:22eb7e8c653404e2",
+      "assignment_revision": "dee5319aebab8393",
+      "selector_registry_revision": "a4d6398bd4cca49c",
+      "template_revision": "cf06e3aed3f14309",
+      "evaluation_result_revision": "not-required:evaluation",
+      "mutation_baseline": "1d42db1006a28087"
+    },
+    "authority_states": {
+      "lane_id": {
+        "status": "current",
+        "revision": "verification:requirement_grounding_delegation",
+        "source": "repo-proof-obligation-resolver",
+        "provenance": "selected proof lane and current repository state"
+      },
+      "lane_revision": {
+        "status": "current",
+        "revision": "573b7b0f6648e0da",
+        "source": "repo-proof-obligation-resolver",
+        "provenance": "selected proof lane and current repository state"
+      },
+      "owner_ref": {
+        "status": "current",
+        "revision": "verification:requirement_grounding_delegation",
+        "source": "repo-proof-obligation-resolver",
+        "provenance": "selected proof lane and current repository state"
+      },
+      "owner_revision": {
+        "status": "current",
+        "revision": "0bd86070d62953c2",
+        "source": "repo-proof-obligation-resolver",
+        "provenance": "selected proof lane and current repository state"
+      },
+      "assignment_target": {
+        "status": "current",
+        "revision": "changed-paths:636f3ab29fbdc44d",
+        "source": "repo-proof-obligation-resolver",
+        "provenance": "selected proof lane and current repository state"
+      },
+      "assignment_context_key": {
+        "status": "current",
+        "revision": "proof-command:22eb7e8c653404e2",
+        "source": "repo-proof-obligation-resolver",
+        "provenance": "selected proof lane and current repository state"
+      },
+      "assignment_revision": {
+        "status": "current",
+        "revision": "dee5319aebab8393",
+        "source": "repo-proof-obligation-resolver",
+        "provenance": "selected proof lane and current repository state"
+      },
+      "selector_registry_revision": {
+        "status": "current",
+        "revision": "a4d6398bd4cca49c",
+        "source": "repo-proof-obligation-resolver",
+        "provenance": "selected proof lane and current repository state"
+      },
+      "template_revision": {
+        "status": "current",
+        "revision": "cf06e3aed3f14309",
+        "source": "repo-proof-obligation-resolver",
+        "provenance": "selected proof lane and current repository state"
+      },
+      "evaluation_result_revision": {
+        "status": "not-required",
+        "revision": "not-required:evaluation",
+        "source": "repo-proof-obligation-resolver",
+        "provenance": "selected proof lane and current repository state"
+      },
+      "mutation_baseline": {
+        "status": "not-required",
+        "revision": "1d42db1006a28087",
+        "source": "repo-proof-obligation-resolver",
+        "provenance": "selected proof lane and current repository state",
+        "payload": {
+          "kind": "agentic-workspace/mutation-baseline/v1",
+          "status": "dirty-scope-advisory-baseline",
+          "baseline_id": "1d42db1006a28087",
+          "head": "1f008b556ede0261e53377ae467e71d77af4e7cd",
+          "observation": {
+            "ok": true,
+            "head": {
+              "ok": true,
+              "command": [
+                "git",
+                "rev-parse",
+                "HEAD"
+              ],
+              "diagnostic": ""
+            },
+            "status": {
+              "ok": true,
+              "command": [
+                "git",
+                "status",
+                "--porcelain=v1",
+                "-z",
+                "--untracked-files=all",
+                "--",
+                "src/agentic_workspace/operating_decision.py",
+                "src/agentic_workspace/workspace_runtime_startup.py",
+                "tests/test_operating_decision.py",
+                "tests/test_workspace_cli.py",
+                ".release/changes/issue-2629-enforcing-obligation-compilation.toml",
+                ".agentic-workspace/planning/execplans/issue-2629-enforcing-obligation-compilation.plan.json"
+              ],
+              "diagnostic": ""
+            },
+            "errors": []
+          },
+          "scope": {
+            "allowed_paths": [
+              "src/agentic_workspace/operating_decision.py",
+              "src/agentic_workspace/workspace_runtime_startup.py",
+              "tests/test_operating_decision.py",
+              "tests/test_workspace_cli.py",
+              ".release/changes/issue-2629-enforcing-obligation-compilation.toml",
+              ".agentic-workspace/planning/execplans/issue-2629-enforcing-obligation-compilation.plan.json"
+            ],
+            "path_count": 6,
+            "comparison": "changed-path-scope"
+          },
+          "assignment": {
+            "target_identity_ref": "changed-paths:636f3ab29fbdc44d",
+            "assignment_revision": "dee5319aebab8393",
+            "comparison": "stable-target-and-assignment-context"
+          },
+          "observed_state": {
+            "entry_count": 6,
+            "entries": [
+              {
+                "path": ".agentic-workspace/planning/execplans/issue-2629-enforcing-obligation-compilation.plan.json",
+                "original_path": null,
+                "paths": [
+                  ".agentic-workspace/planning/execplans/issue-2629-enforcing-obligation-compilation.plan.json"
+                ],
+                "index_status": " ",
+                "worktree_status": "M",
+                "untracked": false,
+                "managed_local_state": false,
+                "rename_or_copy": false,
+                "classification": "unstaged",
+                "object_identities": [
+                  {
+                    "path": ".agentic-workspace/planning/execplans/issue-2629-enforcing-obligation-compilation.plan.json",
+                    "head_object": "fa47e8b29d206373da3d1345a09193b0688b53ba",
+                    "worktree_object": "2c45a2e71043591fc9239511ee4e25f3b2a48b16",
+                    "head_observed": true,
+                    "worktree_observed": true
+                  }
+                ]
+              },
+              {
+                "path": "src/agentic_workspace/operating_decision.py",
+                "original_path": null,
+                "paths": [
+                  "src/agentic_workspace/operating_decision.py"
+                ],
+                "index_status": " ",
+                "worktree_status": "M",
+                "untracked": false,
+                "managed_local_state": false,
+                "rename_or_copy": false,
+                "classification": "unstaged",
+                "object_identities": [
+                  {
+                    "path": "src/agentic_workspace/operating_decision.py",
+                    "head_object": "dde073d72145d1cb108808196d35328f6b8ded36",
+                    "worktree_object": "4ef2ec073cf34e9d31840ee4b7c6b635eb573958",
+                    "head_observed": true,
+                    "worktree_observed": true
+                  }
+                ]
+              },
+              {
+                "path": "src/agentic_workspace/workspace_runtime_startup.py",
+                "original_path": null,
+                "paths": [
+                  "src/agentic_workspace/workspace_runtime_startup.py"
+                ],
+                "index_status": " ",
+                "worktree_status": "M",
+                "untracked": false,
+                "managed_local_state": false,
+                "rename_or_copy": false,
+                "classification": "unstaged",
+                "object_identities": [
+                  {
+                    "path": "src/agentic_workspace/workspace_runtime_startup.py",
+                    "head_object": "fb78d0202a69e777caf44bd905523f73f281d1e2",
+                    "worktree_object": "6daebad89e109e7cdb98c31d30d1d02b39587bda",
+                    "head_observed": true,
+                    "worktree_observed": true
+                  }
+                ]
+              },
+              {
+                "path": "tests/test_operating_decision.py",
+                "original_path": null,
+                "paths": [
+                  "tests/test_operating_decision.py"
+                ],
+                "index_status": " ",
+                "worktree_status": "M",
+                "untracked": false,
+                "managed_local_state": false,
+                "rename_or_copy": false,
+                "classification": "unstaged",
+                "object_identities": [
+                  {
+                    "path": "tests/test_operating_decision.py",
+                    "head_object": "bd1a85f5a7ad26002a26de4c9e7541ba9775443f",
+                    "worktree_object": "d16aa984a6736b6365676a37533f64c7181bbc0e",
+                    "head_observed": true,
+                    "worktree_observed": true
+                  }
+                ]
+              },
+              {
+                "path": "tests/test_workspace_cli.py",
+                "original_path": null,
+                "paths": [
+                  "tests/test_workspace_cli.py"
+                ],
+                "index_status": " ",
+                "worktree_status": "M",
+                "untracked": false,
+                "managed_local_state": false,
+                "rename_or_copy": false,
+                "classification": "unstaged",
+                "object_identities": [
+                  {
+                    "path": "tests/test_workspace_cli.py",
+                    "head_object": "52f92516a44dd2aa2217f368f46d551e423cd67f",
+                    "worktree_object": "32257f8557529012d436d165d2ace8f9f237ea5c",
+                    "head_observed": true,
+                    "worktree_observed": true
+                  }
+                ]
+              },
+              {
+                "path": ".release/changes/issue-2629-enforcing-obligation-compilation.toml",
+                "original_path": null,
+                "paths": [
+                  ".release/changes/issue-2629-enforcing-obligation-compilation.toml"
+                ],
+                "index_status": "?",
+                "worktree_status": "?",
+                "untracked": true,
+                "managed_local_state": false,
+                "rename_or_copy": false,
+                "classification": "untracked",
+                "object_identities": [
+                  {
+                    "path": ".release/changes/issue-2629-enforcing-obligation-compilation.toml",
+                    "head_object": "HEAD:.release/changes/issue-2629-enforcing-obligation-compilation.toml",
+                    "worktree_object": "c9a77fa027b9681fdd029f08e81b18bc420373b3",
+                    "head_observed": false,
+                    "worktree_observed": true
+                  }
+                ]
+              }
+            ],
+            "enforcement_fingerprint": "fd894437b525962f6509972e78c1236ca7b23e0ef44e386d94bb85cd731d311e",
+            "enforcement_entry_count": 6,
+            "enforcement_scope": "full-scoped-status",
+            "omitted_entry_count": 0,
+            "untracked_managed_count": 0
+          },
+          "ownership": {
+            "owner": "current-agent-session",
+            "integration_conflict_owner": "current-agent-session-or-human-review",
+            "claim": "advisory-observed-baseline",
+            "claim_boundary": "This is a point-in-time git baseline for the requested changed-path scope; it is not a lock and cannot prove when dirty state was created."
+          },
+          "stale_revalidation": {
+            "status": "required",
+            "admission": "fail-closed",
+            "comparison_fields": [
+              "baseline_id",
+              "head",
+              "scope.allowed_paths",
+              "observed_state.enforcement_fingerprint",
+              "observed_state.entry_count",
+              "assignment.target_identity_ref",
+              "assignment.assignment_revision"
+            ],
+            "required_before": [
+              "destructive action",
+              "returned-worker admission",
+              "integration",
+              "proof admission",
+              "completion claim when dirty scope is material"
+            ],
+            "stop_reasons": [
+              "baseline-observation-failed",
+              "baseline-head-changed",
+              "unexpected-path-overlap",
+              "scoped-state-fingerprint-changed",
+              "untracked-managed-state",
+              "dirty-scope-not-accounted",
+              "renamed-managed-path",
+              "assignment-target-mismatch",
+              "assignment-revision-mismatch",
+              "scope-expanded"
+            ],
+            "inspect_route": "git status --porcelain=v1 --untracked-files=all -- <changed-paths>",
+            "repair_routes": {
+              "baseline-head-changed": "rerun implement after rebasing or refreshing the branch head",
+              "unexpected-path-overlap": "inspect overlapping edits and assign ownership before writing",
+              "untracked-managed-state": "admit, move, or remove managed local state before claiming closure",
+              "renamed-managed-path": "treat rename as scope expansion unless the changed-path owner includes both sides",
+              "assignment-target-mismatch": "recompute assignment and handoff for the current target identity",
+              "assignment-revision-mismatch": "recompute assignment and handoff for the current assignment revision",
+              "scope-expanded": "rerun implement with the widened changed-path scope or ask for authority"
+            }
+          },
+          "boundary_enforcement": {
+            "kind": "agentic-workspace/mutation-boundary-enforcement/v1",
+            "status": "fail-closed-contract",
+            "baseline_id": "1d42db1006a28087",
+            "boundaries": [
+              {
+                "id": "returned-worker-admission",
+                "read_before": "git status --porcelain=v1 --untracked-files=all -- <changed-paths>",
+                "resolver": "admit_live_mutation_boundary",
+                "reject_on": [
+                  "baseline-observation-failed",
+                  "baseline-head-changed",
+                  "unexpected-path-overlap",
+                  "scoped-state-fingerprint-changed",
+                  "untracked-managed-state",
+                  "dirty-scope-not-accounted",
+                  "renamed-managed-path",
+                  "assignment-target-mismatch",
+                  "assignment-revision-mismatch",
+                  "scope-expanded"
+                ]
+              },
+              {
+                "id": "integration",
+                "read_before": "git status --porcelain=v1 --untracked-files=all -- <changed-paths>",
+                "resolver": "admit_live_mutation_boundary",
+                "reject_on": [
+                  "baseline-observation-failed",
+                  "baseline-head-changed",
+                  "unexpected-path-overlap",
+                  "scoped-state-fingerprint-changed",
+                  "untracked-managed-state",
+                  "dirty-scope-not-accounted",
+                  "renamed-managed-path",
+                  "assignment-target-mismatch",
+                  "assignment-revision-mismatch",
+                  "scope-expanded"
+                ]
+              },
+              {
+                "id": "destructive-mutation",
+                "read_before": "git rev-parse HEAD && git status --porcelain=v1 --untracked-files=all -- <changed-paths>",
+                "resolver": "admit_live_mutation_boundary",
+                "reject_on": [
+                  "baseline-observation-failed",
+                  "baseline-head-changed",
+                  "unexpected-path-overlap",
+                  "scoped-state-fingerprint-changed",
+                  "untracked-managed-state",
+                  "dirty-scope-not-accounted",
+                  "renamed-managed-path",
+                  "assignment-target-mismatch",
+                  "assignment-revision-mismatch",
+                  "scope-expanded"
+                ]
+              },
+              {
+                "id": "proof-admission",
+                "read_before": "git status --porcelain=v1 --untracked-files=all -- <changed-paths>",
+                "resolver": "admit_live_mutation_boundary",
+                "reject_on": [
+                  "baseline-observation-failed",
+                  "baseline-head-changed",
+                  "unexpected-path-overlap",
+                  "scoped-state-fingerprint-changed",
+                  "untracked-managed-state",
+                  "dirty-scope-not-accounted",
+                  "renamed-managed-path",
+                  "assignment-target-mismatch",
+                  "assignment-revision-mismatch",
+                  "scope-expanded"
+                ]
+              },
+              {
+                "id": "closeout",
+                "read_before": "git status --porcelain=v1 --untracked-files=all -- <changed-paths>",
+                "resolver": "admit_live_mutation_boundary",
+                "reject_on": [
+                  "baseline-observation-failed",
+                  "baseline-head-changed",
+                  "unexpected-path-overlap",
+                  "scoped-state-fingerprint-changed",
+                  "untracked-managed-state",
+                  "dirty-scope-not-accounted",
+                  "renamed-managed-path",
+                  "assignment-target-mismatch",
+                  "assignment-revision-mismatch",
+                  "scope-expanded"
+                ]
+              }
+            ],
+            "clean_noop_rule": "If head, scoped status, allowed paths, target identity, and managed-state checks still match, revalidation does not require a new baseline."
+          },
+          "host_enforcement": "fail-closed-at-aw-boundaries"
+        }
+      }
+    },
+    "artifact_provenance": {
+      "changed_paths": [
+        "src/agentic_workspace/operating_decision.py",
+        "src/agentic_workspace/workspace_runtime_startup.py",
+        "tests/test_operating_decision.py",
+        "tests/test_workspace_cli.py",
+        ".release/changes/issue-2629-enforcing-obligation-compilation.toml",
+        ".agentic-workspace/planning/execplans/issue-2629-enforcing-obligation-compilation.plan.json"
+      ]
+    },
+    "result_provenance": {
+      "result": "passed",
+      "recorded_at": "2026-08-30T14:03:42+00:00",
+      "proof_subject_fingerprint": "a12b9c294c13778aef689e7cf666026164b987f6584564712bcbfed1f84b5310"
+    },
+    "freshness": {
+      "status": "current",
+      "source": "repo-proof-obligation-resolver",
+      "authority_states": {
+        "lane_id": {
+          "status": "current",
+          "revision": "verification:requirement_grounding_delegation",
+          "source": "repo-proof-obligation-resolver",
+          "provenance": "selected proof lane and current repository state"
+        },
+        "lane_revision": {
+          "status": "current",
+          "revision": "573b7b0f6648e0da",
+          "source": "repo-proof-obligation-resolver",
+          "provenance": "selected proof lane and current repository state"
+        },
+        "owner_ref": {
+          "status": "current",
+          "revision": "verification:requirement_grounding_delegation",
+          "source": "repo-proof-obligation-resolver",
+          "provenance": "selected proof lane and current repository state"
+        },
+        "owner_revision": {
+          "status": "current",
+          "revision": "0bd86070d62953c2",
+          "source": "repo-proof-obligation-resolver",
+          "provenance": "selected proof lane and current repository state"
+        },
+        "assignment_target": {
+          "status": "current",
+          "revision": "changed-paths:636f3ab29fbdc44d",
+          "source": "repo-proof-obligation-resolver",
+          "provenance": "selected proof lane and current repository state"
+        },
+        "assignment_context_key": {
+          "status": "current",
+          "revision": "proof-command:22eb7e8c653404e2",
+          "source": "repo-proof-obligation-resolver",
+          "provenance": "selected proof lane and current repository state"
+        },
+        "assignment_revision": {
+          "status": "current",
+          "revision": "dee5319aebab8393",
+          "source": "repo-proof-obligation-resolver",
+          "provenance": "selected proof lane and current repository state"
+        },
+        "selector_registry_revision": {
+          "status": "current",
+          "revision": "a4d6398bd4cca49c",
+          "source": "repo-proof-obligation-resolver",
+          "provenance": "selected proof lane and current repository state"
+        },
+        "template_revision": {
+          "status": "current",
+          "revision": "cf06e3aed3f14309",
+          "source": "repo-proof-obligation-resolver",
+          "provenance": "selected proof lane and current repository state"
+        },
+        "evaluation_result_revision": {
+          "status": "not-required",
+          "revision": "not-required:evaluation",
+          "source": "repo-proof-obligation-resolver",
+          "provenance": "selected proof lane and current repository state"
+        },
+        "mutation_baseline": {
+          "status": "not-required",
+          "revision": "1d42db1006a28087",
+          "source": "repo-proof-obligation-resolver",
+          "provenance": "selected proof lane and current repository state",
+          "payload": {
+            "kind": "agentic-workspace/mutation-baseline/v1",
+            "status": "dirty-scope-advisory-baseline",
+            "baseline_id": "1d42db1006a28087",
+            "head": "1f008b556ede0261e53377ae467e71d77af4e7cd",
+            "observation": {
+              "ok": true,
+              "head": {
+                "ok": true,
+                "command": [
+                  "git",
+                  "rev-parse",
+                  "HEAD"
+                ],
+                "diagnostic": ""
+              },
+              "status": {
+                "ok": true,
+                "command": [
+                  "git",
+                  "status",
+                  "--porcelain=v1",
+                  "-z",
+                  "--untracked-files=all",
+                  "--",
+                  "src/agentic_workspace/operating_decision.py",
+                  "src/agentic_workspace/workspace_runtime_startup.py",
+                  "tests/test_operating_decision.py",
+                  "tests/test_workspace_cli.py",
+                  ".release/changes/issue-2629-enforcing-obligation-compilation.toml",
+                  ".agentic-workspace/planning/execplans/issue-2629-enforcing-obligation-compilation.plan.json"
+                ],
+                "diagnostic": ""
+              },
+              "errors": []
+            },
+            "scope": {
+              "allowed_paths": [
+                "src/agentic_workspace/operating_decision.py",
+                "src/agentic_workspace/workspace_runtime_startup.py",
+                "tests/test_operating_decision.py",
+                "tests/test_workspace_cli.py",
+                ".release/changes/issue-2629-enforcing-obligation-compilation.toml",
+                ".agentic-workspace/planning/execplans/issue-2629-enforcing-obligation-compilation.plan.json"
+              ],
+              "path_count": 6,
+              "comparison": "changed-path-scope"
+            },
+            "assignment": {
+              "target_identity_ref": "changed-paths:636f3ab29fbdc44d",
+              "assignment_revision": "dee5319aebab8393",
+              "comparison": "stable-target-and-assignment-context"
+            },
+            "observed_state": {
+              "entry_count": 6,
+              "entries": [
+                {
+                  "path": ".agentic-workspace/planning/execplans/issue-2629-enforcing-obligation-compilation.plan.json",
+                  "original_path": null,
+                  "paths": [
+                    ".agentic-workspace/planning/execplans/issue-2629-enforcing-obligation-compilation.plan.json"
+                  ],
+                  "index_status": " ",
+                  "worktree_status": "M",
+                  "untracked": false,
+                  "managed_local_state": false,
+                  "rename_or_copy": false,
+                  "classification": "unstaged",
+                  "object_identities": [
+                    {
+                      "path": ".agentic-workspace/planning/execplans/issue-2629-enforcing-obligation-compilation.plan.json",
+                      "head_object": "fa47e8b29d206373da3d1345a09193b0688b53ba",
+                      "worktree_object": "2c45a2e71043591fc9239511ee4e25f3b2a48b16",
+                      "head_observed": true,
+                      "worktree_observed": true
+                    }
+                  ]
+                },
+                {
+                  "path": "src/agentic_workspace/operating_decision.py",
+                  "original_path": null,
+                  "paths": [
+                    "src/agentic_workspace/operating_decision.py"
+                  ],
+                  "index_status": " ",
+                  "worktree_status": "M",
+                  "untracked": false,
+                  "managed_local_state": false,
+                  "rename_or_copy": false,
+                  "classification": "unstaged",
+                  "object_identities": [
+                    {
+                      "path": "src/agentic_workspace/operating_decision.py",
+                      "head_object": "dde073d72145d1cb108808196d35328f6b8ded36",
+                      "worktree_object": "4ef2ec073cf34e9d31840ee4b7c6b635eb573958",
+                      "head_observed": true,
+                      "worktree_observed": true
+                    }
+                  ]
+                },
+                {
+                  "path": "src/agentic_workspace/workspace_runtime_startup.py",
+                  "original_path": null,
+                  "paths": [
+                    "src/agentic_workspace/workspace_runtime_startup.py"
+                  ],
+                  "index_status": " ",
+                  "worktree_status": "M",
+                  "untracked": false,
+                  "managed_local_state": false,
+                  "rename_or_copy": false,
+                  "classification": "unstaged",
+                  "object_identities": [
+                    {
+                      "path": "src/agentic_workspace/workspace_runtime_startup.py",
+                      "head_object": "fb78d0202a69e777caf44bd905523f73f281d1e2",
+                      "worktree_object": "6daebad89e109e7cdb98c31d30d1d02b39587bda",
+                      "head_observed": true,
+                      "worktree_observed": true
+                    }
+                  ]
+                },
+                {
+                  "path": "tests/test_operating_decision.py",
+                  "original_path": null,
+                  "paths": [
+                    "tests/test_operating_decision.py"
+                  ],
+                  "index_status": " ",
+                  "worktree_status": "M",
+                  "untracked": false,
+                  "managed_local_state": false,
+                  "rename_or_copy": false,
+                  "classification": "unstaged",
+                  "object_identities": [
+                    {
+                      "path": "tests/test_operating_decision.py",
+                      "head_object": "bd1a85f5a7ad26002a26de4c9e7541ba9775443f",
+                      "worktree_object": "d16aa984a6736b6365676a37533f64c7181bbc0e",
+                      "head_observed": true,
+                      "worktree_observed": true
+                    }
+                  ]
+                },
+                {
+                  "path": "tests/test_workspace_cli.py",
+                  "original_path": null,
+                  "paths": [
+                    "tests/test_workspace_cli.py"
+                  ],
+                  "index_status": " ",
+                  "worktree_status": "M",
+                  "untracked": false,
+                  "managed_local_state": false,
+                  "rename_or_copy": false,
+                  "classification": "unstaged",
+                  "object_identities": [
+                    {
+                      "path": "tests/test_workspace_cli.py",
+                      "head_object": "52f92516a44dd2aa2217f368f46d551e423cd67f",
+                      "worktree_object": "32257f8557529012d436d165d2ace8f9f237ea5c",
+                      "head_observed": true,
+                      "worktree_observed": true
+                    }
+                  ]
+                },
+                {
+                  "path": ".release/changes/issue-2629-enforcing-obligation-compilation.toml",
+                  "original_path": null,
+                  "paths": [
+                    ".release/changes/issue-2629-enforcing-obligation-compilation.toml"
+                  ],
+                  "index_status": "?",
+                  "worktree_status": "?",
+                  "untracked": true,
+                  "managed_local_state": false,
+                  "rename_or_copy": false,
+                  "classification": "untracked",
+                  "object_identities": [
+                    {
+                      "path": ".release/changes/issue-2629-enforcing-obligation-compilation.toml",
+                      "head_object": "HEAD:.release/changes/issue-2629-enforcing-obligation-compilation.toml",
+                      "worktree_object": "c9a77fa027b9681fdd029f08e81b18bc420373b3",
+                      "head_observed": false,
+                      "worktree_observed": true
+                    }
+                  ]
+                }
+              ],
+              "enforcement_fingerprint": "fd894437b525962f6509972e78c1236ca7b23e0ef44e386d94bb85cd731d311e",
+              "enforcement_entry_count": 6,
+              "enforcement_scope": "full-scoped-status",
+              "omitted_entry_count": 0,
+              "untracked_managed_count": 0
+            },
+            "ownership": {
+              "owner": "current-agent-session",
+              "integration_conflict_owner": "current-agent-session-or-human-review",
+              "claim": "advisory-observed-baseline",
+              "claim_boundary": "This is a point-in-time git baseline for the requested changed-path scope; it is not a lock and cannot prove when dirty state was created."
+            },
+            "stale_revalidation": {
+              "status": "required",
+              "admission": "fail-closed",
+              "comparison_fields": [
+                "baseline_id",
+                "head",
+                "scope.allowed_paths",
+                "observed_state.enforcement_fingerprint",
+                "observed_state.entry_count",
+                "assignment.target_identity_ref",
+                "assignment.assignment_revision"
+              ],
+              "required_before": [
+                "destructive action",
+                "returned-worker admission",
+                "integration",
+                "proof admission",
+                "completion claim when dirty scope is material"
+              ],
+              "stop_reasons": [
+                "baseline-observation-failed",
+                "baseline-head-changed",
+                "unexpected-path-overlap",
+                "scoped-state-fingerprint-changed",
+                "untracked-managed-state",
+                "dirty-scope-not-accounted",
+                "renamed-managed-path",
+                "assignment-target-mismatch",
+                "assignment-revision-mismatch",
+                "scope-expanded"
+              ],
+              "inspect_route": "git status --porcelain=v1 --untracked-files=all -- <changed-paths>",
+              "repair_routes": {
+                "baseline-head-changed": "rerun implement after rebasing or refreshing the branch head",
+                "unexpected-path-overlap": "inspect overlapping edits and assign ownership before writing",
+                "untracked-managed-state": "admit, move, or remove managed local state before claiming closure",
+                "renamed-managed-path": "treat rename as scope expansion unless the changed-path owner includes both sides",
+                "assignment-target-mismatch": "recompute assignment and handoff for the current target identity",
+                "assignment-revision-mismatch": "recompute assignment and handoff for the current assignment revision",
+                "scope-expanded": "rerun implement with the widened changed-path scope or ask for authority"
+              }
+            },
+            "boundary_enforcement": {
+              "kind": "agentic-workspace/mutation-boundary-enforcement/v1",
+              "status": "fail-closed-contract",
+              "baseline_id": "1d42db1006a28087",
+              "boundaries": [
+                {
+                  "id": "returned-worker-admission",
+                  "read_before": "git status --porcelain=v1 --untracked-files=all -- <changed-paths>",
+                  "resolver": "admit_live_mutation_boundary",
+                  "reject_on": [
+                    "baseline-observation-failed",
+                    "baseline-head-changed",
+                    "unexpected-path-overlap",
+                    "scoped-state-fingerprint-changed",
+                    "untracked-managed-state",
+                    "dirty-scope-not-accounted",
+                    "renamed-managed-path",
+                    "assignment-target-mismatch",
+                    "assignment-revision-mismatch",
+                    "scope-expanded"
+                  ]
+                },
+                {
+                  "id": "integration",
+                  "read_before": "git status --porcelain=v1 --untracked-files=all -- <changed-paths>",
+                  "resolver": "admit_live_mutation_boundary",
+                  "reject_on": [
+                    "baseline-observation-failed",
+                    "baseline-head-changed",
+                    "unexpected-path-overlap",
+                    "scoped-state-fingerprint-changed",
+                    "untracked-managed-state",
+                    "dirty-scope-not-accounted",
+                    "renamed-managed-path",
+                    "assignment-target-mismatch",
+                    "assignment-revision-mismatch",
+                    "scope-expanded"
+                  ]
+                },
+                {
+                  "id": "destructive-mutation",
+                  "read_before": "git rev-parse HEAD && git status --porcelain=v1 --untracked-files=all -- <changed-paths>",
+                  "resolver": "admit_live_mutation_boundary",
+                  "reject_on": [
+                    "baseline-observation-failed",
+                    "baseline-head-changed",
+                    "unexpected-path-overlap",
+                    "scoped-state-fingerprint-changed",
+                    "untracked-managed-state",
+                    "dirty-scope-not-accounted",
+                    "renamed-managed-path",
+                    "assignment-target-mismatch",
+                    "assignment-revision-mismatch",
+                    "scope-expanded"
+                  ]
+                },
+                {
+                  "id": "proof-admission",
+                  "read_before": "git status --porcelain=v1 --untracked-files=all -- <changed-paths>",
+                  "resolver": "admit_live_mutation_boundary",
+                  "reject_on": [
+                    "baseline-observation-failed",
+                    "baseline-head-changed",
+                    "unexpected-path-overlap",
+                    "scoped-state-fingerprint-changed",
+                    "untracked-managed-state",
+                    "dirty-scope-not-accounted",
+                    "renamed-managed-path",
+                    "assignment-target-mismatch",
+                    "assignment-revision-mismatch",
+                    "scope-expanded"
+                  ]
+                },
+                {
+                  "id": "closeout",
+                  "read_before": "git status --porcelain=v1 --untracked-files=all -- <changed-paths>",
+                  "resolver": "admit_live_mutation_boundary",
+                  "reject_on": [
+                    "baseline-observation-failed",
+                    "baseline-head-changed",
+                    "unexpected-path-overlap",
+                    "scoped-state-fingerprint-changed",
+                    "untracked-managed-state",
+                    "dirty-scope-not-accounted",
+                    "renamed-managed-path",
+                    "assignment-target-mismatch",
+                    "assignment-revision-mismatch",
+                    "scope-expanded"
+                  ]
+                }
+              ],
+              "clean_noop_rule": "If head, scoped status, allowed paths, target identity, and managed-state checks still match, revalidation does not require a new baseline."
+            },
+            "host_enforcement": "fail-closed-at-aw-boundaries"
+          }
+        }
+      }
+    }
+  },
+  "admission": {
+    "kind": "agentic-workspace/proof-receipt-admission/v1",
+    "status": "admitted",
+    "admitted": true,
+    "result_class": "passed",
+    "proof_sufficient": true,
+    "failures": [],
+    "reason": "admissible",
+    "safe_recovery": "none",
+    "rule": "Only admitted receipts may be persisted, selected, or counted as trusted proof state."
+  },
+  "calibration": {
+    "status": "non-calibrating",
+    "reason": "missing-current-assignment-context",
+    "source_ref": ".agentic-workspace/local/assignment-context.json",
+    "rule": "Trusted producer receipts calibrate target evidence only when a current assignment/run authority supplies target/task/scope."
+  },
+  "publication_id": "456670c508f7a28d",
+  "receipt_id": "456670c508f7a28d",
+  "source_type": "aw-proof-receipt",
+  "confidence": "high",
+  "source_ref": "proof://receipts/456670c508f7a28d",
+  "status": "current",
+  "revision": "2026-08-30T14:03:42+00:00"
+}

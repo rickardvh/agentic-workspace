@@ -13245,6 +13245,48 @@ commands = ["agentic-workspace report --section dogfooding_signal_status --forma
     assert any("agent-efficiency: emit compact router state first" in item for item in packet["output_shape_requirements"])
 
 
+def test_start_enforcing_workflow_obligation_cannot_reallow_completion(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[workflow_obligations.closeout_review]
+summary = "Classify workflow pressure before closeout."
+stage = "before-claiming-completion"
+force = "required-before-closeout"
+scope_tags = ["workflow", "planning", "dogfooding"]
+commands = ["agentic-workspace report --section workflow_obligations --format json"]
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Implement the whole workflow planning dogfooding self-improvement lane",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    packet = json.loads(capsys.readouterr().out)["decision_packet"]
+
+    assert packet["effects"]["completion_claim_allowed"] is False
+    assert "claim-work-complete" in packet["effects"]["blocked_claims"]
+    assert packet["claim_boundary"]["completion_claim"] == "blocked-until-proof-and-acceptance"
+    assert packet["claim_blockers"][0]["target"] == "claim:claim-work-complete"
+    assert packet["claim_blockers"][0]["owner"] == "workspace-config-workflow-obligations"
+    assert "workflow-obligation-disposition:closeout_review" in packet["claim_blockers"][0]["repair"]
+
+
 def test_start_report_meta_task_keeps_routine_context_selector_only_with_background_drift(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0

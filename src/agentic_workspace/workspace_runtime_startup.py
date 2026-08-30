@@ -153,6 +153,7 @@ from agentic_workspace.workspace_runtime_core import (
     _uv_cache_guidance_payload,
     _vague_outcome_orientation_payload,
     _validate_target_root,
+    _workflow_obligations_report_payload,
     _workflow_sufficiency_payload,
     _workspace_absence_startup_review,
     _workspace_disabled_payload,
@@ -922,6 +923,12 @@ def _start_payload(
         payload = _start_tiny_payload_fast(
             target_root=target_root, changed_paths=changed_paths, task_text=task_text, config=config, startup_template=startup_template
         )
+        current_workflow_obligations = _workflow_obligations_report_payload(
+            config=config,
+            active_planning_record=None,
+            task_text=task_text,
+            changed_paths=changed_paths,
+        )
         projection_cancellation_checkpoint()
         normalized_paths = _normalize_changed_paths(changed_paths)
         payload["context_authority_projection"] = resolve_context_authority_projection(
@@ -935,7 +942,9 @@ def _start_payload(
             payload["work_threads"] = _local_work_threads_projection(
                 target_root=target_root, cli_invoke=config.cli_invoke, task_text=task_text
             )
-        if _task_posture_packet_relevant(task_text=task_text, changed_paths=normalized_paths, surface="start"):
+        if _task_posture_packet_relevant(task_text=task_text, changed_paths=normalized_paths, surface="start") or _list_payload(
+            current_workflow_obligations.get("relevant_to_current_work")
+        ):
             improvement_pressure = _session_improvement_pressure_payload(
                 target_root=target_root,
                 config=config,
@@ -947,7 +956,7 @@ def _start_payload(
                 surface="start",
                 task_text=task_text,
                 changed_paths=normalized_paths,
-                workflow_obligations=payload.get("workflow_obligations", {}),
+                workflow_obligations=current_workflow_obligations,
                 skill_routing=payload.get("skill_routing", {}),
                 planning_safety_gate=payload.get("planning_safety_gate", {}),
                 proof=payload.get("proof", {}),
@@ -1009,7 +1018,12 @@ def _start_payload(
         if active_planning_present
         else None
     )
-    workflow_obligations = preflight.get("workflow_obligations", {})
+    workflow_obligations = _workflow_obligations_report_payload(
+        config=config,
+        active_planning_record=planning_record if isinstance(planning_record, dict) else None,
+        task_text=task_text,
+        changed_paths=changed_paths,
+    )
     compact_workflow_obligations = _compact_start_workflow_obligations(workflow_obligations)
     assurance_requirements = _assurance_requirements_report_payload(
         config=config,
@@ -1781,6 +1795,7 @@ def _start_payload(
         _task_posture_packet_relevant(task_text=task_text, changed_paths=normalized_paths, surface="start")
         or task_posture_packet.get("improvement_obligations")
         or task_posture_packet.get("dogfooding_obligations")
+        or _list_payload(workflow_obligations.get("relevant_to_current_work"))
     ) and _task_posture_packet_changes_routing(task_posture_packet):
         payload["task_posture_packet"] = task_posture_packet
     _apply_required_payload_target_start_gate(
@@ -2535,6 +2550,11 @@ def _ordinary_start_decision_payload(
         "kind": selected.get("kind", "startup-context/v1"),
         "target": selected.get("target", "."),
         "decision_packet": decision,
+        **(
+            {"task_posture_packet": copy.deepcopy(source_payload["task_posture_packet"])}
+            if isinstance(source_payload.get("task_posture_packet"), dict)
+            else {}
+        ),
         **(
             {"task_assignment_disposition": _compact_task_assignment_disposition(copy.deepcopy(selected["task_assignment_disposition"]))}
             if isinstance(selected.get("task_assignment_disposition"), dict)
