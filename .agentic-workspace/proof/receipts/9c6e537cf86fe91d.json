@@ -1,0 +1,119 @@
+{
+  "kind": "agentic-workspace/proof-receipt/v1",
+  "command": "uv run --active pytest tests/test_workspace_defaults_cli.py -q",
+  "result": "passed",
+  "recorded_at": "2026-08-30T18:51:54+00:00",
+  "changed_paths": [
+    "src/agentic_workspace/workspace_runtime_core.py",
+    "src/agentic_workspace/reporting_support.py",
+    "tests/test_workspace_cli.py",
+    ".release/changes/issue-1891-integration-pending-closeout-lineage.toml"
+  ],
+  "plan_id": "",
+  "rule": "This receipt records actual validation evidence supplied by the caller; proof recommendations alone must not create receipts.",
+  "execution": {
+    "command_identity": "25e0c282f9852b03",
+    "result": "passed",
+    "claim_sufficiency": "not-reviewed",
+    "duration_seconds": 1.762,
+    "exit_state": "passed",
+    "route_id": "domain:workspace_root_guidance",
+    "command_id": "25e0c282f9852b03",
+    "route_identity_source": "proof_selection.selected_commands"
+  },
+  "proof_subject": {
+    "kind": "agentic-workspace/proof-subject/v1",
+    "id": "proof-subject:d8a8bd35f9b0837c6c97",
+    "fingerprint": "d8a8bd35f9b0837c6c972c1663d70dcd1d8efdb157215c9181106767e6da6c27",
+    "claim_classes": [
+      "executable-validation"
+    ],
+    "effect_scope": [
+      ".release/changes/issue-1891-integration-pending-closeout-lineage.toml",
+      "src/agentic_workspace/reporting_support.py",
+      "src/agentic_workspace/workspace_runtime_core.py",
+      "tests/test_workspace_cli.py"
+    ],
+    "source_inputs": [
+      {
+        "path": ".release/changes/issue-1891-integration-pending-closeout-lineage.toml",
+        "sha256": "8ee50d270c9b72f496db8b40bbff006042b2dea458994cb25d732d60209d807c"
+      },
+      {
+        "path": "src/agentic_workspace/reporting_support.py",
+        "sha256": "53d032178ec8e02fa9cbd771b8690cb9739101a5fadcad6f291851a9d629ff0e"
+      },
+      {
+        "path": "src/agentic_workspace/workspace_runtime_core.py",
+        "sha256": "09b29b11b1fdc5e6f195c303e62273703922a3c51aa75c34959a3e05a14bfff4"
+      },
+      {
+        "path": "tests/test_workspace_cli.py",
+        "sha256": "42b3d5d8e7e6ecee6105e20f4f59f472bf257b4680a48e5cf7901b0a5ac237a9"
+      }
+    ],
+    "command_sha256": "25e0c282f9852b03b7bad40c354a1340cf2dcc47496d0f54f612510419718dde",
+    "runtime": {
+      "implementation": "CPython",
+      "version": "3.13.9"
+    },
+    "identity_complete": true,
+    "unavailable_inputs": [],
+    "dependency_roles": [
+      {
+        "path": ".release/changes/issue-1891-integration-pending-closeout-lineage.toml",
+        "owner": "claim",
+        "role": "semantic-input",
+        "reason": "declared-proof-subject-input"
+      },
+      {
+        "path": "src/agentic_workspace/reporting_support.py",
+        "owner": "claim",
+        "role": "semantic-input",
+        "reason": "declared-proof-subject-input"
+      },
+      {
+        "path": "src/agentic_workspace/workspace_runtime_core.py",
+        "owner": "claim",
+        "role": "semantic-input",
+        "reason": "declared-proof-subject-input"
+      },
+      {
+        "path": "tests/test_workspace_cli.py",
+        "owner": "claim",
+        "role": "semantic-input",
+        "reason": "declared-proof-subject-input"
+      }
+    ],
+    "evidence_outputs": [],
+    "dependency_scope": "declared-path-and-command",
+    "fallback": "not-required",
+    "rule": "Only declared semantic inputs participate in proof freshness; proof-owned publication outputs are diagnostic unless this claim explicitly declares them as semantic inputs."
+  },
+  "producer_class": "aw-proof",
+  "authority": "aw-proof",
+  "admission": {
+    "kind": "agentic-workspace/proof-receipt-admission/v1",
+    "status": "admitted",
+    "admitted": true,
+    "result_class": "passed",
+    "proof_sufficient": true,
+    "failures": [],
+    "reason": "admissible",
+    "safe_recovery": "none",
+    "rule": "Only admitted receipts may be persisted, selected, or counted as trusted proof state."
+  },
+  "calibration": {
+    "status": "non-calibrating",
+    "reason": "missing-current-assignment-context",
+    "source_ref": ".agentic-workspace/local/assignment-context.json",
+    "rule": "Trusted producer receipts calibrate target evidence only when a current assignment/run authority supplies target/task/scope."
+  },
+  "publication_id": "9c6e537cf86fe91d",
+  "receipt_id": "9c6e537cf86fe91d",
+  "source_type": "aw-proof-receipt",
+  "confidence": "high",
+  "source_ref": "proof://receipts/9c6e537cf86fe91d",
+  "status": "current",
+  "revision": "2026-08-30T18:51:54+00:00"
+}
