@@ -12,6 +12,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from jsonschema import Draft202012Validator
 from tests.test_workspace_proof_cli import _verified_host_fixture, _write_independent_review_host_result
 
 import agentic_workspace.client as public_client
@@ -127,6 +128,21 @@ def test_assignment_cli_transport_invokes_allow_listed_adapter_and_returns_untru
     assert receipt["returned_work"] == returned
     assert receipt["stdout_tail"] == json.dumps(returned)
     assert receipt["claim_boundary"].startswith("transport-only")
+    context_cost = receipt["context_cost"]
+    assert context_cost["kind"] == "agentic-workspace/assignment-context-cost/v1"
+    assert context_cost["transport"] == "cli"
+    assert context_cost["assignment_packet_bytes"] > 0
+    assert context_cost["rendered_prompt_bytes"] == len("sealed packet".encode("utf-8"))
+    assert context_cost["effective_input_tokens"] is None
+    assert context_cost["unknown_fields"] == [
+        "effective_input_tokens",
+        "cached_input_tokens",
+        "output_tokens",
+        "orientation_command_count",
+        "retry_count",
+        "repair_loop_count",
+    ]
+    assert context_cost["raw_transcript_stored"] is False
     command = observed["command"]
     assert isinstance(command, list)
     assert command[:10] == [
@@ -153,6 +169,108 @@ def test_assignment_cli_transport_invokes_allow_listed_adapter_and_returns_untru
     assert python_primitive_support._assignment_patch_paths(
         "diff --git a/src/feature.py b/outside.py\nsimilarity index 100%\nrename from src/feature.py\nrename to outside.py\n"
     ) == ["outside.py", "src/feature.py"]
+
+
+def test_assignment_transport_metrics_sidecar_is_validated_and_admitted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentic_workspace.contracts import python_primitive_support
+
+    returned = {
+        "assignment_revision": "sha256:assignment",
+        "run_id": "run-metrics",
+        "target": "worker",
+        "changed_paths": [],
+        "summary": "Completed the bounded assignment.",
+        "stop_conditions_hit": [],
+    }
+    metrics = {
+        "kind": "agentic-workspace/assignment-transport-metrics/v1",
+        "effective_input_tokens": 1234,
+        "cached_input_tokens": 1000,
+        "output_tokens": 55,
+        "orientation_command_count": 2,
+        "retry_count": 1,
+        "repair_loop_count": 0,
+    }
+
+    def fake_run(command: list[str], **kwargs: object) -> SimpleNamespace:
+        metrics_path = Path(command[command.index("--metrics") + 1])
+        metrics_path.write_text(json.dumps(metrics), encoding="utf-8")
+        return SimpleNamespace(returncode=0, stdout=json.dumps(returned), stderr="")
+
+    monkeypatch.setattr(python_primitive_support.subprocess, "run", fake_run)
+    receipt = python_primitive_support._dispatch_assignment_packet(
+        packet={
+            "assignment_identity": {
+                "role": "implementer",
+                "dispatch_adapter": {
+                    "kind": "process",
+                    "command": ["worker-bridge", "--metrics", "{metrics_file}"],
+                    "output_mode": "stdout",
+                    "timeout_seconds": 60,
+                    "execution_methods": ["cli"],
+                },
+            }
+        },
+        prompt="sealed packet",
+        target_root=tmp_path,
+        transport="cli",
+    )
+
+    metrics_schema = json.loads((ROOT / "src/agentic_workspace/contracts/schemas/assignment_transport_metrics.schema.json").read_text())
+    cost_schema = json.loads((ROOT / "src/agentic_workspace/contracts/schemas/assignment_context_cost.schema.json").read_text())
+    Draft202012Validator.check_schema(metrics_schema)
+    Draft202012Validator(metrics_schema).validate(metrics)
+    Draft202012Validator.check_schema(cost_schema)
+    Draft202012Validator(cost_schema).validate(receipt["context_cost"])
+    assert receipt["context_cost"] | {"elapsed_ms": 0} == {
+        "kind": "agentic-workspace/assignment-context-cost/v1",
+        "transport": "cli",
+        "adapter_revision": receipt["adapter_revision"],
+        "assignment_packet_bytes": receipt["context_cost"]["assignment_packet_bytes"],
+        "rendered_prompt_bytes": len("sealed packet".encode("utf-8")),
+        "effective_input_tokens": 1234,
+        "cached_input_tokens": 1000,
+        "output_tokens": 55,
+        "orientation_command_count": 2,
+        "retry_count": 1,
+        "repair_loop_count": 0,
+        "elapsed_ms": 0,
+        "unknown_fields": [],
+        "observation_authority": "adapter-sidecar-or-host-measurement",
+        "raw_transcript_stored": False,
+    }
+
+
+def test_assignment_transport_rejects_unrecognized_metrics_sidecar_without_fabricating_zeroes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from agentic_workspace.contracts import python_primitive_support
+
+    def fake_run(command: list[str], **kwargs: object) -> SimpleNamespace:
+        metrics_path = Path(command[command.index("--metrics") + 1])
+        metrics_path.write_text('{"kind":"provider-private-metrics/v1","effective_input_tokens":0}', encoding="utf-8")
+        return SimpleNamespace(returncode=0, stdout="{}", stderr="")
+
+    monkeypatch.setattr(python_primitive_support.subprocess, "run", fake_run)
+    receipt = python_primitive_support._dispatch_assignment_packet(
+        packet={
+            "assignment_identity": {
+                "dispatch_adapter": {
+                    "kind": "process",
+                    "command": ["worker-bridge", "--metrics", "{metrics_file}"],
+                    "output_mode": "stdout",
+                    "timeout_seconds": 60,
+                    "execution_methods": ["cli"],
+                }
+            }
+        },
+        prompt="sealed packet",
+        target_root=tmp_path,
+        transport="cli",
+    )
+
+    assert receipt["context_cost"]["effective_input_tokens"] is None
+    assert "effective_input_tokens" in receipt["context_cost"]["unknown_fields"]
 
 
 def test_assignment_cli_transport_accepts_explicit_no_change_implementer_return(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -211,9 +329,12 @@ def test_assignment_process_and_host_native_adapters_share_one_prompt_and_return
         "stop_conditions_hit": [],
     }
     observed_prompts: list[str] = []
+    observed_schemas: list[dict[str, object]] = []
 
     def fake_run(command: list[str], **kwargs: object) -> SimpleNamespace:
         observed_prompts.append(str(kwargs["input"]))
+        schema_path = Path(command[command.index("--schema") + 1])
+        observed_schemas.append(json.loads(schema_path.read_text(encoding="utf-8")))
         return SimpleNamespace(returncode=0, stdout=json.dumps(returned), stderr="")
 
     monkeypatch.setattr(python_primitive_support.subprocess, "run", fake_run)
@@ -235,7 +356,13 @@ def test_assignment_process_and_host_native_adapters_share_one_prompt_and_return
                         **base_identity,
                         "dispatch_adapter": {
                             "kind": adapter_kind,
-                            "command": ["configured-worker-bridge", "--root", "{target_root}"],
+                            "command": [
+                                "configured-worker-bridge",
+                                "--root",
+                                "{target_root}",
+                                "--schema",
+                                "{output_schema}",
+                            ],
                             "output_mode": "stdout",
                             "timeout_seconds": 60,
                             "execution_methods": [transport],
@@ -253,6 +380,129 @@ def test_assignment_process_and_host_native_adapters_share_one_prompt_and_return
     assert [receipt["adapter_kind"] for receipt in receipts] == ["process", "host-native"]
     assert all(receipt["returned_work"] == returned for receipt in receipts)
     assert all(receipt["claim_boundary"].startswith("transport-only") for receipt in receipts)
+    assert all("patch" not in schema["properties"] for schema in observed_schemas)
+    assert all(set(schema["required"]) == set(schema["properties"]) for schema in observed_schemas)
+
+
+def test_assignment_worker_context_projects_only_canonical_bounded_authority() -> None:
+    from agentic_workspace.contracts import python_primitive_support
+
+    packet = {
+        "kind": "agentic-workspace/assignment-export-packet/v1",
+        "assignment_id": "assignment-1",
+        "assignment_revision": "sha256:assignment",
+        "run_id": "run-1",
+        "target": "worker",
+        "assignment_identity": {
+            "revision": "sha256:identity",
+            "human_intent": "Validate the bounded documentation slice.",
+            "task_class": "validation",
+            "role": "validator",
+            "scope_class": "documentation",
+            "allowed_paths": ["docs/reference.md"],
+            "allowed_effects": ["read"],
+            "prohibited_effects": ["write", "merge", "proof-authority"],
+            "required_inputs": ["current checkout"],
+            "read_first": ["docs/reference.md", "summary:planning_record"],
+            "proof_obligation_id": "proof-1",
+            "proof_obligation_revision": "sha256:proof",
+            "stop_conditions": ["scope mismatch"],
+            "claim_authority": {
+                "worker_result": "evidence-only",
+                "proof": "orchestrator-owned",
+                "integration": "orchestrator-owned",
+                "completion": "orchestrator-owned",
+            },
+            "dispatch_adapter": {"kind": "process", "command": ["secret-provider-command"]},
+        },
+        "return_contract": {
+            "kind": "agentic-workspace/delegated-return/v1",
+            "required_fields": ["assignment_revision", "run_id", "summary"],
+            "worker_proof_authority": False,
+            "worker_completion_authority": False,
+        },
+        "authority_refs": {"planning_assignment": "broad/planning/state.json"},
+        "parent_conversation": "must never be transmitted",
+        "broad_workspace_summary": "must never be transmitted",
+    }
+
+    context = python_primitive_support._assignment_worker_context(packet)
+    prompt = python_primitive_support._assignment_export_prompt({**packet, "worker_context": context})
+    schema = json.loads((ROOT / "src/agentic_workspace/contracts/schemas/assignment_worker_context.schema.json").read_text())
+
+    Draft202012Validator.check_schema(schema)
+    Draft202012Validator(schema).validate(context)
+    assert context == {
+        "kind": "agentic-workspace/assignment-worker-context/v1",
+        "assignment": {
+            "id": "assignment-1",
+            "revision": "sha256:assignment",
+            "run_id": "run-1",
+            "target": "worker",
+        },
+        "intent": {
+            "outcome": "Validate the bounded documentation slice.",
+            "task_class": "validation",
+            "role": "validator",
+        },
+        "scope": {"class": "documentation", "allowed_paths": ["docs/reference.md"]},
+        "effects": {"allowed": ["read"], "prohibited": ["write", "merge", "proof-authority"]},
+        "inputs": {
+            "required": ["current checkout"],
+            "read_first": ["docs/reference.md", "summary:planning_record"],
+            "lazy_expansion_rule": (
+                "Read only these exact references first; request or resolve deeper context only when the assignment requires it."
+            ),
+        },
+        "proof": {"obligation_id": "proof-1", "obligation_revision": "sha256:proof", "worker_authority": False},
+        "stop_conditions": ["scope mismatch"],
+        "authority": {
+            "semantic_source": "canonical-assignment-identity",
+            "claim_authority": {
+                "worker_result": "evidence-only",
+                "proof": "orchestrator-owned",
+                "integration": "orchestrator-owned",
+                "completion": "orchestrator-owned",
+            },
+            "scope_widening_allowed": False,
+        },
+        "return_contract": packet["return_contract"],
+    }
+    assert '"kind": "agentic-workspace/assignment-worker-context/v1"' in prompt
+    assert "docs/reference.md" in prompt
+    assert "summary:planning_record" in prompt
+    assert "must never be transmitted" not in prompt
+    assert "secret-provider-command" not in prompt
+    assert "broad/planning/state.json" not in prompt
+
+
+def test_assignment_worker_context_ignores_non_authoritative_packet_overrides() -> None:
+    from agentic_workspace.contracts import python_primitive_support
+
+    packet = {
+        "assignment_id": "assignment-1",
+        "assignment_revision": "sha256:assignment",
+        "run_id": "run-1",
+        "target": "worker",
+        "scope": ["outside/**"],
+        "allowed_effects": ["write"],
+        "assignment_identity": {
+            "human_intent": "Read one file.",
+            "allowed_paths": ["docs/reference.md"],
+            "allowed_effects": ["read"],
+            "prohibited_effects": ["write"],
+            "read_first": ["docs/reference.md"],
+            "claim_authority": {"worker_result": "evidence-only"},
+        },
+        "return_contract": {"worker_proof_authority": False, "worker_completion_authority": False},
+    }
+
+    context = python_primitive_support._assignment_worker_context(packet)
+
+    assert context["scope"]["allowed_paths"] == ["docs/reference.md"]
+    assert context["effects"] == {"allowed": ["read"], "prohibited": ["write"]}
+    assert context["authority"]["scope_widening_allowed"] is False
+    assert context["proof"]["worker_authority"] is False
 
 
 def test_assignment_dispatch_fails_closed_without_configured_adapter(tmp_path: Path) -> None:
@@ -1297,8 +1547,11 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
         "slice_revision": "slice-rev-1",
         "assignment_decision_revision": "assignment-rev-1",
         "role": "implementer",
+        "human_intent": "Implement the bounded feature change.",
         "allowed_effects": ["repo-write"],
         "allowed_paths": ["src/feature.py"],
+        "required_inputs": ["current checkout"],
+        "read_first": ["src/feature.py", "summary:planning_record"],
         "proof_obligation": {
             "kind": "agentic-workspace/assignment-task-proof-obligation/v1",
             "id": "proof:feature",
@@ -1581,6 +1834,15 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
     assert packet["dispatch_contract"]["silent_local_fallback_allowed"] is False
     assert packet["return_contract"]["worker_completion_authority"] is False
     assert packet["assignment_identity"]["claim_authority"]["completion"] == "orchestrator-owned"
+    assert packet["worker_context"]["intent"]["outcome"] == "Implement the bounded feature change."
+    assert packet["worker_context"]["scope"]["allowed_paths"] == ["src/feature.py"]
+    assert packet["worker_context"]["inputs"]["read_first"] == ["src/feature.py", "summary:planning_record"]
+    assert packet["worker_context"]["authority"]["scope_widening_allowed"] is False
+    prompt_ref = next(ref for ref in export["artifact_refs"] if ref.endswith("export/prompt.md"))
+    prompt = (tmp_path / prompt_ref).read_text(encoding="utf-8")
+    assert '"kind": "agentic-workspace/assignment-worker-context/v1"' in prompt
+    assert "dispatch_adapter" not in prompt
+    assert "authority_refs" not in prompt
     assert "current_authorities" not in export["state"]
 
 
@@ -2673,6 +2935,62 @@ def test_generated_operation_specific_wrapper_uses_public_contract() -> None:
     )
     assert payload["kind"] == "agentic-workspace/config-tiny/v1"
     assert callable(delegation_outcome_append)
+
+
+def test_public_delegation_outcome_append_persists_validated_context_cost(tmp_path: Path) -> None:
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.parent.mkdir()
+    config.write_text("[workspace]\nenabled = true\n", encoding="utf-8")
+    context_cost = {
+        "kind": "agentic-workspace/assignment-context-cost/v1",
+        "transport": "cli",
+        "adapter_revision": "sha256:adapter",
+        "assignment_packet_bytes": 3662,
+        "rendered_prompt_bytes": 3913,
+        "effective_input_tokens": 81752,
+        "cached_input_tokens": 62464,
+        "output_tokens": 1591,
+        "orientation_command_count": 3,
+        "retry_count": 0,
+        "repair_loop_count": 0,
+        "elapsed_ms": 1000,
+        "unknown_fields": [],
+        "observation_authority": "adapter-sidecar-or-host-measurement",
+        "raw_transcript_stored": False,
+    }
+    values = {
+        "delegation_target": "worker",
+        "task_class": "implementation",
+        "scope_class": "bounded",
+        "outcome": "success",
+        "context_cost_json": json.dumps(context_cost),
+    }
+
+    payload = invoke_operation(
+        "delegation-outcome.append",
+        values,
+        target=tmp_path,
+        invocation=[sys.executable, str(ROOT / "scripts/run_agentic_workspace.py")],
+        allow_runtime_backed=True,
+    )
+
+    assert payload["recorded"]["context_cost"] == context_cost
+    stored_path = tmp_path / ".agentic-workspace/delegation-outcomes.json"
+    stored = json.loads(stored_path.read_text(encoding="utf-8"))
+    assert stored["records"][0]["context_cost"] == context_cost
+
+    invalid = {**context_cost, "effective_input_tokens": -1}
+    with pytest.raises(AWClientError) as error:
+        invoke_operation(
+            "delegation-outcome.append",
+            {**values, "context_cost_json": json.dumps(invalid)},
+            target=tmp_path,
+            invocation=[sys.executable, str(ROOT / "scripts/run_agentic_workspace.py")],
+            allow_runtime_backed=True,
+        )
+    assert error.value.kind == "rejected"
+    unchanged = json.loads(stored_path.read_text(encoding="utf-8"))
+    assert len(unchanged["records"]) == 1
 
 
 def test_public_client_classifies_disabled_and_invocation_unavailable(tmp_path: Path) -> None:

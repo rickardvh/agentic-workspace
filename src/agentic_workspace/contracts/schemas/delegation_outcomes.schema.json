@@ -155,6 +155,10 @@
             "type": "string",
             "description": "Observed burden after the delegated route returns."
           },
+          "context_cost": {
+            "$ref": "assignment_context_cost.schema.json",
+            "description": "Optional provider-neutral transport context-cost observation for this outcome."
+          },
           "scope_drift": {
             "type": "string",
             "description": "Scope drift state for this observation."

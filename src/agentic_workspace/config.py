@@ -678,6 +678,7 @@ class DelegationOutcomeRecord:
     restart_burden: str = ""
     expected_burden: str = ""
     observed_burden: str = ""
+    context_cost: dict[str, Any] | None = None
     scope_drift: str = "none"
     contradiction_state: str = "none"
     uncertainty_state: str = "unknown"
@@ -1833,6 +1834,48 @@ def load_delegation_target_profiles(
     return tuple(profiles), warnings
 
 
+def normalize_delegation_context_cost(raw: Any, *, surface_name: str) -> dict[str, Any] | None:
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        raise WorkspaceUsageError(f"{surface_name} record context_cost must be an object when present.")
+    if raw.get("kind") != "agentic-workspace/assignment-context-cost/v1":
+        raise WorkspaceUsageError(f"{surface_name} record context_cost kind must be agentic-workspace/assignment-context-cost/v1.")
+    transport = raw.get("transport")
+    if not isinstance(transport, str) or not transport.strip():
+        raise WorkspaceUsageError(f"{surface_name} record context_cost transport must be a non-empty string.")
+    required_integer_fields = ("assignment_packet_bytes", "rendered_prompt_bytes", "elapsed_ms")
+    optional_integer_fields = (
+        "effective_input_tokens",
+        "cached_input_tokens",
+        "output_tokens",
+        "orientation_command_count",
+        "retry_count",
+        "repair_loop_count",
+    )
+    for field_name in required_integer_fields:
+        value = raw.get(field_name)
+        if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+            raise WorkspaceUsageError(f"{surface_name} record context_cost {field_name} must be a non-negative integer.")
+    for field_name in optional_integer_fields:
+        value = raw.get(field_name)
+        if value is not None and (not isinstance(value, int) or isinstance(value, bool) or value < 0):
+            raise WorkspaceUsageError(f"{surface_name} record context_cost {field_name} must be a non-negative integer or null.")
+    unknown_fields = raw.get("unknown_fields", [])
+    if not isinstance(unknown_fields, list) or any(not isinstance(item, str) for item in unknown_fields):
+        raise WorkspaceUsageError(f"{surface_name} record context_cost unknown_fields must be a string list.")
+    return {
+        "kind": "agentic-workspace/assignment-context-cost/v1",
+        "transport": transport.strip(),
+        "adapter_revision": str(raw.get("adapter_revision") or "").strip(),
+        **{field_name: raw[field_name] for field_name in required_integer_fields},
+        **{field_name: raw.get(field_name) for field_name in optional_integer_fields},
+        "unknown_fields": list(dict.fromkeys(unknown_fields)),
+        "observation_authority": "adapter-sidecar-or-host-measurement",
+        "raw_transcript_stored": False,
+    }
+
+
 def normalize_delegation_outcome_record(raw: Any, *, surface_name: str) -> DelegationOutcomeRecord:
     if not isinstance(raw, dict):
         raise WorkspaceUsageError(f"{surface_name} records entries must be objects.")
@@ -1863,6 +1906,7 @@ def normalize_delegation_outcome_record(raw: Any, *, surface_name: str) -> Deleg
     restart_burden = raw.get("restart_burden", "")
     expected_burden = raw.get("expected_burden", "")
     observed_burden = raw.get("observed_burden", "")
+    context_cost = normalize_delegation_context_cost(raw.get("context_cost"), surface_name=surface_name)
     scope_drift = raw.get("scope_drift", "none")
     contradiction_state = raw.get("contradiction_state", "none")
     uncertainty_state = raw.get("uncertainty_state", "unknown")
@@ -1944,6 +1988,7 @@ def normalize_delegation_outcome_record(raw: Any, *, surface_name: str) -> Deleg
         restart_burden=str(restart_burden).strip(),
         expected_burden=str(expected_burden).strip(),
         observed_burden=str(observed_burden).strip(),
+        context_cost=context_cost,
         scope_drift=str(scope_drift).strip() or "none",
         contradiction_state=str(contradiction_state).strip() or "none",
         uncertainty_state=str(uncertainty_state).strip() or "unknown",

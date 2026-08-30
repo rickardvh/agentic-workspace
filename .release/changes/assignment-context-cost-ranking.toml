@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Record provider-neutral assignment context cost with explicit unknowns and admit it through capability-first target and transport ranking."
+issues = [2818]

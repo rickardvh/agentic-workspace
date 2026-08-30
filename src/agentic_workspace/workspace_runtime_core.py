@@ -43193,6 +43193,7 @@ def _assignment_identity_payload(
         or assignment_gate.get("task")
         or assignment_gate.get("task_class"),
         "required_inputs": assignment_gate.get("required_inputs") or next_step.get("required_inputs") or [],
+        "read_first": assignment_gate.get("read_first") or next_step.get("read_first") or [],
         "prohibited_effects": assignment_gate.get("prohibited_effects")
         or next_step.get("prohibited_effects")
         or ["scope-widening", "merge", "closeout", "proof-authority", "human-authority"],
@@ -44146,9 +44147,16 @@ def _assignment_implementation_gate_payload(
     selected_route_target = selected_profile or str(assignment_decision.get("selected_target") or "") or current_target
     execution_methods = [str(method) for method in _list_payload((selected_target or {}).get("execution_methods"))]
     automatic_methods = [method for method in execution_methods if method != "manual"]
+    selected_transport = str(assignment_decision.get("selected_transport") or "")
+    selected_automatic_transport = (
+        selected_transport if selected_transport in automatic_methods else automatic_methods[0] if automatic_methods else ""
+    )
     configured_dispatch_command = [str(part) for part in _list_payload((selected_target or {}).get("dispatch_command"))]
     automatic_transport_authorized = bool(
-        automatic_methods and configured_dispatch_command and _as_dict(delegation_control).get("execution_permitted") is True
+        selected_transport != "manual"
+        and selected_automatic_transport
+        and configured_dispatch_command
+        and _as_dict(delegation_control).get("execution_permitted") is True
     )
     manual_transport = _manual_transport_admission_payload(
         assignment_policy=assignment_policy,
@@ -44178,7 +44186,7 @@ def _assignment_implementation_gate_payload(
         required_next_action = "dispatch-assigned-target"
         enforcement = "must-dispatch-before-implementation"
         executor_disposition = "executable-nonlocal-dispatch"
-        transport = automatic_methods[0]
+        transport = selected_automatic_transport
     elif decision in {"assign-or-escalate", "assign-best-fit", "manual-handoff"}:
         if manual_transport.get("export_allowed") is True:
             status = "handoff-required"
@@ -44252,6 +44260,7 @@ def _assignment_implementation_gate_payload(
             "selected_target": selected_route_target or None,
             "transport": transport,
             "automatic_methods": automatic_methods,
+            **({"cost_selected_transport": selected_transport} if selected_transport else {}),
             "adapter_configured": bool(configured_dispatch_command),
             "decision_revision": assignment_decision.get("assignment_decision_revision"),
             "rule": "One binding assignment resolves retained-local, executable dispatch, admitted manual handoff, or exact blocked recovery before implementation.",
@@ -44948,6 +44957,14 @@ def _execution_posture_payload(
             baseline = ""
         task_class = str(assignment_gate.get("task_class") or "")
         role, allowed_effects = _assignment_role_and_effects(task_class=task_class)
+        read_first_refs = _dedupe(
+            [
+                str(item.get("target") or item.get("label") or "").strip()
+                for item in _list_payload(plan_record.get("references"))
+                if isinstance(item, dict) and str(item.get("target") or item.get("label") or "").strip()
+            ]
+            + _plan_exact_list(plan_record, "context_budget.live working set")
+        )
         enhanced_gate = {
             **assignment_gate,
             "plan_ref": plan_ref,
@@ -44957,6 +44974,7 @@ def _execution_posture_payload(
             "role": role,
             "human_intent": str(task_text or "").strip(),
             "required_inputs": list(changed_paths),
+            "read_first": read_first_refs,
             "allowed_effects": allowed_effects,
             "allowed_paths": list(changed_paths),
             "dispatch_adapter": {
@@ -55265,6 +55283,24 @@ def _render_workspace_operation_prompt(values: dict[str, Any], _arguments: dict[
     )
 
 
+def _delegation_context_cost_input(value: Any) -> dict[str, Any] | None:
+    if value in (None, ""):
+        return None
+    if isinstance(value, dict):
+        payload = value
+    elif isinstance(value, str):
+        try:
+            loaded = json.loads(value)
+        except json.JSONDecodeError as exc:
+            raise WorkspaceUsageError("note-delegation-outcome context cost must be valid JSON.") from exc
+        payload = loaded if isinstance(loaded, dict) else {}
+    else:
+        payload = {}
+    if not payload:
+        raise WorkspaceUsageError("note-delegation-outcome context cost must be a JSON object.")
+    return config_lib.normalize_delegation_context_cost(payload, surface_name="note-delegation-outcome")
+
+
 def _append_workspace_operation_delegation_outcome(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> dict[str, Any]:
     try:
         return _record_delegation_outcome(
@@ -55293,6 +55329,7 @@ def _append_workspace_operation_delegation_outcome(values: dict[str, Any], _argu
             restart_burden=str(values.get("restart_burden") or ""),
             expected_burden=str(values.get("expected_burden") or ""),
             observed_burden=str(values.get("observed_burden") or ""),
+            context_cost=_delegation_context_cost_input(values.get("context_cost_json")),
             scope_drift=str(values.get("scope_drift") or "none"),
             contradiction_state=str(values.get("contradiction_state") or "none"),
             uncertainty_state=str(values.get("uncertainty_state") or ""),
@@ -59471,6 +59508,7 @@ def _record_delegation_outcome(
     restart_burden: str = "",
     expected_burden: str = "",
     observed_burden: str = "",
+    context_cost: dict[str, Any] | None = None,
     scope_drift: str = "none",
     contradiction_state: str = "none",
     uncertainty_state: str = "",
@@ -59489,6 +59527,7 @@ def _record_delegation_outcome(
     normalized_source_ref = source_ref.strip() or WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix()
     normalized_producer_class = producer_class.strip()
     normalized_idempotency_key = idempotency_key.strip()
+    normalized_context_cost = config_lib.normalize_delegation_context_cost(context_cost, surface_name="note-delegation-outcome")
     normalized_trusted_producer_receipt = _as_dict(trusted_producer_receipt)
     if not normalized_scope:
         raise WorkspaceUsageError("note-delegation-outcome requires --scope-class to keep evidence scoped independently from task class.")
@@ -59573,6 +59612,7 @@ def _record_delegation_outcome(
             "restart_burden": existing.restart_burden,
             "expected_burden": existing.expected_burden,
             "observed_burden": existing.observed_burden,
+            **({"context_cost": existing.context_cost} if existing.context_cost is not None else {}),
             "scope_drift": existing.scope_drift,
             "contradiction_state": existing.contradiction_state,
             "uncertainty_state": existing.uncertainty_state,
@@ -59647,6 +59687,7 @@ def _record_delegation_outcome(
         restart_burden=restart_burden.strip() or "not-recorded",
         expected_burden=expected_burden.strip() or "not-recorded",
         observed_burden=observed_burden.strip() or review_burden,
+        context_cost=normalized_context_cost,
         scope_drift=scope_drift.strip() or "none",
         contradiction_state=contradiction_state.strip()
         or ("none" if normalized_operation != "correct-or-dispute" else "disputed-predecessor"),
@@ -59720,6 +59761,7 @@ def _record_delegation_outcome(
             "handoff_sufficiency": handoff_sufficiency,
             "review_burden": review_burden,
             "escalation_required": escalation_required,
+            "context_cost": normalized_context_cost,
             "authority": normalized_authority,
         },
     )

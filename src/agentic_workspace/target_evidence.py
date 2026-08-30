@@ -131,6 +131,69 @@ def _record_complexity_burden_reasons(record: DelegationOutcomeRecord) -> list[s
     return reasons
 
 
+def _context_cost_penalty(context_cost: dict[str, Any]) -> int:
+    penalty = 0
+    effective_input = context_cost.get("effective_input_tokens")
+    if isinstance(effective_input, int) and not isinstance(effective_input, bool):
+        penalty -= 30 if effective_input >= 50_000 else 20 if effective_input >= 20_000 else 10 if effective_input >= 8_000 else 0
+    output_tokens = context_cost.get("output_tokens")
+    if isinstance(output_tokens, int) and not isinstance(output_tokens, bool) and output_tokens >= 8_000:
+        penalty -= 5
+    elapsed_ms = context_cost.get("elapsed_ms")
+    if isinstance(elapsed_ms, int) and not isinstance(elapsed_ms, bool) and elapsed_ms >= 600_000:
+        penalty -= 5
+    for field, unit, cap in (
+        ("orientation_command_count", 2, 10),
+        ("retry_count", 5, 15),
+        ("repair_loop_count", 5, 15),
+    ):
+        value = context_cost.get(field)
+        if isinstance(value, int) and not isinstance(value, bool):
+            penalty -= min(cap, value * unit)
+    return penalty
+
+
+def _transport_cost_summaries(records: list[DelegationOutcomeRecord]) -> list[dict[str, Any]]:
+    by_transport: dict[str, list[dict[str, Any]]] = {}
+    for record in records:
+        context_cost = record.context_cost if isinstance(record.context_cost, dict) else {}
+        transport = str(context_cost.get("transport") or "").strip()
+        if transport:
+            by_transport.setdefault(transport, []).append(context_cost)
+    summaries: list[dict[str, Any]] = []
+    for transport in sorted(by_transport):
+        costs = by_transport[transport]
+        penalties = [_context_cost_penalty(cost) for cost in costs]
+        observable_fields = sorted(
+            {
+                field
+                for cost in costs
+                for field in (
+                    "effective_input_tokens",
+                    "cached_input_tokens",
+                    "output_tokens",
+                    "orientation_command_count",
+                    "retry_count",
+                    "repair_loop_count",
+                )
+                if cost.get(field) is not None
+            }
+        )
+        summaries.append(
+            {
+                "transport": transport,
+                "record_count": len(costs),
+                "expected_burden_component": round(sum(penalties) / len(penalties)),
+                "observable_fields": observable_fields,
+                "unknown_metric_state": "partial-or-unobserved" if any(cost.get("unknown_fields") for cost in costs) else "observed",
+                "supporting_adapter_revisions": sorted(
+                    {str(cost.get("adapter_revision") or "") for cost in costs if str(cost.get("adapter_revision") or "")}
+                ),
+            }
+        )
+    return summaries
+
+
 def _complexity_reduction_signal(records_by_target: dict[str, list[DelegationOutcomeRecord]]) -> dict[str, Any]:
     repeated_contexts: list[dict[str, Any]] = []
     for target_name in sorted(records_by_target):
@@ -296,6 +359,7 @@ def target_evidence_posture(
                         "expected": record.expected_burden or None,
                         "observed": record.observed_burden or None,
                     },
+                    "context_cost": record.context_cost,
                     "lifecycle_state": {
                         "scope_drift": record.scope_drift,
                         "contradiction": record.contradiction_state,
@@ -367,6 +431,7 @@ def target_evidence_posture(
                     "supported_task_classes": [],
                     "irrelevance_rule": "Only records for matching task/scope classes may affect assignment for that class.",
                     "raw_history_retention": "bounded-local-ledger",
+                    "transport_costs": [],
                 }
             )
             continue
@@ -413,6 +478,7 @@ def target_evidence_posture(
                     "supported_task_classes": sorted({record.task_class for record in scoped_records}),
                     "irrelevance_rule": "Only records for matching task/scope classes may affect assignment for that class.",
                     "raw_history_retention": "bounded-local-ledger-with-lifecycle-transitions",
+                    "transport_costs": _transport_cost_summaries(scoped_records),
                     "retention": {
                         "status": "bounded-current-calibration",
                         "current_records": len(scoped_records),
@@ -550,6 +616,8 @@ def assignment_decision_from_policy(
     candidate_scores: list[dict[str, Any]] = []
     hard_reject_actions = {"escalate-before-execution"}
     recommendation_score = {"recommended": 40, "acceptable": 20, "poor-fit": -30}
+    target_cost_score = {"cheap": 10, "standard": 0, "premium": -10, "unknown": 0}
+    target_latency_score = {"fast": 5, "standard": 0, "slow": -5, "unknown": 0}
     evidence_score = {
         "preferred-for-matching-task-class": 15,
         "advisory-only": 3,
@@ -591,12 +659,45 @@ def assignment_decision_from_policy(
         eligible = not hard_rejection_reasons
         declared_fit_score = int(profile.get("score") or 0)
         recommendation_component = recommendation_score.get(str(profile.get("recommendation") or ""), 0)
+        cost_class = str(profile.get("cost_class") or "unknown")
+        latency_class = str(profile.get("latency_class") or "unknown")
+        target_cost_component = target_cost_score.get(cost_class, 0)
+        target_latency_component = target_latency_score.get(latency_class, 0)
         contextual_evidence_component = 0
         matching_evidence = evidence_by_target.get(target_identity_ref, []) or evidence_by_target.get(target, [])
         for evidence in matching_evidence:
             contextual_evidence_component += evidence_score.get(str(evidence.get("route_effect") or ""), 0)
         current_target_component = 5 if current_target_matches_profile else 0
-        burden_component = 0
+        transport_options: list[dict[str, Any]] = []
+        for method_index, method in enumerate(execution_methods):
+            matching_transport_costs = [
+                cost
+                for evidence in matching_evidence
+                for cost in evidence.get("transport_costs", [])
+                if isinstance(cost, dict) and str(cost.get("transport") or "") == method
+            ]
+            transport_options.append(
+                {
+                    "transport": method,
+                    "expected_burden": round(
+                        sum(int(cost.get("expected_burden_component") or 0) for cost in matching_transport_costs)
+                        / len(matching_transport_costs)
+                    )
+                    if matching_transport_costs
+                    else 0,
+                    "evidence_state": "admitted-contextual" if matching_transport_costs else "unknown",
+                    "record_count": sum(int(cost.get("record_count") or 0) for cost in matching_transport_costs),
+                    "configured_order": method_index,
+                }
+            )
+        selected_transport_option = (
+            max(transport_options, key=lambda item: (int(item["expected_burden"]), -int(item["configured_order"])))
+            if transport_options
+            else {}
+        )
+        selected_transport = str(selected_transport_option.get("transport") or "")
+        transport_burden_component = int(selected_transport_option.get("expected_burden") or 0)
+        burden_component = transport_burden_component + target_cost_component + target_latency_component
         for evidence in matching_evidence:
             if evidence.get("route_effect") == "strong-review-required":
                 burden_component -= 10
@@ -653,12 +754,19 @@ def assignment_decision_from_policy(
                     "runtime_recommendation": recommendation_component,
                     "contextual_evidence": contextual_evidence_component,
                     "current_target_retention": current_target_component,
+                    "target_cost_class": target_cost_component,
+                    "target_latency_class": target_latency_component,
+                    "transport_context_cost": transport_burden_component,
                     "expected_burden": burden_component,
                     "uncertainty": uncertainty_component,
                     "probe_value": probe_value_component,
                     "total": score,
                 },
                 "runtime_recommendation": profile.get("recommendation"),
+                "cost_class": cost_class,
+                "latency_class": latency_class,
+                "selected_transport": selected_transport or None,
+                "transport_options": transport_options,
                 "required_action": required_action or "none",
                 "continuation": continuation,
                 "permitted_continuation": continuation,
@@ -806,6 +914,7 @@ def assignment_decision_from_policy(
         "selected_target": selected_target,
         "selected_target_identity_ref": selected_candidate.get("target_identity_ref"),
         "selected_target_revision": selected_candidate.get("target_revision"),
+        "selected_transport": selected_candidate.get("selected_transport"),
         "candidate_scores": candidate_scores,
         "human_intent": " ".join(human_intent.split()),
     }
@@ -824,6 +933,7 @@ def assignment_decision_from_policy(
         "selected_target": selected_target,
         "selected_target_identity_ref": selected_candidate.get("target_identity_ref"),
         "selected_target_revision": selected_candidate.get("target_revision"),
+        "selected_transport": selected_candidate.get("selected_transport"),
         "assignment_decision_revision": assignment_decision_revision,
         "task_class": requested_task_class or None,
         "scope_class": requested_scope_class or None,

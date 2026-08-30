@@ -31,6 +31,7 @@ External client input contract for delegation-outcome.append.
 | `restart_burden` | string | no |  | Restart burden observation. |  |  |
 | `expected_burden` | string | no |  | Expected burden before execution. |  |  |
 | `observed_burden` | string | no |  | Observed burden after execution. |  |  |
+| `context_cost_json` | string | no |  | JSON-encoded assignment-context-cost/v1 observation produced by an admitted adapter or host measurement. |  |  |
 | `scope_drift` | string | no |  | Scope drift state. |  |  |
 | `contradiction_state` | string | no |  | Contradiction or dispute state. |  |  |
 | `uncertainty_state` | string | no |  | Uncertainty state preserved for non-routing evidence. |  |  |

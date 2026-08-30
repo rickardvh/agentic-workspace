@@ -4382,6 +4382,66 @@ def test_target_evidence_lifecycle_supersession_replaces_current_signal() -> Non
     assert scoped["supporting_record_ids"] == ["fast_worker:mechanical-follow-through:narrow-code-change:2026-04-18:1"]
 
 
+def test_target_evidence_normalizes_historical_context_inflation_as_transport_burden() -> None:
+    from agentic_workspace.config import DelegationOutcomeRecord
+    from agentic_workspace.target_evidence import target_evidence_posture
+
+    posture = target_evidence_posture(
+        target_root=None,
+        profiles=(),
+        records=[
+            DelegationOutcomeRecord(
+                recorded_at="2026-08-29",
+                delegation_target="worker",
+                task_class="implementation",
+                scope_class="bounded",
+                outcome="success",
+                handoff_sufficiency="sufficient",
+                review_burden="normal",
+                escalation_required=False,
+                authority="human-review",
+                confidence="high",
+                context_cost={
+                    "kind": "agentic-workspace/assignment-context-cost/v1",
+                    "transport": "cli",
+                    "adapter_revision": "sha256:adapter",
+                    "assignment_packet_bytes": 3662,
+                    "rendered_prompt_bytes": 3913,
+                    "effective_input_tokens": 81752,
+                    "cached_input_tokens": 62464,
+                    "output_tokens": 1591,
+                    "orientation_command_count": 0,
+                    "retry_count": 0,
+                    "repair_loop_count": 0,
+                    "elapsed_ms": 1000,
+                    "unknown_fields": [],
+                    "observation_authority": "adapter-sidecar-or-host-measurement",
+                    "raw_transcript_stored": False,
+                },
+            )
+        ],
+    )
+
+    costs = posture["suitability"][0]["transport_costs"]
+    assert costs == [
+        {
+            "transport": "cli",
+            "record_count": 1,
+            "expected_burden_component": -30,
+            "observable_fields": [
+                "cached_input_tokens",
+                "effective_input_tokens",
+                "orientation_command_count",
+                "output_tokens",
+                "repair_loop_count",
+                "retry_count",
+            ],
+            "unknown_metric_state": "observed",
+            "supporting_adapter_revisions": ["sha256:adapter"],
+        }
+    ]
+
+
 def test_target_evidence_lifecycle_correction_and_compaction_remove_predecessor_from_current_signal() -> None:
     from agentic_workspace.config import DelegationOutcomeRecord
     from agentic_workspace.target_evidence import target_evidence_posture
@@ -4590,6 +4650,236 @@ def test_assignment_decision_derives_best_fit_from_candidates_and_contextual_evi
     assert fast["ranking_components"]["declared_fit"] == 7
     assert fast["ranking_components"]["contextual_evidence"] == 15
     assert fast["permitted_continuation"] == "delegated-implementation"
+
+
+def test_assignment_decision_selects_lower_cost_transport_from_matching_evidence() -> None:
+    from agentic_workspace.target_evidence import assignment_decision_from_policy
+
+    decision = assignment_decision_from_policy(
+        assignment_policy={
+            "assignment_policy": {"value": "required-best-fit"},
+            "current_target": {"value": "worker"},
+            "binding": {"enforceable": True},
+        },
+        runtime_resolution={
+            "recommendation": "stay-local",
+            "capability_context": {"task_class": "implementation", "scope_class": "narrow-code-change"},
+            "profile_recommendations": [
+                {
+                    "name": "worker",
+                    "recommendation": "recommended",
+                    "score": 8,
+                    "capability_mismatch": False,
+                    "execution_methods": ["cli", "internal"],
+                    "human_control_modes": ["auto"],
+                }
+            ],
+        },
+        target_evidence={
+            "status": "present",
+            "record_count": 2,
+            "suitability": [
+                {
+                    "target": "worker",
+                    "context_key": "implementation::narrow-code-change",
+                    "route_effect": "no-change",
+                    "transport_costs": [
+                        {
+                            "transport": "cli",
+                            "record_count": 1,
+                            "expected_burden_component": -30,
+                        },
+                        {
+                            "transport": "internal",
+                            "record_count": 1,
+                            "expected_burden_component": 0,
+                        },
+                    ],
+                }
+            ],
+        },
+    )
+
+    assert decision["selected_transport"] == "internal"
+    candidate = decision["candidate_scores"][0]
+    assert candidate["ranking_components"]["expected_burden"] == 0
+    assert candidate["transport_options"] == [
+        {
+            "transport": "cli",
+            "expected_burden": -30,
+            "evidence_state": "admitted-contextual",
+            "record_count": 1,
+            "configured_order": 0,
+        },
+        {
+            "transport": "internal",
+            "expected_burden": 0,
+            "evidence_state": "admitted-contextual",
+            "record_count": 1,
+            "configured_order": 1,
+        },
+    ]
+
+
+def test_assignment_context_cost_breaks_equal_fit_but_does_not_override_stronger_fit() -> None:
+    from agentic_workspace.target_evidence import assignment_decision_from_policy
+
+    def decide(*, stronger_score: int) -> dict[str, object]:
+        return assignment_decision_from_policy(
+            assignment_policy={
+                "assignment_policy": {"value": "required-best-fit"},
+                "current_target": {"value": "expensive"},
+                "binding": {"enforceable": True},
+            },
+            runtime_resolution={
+                "recommendation": "stay-local",
+                "capability_context": {"task_class": "implementation", "scope_class": "bounded"},
+                "profile_recommendations": [
+                    {
+                        "name": "expensive",
+                        "recommendation": "recommended",
+                        "score": stronger_score,
+                        "capability_mismatch": False,
+                        "execution_methods": ["cli"],
+                        "human_control_modes": ["auto"],
+                    },
+                    {
+                        "name": "efficient",
+                        "recommendation": "recommended",
+                        "score": 0,
+                        "capability_mismatch": False,
+                        "execution_methods": ["api"],
+                        "human_control_modes": ["auto"],
+                    },
+                ],
+            },
+            target_evidence={
+                "status": "present",
+                "record_count": 2,
+                "suitability": [
+                    {
+                        "target": "expensive",
+                        "context_key": "implementation::bounded",
+                        "route_effect": "no-change",
+                        "transport_costs": [{"transport": "cli", "record_count": 1, "expected_burden_component": -30}],
+                    },
+                    {
+                        "target": "efficient",
+                        "context_key": "implementation::bounded",
+                        "route_effect": "no-change",
+                        "transport_costs": [{"transport": "api", "record_count": 1, "expected_burden_component": 0}],
+                    },
+                ],
+            },
+        )
+
+    assert decide(stronger_score=0)["selected_target"] == "efficient"
+    assert decide(stronger_score=40)["selected_target"] == "expensive"
+
+
+def test_assignment_combines_observed_context_with_declared_price_and_latency_classes() -> None:
+    from agentic_workspace.target_evidence import assignment_decision_from_policy
+
+    decision = assignment_decision_from_policy(
+        assignment_policy={
+            "assignment_policy": {"value": "required-best-fit"},
+            "current_target": {"value": "sol"},
+            "binding": {"enforceable": True},
+        },
+        runtime_resolution={
+            "recommendation": "stay-local",
+            "capability_context": {"task_class": "validation", "scope_class": "multi-slice"},
+            "profile_recommendations": [
+                {
+                    "name": "sol",
+                    "recommendation": "recommended",
+                    "score": 10,
+                    "cost_class": "premium",
+                    "latency_class": "slow",
+                    "capability_mismatch": False,
+                    "execution_methods": ["cli"],
+                    "human_control_modes": ["auto"],
+                },
+                {
+                    "name": "luna",
+                    "recommendation": "recommended",
+                    "score": 10,
+                    "cost_class": "cheap",
+                    "latency_class": "fast",
+                    "capability_mismatch": False,
+                    "execution_methods": ["cli"],
+                    "human_control_modes": ["auto"],
+                },
+            ],
+        },
+        target_evidence={
+            "status": "present",
+            "record_count": 2,
+            "suitability": [
+                {
+                    "target": target,
+                    "context_key": "validation::multi-slice",
+                    "route_effect": "no-change",
+                    "transport_costs": [{"transport": "cli", "record_count": 1, "expected_burden_component": -40}],
+                }
+                for target in ("sol", "luna")
+            ],
+        },
+    )
+
+    assert decision["selected_target"] == "luna"
+    candidates = {candidate["target"]: candidate for candidate in decision["candidate_scores"]}
+    assert {
+        key: candidates["sol"]["ranking_components"][key]
+        for key in ("target_cost_class", "target_latency_class", "transport_context_cost", "expected_burden")
+    } == {
+        "target_cost_class": -10,
+        "target_latency_class": -5,
+        "transport_context_cost": -40,
+        "expected_burden": -55,
+    }
+    assert {
+        key: candidates["luna"]["ranking_components"][key]
+        for key in ("target_cost_class", "target_latency_class", "transport_context_cost", "expected_burden")
+    } == {
+        "target_cost_class": 10,
+        "target_latency_class": 5,
+        "transport_context_cost": -40,
+        "expected_burden": -25,
+    }
+
+
+def test_assignment_transport_cost_unknown_is_explicit_and_preserves_configured_order() -> None:
+    from agentic_workspace.target_evidence import assignment_decision_from_policy
+
+    decision = assignment_decision_from_policy(
+        assignment_policy={
+            "assignment_policy": {"value": "required-best-fit"},
+            "current_target": {"value": "worker"},
+            "binding": {"enforceable": True},
+        },
+        runtime_resolution={
+            "recommendation": "stay-local",
+            "capability_context": {"task_class": "implementation", "scope_class": "bounded"},
+            "profile_recommendations": [
+                {
+                    "name": "worker",
+                    "recommendation": "recommended",
+                    "score": 1,
+                    "capability_mismatch": False,
+                    "execution_methods": ["cli", "api"],
+                    "human_control_modes": ["auto"],
+                }
+            ],
+        },
+        target_evidence={"status": "no-local-evidence", "record_count": 0, "suitability": []},
+    )
+
+    assert decision["selected_transport"] == "cli"
+    assert [item["evidence_state"] for item in decision["candidate_scores"][0]["transport_options"]] == [
+        "unknown",
+        "unknown",
+    ]
 
 
 def test_required_best_fit_honors_current_target_downroute_action() -> None:

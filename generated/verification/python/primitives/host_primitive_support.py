@@ -17,6 +17,7 @@ import re
 import shlex
 import subprocess
 import tempfile
+import time
 import tomllib
 from collections.abc import Mapping, Sequence
 from pathlib import Path
@@ -789,6 +790,7 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
                 "rule": "Import records evidence in received/awaiting-admission; AW-owned admission, integration, proof, and closeout remain pending.",
             },
         }
+        packet["worker_context"] = _assignment_worker_context(packet)
         packet_path = artifact("export/packet.json")
         prompt_path = artifact("export/prompt.md")
         manifest_path = artifact("export/manifest.json")
@@ -801,6 +803,7 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             "packet_ref": _assignment_relative(packet_path, root=target_root),
             "prompt_ref": _assignment_relative(prompt_path, root=target_root),
             "integrity": _assignment_digest(packet),
+            "worker_context_integrity": _assignment_digest(packet["worker_context"]),
         }
         artifact_paths.extend([packet_path, prompt_path, manifest_path])
         transport = _optional_text(values.get("transport")) or "manual"
@@ -1546,6 +1549,7 @@ def _assignment_identity(current_authorities: Mapping[str, Any]) -> dict[str, An
         or assignment_gate.get("task")
         or assignment_gate.get("task_class"),
         "required_inputs": _assignment_list(assignment_gate.get("required_inputs") or next_step.get("required_inputs")),
+        "read_first": _assignment_list(assignment_gate.get("read_first") or next_step.get("read_first")),
         "prohibited_effects": _assignment_list(assignment_gate.get("prohibited_effects") or next_step.get("prohibited_effects"))
         or ["scope-widening", "merge", "closeout", "proof-authority", "human-authority"],
         "dispatch_adapter": _assignment_mapping(assignment_gate.get("dispatch_adapter")),
@@ -1866,19 +1870,68 @@ def _write_assignment_artifact(*, path: Path, payload: Any) -> None:
 
 
 def _assignment_export_prompt(packet: Any) -> str:
+    packet_mapping = _assignment_mapping(packet)
+    worker_context = _assignment_mapping(packet_mapping.get("worker_context")) or _assignment_worker_context(packet_mapping)
     return "\n".join(
         [
-            "You are receiving an Agentic Workspace assignment packet.",
-            "Use only the bounded scope and return contract in the JSON below.",
+            "You are receiving a bounded Agentic Workspace worker context.",
+            "Use only the intent, scope, effects, inputs, proof burden, stop conditions, authority limits, and return contract below.",
+            "Acquire deeper repository context only through the listed read-first references; omitted parent conversation and broad workspace state are not part of this assignment.",
             "Return a structured result for `agentic-workspace assignment import`; do not claim AW proof or integration.",
             "Do not edit the host checkout. For repo-write assignments, return the proposed unified diff in a `patch` field.",
             "The patch must be a complete git-compatible unified diff beginning with `diff --git`; generate or verify it with diff tooling so hunk counts are exact, and never use apply_patch markers, ellipses, placeholder `@@` markers, or omitted context.",
             "",
             "```json",
-            json.dumps(packet, indent=2, sort_keys=True, default=str),
+            json.dumps(worker_context, indent=2, sort_keys=True, default=str),
             "```",
         ]
     )
+
+
+def _assignment_worker_context(packet: Mapping[str, Any]) -> dict[str, Any]:
+    """Project only worker-required semantics from canonical assignment authority."""
+
+    identity = _assignment_mapping(packet.get("assignment_identity"))
+    return_contract = _assignment_mapping(packet.get("return_contract"))
+    return {
+        "kind": "agentic-workspace/assignment-worker-context/v1",
+        "assignment": {
+            "id": _optional_text(packet.get("assignment_id")),
+            "revision": _optional_text(packet.get("assignment_revision")) or _optional_text(identity.get("revision")),
+            "run_id": _optional_text(packet.get("run_id")),
+            "target": _optional_text(packet.get("target")) or _optional_text(identity.get("target")),
+        },
+        "intent": {
+            "outcome": _optional_text(identity.get("human_intent")),
+            "task_class": _optional_text(identity.get("task_class")),
+            "role": _optional_text(identity.get("role")),
+        },
+        "scope": {
+            "class": _optional_text(identity.get("scope_class")),
+            "allowed_paths": _assignment_list(identity.get("allowed_paths")),
+        },
+        "effects": {
+            "allowed": _assignment_list(identity.get("allowed_effects")),
+            "prohibited": _assignment_list(identity.get("prohibited_effects")),
+        },
+        "inputs": {
+            "required": _assignment_list(identity.get("required_inputs")),
+            "read_first": _assignment_list(identity.get("read_first")),
+            "lazy_expansion_rule": "Read only these exact references first; request or resolve deeper context only when the assignment requires it.",
+        },
+        "proof": {
+            "obligation_id": _optional_text(identity.get("proof_obligation_id")),
+            "obligation_revision": _optional_text(identity.get("proof_obligation_revision")),
+            "worker_authority": False,
+        },
+        "stop_conditions": _assignment_list(identity.get("stop_conditions")),
+        "authority": {
+            "semantic_source": "canonical-assignment-identity",
+            "claim_authority": _assignment_mapping(identity.get("claim_authority")),
+            "scope_widening_allowed": False,
+        },
+        "return_contract": return_contract,
+    }
 
 
 def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, target_root: Path, transport: str) -> dict[str, Any]:
@@ -1929,12 +1982,23 @@ def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, targe
         }
     role = _optional_text(identity.get("role"))
     model = _optional_text(adapter.get("model"))
+    adapter_revision = _assignment_digest(
+        {
+            "kind": adapter_kind,
+            "command": command_template,
+            "output_mode": output_mode,
+            "timeout_seconds": timeout_seconds,
+        }
+    )
     completed: subprocess.CompletedProcess[str]
     output = ""
+    observed_metrics: dict[str, Any] = {}
+    started_at = time.perf_counter()
     try:
         with tempfile.TemporaryDirectory(prefix="aw-assignment-dispatch-") as temporary_directory:
             last_message_path = Path(temporary_directory) / "last-message.json"
             output_schema_path = Path(temporary_directory) / "delegated-return.schema.json"
+            metrics_path = Path(temporary_directory) / "transport-metrics.json"
             required_fields = [
                 "assignment_revision",
                 "run_id",
@@ -1945,19 +2009,21 @@ def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, targe
             ]
             if role == "implementer":
                 required_fields.append("patch")
+            return_properties = {
+                "assignment_revision": {"type": "string"},
+                "run_id": {"type": "string"},
+                "target": {"type": "string"},
+                "changed_paths": {"type": "array", "items": {"type": "string"}},
+                "summary": {"type": "string"},
+                "stop_conditions_hit": {"type": "array", "items": {"type": "string"}},
+            }
+            if role == "implementer":
+                return_properties["patch"] = {"type": "string"}
             output_schema_path.write_text(
                 json.dumps(
                     {
                         "type": "object",
-                        "properties": {
-                            "assignment_revision": {"type": "string"},
-                            "run_id": {"type": "string"},
-                            "target": {"type": "string"},
-                            "changed_paths": {"type": "array", "items": {"type": "string"}},
-                            "summary": {"type": "string"},
-                            "stop_conditions_hit": {"type": "array", "items": {"type": "string"}},
-                            "patch": {"type": "string"},
-                        },
+                        "properties": return_properties,
                         "required": required_fields,
                         "additionalProperties": False,
                     }
@@ -1968,6 +2034,7 @@ def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, targe
                 "{target_root}": str(target_root),
                 "{output_schema}": str(output_schema_path),
                 "{output_file}": str(last_message_path),
+                "{metrics_file}": str(metrics_path),
                 "{model}": model,
             }
             dispatch_command = []
@@ -1993,6 +2060,12 @@ def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, targe
                 if output_mode == "json-file" and last_message_path.is_file()
                 else completed.stdout.strip()
             )
+            if metrics_path.is_file():
+                try:
+                    loaded_metrics = json.loads(metrics_path.read_text(encoding="utf-8", errors="replace"))
+                except json.JSONDecodeError:
+                    loaded_metrics = {}
+                observed_metrics = _assignment_mapping(loaded_metrics)
     except (OSError, subprocess.SubprocessError) as exc:
         return {
             "kind": "agentic-workspace/assignment-dispatch-receipt/v1",
@@ -2001,6 +2074,13 @@ def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, targe
             "transport": transport,
             "adapter_kind": adapter_kind,
             "detail": str(exc),
+            "context_cost": _assignment_context_cost(
+                packet=packet,
+                prompt=prompt,
+                transport=transport,
+                adapter_revision=adapter_revision,
+                elapsed_ms=round((time.perf_counter() - started_at) * 1000),
+            ),
         }
     if output.startswith("```json") and output.endswith("```"):
         output = output[7:-3].strip()
@@ -2020,20 +2100,62 @@ def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, targe
         "reason": "worker-returned-untrusted-evidence" if returned else "target-adapter-return-invalid",
         "transport": transport,
         "adapter_kind": adapter_kind,
-        "adapter_revision": _assignment_digest(
-            {
-                "kind": adapter_kind,
-                "command": command_template,
-                "output_mode": output_mode,
-                "timeout_seconds": timeout_seconds,
-            }
-        ),
+        "adapter_revision": adapter_revision,
         "model": model or None,
         "exit_code": completed.returncode,
         "returned_work": returned,
         "stdout_tail": completed.stdout[-4000:] if completed.stdout else "",
         "stderr": completed.stderr[-4000:] if completed.stderr else "",
+        "context_cost": _assignment_context_cost(
+            packet=packet,
+            prompt=prompt,
+            transport=transport,
+            adapter_revision=adapter_revision,
+            elapsed_ms=round((time.perf_counter() - started_at) * 1000),
+            observed=observed_metrics,
+        ),
         "claim_boundary": "transport-only; return still requires AW admission, integration, proof, and closeout",
+    }
+
+
+_ASSIGNMENT_CONTEXT_COST_METRICS = (
+    "effective_input_tokens",
+    "cached_input_tokens",
+    "output_tokens",
+    "orientation_command_count",
+    "retry_count",
+    "repair_loop_count",
+)
+
+
+def _assignment_context_cost(
+    *,
+    packet: Mapping[str, Any],
+    prompt: str,
+    transport: str,
+    adapter_revision: str,
+    elapsed_ms: int,
+    observed: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    observed_mapping = _assignment_mapping(observed)
+    if observed_mapping.get("kind") != "agentic-workspace/assignment-transport-metrics/v1":
+        observed_mapping = {}
+    metrics: dict[str, int | None] = {}
+    for field in _ASSIGNMENT_CONTEXT_COST_METRICS:
+        value = observed_mapping.get(field)
+        metrics[field] = value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else None
+    packet_text = json.dumps(packet, indent=2, sort_keys=True, default=str).rstrip() + "\n"
+    return {
+        "kind": "agentic-workspace/assignment-context-cost/v1",
+        "transport": transport,
+        "adapter_revision": adapter_revision,
+        "assignment_packet_bytes": len(packet_text.encode("utf-8")),
+        "rendered_prompt_bytes": len(prompt.encode("utf-8")),
+        **metrics,
+        "elapsed_ms": max(0, elapsed_ms),
+        "unknown_fields": [field for field, value in metrics.items() if value is None],
+        "observation_authority": "adapter-sidecar-or-host-measurement",
+        "raw_transcript_stored": False,
     }
 
 
