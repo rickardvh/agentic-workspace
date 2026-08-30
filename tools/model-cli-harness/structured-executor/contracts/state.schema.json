@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentic-workspace.dev/schemas/structured-executor-state-v1.json",
+  "title": "Structured Executor state snapshot",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "run_id",
+    "revision",
+    "state_digest",
+    "task_ref",
+    "domain_snapshot_refs",
+    "authoritative_reobservation_required",
+    "decision_points",
+    "action_candidates",
+    "operation_results",
+    "evidence_refs",
+    "claim_statuses",
+    "terminal_disposition",
+    "budgets",
+    "progress"
+  ],
+  "properties": {
+    "kind": {"const": "agentic-workspace/structured-executor-state/v1"},
+    "run_id": {"type": "string", "minLength": 1},
+    "revision": {"type": "integer", "minimum": 0},
+    "state_digest": {"$ref": "#/$defs/digest"},
+    "task_ref": {"$ref": "#/$defs/artifact_ref"},
+    "domain_snapshot_refs": {"type": "array", "items": {"$ref": "#/$defs/domain_snapshot_ref"}},
+    "authoritative_reobservation_required": {"type": "boolean"},
+    "decision_points": {"type": "array", "items": {"$ref": "#/$defs/decision_point"}},
+    "action_candidates": {"type": "array", "items": {"$ref": "#/$defs/action_candidate"}},
+    "selected_action_ref": {"type": ["string", "null"]},
+    "operation_results": {"type": "array", "items": {"$ref": "#/$defs/operation_result"}},
+    "evidence_refs": {"type": "array", "items": {"$ref": "#/$defs/evidence_ref"}},
+    "claim_statuses": {"type": "array", "items": {"$ref": "#/$defs/claim_status"}},
+    "terminal_disposition": {"$ref": "#/$defs/terminal_disposition"},
+    "budgets": {"$ref": "#/$defs/budgets"},
+    "progress": {"$ref": "#/$defs/progress"}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "artifact_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref", "digest", "media_type"],
+      "properties": {
+        "ref": {"type": "string", "minLength": 1},
+        "digest": {"$ref": "#/$defs/digest"},
+        "media_type": {"type": "string", "minLength": 1}
+      }
+    },
+    "domain_snapshot_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["domain_ref", "owner_ref", "source_revision", "artifact_ref", "status"],
+      "properties": {
+        "domain_ref": {"type": "string", "minLength": 1},
+        "owner_ref": {"type": "string", "minLength": 1},
+        "source_revision": {"type": "string", "minLength": 1},
+        "artifact_ref": {"$ref": "#/$defs/artifact_ref"},
+        "status": {"enum": ["current", "unknown", "stale", "unavailable"]}
+      }
+    },
+    "decision_point": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "owner_ref", "question_ref", "resolution_kind"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "owner_ref": {"type": "string", "minLength": 1},
+        "question_ref": {"$ref": "#/$defs/artifact_ref"},
+        "resolution_kind": {"enum": ["deterministic", "semantic", "human", "blocked"]}
+      }
+    },
+    "action_candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "owner_ref", "action_kind", "capability_ref", "required_input_refs", "effects", "precondition_refs", "expected_result_kind", "source_revision", "selection_kind"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "owner_ref": {"type": "string", "minLength": 1},
+        "action_kind": {"type": "string", "minLength": 1},
+        "capability_ref": {"type": "string", "minLength": 1},
+        "required_input_refs": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "effects": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "precondition_refs": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "expected_result_kind": {"type": "string", "minLength": 1},
+        "source_revision": {"type": "string", "minLength": 1},
+        "selection_kind": {"enum": ["deterministic", "semantic", "human", "blocked"]}
+      }
+    },
+    "operation_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "status", "artifact_ref", "source_revision"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "kind": {"type": "string", "minLength": 1},
+        "status": {"enum": ["succeeded", "failed", "unknown"]},
+        "artifact_ref": {"$ref": "#/$defs/artifact_ref"},
+        "source_revision": {"type": "string", "minLength": 1}
+      }
+    },
+    "evidence_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "owner_ref", "artifact_ref", "status"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "owner_ref": {"type": "string", "minLength": 1},
+        "artifact_ref": {"$ref": "#/$defs/artifact_ref"},
+        "status": {"enum": ["current", "stale", "rejected", "unknown"]}
+      }
+    },
+    "claim_status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["claim_ref", "owner_ref", "status", "evidence_refs"],
+      "properties": {
+        "claim_ref": {"type": "string", "minLength": 1},
+        "owner_ref": {"type": "string", "minLength": 1},
+        "status": {"enum": ["open", "admitted", "blocked", "rejected"]},
+        "evidence_refs": {"type": "array", "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "terminal_disposition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reason_ref", "recovery_action_ref"],
+      "properties": {
+        "status": {"enum": ["continue", "delivered", "blocked", "user-paused"]},
+        "reason_ref": {"type": ["string", "null"]},
+        "recovery_action_ref": {"type": ["string", "null"]}
+      }
+    },
+    "budgets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["execution_remaining", "semantic_remaining", "context_tokens_remaining"],
+      "properties": {
+        "execution_remaining": {"type": "integer", "minimum": 0},
+        "semantic_remaining": {"type": "integer", "minimum": 0},
+        "context_tokens_remaining": {"type": "integer", "minimum": 0}
+      }
+    },
+    "progress": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["no_progress_count", "max_no_progress", "max_pair_repeats", "recent_state_action_pairs"],
+      "properties": {
+        "no_progress_count": {"type": "integer", "minimum": 0},
+        "max_no_progress": {"type": "integer", "minimum": 1},
+        "max_pair_repeats": {"type": "integer", "minimum": 1},
+        "recent_state_action_pairs": {"type": "array", "maxItems": 16, "items": {"type": "string", "minLength": 1}}
+      }
+    }
+  }
+}

@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Register the maintainer-only Structured Executor persistence and replay surfaces in the shipped structured-file inventory."
+issues = [2822]
