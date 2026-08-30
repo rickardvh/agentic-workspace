@@ -1,0 +1,117 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "operation-contract-authority-lane",
+  "title": "Unify packaged operation contracts and typed routed actions",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "implementation",
+  "revision": 3,
+  "intent": {
+    "outcome": "Close issues #2197 and #2298 through one operation-contract authority lane: first make packaged external operation resources deterministic from one canonical generator, then make ordinary routed actions derive identity, arguments, effects, preconditions, transitions, retry identity, claim effects, and exact manual renderings from typed invocations.",
+    "non_goals": [
+      "Do not create a second operation or readiness authority.",
+      "Do not preserve shell command parsing as ordinary machine identity.",
+      "Do not broaden the stack beyond #2197 and #2298 or alter unrelated Planning owners."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "Create a bounded plan for Unify packaged operation contracts and typed routed actions.",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "Canonical external operation-resource generation and packaged contract fixed-point behavior for #2197.",
+      "Typed routed-action identity, argument, effect, precondition, transition, retry, claim, and rendering behavior for #2298."
+    ],
+    "effects": [
+      "Generated Python and TypeScript operation resources, external consumer packages, actionability loop detection, Planning and Workspace routed-action projections, focused tests, and release metadata."
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected-local",
+      "owner": "operation-contract-authority-lane"
+    },
+    "proof_posture": {
+      "state": "pending",
+      "refs": []
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    }
+  },
+  "references": [],
+  "next_action": "Implement the #2197 canonical generator fixed point as PR 1, then implement #2298 typed routed-action authority as PR 2.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Issues #2197 and #2298 are satisfied by one two-PR operation-contract authority stack without duplicate contract or readiness owners."
+    ],
+    "requirements": [
+      "Generator order and idempotence fixed-point tests.",
+      "Python/TypeScript/external-consumer contract parity and package-install tests.",
+      "Typed action identity and exact-rendering regressions for #2864 and #2865.",
+      "Actionability same-state loop tests without shell parsing.",
+      "Planning package checks, generated conformance, focused Workspace tests, and exact changed-path proof."
+    ],
+    "refs": []
+  },
+  "continuation": {
+    "owner": "none",
+    "residual_intent": "none"
+  },
+  "specialist_contracts": [],
+  "goal": [
+    "Close issues #2197 and #2298 through one operation-contract authority lane: first make packaged external operation resources deterministic from one canonical generator, then make ordinary routed actions derive identity, arguments, effects, preconditions, transitions, retry identity, claim effects, and exact manual renderings from typed invocations."
+  ],
+  "non_goals": [
+    "Do not create a second operation or readiness authority.",
+    "Do not preserve shell command parsing as ordinary machine identity.",
+    "Do not broaden the stack beyond #2197 and #2298 or alter unrelated Planning owners."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "Independent consumers and routed agents use one generated, typed, target-neutral operation contract.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "execution_bounds": {
+    "allowed paths": "operation contract generators and schemas; actionability and routed-action producers; focused tests; mechanically generated package and reference surfaces; release notes; this execplan",
+    "max changed files": "bounded by generated parity, expected under 80 including generated resources",
+    "required validation commands": "generator fixed-point checks, focused Python tests, TypeScript/external consumer conformance, make check-planning-nosync, exact changed-path proof",
+    "ask-before-refactor threshold": "a new operation authority, readiness owner, or third issue is required",
+    "stop before touching": "unrelated Planning owners, credentials, release publication, or user-owned changes"
+  },
+  "touched_paths": [
+    "scripts/generate_command_packages.py",
+    "scripts/generate_external_consumer_profile.py",
+    "scripts/check/check_contract_tooling_surfaces.py",
+    "src/agentic_workspace/actionability.py",
+    "src/agentic_workspace/contracts/**",
+    "packages/planning/src/repo_planning_bootstrap/**",
+    "generated/**",
+    "tests/**",
+    "packages/planning/tests/**",
+    "docs/reference/**",
+    ".release/changes/*.toml",
+    ".agentic-workspace/planning/execplans/operation-contract-authority-lane.plan.json"
+  ],
+  "validation_commands": [
+    "uv run --frozen --active --no-sync python scripts/generate_command_packages.py --check",
+    "uv run --frozen --active --no-sync python scripts/generate_external_consumer_profile.py --check",
+    "uv run --frozen --active --no-sync python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run --frozen --active --no-sync pytest tests/test_actionability.py tests/test_external_operation_clients.py -q",
+    "make check-planning-nosync",
+    "uv run --frozen --active --no-sync python scripts/run_agentic_workspace.py proof --target . --changed <paths> --format json"
+  ],
+  "completion_criteria": [
+    "Both supported generators reach the same idempotent fixed point from either execution order and packaged Python/TypeScript operation contracts remain equal and complete.",
+    "Ordinary routed actions expose authoritative typed invocations and actionability compares them without parsing command text.",
+    "The #2864 invalid defaults rendering and #2865 integration preview/continuation divergence are covered by regression tests generated from the same typed source.",
+    "Compact machine projections remain executable without command text, while explicit human projections render exact supported commands.",
+    "Focused, package-wide, generated parity, and exact changed-path proof pass; both issues have PR-linked closure evidence."
+  ]
+}
