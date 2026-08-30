@@ -1,0 +1,85 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2806-bounded-selected-proof",
+  "title": "Issue 2806 bounded selected-proof projection",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "implementation",
+  "revision": 3,
+  "intent": {
+    "outcome": "Fail fast with a bounded corrective envelope when scope-dependent proof selectors are requested without changed or current scope, avoiding construction of the full proof world.",
+    "non_goals": [
+      "Do not create a second proof API.",
+      "Do not weaken proof authority or completion gates.",
+      "Do not redesign unrelated proof selectors."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "Create a bounded plan for Issue 2806 bounded selected-proof projection.",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "src/agentic_workspace/workspace_runtime_core.py",
+      "tests/test_workspace_proof_cli.py",
+      ".release/changes/issue-2806-bounded-selected-proof.toml",
+      ".agentic-workspace/planning/execplans/issue-2806-bounded-selected-proof.plan.json"
+    ],
+    "effects": [
+      "Unscoped scope-dependent selector requests return bounded correction guidance before broad proof construction.",
+      "Changed-path and current-scope proof behavior remains authoritative."
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected-local",
+      "owner": "issue-2806-bounded-selected-proof"
+    },
+    "proof_posture": {
+      "state": "pending",
+      "refs": []
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    },
+    "delegation": {
+      "state": "recorded",
+      "route": "keep-local",
+      "reason": "This is a narrow single-file runtime guard plus focused regression; keeping one local owner preserves the proof and review boundary."
+    }
+  },
+  "references": [],
+  "next_action": "Implement the pre-construction scope guard, add strict regression coverage, replay both issue commands, and open one patch PR for independent review.",
+  "blockers": [
+    "Fresh independent review is required after the implementation PR is opened."
+  ],
+  "proof": {
+    "claims": [
+      "Unscoped scope-dependent selected-proof requests do not construct the full proof payload.",
+      "The response is bounded and gives an explicit scoped retry route.",
+      "Scoped proof behavior and authority remain unchanged."
+    ],
+    "requirements": [
+      "Focused CLI regression tests prove the full proof builder is not called.",
+      "Both exact issue commands complete quickly with bounded output.",
+      "Routed changed-path proof and repository checks pass.",
+      "A fresh independent review accepts the current PR head before merge or closure."
+    ],
+    "refs": [
+      "#2806"
+    ]
+  },
+  "continuation": {
+    "owner": "issue-2806-bounded-selected-proof",
+    "residual_intent": "After implementation and validation, stop at the review boundary and resume only after a fresh independent review."
+  },
+  "specialist_contracts": [
+    {
+      "kind": "planning-delegation/v1",
+      "target": "planning://delegation/keep-local",
+      "revision": 1
+    }
+  ]
+}
