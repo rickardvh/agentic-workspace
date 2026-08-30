@@ -3,9 +3,9 @@
   "id": "issue-2818-worker-context-cost",
   "title": "Issue 2818 bounded worker context and transport cost",
   "owner_level": "lane",
-  "lifecycle": "live",
-  "phase": "closeout",
-  "revision": 5,
+  "lifecycle": "archived",
+  "phase": "complete",
+  "revision": 6,
   "canonical_core": {
     "requested_outcome": "Bound delegated execution to an assignment-derived worker-context projection, record observable transport context cost, and let admitted cost evidence influence the existing best-fit decision without weakening capability or proof constraints.",
     "hard_constraints": "Do not add a prompt registry, transcript store, telemetry ledger, scheduler, provider-specific portable fields, peer ranking authority, or parent-conversation inheritance.",
@@ -66,7 +66,7 @@
   },
   "active_milestone": {
     "id": "supported-host-evidence",
-    "status": "completed",
+    "status": "archived",
     "scope": "PR 3 checks in the historical inflation regression, current supported-host evidence, and a substantive all-strong-local baseline comparison.",
     "ready": "PR 1 provides bounded semantic projection and PR 2 records provider-neutral cost with capability-first target and transport ranking.",
     "blocked": "none",
@@ -184,18 +184,20 @@
       ]
     },
     "integration": {
-      "status": "feature-complete-integration-pending",
+      "status": "integrated",
       "proposal_id": "issue-2818-worker-context-cost-archive-owner",
       "proposal_ref": ".agentic-workspace/planning/integration-proposals/issue-2818-worker-context-cost-archive-owner.integration-proposal.json",
       "requested_transition": "archive-owner",
       "proof_refs": [
-        "tools/model-cli-harness/external-agent-evaluation/assignment-context-cost-dogfood-2026-08-30.json",
         "merged PRs #2878 #2879 #2880",
         "434 focused projection transport ranking and evaluation tests passed",
         "maintainer surfaces passed",
         "assignment-context-cost-dogfood-2026-08-30.json validated"
       ],
-      "authority": "feature-head declaration; target integration remains terminal authority"
+      "authority": "feature-head declaration; target integration remains terminal authority",
+      "transition": "archive-owner",
+      "applied_at": "2026-08-30T18:16:31.866490Z",
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2818-worker-context-cost-archive-owner.integration-receipt.json"
     }
   },
   "next_action": "Apply integration proposal 'issue-2818-worker-context-cost-archive-owner' from admitted target authority.",
@@ -224,7 +226,9 @@
   "proof_report": {
     "validation proof": "merged PRs #2878 #2879 #2880, 434 focused projection transport ranking and evaluation tests passed, maintainer surfaces passed, assignment-context-cost-dogfood-2026-08-30.json validated",
     "proof achieved now": "yes; integration-propose recorded accepted feature-head proof.",
-    "evidence for \"proof achieved\" state": "merged PRs #2878 #2879 #2880, 434 focused projection transport ranking and evaluation tests passed, maintainer surfaces passed, assignment-context-cost-dogfood-2026-08-30.json validated"
+    "evidence for \"proof achieved\" state": "merged PRs #2878 #2879 #2880, 434 focused projection transport ranking and evaluation tests passed, maintainer surfaces passed, assignment-context-cost-dogfood-2026-08-30.json validated",
+    "integration proof": "merged PRs #2878 #2879 #2880, 434 focused projection transport ranking and evaluation tests passed, maintainer surfaces passed, assignment-context-cost-dogfood-2026-08-30.json validated",
+    "integration applied at": "2026-08-30T18:16:31.866490Z"
   },
   "execution_run": {
     "run status": "completed",

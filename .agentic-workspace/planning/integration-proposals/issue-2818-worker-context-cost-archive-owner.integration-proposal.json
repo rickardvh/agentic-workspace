@@ -1,8 +1,8 @@
 {
   "kind": "planning-integration-proposal/v1",
   "id": "issue-2818-worker-context-cost-archive-owner",
-  "status": "pending",
-  "phase": "integration-pending",
+  "status": "integrated",
+  "phase": "integrated-lifecycle-truth",
   "requested_transition": "archive-owner",
   "owner": {
     "id": "issue-2818-worker-context-cost",
@@ -25,7 +25,7 @@
   "expected_subject_revision": "e384b300adcade35",
   "expected_planning_revision": "6aa2d2d3e913b828",
   "created_at": "2026-08-30T17:56:20.244342Z",
-  "updated_at": "2026-08-30T17:56:20.244342Z",
+  "updated_at": "2026-08-30T18:16:31.866490Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -41,5 +41,7 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "9b5942fb3fdee622"
+  "proposal_revision": "e0dcb666f14508f3",
+  "integrated_at": "2026-08-30T18:16:31.866490Z",
+  "integration_receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2818-worker-context-cost-archive-owner.integration-receipt.json"
 }
