@@ -85,6 +85,11 @@ def test_proof_changed_selector_routes_generated_command_packages(capsys) -> Non
     ]
     assert {command["execution_mode"] for command in domain_commands} == {"serial-recommended"}
     assert {command["proof_responsibility"] for command in domain_commands} == {"local-closeout"}
+    assert all("--changed <paths> --verbose" in command["detail_route"] for command in domain_commands)
+    assert all(
+        set(command).isdisjoint({"subject_contract", "receipt_contract", "progress_contract", "route_provenance"})
+        for command in domain_commands
+    )
     withheld = answer["selected_lanes"][0]["focused_route_reduction"]["withheld_commands"]
     assert "uv run pytest tests/test_workspace_proof_generated_packages_cli.py -q" in withheld
     assert "uv run python scripts/check/check_generated_command_packages.py --docker --require-docker" in withheld

@@ -716,6 +716,7 @@ def test_bounded_selected_proof_projection_routes_nested_command_and_claim_detai
                 "route_id": "focused",
                 "required": True,
                 "proof_requirement": "exercise changed behavior",
+                "proof_responsibility": "local-closeout",
                 "subject_contract": {"changed_paths": ["src/app.py"]},
                 "authority_resolution": {
                     "kind": "agentic-workspace/proof-template-obligation-resolution/v1",
@@ -764,6 +765,7 @@ def test_bounded_selected_proof_projection_routes_nested_command_and_claim_detai
     command = projected["selected_commands"][0]
     assert command["command"] == "agentic-workspace implement --changed <paths> --format json"
     assert command["proof_requirement"] == "exercise changed behavior"
+    assert command["proof_responsibility"] == "local-closeout"
     assert "--changed <paths> --verbose" in command["detail_route"]
     assert set(command).isdisjoint({"subject_contract", "receipt_contract"})
     authority = command["authority_resolution"]
@@ -812,6 +814,27 @@ def test_proof_scoped_selected_projection_is_decision_sized_and_actionable(tmp_p
     assert gate["proof_route_health"]["surface"] == "proof_route_maintenance.route_health"
     assert payload["values"]["route_refinement_required"]["status"] in {"not-required", "required"}
     assert len(encoded) < 20000
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                changed,
+                "--verbose",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    full = json.loads(capsys.readouterr().out)["answer"]
+    full_commands = {command["command_identity"]: command for command in full["selected_commands"]}
+    assert set(full_commands) == {command["command_identity"] for command in commands}
+    assert all(full_commands[command["command_identity"]]["command"] == command["command"] for command in commands)
+    assert any("subject_contract" in command and "receipt_contract" in command for command in full_commands.values())
 
 
 def test_proof_route_selector_smoke_works_without_mocked_lifecycle(tmp_path: Path, capsys) -> None:

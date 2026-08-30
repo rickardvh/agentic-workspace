@@ -52804,6 +52804,7 @@ _BOUNDED_SELECTED_PROOF_COMMAND_FIELDS = (
     "execution_class",
     "execution_owner",
     "requirement_posture",
+    "proof_responsibility",
     "duration_class",
 )
 
