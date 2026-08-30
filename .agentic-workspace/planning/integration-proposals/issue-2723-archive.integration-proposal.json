@@ -1,8 +1,8 @@
 {
   "kind": "planning-integration-proposal/v1",
   "id": "issue-2723-archive",
-  "status": "pending",
-  "phase": "integration-pending",
+  "status": "integrated",
+  "phase": "integrated-lifecycle-truth",
   "requested_transition": "archive-owner",
   "owner": {
     "id": "issue-2723-selector-route-roundtrip",
@@ -25,7 +25,7 @@
   "expected_subject_revision": "468e5b7ecbd33b26",
   "expected_planning_revision": "1244e79d729c37e3",
   "created_at": "2026-08-30T08:42:08.989947Z",
-  "updated_at": "2026-08-30T08:42:08.989947Z",
+  "updated_at": "2026-08-30T09:19:49.470638Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -41,5 +41,7 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "b64f8ae80db3bb7b"
+  "proposal_revision": "891a707867895dde",
+  "integrated_at": "2026-08-30T09:19:49.470638Z",
+  "integration_receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2723-archive.integration-receipt.json"
 }
