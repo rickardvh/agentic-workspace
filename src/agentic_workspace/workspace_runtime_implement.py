@@ -2529,6 +2529,14 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             if isinstance(payload.get("proof"), dict)
             else "proof-selection/v1",
             "required_commands": proof_commands,
+            "route_identity": {
+                key: payload.get("proof", {}).get("proof_route_strategy_decision", {}).get(key)
+                for key in ("kind", "status", "outcome", "reason_code", "focused_lane_ids", "authority")
+                if isinstance(payload.get("proof", {}).get("proof_route_strategy_decision"), dict)
+                and key in payload.get("proof", {}).get("proof_route_strategy_decision", {})
+            }
+            if isinstance(payload.get("proof"), dict)
+            else {},
             "tiny_surface_compatibility_review": payload.get("proof", {}).get("tiny_surface_compatibility_review", {})
             if isinstance(payload.get("proof"), dict)
             else {},

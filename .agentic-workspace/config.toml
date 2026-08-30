@@ -165,7 +165,7 @@ allowed_composition = ["maintenance", "evidence"]
 
 [assurance.domain_proof_lanes.proof_route_authority]
 purpose = "Focused maintenance route for repo-owned proof-routing authority."
-applies_to_paths = [".agentic-workspace/config.toml", ".agentic-workspace/verification/manifest.toml", ".agentic-workspace/planning/state.toml", ".agentic-workspace/planning/execplans/*.plan.json", ".agentic-workspace/planning/lanes/*.lane.json", ".agentic-workspace/planning/closeout-evidence/issue-2333-serial-focused-proof.closeout.json", ".agentic-workspace/planning/execplans/archive/issue-2334-proof-friction-escalation.plan.json", ".release/changes/*.toml", "Makefile", "docs/reference/implementer-context.md", "docs/reference/workspace-config.md", "src/agentic_workspace/contract_tooling.py", "src/agentic_workspace/contracts/operations/proof.report.json", "src/agentic_workspace/contracts/python_contract_consumption.json", "src/agentic_workspace/contracts/schemas/implementer_context.schema.json", "src/agentic_workspace/contracts/schemas/workspace_config.schema.json", "src/agentic_workspace/workspace_runtime_implement.py", "src/agentic_workspace/workspace_runtime_proof.py", "src/agentic_workspace/workspace_runtime_startup.py", "src/agentic_workspace/workspace_selector_validation.py", "tests/test_workspace_makefile_targets.py", "tests/test_workspace_proof_cli.py"]
+applies_to_paths = [".agentic-workspace/config.toml", ".agentic-workspace/verification/manifest.toml", ".release/changes/*.toml", "Makefile", "docs/reference/implementer-context.md", "docs/reference/workspace-config.md", "src/agentic_workspace/contract_tooling.py", "src/agentic_workspace/contracts/operations/proof.report.json", "src/agentic_workspace/contracts/python_contract_consumption.json", "src/agentic_workspace/contracts/schemas/implementer_context.schema.json", "src/agentic_workspace/contracts/schemas/workspace_config.schema.json", "src/agentic_workspace/workspace_runtime_implement.py", "src/agentic_workspace/workspace_runtime_proof.py", "src/agentic_workspace/workspace_runtime_startup.py", "src/agentic_workspace/workspace_selector_validation.py", "tests/test_workspace_makefile_targets.py", "tests/test_workspace_proof_cli.py"]
 commands = ["uv run pytest tests/test_workspace_proof_cli.py -k \"focused_domain_route or missing_focused_route or tiny_profile_returns_next_validation_action\" -q", "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success", "uv run python scripts/check/check_structured_file_inventory.py --quiet-success"]
 manual_evidence = ["proof_route_authority_review"]
 review_aids = ["Confirm focused routes remain declared in existing config and Verification authority rather than in a standalone parallel matrix."]
@@ -228,9 +228,40 @@ route_role = "behavior"
 precedence = "50"
 allowed_composition = ["maintenance", "evidence"]
 
+[assurance.domain_proof_lanes.planning_record_surfaces]
+purpose = "Narrow schema, owner-revision, and target-integration proof for passive Planning record mutations."
+applies_to_paths = [".agentic-workspace/planning/execplans/*.plan.json", ".agentic-workspace/planning/integration-proposals/*.integration-proposal.json", ".agentic-workspace/planning/integration-receipts/*.integration-receipt.json"]
+commands = ["uv run agentic-planning doctor --target . --format json", "uv run python scripts/check/check_planning_surfaces.py --format json", "uv run pytest packages/planning/tests/test_branch_safe_planning.py -k integration_proposal -q"]
+review_aids = ["Confirm the changed records are schema-valid, remain revision-guarded, and do not alter Planning runtime or cross-surface authority."]
+evidence_concepts = ["host:planning-record-validity", "host:target-integration-guards", "host:record-only-proof"]
+proof_profiles = ["workspace_behavior"]
+authority_refs = [".agentic-workspace/planning/schemas/planning-execplan.schema.json", ".agentic-workspace/planning/schemas/planning-integration-proposal.schema.json", "packages/planning/AGENTS.md"]
+escalation = ["Planning runtime or schema changes", "the record mutation changes cross-surface authority", "the focused record checks expose an uncovered semantic transition"]
+escalation_conditions = ["cross-owner", "cross-claim-boundary", "focused-route-insufficient"]
+claim_boundary = "focused-planning-record-proof-required-before-record-validity-or-integration-claim"
+owner = "planning"
+route_role = "evidence"
+precedence = "64"
+allowed_composition = ["maintenance"]
+
+[assurance.domain_proof_lanes.maintained_review_records]
+purpose = "Narrow freshness proof for maintained review and dogfooding evidence documents."
+applies_to_paths = ["docs/reviews/*.md"]
+commands = ["make maintainer-surfaces"]
+review_aids = ["Confirm the review document reports measured evidence honestly and does not redefine runtime or cross-surface authority."]
+proof_profiles = ["workspace_behavior"]
+authority_refs = ["Makefile", "docs/reviews/"]
+escalation = ["the review document changes executable policy or claims a cross-surface semantic transition"]
+escalation_conditions = ["focused-route-insufficient"]
+claim_boundary = "focused-maintained-review-proof-required-before-evidence-publication-claim"
+owner = "workspace-maintainers"
+route_role = "maintenance"
+precedence = "63"
+allowed_composition = ["behavior", "evidence"]
+
 [assurance.domain_proof_lanes.planning_reconciliation_runtime]
 purpose = "Focused Planning-to-workspace reconciliation, residue disposition, and bounded-effect routing behavior."
-applies_to_paths = [".agentic-workspace/OWNERSHIP.toml", ".agentic-workspace/fallback/no-cli-policy.json", ".agentic-workspace/memory/repo/domains/planning-package-context.md", ".agentic-workspace/planning/**", "docs/reference/installed-surface-catalogue.md", "packages/planning/**", "scripts/check/check_source_payload_operational_install.py", "src/agentic_workspace/_payload/.agentic-workspace/OWNERSHIP.toml", "src/agentic_workspace/_payload/.agentic-workspace/fallback/no-cli-policy.json", "src/agentic_workspace/contracts/authority_markers.json", "src/agentic_workspace/contracts/contract_inventory.json", "src/agentic_workspace/contracts/improvement_latitude_policy.json", "src/agentic_workspace/contracts/module_registry.json", "src/agentic_workspace/contracts/setup_findings_policy.json", "src/agentic_workspace/contracts/workflow_artifact_profiles.json", "src/agentic_workspace/contracts/workspace_defaults/payload.json", "src/agentic_workspace/contracts/workspace_surfaces.json", "src/agentic_workspace/operating_decision.py", "src/agentic_workspace/reconciliation.py", "src/agentic_workspace/workspace_runtime_planning.py", "tools/agent-manifest.json"]
+applies_to_paths = [".agentic-workspace/OWNERSHIP.toml", ".agentic-workspace/fallback/no-cli-policy.json", ".agentic-workspace/memory/repo/domains/planning-package-context.md", ".agentic-workspace/planning/state.toml", ".agentic-workspace/planning/schemas/**", ".agentic-workspace/planning/issue-relations/**", ".agentic-workspace/planning/assignments/**", "docs/reference/installed-surface-catalogue.md", "packages/planning/**", "scripts/check/check_source_payload_operational_install.py", "src/agentic_workspace/_payload/.agentic-workspace/OWNERSHIP.toml", "src/agentic_workspace/_payload/.agentic-workspace/fallback/no-cli-policy.json", "src/agentic_workspace/contracts/authority_markers.json", "src/agentic_workspace/contracts/contract_inventory.json", "src/agentic_workspace/contracts/improvement_latitude_policy.json", "src/agentic_workspace/contracts/module_registry.json", "src/agentic_workspace/contracts/setup_findings_policy.json", "src/agentic_workspace/contracts/workflow_artifact_profiles.json", "src/agentic_workspace/contracts/workspace_defaults/payload.json", "src/agentic_workspace/contracts/workspace_surfaces.json", "src/agentic_workspace/operating_decision.py", "src/agentic_workspace/reconciliation.py", "src/agentic_workspace/workspace_runtime_planning.py", "tools/agent-manifest.json"]
 commands = ["uv run pytest packages/planning/tests/test_promote.py tests/test_reconciliation.py tests/test_workspace_cli.py -q", "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success", "uv run python scripts/check/check_structured_file_inventory.py --quiet-success"]
 review_aids = ["Confirm future-context disposition remains explicit and owner-backed, bounded external effects stay fail-closed, schema mirrors are synchronized, and no parallel Memory or Planning authority is introduced."]
 evidence_concepts = ["planning-workspace-reconciliation", "bounded-external-effects", "owner-backed-residue"]

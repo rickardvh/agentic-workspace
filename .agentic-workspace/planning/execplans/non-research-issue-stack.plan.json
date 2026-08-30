@@ -1,0 +1,116 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "non-research-issue-stack",
+  "title": "Resolve non-research issues as stacked PRs",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "implementation",
+  "revision": 3,
+  "intent": {
+    "outcome": "Resolve open issues #2280, #2727, #2817, #2818, #2900, and #2901 and publish the work as a reviewed stacked PR series from master.",
+    "non_goals": [
+      "Do not modify or close the #2821-#2827 major structured-executor research epic.",
+      "Do not add new authority surfaces or discard preserved residue."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "Create a bounded plan for Resolve non-research issues as stacked PRs.",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "src/agentic_workspace/**",
+      "tests/**",
+      "packages/planning/**",
+      "packages/verification/**",
+      ".agentic-workspace/planning/**",
+      ".agentic-workspace/proof/**",
+      "tools/model-cli-harness/**",
+      "docs/**",
+      ".changeset/**"
+    ],
+    "effects": [
+      "Create issue-focused commits and stacked branches/PRs.",
+      "Run focused and routed repository proof.",
+      "Update only the six non-research issues after acceptance is demonstrated."
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected-local",
+      "owner": "non-research-issue-stack"
+    },
+    "proof_posture": {
+      "state": "pending",
+      "refs": []
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    }
+  },
+  "references": [],
+  "next_action": "Inspect the six issue regressions, implement the smallest owner-local fixes, validate each stack layer, and publish stacked PRs.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "The six non-research issues are satisfied without changing the #2821-#2827 research epic.",
+      "Each stack layer is focused, validated, review-ready, and correctly based."
+    ],
+    "requirements": [
+      "Run focused regression tests for Planning selection, proof execution/persistence, and orchestration cost behavior.",
+      "Replay the issue-specific fixtures and use the repository-selected proof route before closeout."
+    ],
+    "refs": []
+  },
+  "continuation": {
+    "owner": "none",
+    "residual_intent": "none"
+  },
+  "specialist_contracts": [],
+  "goal": [
+    "Resolve open issues #2280, #2727, #2817, #2818, #2900, and #2901 and publish the work as a reviewed stacked PR series from master."
+  ],
+  "non_goals": [
+    "Do not modify or close the #2821-#2827 major structured-executor research epic.",
+    "Do not add a scheduler, transcript store, prompt registry, parallel authority, or provider-specific portable contract.",
+    "Do not discard unrelated worktree residue preserved before switching branches."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "All open non-research issues are genuinely satisfied and represented by a minimal coherent stack.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "execution_bounds": {
+    "allowed paths": "src/agentic_workspace/**; tests/**; packages/planning/**; packages/verification/**; .agentic-workspace/planning/**; .agentic-workspace/proof/**; tools/model-cli-harness/**; docs/**; .changeset/**",
+    "max changed files": "80",
+    "required validation commands": "Focused subsystem tests, route replay fixtures, selected-proof execution, and repository proof acceptance.",
+    "ask-before-refactor threshold": "Stop if an issue requires changing the #2821-#2827 research runtime or adding a new authority surface.",
+    "stop before touching": "Major structured-executor research epic semantics, user-preserved stash residue, release branch state, or unrelated open work."
+  },
+  "touched_paths": [
+    "src/agentic_workspace/**",
+    "tests/**",
+    "packages/planning/**",
+    "packages/verification/**",
+    ".agentic-workspace/planning/**",
+    ".agentic-workspace/proof/**",
+    "tools/model-cli-harness/**",
+    "docs/**",
+    ".changeset/**"
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py tests/test_workspace_proof_cli.py -q",
+    "uv run pytest packages/planning/tests -q",
+    "make check-planning-nosync"
+  ],
+  "completion_criteria": [
+    "Planning selected reads are query-shaped and meet the maintained latency/scaling boundary for the reopened #2280 fixtures.",
+    "Ordinary proof continuation uses execute-selected and produces compact idempotent persistence with exact per-command inspection, satisfying #2727, #2900, and #2901.",
+    "Binding orchestration behavior and context-cost selection satisfy #2817 and #2818 without widening authority or adding mandatory direct-path tax.",
+    "All changed paths pass routed proof and each PR in the stack has an accurate base, description, issue linkage, and review-ready status."
+  ]
+}

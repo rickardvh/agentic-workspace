@@ -3,7 +3,7 @@
 
 Exact footprint, ownership, and availability values generated from `workspace_surfaces.json` and `module_registry.json`.
 
-- Contract digest: `sha256:01fa83f1e6b886079b157e6e4719685b192777af43e847db41e1825ebbcadf58`
+- Contract digest: `sha256:6e6f585e54b270b33f64e2aa8fd2f048d1281bc90d282f3a5d9c636a3122735f`
 - Supported profiles: `necessary-surfaces`, `full-mirror`
 - Declared modules: `planning`, `memory`, `verification`
 
@@ -413,6 +413,10 @@ File count: 23
 | `.agentic-workspace/OWNERSHIP.toml` | `installed-local` | necessary-surfaces, full-mirror | — | required in the selected footprint |
 | `.agentic-workspace/WORKFLOW.md` | `installed-local` | necessary-surfaces, full-mirror | — | required in the selected footprint |
 | `.agentic-workspace/config.toml` | `installed-local` | necessary-surfaces, full-mirror | — | required in the selected footprint |
+| `.agentic-workspace/planning/state.toml` | `optional` | necessary-surfaces, full-mirror | planning | Treat active Planning state as absent until an owner is selected. |
+| `.agentic-workspace/planning/execplans/*.plan.json` | `optional` | necessary-surfaces, full-mirror | planning | Treat passive execplan record proof as not applicable when no records exist. |
+| `.agentic-workspace/planning/integration-proposals/*.integration-proposal.json` | `optional` | necessary-surfaces, full-mirror | planning | Treat target-integration proposal proof as not applicable when no proposals exist. |
+| `.agentic-workspace/planning/integration-receipts/*.integration-receipt.json` | `optional` | necessary-surfaces, full-mirror | planning | Treat target-integration receipt proof as not applicable when no receipts exist. |
 | `.agentic-workspace/verification/manifest.toml` | `optional` | necessary-surfaces, full-mirror | verification | selected-but-unconfigured: Treat Verification as selected but unconfigured until the repo supplies its manifest. |
 | `.agentic-workspace/system-intent/WORKFLOW.md` | `installed-local` | full-mirror | — | required in the selected footprint |
 | `.agentic-workspace/system-intent/intent.toml` | `optional` | necessary-surfaces, full-mirror | — | Keep system intent unavailable until an authoritative mirror is installed. |

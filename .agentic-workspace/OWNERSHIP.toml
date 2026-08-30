@@ -173,8 +173,16 @@ authority = "fenced"
 summary = "Managed pointer block inside the repo-owned AGENTS file."
 
 [[subsystems]]
+id = "planning-records"
+paths = [".agentic-workspace/planning/execplans/*.plan.json", ".agentic-workspace/planning/integration-proposals/*.integration-proposal.json", ".agentic-workspace/planning/integration-receipts/*.integration-receipt.json"]
+owns = ["passive execplan record validity", "target-integration proposal and receipt guards"]
+does_not_own = ["Planning runtime behavior", "cross-surface reconciliation policy", "durable memory note policy"]
+proof = ["uv run agentic-planning doctor --target . --format json", "uv run python scripts/check/check_planning_surfaces.py --format json", "uv run pytest packages/planning/tests/test_branch_safe_planning.py -k integration_proposal -q"]
+escalate_when = ["change alters Planning runtime or schema", "record mutation widens cross-surface authority"]
+
+[[subsystems]]
 id = "planning"
-paths = [".agentic-workspace/planning/**", "packages/planning/**"]
+paths = [".agentic-workspace/planning/state.toml", ".agentic-workspace/planning/schemas/**", ".agentic-workspace/planning/issue-relations/**", ".agentic-workspace/planning/assignments/**", ".agentic-workspace/planning/lanes/**", ".agentic-workspace/planning/decompositions/**", "packages/planning/**"]
 owns = ["active execution state", "execplan scaffolds and closeout", "planning package workflow semantics"]
 does_not_own = ["durable memory note policy", "workspace command runtime internals"]
 proof = ["make check-planning-nosync"]

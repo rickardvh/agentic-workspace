@@ -9019,6 +9019,155 @@ def test_ordinary_focused_task_does_not_select_explicit_broad_route(tmp_path: Pa
     assert all(not command.startswith("make test-workspace-") for command in values["required_commands"])
 
 
+def test_repo_planning_record_changes_use_the_narrow_record_proof_route() -> None:
+    from agentic_workspace.workspace_runtime_proof import _proof_selection_for_changed_paths
+
+    changed_paths = [
+        ".agentic-workspace/planning/execplans/remaining-nonresearch-issues-2629-2804-1891.plan.json",
+        ".agentic-workspace/planning/integration-proposals/remaining-nonresearch-issues-2629-2804-1891-archive-owner.integration-proposal.json",
+        ".agentic-workspace/planning/execplans/issue-2822-structured-executor-kernel.plan.json",
+        ".agentic-workspace/planning/integration-proposals/issue-2822-structured-executor-kernel-archive-owner.integration-proposal.json",
+    ]
+
+    selection = _proof_selection_for_changed_paths(
+        changed_paths=changed_paths,
+        target_root=ROOT,
+        include_durable_intent=False,
+        include_assurance_requirements=False,
+        include_routine_work_context=False,
+        include_runtime_diagnostics=False,
+        include_test_strategy_check=False,
+    )
+
+    lane_ids = {lane["id"] for lane in selection["selected_lanes"]}
+    commands = selection["required_commands"]
+    assert "domain:planning_record_surfaces" in lane_ids
+    assert "domain:planning_reconciliation_runtime" not in lane_ids
+    assert "subsystem:planning-records" in lane_ids
+    assert "subsystem:planning" not in lane_ids
+    assert any("agentic-planning doctor" in command for command in commands)
+    assert any("check_planning_surfaces.py" in command for command in commands)
+    assert any("test_branch_safe_planning.py -k integration_proposal" in command for command in commands)
+    assert all("make check-planning-nosync" not in command for command in commands)
+    assert all("tests/test_promote.py tests/test_reconciliation.py" not in command for command in commands)
+    assert selection["proof_route_strategy_decision"]["outcome"] == "focused"
+
+
+def test_pr_2898_planning_record_replay_keeps_public_implement_and_proof_routes_identical(capsys) -> None:
+    changed_paths = [
+        ".agentic-workspace/planning/execplans/remaining-nonresearch-issues-2629-2804-1891.plan.json",
+        ".agentic-workspace/planning/integration-proposals/remaining-nonresearch-issues-2629-2804-1891-archive-owner.integration-proposal.json",
+        ".agentic-workspace/planning/execplans/issue-2822-structured-executor-kernel.plan.json",
+        ".agentic-workspace/planning/integration-proposals/issue-2822-structured-executor-kernel-archive-owner.integration-proposal.json",
+    ]
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(ROOT),
+                "--changed",
+                *changed_paths,
+                "--select",
+                "required_commands,proof_route_strategy_decision,focused_route_coverage_audit",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    proof = json.loads(capsys.readouterr().out)["values"]
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(ROOT),
+                "--changed",
+                *changed_paths,
+                "--task",
+                "Replay the PR 2898 passive Planning record route.",
+                "--select",
+                "proof",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    implement_proof = json.loads(capsys.readouterr().out)["values"]["proof"]
+
+    route = proof["proof_route_strategy_decision"]
+    assert implement_proof["required_commands"] == proof["required_commands"]
+    assert implement_proof["route_identity"] == {
+        key: route[key] for key in ("kind", "status", "outcome", "reason_code", "focused_lane_ids", "authority")
+    }
+    assert implement_proof["route_identity"]["outcome"] == "focused"
+    assert implement_proof["route_identity"]["reason_code"] == "focused-route-sufficient"
+    assert implement_proof["route_identity"]["focused_lane_ids"] == ["domain:planning_record_surfaces"]
+    assert proof["focused_route_coverage_audit"]["maintenance_gap"]["status"] == "absent"
+    assert proof["focused_route_coverage_audit"]["missing_focused_route_paths"] == []
+    assert len(proof["required_commands"]) == 5
+    assert all("make check-planning-nosync" not in command for command in proof["required_commands"])
+    assert all("tests/test_promote.py tests/test_reconciliation.py" not in command for command in proof["required_commands"])
+
+
+def test_report_only_planning_replay_composes_record_and_maintained_review_routes_without_broad_fallback(capsys) -> None:
+    changed_paths = [
+        ".agentic-workspace/planning/execplans/dogfooding-proof-router-report.plan.json",
+        ".agentic-workspace/planning/integration-proposals/dogfooding-proof-router-report-archive-owner.integration-proposal.json",
+        "docs/reviews/aw-proof-router-closeout-dogfood-2026-08-30.md",
+    ]
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(ROOT),
+                "--changed",
+                *changed_paths,
+                "--select",
+                "required_commands,selected_lanes,proof_route_strategy_decision,focused_route_coverage_audit",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    values = json.loads(capsys.readouterr().out)["values"]
+
+    lane_ids = {lane["id"] for lane in values["selected_lanes"]}
+    assert values["proof_route_strategy_decision"]["outcome"] == "focused"
+    assert values["proof_route_strategy_decision"]["reason_code"] == "focused-route-sufficient"
+    assert {"domain:planning_record_surfaces", "domain:maintained_review_records"}.issubset(lane_ids)
+    assert values["focused_route_coverage_audit"]["missing_focused_route_paths"] == []
+    assert values["focused_route_coverage_audit"]["maintenance_gap"]["status"] == "absent"
+    assert len(values["required_commands"]) == 6
+    assert "make maintainer-surfaces" in values["required_commands"]
+    assert all("make check-planning-nosync" not in command for command in values["required_commands"])
+    assert all("tests/test_promote.py tests/test_reconciliation.py" not in command for command in values["required_commands"])
+
+
+def test_repo_planning_runtime_changes_still_escalate_to_runtime_proof() -> None:
+    from agentic_workspace.workspace_runtime_proof import _proof_selection_for_changed_paths
+
+    selection = _proof_selection_for_changed_paths(
+        changed_paths=["packages/planning/src/repo_planning_bootstrap/installer.py"],
+        target_root=ROOT,
+        include_durable_intent=False,
+        include_assurance_requirements=False,
+        include_routine_work_context=False,
+        include_runtime_diagnostics=False,
+        include_test_strategy_check=False,
+    )
+
+    lane_ids = {lane["id"] for lane in selection["selected_lanes"]}
+    assert "domain:planning_reconciliation_runtime" in lane_ids
+    assert any("make check-planning-nosync" in command for command in selection["required_commands"])
+
+
 def test_proof_route_strategy_decision_selects_structured_broad_escalation_for_two_domain_owners(tmp_path: Path, capsys) -> None:
     _write_repo_local_proof_target(tmp_path)
     _write(

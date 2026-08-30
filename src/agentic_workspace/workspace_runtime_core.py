@@ -31092,6 +31092,9 @@ def _select_summary_payload(
         "execplans",
         "decomposition",
         "planning_surface_health",
+        "execution_readiness",
+        "lanes",
+        "roadmap",
     }
     if requested_fields and requested_roots <= direct_planning_fields:
         from repo_planning_bootstrap.installer import planning_summary_query

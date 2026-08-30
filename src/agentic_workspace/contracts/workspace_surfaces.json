@@ -86,6 +86,38 @@
     },
     {
       "source": ".agentic-workspace/OWNERSHIP.toml",
+      "target": ".agentic-workspace/planning/state.toml",
+      "kind": "optional",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": ["planning"],
+      "degraded_behavior": "Treat active Planning state as absent until an owner is selected."
+    },
+    {
+      "source": ".agentic-workspace/OWNERSHIP.toml",
+      "target": ".agentic-workspace/planning/execplans/*.plan.json",
+      "kind": "optional",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": ["planning"],
+      "degraded_behavior": "Treat passive execplan record proof as not applicable when no records exist."
+    },
+    {
+      "source": ".agentic-workspace/OWNERSHIP.toml",
+      "target": ".agentic-workspace/planning/integration-proposals/*.integration-proposal.json",
+      "kind": "optional",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": ["planning"],
+      "degraded_behavior": "Treat target-integration proposal proof as not applicable when no proposals exist."
+    },
+    {
+      "source": ".agentic-workspace/OWNERSHIP.toml",
+      "target": ".agentic-workspace/planning/integration-receipts/*.integration-receipt.json",
+      "kind": "optional",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": ["planning"],
+      "degraded_behavior": "Treat target-integration receipt proof as not applicable when no receipts exist."
+    },
+    {
+      "source": ".agentic-workspace/OWNERSHIP.toml",
       "target": ".agentic-workspace/verification/manifest.toml",
       "kind": "optional",
       "profiles": ["necessary-surfaces", "full-mirror"],
