@@ -1,0 +1,154 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2755-review-resolution-replay",
+  "title": "Issue 2755 exact-head review resolution replay",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "closeout",
+  "revision": 4,
+  "intent": {
+    "outcome": "Classify exact-current-head implementation resolution notes and independent merge-ready verdicts as non-actionable review evidence while keeping genuinely new requests actionable.",
+    "non_goals": [
+      "Do not add a second review-intake authority or durable review ledger.",
+      "Do not grant implementation agents independent merge-ready authority.",
+      "Do not weaken incomplete-surface, hosted-failure, or genuinely new-request classification."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "https://github.com/rickardvh/agentic-workspace/issues/2755",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "effects": [
+      "Prose-bound exact-head fixes-applied and ready-for-fresh-re-review notes link to stale prior-head blockers as resolution evidence.",
+      "Exact-head independent merge-ready verdicts remain informational to implementation intake and preserve separate review authority.",
+      "New requests on the current head remain actionable."
+    ],
+    "owned": [
+      "scripts/github/pr_comment_delta.py",
+      "tests/test_pr_comment_delta.py",
+      ".release/changes/issue-2755-review-resolution-replay.toml",
+      ".agentic-workspace/planning/execplans/issue-2755-review-resolution-replay.plan.json"
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected-local",
+      "owner": "issue-2755-review-resolution-replay"
+    },
+    "proof_posture": {
+      "state": "accepted",
+      "refs": [
+        "selected-proof:692f0b62e16ff90c",
+        "PR #2887 live replay complete with zero current actions",
+        "139 review-stack tests passed",
+        "513 broad tests passed"
+      ]
+    },
+    "external_posture": {
+      "state": "observed",
+      "refs": [
+        "https://github.com/rickardvh/agentic-workspace/issues/2755",
+        "PR #2887 live replay at merged head 429ec2598e5bafbbaf040c1e84d5b91d2d2a9df9: complete intake but two incorrect current actions"
+      ]
+    },
+    "integration": {
+      "status": "feature-complete-integration-pending",
+      "proposal_id": "issue-2755-review-resolution-replay-archive-owner",
+      "proposal_ref": ".agentic-workspace/planning/integration-proposals/issue-2755-review-resolution-replay-archive-owner.integration-proposal.json",
+      "requested_transition": "archive-owner",
+      "proof_refs": [
+        "#2755",
+        "PR #2859",
+        "PR #2887",
+        "selected-proof:692f0b62e16ff90c",
+        "PR #2887 live replay complete with zero current actions",
+        "139 review-stack tests passed",
+        "513 broad tests passed"
+      ],
+      "authority": "feature-head declaration; target integration remains terminal authority"
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2755",
+      "label": "https://github.com/rickardvh/agentic-workspace/issues/2755",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Apply integration proposal 'issue-2755-review-resolution-replay-archive-owner' from admitted target authority.",
+  "blockers": [
+    "Fresh independent review is required before merge and #2755 closure."
+  ],
+  "proof": {
+    "requirements": [
+      "Focused pr_comment_delta regressions pass.",
+      "The live PR #2887 bounded replay reports complete intake and zero current actions.",
+      "Maintainer surfaces and routed changed-path proof pass.",
+      "Fresh independent review accepts the implementation head."
+    ],
+    "refs": [
+      "#2755",
+      "PR #2859",
+      "PR #2887",
+      "selected-proof:692f0b62e16ff90c",
+      "PR #2887 live replay complete with zero current actions",
+      "139 review-stack tests passed",
+      "513 broad tests passed"
+    ],
+    "claims": [
+      "The merged PR #2887 replay has complete surfaces and zero current implementation actions.",
+      "The exact-head implementation resolution note links to the stale prior-head blocker instead of reopening it.",
+      "The exact-head independent verdict remains non-actionable and cannot grant implementation-side authority.",
+      "A current-head resolution phrase containing a genuinely new request remains actionable."
+    ]
+  },
+  "continuation": {
+    "residual_intent": "After implementation and validation, stop at fresh independent review; target authority owns terminal archive after merge.",
+    "owner": "issue-2755-review-resolution-replay"
+  },
+  "specialist_contracts": [],
+  "proof_report": {
+    "validation proof": "selected-proof:692f0b62e16ff90c, PR #2887 live replay complete with zero current actions, 139 review-stack tests passed, 513 broad tests passed",
+    "proof achieved now": "yes; integration-propose recorded accepted feature-head proof.",
+    "evidence for \"proof achieved\" state": "selected-proof:692f0b62e16ff90c, PR #2887 live replay complete with zero current actions, 139 review-stack tests passed, 513 broad tests passed"
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "current planning owner",
+    "handoff source": "issue-2755-review-resolution-replay",
+    "what happened": "Classify exact-current-head implementation resolution notes and independent merge-ready verdicts as non-actionable review evidence while keeping genuinely new requests actionable.",
+    "scope touched": "scripts/github/pr_comment_delta.py; tests/test_pr_comment_delta.py; .release/changes/issue-2755-review-resolution-replay.toml; .agentic-workspace/planning/execplans/issue-2755-review-resolution-replay.plan.json",
+    "changed surfaces": "scripts/github/pr_comment_delta.py; tests/test_pr_comment_delta.py; .release/changes/issue-2755-review-resolution-replay.toml; .agentic-workspace/planning/execplans/issue-2755-review-resolution-replay.plan.json",
+    "validations run": "selected-proof:692f0b62e16ff90c, PR #2887 live replay complete with zero current actions, 139 review-stack tests passed, 513 broad tests passed",
+    "result for continuation": "feature-head complete; terminal lifecycle remains target-authoritative",
+    "next step": "Apply integration proposal 'issue-2755-review-resolution-replay-archive-owner' from admitted target authority."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; bounded feature-head scope and proof were reviewed.",
+    "proof status": "passed",
+    "intent served": "yes; target integration remains the terminal lifecycle authority.",
+    "config compliance": "used planning integration-propose command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": ".agentic-workspace/planning/integration-proposals/issue-2755-review-resolution-replay-archive-owner.integration-proposal.json"
+  },
+  "intent_satisfaction": {
+    "original intent": "Classify exact-current-head implementation resolution notes and independent merge-ready verdicts as non-actionable review evidence while keeping genuinely new requests actionable.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "selected-proof:692f0b62e16ff90c, PR #2887 live replay complete with zero current actions, 139 review-stack tests passed, 513 broad tests passed",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "Feature-head proof is accepted; terminal lifecycle truth awaits target integration.",
+    "evidence carried forward": "selected-proof:692f0b62e16ff90c, PR #2887 live replay complete with zero current actions, 139 review-stack tests passed, 513 broad tests passed",
+    "reopen trigger": "New contradictory evidence or rejected target integration."
+  }
+}

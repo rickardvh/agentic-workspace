@@ -669,7 +669,7 @@ def test_exact_head_resolution_wording_with_new_request_remains_actionable() -> 
                 {
                     "databaseId": 25,
                     "url": "https://example.test/comment/25",
-                    "body": f"Decision: blocked\nUnresolved: Addressed at this head; please also update src/new.py.\n<!-- aw-chatgpt-review pr=99 head={REVIEW_HEAD} policy=pr-review-recheck-v1 decision=blocked -->",
+                    "body": f"Fixes applied on exact head `{REVIEW_HEAD}`; ready for fresh re-review; please also update src/new.py.",
                     "createdAt": "2026-08-26T11:00:00Z",
                     "author": {"login": "reviewer"},
                 }
@@ -679,6 +679,61 @@ def test_exact_head_resolution_wording_with_new_request_remains_actionable() -> 
 
     assert packet["items"][0]["addressing_status"] == "unresolved_action"
     assert packet["items"][0]["action_required"] is True
+
+
+def test_pr2887_replay_treats_prose_resolution_and_merge_ready_verdict_as_evidence() -> None:
+    module = _load_module()
+    old_head = "b" * 40
+    packet = module.build_packet(
+        _complete_review_payload(
+            comments=[
+                {
+                    "databaseId": 26,
+                    "url": "https://example.test/comment/26",
+                    "body": (
+                        "decision: blocked\n"
+                        "unresolved:\n"
+                        "Update scripts/github/pr_comment_delta.py and add a focused regression test.\n"
+                        f"<!-- aw-chatgpt-review pr=99 head={old_head} policy=pr-review-recheck-v1 decision=blocked -->"
+                    ),
+                    "createdAt": "2026-08-25T11:00:00Z",
+                    "author": {"login": "reviewer"},
+                },
+                {
+                    "databaseId": 27,
+                    "url": "https://example.test/comment/27",
+                    "body": f"Fixes applied on exact head `{REVIEW_HEAD}`; ready for fresh re-review.",
+                    "createdAt": "2026-08-26T11:00:00Z",
+                    "author": {"login": "author"},
+                },
+                {
+                    "databaseId": 28,
+                    "url": "https://example.test/comment/28",
+                    "body": (
+                        "decision: merge-ready\n\n"
+                        f"Exact head `{REVIEW_HEAD}` is merge-ready. The prior blockers are resolved.\n\n"
+                        "closure_honest: yes\n\n"
+                        "next_action: merge this exact head.\n\n"
+                        f"<!-- aw-chatgpt-review pr=99 head={REVIEW_HEAD} policy=pr-review-recheck-v1 decision=merge-ready -->"
+                    ),
+                    "createdAt": "2026-08-26T11:01:00Z",
+                    "author": {"login": "independent-reviewer"},
+                },
+            ]
+        )
+    )
+
+    assert packet["review_intake"]["status"] == "complete"
+    assert packet["review_intake"]["classification"] == "stale_superseded_comment"
+    assert all(item["action_required"] is False for item in packet["items"])
+    resolution = next(item for item in packet["items"] if item["database_id"] == "27")
+    verdict = next(item for item in packet["items"] if item["database_id"] == "28")
+    assert resolution["addressing_status"] == "already_addressed"
+    assert resolution["resolution_of"] == ["https://example.test/comment/26"]
+    assert verdict["category"] == "informational_no_local_change"
+    assert verdict["addressing_status"] == "informational"
+    assert packet["review_intake"]["independent_review_authority"]["implementation_agent_eligible"] is False
+    assert packet["review_intake"]["independent_review_authority"]["merge_ready_authority"] is False
 
 
 def test_complete_intake_treats_markerless_top_level_blocker_after_head_as_current() -> None:
