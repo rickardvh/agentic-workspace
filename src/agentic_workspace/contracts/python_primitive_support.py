@@ -778,6 +778,7 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
                 "rule": "Import records evidence in received/awaiting-admission; AW-owned admission, integration, proof, and closeout remain pending.",
             },
         }
+        packet["worker_context"] = _assignment_worker_context(packet)
         packet_path = artifact("export/packet.json")
         prompt_path = artifact("export/prompt.md")
         manifest_path = artifact("export/manifest.json")
@@ -790,6 +791,7 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             "packet_ref": _assignment_relative(packet_path, root=target_root),
             "prompt_ref": _assignment_relative(prompt_path, root=target_root),
             "integrity": _assignment_digest(packet),
+            "worker_context_integrity": _assignment_digest(packet["worker_context"]),
         }
         artifact_paths.extend([packet_path, prompt_path, manifest_path])
         transport = _optional_text(values.get("transport")) or "manual"
@@ -1535,6 +1537,7 @@ def _assignment_identity(current_authorities: Mapping[str, Any]) -> dict[str, An
         or assignment_gate.get("task")
         or assignment_gate.get("task_class"),
         "required_inputs": _assignment_list(assignment_gate.get("required_inputs") or next_step.get("required_inputs")),
+        "read_first": _assignment_list(assignment_gate.get("read_first") or next_step.get("read_first")),
         "prohibited_effects": _assignment_list(assignment_gate.get("prohibited_effects") or next_step.get("prohibited_effects"))
         or ["scope-widening", "merge", "closeout", "proof-authority", "human-authority"],
         "dispatch_adapter": _assignment_mapping(assignment_gate.get("dispatch_adapter")),
@@ -1855,19 +1858,68 @@ def _write_assignment_artifact(*, path: Path, payload: Any) -> None:
 
 
 def _assignment_export_prompt(packet: Any) -> str:
+    packet_mapping = _assignment_mapping(packet)
+    worker_context = _assignment_mapping(packet_mapping.get("worker_context")) or _assignment_worker_context(packet_mapping)
     return "\n".join(
         [
-            "You are receiving an Agentic Workspace assignment packet.",
-            "Use only the bounded scope and return contract in the JSON below.",
+            "You are receiving a bounded Agentic Workspace worker context.",
+            "Use only the intent, scope, effects, inputs, proof burden, stop conditions, authority limits, and return contract below.",
+            "Acquire deeper repository context only through the listed read-first references; omitted parent conversation and broad workspace state are not part of this assignment.",
             "Return a structured result for `agentic-workspace assignment import`; do not claim AW proof or integration.",
             "Do not edit the host checkout. For repo-write assignments, return the proposed unified diff in a `patch` field.",
             "The patch must be a complete git-compatible unified diff beginning with `diff --git`; generate or verify it with diff tooling so hunk counts are exact, and never use apply_patch markers, ellipses, placeholder `@@` markers, or omitted context.",
             "",
             "```json",
-            json.dumps(packet, indent=2, sort_keys=True, default=str),
+            json.dumps(worker_context, indent=2, sort_keys=True, default=str),
             "```",
         ]
     )
+
+
+def _assignment_worker_context(packet: Mapping[str, Any]) -> dict[str, Any]:
+    """Project only worker-required semantics from canonical assignment authority."""
+
+    identity = _assignment_mapping(packet.get("assignment_identity"))
+    return_contract = _assignment_mapping(packet.get("return_contract"))
+    return {
+        "kind": "agentic-workspace/assignment-worker-context/v1",
+        "assignment": {
+            "id": _optional_text(packet.get("assignment_id")),
+            "revision": _optional_text(packet.get("assignment_revision")) or _optional_text(identity.get("revision")),
+            "run_id": _optional_text(packet.get("run_id")),
+            "target": _optional_text(packet.get("target")) or _optional_text(identity.get("target")),
+        },
+        "intent": {
+            "outcome": _optional_text(identity.get("human_intent")),
+            "task_class": _optional_text(identity.get("task_class")),
+            "role": _optional_text(identity.get("role")),
+        },
+        "scope": {
+            "class": _optional_text(identity.get("scope_class")),
+            "allowed_paths": _assignment_list(identity.get("allowed_paths")),
+        },
+        "effects": {
+            "allowed": _assignment_list(identity.get("allowed_effects")),
+            "prohibited": _assignment_list(identity.get("prohibited_effects")),
+        },
+        "inputs": {
+            "required": _assignment_list(identity.get("required_inputs")),
+            "read_first": _assignment_list(identity.get("read_first")),
+            "lazy_expansion_rule": "Read only these exact references first; request or resolve deeper context only when the assignment requires it.",
+        },
+        "proof": {
+            "obligation_id": _optional_text(identity.get("proof_obligation_id")),
+            "obligation_revision": _optional_text(identity.get("proof_obligation_revision")),
+            "worker_authority": False,
+        },
+        "stop_conditions": _assignment_list(identity.get("stop_conditions")),
+        "authority": {
+            "semantic_source": "canonical-assignment-identity",
+            "claim_authority": _assignment_mapping(identity.get("claim_authority")),
+            "scope_widening_allowed": False,
+        },
+        "return_contract": return_contract,
+    }
 
 
 def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, target_root: Path, transport: str) -> dict[str, Any]:

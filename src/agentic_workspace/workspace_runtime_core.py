@@ -43193,6 +43193,7 @@ def _assignment_identity_payload(
         or assignment_gate.get("task")
         or assignment_gate.get("task_class"),
         "required_inputs": assignment_gate.get("required_inputs") or next_step.get("required_inputs") or [],
+        "read_first": assignment_gate.get("read_first") or next_step.get("read_first") or [],
         "prohibited_effects": assignment_gate.get("prohibited_effects")
         or next_step.get("prohibited_effects")
         or ["scope-widening", "merge", "closeout", "proof-authority", "human-authority"],
@@ -44948,6 +44949,14 @@ def _execution_posture_payload(
             baseline = ""
         task_class = str(assignment_gate.get("task_class") or "")
         role, allowed_effects = _assignment_role_and_effects(task_class=task_class)
+        read_first_refs = _dedupe(
+            [
+                str(item.get("target") or item.get("label") or "").strip()
+                for item in _list_payload(plan_record.get("references"))
+                if isinstance(item, dict) and str(item.get("target") or item.get("label") or "").strip()
+            ]
+            + _plan_exact_list(plan_record, "context_budget.live working set")
+        )
         enhanced_gate = {
             **assignment_gate,
             "plan_ref": plan_ref,
@@ -44957,6 +44966,7 @@ def _execution_posture_payload(
             "role": role,
             "human_intent": str(task_text or "").strip(),
             "required_inputs": list(changed_paths),
+            "read_first": read_first_refs,
             "allowed_effects": allowed_effects,
             "allowed_paths": list(changed_paths),
             "dispatch_adapter": {

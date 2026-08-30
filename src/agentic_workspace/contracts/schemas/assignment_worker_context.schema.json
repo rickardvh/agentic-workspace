@@ -1,0 +1,105 @@
+{
+  "$id": "agentic-workspace/assignment_worker_context.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Bounded worker-facing projection mechanically derived from canonical assignment authority. It intentionally omits transport configuration, parent conversation, and broad workspace state.",
+  "properties": {
+    "kind": {
+      "const": "agentic-workspace/assignment-worker-context/v1",
+      "description": "Versioned worker-context projection discriminator."
+    },
+    "assignment": {
+      "additionalProperties": false,
+      "description": "Revision-bound assignment and target identity.",
+      "properties": {
+        "id": {"description": "Canonical assignment identifier.", "type": "string"},
+        "revision": {"description": "Canonical assignment identity revision.", "type": "string"},
+        "run_id": {"description": "Current assignment run identifier.", "type": "string"},
+        "target": {"description": "Selected worker target identity.", "type": "string"}
+      },
+      "required": ["id", "revision", "run_id", "target"],
+      "type": "object"
+    },
+    "intent": {
+      "additionalProperties": false,
+      "description": "Worker-relevant intended outcome and role projected from assignment identity.",
+      "properties": {
+        "outcome": {"description": "Bounded human intent the worker must serve.", "type": "string"},
+        "task_class": {"description": "Assignment task class.", "type": "string"},
+        "role": {"description": "Worker role admitted by the assignment.", "type": "string"}
+      },
+      "required": ["outcome", "task_class", "role"],
+      "type": "object"
+    },
+    "scope": {
+      "additionalProperties": false,
+      "description": "Bounded scope projected from assignment identity.",
+      "properties": {
+        "class": {"description": "Assignment scope class.", "type": "string"},
+        "allowed_paths": {
+          "description": "Exact paths the worker may touch.",
+          "items": {"type": "string"},
+          "type": "array"
+        }
+      },
+      "required": ["class", "allowed_paths"],
+      "type": "object"
+    },
+    "effects": {
+      "additionalProperties": false,
+      "description": "Allowed and prohibited worker effects.",
+      "properties": {
+        "allowed": {"description": "Effects admitted by assignment authority.", "items": {"type": "string"}, "type": "array"},
+        "prohibited": {"description": "Effects explicitly outside worker authority.", "items": {"type": "string"}, "type": "array"}
+      },
+      "required": ["allowed", "prohibited"],
+      "type": "object"
+    },
+    "inputs": {
+      "additionalProperties": false,
+      "description": "Required inputs and exact lazy context acquisition routes.",
+      "properties": {
+        "required": {"description": "Inputs required before work proceeds.", "items": {"type": "string"}, "type": "array"},
+        "read_first": {"description": "Exact references or selectors the worker reads before requesting deeper context.", "items": {"type": "string"}, "type": "array"},
+        "lazy_expansion_rule": {"description": "Rule preventing construction or transmission of unrelated context.", "type": "string"}
+      },
+      "required": ["required", "read_first", "lazy_expansion_rule"],
+      "type": "object"
+    },
+    "proof": {
+      "additionalProperties": false,
+      "description": "Proof burden reference and worker proof-authority ceiling.",
+      "properties": {
+        "obligation_id": {"description": "Task proof obligation identity.", "type": "string"},
+        "obligation_revision": {"description": "Task proof obligation revision.", "type": "string"},
+        "worker_authority": {"const": false, "description": "Workers never acquire AW proof authority from this projection."}
+      },
+      "required": ["obligation_id", "obligation_revision", "worker_authority"],
+      "type": "object"
+    },
+    "stop_conditions": {
+      "description": "Conditions that require the worker to stop instead of widening scope.",
+      "items": {"type": "string"},
+      "type": "array"
+    },
+    "authority": {
+      "additionalProperties": false,
+      "description": "Explicit semantic-source and claim-authority limits.",
+      "properties": {
+        "semantic_source": {"const": "canonical-assignment-identity", "description": "Only assignment identity supplies worker semantics."},
+        "claim_authority": {"description": "Assignment-owned claim ceilings carried to the worker.", "type": "object"},
+        "scope_widening_allowed": {"const": false, "description": "The projection cannot authorize scope widening."}
+      },
+      "required": ["semantic_source", "claim_authority", "scope_widening_allowed"],
+      "type": "object"
+    },
+    "return_contract": {
+      "description": "Structured delegated-return contract projected from the canonical assignment packet.",
+      "type": "object"
+    }
+  },
+  "required": ["kind", "assignment", "intent", "scope", "effects", "inputs", "proof", "stop_conditions", "authority", "return_contract"],
+  "title": "Assignment worker context",
+  "type": "object",
+  "x-agentic-workspace-doc-role": "contract-reference"
+}
