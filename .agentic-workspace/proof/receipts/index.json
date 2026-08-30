@@ -1303,6 +1303,20 @@
       "source_ref": "proof://receipts/722bcbba9823dc3d",
       "status": "current"
     },
+    "72380bbb7c2d31d9": {
+      "path": "72380bbb7c2d31d9.json",
+      "producer_class": "aw-proof",
+      "revision": "2026-08-30T09:00:23+00:00",
+      "source_ref": "proof://receipts/72380bbb7c2d31d9",
+      "status": "current"
+    },
+    "72c0cb3ba98121a5": {
+      "path": "72c0cb3ba98121a5.json",
+      "producer_class": "aw-proof",
+      "revision": "2026-08-30T08:59:52+00:00",
+      "source_ref": "proof://receipts/72c0cb3ba98121a5",
+      "status": "current"
+    },
     "72c8f9f5a62988c0": {
       "path": "72c8f9f5a62988c0.json",
       "producer_class": "aw-proof",
@@ -1826,6 +1840,13 @@
       "producer_class": "aw-proof",
       "revision": "2026-08-26T12:31:26+00:00",
       "source_ref": "proof://receipts/9a0cdbd09d8a8425",
+      "status": "current"
+    },
+    "9a445aa9d40a60f7": {
+      "path": "9a445aa9d40a60f7.json",
+      "producer_class": "aw-proof",
+      "revision": "2026-08-30T09:00:33+00:00",
+      "source_ref": "proof://receipts/9a445aa9d40a60f7",
       "status": "current"
     },
     "9ac4d5d978365319": {
