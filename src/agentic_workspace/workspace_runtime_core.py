@@ -12811,7 +12811,9 @@ def _pending_feature_integrations(*, target_root: Path) -> dict[str, dict[str, s
             and owner.get("ref")
         ):
             refs[str(owner["ref"]).replace("\\", "/")] = {
+                "owner_id": str(owner.get("id") or ""),
                 "proposal_id": str(proposal.get("id") or ""),
+                "proposal_ref": path.relative_to(target_root).as_posix(),
                 "expected_subject_revision": str(proposal["expected_subject_revision"]),
                 "expected_planning_revision": str(proposal["expected_planning_revision"]),
             }
@@ -26758,6 +26760,68 @@ def _explicit_closeout_candidate_match(*, payload: dict[str, Any], task_text: st
     return bool(normalized and (normalized in identity.replace("_", "-") or identity.replace("_", "-") in normalized))
 
 
+def _pending_feature_integration_closeout_resolution(*, target_root: Path, task_text: str | None) -> dict[str, Any]:
+    pending = _pending_feature_integrations(target_root=target_root)
+    if not pending:
+        return {}
+    candidates: list[dict[str, str]] = []
+    requested_task = str(task_text or "").strip()
+    for owner_ref, proposal in sorted(pending.items()):
+        owner_id = str(proposal.get("owner_id") or Path(owner_ref).stem.removesuffix(".plan")).strip()
+        identity = {
+            "plan_id": owner_id,
+            "source_plan": owner_ref,
+            "lineage": {"lineage_id": owner_id},
+        }
+        if requested_task and not _explicit_closeout_candidate_match(payload=identity, task_text=requested_task):
+            continue
+        candidates.append(
+            {
+                "plan_id": owner_id,
+                "owner_surface": owner_ref,
+                "proposal_id": str(proposal.get("proposal_id") or ""),
+                "proposal_ref": str(proposal.get("proposal_ref") or ""),
+            }
+        )
+    if not candidates:
+        return {}
+    if len(candidates) > 1:
+        return {
+            "_closeout_evidence_resolution": {
+                "status": "ambiguous",
+                "trust": "not-applicable",
+                "relationship": "current-integration-pending",
+                "candidates": candidates[:5],
+                "recovery_command": (
+                    'agentic-workspace report --target ./repo --section closeout_trust --task "<exact plan id>" --format json'
+                ),
+                "rule": (
+                    "Multiple current feature-head integration subjects are present; none may borrow authority "
+                    "from retained historical closeout evidence."
+                ),
+            }
+        }
+    current = candidates[0]
+    return {
+        "_closeout_evidence_resolution": {
+            "status": "no-relevant-evidence",
+            "trust": "not-applicable",
+            "relationship": "current-integration-pending",
+            "selected_plan_id": current["plan_id"],
+            "owner_surface": current["owner_surface"],
+            "integration_proposal_id": current["proposal_id"],
+            "integration_proposal_ref": current["proposal_ref"],
+            "candidates": [],
+            "historical_fallback_suppressed": True,
+            "recovery_command": ("Wait for target-authority integration or retain command-owned closeout evidence for this exact owner."),
+            "rule": (
+                "The current feature-head owner is integration-pending and has no command-owned closeout evidence; "
+                "unrelated retained history cannot control the current claim."
+            ),
+        }
+    }
+
+
 def _closeout_planning_record_for_report(
     *, active_planning_record: dict[str, Any], target_root: Path | None, task_text: str | None = None
 ) -> dict[str, Any]:
@@ -26776,6 +26840,9 @@ def _closeout_planning_record_for_report(
     if target_root is None:
         return {}
     target_resolved = target_root.resolve()
+    integration_pending = _pending_feature_integration_closeout_resolution(target_root=target_root, task_text=task_text)
+    if integration_pending:
+        return integration_pending
     context_path = target_root / ".agentic-workspace" / "local" / "planning-last-closeout.json"
     if context_path.is_file() and not str(task_text or "").strip():
         try:

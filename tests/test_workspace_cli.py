@@ -3777,6 +3777,106 @@ def test_closeout_trust_does_not_turn_unrelated_history_into_a_blocker(tmp_path:
     assert answer["terminal_action"]["recommended_next_action"] != "Create a follow-on planning item before closure."
 
 
+def test_closeout_trust_prefers_integration_pending_lineage_over_unrelated_terminal_cursor(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--format", "json"]) == 0
+    capsys.readouterr()
+    _set_git_branch(target, current="feature/issue-1891", default="master")
+    owner_ref = ".agentic-workspace/planning/execplans/issue-1891.plan.json"
+    proposal_ref = ".agentic-workspace/planning/integration-proposals/issue-1891-archive.integration-proposal.json"
+    _write(
+        target / owner_ref,
+        json.dumps(
+            {
+                "kind": "planning-execplan/v1",
+                "id": "issue-1891",
+                "lifecycle": "live",
+                "phase": "closeout",
+                "revision": 2,
+                "relationships": {
+                    "integration": {
+                        "status": "feature-complete-integration-pending",
+                        "proposal_id": "issue-1891-archive",
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    _write(
+        target / proposal_ref,
+        json.dumps(
+            {
+                "kind": "planning-integration-proposal/v1",
+                "id": "issue-1891-archive",
+                "status": "pending",
+                "phase": "integration-pending",
+                "requested_transition": "archive-owner",
+                "owner": {"id": "issue-1891", "ref": owner_ref},
+                "expected_subject_revision": "subject-current",
+                "expected_planning_revision": "planning-current",
+                "authority_boundary": {"branch_admission": {"phase": "feature", "branch": "feature/issue-1891"}},
+            }
+        ),
+        encoding="utf-8",
+    )
+    unrelated_path = ".agentic-workspace/planning/closeout-evidence/pr-2793-review-reconciliation-repair.closeout.json"
+    _write(
+        target / unrelated_path,
+        json.dumps(
+            {
+                "kind": "planning-closeout-evidence/v1",
+                "plan_id": "pr-2793-review-reconciliation-repair",
+                "proof_report": {"validation proof": "passed", "proof achieved now": "yes"},
+                "closure_check": {
+                    "slice status": "completed",
+                    "larger-intent status": "closed",
+                    "closure decision": "archive-and-close",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    _write(
+        target / ".agentic-workspace/local/planning-last-closeout.json",
+        json.dumps(
+            {
+                "kind": "planning-last-closeout-context/v1",
+                "status": "evidence-retained",
+                "plan_id": "pr-2793-review-reconciliation-repair",
+                "evidence_path": unrelated_path,
+                "authority": "planning-terminal-command",
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert workspace_runtime_core._pending_feature_integrations(target_root=target) == {
+        owner_ref: {
+            "owner_id": "issue-1891",
+            "proposal_id": "issue-1891-archive",
+            "proposal_ref": proposal_ref,
+            "expected_subject_revision": "subject-current",
+            "expected_planning_revision": "planning-current",
+        }
+    }
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    resolution = answer["archived_slice_closeout_evidence"]
+    assert resolution["status"] == "no-relevant-evidence"
+    assert resolution["trust"] == "not-applicable"
+    assert resolution["relationship"] == "current-integration-pending"
+    assert resolution["selected_plan_id"] == "issue-1891"
+    assert resolution["owner_surface"] == owner_ref
+    assert resolution["integration_proposal_id"] == "issue-1891-archive"
+    assert resolution["integration_proposal_ref"] == proposal_ref
+    assert resolution["historical_fallback_suppressed"] is True
+    assert resolution["candidates"] == []
+    assert answer["completion_gate"]["status"] == "no-relevant-evidence"
+    assert "#2793" not in answer["completion_gate"].get("claim_authorization", {}).get("issue_refs", [])
+
+
 def _write_issue_1981_closeout_fixture(
     target: Path,
     *,
