@@ -11134,6 +11134,11 @@ def test_selected_proof_execution_keeps_route_refinement_claim_blocked(tmp_path:
     assert result["outcome"] == "blocked"
     assert result["claim_boundary"]["completion_claim_allowed"] is False
     assert result["next_action"]["action"] == "repair-proof-route"
+    from agentic_workspace.workspace_selector_validation import _detail_route_command_validation
+
+    validation = _detail_route_command_validation(result["next_action"]["command"])
+    assert validation["status"] == "valid"
+    assert validation["selectors"] == ["route_refinement_required", "manual_proof_obligations"]
 
 
 def test_machine_local_config_has_focused_local_lane_but_shared_config_does_not(tmp_path: Path) -> None:
