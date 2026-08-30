@@ -5,7 +5,7 @@
   "owner_level": "slice",
   "lifecycle": "live",
   "phase": "implementation",
-  "revision": 3,
+  "revision": 5,
   "intent": {
     "outcome": "Fail fast with a bounded corrective envelope when scope-dependent proof selectors are requested without changed or current scope, avoiding construction of the full proof world.",
     "non_goals": [
@@ -51,24 +51,37 @@
     }
   },
   "references": [],
-  "next_action": "Implement the pre-construction scope guard, add strict regression coverage, replay both issue commands, and open one patch PR for independent review.",
+  "next_action": "Publish the validated patch PR and stop at the fresh independent review boundary.",
   "blockers": [
     "Fresh independent review is required after the implementation PR is opened."
   ],
   "proof": {
     "claims": [
       "Unscoped scope-dependent selected-proof requests do not construct the full proof payload.",
-      "The response is bounded and gives an explicit scoped retry route.",
-      "Scoped proof behavior and authority remain unchanged."
+      "The response is bounded and gives an explicit changed-path retry route; current status is classified as insufficient for changed-path proof subjects without broad construction.",
+      "Scoped selected output preserves actionable command and claim fields plus compact template authority identity while routing nested subject, receipt, provenance, mutation payload, and diagnostics to full detail."
     ],
     "requirements": [
       "Focused CLI regression tests prove the full proof builder is not called.",
       "Both exact issue commands complete quickly with bounded output.",
+      "Scoped selected output remains decision-sized and full verbose detail remains available.",
       "Routed changed-path proof and repository checks pass.",
       "A fresh independent review accepts the current PR head before merge or closure."
     ],
     "refs": [
-      "#2806"
+      "#2806",
+      "unscoped original selector replay: 2042 bytes, 26 recursive fields, 0 selected commands, 952.9 ms, full_proof_payload_built=false",
+      "unscoped focused-audit replay: 1938 bytes, 26 recursive fields, 0 selected commands, 915.7 ms, full_proof_payload_built=false",
+      "current selected replay: 2122 bytes, 26 recursive fields, 0 selected commands, 901.9 ms, scope=current-insufficient, full_proof_payload_built=false",
+      "scoped selected replay: 36259 bytes for 22 commands with at most 18 flat fields each; no nested subject or mutation payload; one compact template authority identity; handoff claim gate preserved",
+      "tests/test_workspace_proof_cli.py: 258 passed",
+      "focused proof routing selections: 42 passed",
+      "packages/planning/tests/test_promote.py + tests/test_reconciliation.py + tests/test_workspace_cli.py: 513 passed",
+      "make lint-workspace: passed",
+      "make typecheck: passed",
+      "make check-planning-nosync: passed",
+      "contract tooling and structured inventory: passed",
+      "defaults + maintainer + workspace focused checks: 48 passed"
     ]
   },
   "continuation": {
