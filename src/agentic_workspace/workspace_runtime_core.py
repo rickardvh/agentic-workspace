@@ -52184,6 +52184,9 @@ def _record_proof_receipt_payload(
     receipt_repair_authority_revision: str = "",
     receipt_repair_disposition: str = "",
     receipt_repair_idempotency_key: str = "",
+    proof_commands: list[str] | None = None,
+    proof_run: dict[str, Any] | None = None,
+    publish_trusted_producer: bool = True,
     dry_run: bool = False,
 ) -> dict[str, Any]:
     command, result = _validated_proof_receipt_inputs(command=command, result=result)
@@ -52197,6 +52200,15 @@ def _record_proof_receipt_payload(
         "plan_id": str(plan_id or "").strip(),
         "rule": "This receipt records actual validation evidence supplied by the caller; proof recommendations alone must not create receipts.",
     }
+    aggregate_commands = [str(item).strip() for item in (proof_commands or []) if str(item).strip()]
+    if aggregate_commands:
+        selected_proof_material = json.dumps(aggregate_commands, sort_keys=True, ensure_ascii=True).encode("utf-8")
+        selected_proof_fingerprint = hashlib.sha256(selected_proof_material).hexdigest()
+        receipt["proof_commands"] = aggregate_commands
+        receipt["selected_proof_id"] = f"selected-proof:{selected_proof_fingerprint[:16]}"
+        receipt["selected_proof_fingerprint"] = selected_proof_fingerprint
+    if isinstance(proof_run, dict) and proof_run:
+        receipt["proof_run"] = copy.deepcopy(proof_run)
     execution: dict[str, Any] = {
         "command_identity": hashlib.sha256(command.encode("utf-8")).hexdigest()[:16],
         "result": result,
@@ -52378,14 +52390,21 @@ def _record_proof_receipt_payload(
                 "changed_paths": receipt["changed_paths"],
                 "proof_subject": receipt.get("proof_subject", {}),
                 "target_context": target_context,
+                "proof_commands": aggregate_commands,
             },
             sort_keys=True,
             ensure_ascii=True,
         ).encode("utf-8")
     ).hexdigest()[:16]
     receipt["publication_id"] = producer_receipt_id
-    producer_receipt_ref = "" if dry_run else f"proof://receipts/{producer_receipt_id}"
-    if not dry_run:
+    producer_receipt_ref = (
+        ""
+        if dry_run
+        else f"proof://receipts/{producer_receipt_id}"
+        if publish_trusted_producer
+        else f"local-proof-run://{str(_as_dict(proof_run).get('run_id') or producer_receipt_id)}"
+    )
+    if not dry_run and publish_trusted_producer:
         existing_publication = _existing_proof_publication_receipt(
             target_root=target_root,
             producer_receipt_id=producer_receipt_id,
@@ -52420,22 +52439,23 @@ def _record_proof_receipt_payload(
                         json.dumps(receipt, sort_keys=True, ensure_ascii=True)  # lgtm[py/clear-text-storage-sensitive-data]
                         + "\n"
                     )
-            _write_trusted_producer_receipt(
-                target_root=target_root,
-                producer_class="aw-proof",
-                receipt_id=producer_receipt_id,
-                source_ref=producer_receipt_ref,
-                receipt={
-                    **receipt,
-                    "receipt_id": producer_receipt_id,
-                    "producer_class": "aw-proof",
-                    "authority": "aw-proof",
-                    "source_type": "aw-proof-receipt",
-                    "result": "passed" if admission.get("proof_sufficient") else "failed",
-                    "confidence": "high",
-                },
-            )
-            if target_context:
+            if publish_trusted_producer:
+                _write_trusted_producer_receipt(
+                    target_root=target_root,
+                    producer_class="aw-proof",
+                    receipt_id=producer_receipt_id,
+                    source_ref=producer_receipt_ref,
+                    receipt={
+                        **receipt,
+                        "receipt_id": producer_receipt_id,
+                        "producer_class": "aw-proof",
+                        "authority": "aw-proof",
+                        "source_type": "aw-proof-receipt",
+                        "result": "passed" if admission.get("proof_sufficient") else "failed",
+                        "confidence": "high",
+                    },
+                )
+            if target_context and publish_trusted_producer:
                 proof_outcome = "success" if admission.get("proof_sufficient") else "failed"
                 try:
                     calibration = {
@@ -52465,10 +52485,19 @@ def _record_proof_receipt_payload(
                         "source_ref": producer_receipt_ref,
                         "rule": "Duplicate proof calibration is idempotent for the same target/task/scope/provenance key.",
                     }
-            else:
+            elif publish_trusted_producer:
                 calibration = assignment_context
+            else:
+                calibration = {
+                    "status": "local-only",
+                    "source_ref": producer_receipt_ref,
+                    "rule": "Selected-proof execution keeps aggregate evidence local and does not publish delegation calibration.",
+                }
         else:
             calibration = {"status": "dry-run", "rule": "Dry runs do not write producer receipts or calibration evidence."}
+        receipt_action_args = (
+            ["--execute-selected"] if aggregate_commands else ["--record-receipt", "--receipt-command", command, "--receipt-result", result]
+        )
         transition = record_review_stack_transition(
             target_root=target_root,
             phase="review-proof",
@@ -52478,11 +52507,7 @@ def _record_proof_receipt_payload(
                 [
                     "proof",
                     *sum((["--changed", path] for path in _normalize_changed_paths(changed_paths)), []),
-                    "--record-receipt",
-                    "--receipt-command",
-                    command,
-                    "--receipt-result",
-                    result,
+                    *receipt_action_args,
                     "--format",
                     "json",
                 ],
@@ -52514,6 +52539,7 @@ def _record_proof_receipt_payload(
         review_stack_transition=review_stack_transition,
         repair_retry_ladder=repair_retry_ladder,
         failure_summary=failure_summary,
+        trusted_producer_published=publish_trusted_producer,
     )
 
 
@@ -52568,6 +52594,7 @@ def _proof_receipt_write_result(
     review_stack_transition: dict[str, Any],
     repair_retry_ladder: dict[str, Any] | None,
     failure_summary: dict[str, Any] | None,
+    trusted_producer_published: bool,
 ) -> dict[str, Any]:
     """Render the mutation result independently of receipt admission and persistence."""
 
@@ -52578,6 +52605,10 @@ def _proof_receipt_write_result(
         "history_path": PROOF_RECEIPT_HISTORY_RELATIVE_PATH.as_posix(),
         "receipt": receipt,
         "trusted_producer_receipt_ref": producer_receipt_ref,
+        "publication": {
+            "trusted_producer_published": trusted_producer_published and not dry_run,
+            "policy": "explicit-interoperability-publication" if trusted_producer_published else "selected-execution-local-only",
+        },
         "calibration_admission": calibration_admission,
         "proof_reuse_cache": proof_reuse_cache,
         "closeout_command": "agentic-workspace planning closeout --target . --proof-from last --format json",
@@ -52776,7 +52807,8 @@ def _execute_selected_proof_payload(
     }
     records = [item for item in _list_payload(run.get("commands")) if isinstance(item, dict)]
     passed_commands = {str(item.get("command") or "") for item in records if item.get("status") == "passed"}
-    if len(passed_commands.intersection(required_commands)) == len(required_commands):
+    aggregate_receipt = _as_dict(run.get("aggregate_receipt"))
+    if len(passed_commands.intersection(required_commands)) == len(required_commands) and aggregate_receipt.get("status") == "written":
         return _proof_execution_result_payload(run=run, selection=selection, status="reused-fresh-evidence")
     if dry_run:
         run["attempt"] = int(run.get("attempt") or 0) + 1
@@ -52842,32 +52874,6 @@ def _execute_selected_proof_payload(
             "stderr_tail": stderr[-2000:],
             "receipt_ref": receipt_ref.as_posix(),
         }
-        canonical_write: dict[str, Any] | None = None
-        if status in {"passed", "failed"}:
-            try:
-                canonical_write = _record_proof_receipt_payload(
-                    target_root=target_root,
-                    command=command,
-                    result=status,
-                    changed_paths=changed_paths,
-                    task_text=task_text,
-                    receipt_duration_seconds=str(receipt["duration_seconds"]),
-                    receipt_exit_state=status,
-                    dry_run=False,
-                )
-                receipt["canonical_receipt"] = {
-                    "status": canonical_write.get("status", "written"),
-                    "path": canonical_write.get("path", PROOF_RECEIPT_RELATIVE_PATH.as_posix()),
-                    "admission": _as_dict(_as_dict(canonical_write.get("receipt")).get("admission")),
-                }
-            except WorkspaceUsageError as exc:
-                receipt["canonical_receipt"] = {
-                    "status": "rejected-after-runtime-state-change",
-                    "path": PROOF_RECEIPT_RELATIVE_PATH.as_posix(),
-                    "reason": str(exc),
-                }
-                status = "admission-rejected"
-                receipt["status"] = status
         _write_json_file(destination=target_root / receipt_ref, payload=receipt, dry_run=False)
         records = [item for item in records if str(item.get("command") or "") != command]
         records.append({key: value for key, value in receipt.items() if key not in {"stdout_tail", "stderr_tail"}})
@@ -52880,7 +52886,48 @@ def _execute_selected_proof_payload(
     run["updated_at"] = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     _write_json_file(destination=run_path, payload=run, dry_run=False)
     final_passed = {str(item.get("command") or "") for item in records if item.get("status") == "passed"}
-    result_status = "completed" if len(final_passed.intersection(required_commands)) == len(required_commands) else "partial"
+    commands_passed = len(final_passed.intersection(required_commands)) == len(required_commands)
+    if commands_passed and _as_dict(run.get("aggregate_receipt")).get("status") != "written":
+        proof_run = {
+            "kind": "agentic-workspace/selected-proof-run-summary/v1",
+            "run_id": effective_run_id,
+            "subject_revision": subject["revision"],
+            "attempt": run["attempt"],
+            "commands": [
+                {key: item.get(key) for key in ("command_id", "command", "status", "exit_code", "duration_seconds", "receipt_ref")}
+                for item in records
+                if str(item.get("command") or "") in required_commands
+            ],
+        }
+        try:
+            aggregate_write = _record_proof_receipt_payload(
+                target_root=target_root,
+                command=required_commands[0],
+                result="passed",
+                changed_paths=changed_paths,
+                task_text=task_text,
+                receipt_exit_state="passed",
+                proof_commands=required_commands,
+                proof_run=proof_run,
+                publish_trusted_producer=False,
+                dry_run=False,
+            )
+            run["aggregate_receipt"] = {
+                "status": aggregate_write.get("status", "written"),
+                "receipt_ref": aggregate_write.get("path", PROOF_RECEIPT_RELATIVE_PATH.as_posix()),
+                "admission": _as_dict(_as_dict(aggregate_write.get("receipt")).get("admission")),
+                "publication": _as_dict(aggregate_write.get("publication")),
+            }
+        except WorkspaceUsageError as exc:
+            run["aggregate_receipt"] = {
+                "status": "rejected-after-runtime-state-change",
+                "receipt_ref": PROOF_RECEIPT_RELATIVE_PATH.as_posix(),
+                "reason": str(exc),
+            }
+        run["updated_at"] = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+        _write_json_file(destination=run_path, payload=run, dry_run=False)
+    aggregate_written = _as_dict(run.get("aggregate_receipt")).get("status") == "written"
+    result_status = "completed" if commands_passed and aggregate_written else "partial"
     return _proof_execution_result_payload(run=run, selection=selection, status=result_status)
 
 

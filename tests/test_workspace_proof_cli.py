@@ -7915,7 +7915,8 @@ def test_proof_tiny_readme_profile_keeps_docs_only_validation_light(capsys) -> N
     encoded = json.dumps(payload)
     docs_diff = "git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md packages/memory/README.md"
     assert payload["kind"] == "proof-next-decision/v1"
-    assert payload["next"]["command"] == docs_diff
+    assert payload["next"]["action"] == "execute-selected-proof"
+    assert "--execute-selected" in payload["next"]["command"]
     assert payload["required_commands"] == [docs_diff]
     assert "uv run pytest tests -q" not in encoded
     assert len(encoded) < 6000
@@ -8178,11 +8179,87 @@ def test_default_only_weak_agent_consumes_actual_proof_guidance_without_follow_u
         "make lint-workspace",
         "make typecheck",
     ]
+    assert packet["next"]["action"] == "execute-selected-proof"
+    assert packet["next"]["command"] == (
+        'agentic-workspace proof --target "." --changed "fixtures/multi-command.py" --execute-selected --format json'
+    )
+    assert packet["receipt"] == {
+        "status": "not-recorded",
+        "missing_count": 3,
+        "manual_recording_available": True,
+        "detail_selector": "proof_receipt_bridge",
+    }
     assert trace["claim"] == "blocked"
     assert packet["claim_boundary"]["completion_claim_allowed"] is False
     assert trace["selector_calls"] == trace["verbose_calls"] == trace["raw_workspace_reads"] == 0
     evidence = json.loads(Path("docs/maintainer/proof-compression-2684.json").read_text(encoding="utf-8"))
     assert evidence["default_guidance_proof"]["interaction_trace"] == trace
+
+
+def test_ordinary_proof_guidance_materializes_changed_path_templates_before_admission() -> None:
+    from agentic_workspace.workspace_runtime_proof import _ordinary_proof_next_decision_payload
+
+    command = "uv run agentic-workspace implement --changed <paths> --select requirement_grounding --format json"
+    changed_paths = ["src/feature file.py", "tests/test_feature.py"]
+    packet = _ordinary_proof_next_decision_payload(
+        next_decision={
+            "next": {"action": "run-validation-command", "command": command, "route_source": "changed-paths"},
+            "required_commands": [command],
+            "warnings": [],
+        },
+        answer={
+            "proof_route_decision": {"selected_command": {"route_authority": "repo-owned-proof-policy"}},
+            "proof_route_strategy_preservation": {
+                "decision_id": "template-decision",
+                "route_health_id": "template-health",
+                "claim_effect": "selected-proof-required",
+                "proof_route_health": {"status": "current", "finding_count": 0},
+            },
+            "proof_receipt_reconciliation": {
+                "status": "not-recorded",
+                "selected_proof_identity": {"id": "template-proof", "fingerprint": "template-fingerprint", "command_count": 1},
+            },
+            "proof_receipt_bridge": {
+                "missing_receipt_count": 1,
+                "next_recording_command": "agentic-workspace proof --record-receipt --format json",
+            },
+            "proof_closeout_summary": {"status": "not-yet-sufficient", "remaining_gaps": ["proof result missing"]},
+            "proof_route_strategy_claim_gate": {"claim_effect": "selected-proof-required"},
+            "manual_verification": None,
+            "unavailable_proof_commands": [],
+        },
+        target=".",
+        selector={"changed": changed_paths},
+        cli_invoke="agentic-workspace",
+    )
+
+    assert packet["next"]["action"] == "execute-selected-proof"
+    assert "--execute-selected" in packet["next"]["command"]
+    assert "--record-receipt" not in packet["next"]["command"]
+    assert packet["required_commands"] == [command]
+    assert packet["receipt"]["manual_recording_available"] is True
+
+
+def test_issue_1891_ordinary_proof_scope_uses_one_selected_executor_action(capsys) -> None:
+    changed_paths = [
+        ".release/changes/issue-1891-integration-pending-closeout-lineage.toml",
+        "src/agentic_workspace/reporting_support.py",
+        "src/agentic_workspace/workspace_runtime_core.py",
+        "tests/test_workspace_cli.py",
+    ]
+
+    assert cli.main(["proof", "--target", str(ROOT), "--changed", *changed_paths, "--format", "json"]) == 0
+    packet = json.loads(capsys.readouterr().out)
+
+    assert packet["kind"] == "proof-next-decision/v1"
+    assert packet["next"]["action"] == "execute-selected-proof"
+    assert packet["next"]["operation"] == "proof.execute-selected"
+    assert "--execute-selected" in packet["next"]["command"]
+    assert "--record-receipt" not in packet["next"]["command"]
+    assert all(f'--changed "{path}"' in packet["next"]["command"] for path in changed_paths)
+    assert any("<paths>" in command for command in packet["required_commands"])
+    assert packet["receipt"]["manual_recording_available"] is True
+    assert packet["receipt"]["detail_selector"] == "proof_receipt_bridge"
 
 
 def test_proof_changed_selector_flags_direct_cli_edits(tmp_path: Path, capsys) -> None:
@@ -11247,16 +11324,19 @@ def test_selected_proof_execution_reconciles_and_reuses_local_receipts(tmp_path:
     assert first["preexecution_admission"]["status"] == "admitted"
     assert first["preexecution_admission"]["process_launch_count"] == 4
     assert first["canonical_receipt_admission"] == {
-        "recorded_count": 4,
+        "recorded_count": 1,
         "rejected_count": 0,
         "authority": "proof_receipt_admission",
+        "scope": "selected-proof-aggregate",
     }
     assert first["claim_boundary"]["status"] == "effective-local-configuration-verified"
     assert first["claim_boundary"]["shared_repository_claim_allowed"] is False
     assert len(json.dumps(first).encode("utf-8")) < 16_384
     assert before == after
     canonical = json.loads((tmp_path / ".agentic-workspace/local/proof-receipts/last.json").read_text(encoding="utf-8"))
-    assert canonical["command"] == "check-four"
+    assert canonical["command"] == "check-one"
+    assert canonical["proof_commands"] == commands
+    assert canonical["proof_run"]["run_id"] == first["run"]["id"]
     assert canonical["admission"]["proof_sufficient"] is True
     reconciliation = workspace_runtime_proof._proof_receipt_reconciliation_payload(
         target_root=tmp_path,
@@ -11281,6 +11361,66 @@ def test_selected_proof_execution_reconciles_and_reuses_local_receipts(tmp_path:
     assert calls == commands
 
 
+def test_selected_proof_execution_leaves_tracked_receipt_store_unchanged(tmp_path: Path, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    _write(tmp_path / ".gitignore", ".agentic-workspace/local/\n")
+    _write(tmp_path / ".agentic-workspace/config.toml", "schema_version = 1\n")
+    _write(tmp_path / ".agentic-workspace/proof/receipts/index.json", '{"receipts": []}\n')
+    _write(tmp_path / "changed.py", "VALUE = 1\n")
+    subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True)
+    subprocess.run(
+        ["git", "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "fixture"],
+        cwd=tmp_path,
+        check=True,
+    )
+    commands = ["check-shared-one", "check-shared-two"]
+    selection = _selected_execution_fixture(commands, local=False)
+    monkeypatch.setattr(workspace_runtime_core, "_proof_selection_for_changed_paths", lambda **_: selection)
+    monkeypatch.setattr(workspace_runtime_proof, "_proof_selection_for_changed_paths", lambda **_: selection)
+    monkeypatch.setattr(
+        workspace_runtime_core,
+        "run_trusted_shell",
+        lambda command, **_: subprocess.CompletedProcess(command, 0, stdout="passed", stderr=""),
+    )
+    before = subprocess.run(["git", "status", "--short"], cwd=tmp_path, capture_output=True, text=True, check=True).stdout
+
+    first = workspace_runtime_core._execute_selected_proof_payload(
+        target_root=tmp_path,
+        changed_paths=["changed.py"],
+        task_text="verify shared change",
+        run_id="tracked-residue-check",
+        timeout_seconds="30",
+        cancel_file="",
+        dry_run=False,
+    )
+
+    after = subprocess.run(["git", "status", "--short"], cwd=tmp_path, capture_output=True, text=True, check=True).stdout
+    assert first["status"] == "completed"
+    assert first["persistence"]["repository_residue"] is False
+    assert first["persistence"]["tracked_file_count"] == 0
+    assert before == after == ""
+    assert json.loads((tmp_path / ".agentic-workspace/proof/receipts/index.json").read_text(encoding="utf-8")) == {"receipts": []}
+    run_root = tmp_path / ".agentic-workspace/local/proof-receipts/runs/tracked-residue-check"
+    assert len(list(run_root.glob("*.json"))) == len(commands) + 1
+    history_path = tmp_path / ".agentic-workspace/local/proof-receipts/history.jsonl"
+    history_before = history_path.read_bytes()
+
+    reused = workspace_runtime_core._execute_selected_proof_payload(
+        target_root=tmp_path,
+        changed_paths=["changed.py"],
+        task_text="verify shared change",
+        run_id="tracked-residue-check",
+        timeout_seconds="30",
+        cancel_file="",
+        dry_run=False,
+    )
+
+    assert reused["status"] == "reused-fresh-evidence"
+    assert history_path.read_bytes() == history_before
+    assert subprocess.run(["git", "status", "--short"], cwd=tmp_path, capture_output=True, text=True, check=True).stdout == ""
+
+
 def test_selected_proof_execution_materializes_changed_path_templates_before_admission(tmp_path: Path, monkeypatch) -> None:
     _init_git_repo(tmp_path)
     changed_path = "src/feature file.py"
@@ -11300,7 +11440,12 @@ def test_selected_proof_execution_materializes_changed_path_templates_before_adm
     monkeypatch.setattr(
         workspace_runtime_core,
         "_record_proof_receipt_payload",
-        lambda **_: {"status": "written", "receipt": {"admission": {"proof_sufficient": True}}},
+        lambda **_: {
+            "status": "written",
+            "path": ".agentic-workspace/local/proof-receipts/last.json",
+            "receipt": {"admission": {"proof_sufficient": True}},
+            "publication": {"trusted_producer_published": False},
+        },
     )
     result = workspace_runtime_core._execute_selected_proof_payload(
         target_root=tmp_path,

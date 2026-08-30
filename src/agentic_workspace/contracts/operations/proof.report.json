@@ -85,12 +85,13 @@
     {
       "surface": ".agentic-workspace/local/proof-receipts/last.json",
       "required": false,
-      "when": "--record-receipt and not a dry run"
+      "when": "--execute-selected completes or --record-receipt is used, and not a dry run",
+      "description": "one aggregate selected-proof receipt for automatic execution, or one explicit interoperability receipt"
     },
     {
       "surface": ".agentic-workspace/local/proof-receipts/history.jsonl",
       "required": false,
-      "when": "--record-receipt and not a dry run"
+      "when": "--execute-selected completes or --record-receipt is used, and not a dry run"
     },
     {
       "surface": ".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
@@ -118,11 +119,11 @@
     "Additive-only durable surfaces should be flagged unless repeated cost, ownership, discovery, and validation answers are explicit.",
     "Subsystem proof hints must not replace selected package proof lanes; they add host-repo validation context for matching paths.",
     "Tiny output must preserve the first validation action, all required commands, and blocking warnings.",
-    "For ordinary changed-path proof, proof_next_decision is authoritative: run or enumerate every required_commands entry, preserve manual/runtime/receipt blockers and claim_boundary, and use selectors or verbose output only for optional explanation.",
+    "For ordinary changed-path proof, proof_next_decision is authoritative: use its execute-selected action for an admitted command set, preserve manual/runtime/receipt blockers and claim_boundary, and use selectors or verbose output only for optional explanation.",
     "Proof recommendations must not record receipts; --record-receipt requires caller-supplied execution command and result.",
     "--execute-selected runs only commands from the current selected proof decision, reuses only an exact current subject, and fails closed when an explicit run id names stale evidence.",
     "Machine-local config evidence can authorize only the effective-local-configuration claim and must never satisfy repository, PR, release, or parent claims.",
-    "Selected execution writes only under the existing ignored local proof-receipt owner and keeps command output behind exact receipt references.",
+    "Selected execution writes command receipts plus one aggregate receipt only under the existing ignored local proof-receipt owner, keeps command output behind exact receipt references, and never publishes the tracked trusted-producer receipt store.",
     "Proof receipts use caller-supplied structured duration, timeout, environment, route identity, and claim-sufficiency fields; route-health must not infer authoritative timeout or sufficiency from result/log strings.",
     "Route repair receipts must name the stable finding id, authority revision, and disposition before route-health retirement is allowed.",
     "Failed proof receipts may include repair retry ladders, but those ladders guide iteration only and must not replace the originally selected closeout proof.",
