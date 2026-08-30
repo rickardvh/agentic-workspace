@@ -3,9 +3,9 @@
   "id": "issue-2755-review-resolution-replay",
   "title": "Issue 2755 exact-head review resolution replay",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "closeout",
-  "revision": 4,
+  "lifecycle": "archived",
+  "phase": "complete",
+  "revision": 5,
   "intent": {
     "outcome": "Classify exact-current-head implementation resolution notes and independent merge-ready verdicts as non-actionable review evidence while keeping genuinely new requests actionable.",
     "non_goals": [
@@ -54,20 +54,20 @@
       ]
     },
     "integration": {
-      "status": "feature-complete-integration-pending",
+      "status": "integrated",
       "proposal_id": "issue-2755-review-resolution-replay-archive-owner",
       "proposal_ref": ".agentic-workspace/planning/integration-proposals/issue-2755-review-resolution-replay-archive-owner.integration-proposal.json",
       "requested_transition": "archive-owner",
       "proof_refs": [
-        "#2755",
-        "PR #2859",
-        "PR #2887",
         "selected-proof:692f0b62e16ff90c",
         "PR #2887 live replay complete with zero current actions",
         "139 review-stack tests passed",
         "513 broad tests passed"
       ],
-      "authority": "feature-head declaration; target integration remains terminal authority"
+      "authority": "feature-head declaration; target integration remains terminal authority",
+      "transition": "archive-owner",
+      "applied_at": "2026-08-30T17:49:58.281106Z",
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2755-review-resolution-replay-archive-owner.integration-receipt.json"
     }
   },
   "references": [
@@ -114,7 +114,9 @@
   "proof_report": {
     "validation proof": "selected-proof:692f0b62e16ff90c, PR #2887 live replay complete with zero current actions, 139 review-stack tests passed, 513 broad tests passed",
     "proof achieved now": "yes; integration-propose recorded accepted feature-head proof.",
-    "evidence for \"proof achieved\" state": "selected-proof:692f0b62e16ff90c, PR #2887 live replay complete with zero current actions, 139 review-stack tests passed, 513 broad tests passed"
+    "evidence for \"proof achieved\" state": "selected-proof:692f0b62e16ff90c, PR #2887 live replay complete with zero current actions, 139 review-stack tests passed, 513 broad tests passed",
+    "integration proof": "selected-proof:692f0b62e16ff90c, PR #2887 live replay complete with zero current actions, 139 review-stack tests passed, 513 broad tests passed",
+    "integration applied at": "2026-08-30T17:49:58.281106Z"
   },
   "execution_run": {
     "run status": "completed",
@@ -150,5 +152,10 @@
     "why this decision is honest": "Feature-head proof is accepted; terminal lifecycle truth awaits target integration.",
     "evidence carried forward": "selected-proof:692f0b62e16ff90c, PR #2887 live replay complete with zero current actions, 139 review-stack tests passed, 513 broad tests passed",
     "reopen trigger": "New contradictory evidence or rejected target integration."
+  },
+  "active_milestone": {
+    "status": "archived",
+    "ready": "ready",
+    "blocked": "none"
   }
 }

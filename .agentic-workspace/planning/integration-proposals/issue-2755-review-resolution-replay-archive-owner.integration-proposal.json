@@ -1,8 +1,8 @@
 {
   "kind": "planning-integration-proposal/v1",
   "id": "issue-2755-review-resolution-replay-archive-owner",
-  "status": "pending",
-  "phase": "integration-pending",
+  "status": "integrated",
+  "phase": "integrated-lifecycle-truth",
   "requested_transition": "archive-owner",
   "owner": {
     "id": "issue-2755-review-resolution-replay",
@@ -24,7 +24,7 @@
   "expected_subject_revision": "2459febfa3a0c39a",
   "expected_planning_revision": "39aafa1ab01b2649",
   "created_at": "2026-08-30T16:54:19.011726Z",
-  "updated_at": "2026-08-30T16:54:19.011726Z",
+  "updated_at": "2026-08-30T17:49:58.281106Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -40,5 +40,7 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "de85e3230c7c7dcf"
+  "proposal_revision": "96b5ed074819c373",
+  "integrated_at": "2026-08-30T17:49:58.281106Z",
+  "integration_receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2755-review-resolution-replay-archive-owner.integration-receipt.json"
 }
