@@ -5,7 +5,7 @@
   "owner_level": "slice",
   "lifecycle": "live",
   "phase": "implementation",
-  "revision": 4,
+  "revision": 6,
   "intent": {
     "outcome": "Build the maintainer-only deterministic Structured Executor kernel for #2822 with versioned contracts, a pure reducer, atomic local persistence, deterministic replay, revision binding, and bounded cycle/no-progress recovery.",
     "non_goals": [
@@ -52,7 +52,7 @@
     }
   },
   "references": [],
-  "next_action": "Implement PR 1: versioned contracts, representative fixtures, canonical identity helpers, and the pure reducer.",
+  "next_action": "Implement PR 2: atomic local persistence, content-addressed artifacts, deterministic replay, and maintainer-only validate/replay entrypoints.",
   "blockers": [
     "None."
   ],
@@ -92,7 +92,7 @@
     "continuation surface": "GitHub #2821 and next child #2823 after #2822 review and merge."
   },
   "execution_bounds": {
-    "allowed paths": "tools/model-cli-harness/structured-executor/**; tests/test_structured_executor_*.py; .agentic-workspace/planning/execplans/issue-2822-structured-executor-kernel.plan.json; .release/changes/**",
+    "allowed paths": "tools/model-cli-harness/structured-executor/**; tests/test_structured_executor_*.py; src/agentic_workspace/contracts/structured_file_inventory.json; .agentic-workspace/planning/execplans/issue-2822-structured-executor-kernel.plan.json; .release/changes/**",
     "max changed files": "Keep each PR reviewable; split contracts/reducer, persistence/replay, and safety/evidence instead of broadening a layer.",
     "required validation commands": "Focused structured-executor pytest, jsonschema validation, replay determinism, side-effect isolation, ruff, structured inventory, and routed changed-path proof.",
     "ask-before-refactor threshold": "Stop before modifying shipped AW runtime, public CLI, module contracts, or operating-decision authority.",
@@ -101,6 +101,7 @@
   "touched_paths": [
     "tools/model-cli-harness/structured-executor/**",
     "tests/test_structured_executor_*.py",
+    "src/agentic_workspace/contracts/structured_file_inventory.json",
     ".agentic-workspace/planning/execplans/issue-2822-structured-executor-kernel.plan.json",
     ".release/changes/**"
   ],

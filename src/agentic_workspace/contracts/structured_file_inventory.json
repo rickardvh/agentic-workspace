@@ -1225,6 +1225,30 @@
       "storage_class": "diagnostic-fixture"
     },
     {
+      "checked_in_justification": "Maintainer-only Structured Executor contracts define the deterministic state and transition vocabulary used by the model CLI evaluation harness.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "notes": "These schemas are evaluation infrastructure and do not define a shipped AW runtime or public state owner.",
+      "owner": "model-cli-harness",
+      "pattern": "tools/model-cli-harness/structured-executor/contracts/*.schema.json",
+      "schema_or_validator": "JSON Schema draft 2020-12 and tests/test_structured_executor_contracts.py",
+      "status": "schema-backed",
+      "storage_class": "diagnostic-fixture"
+    },
+    {
+      "checked_in_justification": "Compact replay fixtures prove deterministic executor behavior without retaining model transcripts or broad repository state.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "notes": "Fixtures are bounded test evidence validated by the adjacent Structured Executor contracts and focused tests.",
+      "owner": "model-cli-harness",
+      "pattern": "tools/model-cli-harness/structured-executor/fixtures/*.json",
+      "schema_or_validator": "validator: uv run pytest tests/test_structured_executor_contracts.py tests/test_structured_executor_replay.py -q",
+      "status": "typed-validator-backed",
+      "storage_class": "diagnostic-fixture"
+    },
+    {
       "checked_in_justification": "Test fixture or checkout diagnostic data used to prove behavior, not package runtime authority.",
       "editable_by_agents": true,
       "format": "json",
