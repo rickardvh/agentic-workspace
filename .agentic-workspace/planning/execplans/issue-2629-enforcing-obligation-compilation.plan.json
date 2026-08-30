@@ -1,0 +1,89 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2629-enforcing-obligation-compilation",
+  "title": "Issue 2629 enforcing obligation compilation",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "implementation",
+  "revision": 3,
+  "intent": {
+    "outcome": "Ensure an applicable enforcing workflow obligation targeting work completion survives bounded-clause compilation into the authoritative operating decision and mechanically narrows every derived completion projection.",
+    "non_goals": [
+      "Do not add dogfooding-specific branching.",
+      "Do not create a second workflow or claim authority.",
+      "Do not broaden the internal instruction IR or public authoring syntax."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "Create a bounded plan for Issue 2629 enforcing obligation compilation.",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "src/agentic_workspace/operating_decision.py",
+      "tests/test_operating_decision.py",
+      "tests/test_workspace_cli.py",
+      ".release/changes/issue-2629-enforcing-obligation-compilation.toml",
+      ".agentic-workspace/planning/execplans/issue-2629-enforcing-obligation-compilation.plan.json"
+    ],
+    "effects": [
+      "The completion claim is an explicit current instruction target on ordinary projection surfaces.",
+      "Unsatisfied enforcing requirements become authoritative blockers with source provenance and a bounded satisfier route.",
+      "Derived start/implement completion fields cannot re-allow a claim blocked by the operating decision.",
+      "Advisory and non-applicable obligations remain non-blocking."
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected-local",
+      "owner": "issue-2629-enforcing-obligation-compilation"
+    },
+    "proof_posture": {
+      "state": "pending",
+      "refs": []
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    },
+    "delegation": {
+      "state": "recorded",
+      "route": "keep-local",
+      "reason": "This prerequisite is a tightly coupled operating-decision projection fix; one owner should preserve the authority and regression boundary."
+    }
+  },
+  "references": [],
+  "next_action": "Implement the generic claim-target and peer-projection enforcement path, add source-neutral and live workflow regression tests, validate, and open one patch PR for fresh independent review.",
+  "blockers": [
+    "Fresh independent review is required after the PR is opened."
+  ],
+  "proof": {
+    "claims": [
+      "An unsatisfied enforcing workflow requirement blocks claim-work-complete in the sole operating decision.",
+      "The derived ordinary surface reports completion unavailable and exposes the same blocker and satisfier route.",
+      "Satisfied, advisory, and non-applicable cases stay unblocked."
+    ],
+    "requirements": [
+      "A source-neutral operating-decision test proves target-scoped require/restrict composition.",
+      "A workflow-config startup regression reproduces and fixes the contradictory completion output.",
+      "Focused IR, operating-decision, and workspace CLI tests pass.",
+      "Fresh independent review accepts the current PR head before merge or issue closure."
+    ],
+    "refs": [
+      "#2629",
+      "#2870"
+    ]
+  },
+  "continuation": {
+    "owner": "issue-2629-enforcing-obligation-compilation",
+    "residual_intent": "After implementation and validation, stop at the fresh independent review boundary; resume #2806 only after this prerequisite is merged."
+  },
+  "specialist_contracts": [
+    {
+      "kind": "planning-delegation/v1",
+      "target": "planning://delegation/keep-local",
+      "revision": 1
+    }
+  ]
+}
