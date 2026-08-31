@@ -2615,6 +2615,12 @@ def compile_projection_surface_operating_decision(
     )
     initiative_posture = _as_dict(_as_dict(task_posture_packet.get("operating_posture")).get("initiative_posture"))
     improvement_intake = _as_dict(payload.get("improvement_intake")) or _as_dict(payload_context.get("improvement_intake"))
+    proof_route_maintenance = _as_dict(payload.get("proof_route_maintenance")) or _as_dict(payload_context.get("proof_route_maintenance"))
+    proof_route_adaptation_signals = [
+        signal
+        for finding in _as_list(_as_dict(proof_route_maintenance.get("route_health")).get("findings"))
+        if isinstance(finding, dict) and (signal := _as_dict(finding.get("bounded_adaptation_signal")))
+    ]
     improvement_candidate = next(
         (
             item
@@ -2659,7 +2665,8 @@ def compile_projection_surface_operating_decision(
             "improvement_latitude": str(initiative_posture.get("mode") or "conservative"),
             "adaptation_signals": [
                 item for item in _as_list(improvement_intake.get("improvement_signal_candidates")) if isinstance(item, dict)
-            ],
+            ]
+            + proof_route_adaptation_signals,
             "coverage_observations": [
                 item
                 for source in (

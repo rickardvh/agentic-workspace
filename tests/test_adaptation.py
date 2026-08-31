@@ -638,3 +638,79 @@ def test_real_route_health_signal_executes_registered_owner_operation(tmp_path: 
         json.loads((tmp_path / ".agentic-workspace/local/proof-route-repairs/history.jsonl").read_text().splitlines()[0])["status"]
         == "applied"
     )
+
+
+def test_route_health_constructs_bounded_candidate_only_from_safe_refinement_evidence(tmp_path: Path) -> None:
+    from agentic_workspace import workspace_runtime_proof
+
+    config_path = tmp_path / ".agentic-workspace" / "config.toml"
+    config_path.parent.mkdir(parents=True)
+    config_path.write_text("schema_version = 1\n", encoding="utf-8")
+    changed_paths = ["src/example.py"]
+    common = {
+        "command": "make test-workspace",
+        "lane": "domain:example",
+        "route_id": "domain:example",
+        "route_refinement_evidence": {
+            "classification": "subsumed",
+            "subsumed_by": "pytest tests/test_example.py -q",
+            "distinct_evidence": "none beyond the focused owner test",
+            "semantic_delta": {
+                "action": "upsert_domain_lane",
+                "lane_id": "example",
+                "lane": {
+                    "purpose": "Focused example proof.",
+                    "applies_to_paths": changed_paths,
+                    "commands": ["pytest tests/test_example.py -q"],
+                },
+            },
+            "simulation": {
+                "required_behaviors": ["example-owner-claim"],
+                "preserved_behaviors": ["example-owner-claim"],
+                "authority_delta": "none",
+                "allowed_owner_paths": [".agentic-workspace/config.toml"],
+                "before_cost": 600,
+                "after_cost": 20,
+                "before_precision": 0.2,
+                "after_precision": 1.0,
+            },
+            "expected_effect": {"required_coverage": "preserved", "summed_work_seconds": "lower"},
+        },
+    }
+    health = workspace_runtime_proof._proof_route_health_payload(
+        selected_commands=[common],
+        stale_hints=[],
+        invalid_hints=[],
+        manual_missing=[],
+        changed_paths=changed_paths,
+        target_root=tmp_path,
+        cli_invoke="agentic-workspace",
+        focused_route_coverage_audit={},
+        route_refinement_required={},
+        unavailable_commands=[],
+        proof_execution_evidence={},
+    )
+
+    finding = next(item for item in health["findings"] if item.get("bounded_adaptation_signal"))
+    candidate = bounded_adaptation_projection([finding["bounded_adaptation_signal"]])["candidates"][0]
+    assert candidate["status"] == "promotion-ready"
+    assert candidate["proposed_delta"]["lane"]["commands"] == ["pytest tests/test_example.py -q"]
+    assert candidate["authority_requirement"]["expected_owner_revision"] == finding["route_authority_revision"]
+
+    ambiguous = deepcopy(common)
+    ambiguous["route_refinement_evidence"] = {"classification": "ambiguous"}
+    ambiguous_health = workspace_runtime_proof._proof_route_health_payload(
+        selected_commands=[ambiguous],
+        stale_hints=[],
+        invalid_hints=[],
+        manual_missing=[],
+        changed_paths=changed_paths,
+        target_root=tmp_path,
+        cli_invoke="agentic-workspace",
+        focused_route_coverage_audit={},
+        route_refinement_required={},
+        unavailable_commands=[],
+        proof_execution_evidence={},
+    )
+    assert not any(item.get("bounded_adaptation_signal") for item in ambiguous_health["findings"])
+    assert ambiguous_health["findings"][-1]["consequence"] == "proof-owner-decision-required"

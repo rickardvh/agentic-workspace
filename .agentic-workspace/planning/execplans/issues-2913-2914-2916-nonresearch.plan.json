@@ -5,11 +5,13 @@
   "owner_level": "slice",
   "lifecycle": "live",
   "phase": "implementation",
-  "revision": 2,
+  "revision": 3,
   "intent": {
-    "outcome": "Create a bounded plan for Implement new non-research issues 2913, 2914, and 2916.",
+    "outcome": "Implement #2913, #2914, and #2916 outside the research lane through existing source-owned runtime/configuration paths and deliver focused-proof stacked PRs.",
     "non_goals": [
-      "Leave adjacent backlog or follow-on work out of this plan."
+      "Do not implement research-lane issues #2821-#2827.",
+      "Do not introduce parallel proof, testing-policy, or delegation authorities.",
+      "Do not close #2613 or #2817."
     ]
   },
   "parent": {
@@ -19,9 +21,13 @@
   },
   "scope": {
     "owned": [
-      "Fill in the concrete files before implementation starts."
+      "Proof-route adaptation and operating-decision surfaces for #2913.",
+      "Verification strategy and named-requirement composition surfaces for #2914.",
+      "Mixed-agent delegation configuration and migration surfaces for #2916."
     ],
-    "effects": []
+    "effects": [
+      "Three consolidated stack layers with focused proof and exact-head CI."
+    ]
   },
   "relationships": {
     "selection": {
@@ -38,18 +44,24 @@
     }
   },
   "references": [],
-  "next_action": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+  "next_action": "Implement #2913 as the first stack layer, then #2914 and #2916 in dependency order.",
   "blockers": [
     "None."
   ],
   "proof": {
     "claims": [
-      "Implement new non-research issues 2913, 2914, and 2916 is implemented, validated, and closed out honestly."
+      "#2913, #2914, and #2916 each meet their stated completion rules without absorbing research-lane or broader-owner work."
     ],
     "requirements": [
-      "Fill in the narrowest command that proves the promoted work."
+      "Focused owner tests per stack layer.",
+      "Changed-file lint and generated-reference freshness.",
+      "Exact-head CI, Security, Semver, and independent review."
     ],
-    "refs": []
+    "refs": [
+      "https://github.com/rickardvh/agentic-workspace/issues/2913",
+      "https://github.com/rickardvh/agentic-workspace/issues/2914",
+      "https://github.com/rickardvh/agentic-workspace/issues/2916"
+    ]
   },
   "continuation": {
     "owner": "none",

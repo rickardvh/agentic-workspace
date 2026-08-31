@@ -586,6 +586,52 @@ def test_disposed_or_absent_coverage_is_quiet() -> None:
     assert disposed["context_effects"]["status"] == "quiet"
 
 
+def test_projection_operating_decision_consumes_proof_route_adaptation_signal() -> None:
+    signal = {
+        "symptom": "broad command is safely subsumed",
+        "evidence_fingerprint": "proof-route-refinement-1",
+        "source": "proof_route_maintenance.route_refinement_evidence",
+        "observed_during": "proof-route-execution",
+        "cost": "disproportionate",
+        "recurrence": "observed",
+        "adaptation": {
+            "owner_class": "proof-route",
+            "source_owner": ".agentic-workspace/config.toml",
+            "proposed_delta": {"action": "upsert_domain_lane", "lane_id": "example"},
+            "authority_requirement": {
+                "mode": "existing-typed-operation",
+                "operation_id": "proof.report",
+                "expected_owner_revision": "rev-a",
+                "current_owner_revision": "rev-a",
+            },
+            "risk_class": "low",
+            "expected_effect": {"required_coverage": "preserved"},
+            "validation_route": ["pytest tests/test_example.py -q"],
+            "rollback": {"mode": "operation-transaction"},
+            "simulation": {
+                "required_behaviors": ["example-owner-claim"],
+                "preserved_behaviors": ["example-owner-claim"],
+                "authority_delta": "none",
+                "allowed_owner_paths": [".agentic-workspace/config.toml"],
+                "before_cost": 20,
+                "after_cost": 10,
+                "before_precision": 0.5,
+                "after_precision": 1.0,
+            },
+        },
+    }
+    admitted = admit_projection_surface_decision_input(input_revisions={"current_work": "rev-a"}, consumer="proof")
+    decision = compile_projection_surface_operating_decision(
+        payload={"proof_route_maintenance": {"route_health": {"findings": [{"bounded_adaptation_signal": signal}]}}},
+        admitted_input=admitted,
+        consumer="proof",
+    )
+
+    candidate = decision["bounded_adaptations"]["candidates"][0]
+    assert candidate["status"] == "promotion-ready"
+    assert candidate["promotion"]["operation_id"] == "proof.report"
+
+
 def test_authorized_local_code_seam_reuses_ordinary_implementation_owner_and_proportionate_proof() -> None:
     candidate = _material_improvement_candidate(
         proposed_paths=["src/router.py"],

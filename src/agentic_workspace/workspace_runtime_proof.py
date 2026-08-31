@@ -5059,6 +5059,7 @@ def _proof_route_health_payload(
         execution_evidence: dict[str, Any] | None = None,
         stable_identity: dict[str, Any] | None = None,
         improvement_signal: dict[str, Any] | None = None,
+        adaptation_evidence: dict[str, Any] | None = None,
     ) -> None:
         basis = json.dumps(
             {
@@ -5127,6 +5128,15 @@ def _proof_route_health_payload(
             finding_payload["execution_evidence"] = execution_evidence
         if improvement_signal is not None:
             finding_payload["improvement_signal_candidate"] = improvement_signal
+        if adaptation_evidence is not None:
+            from agentic_workspace.adaptation import adaptation_signal_from_proof_route_finding
+
+            finding_payload["bounded_adaptation_signal"] = adaptation_signal_from_proof_route_finding(
+                finding_payload,
+                semantic_delta=_as_dict(adaptation_evidence.get("semantic_delta")),
+                simulation=_as_dict(adaptation_evidence.get("simulation")),
+                expected_effect=_as_dict(adaptation_evidence.get("expected_effect")),
+            )
         findings.append(finding_payload)
 
     uncovered_paths = [str(path) for path in _list_payload(route_refinement_required.get("uncovered_paths")) if str(path).strip()]
@@ -5301,6 +5311,69 @@ def _proof_route_health_payload(
                 "applicability_identity": applicability_identity,
             },
             improvement_signal=signal,
+        )
+
+    for command in selected_commands:
+        if not isinstance(command, dict):
+            continue
+        evidence = _as_dict(command.get("route_refinement_evidence"))
+        classification = str(evidence.get("classification") or "").strip()
+        if classification not in {"redundant", "subsumed", "over-broad", "ambiguous"}:
+            continue
+        command_text = str(command.get("command") or "").strip()
+        signal = _improvement_signal_candidate(
+            kind="workflow_cost",
+            observed_during="proof-route-execution",
+            symptom=f"Selected proof constituent is {classification}: {command_text}",
+            cost=str(evidence.get("cost") or "selected proof exceeds its distinct evidence contribution"),
+            suspected_owner=str(command.get("authority_surface") or "repo proof-route authority"),
+            likely_remediation="command",
+            confidence=str(evidence.get("confidence") or "high"),
+            recurrence=str(evidence.get("recurrence") or "observed"),
+            immediate_action="route",
+            retention="shrink_after_fix",
+            source="proof_route_maintenance.route_refinement_evidence",
+        )
+        signal["applicability_identity"] = {
+            "changed_paths": _proof_route_normalize_paths(changed_paths),
+            "changed_paths_digest": _proof_route_scope_digest(changed_paths),
+        }
+        safe_refinement = classification in {"redundant", "subsumed", "over-broad"}
+        required_evidence = (
+            _as_dict(evidence.get("semantic_delta")),
+            _as_dict(evidence.get("simulation")),
+            _as_dict(evidence.get("expected_effect")),
+            str(evidence.get("subsumed_by") or evidence.get("applicability_boundary") or "").strip(),
+        )
+        adaptation_evidence = evidence if safe_refinement and all(required_evidence) else None
+        add_finding(
+            finding_class="excessive_breadth_cost",
+            affected_route=str(command.get("route_id") or command.get("lane") or "selected-proof-route"),
+            evidence=[
+                f"command: {command_text}",
+                f"classification: {classification}",
+                f"evidence contribution: {evidence.get('distinct_evidence') or 'unresolved'}",
+                f"subsumed by/applicability boundary: {required_evidence[-1] or 'unresolved'}",
+            ],
+            consequence="safe-typed-repair" if adaptation_evidence is not None else "proof-owner-decision-required",
+            owner=str(evidence.get("owner") or "repo proof-route authority"),
+            canonical_edit_surface=str(
+                evidence.get("canonical_edit_surface") or ".agentic-workspace/config.toml [assurance.domain_proof_lanes]"
+            ),
+            proposed_delta=(
+                "Apply the evidence-backed smallest typed route refinement."
+                if adaptation_evidence is not None
+                else "Resolve whether this constituent supplies distinct required owner, claim, or evidence coverage."
+            ),
+            validation_commands=[str(item) for item in _list_payload(evidence.get("validation_commands")) if str(item).strip()]
+            or ["agentic-workspace proof --target . --changed <paths> --select proof_route_maintenance,proof_narrowness --format json"],
+            stable_identity={
+                "command_identity": str(command.get("command_identity") or hashlib.sha256(command_text.encode()).hexdigest()[:16]),
+                "classification": classification,
+                "evidence_revision": str(evidence.get("evidence_revision") or ""),
+            },
+            improvement_signal=signal,
+            adaptation_evidence=adaptation_evidence,
         )
     for lane_id in affected_generic_lanes:
         add_finding(
