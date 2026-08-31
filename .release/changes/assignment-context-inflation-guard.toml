@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Retain an equally capable current assignment target when supported-host evidence shows material context inflation without portable price normalization."
-issues = [2818]

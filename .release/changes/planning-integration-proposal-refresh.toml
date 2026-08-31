@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Add a revision-guarded route for refreshing stale pending Planning integration proposals without changing lifecycle intent."
-issues = [2835]

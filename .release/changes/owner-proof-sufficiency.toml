@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Keep every affected subsystem in proof coverage and require its current owner-maintained acceptance gate before claiming sufficiency."
-issues = [2708]

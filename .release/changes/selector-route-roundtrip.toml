@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Keep nested selectors in emitted summary detail routes aligned with canonical selector validation and generated target metadata."
-issues = [2723]

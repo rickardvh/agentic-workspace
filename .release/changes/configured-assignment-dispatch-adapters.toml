@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Execute binding assignments through configured provider-neutral adapters and give their support surfaces focused proof ownership."
-issues = [2817, 2850]

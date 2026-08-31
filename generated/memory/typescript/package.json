@@ -69,5 +69,5 @@
     "test": "node --test test/command-package.test.mjs"
   },
   "type": "module",
-  "version": "0.50.0"
+  "version": "0.51.0"
 }

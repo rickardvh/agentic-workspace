@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Project canonical assignments into bounded worker context with exact lazy read routes and without inherited conversation or broad workspace state."
-issues = [2818]

@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Preserve consequential source-owned outcomes as bounded future-learning candidates without adding noisy no-signal residue."
-issues = [2810]

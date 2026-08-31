@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Add the public revision-bound assignment dispatch operation and explicit executor disposition contract."
-issues = [2817]

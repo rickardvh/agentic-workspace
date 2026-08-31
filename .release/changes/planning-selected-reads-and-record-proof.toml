@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Serve selected Planning readiness and roadmap reads without broad history scans and keep record-only Planning proof on its focused route."
-issues = [2280, 2900]

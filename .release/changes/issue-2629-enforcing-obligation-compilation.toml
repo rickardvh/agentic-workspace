@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Preserve enforcing workflow-obligation claim blockers in the authoritative operating decision and derived ordinary projections."
-issues = [2629]
