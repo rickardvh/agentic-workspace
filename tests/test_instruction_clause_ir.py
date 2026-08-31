@@ -589,6 +589,99 @@ def test_measurement_summary_flows_through_existing_claim_enforcement() -> None:
     assert advisory["instruction_clause_projection"]["effects"]["prefer"][0]["requirement"]["measurement"]["status"] == "failed"
 
 
+def test_passing_measurement_satisfies_only_its_named_requirement_not_broader_semantic_intent() -> None:
+    measurement = {
+        "kind": "agentic-workspace/measurement-evidence-summary/v1",
+        "status": "satisfied",
+        "metric": "selected-read-latency",
+        "observed_value": 1.8,
+        "threshold": 2.0,
+        "detail_ref": "scratch/measurements/selected-read.json",
+    }
+    assurance = {
+        "active": [
+            {
+                "id": "selected-latency",
+                "requirement_class": "current-evidence",
+                "source_intent_ref": ".agentic-workspace/system-intent/intent.toml#responsive-selected-reads",
+                "source_intent_revision": "intent-r1",
+                "source_intent_current": True,
+                "required_evidence": ["cold-median"],
+                "blocking_claims": ["claim-work-complete"],
+                "evidence_owner": "verification:selected-latency",
+                "detail_route": "inspect selected latency evidence",
+            }
+        ],
+        "evidence_status": [
+            {
+                "requirement_id": "selected-latency",
+                "evidence_label": "cold-median",
+                "state": "satisfied",
+                "measurement": measurement,
+            }
+        ],
+    }
+
+    mechanisms, capabilities = _projection_instruction_mechanisms({"assurance_requirements": assurance}, {"blocked_claim_classes": []})
+
+    assert mechanisms["repo_requirements"][0]["id"].startswith("selected-latency:")
+    assert {item["id"] for item in capabilities} == {"evidence:selected-latency:cold-median"}
+    assert all(not str(item["id"]).startswith("intent:") for item in capabilities)
+
+
+def test_promoted_intent_feedback_measurement_blocks_recurrence_and_supersession_forces_review() -> None:
+    promoted = {
+        "active": [
+            {
+                "id": "issue-2569-repeated-context-drift",
+                "requirement_class": "current-evidence",
+                "source_intent_ref": "issue:2569#repeated-measurable-drift",
+                "source_intent_revision": "feedback-r2",
+                "source_intent_current": True,
+                "required_evidence": ["context-drift-count"],
+                "blocking_claims": ["claim-work-complete"],
+                "evidence_owner": "verification:intent-feedback",
+                "detail_route": "refresh the promoted intent-feedback measurement",
+            }
+        ],
+        "evidence_status": [
+            {
+                "requirement_id": "issue-2569-repeated-context-drift",
+                "evidence_label": "context-drift-count",
+                "state": "failed",
+                "measurement": {
+                    "kind": "agentic-workspace/measurement-evidence-summary/v1",
+                    "status": "failed",
+                    "metric": "repeated-context-drift",
+                    "observed_value": 1,
+                    "threshold": 0,
+                    "detail_ref": "scratch/intent-feedback/context-drift.json",
+                },
+            }
+        ],
+    }
+    mechanisms, capabilities = _projection_instruction_mechanisms({"assurance_requirements": promoted}, {"blocked_claim_classes": []})
+    recurrence = compile_instruction_program(
+        instruction_program_from_existing_mechanisms({"instruction_mechanisms": mechanisms, "instruction_capabilities": capabilities}),
+        current_targets=["claim:claim-work-complete"],
+    )
+    assert recurrence["status"] == "blocked"
+    assert recurrence["blockers"][0]["reason_code"] == "failed-evidence"
+
+    superseded = {**promoted, "active": [{**promoted["active"][0], "source_intent_current": False}]}
+    stale_mechanisms, stale_capabilities = _projection_instruction_mechanisms(
+        {"assurance_requirements": superseded}, {"blocked_claim_classes": []}
+    )
+    stale = compile_instruction_program(
+        instruction_program_from_existing_mechanisms(
+            {"instruction_mechanisms": stale_mechanisms, "instruction_capabilities": stale_capabilities}
+        ),
+        current_targets=["claim:claim-work-complete"],
+    )
+    assert stale["status"] == "blocked"
+    assert stale["blockers"][0]["reason_code"] == "stale-revision"
+
+
 def test_named_repo_requirement_preserves_distinct_evidence_states() -> None:
     expected = {
         "failed": "failed-evidence",

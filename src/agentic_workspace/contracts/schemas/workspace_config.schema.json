@@ -569,7 +569,8 @@
                   "subject",
                   "subject_revision",
                   "environment",
-                  "source_revision"
+                  "source_revision",
+                  "producer_command"
                 ],
                 "properties": {
                   "kind": {"description": "Versioned measurable-condition discriminator.", "const": "agentic-workspace/measurement-requirement/v1"},
@@ -587,6 +588,7 @@
                   "control_revision": {"description": "Revision of the relative/scaling control subject.", "type": "string", "minLength": 1},
                   "environment": {"description": "Maintained runtime or benchmark environment identity; use none for deterministic checks.", "type": "string", "minLength": 1},
                   "source_revision": {"description": "Revision of the evidence-producing fixture or measurement method.", "type": "string", "minLength": 1},
+                  "producer_command": {"description": "Exact bounded command selected by the ordinary proof path when current measurement evidence is absent or stale.", "type": "string", "minLength": 1},
                   "excluded_costs": {
                     "description": "Explicit costs excluded by the maintained measurement method.",
                     "type": "array",

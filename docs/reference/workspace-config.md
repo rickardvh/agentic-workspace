@@ -131,6 +131,7 @@ Repo-owned Agentic Workspace configuration stored in .agentic-workspace/config.t
 | `assurance.requirements.<name>.measurement.control_revision` | string | no |  | Revision of the relative/scaling control subject. |  |  |
 | `assurance.requirements.<name>.measurement.environment` | string | yes |  | Maintained runtime or benchmark environment identity; use none for deterministic checks. |  |  |
 | `assurance.requirements.<name>.measurement.source_revision` | string | yes |  | Revision of the evidence-producing fixture or measurement method. |  |  |
+| `assurance.requirements.<name>.measurement.producer_command` | string | yes |  | Exact bounded command selected by the ordinary proof path when current measurement evidence is absent or stale. |  |  |
 | `assurance.requirements.<name>.measurement.excluded_costs` | array of string | no | `[]` | Explicit costs excluded by the maintained measurement method. |  |  |
 | `assurance.subsystem_profiles` | object | no | `{}` | Subsystem-scoped assurance profiles keyed by existing .agentic-workspace/OWNERSHIP.toml subsystem ids. |  |  |
 | `assurance.subsystem_profiles.<name>` | object | no |  | One host-owned assurance profile for an ownership subsystem. |  | x-agentic-workspace-unknown-properties: "warn" |

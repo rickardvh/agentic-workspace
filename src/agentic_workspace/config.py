@@ -1128,6 +1128,7 @@ def _require_measurement_requirement(*, payload: dict[str, Any], config_path: Pa
         "subject_revision",
         "environment",
         "source_revision",
+        "producer_command",
     }
     optional = {"tolerance", "excluded_costs", "control_subject", "control_revision"}
     unknown = sorted(set(raw) - required - optional)
@@ -1160,9 +1161,19 @@ def _require_measurement_requirement(*, payload: dict[str, Any], config_path: Pa
         "subject_revision": require_optional_string(payload=raw, key="subject_revision", config_path=measurement_path),
         "environment": require_optional_string(payload=raw, key="environment", config_path=measurement_path),
         "source_revision": require_optional_string(payload=raw, key="source_revision", config_path=measurement_path),
+        "producer_command": require_optional_string(payload=raw, key="producer_command", config_path=measurement_path),
         "excluded_costs": list(require_optional_string_list(payload=raw, key="excluded_costs", config_path=measurement_path)),
     }
-    for field in ("evidence_label", "metric", "unit", "subject", "subject_revision", "environment", "source_revision"):
+    for field in (
+        "evidence_label",
+        "metric",
+        "unit",
+        "subject",
+        "subject_revision",
+        "environment",
+        "source_revision",
+        "producer_command",
+    ):
         if not normalized[field]:
             raise WorkspaceUsageError(f"{measurement_path.as_posix()} {field} must be a non-empty string.")
     threshold = raw.get("threshold")

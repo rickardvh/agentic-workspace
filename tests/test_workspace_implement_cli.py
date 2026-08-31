@@ -2228,6 +2228,7 @@ subject = "planning-record-selected-read"
 subject_revision = "fixture-r1"
 environment = "windows-ci-python-3.13"
 source_revision = "benchmark-r1"
+producer_command = "python scripts/measure_selected_latency.py --compact"
 excluded_costs = ["uv environment bootstrap"]
 """,
     )
@@ -2308,6 +2309,7 @@ def test_measurement_evidence_supports_ratio_count_and_distinct_freshness_states
         "control_revision": "control-r1",
         "environment": "maintained-ci",
         "source_revision": "fixture-r1",
+        "producer_command": "python scripts/measure_scaling.py --compact",
     }
     ratio_result = {
         "kind": "agentic-workspace/measurement-evidence/v1",

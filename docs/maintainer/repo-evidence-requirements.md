@@ -67,12 +67,15 @@ subject = "planning-record-selected-read"
 subject_revision = "fixture-r1"
 environment = "windows-ci-python-3.13"
 source_revision = "benchmark-r1"
+producer_command = "python scripts/measure_selected_latency.py --compact"
 excluded_costs = ["environment bootstrap"]
 ```
 
 The corresponding `.agentic-workspace/verification/assurance-evidence-records.json` item uses `agentic-workspace/measurement-evidence/v1`. It repeats the comparison and freshness identities, binds `requirement_revision` to the source-intent revision, and records `observed_value`, `sample_count`, `status`, and an exact `detail_ref`. Ratio evidence additionally names a control subject/revision and `baseline_value`; deterministic zero-residue evidence uses `aggregation = "count"`, `comparator = "eq"`, `threshold = 0`, and `environment = "none"`.
 
-AW evaluates the observation against the requirement-owned threshold. Identity changes produce stale evidence; malformed values produce invalid evidence; failed, unknown, and unavailable results remain distinct. Current matching evidence is reused with no measurement action. Only a relevant requirement with missing or non-current evidence exposes its one bounded detail/recovery route. Raw samples and verbose environment output stay behind the evidence owner’s detail reference.
+AW evaluates the observation against the requirement-owned threshold. Identity changes produce stale evidence; malformed values produce invalid evidence; failed, unknown, and unavailable results remain distinct. Current matching evidence is reused with no measurement action. Only a relevant requirement with missing or non-current evidence selects its source-owned `producer_command` through the ordinary proof executor. Raw samples and verbose environment output stay behind the evidence owner’s detail reference.
+
+Measurement remains evidence, not semantic intent authority. The current source intent or grounded requirement owns why the threshold applies; superseding that source makes the derived measurement requirement non-current. A passing observation satisfies only its named evidence contract. Intent feedback such as #2569 may promote repeated deterministic drift into a new source-bound measurable requirement, but the producer cannot create or rewrite that threshold. See #1556, #2569, and `.agentic-workspace/system-intent/intent.toml` for the adjacent intent-grounding and feedback boundaries.
 
 ## Current-surface disposition
 

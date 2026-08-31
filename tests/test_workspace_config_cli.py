@@ -1063,6 +1063,8 @@ detail_route = "agentic-workspace proof --select typed-exit"
     assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
     requirements = json.loads(capsys.readouterr().out)["assurance"]["requirements"]
     assert [item["id"] for item in requirements].count("typed_exit") == 1
+
+
 def test_config_command_validates_source_owned_measurement_requirements(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     config_path = tmp_path / ".agentic-workspace/config.toml"
@@ -1099,6 +1101,7 @@ control_subject = "history-empty"
 control_revision = "control-r1"
 environment = "maintained-ci"
 source_revision = "fixture-r1"
+producer_command = "python scripts/measure_scaling.py --compact"
 excluded_costs = ["environment bootstrap"]
 """,
     )
