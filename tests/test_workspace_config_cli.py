@@ -46,6 +46,101 @@ def test_repo_config_orthogonality_requirement_is_hard_and_current() -> None:
     assert record["status"] == "satisfied"
 
 
+@pytest.mark.parametrize("assignment_policy", ["local-preferred", "best-fit-advisory", "required-best-fit"])
+@pytest.mark.parametrize("transport_authority", ["manual", "automatic"])
+@pytest.mark.parametrize("human_override_policy", ["explicit-only", "allowed-with-recorded-reason", "disallowed"])
+def test_canonical_delegation_policy_dimensions_compose_freely(
+    tmp_path: Path,
+    assignment_policy: str,
+    transport_authority: str,
+    human_override_policy: str,
+) -> None:
+    target = tmp_path / f"repo-{assignment_policy}-{transport_authority}-{human_override_policy}"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(
+        target / ".agentic-workspace/config.local.toml",
+        f"""
+schema_version = 1
+
+[runtime]
+supports_internal_delegation = true
+
+[safety]
+safe_to_auto_run_commands = true
+
+[delegation]
+assignment_policy = "{assignment_policy}"
+transport_authority = "{transport_authority}"
+human_override_policy = "{human_override_policy}"
+current_target = "current"
+
+[delegation_targets.current]
+target_id = "target:current"
+strength = "strong"
+execution_methods = ["internal"]
+capability_classes = ["boundary-shaping", "reasoning-heavy", "mixed", "mechanical-follow-through"]
+""",
+    )
+
+    config = cli._load_workspace_config(target_root=target)
+    mixed = workspace_runtime_core._mixed_agent_payload(config=config)
+    policy = mixed["assignment_policy"]
+    posture = mixed["effective_orchestration"]
+
+    assert policy["assignment_policy"]["value"] == assignment_policy
+    assert policy["execution_role"]["value"] == ("ordinary-executor" if assignment_policy == "local-preferred" else "orchestrator")
+    assert policy["human_override_policy"]["value"] == human_override_policy
+    assert posture["assignment"]["policy"] == assignment_policy
+    assert posture["transport"]["authority"] == transport_authority
+    assert not posture["status"].startswith("binding-blocked-execution-role")
+    assert posture["assignment"]["authority"] == (
+        "binding" if assignment_policy == "required-best-fit" else "advisory" if assignment_policy == "best-fit-advisory" else "local"
+    )
+
+
+def test_repo_local_delegation_policy_uses_only_canonical_independent_controls() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    config = cli._load_workspace_config(target_root=repo_root)
+    mixed = workspace_runtime_core._mixed_agent_payload(config=config)
+
+    assert mixed["effective_orchestration"]["status"] == "binding-active"
+    assert mixed["effective_orchestration"]["current_target"]["automatic_methods"] == ["internal"]
+    assert mixed["assignment_policy"]["migration"]["canonical_fields"] == [
+        "delegation.assignment_policy",
+        "delegation.transport_authority",
+        "delegation.human_override_policy",
+        "delegation.current_target",
+    ]
+
+
+def test_target_eligibility_and_reasoning_are_derived_from_capability_and_strength(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(
+        target / ".agentic-workspace/config.local.toml",
+        """
+schema_version = 1
+
+[delegation_targets.worker]
+strength = "medium"
+execution_methods = ["manual"]
+capability_classes = ["mixed", "mechanical-follow-through"]
+safe_task_classes = ["boundary-shaping"]
+forbidden_task_classes = ["mixed"]
+human_control_modes = ["off"]
+""",
+    )
+
+    config = cli._load_workspace_config(target_root=target)
+    profile = config.local_override.delegation_targets[0]
+    assert profile.reasoning_profile == "balanced"
+    assert profile.safe_task_classes == ("mechanical-follow-through",)
+    assert profile.forbidden_task_classes == ("mixed",)
+    assert profile.human_control_modes == ()
+
+
 def test_config_rejects_overlapping_assurance_level_owners_with_structural_repair(tmp_path: Path) -> None:
     from agentic_workspace.config import WorkspaceUsageError
 
@@ -1970,7 +2065,7 @@ def test_config_command_reports_assignment_policy_separate_from_delegation_mode(
     payload = json.loads(capsys.readouterr().out)
     policy = payload["local_runtime"]["assignment_policy"]
     assert policy["status"] == "configured"
-    assert policy["execution_role"] == {"value": "orchestrator", "source": "local-override"}
+    assert policy["execution_role"] == {"value": "orchestrator", "source": "derived:delegation.assignment_policy"}
     assert policy["assignment_policy"] == {"value": "required-best-fit", "source": "local-override"}
     assert policy["current_target"] == {"value": "user-local:codex-current", "source": "local-override"}
     assert policy["current_target_status"] == "known-profile"
@@ -4121,10 +4216,10 @@ def test_config_command_layers_assignment_policy_from_shared_local_config(tmp_pa
 
     payload = json.loads(capsys.readouterr().out)
     policy = payload["mixed_agent"]["assignment_policy"]
-    assert policy["execution_role"] == {"value": "orchestrator", "source": "shared-local-config"}
+    assert policy["execution_role"] == {"value": "orchestrator", "source": "derived:delegation.assignment_policy"}
     assert policy["assignment_policy"] == {"value": "required-best-fit", "source": "local-override"}
     assert policy["current_target"] == {"value": "shared_current", "source": "shared-local-config"}
-    assert policy["underfit_behavior"] == {"value": "prepare-manual-escalation", "source": "shared-local-config"}
+    assert policy["underfit_behavior"] == {"value": "require-delegation", "source": "derived:delegation.assignment_policy"}
     assert policy["binding"]["enforceable"] is True
 
 

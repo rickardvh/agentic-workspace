@@ -87,6 +87,7 @@ from agentic_workspace.config import (
     SUPPORTED_OPTIMIZATION_BIASES,
     SUPPORTED_ORCHESTRATION_EXECUTION_ROLES,
     SUPPORTED_REVIEW_BURDENS,
+    SUPPORTED_TRANSPORT_AUTHORITIES,
     SUPPORTED_UNDERFIT_BEHAVIORS,
     SUPPORTED_WORKFLOW_ARTIFACT_PROFILES,
     SUPPORTED_WORKFLOW_OBLIGATION_FORCES,
@@ -43253,7 +43254,13 @@ def _capability_posture_for_implementation(*, changed_paths: list[str], task_tex
 
 
 def _delegation_control_payload(local_override: MixedAgentLocalOverride) -> dict[str, Any]:
-    configured_mode = local_override.delegation_mode or "suggest"
+    configured_mode = (
+        "auto"
+        if local_override.transport_authority == "automatic"
+        else "manual"
+        if local_override.transport_authority == "manual"
+        else local_override.delegation_mode or "suggest"
+    )
     safe_to_auto = bool(local_override.safe_to_auto_run_commands)
     if configured_mode == "auto" and (not safe_to_auto):
         effective_mode = "suggest"
@@ -43275,9 +43282,17 @@ def _delegation_control_payload(local_override: MixedAgentLocalOverride) -> dict
         "configured_mode": configured_mode,
         "effective_mode": effective_mode,
         "supported_modes": list(SUPPORTED_DELEGATION_CONTROL_MODES),
-        "source": "local-override" if local_override.delegation_mode is not None else "default",
+        "source": (
+            local_override.field_sources.get("delegation.transport_authority", "local-override")
+            if local_override.transport_authority is not None
+            else "compatibility-alias"
+            if local_override.delegation_mode is not None
+            else "default"
+        ),
+        "transport_authority": local_override.transport_authority or ("automatic" if configured_mode == "auto" else "manual"),
         "execution_permitted": execution_permitted,
         "safe_to_auto_run_commands": safe_to_auto,
+        "supports_internal_delegation": bool(local_override.supports_internal_delegation),
         "disabled_reason": disabled_reason,
         "human_control": {
             "rule": "Local delegation posture may prepare or suggest work, but must not take control away from the human unless effective_mode is auto.",
@@ -43287,8 +43302,8 @@ def _delegation_control_payload(local_override: MixedAgentLocalOverride) -> dict
 
 
 def _assignment_policy_payload(local_override: MixedAgentLocalOverride, profile_payloads: list[dict[str, Any]]) -> dict[str, Any]:
-    configured_role = local_override.execution_role or "ordinary-executor"
     configured_policy = local_override.assignment_policy or "local-preferred"
+    configured_role = "orchestrator" if configured_policy != "local-preferred" else "ordinary-executor"
     configured_target = local_override.current_target
     target_matches = [
         profile
@@ -43306,7 +43321,7 @@ def _assignment_policy_payload(local_override: MixedAgentLocalOverride, profile_
     resolved_current_target = target_matches[0] if current_target_known else {}
     binding_requested = configured_policy == "required-best-fit"
     enforceable = not binding_requested or bool(current_target_known)
-    status = "configured" if local_override.assignment_policy is not None or local_override.execution_role is not None else "default-quiet"
+    status = "configured" if local_override.assignment_policy is not None else "default-quiet"
     if binding_requested and not current_target_known:
         status = "blocked-unknown-current-target"
     return {
@@ -43314,9 +43329,7 @@ def _assignment_policy_payload(local_override: MixedAgentLocalOverride, profile_
         "status": status,
         "execution_role": _sourced_value(
             configured_role,
-            source=local_override.field_sources.get("delegation.execution_role", "default")
-            if local_override.execution_role is not None
-            else "default",
+            source="derived:delegation.assignment_policy",
         ),
         "assignment_policy": _sourced_value(
             configured_policy,
@@ -43325,11 +43338,8 @@ def _assignment_policy_payload(local_override: MixedAgentLocalOverride, profile_
             else "default",
         ),
         "selection_objective": _sourced_value(
-            local_override.selection_objective
-            or "safe minimum expected total successful-completion cost with quality and proof before price",
-            source=local_override.field_sources.get("delegation.selection_objective", "default")
-            if local_override.selection_objective is not None
-            else "default",
+            "safe minimum expected total successful-completion cost with quality and proof before price",
+            source="derived:best-fit-ranking",
         ),
         "current_target": _sourced_value(
             configured_target,
@@ -43339,16 +43349,12 @@ def _assignment_policy_payload(local_override: MixedAgentLocalOverride, profile_
         "current_target_profile_name": resolved_current_target.get("name") if isinstance(resolved_current_target, dict) else None,
         "current_target_identity_ref": resolved_current_target.get("target_id") if isinstance(resolved_current_target, dict) else None,
         "underfit_behavior": _sourced_value(
-            local_override.underfit_behavior or "stay-when-safe",
-            source=local_override.field_sources.get("delegation.underfit_behavior", "default")
-            if local_override.underfit_behavior is not None
-            else "default",
+            "require-delegation" if configured_policy == "required-best-fit" else "stay-when-safe",
+            source="derived:delegation.assignment_policy",
         ),
         "down_routing_behavior": _sourced_value(
-            local_override.down_routing_behavior or "never",
-            source=local_override.field_sources.get("delegation.down_routing_behavior", "default")
-            if local_override.down_routing_behavior is not None
-            else "default",
+            "when-cheaper-safe-target-exists" if configured_policy == "required-best-fit" else "never",
+            source="derived:delegation.assignment_policy",
         ),
         "human_override_policy": _sourced_value(
             local_override.human_override_policy or "explicit-only",
@@ -43357,8 +43363,14 @@ def _assignment_policy_payload(local_override: MixedAgentLocalOverride, profile_
             else "default",
         ),
         "manual_transport_policy": _sourced_value(
-            local_override.manual_transport_policy or "allowed",
-            source=local_override.field_sources.get("delegation.manual_transport_policy", "default")
+            "required-when-no-automatic-method"
+            if local_override.transport_authority == "automatic"
+            else "allowed"
+            if local_override.transport_authority == "manual"
+            else local_override.manual_transport_policy or "allowed",
+            source="derived:delegation.transport_authority"
+            if local_override.transport_authority is not None
+            else "compatibility-alias"
             if local_override.manual_transport_policy is not None
             else "default",
         ),
@@ -43376,6 +43388,7 @@ def _assignment_policy_payload(local_override: MixedAgentLocalOverride, profile_
             "down_routing_behaviors": list(SUPPORTED_DOWN_ROUTING_BEHAVIORS),
             "human_override_policies": list(SUPPORTED_HUMAN_OVERRIDE_POLICIES),
             "manual_transport_policies": list(SUPPORTED_MANUAL_TRANSPORT_POLICIES),
+            "transport_authorities": list(SUPPORTED_TRANSPORT_AUTHORITIES),
         },
         "authority_order": [
             "explicit current-session human instruction",
@@ -43385,7 +43398,26 @@ def _assignment_policy_payload(local_override: MixedAgentLocalOverride, profile_
             "target metadata and learned evidence",
             "model self-assessment",
         ],
-        "separation_rule": "assignment_policy chooses who should own work; delegation_control.mode only governs how far tooling may execute a selected handoff.",
+        "separation_rule": "assignment_policy chooses who should own work; transport_authority independently governs execution after selection.",
+        "migration": {
+            "canonical_fields": [
+                "delegation.assignment_policy",
+                "delegation.transport_authority",
+                "delegation.human_override_policy",
+                "delegation.current_target",
+            ],
+            "compatibility_aliases": [
+                "delegation.mode",
+                "delegation.execution_role",
+                "delegation.selection_objective",
+                "delegation.underfit_behavior",
+                "delegation.down_routing_behavior",
+                "delegation.manual_transport_policy",
+                "runtime.cheap_bounded_executor_available",
+                "handoff.prefer_internal_delegation_when_available",
+                "delegation_targets.<target>.human_control_modes",
+            ],
+        },
     }
 
 
@@ -43419,7 +43451,12 @@ def _effective_orchestration_posture_payload(
     )
     execution_methods = [str(item) for item in _list_payload(matching_profile.get("execution_methods")) if str(item)]
     adapter_configured = bool(_list_payload(matching_profile.get("dispatch_command")))
-    automatic_methods = [item for item in execution_methods if adapter_configured and item in {"internal", "cli", "api"}]
+    automatic_methods = [
+        item
+        for item in execution_methods
+        if (item == "internal" and (delegation_control.get("supports_internal_delegation") is True or adapter_configured))
+        or (item in {"cli", "api"} and adapter_configured)
+    ]
     current_target_ready = target_status == "known-profile"
     binding_requested = policy == "required-best-fit"
     orchestrator_role = role == "orchestrator"
@@ -43475,6 +43512,7 @@ def _effective_orchestration_posture_payload(
             "automatic_methods": automatic_methods,
         },
         "transport": {
+            "authority": str(delegation_control.get("transport_authority") or "manual"),
             "configured_mode": configured_mode,
             "effective_mode": effective_mode,
             "execution_permitted": transport_permitted,
@@ -43491,12 +43529,12 @@ def _effective_orchestration_posture_payload(
             ),
         },
         "provenance": {
-            "execution_role": _as_dict(assignment_policy.get("execution_role")).get("source"),
+            "execution_role": "derived:delegation.assignment_policy",
             "assignment_policy": _as_dict(assignment_policy.get("assignment_policy")).get("source"),
             "current_target": _as_dict(assignment_policy.get("current_target")).get("source"),
-            "delegation_mode": delegation_control.get("source"),
+            "transport_authority": delegation_control.get("source"),
         },
-        "separation_rule": "Assignment policy chooses ownership; delegation mode only governs execution transport after a route is selected.",
+        "separation_rule": "Assignment policy chooses ownership; transport authority only governs execution after a route is selected.",
     }
 
 
@@ -55532,6 +55570,7 @@ _CONFIG_POLICY_FIELDS: dict[str, dict[str, tuple[type, tuple[Any, ...] | None]]]
         "delegation.mode": (str, SUPPORTED_DELEGATION_CONTROL_MODES),
         "delegation.execution_role": (str, SUPPORTED_ORCHESTRATION_EXECUTION_ROLES),
         "delegation.assignment_policy": (str, SUPPORTED_ASSIGNMENT_POLICIES),
+        "delegation.transport_authority": (str, SUPPORTED_TRANSPORT_AUTHORITIES),
         "delegation.underfit_behavior": (str, SUPPORTED_UNDERFIT_BEHAVIORS),
         "delegation.down_routing_behavior": (str, SUPPORTED_DOWN_ROUTING_BEHAVIORS),
         "delegation.human_override_policy": (str, SUPPORTED_HUMAN_OVERRIDE_POLICIES),

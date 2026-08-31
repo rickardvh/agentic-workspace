@@ -351,6 +351,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "delegation.mode",
         "delegation.execution_role",
         "delegation.assignment_policy",
+        "delegation.transport_authority",
         "delegation.selection_objective",
         "delegation.current_target",
         "delegation.underfit_behavior",
@@ -433,10 +434,17 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "allowed",
         "required-when-no-automatic-method",
     ]
+    assert payload["mixed_agent"]["local_override"]["supported_transport_authorities"] == ["manual", "automatic"]
+    assert payload["mixed_agent"]["local_override"]["canonical_delegation_policy_fields"] == [
+        "delegation.assignment_policy",
+        "delegation.transport_authority",
+        "delegation.human_override_policy",
+        "delegation.current_target",
+    ]
     assert payload["mixed_agent"]["local_override"]["supported_clarification_modes"] == ["ask-first", "suggest", "auto-continue"]
     delegation_control = payload["mixed_agent"]["delegation_control"]
-    assert delegation_control["field"] == "delegation.mode"
-    assert delegation_control["default"] == "suggest"
+    assert delegation_control["field"] == "delegation.transport_authority"
+    assert delegation_control["default"] == "manual"
     assert "quality" in delegation_control["quality_first_rule"]
     assert delegation_control["mode_semantics"]["auto"].startswith("permit automatic delegation")
     clarification_control = payload["mixed_agent"]["clarification_control"]

@@ -116,6 +116,15 @@
           "default": "local-preferred",
           "description": "Whether work stays local by default, receives advisory best-fit routing, or must bind to the best available configured target before implementation claims."
         },
+        "transport_authority": {
+          "type": "string",
+          "enum": [
+            "manual",
+            "automatic"
+          ],
+          "default": "manual",
+          "description": "Whether an executable admitted transport selected after assignment requires manual fallback or may run automatically within the independent safety ceiling."
+        },
         "selection_objective": {
           "type": "string",
           "minLength": 1,

@@ -236,6 +236,10 @@ SUPPORTED_MANUAL_TRANSPORT_POLICIES = (
     "allowed",
     "required-when-no-automatic-method",
 )
+SUPPORTED_TRANSPORT_AUTHORITIES = (
+    "manual",
+    "automatic",
+)
 SUPPORTED_CLARIFICATION_CONTROL_MODES = (
     "ask-first",
     "suggest",
@@ -433,6 +437,7 @@ class MixedAgentLocalOverride:
     delegation_mode: str | None
     execution_role: str | None
     assignment_policy: str | None
+    transport_authority: str | None
     selection_objective: str | None
     current_target: str | None
     underfit_behavior: str | None
@@ -1982,6 +1987,26 @@ def load_delegation_target_profiles(
             dispatch_adapter_kind = "process"
         if dispatch_adapter_kind is not None and not dispatch_command:
             raise WorkspaceUsageError(f"{target_path.as_posix()} dispatch_command is required when dispatch_adapter_kind is configured.")
+        capability_classes = require_optional_string_list(
+            payload=raw_profile,
+            key="capability_classes",
+            config_path=target_path,
+            allowed=SUPPORTED_CAPABILITY_EXECUTION_CLASSES,
+        )
+        forbidden_task_classes = require_optional_string_list(
+            payload=raw_profile,
+            key="forbidden_task_classes",
+            config_path=target_path,
+            allowed=SUPPORTED_CAPABILITY_EXECUTION_CLASSES,
+        )
+        safe_task_classes = tuple(item for item in capability_classes if item not in forbidden_task_classes)
+        reasoning_profile = require_optional_enum(
+            payload=raw_profile,
+            key="reasoning_profile",
+            config_path=target_path,
+            allowed=SUPPORTED_DELEGATION_TARGET_REASONING_PROFILES,
+            default={"strong": "strong", "medium": "balanced", "weak": "weak"}[strength],
+        )
         profiles.append(
             DelegationTargetProfile(
                 name=target_name,
@@ -2015,12 +2040,7 @@ def load_delegation_target_profiles(
                     key="task_fit",
                     config_path=target_path,
                 ),
-                capability_classes=require_optional_string_list(
-                    payload=raw_profile,
-                    key="capability_classes",
-                    config_path=target_path,
-                    allowed=SUPPORTED_CAPABILITY_EXECUTION_CLASSES,
-                ),
+                capability_classes=capability_classes,
                 model_family=require_optional_string(payload=raw_profile, key="model_family", config_path=target_path),
                 provider=require_optional_string(payload=raw_profile, key="provider", config_path=target_path),
                 dispatch_adapter_kind=dispatch_adapter_kind,
@@ -2034,13 +2054,7 @@ def load_delegation_target_profiles(
                     allowed=SUPPORTED_DELEGATION_TARGET_CONTEXT_CAPACITIES,
                     default="unknown",
                 ),
-                reasoning_profile=require_optional_enum(
-                    payload=raw_profile,
-                    key="reasoning_profile",
-                    config_path=target_path,
-                    allowed=SUPPORTED_DELEGATION_TARGET_REASONING_PROFILES,
-                    default="unknown",
-                ),
+                reasoning_profile=reasoning_profile,
                 cost_class=require_optional_enum(
                     payload=raw_profile,
                     key="cost_class",
@@ -2055,27 +2069,12 @@ def load_delegation_target_profiles(
                     allowed=SUPPORTED_DELEGATION_TARGET_LATENCY_CLASSES,
                     default="unknown",
                 ),
-                safe_task_classes=require_optional_string_list(
-                    payload=raw_profile,
-                    key="safe_task_classes",
-                    config_path=target_path,
-                    allowed=SUPPORTED_CAPABILITY_EXECUTION_CLASSES,
-                ),
-                forbidden_task_classes=require_optional_string_list(
-                    payload=raw_profile,
-                    key="forbidden_task_classes",
-                    config_path=target_path,
-                    allowed=SUPPORTED_CAPABILITY_EXECUTION_CLASSES,
-                ),
+                safe_task_classes=safe_task_classes,
+                forbidden_task_classes=forbidden_task_classes,
                 escalation_target=require_optional_string(payload=raw_profile, key="escalation_target", config_path=target_path),
                 confidence_source=require_optional_string(payload=raw_profile, key="confidence_source", config_path=target_path),
                 last_evaluation=require_optional_string(payload=raw_profile, key="last_evaluation", config_path=target_path),
-                human_control_modes=require_optional_string_list(
-                    payload=raw_profile,
-                    key="human_control_modes",
-                    config_path=target_path,
-                    allowed=SUPPORTED_DELEGATION_CONTROL_MODES,
-                ),
+                human_control_modes=(),
             )
         )
     return tuple(profiles), warnings
@@ -2289,6 +2288,7 @@ def empty_mixed_agent_local_override(*, path: Path | None, exists: bool) -> Mixe
         delegation_mode=None,
         execution_role=None,
         assignment_policy=None,
+        transport_authority=None,
         selection_objective=None,
         current_target=None,
         underfit_behavior=None,
@@ -3007,6 +3007,7 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
             "mode",
             "execution_role",
             "assignment_policy",
+            "transport_authority",
             "selection_objective",
             "current_target",
             "underfit_behavior",
@@ -3040,6 +3041,12 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
         key="assignment_policy",
         config_path=WORKSPACE_LOCAL_CONFIG_PATH,
         allowed=SUPPORTED_ASSIGNMENT_POLICIES,
+    )
+    transport_authority = require_optional_enum_or_none(
+        payload=raw_delegation,
+        key="transport_authority",
+        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
+        allowed=SUPPORTED_TRANSPORT_AUTHORITIES,
     )
     selection_objective = require_optional_string(
         payload=raw_delegation,
@@ -3244,6 +3251,7 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
         delegation_mode=delegation_mode,
         execution_role=execution_role,
         assignment_policy=assignment_policy,
+        transport_authority=transport_authority,
         selection_objective=selection_objective,
         current_target=current_target,
         underfit_behavior=underfit_behavior,
@@ -3352,6 +3360,7 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
                 ),
                 ("delegation.execution_role", "delegation", "execution_role", raw_delegation.get("execution_role")),
                 ("delegation.assignment_policy", "delegation", "assignment_policy", raw_delegation.get("assignment_policy")),
+                ("delegation.transport_authority", "delegation", "transport_authority", raw_delegation.get("transport_authority")),
                 ("delegation.selection_objective", "delegation", "selection_objective", raw_delegation.get("selection_objective")),
                 ("delegation.current_target", "delegation", "current_target", raw_delegation.get("current_target")),
                 ("delegation.underfit_behavior", "delegation", "underfit_behavior", raw_delegation.get("underfit_behavior")),
