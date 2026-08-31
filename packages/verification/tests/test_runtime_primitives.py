@@ -733,8 +733,10 @@ def test_widget_case_regression_windows():
     assert basis["structured_strategy_hints"] == {
         "path": ".agentic-workspace/verification/proof-strategy.toml",
         "authority": "host-structured-config",
+        "role": "compatibility-index",
+        "consequential_strategy_owner": ".agentic-workspace/config.toml [assurance.requirements]",
         "limits": [
-            "Only structured enum fields are interpreted.",
+            "Compatible hints remain advisory index values; named assurance requirements own consequential strategy.",
             "Free-text host strategy prose remains uninterpreted.",
         ],
         "status": "present",
@@ -757,8 +759,10 @@ def test_verification_evidence_strategy_reports_absent_structured_strategy_hints
     assert hints == {
         "path": ".agentic-workspace/verification/proof-strategy.toml",
         "authority": "host-structured-config",
+        "role": "compatibility-index",
+        "consequential_strategy_owner": ".agentic-workspace/config.toml [assurance.requirements]",
         "limits": [
-            "Only structured enum fields are interpreted.",
+            "Compatible hints remain advisory index values; named assurance requirements own consequential strategy.",
             "Free-text host strategy prose remains uninterpreted.",
         ],
         "status": "absent",

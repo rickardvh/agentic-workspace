@@ -3585,6 +3585,87 @@ def _proof_route_command_is_broad(command: str, *, proof_kind: str = "") -> bool
     )
 
 
+def _repo_evidence_strategy_payload(
+    *,
+    assurance_requirements: dict[str, Any],
+    selected_commands: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Compose host-owned named evidence requirements without interpreting methodology prose."""
+    active = [item for item in _list_payload(assurance_requirements.get("active")) if isinstance(item, dict)]
+    named = [item for item in active if str(item.get("requirement_class") or "") in {"invariant", "current-evidence", "guideline"}]
+    if not named:
+        return {
+            "kind": "agentic-workspace/repo-evidence-strategy/v1",
+            "status": "not-declared",
+            "clauses": [],
+            "hard_blockers": [],
+            "advisory_preferences": [],
+            "selected_command_count": 0,
+            "rule": "No applicable named evidence-strategy requirement means no portable testing methodology is imposed.",
+        }
+    evidence_status_by_id = {
+        str(item.get("requirement_id") or item.get("id") or ""): item
+        for item in _list_payload(assurance_requirements.get("evidence_status"))
+        if isinstance(item, dict)
+    }
+    clauses: list[dict[str, Any]] = []
+    hard_blockers: list[dict[str, Any]] = []
+    advisory_preferences: list[dict[str, Any]] = []
+    selected_strategy_commands: list[str] = []
+    for requirement in named:
+        requirement_id = str(requirement.get("id") or "")
+        requirement_class = str(requirement.get("requirement_class") or "")
+        status = _as_dict(evidence_status_by_id.get(requirement_id))
+        selected = [
+            str(command.get("command") or "")
+            for command in selected_commands
+            if requirement_id in {str(item) for item in _list_payload(command.get("assurance_requirement_refs"))}
+        ]
+        selected_strategy_commands.extend(selected)
+        hard = requirement_class in {"invariant", "current-evidence"}
+        unresolved = hard and str(status.get("state") or "unknown") not in {"satisfied", "current", "accepted", "passed"}
+        clause = {
+            "id": requirement_id,
+            "class": requirement_class,
+            "authority": str(requirement.get("source_intent_ref") or ""),
+            "authority_revision": str(requirement.get("source_intent_revision") or ""),
+            "source_current": requirement.get("source_intent_current"),
+            "applicability": _list_payload(requirement.get("applies_because")),
+            "required_evidence": _list_payload(requirement.get("required_evidence")),
+            "preference_target": str(requirement.get("preference_target") or ""),
+            "proof_profile": str(requirement.get("proof_profile") or ""),
+            "selected_commands": selected,
+            "evidence_state": str(status.get("state") or "not-recorded"),
+            "effect": "hard-claim-boundary" if hard else "advisory-proof-preference",
+        }
+        clauses.append(clause)
+        if unresolved:
+            hard_blockers.append(
+                {
+                    "reason_code": "missing-capability" if status.get("state") == "unavailable" else "missing-evidence",
+                    "owner": str(requirement.get("evidence_owner") or "repo evidence strategy owner"),
+                    "requirement_id": requirement_id,
+                    "repair": str(requirement.get("detail_route") or "produce current source-owned evidence"),
+                    "blocked_claims": _list_payload(requirement.get("blocking_claims")),
+                }
+            )
+        elif not hard:
+            advisory_preferences.append(clause)
+    return {
+        "kind": "agentic-workspace/repo-evidence-strategy/v1",
+        "status": "blocked" if hard_blockers else "applicable",
+        "clauses": clauses,
+        "hard_blockers": hard_blockers,
+        "advisory_preferences": advisory_preferences,
+        "selected_command_count": len(_dedupe(selected_strategy_commands)),
+        "composition_rule": "All applicable hard clauses compose; advisory clauses remain agent-resolvable.",
+        "authority_boundary": (
+            "Workspace composes named requirements and host-owned check results; it does not infer property testing, "
+            "public/private API boundaries, test frameworks, or methodology from prose or names."
+        ),
+    }
+
+
 PROOF_ROUTE_REPAIR_HISTORY_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "proof-route-repairs" / "history.jsonl"
 _PROOF_ROUTE_AUTHORITY_PATHS = {
     ".agentic-workspace/config.toml",
@@ -9851,6 +9932,10 @@ def _proof_selection_for_changed_paths(
         unavailable_commands=unavailable_commands,
         proof_execution_evidence=proof_execution_evidence,
     )
+    repo_evidence_strategy = _repo_evidence_strategy_payload(
+        assurance_requirements=active_assurance_requirements,
+        selected_commands=selected_commands,
+    )
     proof_route_strategy_preservation = _proof_route_strategy_preservation_payload(
         proof_route_strategy_decision=proof_route_strategy_decision,
         proof_route_maintenance=proof_route_maintenance,
@@ -10207,6 +10292,7 @@ def _proof_selection_for_changed_paths(
         "learned_route_reliance": learned_route_reliance,
         "learned_proof_route_model": learned_proof_route_model,
         "proof_route_maintenance": proof_route_maintenance,
+        "repo_evidence_strategy": repo_evidence_strategy,
         "focused_route_coverage_audit": focused_route_coverage_audit,
         "route_refinement_required": route_refinement_required,
         "proof_route_strategy_decision": proof_route_strategy_decision,

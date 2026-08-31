@@ -632,6 +632,108 @@ def test_projection_operating_decision_consumes_proof_route_adaptation_signal() 
     assert candidate["promotion"]["operation_id"] == "proof.report"
 
 
+def test_repo_evidence_strategy_composes_hard_and_advisory_named_requirements() -> None:
+    from agentic_workspace.workspace_runtime_proof import _repo_evidence_strategy_payload
+
+    requirements = {
+        "active": [
+            {
+                "id": "property_invariants",
+                "requirement_class": "guideline",
+                "preference_target": "surface:property-generative-evidence",
+                "source_intent_ref": "docs/testing.md#properties",
+                "source_intent_revision": "rev-1",
+                "source_intent_current": True,
+                "applies_because": ["matched behavior package"],
+            },
+            {
+                "id": "representative_external_examples",
+                "requirement_class": "invariant",
+                "required_evidence": ["representative-public-example"],
+                "proof_profile": "public_examples",
+                "blocking_claims": ["claim-work-complete"],
+                "evidence_owner": "verification:public-examples",
+                "detail_route": "run the host-owned public example check",
+                "source_intent_ref": "docs/testing.md#examples",
+                "source_intent_revision": "rev-1",
+                "source_intent_current": True,
+                "applies_because": ["matched exported API"],
+            },
+            {
+                "id": "public_api_only",
+                "requirement_class": "invariant",
+                "required_evidence": ["public-api-boundary-check"],
+                "proof_profile": "public_api_boundary",
+                "blocking_claims": ["claim-work-complete"],
+                "evidence_owner": "module:host-api-classifier",
+                "detail_route": "run the host-owned API-surface classifier",
+                "source_intent_ref": "docs/testing.md#public-api-only",
+                "source_intent_revision": "rev-1",
+                "source_intent_current": True,
+                "applies_because": ["host classifier matched library package"],
+            },
+            {
+                "id": "compact_suite_budget",
+                "requirement_class": "current-evidence",
+                "required_evidence": ["workspace-suite-count-and-runtime"],
+                "blocking_claims": ["claim-work-complete"],
+                "evidence_owner": "verification:workspace-suite-budget",
+                "detail_route": "refresh the repo-owned suite budget measurement",
+                "source_intent_ref": "docs/maintainer/testing-strategy.md#budget",
+                "source_intent_revision": "budget-r1",
+                "source_intent_current": True,
+                "applies_because": ["ordinary Workspace evidence changed"],
+            },
+        ],
+        "evidence_status": [
+            {"requirement_id": "representative_external_examples", "state": "satisfied"},
+            {"requirement_id": "public_api_only", "state": "missing-evidence"},
+            {"requirement_id": "compact_suite_budget", "state": "satisfied"},
+        ],
+    }
+    selected = [
+        {
+            "command": "pytest tests/test_public_examples.py -q",
+            "assurance_requirement_refs": ["representative_external_examples"],
+        },
+        {
+            "command": "python scripts/check_public_api_tests.py",
+            "assurance_requirement_refs": ["public_api_only"],
+        },
+    ]
+
+    strategy = _repo_evidence_strategy_payload(assurance_requirements=requirements, selected_commands=selected)
+    assert strategy["status"] == "blocked"
+    assert {item["class"] for item in strategy["clauses"]} == {"guideline", "invariant", "current-evidence"}
+    assert strategy["selected_command_count"] == 2
+    assert strategy["hard_blockers"] == [
+        {
+            "reason_code": "missing-evidence",
+            "owner": "module:host-api-classifier",
+            "requirement_id": "public_api_only",
+            "repair": "run the host-owned API-surface classifier",
+            "blocked_claims": ["claim-work-complete"],
+        }
+    ]
+    assert strategy["advisory_preferences"][0]["id"] == "property_invariants"
+
+    admitted = admit_projection_surface_decision_input(input_revisions={"current_work": "rev-a"}, consumer="proof")
+    decision = compile_projection_surface_operating_decision(
+        payload={"repo_evidence_strategy": strategy}, admitted_input=admitted, consumer="proof"
+    )
+    assert decision["status"] == "blocked"
+    assert "claim-work-complete" in decision["blocked_claim_classes"]
+    assert decision["external_blocker"]["owner"] == "module:host-api-classifier"
+
+
+def test_repo_evidence_strategy_has_no_default_methodology() -> None:
+    from agentic_workspace.workspace_runtime_proof import _repo_evidence_strategy_payload
+
+    strategy = _repo_evidence_strategy_payload(assurance_requirements={}, selected_commands=[])
+    assert strategy["status"] == "not-declared"
+    assert strategy["clauses"] == []
+
+
 def test_authorized_local_code_seam_reuses_ordinary_implementation_owner_and_proportionate_proof() -> None:
     candidate = _material_improvement_candidate(
         proposed_paths=["src/router.py"],

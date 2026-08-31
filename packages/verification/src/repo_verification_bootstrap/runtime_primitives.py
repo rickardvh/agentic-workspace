@@ -684,8 +684,10 @@ def _structured_strategy_hints_payload(*, target_root: Path) -> dict[str, Any]:
     base = {
         "path": PROOF_STRATEGY_PATH.as_posix(),
         "authority": "host-structured-config",
+        "role": "compatibility-index",
+        "consequential_strategy_owner": ".agentic-workspace/config.toml [assurance.requirements]",
         "limits": [
-            "Only structured enum fields are interpreted.",
+            "Compatible hints remain advisory index values; named assurance requirements own consequential strategy.",
             "Free-text host strategy prose remains uninterpreted.",
         ],
     }
