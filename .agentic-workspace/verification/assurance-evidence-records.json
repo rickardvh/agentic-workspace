@@ -379,6 +379,20 @@
         "status": "passed",
         "detail_ref": "tests/test_workspace_proof_cli.py::test_selected_proof_execution_leaves_tracked_receipt_store_unchanged"
       }
+    },
+    {
+      "requirement_id": "binding_automatic_assignment",
+      "evidence_label": "binding_automatic_assignment_organic_dogfood",
+      "status": "unavailable",
+      "source_kind": "supported-host-observation",
+      "command": "",
+      "review_ref": "https://github.com/rickardvh/agentic-workspace/issues/2817",
+      "changed_paths": [
+        "src/agentic_workspace/workspace_runtime_core.py",
+        "tests/test_workspace_implement_cli.py"
+      ],
+      "recorded_by": "maintainer",
+      "notes": "The deterministic dispatch fixture preserves the no-second-permission and no-local-fallback invariant, but the unrelated substantive supported-host dogfood required to satisfy #2817 has not yet been admitted."
     }
   ]
 }

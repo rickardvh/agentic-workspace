@@ -4,6 +4,32 @@ from __future__ import annotations
 from tests.workspace_cli_support import *
 
 
+def test_repo_binding_automatic_assignment_requirement_is_hard_with_honest_unavailable_evidence() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    config = cli._load_workspace_config(target_root=repo_root)
+    requirement = next(item for item in config.assurance.requirements if item.id == "binding_automatic_assignment")
+
+    assert requirement.requirement_class == "invariant"
+    assert requirement.force == "required-before-closeout"
+    assert requirement.blocking_claims == ("claim-work-complete",)
+    assert requirement.source_intent_ref.endswith("/issues/2817")
+    assert requirement.required_evidence == ("binding_automatic_assignment_organic_dogfood",)
+
+    evidence = workspace_runtime_core._load_assurance_evidence_records(target_root=repo_root)
+    record = next(item for item in evidence["records"] if item["requirement_id"] == requirement.id)
+    assert record["evidence_label"] == requirement.required_evidence[0]
+    assert record["status"] == "unavailable"
+
+    report = workspace_runtime_core._assurance_requirements_report_payload(
+        config=config,
+        target_root=repo_root,
+        task_text="binding automatic assignment issue 2817",
+        changed_paths=["src/agentic_workspace/workspace_runtime_core.py"],
+    )
+    status = next(item for item in report["evidence_status"] if item["requirement_id"] == requirement.id)
+    assert status["state"] == "unavailable"
+
+
 @pytest.mark.parametrize(
     ("role", "policy", "target_status", "mode", "permitted", "expected"),
     [

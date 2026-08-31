@@ -4593,9 +4593,20 @@ def _assurance_status_for_requirement(
             if str(item).strip()
         ]
     missing_evidence = [item for item in required_evidence if item not in evidence_present]
+    evidence_records = [item for item in _list_payload(planning_facts.get("evidence_records")) if isinstance(item, dict)]
+    recorded_states = {
+        str(item.get("evidence_label") or ""): str(item.get("status") or "")
+        for item in evidence_records
+        if str(item.get("requirement_id") or "") == str(requirement.get("id") or "")
+    }
+    noncurrent_states = [
+        recorded_states[label]
+        for label in missing_evidence
+        if recorded_states.get(label) in {"failed", "stale", "unknown", "unavailable", "invalid"}
+    ]
     measurement_status = _measurement_status_for_requirement(
         requirement=requirement,
-        evidence_records=[item for item in _list_payload(planning_facts.get("evidence_records")) if isinstance(item, dict)],
+        evidence_records=evidence_records,
     )
     if measurement_status is not None:
         measurement_label = str(measurement_status.get("evidence_label") or "")
@@ -4631,7 +4642,12 @@ def _assurance_status_for_requirement(
     state = (
         str(measurement_status.get("state"))
         if measurement_status is not None
-        else ("satisfied" if not missing_evidence else "missing-evidence")
+        else (
+            next(
+                (candidate for candidate in ("invalid", "failed", "stale", "unavailable", "unknown") if candidate in noncurrent_states), ""
+            )
+            or ("satisfied" if not missing_evidence else "missing-evidence")
+        )
     )
     if dismissal.get("status") == "recorded" and not dismissal_evaluation["requirement_active"]:
         state = "dismissed"
@@ -4639,7 +4655,7 @@ def _assurance_status_for_requirement(
     elif waiver.get("status") == "recorded" and not waiver_evaluation["requirement_active"]:
         state = "waived"
         missing_evidence = []
-    elif missing_evidence and requirement.get("review_owner"):
+    elif state == "missing-evidence" and requirement.get("review_owner"):
         state = "review-required"
     return {
         "requirement_id": str(requirement.get("id", "")),

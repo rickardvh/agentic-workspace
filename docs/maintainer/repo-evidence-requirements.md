@@ -115,6 +115,10 @@ The first repo-owned catalogue is intentionally smaller than the issue history t
 
 `direct_no_signal` preserves the system-intent rule that irrelevant installed capabilities do not create first-line context, commands, network work, durable artifacts, or claim pressure. `total_completion_cost`, `query_shaped_operation`, and `stronger_owner_correction` merge the advisory list into three non-blocking preferences: optimize the whole successful path among safe/capable peers, prefer exact owner queries and progressive disclosure, and repair the strongest deterministic owner instead of accumulating compensating guidance. Reusing current evidence and enforcing outcomes rather than historical choreography are part of those three preferences, not separate gates.
 
+### Binding automatic assignment
+
+`binding_automatic_assignment` preserves the hard behavioral boundary already established for #2817. Once durable local policy and a current binding non-local assignment authorize an executable automatic transport, the ordinary primary action is revision-bound dispatch without delegation wording or a second conversational permission. Local implementation remains forbidden, and unavailable or failed transport cannot silently fall back to local work. The requirement is active even though its final unrelated-substantive supported-host evidence remains unavailable; deterministic mechanism fixtures must not be presented as satisfying or closing #2817.
+
 ### Initial-policy disposition
 
 | Proposed policy | Disposition | Current owner and rationale |
@@ -122,7 +126,7 @@ The first repo-owned catalogue is intentionally smaller than the issue history t
 | typed result/process/session agreement | retained, merged | `typed_cli_selector_contract`; root CLI/runtime plus session logging |
 | selector authority and fail-fast | retained, merged | `typed_cli_selector_contract`; shared selector authority and lifecycle regression fixture |
 | proof claim completeness/execution integrity | retained, merged | `proof_execution_integrity`; existing proof admission and execution owners |
-| binding automatic assignment without second permission | deferred | remains owned by open #2817 until an explicitly authorized substantive non-local dispatch proves its acceptance boundary; no passing policy is fabricated here |
+| binding automatic assignment without second permission | retained, evidence unavailable | `binding_automatic_assignment`; #2817 owns the still-missing unrelated-substantive supported-host evidence, while the already-landed no-second-permission/no-local-fallback behavior remains a hard invariant |
 | direct/no-signal stays direct | retained | `direct_no_signal`; system intent plus startup/implement proportionality fixtures |
 | selected Planning read latency/scaling | retained as two measurements | `selected_planning_read_budget` and `selected_planning_scaling_budget` |
 | invalid-selector latency/envelope | retained, split by semantics | latency is `invalid_selector_rejection_budget`; bounded recovery/envelope is deterministic selector-contract evidence |

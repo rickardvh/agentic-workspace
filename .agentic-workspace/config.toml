@@ -108,6 +108,24 @@ evidence_owner = "verification:workspace-proof-runtime"
 detail_route = "uv run pytest tests/test_workspace_proof_cli.py -k 'selected_proof_execution or claim_boundary' -q"
 notes = "A green proof claim requires affected-owner coverage, one admitted execution path, current evidence, and no default tracked proof residue."
 
+[assurance.requirements.binding_automatic_assignment]
+level = "high"
+applies_to_paths = ["src/agentic_workspace/workspace_runtime_implement.py", "src/agentic_workspace/workspace_runtime_core.py", "src/agentic_workspace/assignment_lifecycle.py", "tests/test_workspace_implement_cli.py", ".agentic-workspace/config.local.toml"]
+applies_to_task_markers = ["binding automatic assignment", "automatic delegation", "non-local assignment", "delegation permission", "issue 2817"]
+authority_refs = ["https://github.com/rickardvh/agentic-workspace/issues/2817", "docs/maintainer/repo-evidence-requirements.md#binding-automatic-assignment"]
+required_evidence = ["binding_automatic_assignment_organic_dogfood"]
+proof_profile = "workspace_behavior"
+review_owner = "workspace-cli-runtime"
+force = "required-before-closeout"
+blocking_claims = ["claim-work-complete"]
+requirement_class = "invariant"
+source_intent_ref = "https://github.com/rickardvh/agentic-workspace/issues/2817"
+source_intent_revision = "issue-2817-ordinary-behavior-v1"
+source_intent_current = true
+evidence_owner = "verification:supported-host-delegation-dogfood"
+detail_route = "https://github.com/rickardvh/agentic-workspace/issues/2817"
+notes = "Once durable local policy and a current binding non-local assignment authorize an executable automatic transport, dispatch is the primary action without delegation wording or second conversational permission; local implementation and silent local fallback remain forbidden. The open issue still requires unrelated substantive supported-host evidence and must not be closed by the deterministic fixture alone."
+
 [assurance.requirements.direct_no_signal]
 level = "high"
 applies_to_paths = ["src/agentic_workspace/workspace_runtime_startup.py", "src/agentic_workspace/workspace_runtime_implement.py", "tests/test_workspace_cli.py", "tests/test_workspace_implement_cli.py"]
@@ -157,6 +175,7 @@ subject_revision = "tests/test_summary_exact_selector_performance.py@policy-v1"
 environment = "maintained-local-cold-process"
 source_revision = "repo-acceptance-policy-v1"
 excluded_costs = ["dependency installation", "provider refresh"]
+producer_command = "uv run pytest tests/test_summary_exact_selector_performance.py -q"
 
 [assurance.requirements.selected_planning_scaling_budget]
 level = "high"
@@ -192,6 +211,7 @@ control_revision = "tests/test_summary_exact_selector_performance.py@policy-v1"
 environment = "maintained-local-cold-process"
 source_revision = "repo-acceptance-policy-v1"
 excluded_costs = ["dependency installation", "provider refresh"]
+producer_command = "uv run pytest tests/test_summary_exact_selector_performance.py -q"
 
 [assurance.requirements.invalid_selector_rejection_budget]
 level = "high"
@@ -224,6 +244,7 @@ subject_revision = "tests/test_workspace_cli.py@policy-v1"
 environment = "maintained-local-cold-process"
 source_revision = "repo-acceptance-policy-v1"
 excluded_costs = ["dependency installation"]
+producer_command = "uv run pytest tests/test_workspace_cli.py -k upgrade_unknown_selector -q"
 
 [assurance.requirements.selected_proof_residue_budget]
 level = "high"
@@ -255,6 +276,7 @@ subject = "ordinary-execute-selected-proof"
 subject_revision = "tests/test_workspace_proof_cli.py@policy-v1"
 environment = "none"
 source_revision = "repo-acceptance-policy-v1"
+producer_command = "uv run pytest tests/test_workspace_proof_cli.py -k leaves_tracked_receipt_store_unchanged -q"
 
 [assurance.requirements.total_completion_cost]
 level = "medium"

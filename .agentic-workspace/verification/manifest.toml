@@ -520,6 +520,7 @@ steps = [
 ]
 expected_observations = [
   "Applicable hard requirements use current evidence and constrain only their named completion claim.",
+  "A binding authorized non-local assignment dispatches without second conversational permission and never silently falls back to local implementation.",
   "Measurement evidence preserves exact policy, subject, environment, and source identity.",
   "Guidelines remain advisory and unrelated direct work gains no first-line policy ceremony.",
 ]
@@ -533,6 +534,7 @@ pass_evidence_labels = [
   "selected_proof_tracked_residue",
 ]
 fail_evidence_labels = [
+  "binding_automatic_assignment_organic_dogfood",
   "repo_acceptance_reference_drift",
   "repo_acceptance_evidence_stale",
   "repo_acceptance_guideline_became_blocking",
@@ -552,6 +554,7 @@ applies_to_paths = [
 assurance_requirement_refs = [
   "typed_cli_selector_contract",
   "proof_execution_integrity",
+  "binding_automatic_assignment",
   "direct_no_signal",
   "selected_planning_read_budget",
   "selected_planning_scaling_budget",
@@ -567,6 +570,7 @@ steps = [
 expected_evidence = [
   "typed_cli_selector_contract_fixture",
   "proof_execution_integrity_fixture",
+  "binding_automatic_assignment_organic_dogfood",
   "direct_no_signal_fixture",
   "selected_planning_read_cold_median",
   "selected_planning_read_history_ratio",
@@ -603,6 +607,7 @@ scenario_refs = ["repo_acceptance_policy"]
 assurance_requirement_refs = [
   "typed_cli_selector_contract",
   "proof_execution_integrity",
+  "binding_automatic_assignment",
   "direct_no_signal",
   "selected_planning_read_budget",
   "selected_planning_scaling_budget",

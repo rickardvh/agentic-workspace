@@ -9471,7 +9471,7 @@ def test_assignment_proof_obligation_selects_exact_integrated_intent_among_curre
     assert selected["id"] == "proof:two"
 
 
-def test_configured_orchestrator_compiles_current_nonlocal_and_returned_assignment_actions(tmp_path: Path) -> None:
+def test_binding_automatic_assignment_needs_no_second_permission_and_forbids_local_fallback(tmp_path: Path) -> None:
     policy = {
         "execution_role": {"value": "orchestrator"},
         "assignment_policy": {"value": "required-best-fit"},
@@ -9653,6 +9653,8 @@ def test_configured_orchestrator_compiles_current_nonlocal_and_returned_assignme
     invocation = automatic["operation_invocation"]
     assert automatic["action"] == "dispatch-assigned-target"
     assert automatic["transport"] == "cli"
+    assert automatic["implementation_allowed"] is False
+    assert automatic.get("permission_required") is not True
     assert invocation["operation_id"] == "assignment.dispatch"
     assert invocation["arguments"] == {
         "target": ".",
