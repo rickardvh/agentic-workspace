@@ -41,7 +41,6 @@ review_aids = ["Confirm Verification reports facts and questions without making 
 
 [assurance.proof_profiles.test_evidence_change]
 required_commands = ["uv run python scripts/run_agentic_workspace.py report --target . --section verification --format json"]
-optional_commands = ["uv run python scripts/run_agentic_workspace.py report --target . --section verification --format json"]
 review_aids = ["Record or inspect the Verification proof-decision route when ordinary tests grow, shrink, or move."]
 
 [assurance.requirements.test_evidence_change_decision]
@@ -141,8 +140,8 @@ source_intent_ref = "https://github.com/rickardvh/agentic-workspace/issues/2613"
 source_intent_revision = "issues-2613-2916-orthogonality-v1"
 source_intent_current = true
 evidence_owner = "verification:workspace-config"
-detail_route = "uv run pytest tests/test_workspace_config_cli.py -k 'overlapping_assurance_level_owners or shared_local_assignment_policy_layers_compose' -q"
-notes = "Independent writable config dimensions must compose for every legal value. Same-question aliases or dependent peers require one canonical owner, a tagged/derived shape, or finite migration; explicit repo/local authority layering and safety intersections remain legal. This seeded mechanically enforceable subset does not close the general #2613 or delegation-specific #2916 redesign."
+detail_route = "uv run pytest tests/test_workspace_config_cli.py -k 'config_orthogonality or overlapping_assurance_level_owners or shared_local_assignment_policy_layers_compose' -q"
+notes = "Independent writable config dimensions must compose for every legal value. Same-question aliases or dependent peers require one canonical owner, a tagged/derived shape, or finite migration; explicit repo/local authority layering and safety intersections remain legal. Maintained seed coverage includes session path-mode and subsystem-level aliases, classifier owner/source, proof command roles, installed capability ownership, terminal assurance dispositions, and the shared/local delegation matrix. This seeded mechanically enforceable subset does not close the general #2613 or delegation-specific #2916 redesign."
 
 [assurance.requirements.direct_no_signal]
 level = "high"
@@ -674,7 +673,6 @@ enforcement = "advisory"
 source_classes = ["source-checkout"]
 target_relations = ["inside-target"]
 contract_schema = "agentic-workspace/installed-state-compatibility/v1"
-required_capabilities = ["installed-state-sync-v2"]
 minimum_reader_epoch = 1
 required_reader_capabilities = ["pre-state-runtime-compatibility-v1"]
 required_resources = [

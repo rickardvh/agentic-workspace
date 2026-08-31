@@ -57,7 +57,7 @@ Repo-owned Agentic Workspace configuration stored in .agentic-workspace/config.t
 | `assurance.agent_may_escalate` | boolean | no | `true` | Whether agents may raise assurance level when risk or scope warrants it. |  |  |
 | `assurance.agent_may_deescalate` | boolean | no | `false` | Whether agents may lower assurance level below the configured default. |  |  |
 | `assurance.strict_closeout` | boolean | no | `false` | Whether closeout should block when required proof references or gates are missing. |  |  |
-| `assurance.classification_owner` | enum `"config-native"`, `"repository-owned"` | no | `"config-native"` | Exclusive owner of assurance applicability classification: native workspace config or one repository-owned classifier. |  |  |
+| `assurance.classification_owner` | enum `"config-native"`, `"repository-owned"` | no | `"config-native"` | Exclusive owner of assurance applicability classification: config-native forbids classification_source, while repository-owned requires exactly one classification_source. |  |  |
 | `assurance.classification_source` | string | no |  | Repo-relative source or operation ref for the repository-owned classifier; forbidden for config-native ownership. |  |  |
 | `assurance.decision_record_target` | string | no |  | Path for durable decision records when work requires one; explicit config wins, but conventional ADR directories may be discovered when this is unset. | `"docs/decisions/"` |  |
 | `assurance.decision_record_format` | string | no |  | Host-declared file format for durable decision records. | `"markdown"` |  |
@@ -67,10 +67,10 @@ Repo-owned Agentic Workspace configuration stored in .agentic-workspace/config.t
 | `assurance.risk_registry` | string | no |  | Path to the repo risk registry used during higher-assurance work. | `"docs/risks.md"` |  |
 | `assurance.proof_profiles` | object | no | `{}` | Named proof profiles available to active planning assurance fields. |  |  |
 | `assurance.proof_profiles.<name>` | object | no |  | Reusable command and review-aid set for a named proof profile. |  | x-agentic-workspace-unknown-properties: "warn" |
-| `assurance.proof_profiles.<name>.required_commands` | array of string | no | `[]` | Commands that must pass for this proof profile. |  |  |
-| `assurance.proof_profiles.<name>.optional_commands` | array of string | no | `[]` | Commands that are useful but not required for this proof profile. |  |  |
+| `assurance.proof_profiles.<name>.required_commands` | array of string | no | `[]` | Commands that must pass for this proof profile. A command may occupy only one of the required, optional, or disallowed roles. |  |  |
+| `assurance.proof_profiles.<name>.optional_commands` | array of string | no | `[]` | Commands that are useful but not required for this proof profile. A command may occupy only one proof-command role. |  |  |
 | `assurance.proof_profiles.<name>.review_aids` | array of string | no | `[]` | Manual review aids or checklists associated with this proof profile. |  |  |
-| `assurance.proof_profiles.<name>.disallowed_commands` | array of string | no | `[]` | Commands that this proof profile disallows for the matched assurance concern. |  |  |
+| `assurance.proof_profiles.<name>.disallowed_commands` | array of string | no | `[]` | Commands that this proof profile disallows for the matched assurance concern. A command may occupy only one proof-command role. |  |  |
 | `assurance.requirements` | object | no | `{}` | Repo-declared assurance requirements that map work signals to authority refs, required evidence, proof profiles, review owners, and completion claim boundaries. |  |  |
 | `assurance.requirements.<name>` | object | no |  | One repo-defined assurance requirement. Domain meaning stays in repo-owned authority refs and free-form evidence labels. |  | x-agentic-workspace-unknown-properties: "warn" |
 | `assurance.requirements.<name>.level` | enum `"low"`, `"medium"`, `"high"`, `"critical"` | yes |  | Repo-interpreted assurance level for the matched requirement. |  |  |
@@ -87,7 +87,7 @@ Repo-owned Agentic Workspace configuration stored in .agentic-workspace/config.t
 | `assurance.requirements.<name>.review_owner` | string | no |  | Repo-local owner label for review or waiver decisions. |  |  |
 | `assurance.requirements.<name>.force` | enum `"informational"`, `"recommended"`, `"required-before-closeout"`, `"blocking"` | yes |  | How strongly this requirement affects guidance and closeout claim gates. |  |  |
 | `assurance.requirements.<name>.blocking_claims` | array of enum `"claim-slice-complete"`, `"claim-work-complete"`, `"close-parent-lane"` | no | `[]` | Completion option ids blocked while required evidence for this requirement is missing. |  |  |
-| `assurance.requirements.<name>.waiver` | ref `#/$defs/assurance_requirement_disposition` | no |  | Recorded waiver with reason and owner for this requirement. |  |  |
+| `assurance.requirements.<name>.waiver` | ref `#/$defs/assurance_requirement_disposition` | no |  | Recorded waiver with reason and owner for this requirement. Waiver and dismissal are mutually exclusive terminal dispositions. |  |  |
 | `assurance.requirements.<name>.waiver.reason` | string | yes |  | Why the requirement was waived, dismissed, or found not applicable. |  |  |
 | `assurance.requirements.<name>.waiver.owner` | string | yes |  | Repo-local owner or role accountable for the waiver or dismissal. |  |  |
 | `assurance.requirements.<name>.waiver.applicability` | object | no |  | Optional bounds that keep the disposition active only for the classified application, proof subject, work identity, source revision, and review window. |  |  |
@@ -97,7 +97,7 @@ Repo-owned Agentic Workspace configuration stored in .agentic-workspace/config.t
 | `assurance.requirements.<name>.waiver.applicability.proof_subject_fingerprint` | string | no |  | Optional proof subject to which this disposition is bound. |  |  |
 | `assurance.requirements.<name>.waiver.applicability.expires_at` | string | no |  | Time after which the disposition is inactive. |  |  |
 | `assurance.requirements.<name>.waiver.applicability.review_after` | string | no |  | Time at which owner review is required and the disposition becomes inactive. |  |  |
-| `assurance.requirements.<name>.dismissal` | ref `#/$defs/assurance_requirement_disposition` | no |  | Recorded dismissal or not-applicable decision with reason and owner for this requirement. |  |  |
+| `assurance.requirements.<name>.dismissal` | ref `#/$defs/assurance_requirement_disposition` | no |  | Recorded dismissal or not-applicable decision with reason and owner for this requirement. Dismissal and waiver are mutually exclusive terminal dispositions. |  |  |
 | `assurance.requirements.<name>.dismissal.reason` | string | yes |  | Why the requirement was waived, dismissed, or found not applicable. |  |  |
 | `assurance.requirements.<name>.dismissal.owner` | string | yes |  | Repo-local owner or role accountable for the waiver or dismissal. |  |  |
 | `assurance.requirements.<name>.dismissal.applicability` | object | no |  | Optional bounds that keep the disposition active only for the classified application, proof subject, work identity, source revision, and review window. |  |  |
@@ -136,7 +136,7 @@ Repo-owned Agentic Workspace configuration stored in .agentic-workspace/config.t
 | `assurance.subsystem_profiles` | object | no | `{}` | Subsystem-scoped assurance profiles keyed by existing .agentic-workspace/OWNERSHIP.toml subsystem ids. |  |  |
 | `assurance.subsystem_profiles.<name>` | object | no |  | One host-owned assurance profile for an ownership subsystem. |  | x-agentic-workspace-unknown-properties: "warn" |
 | `assurance.subsystem_profiles.<name>.assurance_level` | enum `"low"`, `"medium"`, `"high"`, `"critical"` | yes |  | Repo-interpreted assurance level for the matched subsystem. |  |  |
-| `assurance.subsystem_profiles.<name>.level` | enum `"low"`, `"medium"`, `"high"`, `"critical"` | no |  | Alias for assurance_level. |  |  |
+| `assurance.subsystem_profiles.<name>.level` | enum `"low"`, `"medium"`, `"high"`, `"critical"` | no |  | Compatibility alias for assurance_level. It cannot be declared beside assurance_level; new configuration should use assurance_level. |  |  |
 | `assurance.subsystem_profiles.<name>.scope_refs` | array of string | no | `[]` | Additional refs for the existing ownership subsystem that may activate this profile, such as ownership.subsystems.<id> or subsystem:<id>. The profile id must already be declared in .agentic-workspace/OWNERSHIP.toml [[subsystems]]. |  |  |
 | `assurance.subsystem_profiles.<name>.requirement_refs` | array of string | no | `[]` | Repo-owned requirement refs normally applying to this subsystem. |  |  |
 | `assurance.subsystem_profiles.<name>.required_evidence` | array of string | no | `[]` | Free-form repo vocabulary naming evidence expected before supported subsystem claims. |  |  |
@@ -185,7 +185,7 @@ Repo-owned Agentic Workspace configuration stored in .agentic-workspace/config.t
 | `assurance.test_data_policy` | object | no | `{}` | Repo-specific policy for test data, privacy, fixtures, or generated samples. |  | x-agentic-workspace-unknown-properties: "warn" |
 | `payload` | object | no | `{}` | Repo-owned installed payload target policy. Use this when the checked-in payload must be kept aligned with a release or source-checkout capability target independent of the CLI install location. |  | x-agentic-workspace-doc-role: "maintainer"<br>x-agentic-workspace-unknown-properties: "warn" |
 | `payload.target_release` | string | no |  | Desired checked-in Agentic Workspace payload release. Use source-current for source-checkout dogfooding. | `"0.24.0"`<br>`"source-current"` |  |
-| `payload.minimum_capabilities` | array of string | no | `[]` | Payload capabilities that must be present in checked-in payload provenance before the target is satisfied. | `["installed-state-sync-v2"]` |  |
+| `payload.minimum_capabilities` | array of string | no | `[]` | Payload-owned install-target capabilities that must be present in checked-in payload provenance before the target is satisfied. The same capability cannot also appear in cli_compatibility.required_capabilities. | `["installed-state-sync-v2"]` |  |
 | `payload.policy` | enum `"advisory"`, `"required-before-claim"`, `"required-before-work"` | no | `"advisory"` | How strongly startup should gate work when the installed payload does not satisfy the repo-declared target. |  |  |
 | `payload.dogfood_latest` | boolean | no | `false` | For the Agentic Workspace source repo, require the checked-in payload to track the latest source-checkout payload before ordinary work. |  |  |
 | `cli_compatibility` | object | no | `{}` | Expected CLI identity and posture for commands executed in this repo. |  | x-agentic-workspace-doc-role: "maintainer"<br>x-agentic-workspace-unknown-properties: "warn" |
@@ -196,7 +196,7 @@ Repo-owned Agentic Workspace configuration stored in .agentic-workspace/config.t
 | `cli_compatibility.target_relations` | array of enum `"inside-target"`, `"outside-target"`, `"no-target"` | no | `[]` | Allowed relation between the invoked CLI executable and the target repo. |  |  |
 | `cli_compatibility.command` | string | no |  | Expected CLI command string when the repo wants compatibility checks to match a specific invocation. | `"agentic-workspace"` |  |
 | `cli_compatibility.contract_schema` | string | no | `"agentic-workspace/installed-state-compatibility/v1"` | Durable installed-state contract schema expected by this repository. |  |  |
-| `cli_compatibility.required_capabilities` | array of string | no | `[]` | Package capabilities required from the configured Agentic Workspace runtime. |  |  |
+| `cli_compatibility.required_capabilities` | array of string | no | `[]` | Reader/runtime compatibility capabilities required from the configured Agentic Workspace CLI. Install-target capabilities belong only in payload.minimum_capabilities and cannot be duplicated here. |  |  |
 | `cli_compatibility.required_resources` | array of string | no | `[]` | Package resources required from the configured Agentic Workspace runtime, expressed as package:relative/path. |  |  |
 | `cli_compatibility.minimum_reader_epoch` | integer | no |  | Minimum pre-state compatibility reader epoch required before this repository's managed state may be interpreted. |  |  |
 | `cli_compatibility.required_reader_capabilities` | array of string | no | `[]` | Root-reader capabilities required before generated handlers or managed repository state may be loaded. |  |  |

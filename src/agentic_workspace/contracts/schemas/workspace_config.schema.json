@@ -243,7 +243,7 @@
           "default": false
         },
         "classification_owner": {
-          "description": "Exclusive owner of assurance applicability classification: native workspace config or one repository-owned classifier.",
+          "description": "Exclusive owner of assurance applicability classification: config-native forbids classification_source, while repository-owned requires exactly one classification_source.",
           "enum": ["config-native", "repository-owned"],
           "default": "config-native"
         },
@@ -317,7 +317,7 @@
             "x-agentic-workspace-unknown-properties": "warn",
             "properties": {
               "required_commands": {
-                "description": "Commands that must pass for this proof profile.",
+                "description": "Commands that must pass for this proof profile. A command may occupy only one of the required, optional, or disallowed roles.",
                 "type": "array",
                 "items": {
                   "type": "string",
@@ -328,7 +328,7 @@
                 "default": []
               },
               "optional_commands": {
-                "description": "Commands that are useful but not required for this proof profile.",
+                "description": "Commands that are useful but not required for this proof profile. A command may occupy only one proof-command role.",
                 "type": "array",
                 "items": {
                   "type": "string",
@@ -350,7 +350,7 @@
                 "default": []
               },
               "disallowed_commands": {
-                "description": "Commands that this proof profile disallows for the matched assurance concern.",
+                "description": "Commands that this proof profile disallows for the matched assurance concern. A command may occupy only one proof-command role.",
                 "type": "array",
                 "items": {
                   "type": "string",
@@ -509,11 +509,11 @@
                 "default": []
               },
               "waiver": {
-                "description": "Recorded waiver with reason and owner for this requirement.",
+                "description": "Recorded waiver with reason and owner for this requirement. Waiver and dismissal are mutually exclusive terminal dispositions.",
                 "$ref": "#/$defs/assurance_requirement_disposition"
               },
               "dismissal": {
-                "description": "Recorded dismissal or not-applicable decision with reason and owner for this requirement.",
+                "description": "Recorded dismissal or not-applicable decision with reason and owner for this requirement. Dismissal and waiver are mutually exclusive terminal dispositions.",
                 "$ref": "#/$defs/assurance_requirement_disposition"
               },
               "notes": {
@@ -670,7 +670,7 @@
                 ]
               },
               "level": {
-                "description": "Alias for assurance_level.",
+                "description": "Compatibility alias for assurance_level. It cannot be declared beside assurance_level; new configuration should use assurance_level.",
                 "enum": [
                   "low",
                   "medium",
@@ -1075,7 +1075,7 @@
           ]
         },
         "minimum_capabilities": {
-          "description": "Payload capabilities that must be present in checked-in payload provenance before the target is satisfied.",
+          "description": "Payload-owned install-target capabilities that must be present in checked-in payload provenance before the target is satisfied. The same capability cannot also appear in cli_compatibility.required_capabilities.",
           "type": "array",
           "items": {
             "type": "string",
@@ -1183,7 +1183,7 @@
           "default": "agentic-workspace/installed-state-compatibility/v1"
         },
         "required_capabilities": {
-          "description": "Package capabilities required from the configured Agentic Workspace runtime.",
+          "description": "Reader/runtime compatibility capabilities required from the configured Agentic Workspace CLI. Install-target capabilities belong only in payload.minimum_capabilities and cannot be duplicated here.",
           "type": "array",
           "items": { "type": "string", "minLength": 1 },
           "uniqueItems": true,

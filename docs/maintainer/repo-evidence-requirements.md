@@ -127,7 +127,7 @@ The first repo-owned catalogue is intentionally smaller than the issue history t
 | --- | --- |
 | strongest source intent / revision | #2613, supplemented by #2916; `issues-2613-2916-orthogonality-v1`, current |
 | observable contract | duplicate same-question writers fail closed with a structural repair, while shared/local authority layers compose across their legal values |
-| mechanically enforceable subset | subsystem assurance has one writable level owner; focused fixtures reject the compatibility alias beside its canonical field and exercise every shared/local assignment-policy pairing |
+| mechanically enforceable subset | session path mode and subsystem assurance level expose one writable owner; classifier owner/source remains a constructible dependent choice; proof commands have one role; installed capability requirements have one owner; requirements have one terminal disposition; focused fixtures also exercise every shared/local assignment-policy pairing |
 | remaining judgment | the broader retain/merge/derive/tag/remove audit, migration design, and proof that retained dimensions are genuinely independent |
 | rescope or retirement owner | #2613 for the general config model; #2916 for delegation controls; compatibility aliases retire through their owning schema migration |
 

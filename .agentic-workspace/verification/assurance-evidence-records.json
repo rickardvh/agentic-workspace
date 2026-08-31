@@ -399,14 +399,14 @@
       "evidence_label": "config_orthogonality_constructibility_fixture",
       "status": "satisfied",
       "source_kind": "command",
-      "command": "uv run pytest tests/test_workspace_config_cli.py -k 'overlapping_assurance_level_owners or shared_local_assignment_policy_layers_compose' -q",
+      "command": "uv run pytest tests/test_workspace_config_cli.py -k 'config_orthogonality or overlapping_assurance_level_owners or shared_local_assignment_policy_layers_compose' -q",
       "review_ref": "https://github.com/rickardvh/agentic-workspace/issues/2613",
       "changed_paths": [
         "src/agentic_workspace/config.py",
         "tests/test_workspace_config_cli.py"
       ],
       "recorded_by": "agent",
-      "notes": "The bounded mechanical subset rejects two writable owners for subsystem assurance level with a canonical-owner repair and proves shared/local assignment-policy authority layering across all legal values. #2613 and #2916 retain the broader redesign and migration judgment."
+      "notes": "The maintained initial conformance set covers session path-mode aliasing, assurance classifier owner/source, proof command roles, payload/CLI installed-capability ownership, assurance terminal dispositions, subsystem assurance-level aliasing, and all shared/local assignment-policy authority-layer combinations. #2613 and #2916 retain the broader redesign and migration judgment."
     }
   ]
 }

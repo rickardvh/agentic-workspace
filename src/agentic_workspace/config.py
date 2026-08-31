@@ -1052,6 +1052,19 @@ def _load_payload_target_config(*, raw_payload: Any, config_path: Path) -> tuple
     )
 
 
+def _validate_installed_capability_ownership(
+    *, cli_compatibility: CLICompatibilityExpectation, payload_target: PayloadTargetConfig, config_path: Path
+) -> None:
+    overlap = sorted(set(cli_compatibility.required_capabilities) & set(payload_target.minimum_capabilities))
+    if overlap:
+        raise WorkspaceUsageError(
+            f"{config_path.as_posix()} duplicates installed-runtime capability ownership across "
+            "cli_compatibility.required_capabilities and payload.minimum_capabilities for: "
+            f"{', '.join(overlap)}. Keep install-target requirements in payload.minimum_capabilities and reserve "
+            "cli_compatibility.required_capabilities for distinct reader/runtime compatibility requirements."
+        )
+
+
 def _require_bool(*, payload: dict[str, Any], key: str, default: bool, config_path: Path) -> bool:
     if key not in payload:
         return default
@@ -1251,6 +1264,11 @@ def _load_assurance_requirements(
         requirement_path = Path(f"{config_path.as_posix()} assurance.requirements.{requirement_id}")
         if not isinstance(raw_requirement, dict):
             raise WorkspaceUsageError(f"{requirement_path.as_posix()} must be a table.")
+        if "waiver" in raw_requirement and "dismissal" in raw_requirement:
+            raise WorkspaceUsageError(
+                f"{requirement_path.as_posix()} declares contradictory sibling dispositions waiver and dismissal; "
+                "record one owned terminal disposition and remove the other."
+            )
         unknown_requirement = sorted(set(raw_requirement) - supported_fields)
         if unknown_requirement:
             warnings.append(f"{requirement_path.as_posix()} contains unsupported field(s): {', '.join(unknown_requirement)}.")
@@ -1675,15 +1693,26 @@ def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[As
             warnings.append(
                 f"{config_path.as_posix()} [assurance.proof_profiles.{profile_id}] contains unsupported field(s): {', '.join(unknown_profile)}."
             )
+        required_commands = require_optional_string_list(payload=profile_payload, key="required_commands", config_path=config_path)
+        optional_commands = require_optional_string_list(payload=profile_payload, key="optional_commands", config_path=config_path)
+        disallowed_commands = require_optional_string_list(payload=profile_payload, key="disallowed_commands", config_path=config_path)
+        overlapping_roles = sorted(
+            (set(required_commands) & set(optional_commands))
+            | (set(required_commands) & set(disallowed_commands))
+            | (set(optional_commands) & set(disallowed_commands))
+        )
+        if overlapping_roles:
+            raise WorkspaceUsageError(
+                f"{config_path.as_posix()} [assurance.proof_profiles.{profile_id}] assigns multiple command roles "
+                f"to: {', '.join(overlapping_roles)}. Give each command identity exactly one of required, optional, or disallowed."
+            )
         profiles.append(
             AssuranceProofProfile(
                 id=str(profile_id).strip(),
-                required_commands=require_optional_string_list(payload=profile_payload, key="required_commands", config_path=config_path),
-                optional_commands=require_optional_string_list(payload=profile_payload, key="optional_commands", config_path=config_path),
+                required_commands=required_commands,
+                optional_commands=optional_commands,
                 review_aids=require_optional_string_list(payload=profile_payload, key="review_aids", config_path=config_path),
-                disallowed_commands=require_optional_string_list(
-                    payload=profile_payload, key="disallowed_commands", config_path=config_path
-                ),
+                disallowed_commands=disallowed_commands,
             )
         )
     raw_test_data_policy = raw_assurance.get("test_data_policy", {})
@@ -3130,6 +3159,11 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
     if unknown_session_logging:
         unknown_text = ", ".join(unknown_session_logging)
         warnings.append(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [session_logging] contains unsupported field(s): {unknown_text}.")
+    if "redact_local_paths" in raw_session_logging and "path_mode" in raw_session_logging:
+        raise WorkspaceUsageError(
+            f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} session_logging declares two writable path-mode owners: "
+            "keep path_mode and remove the compatibility-only redact_local_paths alias."
+        )
     session_logging_enabled = require_optional_bool(
         payload=raw_session_logging,
         key="enabled",
@@ -3755,6 +3789,11 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
         config_path=WORKSPACE_CONFIG_PATH,
     )
     warnings.extend(payload_target_warnings)
+    _validate_installed_capability_ownership(
+        cli_compatibility=cli_compatibility,
+        payload_target=payload_target,
+        config_path=WORKSPACE_CONFIG_PATH,
+    )
 
     agent_instructions_file, agent_instructions_source, detected_agent_instruction_files = resolve_effective_agent_instructions_file(
         target_root=effective_root,

@@ -67,6 +67,140 @@ force = "recommended"
         cli._load_workspace_config(target_root=target)
 
 
+def test_config_orthogonality_rejects_session_path_mode_alias_beside_canonical_owner(tmp_path: Path) -> None:
+    from agentic_workspace.config import WorkspaceUsageError
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    _write(
+        target / ".agentic-workspace/config.local.toml",
+        'schema_version = 1\n\n[session_logging]\nredact_local_paths = true\npath_mode = "absolute"\n',
+    )
+
+    with pytest.raises(WorkspaceUsageError, match="two writable path-mode owners.*keep path_mode.*compatibility-only"):
+        cli._load_workspace_config(target_root=target)
+
+    _write(
+        target / ".agentic-workspace/config.local.toml",
+        'schema_version = 1\n\n[session_logging]\npath_mode = "redacted"\n',
+    )
+    config = cli._load_workspace_config(target_root=target)
+    assert config.local_override.session_logging.path_mode == "redacted"
+
+
+def test_config_orthogonality_keeps_assurance_classifier_owner_source_constructible(tmp_path: Path) -> None:
+    from agentic_workspace.config import WorkspaceUsageError
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    _write(
+        target / ".agentic-workspace/config.toml",
+        'schema_version = 1\n\n[assurance]\nclassification_owner = "config-native"\nclassification_source = "repo-policy"\n',
+    )
+    with pytest.raises(WorkspaceUsageError, match="classification_source conflicts with config-native"):
+        cli._load_workspace_config(target_root=target)
+
+    _write(
+        target / ".agentic-workspace/config.toml",
+        'schema_version = 1\n\n[assurance]\nclassification_owner = "repository-owned"\nclassification_source = "repo-policy"\n',
+    )
+    config = cli._load_workspace_config(target_root=target)
+    assert config.assurance.classification_owner == "repository-owned"
+    assert config.assurance.classification_source == "repo-policy"
+
+
+def test_config_orthogonality_rejects_multiple_roles_for_one_proof_command(tmp_path: Path) -> None:
+    from agentic_workspace.config import WorkspaceUsageError
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    command = "python -m pytest tests/test_audit.py -q"
+    _write(
+        target / ".agentic-workspace/config.toml",
+        f'schema_version = 1\n\n[assurance.proof_profiles.audit]\nrequired_commands = ["{command}"]\noptional_commands = ["{command}"]\n',
+    )
+
+    with pytest.raises(WorkspaceUsageError, match="assigns multiple command roles.*exactly one"):
+        cli._load_workspace_config(target_root=target)
+
+    _write(
+        target / ".agentic-workspace/config.toml",
+        f'schema_version = 1\n\n[assurance.proof_profiles.audit]\nrequired_commands = ["{command}"]\n',
+    )
+    config = cli._load_workspace_config(target_root=target)
+    assert config.assurance.proof_profiles[0].required_commands == (command,)
+    assert config.assurance.proof_profiles[0].optional_commands == ()
+
+
+def test_config_orthogonality_rejects_duplicate_installed_capability_owners(tmp_path: Path) -> None:
+    from agentic_workspace.config import WorkspaceUsageError
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    _write(
+        target / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[cli_compatibility]
+required_capabilities = ["installed-state-sync-v2"]
+
+[payload]
+minimum_capabilities = ["installed-state-sync-v2"]
+""",
+    )
+
+    with pytest.raises(WorkspaceUsageError, match="duplicates installed-runtime capability ownership.*payload.minimum_capabilities"):
+        cli._load_workspace_config(target_root=target)
+
+    _write(
+        target / ".agentic-workspace/config.toml",
+        'schema_version = 1\n\n[payload]\nminimum_capabilities = ["installed-state-sync-v2"]\n',
+    )
+    config = cli._load_workspace_config(target_root=target)
+    assert config.payload_target.minimum_capabilities == ("installed-state-sync-v2",)
+    assert config.cli_compatibility.required_capabilities == ()
+
+
+def test_config_orthogonality_rejects_sibling_terminal_assurance_dispositions(tmp_path: Path) -> None:
+    from agentic_workspace.config import WorkspaceUsageError
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    _write(
+        target / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[assurance.requirements.audit]
+level = "high"
+applies_to_paths = ["src/audit/**"]
+force = "recommended"
+waiver = { reason = "waive", owner = "maintainer", applicability = {} }
+dismissal = { reason = "dismiss", owner = "maintainer", applicability = {} }
+""",
+    )
+
+    with pytest.raises(WorkspaceUsageError, match="contradictory sibling dispositions waiver and dismissal.*one owned terminal"):
+        cli._load_workspace_config(target_root=target)
+
+    _write(
+        target / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[assurance.requirements.audit]
+level = "high"
+applies_to_paths = ["src/audit/**"]
+force = "recommended"
+waiver = { reason = "waive", owner = "maintainer", applicability = {} }
+""",
+    )
+    config = cli._load_workspace_config(target_root=target)
+    assert config.assurance.requirements[0].waiver is not None
+    assert config.assurance.requirements[0].dismissal is None
+
+
 @pytest.mark.parametrize("shared_policy", ["local-preferred", "best-fit-advisory", "required-best-fit"])
 @pytest.mark.parametrize("local_policy", ["local-preferred", "best-fit-advisory", "required-best-fit"])
 def test_shared_local_assignment_policy_layers_compose_for_every_legal_value(tmp_path: Path, shared_policy: str, local_policy: str) -> None:
