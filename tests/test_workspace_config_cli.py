@@ -30,6 +30,70 @@ def test_repo_binding_automatic_assignment_requirement_is_hard_with_honest_unava
     assert status["state"] == "unavailable"
 
 
+def test_repo_config_orthogonality_requirement_is_hard_and_current() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    config = cli._load_workspace_config(target_root=repo_root)
+    requirement = next(item for item in config.assurance.requirements if item.id == "config_orthogonality_constructibility")
+
+    assert requirement.requirement_class == "invariant"
+    assert requirement.force == "required-before-closeout"
+    assert requirement.blocking_claims == ("claim-work-complete",)
+    assert requirement.source_intent_ref.endswith("/issues/2613")
+    assert requirement.required_evidence == ("config_orthogonality_constructibility_fixture",)
+
+    evidence = workspace_runtime_core._load_assurance_evidence_records(target_root=repo_root)
+    record = next(item for item in evidence["records"] if item["requirement_id"] == requirement.id)
+    assert record["status"] == "satisfied"
+
+
+def test_config_rejects_overlapping_assurance_level_owners_with_structural_repair(tmp_path: Path) -> None:
+    from agentic_workspace.config import WorkspaceUsageError
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    _write(
+        target / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[assurance.subsystem_profiles.audit]
+assurance_level = "high"
+level = "low"
+force = "recommended"
+""",
+    )
+
+    with pytest.raises(WorkspaceUsageError, match="overlapping writable owners.*keep assurance_level.*compatibility-only level alias"):
+        cli._load_workspace_config(target_root=target)
+
+
+@pytest.mark.parametrize("shared_policy", ["local-preferred", "best-fit-advisory", "required-best-fit"])
+@pytest.mark.parametrize("local_policy", ["local-preferred", "best-fit-advisory", "required-best-fit"])
+def test_shared_local_assignment_policy_layers_compose_for_every_legal_value(tmp_path: Path, shared_policy: str, local_policy: str) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    shared = tmp_path / "aw.config.shared.toml"
+    _write(shared, f'schema_version = 1\n\n[delegation]\nassignment_policy = "{shared_policy}"\n')
+    _write(
+        target / ".agentic-workspace/config.local.toml",
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[workspace]",
+                f'shared_config_path = "{shared.as_posix()}"',
+                "",
+                "[delegation]",
+                f'assignment_policy = "{local_policy}"',
+            ]
+        ),
+    )
+
+    config = cli._load_workspace_config(target_root=target)
+    policy = cli._config_payload(config=config)["mixed_agent"]["assignment_policy"]
+    assert policy["assignment_policy"] == {"value": local_policy, "source": "local-override"}
+
+
 @pytest.mark.parametrize(
     ("role", "policy", "target_status", "mode", "permitted", "expected"),
     [

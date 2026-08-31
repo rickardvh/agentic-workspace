@@ -1429,6 +1429,12 @@ def _load_assurance_subsystem_profiles(
         profile_path = Path(f"{config_path.as_posix()} assurance.subsystem_profiles.{profile_id}")
         if not isinstance(raw_profile, dict):
             raise WorkspaceUsageError(f"{profile_path.as_posix()} must be a table.")
+        if "assurance_level" in raw_profile and "level" in raw_profile:
+            raise WorkspaceUsageError(
+                f"{profile_path.as_posix()} declares overlapping writable owners for assurance level: "
+                "keep assurance_level and remove the compatibility-only level alias; aliases must not silently neutralize "
+                "or override their canonical setting."
+            )
         unknown_profile = sorted(set(raw_profile) - supported_fields)
         if unknown_profile:
             warnings.append(f"{profile_path.as_posix()} contains unsupported field(s): {', '.join(unknown_profile)}.")

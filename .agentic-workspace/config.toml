@@ -126,6 +126,24 @@ evidence_owner = "verification:supported-host-delegation-dogfood"
 detail_route = "https://github.com/rickardvh/agentic-workspace/issues/2817"
 notes = "Once durable local policy and a current binding non-local assignment authorize an executable automatic transport, dispatch is the primary action without delegation wording or second conversational permission; local implementation and silent local fallback remain forbidden. The open issue still requires unrelated substantive supported-host evidence and must not be closed by the deterministic fixture alone."
 
+[assurance.requirements.config_orthogonality_constructibility]
+level = "high"
+applies_to_paths = ["src/agentic_workspace/config.py", "src/agentic_workspace/contracts/schemas/workspace_config.schema.json", "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json", "tests/test_workspace_config_cli.py", "docs/reference/workspace-config.md", "docs/reference/workspace-local-override.md"]
+applies_to_task_markers = ["config orthogonality", "constructible configuration", "overlapping config owners", "issue 2613", "issue 2916"]
+authority_refs = ["https://github.com/rickardvh/agentic-workspace/issues/2613", "https://github.com/rickardvh/agentic-workspace/issues/2916", "docs/maintainer/repo-evidence-requirements.md#config-orthogonality-and-constructibility"]
+required_evidence = ["config_orthogonality_constructibility_fixture"]
+proof_profile = "workspace_behavior"
+review_owner = "workspace-cli-runtime"
+force = "required-before-closeout"
+blocking_claims = ["claim-work-complete"]
+requirement_class = "invariant"
+source_intent_ref = "https://github.com/rickardvh/agentic-workspace/issues/2613"
+source_intent_revision = "issues-2613-2916-orthogonality-v1"
+source_intent_current = true
+evidence_owner = "verification:workspace-config"
+detail_route = "uv run pytest tests/test_workspace_config_cli.py -k 'overlapping_assurance_level_owners or shared_local_assignment_policy_layers_compose' -q"
+notes = "Independent writable config dimensions must compose for every legal value. Same-question aliases or dependent peers require one canonical owner, a tagged/derived shape, or finite migration; explicit repo/local authority layering and safety intersections remain legal. This seeded mechanically enforceable subset does not close the general #2613 or delegation-specific #2916 redesign."
+
 [assurance.requirements.direct_no_signal]
 level = "high"
 applies_to_paths = ["src/agentic_workspace/workspace_runtime_startup.py", "src/agentic_workspace/workspace_runtime_implement.py", "tests/test_workspace_cli.py", "tests/test_workspace_implement_cli.py"]

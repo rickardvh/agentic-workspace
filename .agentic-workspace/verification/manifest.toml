@@ -521,12 +521,14 @@ steps = [
 expected_observations = [
   "Applicable hard requirements use current evidence and constrain only their named completion claim.",
   "A binding authorized non-local assignment dispatches without second conversational permission and never silently falls back to local implementation.",
+  "Independent config dimensions compose across legal values while same-question aliases expose one structural repair toward a canonical owner.",
   "Measurement evidence preserves exact policy, subject, environment, and source identity.",
   "Guidelines remain advisory and unrelated direct work gains no first-line policy ceremony.",
 ]
 pass_evidence_labels = [
   "typed_cli_selector_contract_fixture",
   "proof_execution_integrity_fixture",
+  "config_orthogonality_constructibility_fixture",
   "direct_no_signal_fixture",
   "selected_planning_read_cold_median",
   "selected_planning_read_history_ratio",
@@ -555,6 +557,7 @@ assurance_requirement_refs = [
   "typed_cli_selector_contract",
   "proof_execution_integrity",
   "binding_automatic_assignment",
+  "config_orthogonality_constructibility",
   "direct_no_signal",
   "selected_planning_read_budget",
   "selected_planning_scaling_budget",
@@ -571,6 +574,7 @@ expected_evidence = [
   "typed_cli_selector_contract_fixture",
   "proof_execution_integrity_fixture",
   "binding_automatic_assignment_organic_dogfood",
+  "config_orthogonality_constructibility_fixture",
   "direct_no_signal_fixture",
   "selected_planning_read_cold_median",
   "selected_planning_read_history_ratio",
@@ -608,6 +612,7 @@ assurance_requirement_refs = [
   "typed_cli_selector_contract",
   "proof_execution_integrity",
   "binding_automatic_assignment",
+  "config_orthogonality_constructibility",
   "direct_no_signal",
   "selected_planning_read_budget",
   "selected_planning_scaling_budget",

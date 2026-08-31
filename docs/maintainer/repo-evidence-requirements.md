@@ -119,6 +119,18 @@ The first repo-owned catalogue is intentionally smaller than the issue history t
 
 `binding_automatic_assignment` preserves the hard behavioral boundary already established for #2817. Once durable local policy and a current binding non-local assignment authorize an executable automatic transport, the ordinary primary action is revision-bound dispatch without delegation wording or a second conversational permission. Local implementation remains forbidden, and unavailable or failed transport cannot silently fall back to local work. The requirement is active even though its final unrelated-substantive supported-host evidence remains unavailable; deterministic mechanism fixtures must not be presented as satisfying or closing #2817.
 
+### Config orthogonality and constructibility
+
+`config_orthogonality_constructibility` preserves the current #2613 design invariant, with #2916 as its delegation-specific proving slice: legal values of genuinely independent writable settings compose without hidden precedence, silent neutralization, or a pairwise compatibility matrix. Same-question aliases have one canonical owner and a finite retirement path; dependent alternatives become tagged or derived; specialist fields stay in their variant. Explicit repo/local precedence and safety-ceiling intersections remain valid authority layers because every legal combination is meaningful.
+
+| Provenance field | Current disposition |
+| --- | --- |
+| strongest source intent / revision | #2613, supplemented by #2916; `issues-2613-2916-orthogonality-v1`, current |
+| observable contract | duplicate same-question writers fail closed with a structural repair, while shared/local authority layers compose across their legal values |
+| mechanically enforceable subset | subsystem assurance has one writable level owner; focused fixtures reject the compatibility alias beside its canonical field and exercise every shared/local assignment-policy pairing |
+| remaining judgment | the broader retain/merge/derive/tag/remove audit, migration design, and proof that retained dimensions are genuinely independent |
+| rescope or retirement owner | #2613 for the general config model; #2916 for delegation controls; compatibility aliases retire through their owning schema migration |
+
 ### Initial-policy disposition
 
 | Proposed policy | Disposition | Current owner and rationale |
@@ -127,6 +139,7 @@ The first repo-owned catalogue is intentionally smaller than the issue history t
 | selector authority and fail-fast | retained, merged | `typed_cli_selector_contract`; shared selector authority and lifecycle regression fixture |
 | proof claim completeness/execution integrity | retained, merged | `proof_execution_integrity`; existing proof admission and execution owners |
 | binding automatic assignment without second permission | retained, evidence unavailable | `binding_automatic_assignment`; #2817 owns the still-missing unrelated-substantive supported-host evidence, while the already-landed no-second-permission/no-local-fallback behavior remains a hard invariant |
+| config orthogonality and constructibility | retained, bounded mechanical subset | `config_orthogonality_constructibility`; #2613/#2916 remain open for the general/delegation redesign and migration |
 | direct/no-signal stays direct | retained | `direct_no_signal`; system intent plus startup/implement proportionality fixtures |
 | selected Planning read latency/scaling | retained as two measurements | `selected_planning_read_budget` and `selected_planning_scaling_budget` |
 | invalid-selector latency/envelope | retained, split by semantics | latency is `invalid_selector_rejection_budget`; bounded recovery/envelope is deterministic selector-contract evidence |

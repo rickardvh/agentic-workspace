@@ -9,6 +9,7 @@ paths:
 checks:
   - requirement:typed_cli_selector_contract
   - requirement:proof_execution_integrity
+  - requirement:config_orthogonality_constructibility
   - requirement:direct_no_signal
   - requirement:selected_planning_read_budget
   - requirement:selected_planning_scaling_budget
