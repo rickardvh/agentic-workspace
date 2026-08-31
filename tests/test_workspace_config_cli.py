@@ -994,6 +994,77 @@ preference_target = "operation:assignment.best-fit"
     assert "guideline cannot block claims" in capsys.readouterr().err
 
 
+def test_config_rejects_conflicting_owners_for_normalized_repo_requirement_identity(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[assurance.requirements.typed_exit]
+level = "high"
+applies_to_paths = ["src/**"]
+required_evidence = ["typed_exit_fixture"]
+force = "required-before-closeout"
+blocking_claims = ["claim-work-complete"]
+requirement_class = "invariant"
+source_intent_ref = "SYSTEM_INTENT.md#trust"
+source_intent_revision = "r1"
+source_intent_current = true
+evidence_owner = "verification:typed-exit"
+detail_route = "agentic-workspace proof --select typed-exit"
+
+[assurance.requirements." typed_exit "]
+level = "high"
+applies_to_paths = ["src/**"]
+required_evidence = ["typed_exit_fixture"]
+force = "required-before-closeout"
+blocking_claims = ["claim-work-complete"]
+requirement_class = "invariant"
+source_intent_ref = "docs/other-policy.md#exit"
+source_intent_revision = "r2"
+source_intent_current = true
+evidence_owner = "proof:other-exit"
+detail_route = "agentic-workspace proof --select other-exit"
+""",
+    )
+
+    with pytest.raises(SystemExit):
+        cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"])
+    error = capsys.readouterr().err
+    assert "conflicting owner declarations" in error
+    assert "SYSTEM_INTENT.md#trust" in error
+    assert "docs/other-policy.md#exit" in error
+
+
+def test_config_deduplicates_same_owner_same_repo_requirement_identity(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    declaration = """
+level = "high"
+applies_to_paths = ["src/**"]
+required_evidence = ["typed_exit_fixture"]
+force = "required-before-closeout"
+blocking_claims = ["claim-work-complete"]
+requirement_class = "invariant"
+source_intent_ref = "SYSTEM_INTENT.md#trust"
+source_intent_revision = "r1"
+source_intent_current = true
+evidence_owner = "verification:typed-exit"
+detail_route = "agentic-workspace proof --select typed-exit"
+"""
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        "schema_version = 1\n\n[assurance.requirements.typed_exit]\n"
+        + declaration
+        + '\n[assurance.requirements." typed_exit "]\n'
+        + declaration,
+    )
+
+    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
+    requirements = json.loads(capsys.readouterr().out)["assurance"]["requirements"]
+    assert [item["id"] for item in requirements].count("typed_exit") == 1
+
+
 def test_config_command_reports_enabled_advanced_features(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     (tmp_path / ".agentic-workspace/config.toml").write_text(

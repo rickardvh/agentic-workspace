@@ -1,8 +1,8 @@
 {
   "kind": "planning-integration-proposal/v1",
   "id": "issue-2822-structured-executor-kernel-archive-owner",
-  "status": "integrated",
-  "phase": "integrated-lifecycle-truth",
+  "status": "pending",
+  "phase": "integration-pending",
   "requested_transition": "archive-owner",
   "owner": {
     "id": "issue-2822-structured-executor-kernel",
@@ -22,7 +22,7 @@
   "expected_subject_revision": "f1d8fc540dcc3c80",
   "expected_planning_revision": "0820062a4c0d41c5",
   "created_at": "2026-08-30T19:58:18.724545Z",
-  "updated_at": "2026-08-31T09:39:43.478599Z",
+  "updated_at": "2026-08-30T19:58:18.724545Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -38,7 +38,5 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "c16a1eb3a647924c",
-  "integrated_at": "2026-08-31T09:39:43.478599Z",
-  "integration_receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2822-structured-executor-kernel-archive-owner.integration-receipt.json"
+  "proposal_revision": "6ce0ec0383ce2ea8"
 }

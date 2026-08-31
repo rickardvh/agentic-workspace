@@ -1116,6 +1116,7 @@ def _load_assurance_requirements(
     if not isinstance(raw_requirements, dict):
         raise WorkspaceUsageError(f"{config_path.as_posix()} [assurance.requirements] section must be a table.")
     requirements: list[AssuranceRequirement] = []
+    requirement_declarations: dict[str, tuple[str, AssuranceRequirement]] = {}
     supported_fields = {
         "level",
         "applies_to_paths",
@@ -1218,42 +1219,77 @@ def _load_assurance_requirements(
                 )
             if force not in {"required-before-closeout", "blocking"}:
                 raise WorkspaceUsageError(f"{requirement_path.as_posix()} hard named repo requirements require enforcing force.")
-        requirements.append(
-            AssuranceRequirement(
-                id=str(requirement_id).strip(),
-                level=require_required_enum(
-                    payload=raw_requirement,
-                    key="level",
-                    config_path=requirement_path,
-                    allowed=SUPPORTED_ASSURANCE_LEVELS,
-                ),
-                applies_to_paths=activation_values["applies_to_paths"],
-                applies_to_task_markers=activation_values["applies_to_task_markers"],
-                applies_to_planning_refs=activation_values["applies_to_planning_refs"],
-                applies_to_proof_profiles=activation_values["applies_to_proof_profiles"],
-                applies_to_risk_refs=activation_values["applies_to_risk_refs"],
-                applies_to_invariant_refs=activation_values["applies_to_invariant_refs"],
-                authority_refs=require_optional_string_list(payload=raw_requirement, key="authority_refs", config_path=requirement_path),
-                required_evidence=required_evidence,
-                proof_profile=require_optional_string(payload=raw_requirement, key="proof_profile", config_path=requirement_path),
-                workflow_obligation_refs=require_optional_string_list(
-                    payload=raw_requirement, key="workflow_obligation_refs", config_path=requirement_path
-                ),
-                review_owner=require_optional_string(payload=raw_requirement, key="review_owner", config_path=requirement_path),
-                force=force,
-                blocking_claims=blocking_claims,
-                waiver=_require_disposition(payload=raw_requirement, key="waiver", config_path=requirement_path),
-                dismissal=_require_disposition(payload=raw_requirement, key="dismissal", config_path=requirement_path),
-                notes=require_optional_string(payload=raw_requirement, key="notes", config_path=requirement_path),
-                requirement_class=requirement_class,
-                source_intent_ref=source_intent_ref,
-                source_intent_revision=source_intent_revision,
-                source_intent_current=source_intent_current,
-                preference_target=preference_target,
-                evidence_owner=evidence_owner,
-                detail_route=detail_route,
-            )
+        requirement = AssuranceRequirement(
+            id=str(requirement_id).strip(),
+            level=require_required_enum(
+                payload=raw_requirement,
+                key="level",
+                config_path=requirement_path,
+                allowed=SUPPORTED_ASSURANCE_LEVELS,
+            ),
+            applies_to_paths=activation_values["applies_to_paths"],
+            applies_to_task_markers=activation_values["applies_to_task_markers"],
+            applies_to_planning_refs=activation_values["applies_to_planning_refs"],
+            applies_to_proof_profiles=activation_values["applies_to_proof_profiles"],
+            applies_to_risk_refs=activation_values["applies_to_risk_refs"],
+            applies_to_invariant_refs=activation_values["applies_to_invariant_refs"],
+            authority_refs=require_optional_string_list(payload=raw_requirement, key="authority_refs", config_path=requirement_path),
+            required_evidence=required_evidence,
+            proof_profile=require_optional_string(payload=raw_requirement, key="proof_profile", config_path=requirement_path),
+            workflow_obligation_refs=require_optional_string_list(
+                payload=raw_requirement, key="workflow_obligation_refs", config_path=requirement_path
+            ),
+            review_owner=require_optional_string(payload=raw_requirement, key="review_owner", config_path=requirement_path),
+            force=force,
+            blocking_claims=blocking_claims,
+            waiver=_require_disposition(payload=raw_requirement, key="waiver", config_path=requirement_path),
+            dismissal=_require_disposition(payload=raw_requirement, key="dismissal", config_path=requirement_path),
+            notes=require_optional_string(payload=raw_requirement, key="notes", config_path=requirement_path),
+            requirement_class=requirement_class,
+            source_intent_ref=source_intent_ref,
+            source_intent_revision=source_intent_revision,
+            source_intent_current=source_intent_current,
+            preference_target=preference_target,
+            evidence_owner=evidence_owner,
+            detail_route=detail_route,
         )
+        prior_declaration = requirement_declarations.get(requirement.id)
+        if prior_declaration is not None:
+            prior_id, prior_requirement = prior_declaration
+            prior_owner = (
+                prior_requirement.source_intent_ref,
+                prior_requirement.source_intent_revision,
+                prior_requirement.authority_refs,
+                prior_requirement.evidence_owner,
+            )
+            current_owner = (
+                requirement.source_intent_ref,
+                requirement.source_intent_revision,
+                requirement.authority_refs,
+                requirement.evidence_owner,
+            )
+            if current_owner != prior_owner:
+                raise WorkspaceUsageError(
+                    f"{config_path.as_posix()} assurance.requirements contains conflicting owner declarations "
+                    f"for stable requirement id {requirement.id!r}: {prior_id!r} owns "
+                    f"source_intent_ref={prior_requirement.source_intent_ref!r}, "
+                    f"source_intent_revision={prior_requirement.source_intent_revision!r}, "
+                    f"authority_refs={list(prior_requirement.authority_refs)!r}, "
+                    f"evidence_owner={prior_requirement.evidence_owner!r}; {str(requirement_id)!r} owns "
+                    f"source_intent_ref={requirement.source_intent_ref!r}, "
+                    f"source_intent_revision={requirement.source_intent_revision!r}, "
+                    f"authority_refs={list(requirement.authority_refs)!r}, "
+                    f"evidence_owner={requirement.evidence_owner!r}."
+                )
+            if requirement != prior_requirement:
+                raise WorkspaceUsageError(
+                    f"{config_path.as_posix()} assurance.requirements contains divergent declarations "
+                    f"for stable requirement id {requirement.id!r} under the same source owner: "
+                    f"{prior_id!r} and {str(requirement_id)!r}."
+                )
+            continue
+        requirement_declarations[requirement.id] = (str(requirement_id), requirement)
+        requirements.append(requirement)
     return (tuple(requirement for requirement in requirements if requirement.id), warnings)
 
 

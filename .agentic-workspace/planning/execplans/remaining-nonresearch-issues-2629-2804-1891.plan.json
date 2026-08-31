@@ -3,9 +3,9 @@
   "id": "remaining-nonresearch-issues-2629-2804-1891",
   "title": "Complete remaining non-research issues 2629 2804 and 1891",
   "owner_level": "slice",
-  "lifecycle": "archived",
-  "phase": "complete",
-  "revision": 6,
+  "lifecycle": "live",
+  "phase": "closeout",
+  "revision": 5,
   "intent": {
     "outcome": "Close issues #2804, #1891, and #2629 outside the larger research lane, using current executable acceptance evidence and the smallest ordered PR stack.",
     "non_goals": [
@@ -46,17 +46,14 @@
       "refs": []
     },
     "integration": {
-      "status": "integrated",
+      "status": "feature-complete-integration-pending",
       "proposal_id": "remaining-nonresearch-issues-2629-2804-1891-archive-owner",
       "proposal_ref": ".agentic-workspace/planning/integration-proposals/remaining-nonresearch-issues-2629-2804-1891-archive-owner.integration-proposal.json",
       "requested_transition": "archive-owner",
       "proof_refs": [
         "Merged target replay passed: 12 issue-2804 tests; 148 issue-2629 tests; 24 issue-1891 closeout-trust tests; check-planning-nosync; generated conformance."
       ],
-      "authority": "feature-head declaration; target integration remains terminal authority",
-      "transition": "archive-owner",
-      "applied_at": "2026-08-31T09:39:43.478599Z",
-      "receipt_ref": ".agentic-workspace/planning/integration-receipts/remaining-nonresearch-issues-2629-2804-1891-archive-owner.integration-receipt.json"
+      "authority": "feature-head declaration; target integration remains terminal authority"
     }
   },
   "references": [],
@@ -149,9 +146,7 @@
   "proof_report": {
     "validation proof": "Merged target replay passed: 12 issue-2804 tests; 148 issue-2629 tests; 24 issue-1891 closeout-trust tests; check-planning-nosync; generated conformance.",
     "proof achieved now": "yes; integration-propose recorded accepted feature-head proof.",
-    "evidence for \"proof achieved\" state": "Merged target replay passed: 12 issue-2804 tests; 148 issue-2629 tests; 24 issue-1891 closeout-trust tests; check-planning-nosync; generated conformance.",
-    "integration proof": "Merged target replay passed: 12 issue-2804 tests; 148 issue-2629 tests; 24 issue-1891 closeout-trust tests; check-planning-nosync; generated conformance.",
-    "integration applied at": "2026-08-31T09:39:43.478599Z"
+    "evidence for \"proof achieved\" state": "Merged target replay passed: 12 issue-2804 tests; 148 issue-2629 tests; 24 issue-1891 closeout-trust tests; check-planning-nosync; generated conformance."
   },
   "execution_run": {
     "run status": "completed",
@@ -187,10 +182,5 @@
     "why this decision is honest": "Feature-head proof is accepted; terminal lifecycle truth awaits target integration.",
     "evidence carried forward": "Merged target replay passed: 12 issue-2804 tests; 148 issue-2629 tests; 24 issue-1891 closeout-trust tests; check-planning-nosync; generated conformance.",
     "reopen trigger": "New contradictory evidence or rejected target integration."
-  },
-  "active_milestone": {
-    "status": "archived",
-    "ready": "ready",
-    "blocked": "none"
   }
 }

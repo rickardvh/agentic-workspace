@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Compile source-owned named repository requirements into the existing operating decision with fail-closed ownership validation."
+issues = [2908]
