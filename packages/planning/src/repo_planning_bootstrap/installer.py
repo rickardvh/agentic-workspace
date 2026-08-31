@@ -2236,6 +2236,9 @@ def planning_summary_query(
         "execplans",
         "decomposition",
         "planning_surface_health",
+        "execution_readiness",
+        "lanes",
+        "roadmap",
     }
     if not requested or not set(requested) <= supported:
         return {
@@ -2253,6 +2256,24 @@ def planning_summary_query(
     invoked_resolvers: set[str] = {"planning_revision"}
     if cached is None:
         source_payload: dict[str, Any] = {"planning_revision": revision}
+        selected_owner_payload: dict[str, Any] | None = None
+        lane_projection: dict[str, Any] | None = None
+
+        def resolve_selected_owner() -> dict[str, Any]:
+            nonlocal selected_owner_payload
+            if selected_owner_payload is None:
+                selected_owner_payload = _selected_owner_query_payload(target_root=target_root)
+                source_payload.update(selected_owner_payload)
+                invoked_resolvers.add("selected-owner-query")
+            return selected_owner_payload
+
+        def resolve_lanes() -> dict[str, Any]:
+            nonlocal lane_projection
+            if lane_projection is None:
+                lane_projection = _planning_lane_projection(target_root=target_root)
+                invoked_resolvers.add("tiny-lanes")
+            return lane_projection
+
         selected_owner_fields = {
             "planning_record",
             "active_contract",
@@ -2261,8 +2282,7 @@ def planning_summary_query(
             "handoff_contract",
         }
         if set(requested) & selected_owner_fields:
-            source_payload.update(_selected_owner_query_payload(target_root=target_root))
-            invoked_resolvers.add("selected-owner-query")
+            resolve_selected_owner()
         if "execplans" in requested:
             source_payload["execplans"] = _planning_live_execplans_projection(target_root=target_root)
             invoked_resolvers.add("direct-live-execplans")
@@ -2274,10 +2294,10 @@ def planning_summary_query(
             invoked_resolvers.add("direct-decomposition")
         if "planning_surface_health" in requested:
             state = _read_state_from_toml(target_root) or {}
-            lane_projection = _planning_lane_projection(target_root=target_root)
+            current_lanes = resolve_lanes()
             issue_relations = _issue_relation_projection(target_root=target_root)
             integration = _integration_projection(target_root=target_root)
-            warnings = _planning_lane_surface_warnings(target_root=target_root, lane_projection=lane_projection)
+            warnings = _planning_lane_surface_warnings(target_root=target_root, lane_projection=current_lanes)
             warnings.extend(_planning_state_v1_warnings(target_root=target_root, state=state if state else None))
             warnings.extend(
                 _planning_branch_safe_surface_warnings(
@@ -2293,6 +2313,39 @@ def planning_summary_query(
                 health["status"] = "active"
             source_payload["planning_surface_health"] = health
             invoked_resolvers.add("tiny-health")
+        if set(requested) & {"execution_readiness", "lanes", "roadmap"}:
+            current_lanes = resolve_lanes()
+            roadmap_lanes = [dict(item) for item in current_lanes.get("records", []) if isinstance(item, dict)]
+            roadmap_candidates: list[dict[str, str]] = []
+            if "lanes" in requested:
+                source_payload["lanes"] = current_lanes
+            if "roadmap" in requested:
+                source_payload["roadmap"] = {
+                    "lane_count": len(roadmap_lanes),
+                    "candidate_lanes": roadmap_lanes,
+                    "candidate_count": 0,
+                    "candidates": roadmap_candidates,
+                }
+                invoked_resolvers.add("tiny-roadmap-counts")
+            if "execution_readiness" in requested:
+                owner_payload = resolve_selected_owner()
+                execplans = source_payload.get("execplans")
+                if not isinstance(execplans, dict):
+                    execplans = _planning_live_execplans_projection(target_root=target_root)
+                    invoked_resolvers.add("direct-live-execplans")
+                state = _read_state_from_toml(target_root) or {}
+                resolution = _selected_owner_resolution(target_root)
+                selected_item = _selected_owner_active_item(target_root=target_root, state=state, resolution=resolution)
+                planning_record_value = owner_payload.get("planning_record")
+                source_payload["execution_readiness"] = _execution_readiness_payload(
+                    target_root=target_root,
+                    planning_record=planning_record_value if isinstance(planning_record_value, dict) else {},
+                    active_items=[selected_item] if selected_item else [],
+                    active_execplans=[dict(item) for item in execplans.get("active_execplans", []) if isinstance(item, dict)],
+                    roadmap_lanes=roadmap_lanes,
+                    roadmap_candidates=roadmap_candidates,
+                )
+                invoked_resolvers.add("tiny-readiness")
         cached = {field: copy.deepcopy(source_payload[field]) for field in requested}
         if len(_PLANNING_SELECTED_OWNER_CACHE) >= 32:
             _PLANNING_SELECTED_OWNER_CACHE.pop(next(iter(_PLANNING_SELECTED_OWNER_CACHE)))

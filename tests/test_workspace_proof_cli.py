@@ -7915,7 +7915,8 @@ def test_proof_tiny_readme_profile_keeps_docs_only_validation_light(capsys) -> N
     encoded = json.dumps(payload)
     docs_diff = "git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md packages/memory/README.md"
     assert payload["kind"] == "proof-next-decision/v1"
-    assert payload["next"]["command"] == docs_diff
+    assert payload["next"]["action"] == "execute-selected-proof"
+    assert "--execute-selected" in payload["next"]["command"]
     assert payload["required_commands"] == [docs_diff]
     assert "uv run pytest tests -q" not in encoded
     assert len(encoded) < 6000
@@ -8178,11 +8179,87 @@ def test_default_only_weak_agent_consumes_actual_proof_guidance_without_follow_u
         "make lint-workspace",
         "make typecheck",
     ]
+    assert packet["next"]["action"] == "execute-selected-proof"
+    assert packet["next"]["command"] == (
+        'agentic-workspace proof --target "." --changed "fixtures/multi-command.py" --execute-selected --format json'
+    )
+    assert packet["receipt"] == {
+        "status": "not-recorded",
+        "missing_count": 3,
+        "manual_recording_available": True,
+        "detail_selector": "proof_receipt_bridge",
+    }
     assert trace["claim"] == "blocked"
     assert packet["claim_boundary"]["completion_claim_allowed"] is False
     assert trace["selector_calls"] == trace["verbose_calls"] == trace["raw_workspace_reads"] == 0
     evidence = json.loads(Path("docs/maintainer/proof-compression-2684.json").read_text(encoding="utf-8"))
     assert evidence["default_guidance_proof"]["interaction_trace"] == trace
+
+
+def test_ordinary_proof_guidance_materializes_changed_path_templates_before_admission() -> None:
+    from agentic_workspace.workspace_runtime_proof import _ordinary_proof_next_decision_payload
+
+    command = "uv run agentic-workspace implement --changed <paths> --select requirement_grounding --format json"
+    changed_paths = ["src/feature file.py", "tests/test_feature.py"]
+    packet = _ordinary_proof_next_decision_payload(
+        next_decision={
+            "next": {"action": "run-validation-command", "command": command, "route_source": "changed-paths"},
+            "required_commands": [command],
+            "warnings": [],
+        },
+        answer={
+            "proof_route_decision": {"selected_command": {"route_authority": "repo-owned-proof-policy"}},
+            "proof_route_strategy_preservation": {
+                "decision_id": "template-decision",
+                "route_health_id": "template-health",
+                "claim_effect": "selected-proof-required",
+                "proof_route_health": {"status": "current", "finding_count": 0},
+            },
+            "proof_receipt_reconciliation": {
+                "status": "not-recorded",
+                "selected_proof_identity": {"id": "template-proof", "fingerprint": "template-fingerprint", "command_count": 1},
+            },
+            "proof_receipt_bridge": {
+                "missing_receipt_count": 1,
+                "next_recording_command": "agentic-workspace proof --record-receipt --format json",
+            },
+            "proof_closeout_summary": {"status": "not-yet-sufficient", "remaining_gaps": ["proof result missing"]},
+            "proof_route_strategy_claim_gate": {"claim_effect": "selected-proof-required"},
+            "manual_verification": None,
+            "unavailable_proof_commands": [],
+        },
+        target=".",
+        selector={"changed": changed_paths},
+        cli_invoke="agentic-workspace",
+    )
+
+    assert packet["next"]["action"] == "execute-selected-proof"
+    assert "--execute-selected" in packet["next"]["command"]
+    assert "--record-receipt" not in packet["next"]["command"]
+    assert packet["required_commands"] == [command]
+    assert packet["receipt"]["manual_recording_available"] is True
+
+
+def test_issue_1891_ordinary_proof_scope_uses_one_selected_executor_action(capsys) -> None:
+    changed_paths = [
+        ".release/changes/issue-1891-integration-pending-closeout-lineage.toml",
+        "src/agentic_workspace/reporting_support.py",
+        "src/agentic_workspace/workspace_runtime_core.py",
+        "tests/test_workspace_cli.py",
+    ]
+
+    assert cli.main(["proof", "--target", str(ROOT), "--changed", *changed_paths, "--format", "json"]) == 0
+    packet = json.loads(capsys.readouterr().out)
+
+    assert packet["kind"] == "proof-next-decision/v1"
+    assert packet["next"]["action"] == "execute-selected-proof"
+    assert packet["next"]["operation"] == "proof.execute-selected"
+    assert "--execute-selected" in packet["next"]["command"]
+    assert "--record-receipt" not in packet["next"]["command"]
+    assert all(f'--changed "{path}"' in packet["next"]["command"] for path in changed_paths)
+    assert any("<paths>" in command for command in packet["required_commands"])
+    assert packet["receipt"]["manual_recording_available"] is True
+    assert packet["receipt"]["detail_selector"] == "proof_receipt_bridge"
 
 
 def test_proof_changed_selector_flags_direct_cli_edits(tmp_path: Path, capsys) -> None:
@@ -9017,6 +9094,155 @@ def test_ordinary_focused_task_does_not_select_explicit_broad_route(tmp_path: Pa
     assert values["proof_route_strategy_decision"]["outcome"] == "focused"
     assert "domain:workspace_broad_suite" not in [lane["id"] for lane in values["selected_lanes"]]
     assert all(not command.startswith("make test-workspace-") for command in values["required_commands"])
+
+
+def test_repo_planning_record_changes_use_the_narrow_record_proof_route() -> None:
+    from agentic_workspace.workspace_runtime_proof import _proof_selection_for_changed_paths
+
+    changed_paths = [
+        ".agentic-workspace/planning/execplans/remaining-nonresearch-issues-2629-2804-1891.plan.json",
+        ".agentic-workspace/planning/integration-proposals/remaining-nonresearch-issues-2629-2804-1891-archive-owner.integration-proposal.json",
+        ".agentic-workspace/planning/execplans/issue-2822-structured-executor-kernel.plan.json",
+        ".agentic-workspace/planning/integration-proposals/issue-2822-structured-executor-kernel-archive-owner.integration-proposal.json",
+    ]
+
+    selection = _proof_selection_for_changed_paths(
+        changed_paths=changed_paths,
+        target_root=ROOT,
+        include_durable_intent=False,
+        include_assurance_requirements=False,
+        include_routine_work_context=False,
+        include_runtime_diagnostics=False,
+        include_test_strategy_check=False,
+    )
+
+    lane_ids = {lane["id"] for lane in selection["selected_lanes"]}
+    commands = selection["required_commands"]
+    assert "domain:planning_record_surfaces" in lane_ids
+    assert "domain:planning_reconciliation_runtime" not in lane_ids
+    assert "subsystem:planning-records" in lane_ids
+    assert "subsystem:planning" not in lane_ids
+    assert any("agentic-planning doctor" in command for command in commands)
+    assert any("check_planning_surfaces.py" in command for command in commands)
+    assert any("test_branch_safe_planning.py -k integration_proposal" in command for command in commands)
+    assert all("make check-planning-nosync" not in command for command in commands)
+    assert all("tests/test_promote.py tests/test_reconciliation.py" not in command for command in commands)
+    assert selection["proof_route_strategy_decision"]["outcome"] == "focused"
+
+
+def test_pr_2898_planning_record_replay_keeps_public_implement_and_proof_routes_identical(capsys) -> None:
+    changed_paths = [
+        ".agentic-workspace/planning/execplans/remaining-nonresearch-issues-2629-2804-1891.plan.json",
+        ".agentic-workspace/planning/integration-proposals/remaining-nonresearch-issues-2629-2804-1891-archive-owner.integration-proposal.json",
+        ".agentic-workspace/planning/execplans/issue-2822-structured-executor-kernel.plan.json",
+        ".agentic-workspace/planning/integration-proposals/issue-2822-structured-executor-kernel-archive-owner.integration-proposal.json",
+    ]
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(ROOT),
+                "--changed",
+                *changed_paths,
+                "--select",
+                "required_commands,proof_route_strategy_decision,focused_route_coverage_audit",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    proof = json.loads(capsys.readouterr().out)["values"]
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(ROOT),
+                "--changed",
+                *changed_paths,
+                "--task",
+                "Replay the PR 2898 passive Planning record route.",
+                "--select",
+                "proof",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    implement_proof = json.loads(capsys.readouterr().out)["values"]["proof"]
+
+    route = proof["proof_route_strategy_decision"]
+    assert implement_proof["required_commands"] == proof["required_commands"]
+    assert implement_proof["route_identity"] == {
+        key: route[key] for key in ("kind", "status", "outcome", "reason_code", "focused_lane_ids", "authority")
+    }
+    assert implement_proof["route_identity"]["outcome"] == "focused"
+    assert implement_proof["route_identity"]["reason_code"] == "focused-route-sufficient"
+    assert implement_proof["route_identity"]["focused_lane_ids"] == ["domain:planning_record_surfaces"]
+    assert proof["focused_route_coverage_audit"]["maintenance_gap"]["status"] == "absent"
+    assert proof["focused_route_coverage_audit"]["missing_focused_route_paths"] == []
+    assert len(proof["required_commands"]) == 5
+    assert all("make check-planning-nosync" not in command for command in proof["required_commands"])
+    assert all("tests/test_promote.py tests/test_reconciliation.py" not in command for command in proof["required_commands"])
+
+
+def test_report_only_planning_replay_composes_record_and_maintained_review_routes_without_broad_fallback(capsys) -> None:
+    changed_paths = [
+        ".agentic-workspace/planning/execplans/dogfooding-proof-router-report.plan.json",
+        ".agentic-workspace/planning/integration-proposals/dogfooding-proof-router-report-archive-owner.integration-proposal.json",
+        "docs/reviews/aw-proof-router-closeout-dogfood-2026-08-30.md",
+    ]
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(ROOT),
+                "--changed",
+                *changed_paths,
+                "--select",
+                "required_commands,selected_lanes,proof_route_strategy_decision,focused_route_coverage_audit",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    values = json.loads(capsys.readouterr().out)["values"]
+
+    lane_ids = {lane["id"] for lane in values["selected_lanes"]}
+    assert values["proof_route_strategy_decision"]["outcome"] == "focused"
+    assert values["proof_route_strategy_decision"]["reason_code"] == "focused-route-sufficient"
+    assert {"domain:planning_record_surfaces", "domain:maintained_review_records"}.issubset(lane_ids)
+    assert values["focused_route_coverage_audit"]["missing_focused_route_paths"] == []
+    assert values["focused_route_coverage_audit"]["maintenance_gap"]["status"] == "absent"
+    assert len(values["required_commands"]) == 6
+    assert "make maintainer-surfaces" in values["required_commands"]
+    assert all("make check-planning-nosync" not in command for command in values["required_commands"])
+    assert all("tests/test_promote.py tests/test_reconciliation.py" not in command for command in values["required_commands"])
+
+
+def test_repo_planning_runtime_changes_still_escalate_to_runtime_proof() -> None:
+    from agentic_workspace.workspace_runtime_proof import _proof_selection_for_changed_paths
+
+    selection = _proof_selection_for_changed_paths(
+        changed_paths=["packages/planning/src/repo_planning_bootstrap/installer.py"],
+        target_root=ROOT,
+        include_durable_intent=False,
+        include_assurance_requirements=False,
+        include_routine_work_context=False,
+        include_runtime_diagnostics=False,
+        include_test_strategy_check=False,
+    )
+
+    lane_ids = {lane["id"] for lane in selection["selected_lanes"]}
+    assert "domain:planning_reconciliation_runtime" in lane_ids
+    assert any("make check-planning-nosync" in command for command in selection["required_commands"])
 
 
 def test_proof_route_strategy_decision_selects_structured_broad_escalation_for_two_domain_owners(tmp_path: Path, capsys) -> None:
@@ -11098,16 +11324,19 @@ def test_selected_proof_execution_reconciles_and_reuses_local_receipts(tmp_path:
     assert first["preexecution_admission"]["status"] == "admitted"
     assert first["preexecution_admission"]["process_launch_count"] == 4
     assert first["canonical_receipt_admission"] == {
-        "recorded_count": 4,
+        "recorded_count": 1,
         "rejected_count": 0,
         "authority": "proof_receipt_admission",
+        "scope": "selected-proof-aggregate",
     }
     assert first["claim_boundary"]["status"] == "effective-local-configuration-verified"
     assert first["claim_boundary"]["shared_repository_claim_allowed"] is False
     assert len(json.dumps(first).encode("utf-8")) < 16_384
     assert before == after
     canonical = json.loads((tmp_path / ".agentic-workspace/local/proof-receipts/last.json").read_text(encoding="utf-8"))
-    assert canonical["command"] == "check-four"
+    assert canonical["command"] == "check-one"
+    assert canonical["proof_commands"] == commands
+    assert canonical["proof_run"]["run_id"] == first["run"]["id"]
     assert canonical["admission"]["proof_sufficient"] is True
     reconciliation = workspace_runtime_proof._proof_receipt_reconciliation_payload(
         target_root=tmp_path,
@@ -11132,6 +11361,66 @@ def test_selected_proof_execution_reconciles_and_reuses_local_receipts(tmp_path:
     assert calls == commands
 
 
+def test_selected_proof_execution_leaves_tracked_receipt_store_unchanged(tmp_path: Path, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    _write(tmp_path / ".gitignore", ".agentic-workspace/local/\n")
+    _write(tmp_path / ".agentic-workspace/config.toml", "schema_version = 1\n")
+    _write(tmp_path / ".agentic-workspace/proof/receipts/index.json", '{"receipts": []}\n')
+    _write(tmp_path / "changed.py", "VALUE = 1\n")
+    subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True)
+    subprocess.run(
+        ["git", "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "fixture"],
+        cwd=tmp_path,
+        check=True,
+    )
+    commands = ["check-shared-one", "check-shared-two"]
+    selection = _selected_execution_fixture(commands, local=False)
+    monkeypatch.setattr(workspace_runtime_core, "_proof_selection_for_changed_paths", lambda **_: selection)
+    monkeypatch.setattr(workspace_runtime_proof, "_proof_selection_for_changed_paths", lambda **_: selection)
+    monkeypatch.setattr(
+        workspace_runtime_core,
+        "run_trusted_shell",
+        lambda command, **_: subprocess.CompletedProcess(command, 0, stdout="passed", stderr=""),
+    )
+    before = subprocess.run(["git", "status", "--short"], cwd=tmp_path, capture_output=True, text=True, check=True).stdout
+
+    first = workspace_runtime_core._execute_selected_proof_payload(
+        target_root=tmp_path,
+        changed_paths=["changed.py"],
+        task_text="verify shared change",
+        run_id="tracked-residue-check",
+        timeout_seconds="30",
+        cancel_file="",
+        dry_run=False,
+    )
+
+    after = subprocess.run(["git", "status", "--short"], cwd=tmp_path, capture_output=True, text=True, check=True).stdout
+    assert first["status"] == "completed"
+    assert first["persistence"]["repository_residue"] is False
+    assert first["persistence"]["tracked_file_count"] == 0
+    assert before == after == ""
+    assert json.loads((tmp_path / ".agentic-workspace/proof/receipts/index.json").read_text(encoding="utf-8")) == {"receipts": []}
+    run_root = tmp_path / ".agentic-workspace/local/proof-receipts/runs/tracked-residue-check"
+    assert len(list(run_root.glob("*.json"))) == len(commands) + 1
+    history_path = tmp_path / ".agentic-workspace/local/proof-receipts/history.jsonl"
+    history_before = history_path.read_bytes()
+
+    reused = workspace_runtime_core._execute_selected_proof_payload(
+        target_root=tmp_path,
+        changed_paths=["changed.py"],
+        task_text="verify shared change",
+        run_id="tracked-residue-check",
+        timeout_seconds="30",
+        cancel_file="",
+        dry_run=False,
+    )
+
+    assert reused["status"] == "reused-fresh-evidence"
+    assert history_path.read_bytes() == history_before
+    assert subprocess.run(["git", "status", "--short"], cwd=tmp_path, capture_output=True, text=True, check=True).stdout == ""
+
+
 def test_selected_proof_execution_materializes_changed_path_templates_before_admission(tmp_path: Path, monkeypatch) -> None:
     _init_git_repo(tmp_path)
     changed_path = "src/feature file.py"
@@ -11151,7 +11440,12 @@ def test_selected_proof_execution_materializes_changed_path_templates_before_adm
     monkeypatch.setattr(
         workspace_runtime_core,
         "_record_proof_receipt_payload",
-        lambda **_: {"status": "written", "receipt": {"admission": {"proof_sufficient": True}}},
+        lambda **_: {
+            "status": "written",
+            "path": ".agentic-workspace/local/proof-receipts/last.json",
+            "receipt": {"admission": {"proof_sufficient": True}},
+            "publication": {"trusted_producer_published": False},
+        },
     )
     result = workspace_runtime_core._execute_selected_proof_payload(
         target_root=tmp_path,

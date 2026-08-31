@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Make ordinary proof execute its admitted selected set directly and persist one local aggregate receipt without tracked repository residue."
+issues = [2727, 2901]

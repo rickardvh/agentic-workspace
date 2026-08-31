@@ -17,6 +17,10 @@ SUMMARY_SCRIPT = REPO_ROOT / "scripts" / "run_agentic_workspace.py"
 SELECTOR_FIXTURES = (
     "decomposition,planning_surface_health,planning_revision",
     "planning_record,execplans,continuation_view,planning_revision",
+    "planning_record,execution_readiness",
+    "execution_readiness,planning_revision",
+    "continuation_view,execution_readiness,planning_revision",
+    "lanes,roadmap,planning_record",
 )
 HISTORICAL_BUILDERS = {
     "execplan_archive_builder",
@@ -67,6 +71,7 @@ candidates = []
                 "revision": 1,
                 "intent": {"outcome": "Prove exact selector isolation.", "non_goals": []},
                 "next_action": "run bounded proof",
+                "completion_criteria": ["The bounded exact-selector proof passes."],
                 "blockers": [],
                 "proof": {"claims": [], "requirements": [], "refs": []},
                 "continuation": {"owner": "none", "residual_intent": "none"},
@@ -248,6 +253,22 @@ def test_exact_summary_selectors_are_clean_process_history_independent(tmp_path:
                 ".agentic-workspace/planning/execplans/plan-beta.plan.json",
             }
             assert "direct-live-execplans" in diagnostics["invoked_resolvers"]
+        if "execution_readiness" in requested_roots:
+            readiness = values["execution_readiness"]
+            assert readiness["status"] == "scaffold-tightening-required"
+            assert readiness["implementation_tightening"]["owner"].endswith("plan-alpha.plan.json")
+            assert "tiny-readiness" in diagnostics["invoked_resolvers"]
+        if "lanes" in requested_roots:
+            assert values["lanes"]["record_count"] == 0
+            assert "tiny-lanes" in diagnostics["invoked_resolvers"]
+        if "roadmap" in requested_roots:
+            assert values["roadmap"] == {
+                "lane_count": 0,
+                "candidate_lanes": [],
+                "candidate_count": 0,
+                "candidates": [],
+            }
+            assert "tiny-roadmap-counts" in diagnostics["invoked_resolvers"]
     assert max(observed_sizes) < 64 * 1024
 
     empty_median = median(empty_samples)

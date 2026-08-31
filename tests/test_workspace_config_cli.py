@@ -4428,6 +4428,14 @@ def test_target_evidence_normalizes_historical_context_inflation_as_transport_bu
             "transport": "cli",
             "record_count": 1,
             "expected_burden_component": -30,
+            "observed_context_cost": {
+                "assignment_packet_bytes": 3662,
+                "cached_input_tokens": 62464,
+                "effective_input_tokens": 81752,
+                "elapsed_ms": 1000,
+                "output_tokens": 1591,
+                "rendered_prompt_bytes": 3913,
+            },
             "observable_fields": [
                 "cached_input_tokens",
                 "effective_input_tokens",
@@ -4847,6 +4855,108 @@ def test_assignment_combines_observed_context_with_declared_price_and_latency_cl
         "transport_context_cost": -40,
         "expected_burden": -25,
     }
+
+
+def test_assignment_retains_equal_fit_current_target_when_delegation_inflates_observed_context() -> None:
+    from agentic_workspace.target_evidence import assignment_decision_from_policy
+
+    def decide(*, luna_fit: int) -> dict[str, object]:
+        return assignment_decision_from_policy(
+            assignment_policy={
+                "assignment_policy": {"value": "required-best-fit"},
+                "current_target": {"value": "codex_sol"},
+                "binding": {"enforceable": True},
+            },
+            runtime_resolution={
+                "recommendation": "stay-local",
+                "capability_context": {"task_class": "validation", "scope_class": "issue-2818-multi-slice"},
+                "profile_recommendations": [
+                    {
+                        "name": "codex_sol",
+                        "recommendation": "recommended",
+                        "score": 10,
+                        "cost_class": "premium",
+                        "latency_class": "slow",
+                        "capability_mismatch": False,
+                        "execution_methods": ["cli"],
+                        "human_control_modes": ["auto"],
+                    },
+                    {
+                        "name": "codex_luna",
+                        "recommendation": "recommended",
+                        "score": luna_fit,
+                        "cost_class": "cheap",
+                        "latency_class": "fast",
+                        "capability_mismatch": False,
+                        "execution_methods": ["cli"],
+                        "human_control_modes": ["auto"],
+                    },
+                ],
+            },
+            target_evidence={
+                "status": "present",
+                "record_count": 2,
+                "suitability": [
+                    {
+                        "target": "codex_sol",
+                        "context_key": "validation::issue-2818-multi-slice",
+                        "route_effect": "no-change",
+                        "transport_costs": [
+                            {
+                                "transport": "cli",
+                                "record_count": 1,
+                                "expected_burden_component": -40,
+                                "observed_context_cost": {
+                                    "assignment_packet_bytes": 7016,
+                                    "rendered_prompt_bytes": 3952,
+                                    "effective_input_tokens": 470683,
+                                    "output_tokens": 2604,
+                                    "elapsed_ms": 125438,
+                                },
+                            }
+                        ],
+                    },
+                    {
+                        "target": "codex_luna",
+                        "context_key": "validation::issue-2818-multi-slice",
+                        "route_effect": "no-change",
+                        "transport_costs": [
+                            {
+                                "transport": "cli",
+                                "record_count": 1,
+                                "expected_burden_component": -40,
+                                "observed_context_cost": {
+                                    "assignment_packet_bytes": 7024,
+                                    "rendered_prompt_bytes": 3955,
+                                    "effective_input_tokens": 488645,
+                                    "output_tokens": 3209,
+                                    "elapsed_ms": 114636,
+                                },
+                            }
+                        ],
+                    },
+                ],
+            },
+        )
+
+    equal_fit = decide(luna_fit=10)
+    assert equal_fit["decision"] == "assign-current-target"
+    assert equal_fit["selected_target"] == "codex_sol"
+    guard = equal_fit["selection_basis"]["context_inflation_guard"]
+    assert guard["status"] == "applied"
+    assert guard["cases"] == [
+        {
+            "candidate": "codex_luna",
+            "retained_target": "codex_sol",
+            "candidate_total_tokens": 491854,
+            "current_total_tokens": 473287,
+            "observed_increase_tokens": 18567,
+            "threshold_tokens": 9466,
+            "ranking_adjustment": -26,
+            "reason": "materially-higher-observed-context-without-stronger-declared-fit",
+        }
+    ]
+    assert decide(luna_fit=40)["selected_target"] == "codex_luna"
 
 
 def test_assignment_transport_cost_unknown_is_explicit_and_preserves_configured_order() -> None:

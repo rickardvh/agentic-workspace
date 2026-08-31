@@ -512,6 +512,39 @@ def _ordinary_proof_next_decision_payload(
     receipt_status = str(reconciliation.get("status") or "not-recorded")
     missing_receipt_count = int(bridge.get("missing_receipt_count", 0) or 0)
     sufficient = closeout_status == "sufficient-recorded"
+    changed_paths = [str(path) for path in _list_payload(_as_dict(selector).get("changed")) if str(path).strip()]
+    admission_commands = [
+        _proof_route_materialize_validation_command(command=command, changed_paths=changed_paths) for command in required_commands
+    ]
+
+    primary_next = next_decision.get("next", {})
+    primary_action = _as_dict(primary_next).get("action")
+    executable_selected_proof = (
+        not sufficient
+        and primary_action == "run-validation-command"
+        and bool(required_commands)
+        and not unavailable
+        and not (isinstance(manual, dict) and manual)
+        and all(proof_command_admission(command).get("admitted") is True for command in admission_commands)
+    )
+    if executable_selected_proof:
+        changed_args = " ".join(f"--changed {_shell_quote(path)}" for path in changed_paths)
+        execute_command = " ".join(
+            part
+            for part in (
+                f"agentic-workspace proof --target {_shell_quote(str(target))}",
+                changed_args,
+                "--execute-selected --format json",
+            )
+            if part
+        )
+        primary_next = {
+            "action": "execute-selected-proof",
+            "command": _command_with_cli_invoke(command=execute_command, cli_invoke=cli_invoke),
+            "required": True,
+            "operation": "proof.execute-selected",
+            "route_source": _as_dict(next_decision.get("next")).get("route_source") or "changed-paths",
+        }
 
     blockers: list[dict[str, Any]] = []
     if unavailable:
@@ -552,7 +585,7 @@ def _ordinary_proof_next_decision_payload(
             },
             "freshness": "current" if sufficient else "missing-stale-or-insufficient",
         },
-        "next": next_decision.get("next", {}),
+        "next": primary_next,
         "required_commands": required_commands,
         "route": {
             "source": route.get("route_source") or _as_dict(next_decision.get("next")).get("route_source") or "not-recorded",
@@ -567,7 +600,8 @@ def _ordinary_proof_next_decision_payload(
         "receipt": {
             "status": receipt_status,
             "missing_count": missing_receipt_count,
-            "next_recording_command": bridge.get("next_recording_command"),
+            "manual_recording_available": bool(bridge.get("next_recording_command")),
+            "detail_selector": "proof_receipt_bridge",
         },
         "manual_verification": manual,
         "blockers": blockers,

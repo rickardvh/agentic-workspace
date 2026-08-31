@@ -129,6 +129,9 @@ def proof_execution_result_payload(
     passed_count = sum(record_by_command.get(command, {}).get("status") == "passed" for command in required_commands)
     failure_records = [item for item in command_records if item.get("status") in {"failed", "timeout", "cancelled", "admission-rejected"}]
     commands_complete = bool(required_commands) and passed_count == len(required_commands)
+    aggregate_receipt = _as_dict(run.get("aggregate_receipt"))
+    aggregate_admission = _as_dict(aggregate_receipt.get("admission"))
+    aggregate_complete = aggregate_receipt.get("status") == "written" and aggregate_admission.get("proof_sufficient") is True
     selection_blockers: list[str] = []
     if _as_dict(selection.get("route_refinement_required")).get("status") == "required":
         selection_blockers.append("route-refinement-required")
@@ -140,7 +143,9 @@ def proof_execution_result_payload(
     ]
     if unresolved_manual_obligations:
         selection_blockers.append("manual-proof-obligations")
-    complete = commands_complete and not selection_blockers
+    if commands_complete and not aggregate_complete:
+        selection_blockers.append("aggregate-receipt-admission")
+    complete = commands_complete and aggregate_complete and not selection_blockers
     local_scope = _as_dict(run.get("subject")).get("claim_scope") == "machine-local-effective-config"
     if complete and local_scope:
         claim_boundary = {
@@ -172,6 +177,12 @@ def proof_execution_result_payload(
         if complete and not local_scope
         else {"action": "continue-with-verified-local-config", "command": None}
         if complete
+        else {
+            "action": "resume-selected-proof",
+            "command": f"agentic-workspace proof --target . --changed <paths> --execute-selected --proof-run-id {run['run_id']} --format json",
+            "reason": "aggregate-receipt-admission",
+        }
+        if commands_complete and not aggregate_complete
         else {
             "action": "repair-proof-route",
             "command": "agentic-workspace proof --target . --changed <paths> --select route_refinement_required,manual_proof_obligations --format json",
@@ -210,15 +221,10 @@ def proof_execution_result_payload(
             "authority": "canonical-proof-receipt-selection-binding",
         },
         "canonical_receipt_admission": {
-            "recorded_count": sum(
-                1 for item in command_records if _as_dict(item.get("canonical_receipt")).get("status") in {"written", "dry-run"}
-            ),
-            "rejected_count": sum(
-                1
-                for item in command_records
-                if _as_dict(item.get("canonical_receipt")).get("status") == "rejected-after-runtime-state-change"
-            ),
+            "recorded_count": 1 if aggregate_receipt.get("status") in {"written", "dry-run"} else 0,
+            "rejected_count": 1 if aggregate_receipt.get("status") == "rejected-after-runtime-state-change" else 0,
             "authority": "proof_receipt_admission",
+            "scope": "selected-proof-aggregate",
         },
         "failures": [
             {"command_id": item.get("command_id"), "status": item.get("status"), "exit_code": item.get("exit_code")}
@@ -229,11 +235,14 @@ def proof_execution_result_payload(
         "detail_routes": {
             "run_receipt": run_receipt_ref,
             "command_receipts": [str(item.get("receipt_ref") or "") for item in command_records],
+            "aggregate_receipt": str(aggregate_receipt.get("receipt_ref") or ""),
             "resume": next_action.get("command"),
         },
         "persistence": {
             "owner": ".agentic-workspace/local/proof-receipts/runs",
             "repository_residue": False,
-            "delta_shape": "one bounded run receipt plus individually addressable local command receipts",
+            "tracked_file_count": 0,
+            "delta_shape": "one local aggregate receipt plus one bounded run receipt and individually addressable local command receipts",
+            "detailed_repository_publication": "manual --record-receipt interoperability route only",
         },
     }
