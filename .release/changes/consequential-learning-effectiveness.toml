@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Correct admitted learning from later authoritative outcomes while keeping inconclusive and unrelated uses quiet."
-issues = [2811]

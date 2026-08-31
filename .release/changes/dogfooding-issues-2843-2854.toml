@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Make retry, review, checkpoint, derived-write, and Planning integration workflows converge truthfully under dogfooding."
-issues = [2843, 2844, 2845, 2848, 2849, 2851, 2852, 2853, 2854]

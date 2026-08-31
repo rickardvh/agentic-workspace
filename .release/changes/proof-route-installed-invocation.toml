@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Materialize proof-route repair validation through the host repository's configured Agentic Workspace invocation."
-issues = [2797]

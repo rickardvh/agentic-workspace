@@ -12,7 +12,7 @@ members = [
 
 [[package]]
 name = "agentic-workspace"
-version = "0.50.0"
+version = "0.51.0"
 source = { editable = "." }
 dependencies = [
     { name = "agentic-workspace-memory" },
@@ -57,12 +57,12 @@ dev = [
 
 [[package]]
 name = "agentic-workspace-memory"
-version = "0.50.0"
+version = "0.51.0"
 source = { editable = "packages/memory" }
 
 [[package]]
 name = "agentic-workspace-planning"
-version = "0.50.0"
+version = "0.51.0"
 source = { editable = "packages/planning" }
 dependencies = [
     { name = "jsonschema" },
@@ -73,7 +73,7 @@ requires-dist = [{ name = "jsonschema", specifier = ">=4.0" }]
 
 [[package]]
 name = "agentic-workspace-verification"
-version = "0.50.0"
+version = "0.51.0"
 source = { editable = "packages/verification" }
 
 [[package]]
