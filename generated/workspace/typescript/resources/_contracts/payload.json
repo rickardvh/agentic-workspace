@@ -2421,8 +2421,8 @@
       }
     },
     "delegation_control": {
-      "default": "suggest",
-      "field": "delegation.mode",
+      "default": "manual",
+      "field": "delegation.transport_authority",
       "mode_semantics": {
         "auto": "permit automatic delegation only when local safety and target rules allow it",
         "manual": "prepare handoff packets or prompts only",
@@ -2431,10 +2431,8 @@
       },
       "quality_first_rule": "Delegation should improve quality where it matters and is worth the overhead; token saving is valid only when safe and not quality-compromising.",
       "supported_modes": [
-        "off",
         "manual",
-        "suggest",
-        "auto"
+        "automatic"
       ]
     },
     "handoff_quality": {
@@ -2602,6 +2600,16 @@
         "allowed",
         "required-when-no-automatic-method"
       ],
+      "supported_transport_authorities": [
+        "manual",
+        "automatic"
+      ],
+      "canonical_delegation_policy_fields": [
+        "delegation.assignment_policy",
+        "delegation.transport_authority",
+        "delegation.human_override_policy",
+        "delegation.current_target"
+      ],
       "supported_fields": [
         "workspace.cli_invoke",
         "workspace.shared_config_path",
@@ -2615,6 +2623,7 @@
         "delegation.mode",
         "delegation.execution_role",
         "delegation.assignment_policy",
+        "delegation.transport_authority",
         "delegation.selection_objective",
         "delegation.current_target",
         "delegation.underfit_behavior",
