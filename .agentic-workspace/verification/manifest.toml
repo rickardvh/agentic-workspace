@@ -509,3 +509,123 @@ review_aids = [
 ]
 proof_lane_hint = "test-evidence-decision"
 reason = "Test evidence changes need trust-question and replacement-evidence review beyond raw test counts."
+
+[scenarios.repo_acceptance_policy]
+protocol_id = "repo_acceptance_policy"
+title = "Repo acceptance policy remains executable and proportional"
+steps = [
+  "Validate named references and config authority constraints.",
+  "Run the focused behavior and measurement fixtures selected by the changed policy owner.",
+  "Inspect the ordinary operating decision for relevant and irrelevant scopes.",
+]
+expected_observations = [
+  "Applicable hard requirements use current evidence and constrain only their named completion claim.",
+  "A binding authorized non-local assignment dispatches without second conversational permission and never silently falls back to local implementation.",
+  "Independent config dimensions compose across legal values while same-question aliases expose one structural repair toward a canonical owner.",
+  "Measurement evidence preserves exact policy, subject, environment, and source identity.",
+  "Guidelines remain advisory and unrelated direct work gains no first-line policy ceremony.",
+]
+pass_evidence_labels = [
+  "typed_cli_selector_contract_fixture",
+  "proof_execution_integrity_fixture",
+  "config_orthogonality_constructibility_fixture",
+  "direct_no_signal_fixture",
+  "selected_planning_read_cold_median",
+  "selected_planning_read_history_ratio",
+  "invalid_selector_cold_median",
+  "selected_proof_tracked_residue",
+]
+fail_evidence_labels = [
+  "binding_automatic_assignment_organic_dogfood",
+  "repo_acceptance_reference_drift",
+  "repo_acceptance_evidence_stale",
+  "repo_acceptance_guideline_became_blocking",
+]
+automation_hint = "uv run pytest tests/test_workspace_cli.py tests/test_workspace_session_logging.py tests/test_summary_exact_selector_performance.py tests/test_workspace_proof_cli.py -k 'upgrade_unknown_selector or upgrade_selector_inventory or process_status_matches_typed_selected_execution_failure or lifecycle_typed_selector_failure_and_session_process_status_agree or exact_summary_selectors_are_clean_process_history_independent or leaves_tracked_receipt_store_unchanged' -q"
+manual_boundary = "Verification reports evidence; config and the operating decision retain policy and claim authority. This route does not authorize non-local dispatch or satisfy open issue #2817."
+
+[protocols.repo_acceptance_policy]
+title = "Repo acceptance policy"
+purpose = "Keep repo-selected policy source-local while reusing assurance, Verification, proof, scoped instructions, and the one operating decision."
+applies_to_paths = [
+  ".agentic-workspace/config.toml",
+  ".agentic-workspace/instructions/workspace-dogfooding.md",
+  ".agentic-workspace/verification/**",
+  "docs/maintainer/repo-evidence-requirements.md",
+]
+assurance_requirement_refs = [
+  "typed_cli_selector_contract",
+  "proof_execution_integrity",
+  "binding_automatic_assignment",
+  "config_orthogonality_constructibility",
+  "direct_no_signal",
+  "selected_planning_read_budget",
+  "selected_planning_scaling_budget",
+  "invalid_selector_rejection_budget",
+  "selected_proof_residue_budget",
+]
+scenario_refs = ["repo_acceptance_policy"]
+steps = [
+  "Validate named references and config authority constraints.",
+  "Run the focused behavior and measurement fixtures selected by the changed policy owner.",
+  "Inspect the ordinary operating decision for relevant and irrelevant scopes.",
+]
+expected_evidence = [
+  "typed_cli_selector_contract_fixture",
+  "proof_execution_integrity_fixture",
+  "binding_automatic_assignment_organic_dogfood",
+  "config_orthogonality_constructibility_fixture",
+  "direct_no_signal_fixture",
+  "selected_planning_read_cold_median",
+  "selected_planning_read_history_ratio",
+  "invalid_selector_cold_median",
+  "selected_proof_tracked_residue",
+]
+review_owner = "workspace-maintainers"
+authority_refs = [
+  "SYSTEM_INTENT.md",
+  ".agentic-workspace/config.toml",
+  "docs/maintainer/repo-evidence-requirements.md#initial-dogfood-policy",
+]
+stale_when = [
+  ".agentic-workspace/config.toml",
+  "tests/test_summary_exact_selector_performance.py",
+  "tests/test_workspace_cli.py",
+  "tests/test_workspace_proof_cli.py",
+]
+retention = "retain-summary"
+non_goals = [
+  "The protocol does not create generic portable thresholds.",
+  "The protocol does not replace domain-owned test or proof semantics.",
+]
+commands = [
+  "uv run python scripts/run_agentic_workspace.py implement --target . --changed <paths> --select assurance_requirements --format json",
+]
+review_aids = [
+  "Use the smallest focused route that proves the activated requirement and keep full evidence detail with its declared owner.",
+]
+
+[proof_routes.repo_acceptance_policy]
+protocol_refs = ["repo_acceptance_policy"]
+scenario_refs = ["repo_acceptance_policy"]
+assurance_requirement_refs = [
+  "typed_cli_selector_contract",
+  "proof_execution_integrity",
+  "binding_automatic_assignment",
+  "config_orthogonality_constructibility",
+  "direct_no_signal",
+  "selected_planning_read_budget",
+  "selected_planning_scaling_budget",
+  "invalid_selector_rejection_budget",
+  "selected_proof_residue_budget",
+]
+commands = [
+  "uv run pytest tests/test_workspace_cli.py tests/test_workspace_proof_cli.py tests/test_workspace_session_logging.py -k 'upgrade_unknown_selector or upgrade_selector_inventory or process_status_matches_typed_selected_execution_failure or lifecycle_typed_selector_failure_and_session_process_status_agree' -q",
+  "uv run pytest tests/test_summary_exact_selector_performance.py tests/test_workspace_proof_cli.py -k 'exact_summary_selectors_are_clean_process_history_independent or leaves_tracked_receipt_store_unchanged' -q",
+  "uv run pytest tests/test_instruction_clause_ir.py tests/test_scoped_instructions.py tests/test_workspace_config_cli.py -q",
+]
+review_aids = [
+  "Check evidence identity/currentness and verify guidelines remain non-blocking for unrelated direct work.",
+]
+proof_lane_hint = "repo-acceptance-policy"
+reason = "Repo-local policy changes need executable source-owner evidence without widening portable Workspace authority."

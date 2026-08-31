@@ -4,6 +4,230 @@ from __future__ import annotations
 from tests.workspace_cli_support import *
 
 
+def test_repo_binding_automatic_assignment_requirement_is_hard_with_honest_unavailable_evidence() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    config = cli._load_workspace_config(target_root=repo_root)
+    requirement = next(item for item in config.assurance.requirements if item.id == "binding_automatic_assignment")
+
+    assert requirement.requirement_class == "invariant"
+    assert requirement.force == "required-before-closeout"
+    assert requirement.blocking_claims == ("claim-work-complete",)
+    assert requirement.source_intent_ref.endswith("/issues/2817")
+    assert requirement.required_evidence == ("binding_automatic_assignment_organic_dogfood",)
+
+    evidence = workspace_runtime_core._load_assurance_evidence_records(target_root=repo_root)
+    record = next(item for item in evidence["records"] if item["requirement_id"] == requirement.id)
+    assert record["evidence_label"] == requirement.required_evidence[0]
+    assert record["status"] == "unavailable"
+
+    report = workspace_runtime_core._assurance_requirements_report_payload(
+        config=config,
+        target_root=repo_root,
+        task_text="binding automatic assignment issue 2817",
+        changed_paths=["src/agentic_workspace/workspace_runtime_core.py"],
+    )
+    status = next(item for item in report["evidence_status"] if item["requirement_id"] == requirement.id)
+    assert status["state"] == "unavailable"
+
+
+def test_repo_config_orthogonality_requirement_is_hard_and_current() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    config = cli._load_workspace_config(target_root=repo_root)
+    requirement = next(item for item in config.assurance.requirements if item.id == "config_orthogonality_constructibility")
+
+    assert requirement.requirement_class == "invariant"
+    assert requirement.force == "required-before-closeout"
+    assert requirement.blocking_claims == ("claim-work-complete",)
+    assert requirement.source_intent_ref.endswith("/issues/2613")
+    assert requirement.required_evidence == ("config_orthogonality_constructibility_fixture",)
+
+    evidence = workspace_runtime_core._load_assurance_evidence_records(target_root=repo_root)
+    record = next(item for item in evidence["records"] if item["requirement_id"] == requirement.id)
+    assert record["status"] == "satisfied"
+
+
+def test_config_rejects_overlapping_assurance_level_owners_with_structural_repair(tmp_path: Path) -> None:
+    from agentic_workspace.config import WorkspaceUsageError
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    _write(
+        target / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[assurance.subsystem_profiles.audit]
+assurance_level = "high"
+level = "low"
+force = "recommended"
+""",
+    )
+
+    with pytest.raises(WorkspaceUsageError, match="overlapping writable owners.*keep assurance_level.*compatibility-only level alias"):
+        cli._load_workspace_config(target_root=target)
+
+
+def test_config_orthogonality_rejects_session_path_mode_alias_beside_canonical_owner(tmp_path: Path) -> None:
+    from agentic_workspace.config import WorkspaceUsageError
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    _write(
+        target / ".agentic-workspace/config.local.toml",
+        'schema_version = 1\n\n[session_logging]\nredact_local_paths = true\npath_mode = "absolute"\n',
+    )
+
+    with pytest.raises(WorkspaceUsageError, match="two writable path-mode owners.*keep path_mode.*compatibility-only"):
+        cli._load_workspace_config(target_root=target)
+
+    _write(
+        target / ".agentic-workspace/config.local.toml",
+        'schema_version = 1\n\n[session_logging]\npath_mode = "redacted"\n',
+    )
+    config = cli._load_workspace_config(target_root=target)
+    assert config.local_override.session_logging.path_mode == "redacted"
+
+
+def test_config_orthogonality_keeps_assurance_classifier_owner_source_constructible(tmp_path: Path) -> None:
+    from agentic_workspace.config import WorkspaceUsageError
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    _write(
+        target / ".agentic-workspace/config.toml",
+        'schema_version = 1\n\n[assurance]\nclassification_owner = "config-native"\nclassification_source = "repo-policy"\n',
+    )
+    with pytest.raises(WorkspaceUsageError, match="classification_source conflicts with config-native"):
+        cli._load_workspace_config(target_root=target)
+
+    _write(
+        target / ".agentic-workspace/config.toml",
+        'schema_version = 1\n\n[assurance]\nclassification_owner = "repository-owned"\nclassification_source = "repo-policy"\n',
+    )
+    config = cli._load_workspace_config(target_root=target)
+    assert config.assurance.classification_owner == "repository-owned"
+    assert config.assurance.classification_source == "repo-policy"
+
+
+def test_config_orthogonality_rejects_multiple_roles_for_one_proof_command(tmp_path: Path) -> None:
+    from agentic_workspace.config import WorkspaceUsageError
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    command = "python -m pytest tests/test_audit.py -q"
+    _write(
+        target / ".agentic-workspace/config.toml",
+        f'schema_version = 1\n\n[assurance.proof_profiles.audit]\nrequired_commands = ["{command}"]\noptional_commands = ["{command}"]\n',
+    )
+
+    with pytest.raises(WorkspaceUsageError, match="assigns multiple command roles.*exactly one"):
+        cli._load_workspace_config(target_root=target)
+
+    _write(
+        target / ".agentic-workspace/config.toml",
+        f'schema_version = 1\n\n[assurance.proof_profiles.audit]\nrequired_commands = ["{command}"]\n',
+    )
+    config = cli._load_workspace_config(target_root=target)
+    assert config.assurance.proof_profiles[0].required_commands == (command,)
+    assert config.assurance.proof_profiles[0].optional_commands == ()
+
+
+def test_config_orthogonality_rejects_duplicate_installed_capability_owners(tmp_path: Path) -> None:
+    from agentic_workspace.config import WorkspaceUsageError
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    _write(
+        target / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[cli_compatibility]
+required_capabilities = ["installed-state-sync-v2"]
+
+[payload]
+minimum_capabilities = ["installed-state-sync-v2"]
+""",
+    )
+
+    with pytest.raises(WorkspaceUsageError, match="duplicates installed-runtime capability ownership.*payload.minimum_capabilities"):
+        cli._load_workspace_config(target_root=target)
+
+    _write(
+        target / ".agentic-workspace/config.toml",
+        'schema_version = 1\n\n[payload]\nminimum_capabilities = ["installed-state-sync-v2"]\n',
+    )
+    config = cli._load_workspace_config(target_root=target)
+    assert config.payload_target.minimum_capabilities == ("installed-state-sync-v2",)
+    assert config.cli_compatibility.required_capabilities == ()
+
+
+def test_config_orthogonality_rejects_sibling_terminal_assurance_dispositions(tmp_path: Path) -> None:
+    from agentic_workspace.config import WorkspaceUsageError
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    _write(
+        target / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[assurance.requirements.audit]
+level = "high"
+applies_to_paths = ["src/audit/**"]
+force = "recommended"
+waiver = { reason = "waive", owner = "maintainer", applicability = {} }
+dismissal = { reason = "dismiss", owner = "maintainer", applicability = {} }
+""",
+    )
+
+    with pytest.raises(WorkspaceUsageError, match="contradictory sibling dispositions waiver and dismissal.*one owned terminal"):
+        cli._load_workspace_config(target_root=target)
+
+    _write(
+        target / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[assurance.requirements.audit]
+level = "high"
+applies_to_paths = ["src/audit/**"]
+force = "recommended"
+waiver = { reason = "waive", owner = "maintainer", applicability = {} }
+""",
+    )
+    config = cli._load_workspace_config(target_root=target)
+    assert config.assurance.requirements[0].waiver is not None
+    assert config.assurance.requirements[0].dismissal is None
+
+
+@pytest.mark.parametrize("shared_policy", ["local-preferred", "best-fit-advisory", "required-best-fit"])
+@pytest.mark.parametrize("local_policy", ["local-preferred", "best-fit-advisory", "required-best-fit"])
+def test_shared_local_assignment_policy_layers_compose_for_every_legal_value(tmp_path: Path, shared_policy: str, local_policy: str) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    shared = tmp_path / "aw.config.shared.toml"
+    _write(shared, f'schema_version = 1\n\n[delegation]\nassignment_policy = "{shared_policy}"\n')
+    _write(
+        target / ".agentic-workspace/config.local.toml",
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[workspace]",
+                f'shared_config_path = "{shared.as_posix()}"',
+                "",
+                "[delegation]",
+                f'assignment_policy = "{local_policy}"',
+            ]
+        ),
+    )
+
+    config = cli._load_workspace_config(target_root=target)
+    policy = cli._config_payload(config=config)["mixed_agent"]["assignment_policy"]
+    assert policy["assignment_policy"] == {"value": local_policy, "source": "local-override"}
+
+
 @pytest.mark.parametrize(
     ("role", "policy", "target_status", "mode", "permitted", "expected"),
     [
@@ -942,6 +1166,180 @@ blocking_claims = ["certify-compliant"]
     with pytest.raises(SystemExit):
         cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"])
     assert "blocking_claims entries must be one of" in capsys.readouterr().err
+
+
+def test_config_command_accepts_source_bound_named_repo_requirement_and_rejects_enforcing_guideline(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[assurance.requirements.typed_exit]
+level = "high"
+applies_to_paths = ["src/**"]
+required_evidence = ["typed_exit_fixture"]
+force = "required-before-closeout"
+blocking_claims = ["claim-work-complete"]
+requirement_class = "invariant"
+source_intent_ref = "SYSTEM_INTENT.md#trust"
+source_intent_revision = "r1"
+source_intent_current = true
+evidence_owner = "verification:typed-exit"
+detail_route = "agentic-workspace proof --select typed-exit"
+""",
+    )
+
+    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
+    requirement = json.loads(capsys.readouterr().out)["assurance"]["requirements"][0]
+    assert requirement["requirement_class"] == "invariant"
+    assert requirement["source_intent_ref"] == "SYSTEM_INTENT.md#trust"
+    assert requirement["evidence_owner"] == "verification:typed-exit"
+
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[assurance.requirements.cheaper]
+level = "low"
+applies_to_task_markers = ["assignment"]
+force = "blocking"
+blocking_claims = ["claim-work-complete"]
+requirement_class = "guideline"
+source_intent_ref = "SYSTEM_INTENT.md#cost"
+source_intent_revision = "r1"
+source_intent_current = true
+preference_target = "operation:assignment.best-fit"
+""",
+    )
+    with pytest.raises(SystemExit):
+        cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"])
+    assert "guideline cannot block claims" in capsys.readouterr().err
+
+
+def test_config_rejects_conflicting_owners_for_normalized_repo_requirement_identity(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[assurance.requirements.typed_exit]
+level = "high"
+applies_to_paths = ["src/**"]
+required_evidence = ["typed_exit_fixture"]
+force = "required-before-closeout"
+blocking_claims = ["claim-work-complete"]
+requirement_class = "invariant"
+source_intent_ref = "SYSTEM_INTENT.md#trust"
+source_intent_revision = "r1"
+source_intent_current = true
+evidence_owner = "verification:typed-exit"
+detail_route = "agentic-workspace proof --select typed-exit"
+
+[assurance.requirements." typed_exit "]
+level = "high"
+applies_to_paths = ["src/**"]
+required_evidence = ["typed_exit_fixture"]
+force = "required-before-closeout"
+blocking_claims = ["claim-work-complete"]
+requirement_class = "invariant"
+source_intent_ref = "docs/other-policy.md#exit"
+source_intent_revision = "r2"
+source_intent_current = true
+evidence_owner = "proof:other-exit"
+detail_route = "agentic-workspace proof --select other-exit"
+""",
+    )
+
+    with pytest.raises(SystemExit):
+        cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"])
+    error = capsys.readouterr().err
+    assert "conflicting owner declarations" in error
+    assert "SYSTEM_INTENT.md#trust" in error
+    assert "docs/other-policy.md#exit" in error
+
+
+def test_config_deduplicates_same_owner_same_repo_requirement_identity(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    declaration = """
+level = "high"
+applies_to_paths = ["src/**"]
+required_evidence = ["typed_exit_fixture"]
+force = "required-before-closeout"
+blocking_claims = ["claim-work-complete"]
+requirement_class = "invariant"
+source_intent_ref = "SYSTEM_INTENT.md#trust"
+source_intent_revision = "r1"
+source_intent_current = true
+evidence_owner = "verification:typed-exit"
+detail_route = "agentic-workspace proof --select typed-exit"
+"""
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        "schema_version = 1\n\n[assurance.requirements.typed_exit]\n"
+        + declaration
+        + '\n[assurance.requirements." typed_exit "]\n'
+        + declaration,
+    )
+
+    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
+    requirements = json.loads(capsys.readouterr().out)["assurance"]["requirements"]
+    assert [item["id"] for item in requirements].count("typed_exit") == 1
+
+
+def test_config_command_validates_source_owned_measurement_requirements(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    config_path = tmp_path / ".agentic-workspace/config.toml"
+    _write(
+        config_path,
+        """
+schema_version = 1
+
+[assurance.requirements.scaling]
+level = "high"
+applies_to_paths = ["src/**"]
+required_evidence = ["history_scaling"]
+force = "required-before-closeout"
+blocking_claims = ["claim-work-complete"]
+requirement_class = "current-evidence"
+source_intent_ref = "docs/requirements.md#scaling"
+source_intent_revision = "policy-r1"
+source_intent_current = true
+evidence_owner = "verification:history-scaling"
+detail_route = "agentic-workspace proof --select history-scaling"
+
+[assurance.requirements.scaling.measurement]
+kind = "agentic-workspace/measurement-requirement/v1"
+evidence_label = "history_scaling"
+metric = "selected-read-latency"
+unit = "seconds"
+comparator = "ratio-lte"
+threshold = 1.2
+aggregation = "ratio"
+minimum_samples = 5
+subject = "history-1000"
+subject_revision = "loaded-r1"
+control_subject = "history-empty"
+control_revision = "control-r1"
+environment = "maintained-ci"
+source_revision = "fixture-r1"
+producer_command = "python scripts/measure_scaling.py --compact"
+excluded_costs = ["environment bootstrap"]
+""",
+    )
+
+    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
+    measurement = json.loads(capsys.readouterr().out)["assurance"]["requirements"][0]["measurement"]
+    assert measurement["comparator"] == "ratio-lte"
+    assert measurement["threshold"] == 1.2
+    assert measurement["control_subject"] == "history-empty"
+
+    _write(config_path, config_path.read_text(encoding="utf-8").replace('evidence_label = "history_scaling"', 'evidence_label = "other"'))
+    with pytest.raises(SystemExit):
+        cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"])
+    assert "measurement evidence_label must appear in required_evidence" in capsys.readouterr().err
 
 
 def test_config_command_reports_enabled_advanced_features(tmp_path: Path, capsys) -> None:

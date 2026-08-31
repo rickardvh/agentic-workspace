@@ -953,6 +953,56 @@ def test_start_selector_inventory_does_not_build_start_payload(tmp_path: Path, m
     assert payload["values"]["selector_inventory"]["source_command"] == "start"
 
 
+def test_upgrade_unknown_selector_is_typed_nonzero_and_fails_before_lifecycle_construction(tmp_path: Path, monkeypatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    def fail_lifecycle_context(*args: Any, **kwargs: Any) -> object:
+        raise AssertionError("invalid lifecycle selectors must fail before lifecycle construction")
+
+    monkeypatch.setattr(workspace_runtime_core, "_load_lifecycle_mutation_context", fail_lifecycle_context)
+
+    assert (
+        cli.main(
+            [
+                "upgrade",
+                "--target",
+                str(tmp_path),
+                "--dry-run",
+                "--select",
+                "actions",
+                "--format",
+                "json",
+            ]
+        )
+        == 2
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/selector-validation-error/v1"
+    assert payload["unknown_selectors"] == ["actions"]
+    assert (payload["exit_status"], payload["exit_class"], payload["mutation_occurred"]) == (
+        2,
+        "usage-or-validation-error",
+        False,
+    )
+    assert payload["selector_inventory"]["inventory_command"].endswith("upgrade --target . --select selector_inventory --format json")
+
+
+def test_upgrade_selector_inventory_is_available_without_lifecycle_construction(tmp_path: Path, monkeypatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    def fail_lifecycle_context(*args: Any, **kwargs: Any) -> object:
+        raise AssertionError("selector inventory must not construct lifecycle state")
+
+    monkeypatch.setattr(workspace_runtime_core, "_load_lifecycle_mutation_context", fail_lifecycle_context)
+
+    assert cli.main(["upgrade", "--target", str(tmp_path), "--select", "selector_inventory", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    inventory = payload["values"]["selector_inventory"]
+    assert inventory["source_command"] == "upgrade"
+    assert "changed_paths" in inventory["selectors"]
+    assert "actions" not in inventory["selectors"]
+
+
 def test_default_start_defers_action_neutral_advisory_builders_without_changing_action_boundary(
     tmp_path: Path, monkeypatch, capsys
 ) -> None:

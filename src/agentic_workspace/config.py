@@ -121,6 +121,13 @@ SUPPORTED_ASSURANCE_REQUIREMENT_BLOCKING_CLAIMS = (
     "claim-work-complete",
     "close-parent-lane",
 )
+SUPPORTED_REPO_REQUIREMENT_CLASSES = (
+    "invariant",
+    "current-evidence",
+    "guideline",
+)
+SUPPORTED_MEASUREMENT_COMPARATORS = ("lte", "gte", "eq", "ratio-lte", "ratio-gte")
+SUPPORTED_MEASUREMENT_AGGREGATIONS = ("single", "median", "percentile", "ratio", "count")
 SUPPORTED_DELEGATION_TARGET_STRENGTHS = (
     "strong",
     "medium",
@@ -506,6 +513,14 @@ class AssuranceRequirement:
     waiver: AssuranceRequirementDisposition | None
     dismissal: AssuranceRequirementDisposition | None
     notes: str | None
+    requirement_class: str | None
+    source_intent_ref: str | None
+    source_intent_revision: str | None
+    source_intent_current: bool | None
+    preference_target: str | None
+    evidence_owner: str | None
+    detail_route: str | None
+    measurement: dict[str, Any] | None
 
 
 @dataclass(frozen=True)
@@ -1037,6 +1052,19 @@ def _load_payload_target_config(*, raw_payload: Any, config_path: Path) -> tuple
     )
 
 
+def _validate_installed_capability_ownership(
+    *, cli_compatibility: CLICompatibilityExpectation, payload_target: PayloadTargetConfig, config_path: Path
+) -> None:
+    overlap = sorted(set(cli_compatibility.required_capabilities) & set(payload_target.minimum_capabilities))
+    if overlap:
+        raise WorkspaceUsageError(
+            f"{config_path.as_posix()} duplicates installed-runtime capability ownership across "
+            "cli_compatibility.required_capabilities and payload.minimum_capabilities for: "
+            f"{', '.join(overlap)}. Keep install-target requirements in payload.minimum_capabilities and reserve "
+            "cli_compatibility.required_capabilities for distinct reader/runtime compatibility requirements."
+        )
+
+
 def _require_bool(*, payload: dict[str, Any], key: str, default: bool, config_path: Path) -> bool:
     if key not in payload:
         return default
@@ -1093,6 +1121,98 @@ def _require_disposition(
     return AssuranceRequirementDisposition(reason=reason, owner=owner, applicability=normalized_applicability)
 
 
+def _require_measurement_requirement(*, payload: dict[str, Any], config_path: Path) -> dict[str, Any] | None:
+    raw = payload.get("measurement")
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        raise WorkspaceUsageError(f"{config_path.as_posix()} measurement must be a table.")
+    measurement_path = Path(f"{config_path.as_posix()} measurement")
+    required = {
+        "kind",
+        "evidence_label",
+        "metric",
+        "unit",
+        "comparator",
+        "threshold",
+        "aggregation",
+        "minimum_samples",
+        "subject",
+        "subject_revision",
+        "environment",
+        "source_revision",
+        "producer_command",
+    }
+    optional = {"tolerance", "excluded_costs", "control_subject", "control_revision"}
+    unknown = sorted(set(raw) - required - optional)
+    if unknown:
+        raise WorkspaceUsageError(f"{measurement_path.as_posix()} contains unsupported field(s): {', '.join(unknown)}.")
+    missing = sorted(required - set(raw))
+    if missing:
+        raise WorkspaceUsageError(f"{measurement_path.as_posix()} requires: {', '.join(missing)}.")
+    kind = require_optional_string(payload=raw, key="kind", config_path=measurement_path)
+    if kind != "agentic-workspace/measurement-requirement/v1":
+        raise WorkspaceUsageError(f"{measurement_path.as_posix()} kind must be agentic-workspace/measurement-requirement/v1.")
+    normalized: dict[str, Any] = {
+        "kind": kind,
+        "evidence_label": require_optional_string(payload=raw, key="evidence_label", config_path=measurement_path),
+        "metric": require_optional_string(payload=raw, key="metric", config_path=measurement_path),
+        "unit": require_optional_string(payload=raw, key="unit", config_path=measurement_path),
+        "comparator": require_required_enum(
+            payload=raw,
+            key="comparator",
+            config_path=measurement_path,
+            allowed=SUPPORTED_MEASUREMENT_COMPARATORS,
+        ),
+        "aggregation": require_required_enum(
+            payload=raw,
+            key="aggregation",
+            config_path=measurement_path,
+            allowed=SUPPORTED_MEASUREMENT_AGGREGATIONS,
+        ),
+        "subject": require_optional_string(payload=raw, key="subject", config_path=measurement_path),
+        "subject_revision": require_optional_string(payload=raw, key="subject_revision", config_path=measurement_path),
+        "environment": require_optional_string(payload=raw, key="environment", config_path=measurement_path),
+        "source_revision": require_optional_string(payload=raw, key="source_revision", config_path=measurement_path),
+        "producer_command": require_optional_string(payload=raw, key="producer_command", config_path=measurement_path),
+        "excluded_costs": list(require_optional_string_list(payload=raw, key="excluded_costs", config_path=measurement_path)),
+    }
+    for field in (
+        "evidence_label",
+        "metric",
+        "unit",
+        "subject",
+        "subject_revision",
+        "environment",
+        "source_revision",
+        "producer_command",
+    ):
+        if not normalized[field]:
+            raise WorkspaceUsageError(f"{measurement_path.as_posix()} {field} must be a non-empty string.")
+    threshold = raw.get("threshold")
+    tolerance = raw.get("tolerance", 0)
+    minimum_samples = raw.get("minimum_samples")
+    if isinstance(threshold, bool) or not isinstance(threshold, (int, float)):
+        raise WorkspaceUsageError(f"{measurement_path.as_posix()} threshold must be a number.")
+    if isinstance(tolerance, bool) or not isinstance(tolerance, (int, float)) or tolerance < 0:
+        raise WorkspaceUsageError(f"{measurement_path.as_posix()} tolerance must be a non-negative number.")
+    if isinstance(minimum_samples, bool) or not isinstance(minimum_samples, int) or minimum_samples < 1:
+        raise WorkspaceUsageError(f"{measurement_path.as_posix()} minimum_samples must be a positive integer.")
+    normalized.update(threshold=threshold, tolerance=tolerance, minimum_samples=minimum_samples)
+    for field in ("control_subject", "control_revision"):
+        value = require_optional_string(payload=raw, key=field, config_path=measurement_path)
+        if value is not None:
+            normalized[field] = value
+    if normalized["comparator"].startswith("ratio-"):
+        if normalized["aggregation"] != "ratio" or not normalized.get("control_subject") or not normalized.get("control_revision"):
+            raise WorkspaceUsageError(
+                f"{measurement_path.as_posix()} ratio comparators require aggregation=ratio, control_subject, and control_revision."
+            )
+    elif normalized["aggregation"] == "ratio":
+        raise WorkspaceUsageError(f"{measurement_path.as_posix()} ratio aggregation requires a ratio comparator.")
+    return normalized
+
+
 def _load_assurance_requirements(
     *,
     raw_requirements: Any,
@@ -1104,6 +1224,7 @@ def _load_assurance_requirements(
     if not isinstance(raw_requirements, dict):
         raise WorkspaceUsageError(f"{config_path.as_posix()} [assurance.requirements] section must be a table.")
     requirements: list[AssuranceRequirement] = []
+    requirement_declarations: dict[str, tuple[str, AssuranceRequirement]] = {}
     supported_fields = {
         "level",
         "applies_to_paths",
@@ -1122,6 +1243,14 @@ def _load_assurance_requirements(
         "waiver",
         "dismissal",
         "notes",
+        "requirement_class",
+        "source_intent_ref",
+        "source_intent_revision",
+        "source_intent_current",
+        "preference_target",
+        "evidence_owner",
+        "detail_route",
+        "measurement",
     }
     activation_fields = {
         "applies_to_paths",
@@ -1135,6 +1264,11 @@ def _load_assurance_requirements(
         requirement_path = Path(f"{config_path.as_posix()} assurance.requirements.{requirement_id}")
         if not isinstance(raw_requirement, dict):
             raise WorkspaceUsageError(f"{requirement_path.as_posix()} must be a table.")
+        if "waiver" in raw_requirement and "dismissal" in raw_requirement:
+            raise WorkspaceUsageError(
+                f"{requirement_path.as_posix()} declares contradictory sibling dispositions waiver and dismissal; "
+                "record one owned terminal disposition and remove the other."
+            )
         unknown_requirement = sorted(set(raw_requirement) - supported_fields)
         if unknown_requirement:
             warnings.append(f"{requirement_path.as_posix()} contains unsupported field(s): {', '.join(unknown_requirement)}.")
@@ -1144,47 +1278,143 @@ def _load_assurance_requirements(
         if not any(activation_values.values()):
             allowed = ", ".join(sorted(activation_fields))
             raise WorkspaceUsageError(f"{requirement_path.as_posix()} requires at least one activation signal: {allowed}.")
-        requirements.append(
-            AssuranceRequirement(
-                id=str(requirement_id).strip(),
-                level=require_required_enum(
-                    payload=raw_requirement,
-                    key="level",
-                    config_path=requirement_path,
-                    allowed=SUPPORTED_ASSURANCE_LEVELS,
-                ),
-                applies_to_paths=activation_values["applies_to_paths"],
-                applies_to_task_markers=activation_values["applies_to_task_markers"],
-                applies_to_planning_refs=activation_values["applies_to_planning_refs"],
-                applies_to_proof_profiles=activation_values["applies_to_proof_profiles"],
-                applies_to_risk_refs=activation_values["applies_to_risk_refs"],
-                applies_to_invariant_refs=activation_values["applies_to_invariant_refs"],
-                authority_refs=require_optional_string_list(payload=raw_requirement, key="authority_refs", config_path=requirement_path),
-                required_evidence=require_optional_string_list(
-                    payload=raw_requirement, key="required_evidence", config_path=requirement_path
-                ),
-                proof_profile=require_optional_string(payload=raw_requirement, key="proof_profile", config_path=requirement_path),
-                workflow_obligation_refs=require_optional_string_list(
-                    payload=raw_requirement, key="workflow_obligation_refs", config_path=requirement_path
-                ),
-                review_owner=require_optional_string(payload=raw_requirement, key="review_owner", config_path=requirement_path),
-                force=require_required_enum(
-                    payload=raw_requirement,
-                    key="force",
-                    config_path=requirement_path,
-                    allowed=SUPPORTED_WORKFLOW_OBLIGATION_FORCES,
-                ),
-                blocking_claims=require_optional_string_list(
-                    payload=raw_requirement,
-                    key="blocking_claims",
-                    config_path=requirement_path,
-                    allowed=SUPPORTED_ASSURANCE_REQUIREMENT_BLOCKING_CLAIMS,
-                ),
-                waiver=_require_disposition(payload=raw_requirement, key="waiver", config_path=requirement_path),
-                dismissal=_require_disposition(payload=raw_requirement, key="dismissal", config_path=requirement_path),
-                notes=require_optional_string(payload=raw_requirement, key="notes", config_path=requirement_path),
+        requirement_class = (
+            require_required_enum(
+                payload=raw_requirement,
+                key="requirement_class",
+                config_path=requirement_path,
+                allowed=SUPPORTED_REPO_REQUIREMENT_CLASSES,
             )
+            if "requirement_class" in raw_requirement
+            else None
         )
+        source_intent_ref = require_optional_string(payload=raw_requirement, key="source_intent_ref", config_path=requirement_path)
+        source_intent_revision = require_optional_string(
+            payload=raw_requirement, key="source_intent_revision", config_path=requirement_path
+        )
+        source_intent_current = require_optional_bool(payload=raw_requirement, key="source_intent_current", config_path=requirement_path)
+        preference_target = require_optional_string(payload=raw_requirement, key="preference_target", config_path=requirement_path)
+        evidence_owner = require_optional_string(payload=raw_requirement, key="evidence_owner", config_path=requirement_path)
+        detail_route = require_optional_string(payload=raw_requirement, key="detail_route", config_path=requirement_path)
+        measurement = _require_measurement_requirement(payload=raw_requirement, config_path=requirement_path)
+        blocking_claims = require_optional_string_list(
+            payload=raw_requirement,
+            key="blocking_claims",
+            config_path=requirement_path,
+            allowed=SUPPORTED_ASSURANCE_REQUIREMENT_BLOCKING_CLAIMS,
+        )
+        required_evidence = require_optional_string_list(payload=raw_requirement, key="required_evidence", config_path=requirement_path)
+        force = require_required_enum(
+            payload=raw_requirement,
+            key="force",
+            config_path=requirement_path,
+            allowed=SUPPORTED_WORKFLOW_OBLIGATION_FORCES,
+        )
+        if requirement_class is not None and not (source_intent_ref and source_intent_revision and source_intent_current is not None):
+            raise WorkspaceUsageError(
+                f"{requirement_path.as_posix()} named repo requirements require source_intent_ref, "
+                "source_intent_revision, and source_intent_current."
+            )
+        if requirement_class == "guideline":
+            if not preference_target or not preference_target.startswith(("surface:", "skill:", "operation:")):
+                raise WorkspaceUsageError(
+                    f"{requirement_path.as_posix()} guideline requires a surface:, skill:, or operation: preference_target."
+                )
+            if blocking_claims or force not in {"informational", "recommended"}:
+                raise WorkspaceUsageError(f"{requirement_path.as_posix()} guideline cannot block claims or use enforcing force.")
+        elif requirement_class in {"invariant", "current-evidence"}:
+            if not required_evidence or not blocking_claims or not evidence_owner or not detail_route:
+                raise WorkspaceUsageError(
+                    f"{requirement_path.as_posix()} hard named repo requirements require required_evidence, "
+                    "blocking_claims, evidence_owner, and detail_route."
+                )
+            if not evidence_owner.startswith(("assurance:", "verification:", "proof:", "module:")):
+                raise WorkspaceUsageError(
+                    f"{requirement_path.as_posix()} evidence_owner must name an assurance:, verification:, proof:, or module: owner."
+                )
+            if force not in {"required-before-closeout", "blocking"}:
+                raise WorkspaceUsageError(f"{requirement_path.as_posix()} hard named repo requirements require enforcing force.")
+        if measurement is not None:
+            if requirement_class not in {"current-evidence", "guideline"}:
+                raise WorkspaceUsageError(
+                    f"{requirement_path.as_posix()} measurement is supported only for current-evidence or guideline requirements."
+                )
+            if requirement_class == "current-evidence" and measurement["evidence_label"] not in required_evidence:
+                raise WorkspaceUsageError(f"{requirement_path.as_posix()} measurement evidence_label must appear in required_evidence.")
+            if not evidence_owner or not detail_route:
+                raise WorkspaceUsageError(f"{requirement_path.as_posix()} measurement requires evidence_owner and detail_route.")
+        requirement = AssuranceRequirement(
+            id=str(requirement_id).strip(),
+            level=require_required_enum(
+                payload=raw_requirement,
+                key="level",
+                config_path=requirement_path,
+                allowed=SUPPORTED_ASSURANCE_LEVELS,
+            ),
+            applies_to_paths=activation_values["applies_to_paths"],
+            applies_to_task_markers=activation_values["applies_to_task_markers"],
+            applies_to_planning_refs=activation_values["applies_to_planning_refs"],
+            applies_to_proof_profiles=activation_values["applies_to_proof_profiles"],
+            applies_to_risk_refs=activation_values["applies_to_risk_refs"],
+            applies_to_invariant_refs=activation_values["applies_to_invariant_refs"],
+            authority_refs=require_optional_string_list(payload=raw_requirement, key="authority_refs", config_path=requirement_path),
+            required_evidence=required_evidence,
+            proof_profile=require_optional_string(payload=raw_requirement, key="proof_profile", config_path=requirement_path),
+            workflow_obligation_refs=require_optional_string_list(
+                payload=raw_requirement, key="workflow_obligation_refs", config_path=requirement_path
+            ),
+            review_owner=require_optional_string(payload=raw_requirement, key="review_owner", config_path=requirement_path),
+            force=force,
+            blocking_claims=blocking_claims,
+            waiver=_require_disposition(payload=raw_requirement, key="waiver", config_path=requirement_path),
+            dismissal=_require_disposition(payload=raw_requirement, key="dismissal", config_path=requirement_path),
+            notes=require_optional_string(payload=raw_requirement, key="notes", config_path=requirement_path),
+            requirement_class=requirement_class,
+            source_intent_ref=source_intent_ref,
+            source_intent_revision=source_intent_revision,
+            source_intent_current=source_intent_current,
+            preference_target=preference_target,
+            evidence_owner=evidence_owner,
+            detail_route=detail_route,
+            measurement=measurement,
+        )
+        prior_declaration = requirement_declarations.get(requirement.id)
+        if prior_declaration is not None:
+            prior_id, prior_requirement = prior_declaration
+            prior_owner = (
+                prior_requirement.source_intent_ref,
+                prior_requirement.source_intent_revision,
+                prior_requirement.authority_refs,
+                prior_requirement.evidence_owner,
+            )
+            current_owner = (
+                requirement.source_intent_ref,
+                requirement.source_intent_revision,
+                requirement.authority_refs,
+                requirement.evidence_owner,
+            )
+            if current_owner != prior_owner:
+                raise WorkspaceUsageError(
+                    f"{config_path.as_posix()} assurance.requirements contains conflicting owner declarations "
+                    f"for stable requirement id {requirement.id!r}: {prior_id!r} owns "
+                    f"source_intent_ref={prior_requirement.source_intent_ref!r}, "
+                    f"source_intent_revision={prior_requirement.source_intent_revision!r}, "
+                    f"authority_refs={list(prior_requirement.authority_refs)!r}, "
+                    f"evidence_owner={prior_requirement.evidence_owner!r}; {str(requirement_id)!r} owns "
+                    f"source_intent_ref={requirement.source_intent_ref!r}, "
+                    f"source_intent_revision={requirement.source_intent_revision!r}, "
+                    f"authority_refs={list(requirement.authority_refs)!r}, "
+                    f"evidence_owner={requirement.evidence_owner!r}."
+                )
+            if requirement != prior_requirement:
+                raise WorkspaceUsageError(
+                    f"{config_path.as_posix()} assurance.requirements contains divergent declarations "
+                    f"for stable requirement id {requirement.id!r} under the same source owner: "
+                    f"{prior_id!r} and {str(requirement_id)!r}."
+                )
+            continue
+        requirement_declarations[requirement.id] = (str(requirement_id), requirement)
+        requirements.append(requirement)
     return (tuple(requirement for requirement in requirements if requirement.id), warnings)
 
 
@@ -1217,6 +1447,12 @@ def _load_assurance_subsystem_profiles(
         profile_path = Path(f"{config_path.as_posix()} assurance.subsystem_profiles.{profile_id}")
         if not isinstance(raw_profile, dict):
             raise WorkspaceUsageError(f"{profile_path.as_posix()} must be a table.")
+        if "assurance_level" in raw_profile and "level" in raw_profile:
+            raise WorkspaceUsageError(
+                f"{profile_path.as_posix()} declares overlapping writable owners for assurance level: "
+                "keep assurance_level and remove the compatibility-only level alias; aliases must not silently neutralize "
+                "or override their canonical setting."
+            )
         unknown_profile = sorted(set(raw_profile) - supported_fields)
         if unknown_profile:
             warnings.append(f"{profile_path.as_posix()} contains unsupported field(s): {', '.join(unknown_profile)}.")
@@ -1457,15 +1693,26 @@ def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[As
             warnings.append(
                 f"{config_path.as_posix()} [assurance.proof_profiles.{profile_id}] contains unsupported field(s): {', '.join(unknown_profile)}."
             )
+        required_commands = require_optional_string_list(payload=profile_payload, key="required_commands", config_path=config_path)
+        optional_commands = require_optional_string_list(payload=profile_payload, key="optional_commands", config_path=config_path)
+        disallowed_commands = require_optional_string_list(payload=profile_payload, key="disallowed_commands", config_path=config_path)
+        overlapping_roles = sorted(
+            (set(required_commands) & set(optional_commands))
+            | (set(required_commands) & set(disallowed_commands))
+            | (set(optional_commands) & set(disallowed_commands))
+        )
+        if overlapping_roles:
+            raise WorkspaceUsageError(
+                f"{config_path.as_posix()} [assurance.proof_profiles.{profile_id}] assigns multiple command roles "
+                f"to: {', '.join(overlapping_roles)}. Give each command identity exactly one of required, optional, or disallowed."
+            )
         profiles.append(
             AssuranceProofProfile(
                 id=str(profile_id).strip(),
-                required_commands=require_optional_string_list(payload=profile_payload, key="required_commands", config_path=config_path),
-                optional_commands=require_optional_string_list(payload=profile_payload, key="optional_commands", config_path=config_path),
+                required_commands=required_commands,
+                optional_commands=optional_commands,
                 review_aids=require_optional_string_list(payload=profile_payload, key="review_aids", config_path=config_path),
-                disallowed_commands=require_optional_string_list(
-                    payload=profile_payload, key="disallowed_commands", config_path=config_path
-                ),
+                disallowed_commands=disallowed_commands,
             )
         )
     raw_test_data_policy = raw_assurance.get("test_data_policy", {})
@@ -2912,6 +3159,11 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
     if unknown_session_logging:
         unknown_text = ", ".join(unknown_session_logging)
         warnings.append(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [session_logging] contains unsupported field(s): {unknown_text}.")
+    if "redact_local_paths" in raw_session_logging and "path_mode" in raw_session_logging:
+        raise WorkspaceUsageError(
+            f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} session_logging declares two writable path-mode owners: "
+            "keep path_mode and remove the compatibility-only redact_local_paths alias."
+        )
     session_logging_enabled = require_optional_bool(
         payload=raw_session_logging,
         key="enabled",
@@ -3537,6 +3789,11 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
         config_path=WORKSPACE_CONFIG_PATH,
     )
     warnings.extend(payload_target_warnings)
+    _validate_installed_capability_ownership(
+        cli_compatibility=cli_compatibility,
+        payload_target=payload_target,
+        config_path=WORKSPACE_CONFIG_PATH,
+    )
 
     agent_instructions_file, agent_instructions_source, detected_agent_instruction_files = resolve_effective_agent_instructions_file(
         target_root=effective_root,

@@ -2297,6 +2297,126 @@ def test_proof_changed_selector_uses_focused_domain_route(tmp_path: Path, capsys
     assert answer["focused_route_coverage_audit"]["status"] == "covered"
 
 
+def test_applicable_measurement_producer_executes_once_and_current_evidence_is_reused(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / ".gitignore", ".agentic-workspace/local/\n")
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[assurance.requirements.selected_latency]
+level = "high"
+applies_to_paths = ["src/runtime.py"]
+required_evidence = ["cold_median"]
+force = "required-before-closeout"
+blocking_claims = ["claim-work-complete"]
+requirement_class = "current-evidence"
+source_intent_ref = "docs/requirements.md#selected-latency"
+source_intent_revision = "policy-r1"
+source_intent_current = true
+evidence_owner = "verification:selected-latency"
+detail_route = "agentic-workspace report --section assurance_requirements"
+
+[assurance.requirements.selected_latency.measurement]
+kind = "agentic-workspace/measurement-requirement/v1"
+evidence_label = "cold_median"
+metric = "selected-read-latency"
+unit = "seconds"
+comparator = "lte"
+threshold = 2.0
+aggregation = "median"
+minimum_samples = 3
+subject = "planning-record-selected-read"
+subject_revision = "fixture-r1"
+environment = "maintained-ci"
+source_revision = "benchmark-r1"
+producer_command = "python scripts/measure_selected_latency.py --compact"
+""",
+    )
+    _write(tmp_path / "src/runtime.py", "VALUE = 1\n")
+    _write(tmp_path / "scripts/measure_selected_latency.py", "print('compact measurement')\n")
+
+    missing = workspace_runtime_proof._proof_selection_for_changed_paths(
+        changed_paths=["src/runtime.py"], target_root=tmp_path, include_durable_intent=False
+    )
+    producer = "python scripts/measure_selected_latency.py --compact"
+    measurement_lanes = [lane for lane in missing["selected_lanes"] if lane["id"] == "measurement:selected_latency"]
+    assert any(lane.get("required_commands") == [producer] for lane in measurement_lanes), measurement_lanes
+
+    calls: list[str] = []
+
+    def run(command: str, **_: object) -> subprocess.CompletedProcess[str]:
+        calls.append(command)
+        return subprocess.CompletedProcess(command, 0, stdout="passed", stderr="")
+
+    monkeypatch.setattr(workspace_runtime_core, "run_trusted_shell", run)
+    monkeypatch.setattr(
+        workspace_runtime_core,
+        "_record_proof_receipt_payload",
+        lambda **_: {
+            "status": "written",
+            "path": ".agentic-workspace/local/proof-receipts/last.json",
+            "receipt": {"admission": {"proof_sufficient": True}},
+            "publication": {"trusted_producer_published": False},
+        },
+    )
+    executed = workspace_runtime_core._execute_selected_proof_payload(
+        target_root=tmp_path,
+        changed_paths=["src/runtime.py"],
+        task_text=None,
+        run_id="measurement-producer",
+        timeout_seconds="30",
+        cancel_file="",
+        dry_run=False,
+    )
+    assert executed["status"] == "completed"
+    assert calls.count(producer) == 1
+
+    _write_json(
+        tmp_path / ".agentic-workspace/verification/assurance-evidence-records.json",
+        {
+            "kind": "agentic-workspace/assurance-evidence-records/v1",
+            "records": [
+                {
+                    "requirement_id": "selected_latency",
+                    "evidence_label": "cold_median",
+                    "status": "passed",
+                    "measurement": {
+                        "kind": "agentic-workspace/measurement-evidence/v1",
+                        "metric": "selected-read-latency",
+                        "unit": "seconds",
+                        "observed_value": 1.8,
+                        "comparator": "lte",
+                        "threshold": 2.0,
+                        "aggregation": "median",
+                        "sample_count": 5,
+                        "subject": "planning-record-selected-read",
+                        "subject_revision": "fixture-r1",
+                        "environment": "maintained-ci",
+                        "source_revision": "benchmark-r1",
+                        "requirement_revision": "policy-r1",
+                        "status": "passed",
+                        "detail_ref": ".agentic-workspace/local/measurements/selected-latency.json",
+                    },
+                }
+            ],
+        },
+    )
+    current = workspace_runtime_proof._proof_selection_for_changed_paths(
+        changed_paths=["src/runtime.py"], target_root=tmp_path, include_durable_intent=False
+    )
+    assert all(lane["id"] != "measurement:selected_latency" for lane in current["selected_lanes"])
+    assert producer not in current["required_commands"]
+
+    unrelated = workspace_runtime_proof._proof_selection_for_changed_paths(
+        changed_paths=["docs/unrelated.md"], target_root=tmp_path, include_durable_intent=False
+    )
+    assert all(lane["id"] != "measurement:selected_latency" for lane in unrelated["selected_lanes"])
+
+
 def test_pr_comment_delta_maps_to_its_focused_proof_owner_only() -> None:
     target_root = Path(__file__).resolve().parents[1]
     selection = workspace_runtime_proof._proof_selection_for_changed_paths(
@@ -3081,9 +3201,9 @@ def test_proof_changed_uses_available_target_makefile_targets(tmp_path: Path, ca
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["required_commands"] == ["make test", "make lint"]
-    assert payload["next"]["command"] == "make test"
+    assert payload["next"]["action"] == "execute-selected-proof"
+    assert "--execute-selected" in payload["next"]["command"]
     assert payload["next"]["route_source"] == "live-adapted-target-capability"
-    assert payload["next"]["why"] == "behavior-test intent selected live-adapted-target-capability."
     assert payload["route"]["source"] == "live-adapted-target-capability"
     assert payload["route"]["authority"] == "live-target-capability"
     assert payload["route"]["health"] == {"status": "attention", "finding_count": 2}
@@ -3396,9 +3516,8 @@ def test_proof_changed_uses_subrepo_package_json_for_package_paths(tmp_path: Pat
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["required_commands"] == ["cd packages/ui && npm test", "cd packages/ui && npm run lint"]
-    assert payload["next"]["command"] == "cd packages/ui && npm test"
-    assert payload["next"]["cwd"] == "packages/ui"
-    assert payload["next"]["run"] == "npm test"
+    assert payload["next"]["action"] == "execute-selected-proof"
+    assert "--execute-selected" in payload["next"]["command"]
     assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "packages/ui/src/index.ts", "--format", "json"]) == 0
     payload = json.loads(capsys.readouterr().out)["answer"]
     assert payload["proof_command_adjustments"] == [
@@ -9642,7 +9761,8 @@ evidence = ["session-log:slow-command:generated"]
     assert claim_gate["handoff"]["required_identity_field"] == "proof_route_strategy_preservation.decision_id"
     assert values["proof_closeout_summary"]["proof_route_strategy_claim_gate"]["decision_id"] == preservation["decision_id"]
     assert values.get("manual_verification") is None
-    assert values["next"]["action"] == "run-validation-command"
+    assert values["next"]["action"] == "execute-selected-proof"
+    assert "--execute-selected" in values["next"]["command"]
 
 
 def test_proof_route_strategy_decision_ignores_non_live_memory_validation_friction(tmp_path: Path, capsys) -> None:
@@ -11531,6 +11651,10 @@ def test_selected_proof_execution_resumes_failure_and_blocks_stale_subject(tmp_p
     )
     assert first["status"] == "partial"
     assert first["outcome"] == "failed"
+    assert first["exit_status"] == 1
+    assert first["exit_class"] == "proof-incomplete-or-failed"
+    assert first["safe_to_retry"] is True
+    assert first["mutation_occurred"] is True
 
     fail_second = False
     resumed = workspace_runtime_core._execute_selected_proof_payload(
@@ -11543,6 +11667,7 @@ def test_selected_proof_execution_resumes_failure_and_blocks_stale_subject(tmp_p
         dry_run=False,
     )
     assert resumed["status"] == "completed"
+    assert resumed["exit_status"] == 0
     assert calls == ["check-one", "check-two", "check-two"]
 
     _write(local_path, "schema_version = 1\n# changed subject\n")
@@ -11556,6 +11681,7 @@ def test_selected_proof_execution_resumes_failure_and_blocks_stale_subject(tmp_p
         dry_run=False,
     )
     assert stale["status"] == "stale-subject-blocked"
+    assert stale["exit_status"] == 1
     assert stale["claim_boundary"]["completion_claim_allowed"] is False
 
 
@@ -11683,4 +11809,41 @@ def test_proof_cli_exposes_typed_selected_execution_dry_run(tmp_path: Path, caps
     payload = json.loads(capsys.readouterr().out)
     assert payload["kind"] == "agentic-workspace/proof-execution-result/v1"
     assert payload["status"] == "dry-run"
+    assert payload["exit_status"] == 0
+    assert payload["mutation_occurred"] is False
     assert payload["persistence"]["repository_residue"] is False
+
+
+def test_proof_cli_process_status_matches_typed_selected_execution_failure(tmp_path: Path, capsys, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    monkeypatch.setattr(
+        workspace_runtime_core,
+        "_execute_selected_proof_payload",
+        lambda **_: {
+            "kind": "agentic-workspace/proof-execution-result/v1",
+            "status": "partial",
+            "outcome": "failed",
+            "exit_status": 1,
+            "exit_class": "proof-incomplete-or-failed",
+            "safe_to_retry": True,
+            "mutation_occurred": True,
+        },
+    )
+
+    process_status = cli.main(
+        [
+            "proof",
+            "--target",
+            str(tmp_path),
+            "--changed",
+            ".agentic-workspace/config.toml",
+            "--execute-selected",
+            "--format",
+            "json",
+        ]
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["exit_status"] == process_status == 1

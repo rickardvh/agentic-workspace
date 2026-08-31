@@ -2798,6 +2798,7 @@ def planning_report(*, target: str | Path | None = None, audit_cursor: str = "",
     hierarchy_contract = summary.get("hierarchy_contract", {})
     handoff_contract = summary.get("handoff_contract", {})
     work_maturity = summary.get("work_maturity", {})
+    decomposition = summary.get("decomposition", {})
     lanes = summary.get("lanes", {})
     issue_relations = summary.get("issue_relations", {})
     integration = summary.get("integration", {})
@@ -2911,6 +2912,7 @@ def planning_report(*, target: str | Path | None = None, audit_cursor: str = "",
                 "planning_surface_health",
                 "ownership_review",
                 "work_maturity",
+                "decomposition",
                 "lanes",
                 "issue_relations",
                 "integration",
@@ -2961,6 +2963,7 @@ def planning_report(*, target: str | Path | None = None, audit_cursor: str = "",
         "planning_surface_health": summary.get("planning_surface_health", {}),
         "ownership_review": summary.get("ownership_review", {}),
         "work_maturity": work_maturity,
+        "decomposition": decomposition,
         "lanes": lanes,
         "issue_relations": issue_relations,
         "integration": integration,

@@ -365,3 +365,359 @@ def test_snapshot_revision_changes_when_source_revision_changes() -> None:
     second = compile_instruction_program(_program(facts=[changed_fact], clauses=[_clause("docs", "surface", "surface:docs")]))
 
     assert first["snapshot_revision"] != second["snapshot_revision"]
+
+
+def test_named_repo_requirements_join_hard_evidence_and_advisory_preference() -> None:
+    mechanisms = {
+        "repo_requirements": [
+            {
+                "id": "typed-exit",
+                "owner": "SYSTEM_INTENT.md",
+                "revision": "intent-r1",
+                "requirement_class": "invariant",
+                "source_intent_ref": "SYSTEM_INTENT.md#trust",
+                "source_intent_revision": "intent-r1",
+                "source_intent_current": True,
+                "target": "claim:claim-work-complete",
+                "satisfier": "evidence:typed-exit",
+                "evidence_owner": "verification:typed-exit",
+                "evidence_state": "failed",
+                "detail_route": "agentic-workspace proof --select typed-exit",
+            },
+            {
+                "id": "query-shaped",
+                "owner": "SYSTEM_INTENT.md",
+                "revision": "intent-r1",
+                "requirement_class": "guideline",
+                "source_intent_ref": "SYSTEM_INTENT.md#query-shaped",
+                "source_intent_revision": "intent-r1",
+                "source_intent_current": True,
+                "target": "operation:summary.selected",
+                "evidence_state": "unknown",
+            },
+        ]
+    }
+    capabilities = [
+        {
+            "id": "evidence:typed-exit",
+            "kind": "evidence",
+            "current": False,
+            "evidence_state": "failed",
+            "detail_route": "agentic-workspace proof --select typed-exit",
+            "source": _source("verification"),
+        }
+    ]
+
+    projection = compile_instruction_program(
+        instruction_program_from_existing_mechanisms({"instruction_mechanisms": mechanisms, "instruction_capabilities": capabilities}),
+        current_targets=["claim:claim-work-complete", "operation:summary.selected"],
+    )
+
+    assert projection["status"] == "blocked"
+    assert projection["blockers"][0]["reason_code"] == "failed-evidence"
+    assert projection["blockers"][0]["repair"] == "agentic-workspace proof --select typed-exit"
+    hard = projection["effects"]["require"][0]
+    assert hard["requirement"]["source_intent_ref"] == "SYSTEM_INTENT.md#trust"
+    assert projection["effects"]["prefer"][0]["target"] == "operation:summary.selected"
+
+
+def test_named_repo_requirement_stale_intent_is_claim_scoped_and_invalid_contracts_fail_closed() -> None:
+    stale = {
+        "repo_requirements": [
+            {
+                "id": "stale-policy",
+                "owner": "repo-policy",
+                "revision": "r1",
+                "requirement_class": "current-evidence",
+                "source_intent_ref": "docs/requirements.md#old",
+                "source_intent_revision": "r1",
+                "source_intent_current": False,
+                "target": "claim:claim-work-complete",
+                "satisfier": "evidence:stale-policy",
+                "evidence_state": "stale-intent",
+                "detail_route": "review the superseded source requirement",
+            }
+        ]
+    }
+    capability = {
+        "id": "evidence:stale-policy",
+        "kind": "evidence",
+        "current": False,
+        "evidence_state": "stale-intent",
+        "detail_route": "review the superseded source requirement",
+        "source": _source("verification"),
+    }
+    program = instruction_program_from_existing_mechanisms({"instruction_mechanisms": stale, "instruction_capabilities": [capability]})
+
+    unrelated = compile_instruction_program(program, current_targets=["operation:summary"])
+    relevant = compile_instruction_program(program, current_targets=["claim:claim-work-complete"])
+
+    assert unrelated["blockers"] == []
+    assert relevant["blockers"][0]["reason_code"] == "stale-revision"
+    assert relevant["blockers"][0]["repair"] == "review the superseded source requirement"
+
+    invalid = instruction_program_from_existing_mechanisms(
+        {
+            "instruction_mechanisms": {
+                "repo_requirements": [{"id": "bad", "owner": "repo", "revision": "r1", "requirement_class": "hard", "target": "claim:x"}]
+            }
+        }
+    )
+    invalid_projection = compile_instruction_program(invalid, current_targets=["claim:x"])
+    assert invalid_projection["status"] == "invalid"
+    assert invalid_projection["diagnostics"][0]["code"] == "invalid-repo-requirement"
+
+
+def test_assurance_named_requirement_normalizes_into_the_existing_operating_decision() -> None:
+    assurance = {
+        "active": [
+            {
+                "id": "typed-exit",
+                "requirement_class": "invariant",
+                "source_intent_ref": "SYSTEM_INTENT.md#trust",
+                "source_intent_revision": "intent-r1",
+                "source_intent_current": True,
+                "required_evidence": ["typed-exit-fixture"],
+                "blocking_claims": ["claim-work-complete"],
+                "evidence_owner": "verification:typed-exit",
+                "detail_route": "agentic-workspace proof --select typed-exit",
+            }
+        ],
+        "evidence_status": [{"requirement_id": "typed-exit", "evidence_label": "typed-exit-fixture", "status": "failed"}],
+    }
+    mechanisms, capabilities = _projection_instruction_mechanisms({"assurance_requirements": assurance}, {"blocked_claim_classes": []})
+    decision = compile_operating_decision(
+        inputs={
+            "instruction_mechanisms": mechanisms,
+            "instruction_capabilities": capabilities,
+            "requested_claim_classes": ["claim-work-complete"],
+        }
+    )
+
+    assert decision["status"] == "blocked"
+    assert decision["external_blocker"]["reason_code"] == "failed-evidence"
+    effect = decision["instruction_clause_projection"]["effects"]["require"][0]
+    assert effect["requirement"]["evidence_owner"] == "verification:typed-exit"
+    assert decision["instruction_clause_projection"]["effects"]["restrict"] == []
+
+
+def test_measurement_summary_flows_through_existing_claim_enforcement() -> None:
+    measurement = {
+        "kind": "agentic-workspace/measurement-evidence-summary/v1",
+        "status": "failed",
+        "metric": "selected-read-latency",
+        "unit": "seconds",
+        "observed_value": 2.4,
+        "evaluated_value": 2.4,
+        "comparator": "lte",
+        "threshold": 2.0,
+        "tolerance": 0,
+        "aggregation": "median",
+        "sample_count": 5,
+        "subject": "planning-record-selected-read",
+        "subject_revision": "fixture-r1",
+        "environment": "maintained-ci",
+        "source_revision": "benchmark-r1",
+        "requirement_revision": "policy-r1",
+        "detail_ref": "scratch/measurements/selected-read.json",
+    }
+    assurance = {
+        "active": [
+            {
+                "id": "selected-latency",
+                "requirement_class": "current-evidence",
+                "source_intent_ref": "docs/requirements.md#selected-latency",
+                "source_intent_revision": "policy-r1",
+                "source_intent_current": True,
+                "required_evidence": ["cold-median"],
+                "blocking_claims": ["claim-work-complete"],
+                "evidence_owner": "verification:selected-latency",
+                "detail_route": "agentic-workspace proof --select selected-latency",
+            }
+        ],
+        "evidence_status": [
+            {
+                "requirement_id": "selected-latency",
+                "evidence_label": "cold-median",
+                "state": "failed",
+                "measurement": measurement,
+            }
+        ],
+    }
+    mechanisms, capabilities = _projection_instruction_mechanisms({"assurance_requirements": assurance}, {"blocked_claim_classes": []})
+    decision = compile_operating_decision(
+        inputs={
+            "instruction_mechanisms": mechanisms,
+            "instruction_capabilities": capabilities,
+            "requested_claim_classes": ["claim-work-complete"],
+        }
+    )
+
+    assert decision["status"] == "blocked"
+    assert decision["external_blocker"]["reason_code"] == "failed-evidence"
+    effect = decision["instruction_clause_projection"]["effects"]["require"][0]
+    assert effect["requirement"]["measurement"]["observed_value"] == 2.4
+    assert effect["requirement"]["measurement"]["threshold"] == 2.0
+
+    advisory_assurance = {
+        "active": [
+            {
+                "id": "preferred-latency",
+                "requirement_class": "guideline",
+                "source_intent_ref": "docs/requirements.md#cost",
+                "source_intent_revision": "policy-r1",
+                "source_intent_current": True,
+                "preference_target": "operation:summary.selected",
+                "evidence_owner": "verification:selected-latency",
+                "detail_route": "inspect preferred latency",
+            }
+        ],
+        "evidence_status": [{"requirement_id": "preferred-latency", "state": "failed", "measurement": measurement}],
+    }
+    advisory_mechanisms, advisory_capabilities = _projection_instruction_mechanisms(
+        {"assurance_requirements": advisory_assurance}, {"blocked_claim_classes": []}
+    )
+    advisory = compile_operating_decision(
+        inputs={
+            "instruction_mechanisms": advisory_mechanisms,
+            "instruction_capabilities": advisory_capabilities,
+            "requested_claim_classes": ["claim-work-complete"],
+        }
+    )
+    assert advisory["status"] != "blocked"
+    assert advisory["instruction_clause_projection"]["blockers"] == []
+    assert advisory["instruction_clause_projection"]["effects"]["prefer"][0]["requirement"]["measurement"]["status"] == "failed"
+
+
+def test_passing_measurement_satisfies_only_its_named_requirement_not_broader_semantic_intent() -> None:
+    measurement = {
+        "kind": "agentic-workspace/measurement-evidence-summary/v1",
+        "status": "satisfied",
+        "metric": "selected-read-latency",
+        "observed_value": 1.8,
+        "threshold": 2.0,
+        "detail_ref": "scratch/measurements/selected-read.json",
+    }
+    assurance = {
+        "active": [
+            {
+                "id": "selected-latency",
+                "requirement_class": "current-evidence",
+                "source_intent_ref": ".agentic-workspace/system-intent/intent.toml#responsive-selected-reads",
+                "source_intent_revision": "intent-r1",
+                "source_intent_current": True,
+                "required_evidence": ["cold-median"],
+                "blocking_claims": ["claim-work-complete"],
+                "evidence_owner": "verification:selected-latency",
+                "detail_route": "inspect selected latency evidence",
+            }
+        ],
+        "evidence_status": [
+            {
+                "requirement_id": "selected-latency",
+                "evidence_label": "cold-median",
+                "state": "satisfied",
+                "measurement": measurement,
+            }
+        ],
+    }
+
+    mechanisms, capabilities = _projection_instruction_mechanisms({"assurance_requirements": assurance}, {"blocked_claim_classes": []})
+
+    assert mechanisms["repo_requirements"][0]["id"].startswith("selected-latency:")
+    assert {item["id"] for item in capabilities} == {"evidence:selected-latency:cold-median"}
+    assert all(not str(item["id"]).startswith("intent:") for item in capabilities)
+
+
+def test_promoted_intent_feedback_measurement_blocks_recurrence_and_supersession_forces_review() -> None:
+    promoted = {
+        "active": [
+            {
+                "id": "issue-2569-repeated-context-drift",
+                "requirement_class": "current-evidence",
+                "source_intent_ref": "issue:2569#repeated-measurable-drift",
+                "source_intent_revision": "feedback-r2",
+                "source_intent_current": True,
+                "required_evidence": ["context-drift-count"],
+                "blocking_claims": ["claim-work-complete"],
+                "evidence_owner": "verification:intent-feedback",
+                "detail_route": "refresh the promoted intent-feedback measurement",
+            }
+        ],
+        "evidence_status": [
+            {
+                "requirement_id": "issue-2569-repeated-context-drift",
+                "evidence_label": "context-drift-count",
+                "state": "failed",
+                "measurement": {
+                    "kind": "agentic-workspace/measurement-evidence-summary/v1",
+                    "status": "failed",
+                    "metric": "repeated-context-drift",
+                    "observed_value": 1,
+                    "threshold": 0,
+                    "detail_ref": "scratch/intent-feedback/context-drift.json",
+                },
+            }
+        ],
+    }
+    mechanisms, capabilities = _projection_instruction_mechanisms({"assurance_requirements": promoted}, {"blocked_claim_classes": []})
+    recurrence = compile_instruction_program(
+        instruction_program_from_existing_mechanisms({"instruction_mechanisms": mechanisms, "instruction_capabilities": capabilities}),
+        current_targets=["claim:claim-work-complete"],
+    )
+    assert recurrence["status"] == "blocked"
+    assert recurrence["blockers"][0]["reason_code"] == "failed-evidence"
+
+    superseded = {**promoted, "active": [{**promoted["active"][0], "source_intent_current": False}]}
+    stale_mechanisms, stale_capabilities = _projection_instruction_mechanisms(
+        {"assurance_requirements": superseded}, {"blocked_claim_classes": []}
+    )
+    stale = compile_instruction_program(
+        instruction_program_from_existing_mechanisms(
+            {"instruction_mechanisms": stale_mechanisms, "instruction_capabilities": stale_capabilities}
+        ),
+        current_targets=["claim:claim-work-complete"],
+    )
+    assert stale["status"] == "blocked"
+    assert stale["blockers"][0]["reason_code"] == "stale-revision"
+
+
+def test_named_repo_requirement_preserves_distinct_evidence_states() -> None:
+    expected = {
+        "failed": "failed-evidence",
+        "stale": "stale-revision",
+        "unknown": "unresolved-evidence",
+        "unavailable": "unavailable-evidence",
+        "invalid": "invalid-evidence",
+    }
+    for evidence_state, reason_code in expected.items():
+        mechanisms = {
+            "repo_requirements": [
+                {
+                    "id": evidence_state,
+                    "owner": "repo-policy",
+                    "revision": "r1",
+                    "requirement_class": "current-evidence",
+                    "source_intent_ref": "docs/requirements.md#budget",
+                    "source_intent_revision": "r1",
+                    "source_intent_current": True,
+                    "target": "claim:claim-work-complete",
+                    "satisfier": f"evidence:{evidence_state}",
+                    "evidence_state": evidence_state,
+                }
+            ]
+        }
+        capabilities = [
+            {
+                "id": f"evidence:{evidence_state}",
+                "kind": "evidence",
+                "current": False,
+                "evidence_state": evidence_state,
+                "source": _source("verification"),
+            }
+        ]
+        projection = compile_instruction_program(
+            instruction_program_from_existing_mechanisms({"instruction_mechanisms": mechanisms, "instruction_capabilities": capabilities}),
+            current_targets=["claim:claim-work-complete"],
+        )
+        assert projection["blockers"][0]["reason_code"] == reason_code

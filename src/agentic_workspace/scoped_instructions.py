@@ -6,6 +6,7 @@ import fnmatch
 import hashlib
 import json
 import re
+import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
@@ -223,6 +224,19 @@ def _capability_candidates(root: Path) -> dict[str, list[str]]:
             )
         except (OSError, json.JSONDecodeError):
             pass
+    config_path = root / ".agentic-workspace/config.toml"
+    if config_path.is_file():
+        try:
+            config = tomllib.loads(config_path.read_text(encoding="utf-8-sig"))
+            requirements = config.get("assurance", {}).get("requirements", {})
+            if isinstance(requirements, dict):
+                identities.update(
+                    f"requirement:{requirement_id}"
+                    for requirement_id, requirement in requirements.items()
+                    if isinstance(requirement, dict) and requirement.get("requirement_class")
+                )
+        except (OSError, tomllib.TOMLDecodeError):
+            pass
     candidates: dict[str, list[str]] = {}
     for identity in sorted(identities):
         short = identity.partition(":")[2].rsplit(".", 1)[-1]
@@ -297,7 +311,13 @@ def inspect_instructions(
                     item_diagnostics.append(diagnostic)
                 else:
                     check_id = "instruction-check:" + resolved
-                    resolved_checks.append({"identity": check_id, "reference": resolved, "kind": "named"})
+                    resolved_checks.append(
+                        {
+                            "identity": check_id,
+                            "reference": resolved,
+                            "kind": "requirement" if resolved.startswith("requirement:") else "named",
+                        }
+                    )
         for diagnostic in item_diagnostics:
             diagnostics.append({"source_ref": document.source_ref, **diagnostic})
         record = {
@@ -350,6 +370,9 @@ def inspect_instructions(
         effects.extend({"kind": "surface", "target": f"surface:{ref}"} for ref in document.metadata["read"])
         effects.extend({"kind": "prefer", "target": ref} for ref in resolved_use)
         for check in resolved_checks:
+            if check["kind"] == "requirement":
+                effects.append({"kind": "surface", "target": f"surface:{check['reference']}"})
+                continue
             satisfier = check["identity"]
             effects.append({"kind": "require", "target": "claim:complete", "satisfier": satisfier})
             program["capabilities"].append(

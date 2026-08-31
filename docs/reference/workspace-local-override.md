@@ -53,8 +53,8 @@ Machine-local override schema for invocation preferences, delegation capabilitie
 | `local_memory.correction_events_path` | string | no |  | Repository-relative ignored path for structured local correction-feedback events. |  |  |
 | `session_logging` | object | no |  | Machine-local session logging and path-normalization preferences. |  |  |
 | `session_logging.enabled` | boolean | no |  | Whether this checkout should keep ignored local AW command session logs. |  |  |
-| `session_logging.redact_local_paths` | boolean | no |  | Compatibility alias for path_mode = redacted. |  |  |
-| `session_logging.path_mode` | enum `"absolute"`, `"repo-relative"`, `"redacted"` | no | `"absolute"` | How local filesystem paths should be represented in session log markdown, indexes, and summaries. |  |  |
+| `session_logging.redact_local_paths` | boolean | no |  | Compatibility alias for path_mode = redacted. It cannot be declared beside path_mode; new configuration should use path_mode. |  |  |
+| `session_logging.path_mode` | enum `"absolute"`, `"repo-relative"`, `"redacted"` | no | `"absolute"` | Canonical setting for how local filesystem paths should be represented in session log markdown, indexes, and summaries. |  |  |
 | `local_overlay` | object | no |  | Machine-local guidance overlay. It may shape the acting checkout workflow but is not checked-in host policy. |  |  |
 | `local_overlay.guidance` | ref `#/$defs/local_guidance_items` | no |  | General local guidance overlay items for ordinary checkout-local facts such as tool availability, validation commands, branch conventions, access constraints, and adoption-time hints. |  |  |
 | `local_overlay.guidance.<^.+$>` | object | no |  | One named ordinary local guidance overlay item. It can shape this checkout's workflow but is not shared host policy. |  |  |

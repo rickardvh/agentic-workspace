@@ -242,6 +242,171 @@
       ],
       "recorded_by": "agent",
       "notes": "The selected route is the existing repo-owned proof_route_authority maintenance lane composed with test_evidence_decision. This lane does not add a parallel proof matrix or change route authority; focused proof-router, contract-tooling, structured-inventory, and maintainer-surface checks remain the declared evidence."
+    },
+    {
+      "requirement_id": "typed_cli_selector_contract",
+      "evidence_label": "typed_cli_selector_contract_fixture",
+      "status": "satisfied",
+      "source_kind": "command",
+      "command": "uv run pytest tests/test_workspace_cli.py tests/test_workspace_proof_cli.py tests/test_workspace_session_logging.py -k 'upgrade_unknown_selector or upgrade_selector_inventory or process_status_matches_typed_selected_execution_failure or lifecycle_typed_selector_failure_and_session_process_status_agree' -q",
+      "changed_paths": [
+        "src/agentic_workspace/proof_execution_projection.py",
+        "src/agentic_workspace/workspace_runtime_core.py",
+        "src/agentic_workspace/workspace_selector_validation.py",
+        "tests/test_workspace_cli.py",
+        "tests/test_workspace_proof_cli.py",
+        "tests/test_workspace_session_logging.py"
+      ],
+      "recorded_by": "agent",
+      "notes": "The lifecycle regression rejects the invalid actions selector before construction, emits bounded typed exit 2, returns process status 2, and records the same failure in session logging. Selected-proof failure now carries retry/mutation posture and returns its typed nonzero status, while completed and dry-run proof remain zero. Selector inventory is executable without constructing lifecycle state."
+    },
+    {
+      "requirement_id": "proof_execution_integrity",
+      "evidence_label": "proof_execution_integrity_fixture",
+      "status": "satisfied",
+      "source_kind": "command",
+      "command": "uv run pytest tests/test_workspace_proof_cli.py -k 'selected_proof_execution_reconciles_and_reuses_local_receipts or selected_proof_execution_leaves_tracked_receipt_store_unchanged or selected_proof_execution_resumes_failure_and_blocks_stale_subject' -q",
+      "changed_paths": [
+        ".agentic-workspace/config.toml",
+        "docs/maintainer/repo-evidence-requirements.md",
+        "src/agentic_workspace/proof_execution_projection.py",
+        "src/agentic_workspace/workspace_runtime_core.py",
+        "tests/test_workspace_proof_cli.py"
+      ],
+      "recorded_by": "agent",
+      "notes": "Current maintained proof fixtures preserve one admitted selected-proof execution, exact-subject fresh-evidence reuse, aggregate claim admission, honest failed/blocked process status, and zero tracked repository residue."
+    },
+    {
+      "requirement_id": "direct_no_signal",
+      "evidence_label": "direct_no_signal_fixture",
+      "status": "satisfied",
+      "source_kind": "command",
+      "command": "uv run pytest tests/test_workspace_implement_cli.py -k 'start_direct_shape_emits_no_planning_writer or start_zero_study_direct_work_does_not_emit_owner_writer or start_keeps_narrow_direct_issue_quiet_without_custody_noise or implement_reuse_pressure_keeps_small_direct_task_unblocked' -q",
+      "changed_paths": [
+        ".agentic-workspace/config.toml",
+        ".agentic-workspace/instructions/workspace-dogfooding.md"
+      ],
+      "recorded_by": "agent",
+      "notes": "Direct startup and implementation fixtures remain unblocked and omit Planning writers, custody noise, and irrelevant reuse pressure when no relevant signal applies."
+    },
+    {
+      "requirement_id": "selected_planning_read_budget",
+      "evidence_label": "selected_planning_read_cold_median",
+      "status": "passed",
+      "measurement": {
+        "kind": "agentic-workspace/measurement-evidence/v1",
+        "metric": "selected-planning-read-latency",
+        "unit": "seconds",
+        "observed_value": 0.7112257000990212,
+        "comparator": "lte",
+        "threshold": 2.0,
+        "aggregation": "median",
+        "sample_count": 30,
+        "subject": "planning-summary-exact-selector-history-1000",
+        "subject_revision": "tests/test_summary_exact_selector_performance.py@policy-v1",
+        "environment": "maintained-local-cold-process",
+        "source_revision": "repo-acceptance-policy-v1",
+        "requirement_revision": "repo-acceptance-policy-v1",
+        "status": "passed",
+        "detail_ref": "tests/test_summary_exact_selector_performance.py::test_exact_summary_selectors_are_clean_process_history_independent"
+      }
+    },
+    {
+      "requirement_id": "selected_planning_scaling_budget",
+      "evidence_label": "selected_planning_read_history_ratio",
+      "status": "passed",
+      "measurement": {
+        "kind": "agentic-workspace/measurement-evidence/v1",
+        "metric": "selected-planning-read-latency",
+        "unit": "seconds",
+        "observed_value": 0.7112257000990212,
+        "baseline_value": 0.6817825000034645,
+        "comparator": "ratio-lte",
+        "threshold": 1.2,
+        "aggregation": "ratio",
+        "sample_count": 5,
+        "subject": "planning-summary-exact-selector-history-1000",
+        "subject_revision": "tests/test_summary_exact_selector_performance.py@policy-v1",
+        "control_subject": "planning-summary-exact-selector-history-empty",
+        "control_revision": "tests/test_summary_exact_selector_performance.py@policy-v1",
+        "environment": "maintained-local-cold-process",
+        "source_revision": "repo-acceptance-policy-v1",
+        "requirement_revision": "repo-acceptance-policy-v1",
+        "status": "passed",
+        "detail_ref": "tests/test_summary_exact_selector_performance.py::test_exact_summary_selectors_are_clean_process_history_independent"
+      }
+    },
+    {
+      "requirement_id": "invalid_selector_rejection_budget",
+      "evidence_label": "invalid_selector_cold_median",
+      "status": "passed",
+      "measurement": {
+        "kind": "agentic-workspace/measurement-evidence/v1",
+        "metric": "invalid-selector-rejection-latency",
+        "unit": "seconds",
+        "observed_value": 0.8126601,
+        "comparator": "lte",
+        "threshold": 2.0,
+        "aggregation": "median",
+        "sample_count": 5,
+        "subject": "upgrade-dry-run-invalid-actions-selector",
+        "subject_revision": "tests/test_workspace_cli.py@policy-v1",
+        "environment": "maintained-local-cold-process",
+        "source_revision": "repo-acceptance-policy-v1",
+        "requirement_revision": "repo-acceptance-policy-v1",
+        "status": "passed",
+        "detail_ref": "tests/test_workspace_cli.py::test_upgrade_unknown_selector_is_typed_nonzero_and_fails_before_lifecycle_construction"
+      }
+    },
+    {
+      "requirement_id": "selected_proof_residue_budget",
+      "evidence_label": "selected_proof_tracked_residue",
+      "status": "passed",
+      "measurement": {
+        "kind": "agentic-workspace/measurement-evidence/v1",
+        "metric": "tracked-proof-residue",
+        "unit": "count",
+        "observed_value": 0,
+        "comparator": "eq",
+        "threshold": 0,
+        "aggregation": "count",
+        "sample_count": 1,
+        "subject": "ordinary-execute-selected-proof",
+        "subject_revision": "tests/test_workspace_proof_cli.py@policy-v1",
+        "environment": "none",
+        "source_revision": "repo-acceptance-policy-v1",
+        "requirement_revision": "repo-acceptance-policy-v1",
+        "status": "passed",
+        "detail_ref": "tests/test_workspace_proof_cli.py::test_selected_proof_execution_leaves_tracked_receipt_store_unchanged"
+      }
+    },
+    {
+      "requirement_id": "binding_automatic_assignment",
+      "evidence_label": "binding_automatic_assignment_organic_dogfood",
+      "status": "unavailable",
+      "source_kind": "supported-host-observation",
+      "command": "",
+      "review_ref": "https://github.com/rickardvh/agentic-workspace/issues/2817",
+      "changed_paths": [
+        "src/agentic_workspace/workspace_runtime_core.py",
+        "tests/test_workspace_implement_cli.py"
+      ],
+      "recorded_by": "maintainer",
+      "notes": "The deterministic dispatch fixture preserves the no-second-permission and no-local-fallback invariant, but the unrelated substantive supported-host dogfood required to satisfy #2817 has not yet been admitted."
+    },
+    {
+      "requirement_id": "config_orthogonality_constructibility",
+      "evidence_label": "config_orthogonality_constructibility_fixture",
+      "status": "satisfied",
+      "source_kind": "command",
+      "command": "uv run pytest tests/test_workspace_config_cli.py -k 'config_orthogonality or overlapping_assurance_level_owners or shared_local_assignment_policy_layers_compose' -q",
+      "review_ref": "https://github.com/rickardvh/agentic-workspace/issues/2613",
+      "changed_paths": [
+        "src/agentic_workspace/config.py",
+        "tests/test_workspace_config_cli.py"
+      ],
+      "recorded_by": "agent",
+      "notes": "The maintained initial conformance set covers session path-mode aliasing, assurance classifier owner/source, proof command roles, payload/CLI installed-capability ownership, assurance terminal dispositions, subsystem assurance-level aliasing, and all shared/local assignment-policy authority-layer combinations. #2613 and #2916 retain the broader redesign and migration judgment."
     }
   ]
 }

@@ -127,12 +127,17 @@ def test_proof_changed_selector_routes_python_generated_packages_to_python_docke
         "subsystem:workspace-cli-runtime",
         "verification:closeout_intent_satisfaction",
         "verification:generated_adapter_conformance",
+        "verification:repo_acceptance_policy",
         "verification:requirement_grounding_delegation",
         "domain:generated_command_packages",
     ]
     assert answer["required_commands"] == [
         "uv run --frozen --active --no-sync python scripts/run_agentic_workspace.py defaults --section root_cli_authority --format json",
         "uv run --active python scripts/run_agentic_workspace.py report --target . --section closeout_trust --format json",
+        "uv run --active python scripts/run_agentic_workspace.py implement --target . --changed <paths> --select assurance_requirements --format json",
+        "uv run --active pytest tests/test_workspace_cli.py tests/test_workspace_proof_cli.py tests/test_workspace_session_logging.py -k 'upgrade_unknown_selector or upgrade_selector_inventory or process_status_matches_typed_selected_execution_failure or lifecycle_typed_selector_failure_and_session_process_status_agree' -q",
+        "uv run --active pytest tests/test_summary_exact_selector_performance.py tests/test_workspace_proof_cli.py -k 'exact_summary_selectors_are_clean_process_history_independent or leaves_tracked_receipt_store_unchanged' -q",
+        "uv run --active pytest tests/test_instruction_clause_ir.py tests/test_scoped_instructions.py tests/test_workspace_config_cli.py -q",
         "uv run --active python scripts/run_agentic_workspace.py implement --changed <paths> --select requirement_grounding,context.delegation_decision,context.plan_delegation_packet --format json",
         "uv run --active python scripts/check/check_generated_command_packages.py --require-node",
         "uv run --active python scripts/check/check_generated_command_packages.py --conformance --require-node",

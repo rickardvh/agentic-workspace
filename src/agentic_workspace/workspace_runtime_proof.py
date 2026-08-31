@@ -9058,10 +9058,41 @@ def _proof_selection_for_changed_paths(
         else {}
     )
     requirement_lanes: list[dict[str, Any]] = []
+    requirement_status = {
+        str(item.get("requirement_id") or ""): str(item.get("state") or "")
+        for item in _list_payload(active_assurance_requirements.get("evidence_status"))
+        if isinstance(item, dict)
+    }
     existing_concern_profiles = {str(lane.get("proof_profile", "")) for lane in concern_lanes}
     for requirement in active_assurance_requirements.get("active", []):
         if not isinstance(requirement, dict):
             continue
+        measurement = _as_dict(requirement.get("measurement"))
+        producer_command = str(measurement.get("producer_command") or "").strip()
+        evidence_state = requirement_status.get(str(requirement.get("id") or ""), "")
+        if producer_command and evidence_state in {
+            "missing-evidence",
+            "stale",
+            "unknown",
+            "unavailable",
+            "invalid",
+        }:
+            requirement_lanes.append(
+                {
+                    "id": f"measurement:{requirement.get('id')}",
+                    "when": "applicable measurable requirement lacks current sufficient evidence",
+                    "enough_proof": [producer_command],
+                    "recovery_signal": "measurement producer failure preserves the distinct evidence state and blocks only the configured claim",
+                    "proof_kind": "targeted-test",
+                    "proof_responsibility": "evidence-owner",
+                    "execution_mode": "serial-required",
+                    "requirement_id": str(requirement.get("id") or ""),
+                    "measurement_evidence_state": evidence_state,
+                    "evidence_owner": requirement.get("evidence_owner"),
+                    "detail_route": requirement.get("detail_route"),
+                    "applies_because": _list_payload(requirement.get("applies_because")),
+                }
+            )
         profile_id = str(requirement.get("proof_profile") or "").strip()
         if not profile_id:
             continue

@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Select source-owned measurement producers only when applicable evidence is not current, and reuse admitted current results."
+issues = [2907]

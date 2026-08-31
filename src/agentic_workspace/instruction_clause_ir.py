@@ -10,6 +10,7 @@ from typing import Any
 EFFECT_KINDS = {"surface", "prefer", "require", "restrict"}
 PREDICATE_OPERATORS = {"present", "is", "one_of", "intersects", "matches", "current"}
 ENFORCING_EFFECTS = {"require", "restrict"}
+REPO_REQUIREMENT_CLASSES = {"invariant", "current-evidence", "guideline"}
 TARGET_PREFIXES = {"surface", "skill", "operation", "evidence", "human", "action", "effect", "claim"}
 EFFECT_TARGET_CLASSES = {
     "surface": {"surface"},
@@ -228,9 +229,10 @@ def compile_instruction_program(program: dict[str, Any], *, current_targets: lis
         "missing-effect-target",
         "missing-satisfier",
         "invalid-bounded-control",
+        "invalid-repo-requirement",
     }
     for diagnostic in source_diagnostics:
-        if diagnostic.get("code") in {"missing-effect-target", "invalid-bounded-control"}:
+        if diagnostic.get("code") in {"missing-effect-target", "invalid-bounded-control", "invalid-repo-requirement"}:
             blockers.append(
                 {
                     "reason_code": "missing-authority",
@@ -290,11 +292,22 @@ def compile_instruction_program(program: dict[str, Any], *, current_targets: lis
                 )
                 effect = {**effect, "satisfied": satisfied}
                 if not satisfied and _target_relevant(target, relevant_targets):
+                    requirement = _as_dict(effect.get("requirement"))
+                    evidence_state = str(_as_dict(capability).get("evidence_state") or requirement.get("evidence_state") or "missing")
+                    reason_code = {
+                        "failed": "failed-evidence",
+                        "stale": "stale-revision",
+                        "stale-intent": "stale-revision",
+                        "unknown": "unresolved-evidence",
+                        "unavailable": "unavailable-evidence",
+                        "invalid": "invalid-evidence",
+                    }.get(evidence_state, "missing-capability")
+                    detail_route = str(_as_dict(capability).get("detail_route") or requirement.get("detail_route") or "")
                     blockers.append(
                         {
-                            "reason_code": "missing-capability",
+                            "reason_code": reason_code,
                             "owner": str(_as_dict(clause.get("source")).get("owner") or "instruction-source"),
-                            "repair": f"satisfy {satisfier or target} through its source owner",
+                            "repair": detail_route or f"satisfy {satisfier or target} through its source owner",
                             "clause_id": clause_id,
                             "target": target,
                         }
@@ -328,7 +341,16 @@ def compile_instruction_program(program: dict[str, Any], *, current_targets: lis
     snapshot = {
         "facts": [{"id": item.get("id"), "source": item.get("source")} for item in facts],
         "clauses": [{"id": item.get("id"), "source": item.get("source")} for item in clauses],
-        "capabilities": [{"id": item.get("id"), "current": item.get("current"), "source": item.get("source")} for item in capabilities],
+        "capabilities": [
+            {
+                "id": item.get("id"),
+                "current": item.get("current"),
+                "evidence_state": item.get("evidence_state"),
+                "measurement": item.get("measurement"),
+                "source": item.get("source"),
+            }
+            for item in capabilities
+        ],
         "source_diagnostics": source_diagnostics,
     }
     return {
@@ -405,6 +427,72 @@ def instruction_program_from_existing_mechanisms(inputs: dict[str, Any]) -> dict
                     "authority": {"effects": [effect_kind], "target_patterns": [target]},
                 }
             )
+    for index, item in enumerate([_as_dict(value) for value in _as_list(mechanisms.get("repo_requirements"))]):
+        item_id = str(item.get("id") or f"repo-requirement-{index + 1}")
+        owner = str(item.get("owner") or "repo-requirements")
+        revision = str(item.get("revision") or "")
+        requirement_class = str(item.get("requirement_class") or "")
+        effect_kind = "prefer" if requirement_class == "guideline" else "require"
+        target = str(item.get("target") or "")
+        satisfier = str(item.get("satisfier") or "")
+        source_intent_ref = str(item.get("source_intent_ref") or "")
+        source_intent_revision = str(item.get("source_intent_revision") or "")
+        source_intent_current = item.get("source_intent_current")
+        if (
+            requirement_class not in REPO_REQUIREMENT_CLASSES
+            or not source_intent_ref
+            or not source_intent_revision
+            or not isinstance(source_intent_current, bool)
+        ):
+            source_diagnostics.append(
+                {
+                    "code": "invalid-repo-requirement",
+                    "ref": f"adapter:repo_requirements:{item_id}",
+                    "owner": owner,
+                    "repair": "use a supported class and bind the strongest current source intent ref, revision, and currentness",
+                }
+            )
+            continue
+        if not target or (effect_kind == "require" and not satisfier):
+            source_diagnostics.append(
+                {
+                    "code": "invalid-repo-requirement",
+                    "ref": f"adapter:repo_requirements:{item_id}",
+                    "owner": owner,
+                    "repair": "provide one existing bounded target and a source-owned satisfier for hard requirements",
+                }
+            )
+            continue
+        fact_id = f"repo-requirement:{item_id}:applicable"
+        source = {"owner": owner, "revision": revision, "current": bool(revision)}
+        facts.append({"id": fact_id, "type": "boolean", "value": item.get("applicable", True), "source": source})
+        requirement = {
+            key: item.get(key)
+            for key in (
+                "id",
+                "requirement_class",
+                "source_intent_ref",
+                "source_intent_revision",
+                "source_intent_current",
+                "evidence_owner",
+                "evidence_state",
+                "detail_route",
+                "measurement",
+            )
+            if item.get(key) is not None
+        }
+        effect = {"kind": effect_kind, "target": target, "requirement": requirement}
+        if effect_kind == "require":
+            effect["satisfier"] = satisfier
+        clauses.append(
+            {
+                "id": f"repo-requirement:{item_id}",
+                "source": source,
+                "when": {"fact": fact_id, "operator": "is", "value": True},
+                "effects": [effect],
+                "authority": {"effects": [effect_kind], "target_patterns": [target]},
+            }
+        )
     for index, item in enumerate([_as_dict(value) for value in _as_list(mechanisms.get("bounded_controls"))]):
         item_id = str(item.get("id") or f"bounded-control-{index + 1}")
         owner = str(item.get("owner") or "bounded-controls")

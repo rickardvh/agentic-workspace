@@ -184,6 +184,44 @@ def test_inline_check_enters_the_existing_trusted_proof_route(tmp_path: Path) ->
     assert selected["required"] is True
 
 
+def test_scoped_markdown_can_reference_named_repo_requirement_without_creating_a_second_gate(tmp_path: Path) -> None:
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.parent.mkdir(parents=True)
+    config.write_text(
+        """schema_version = 1
+
+[assurance.requirements.typed_exit]
+level = "high"
+applies_to_paths = ["src/**"]
+required_evidence = ["typed_exit_fixture"]
+force = "required-before-closeout"
+blocking_claims = ["claim-work-complete"]
+requirement_class = "invariant"
+source_intent_ref = "SYSTEM_INTENT.md#trust"
+source_intent_revision = "r1"
+source_intent_current = true
+evidence_owner = "verification:typed-exit"
+detail_route = "agentic-workspace proof --select typed-exit"
+""",
+        encoding="utf-8",
+    )
+    _write(
+        tmp_path,
+        "runtime",
+        "---\npaths:\n  - src/**\nchecks:\n  - requirement:typed_exit\n---\n\n# Runtime\n",
+    )
+
+    program = instruction_program_for_operating_decision(root=tmp_path, task="", changed_paths=["src/cli.py"])
+
+    assert program["capabilities"] == []
+    effects = program["clauses"][0]["effects"]
+    assert {item["target"] for item in effects} == {
+        "surface:instruction:runtime",
+        "surface:requirement:typed_exit",
+    }
+    assert all(item["kind"] == "surface" for item in effects)
+
+
 def test_scaffold_is_minimal_and_never_overwrites(tmp_path: Path) -> None:
     global_result = _write_scaffold(tmp_path, name="repository", paths=[])
     _write_scaffold(tmp_path, name="authentication", paths=["src/auth/**"])

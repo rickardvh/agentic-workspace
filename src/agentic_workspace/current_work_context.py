@@ -82,11 +82,13 @@ def _selected_planning_owner(root: Path) -> tuple[str, str]:
 
 def _active_plan(root: Path, *, task_refs: list[str] | None = None) -> tuple[str, str, list[str], bool]:
     path = root / ".agentic-workspace" / "planning" / "state.toml"
+    selected_id, selected_ref = _local_selected_planning_owner(root)
     try:
         state = tomllib.loads(path.read_text(encoding="utf-8-sig"))
     except (OSError, tomllib.TOMLDecodeError):
-        return "", "", [], False
-    selected_id, selected_ref = _local_selected_planning_owner(root)
+        if not selected_id:
+            return "", "", [], False
+        state = {}
     items = state.get("todo", {}).get("active_items", []) if isinstance(state.get("todo"), dict) else []
     item = next((entry for entry in items if isinstance(entry, dict) and str(entry.get("id") or "") == selected_id), None)
     if item is None and not selected_id:

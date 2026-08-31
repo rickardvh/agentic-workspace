@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Dogfood repo-owned evidence requirements and align lifecycle and selected-proof typed failures with process and session status."
+issues = [2564, 2906, 2909]

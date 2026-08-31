@@ -5,6 +5,8 @@
     "fact": "A typed, source-owned, revision-bound projection; never a central knowledge record.",
     "clause": "A source-bound bounded predicate mapped to declared control effects.",
     "capability_reference": "An existing registered context, skill, operation, evidence, human-decision, action, effect, or claim affordance.",
+    "named_repo_requirement": "A source-intent-bound invariant, current-evidence requirement, or advisory guideline normalized through existing assurance and instruction effects.",
+    "measurement_evidence": "A compact source/subject/environment/revision-bound result evaluated against its requirement-owned comparator and threshold; it is evidence, not policy authority.",
     "operating_contract": "The existing operating decision; no peer instruction authority is created."
   },
   "predicate_operators": ["present", "is", "one_of", "intersects", "matches", "current"],
@@ -22,6 +24,8 @@
   "unknown_rule": "Unknown advisory clauses remain inactive and diagnosable. Unknown enforcing clauses block only a matching current target.",
   "authority_rule": "A source may emit only declared effect kinds against declared target patterns; clauses cannot widen authority.",
   "state_rule": "Requirements are satisfied from current source-owned facts, capabilities, evidence, or human dispositions; the IR stores no obligation state.",
+  "repo_requirement_rule": "Named repo requirements preserve source intent revision, evidence owner/state, bounded target, and detail route. Hard classes compile to require; guidelines compile to prefer and cannot block by absence.",
+  "measurement_rule": "The requirement owner fixes metric identity, comparator, threshold, aggregation, minimum samples, and freshness identities. Compact evidence supplies observations and detail refs; mismatched identities are stale or invalid and cannot silently weaken policy.",
   "compiler_owner": "agentic_workspace.operating_decision.compile_operating_decision",
   "schema": "schemas/instruction_clause_program.schema.json"
 }

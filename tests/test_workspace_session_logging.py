@@ -7,6 +7,7 @@ import subprocess
 import sys
 import threading
 import time
+from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -19,9 +20,26 @@ from agentic_workspace import current_work_context, session_logging
 
 
 @pytest.fixture(autouse=True)
-def _capture_pytest_session_log_detail(monkeypatch) -> None:
+def _capture_pytest_session_log_detail(monkeypatch) -> Iterator[None]:
+    session_logging._declared_workspace_command_interfaces.cache_clear()
+    for key in (
+        "AW_SESSION_LOG_ORIGIN",
+        "AW_SESSION_LOG_EXPECTED_FAILURE",
+        "AW_SESSION_LOG_EXPECTED_EXIT",
+        "AW_SESSION_LOG_EXPECTED_REASON_CLASS",
+        "AW_SESSION_LOG_PARENT_COMMAND",
+        "AW_SESSION_LOG_PARENT_CONTEXT",
+        "AW_SESSION_LOG_PARENT_ENTRY_ID",
+        "AW_SESSION_LOG_PARENT_LOGICAL_IDENTITY",
+        "AW_SESSION_CORRELATION_ID",
+        "AW_VALIDATION",
+        "AW_VALIDATION_CONTEXT",
+    ):
+        monkeypatch.delenv(key, raising=False)
     monkeypatch.setenv("AW_SESSION_LOG_CAPTURE_DETAIL", "1")
     monkeypatch.setenv(session_logging.LOGICAL_SESSION_IDENTITY_ENV, "pytest-logical-session")
+    yield
+    session_logging._declared_workspace_command_interfaces.cache_clear()
 
 
 def _write(path: Path, content: str) -> None:
@@ -1455,6 +1473,43 @@ def test_session_log_preserves_producer_invocation_intent_and_matches_observed_o
     assert negative["invocation_outcome"]["match"] == "matched"
     assert negative["invocation_outcome"]["expectation_provenance"]["source"] == "producer-environment+generated-command-package-ir"
     assert negative["invocation_outcome"]["observed"] != negative["invocation_outcome"]["expected"]
+
+
+def test_lifecycle_typed_selector_failure_and_session_process_status_agree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    target = _target(tmp_path)
+    _write(
+        target / ".agentic-workspace/config.local.toml",
+        "schema_version = 1\n\n[session_logging]\nenabled = true\n",
+    )
+    monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
+
+    assert (
+        source_cli.main(
+            [
+                "upgrade",
+                "--target",
+                str(target),
+                "--dry-run",
+                "--select",
+                "actions",
+                "--format",
+                "json",
+            ]
+        )
+        == 2
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/selector-validation-error/v1"
+    assert payload["exit_status"] == 2
+
+    state = session_logging.load_state_for_argv(["--target", str(target)])
+    entries = session_logging.analyze_session_log(state=state, origin_scope="all", detail="entries")["detail_page"]["items"]
+    assert len(entries) == 1
+    assert entries[0]["exit_status"] == payload["exit_status"] == 2
+    assert entries[0]["exit_class"] == "failure"
+    assert entries[0]["invocation_outcome"]["observed"]["exit_class"] == "failure"
 
 
 def test_supported_workspace_commands_declare_generated_operation_purpose_without_producer_hints() -> None:

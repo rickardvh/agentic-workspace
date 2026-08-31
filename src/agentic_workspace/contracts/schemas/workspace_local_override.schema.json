@@ -265,7 +265,7 @@
         },
         "redact_local_paths": {
           "type": "boolean",
-          "description": "Compatibility alias for path_mode = redacted."
+          "description": "Compatibility alias for path_mode = redacted. It cannot be declared beside path_mode; new configuration should use path_mode."
         },
         "path_mode": {
           "type": "string",
@@ -275,7 +275,7 @@
             "redacted"
           ],
           "default": "absolute",
-          "description": "How local filesystem paths should be represented in session log markdown, indexes, and summaries."
+          "description": "Canonical setting for how local filesystem paths should be represented in session log markdown, indexes, and summaries."
         }
       },
       "additionalProperties": false,
