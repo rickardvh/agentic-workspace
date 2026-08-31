@@ -3201,9 +3201,9 @@ def test_proof_changed_uses_available_target_makefile_targets(tmp_path: Path, ca
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["required_commands"] == ["make test", "make lint"]
-    assert payload["next"]["command"] == "make test"
+    assert payload["next"]["action"] == "execute-selected-proof"
+    assert "--execute-selected" in payload["next"]["command"]
     assert payload["next"]["route_source"] == "live-adapted-target-capability"
-    assert payload["next"]["why"] == "behavior-test intent selected live-adapted-target-capability."
     assert payload["route"]["source"] == "live-adapted-target-capability"
     assert payload["route"]["authority"] == "live-target-capability"
     assert payload["route"]["health"] == {"status": "attention", "finding_count": 2}
@@ -3516,9 +3516,8 @@ def test_proof_changed_uses_subrepo_package_json_for_package_paths(tmp_path: Pat
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["required_commands"] == ["cd packages/ui && npm test", "cd packages/ui && npm run lint"]
-    assert payload["next"]["command"] == "cd packages/ui && npm test"
-    assert payload["next"]["cwd"] == "packages/ui"
-    assert payload["next"]["run"] == "npm test"
+    assert payload["next"]["action"] == "execute-selected-proof"
+    assert "--execute-selected" in payload["next"]["command"]
     assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "packages/ui/src/index.ts", "--format", "json"]) == 0
     payload = json.loads(capsys.readouterr().out)["answer"]
     assert payload["proof_command_adjustments"] == [
@@ -9762,7 +9761,8 @@ evidence = ["session-log:slow-command:generated"]
     assert claim_gate["handoff"]["required_identity_field"] == "proof_route_strategy_preservation.decision_id"
     assert values["proof_closeout_summary"]["proof_route_strategy_claim_gate"]["decision_id"] == preservation["decision_id"]
     assert values.get("manual_verification") is None
-    assert values["next"]["action"] == "run-validation-command"
+    assert values["next"]["action"] == "execute-selected-proof"
+    assert "--execute-selected" in values["next"]["command"]
 
 
 def test_proof_route_strategy_decision_ignores_non_live_memory_validation_friction(tmp_path: Path, capsys) -> None:
@@ -11651,6 +11651,10 @@ def test_selected_proof_execution_resumes_failure_and_blocks_stale_subject(tmp_p
     )
     assert first["status"] == "partial"
     assert first["outcome"] == "failed"
+    assert first["exit_status"] == 1
+    assert first["exit_class"] == "proof-incomplete-or-failed"
+    assert first["safe_to_retry"] is True
+    assert first["mutation_occurred"] is True
 
     fail_second = False
     resumed = workspace_runtime_core._execute_selected_proof_payload(
@@ -11663,6 +11667,7 @@ def test_selected_proof_execution_resumes_failure_and_blocks_stale_subject(tmp_p
         dry_run=False,
     )
     assert resumed["status"] == "completed"
+    assert resumed["exit_status"] == 0
     assert calls == ["check-one", "check-two", "check-two"]
 
     _write(local_path, "schema_version = 1\n# changed subject\n")
@@ -11676,6 +11681,7 @@ def test_selected_proof_execution_resumes_failure_and_blocks_stale_subject(tmp_p
         dry_run=False,
     )
     assert stale["status"] == "stale-subject-blocked"
+    assert stale["exit_status"] == 1
     assert stale["claim_boundary"]["completion_claim_allowed"] is False
 
 
@@ -11803,4 +11809,41 @@ def test_proof_cli_exposes_typed_selected_execution_dry_run(tmp_path: Path, caps
     payload = json.loads(capsys.readouterr().out)
     assert payload["kind"] == "agentic-workspace/proof-execution-result/v1"
     assert payload["status"] == "dry-run"
+    assert payload["exit_status"] == 0
+    assert payload["mutation_occurred"] is False
     assert payload["persistence"]["repository_residue"] is False
+
+
+def test_proof_cli_process_status_matches_typed_selected_execution_failure(tmp_path: Path, capsys, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    monkeypatch.setattr(
+        workspace_runtime_core,
+        "_execute_selected_proof_payload",
+        lambda **_: {
+            "kind": "agentic-workspace/proof-execution-result/v1",
+            "status": "partial",
+            "outcome": "failed",
+            "exit_status": 1,
+            "exit_class": "proof-incomplete-or-failed",
+            "safe_to_retry": True,
+            "mutation_occurred": True,
+        },
+    )
+
+    process_status = cli.main(
+        [
+            "proof",
+            "--target",
+            str(tmp_path),
+            "--changed",
+            ".agentic-workspace/config.toml",
+            "--execute-selected",
+            "--format",
+            "json",
+        ]
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["exit_status"] == process_status == 1

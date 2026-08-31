@@ -146,6 +146,8 @@ def proof_execution_result_payload(
     if commands_complete and not aggregate_complete:
         selection_blockers.append("aggregate-receipt-admission")
     complete = commands_complete and aggregate_complete and not selection_blockers
+    process_success = complete or status == "dry-run"
+    exit_status = 0 if process_success else 1
     local_scope = _as_dict(run.get("subject")).get("claim_scope") == "machine-local-effective-config"
     if complete and local_scope:
         claim_boundary = {
@@ -195,6 +197,10 @@ def proof_execution_result_payload(
     )
     return {
         "kind": "agentic-workspace/proof-execution-result/v1",
+        "exit_status": exit_status,
+        "exit_class": "success" if process_success else "proof-incomplete-or-failed",
+        "safe_to_retry": not process_success,
+        "mutation_occurred": status != "dry-run" and bool(command_records or aggregate_receipt),
         "status": "completed-with-unresolved-obligations" if commands_complete and selection_blockers else status,
         "outcome": "passed"
         if complete

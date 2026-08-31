@@ -11074,7 +11074,14 @@ def _minimal_module_footprint_report(
     if module_name == "planning":
         _ensure_text(
             Path(".agentic-workspace/planning/execplans/README.md"),
-            "# Planning execplans\n\nBounded owner records live here when continuity is expensive to reconstruct.\n",
+            "# Planning execplans\n\n"
+            "Bounded owner records live here when continuity is expensive to reconstruct.\n\n"
+            "Use `agentic-workspace summary --format json` first. Read raw `TODO.md` and execplan prose after that only "
+            "when the compact summary is insufficient.\n\n"
+            "## Meaning Boundary\n\n"
+            "`planning_record` is the canonical active planning record and machine-readable state. Compact prose answers "
+            "questions such as ‘What should I do next?’; raw execplan detail is the fallback for maintenance or omitted "
+            "evidence. Preserve the `resumable_contract` identity across summary, handoff, and closeout.\n",
             "create the bounded-owner Planning anchor without a repository-global state aggregate",
         )
         execplans = target_root / ".agentic-workspace" / "planning" / "execplans"
@@ -35100,6 +35107,7 @@ def _start_tiny_payload_fast(
         "continue-read-only-source-evidence-review",
         "inspect-closeout-trust-before-completion-answer",
         "inspect-known-task-paths",
+        "perform-bounded-external-issue-filing",
         "refresh-external-issue-intent",
         "refresh-open-issue-intake",
         "run-installed-payload-target-upgrade",
@@ -52971,6 +52979,10 @@ def _execute_selected_proof_payload(
     if not required_commands:
         return {
             "kind": "agentic-workspace/proof-execution-result/v1",
+            "exit_status": 1,
+            "exit_class": "proof-incomplete-or-failed",
+            "safe_to_retry": True,
+            "mutation_occurred": False,
             "status": "blocked-no-executable-proof",
             "outcome": "blocked",
             "claim_boundary": {"status": "blocked", "completion_claim_allowed": False},
@@ -52994,6 +53006,10 @@ def _execute_selected_proof_payload(
         rejected = rejected_admissions[0]
         return {
             "kind": "agentic-workspace/proof-execution-result/v1",
+            "exit_status": 1,
+            "exit_class": "proof-incomplete-or-failed",
+            "safe_to_retry": True,
+            "mutation_occurred": False,
             "status": "admission-blocked-before-execution",
             "outcome": "blocked",
             "preexecution_admission": {
@@ -53038,6 +53054,10 @@ def _execute_selected_proof_payload(
     if existing and existing_revision != subject["revision"]:
         return {
             "kind": "agentic-workspace/proof-execution-result/v1",
+            "exit_status": 1,
+            "exit_class": "proof-incomplete-or-failed",
+            "safe_to_retry": True,
+            "mutation_occurred": False,
             "status": "stale-subject-blocked",
             "outcome": "blocked",
             "run": {
@@ -53412,10 +53432,11 @@ def _emit_proof(
             cancel_file=proof_cancel_file,
             dry_run=dry_run,
         )
+        exit_status = _typed_result_exit_status(payload)
         if select:
             payload = _select_payload_fields(payload, select=select, source_command="proof")
         _emit_payload(payload=payload, format_name=format_name)
-        return 0
+        return exit_status
     if route_repair_mode:
         from agentic_workspace.workspace_runtime_proof import _proof_route_repair_operation_payload
 
@@ -55056,6 +55077,12 @@ def _run_init_lifecycle_adapter(args: argparse.Namespace) -> int:
 
 def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
     command_name = str(args.command)
+    if inventory_payload := _selector_inventory_selected_payload(select=getattr(args, "select", None), source_command=command_name):
+        _emit_payload(payload=inventory_payload, format_name=args.format)
+        return _typed_result_exit_status(inventory_payload)
+    if prevalidation_error := _selector_prevalidation_error(select=getattr(args, "select", None), source_command=command_name):
+        _emit_payload(payload=prevalidation_error, format_name=args.format)
+        return _typed_result_exit_status(prevalidation_error)
     target_root, local_only_repo_root, selected_modules, resolved_preset, descriptors, config = _load_lifecycle_mutation_context(
         args, command_name=command_name
     )
@@ -55072,8 +55099,7 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
             resolved_preset=resolved_preset,
             non_interactive=args.non_interactive,
         )
-        _emit_lifecycle_mutation_result(args=args, payload=payload, target_root=target_root, config=config)
-        return 0
+        return _emit_lifecycle_mutation_result(args=args, payload=payload, target_root=target_root, config=config)
     if command_name == "upgrade" and bool(getattr(args, "repair_managed_local_instructions", False)):
         payload = _run_managed_local_instructions_repair(
             target_root=target_root,
@@ -55083,8 +55109,7 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
             resolved_preset=resolved_preset,
             non_interactive=args.non_interactive,
         )
-        _emit_lifecycle_mutation_result(args=args, payload=payload, target_root=target_root, config=config)
-        return 0
+        return _emit_lifecycle_mutation_result(args=args, payload=payload, target_root=target_root, config=config)
     if command_name == "upgrade" and bool(getattr(args, "repair_root_startup_pointer", False)):
         payload = _run_root_startup_pointer_repair(
             target_root=target_root,
@@ -55094,8 +55119,7 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
             resolved_preset=resolved_preset,
             non_interactive=args.non_interactive,
         )
-        _emit_lifecycle_mutation_result(args=args, payload=payload, target_root=target_root, config=config)
-        return 0
+        return _emit_lifecycle_mutation_result(args=args, payload=payload, target_root=target_root, config=config)
     if command_name == "upgrade" and bool(getattr(args, "adopt_local_only", False)):
         adoption_modules = [entry.name for entry in _module_registry(descriptors=descriptors, target_root=target_root) if entry.installed]
         payload = _run_checked_in_adoption_from_local_only(
@@ -55106,8 +55130,7 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
             resolved_preset=resolved_preset,
             non_interactive=args.non_interactive,
         )
-        _emit_lifecycle_mutation_result(args=args, payload=payload, target_root=target_root, config=config)
-        return 0
+        return _emit_lifecycle_mutation_result(args=args, payload=payload, target_root=target_root, config=config)
     if command_name == "upgrade" and bool(getattr(args, "to_necessary_surfaces", False)):
         migration = _workspace_runtime_core._necessary_surfaces_migration_payload(
             target_root=target_root,
@@ -55131,8 +55154,7 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
             "reports": [report],
             **summary,
         }
-        _emit_lifecycle_mutation_result(args=args, payload=payload, target_root=target_root, config=config)
-        return 0
+        return _emit_lifecycle_mutation_result(args=args, payload=payload, target_root=target_root, config=config)
     if command_name in {"install", "upgrade"} and not bool(getattr(args, "dry_run", False)):
         payload = execute_workspace_install_upgrade_sync(
             mode=command_name,
@@ -55164,8 +55186,7 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
             footprint_profile=getattr(args, "footprint_profile", None),
             mirror_payload=bool(getattr(args, "mirror_payload", False)),
         )
-    _emit_lifecycle_mutation_result(args=args, payload=payload, target_root=target_root, config=config)
-    return 0
+    return _emit_lifecycle_mutation_result(args=args, payload=payload, target_root=target_root, config=config)
 
 
 def _run_legacy_scratch_cleanup(
@@ -66113,9 +66134,19 @@ def _lifecycle_mutation_summary_payload(
     }
 
 
+def _typed_result_exit_status(payload: Any) -> int:
+    """Return the process status declared by a typed result envelope."""
+
+    if isinstance(payload, dict):
+        exit_status = payload.get("exit_status")
+        if isinstance(exit_status, int) and not isinstance(exit_status, bool):
+            return exit_status
+    return 0
+
+
 def _emit_lifecycle_mutation_result(
     *, args: argparse.Namespace, payload: dict[str, Any], target_root: Path, config: WorkspaceConfig
-) -> None:
+) -> int:
     command_name = str(args.command)
     select = getattr(args, "select", None)
     compact_payload_route = command_name == "upgrade" and bool(getattr(args, "to_payload_target", False))
@@ -66125,14 +66156,12 @@ def _emit_lifecycle_mutation_result(
             if compact_payload_route
             else payload
         )
-        _emit_payload(
-            payload=_select_payload_fields(selectable_payload, select=select, source_command=command_name), format_name=args.format
-        )
-        return
+        result = _select_payload_fields(selectable_payload, select=select, source_command=command_name)
+        _emit_payload(payload=result, format_name=args.format)
+        return _typed_result_exit_status(result)
     if not compact_payload_route or bool(getattr(args, "verbose", False)):
         _emit_payload(payload=payload, format_name=args.format)
-        return
-    _emit_payload(
-        payload=_lifecycle_mutation_summary_payload(args=args, payload=payload, target_root=target_root, config=config),
-        format_name=args.format,
-    )
+        return _typed_result_exit_status(payload)
+    result = _lifecycle_mutation_summary_payload(args=args, payload=payload, target_root=target_root, config=config)
+    _emit_payload(payload=result, format_name=args.format)
+    return _typed_result_exit_status(result)

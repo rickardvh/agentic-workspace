@@ -1874,7 +1874,7 @@ candidates = []
     assert payload["completed_work_reconciliation"]["apply_command"] == "agentic-workspace reconcile --apply-safe-prune --format json"
 
 
-def test_workspace_reconcile_apply_safe_prune_removes_exact_closed_items(tmp_path: Path, capsys) -> None:
+def test_workspace_reconcile_apply_safe_prune_preserves_legacy_aggregate_rows(tmp_path: Path, capsys) -> None:
     install_bootstrap(target=tmp_path)
     state_path = tmp_path / ".agentic-workspace/planning/state.toml"
     _write(
@@ -1924,10 +1924,10 @@ candidates = []
     payload = json.loads(capsys.readouterr().out)
 
     assert exit_code == 0
-    assert payload["apply_result"]["applied_count"] == 1
-    assert payload["completed_work_reconciliation"]["cleanup_target_count"] == 0
+    assert payload["apply_result"]["applied_count"] == 0
+    assert payload["completed_work_reconciliation"]["cleanup_target_count"] == 1
     state = tomllib.loads(state_path.read_text(encoding="utf-8"))
-    assert [lane["id"] for lane in state["roadmap"]["lanes"]] == ["open-lane"]
+    assert [lane["id"] for lane in state["roadmap"]["lanes"]] == ["closed-lane", "open-lane"]
 
 
 def test_workspace_reconcile_reconstructs_external_cache_when_gh_is_available(tmp_path: Path, monkeypatch, capsys) -> None:
@@ -2376,6 +2376,10 @@ def test_external_issue_grouping_keeps_hierarchy_unsupported_provider_items_flat
 
 def test_external_intent_refresh_requires_explicit_refs_before_candidate_promotion(tmp_path: Path, monkeypatch, capsys) -> None:
     install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        "[todo]\nactive_items = []\nqueued_items = []\n\n[roadmap]\nlanes = []\ncandidates = []\n",
+    )
 
     class Result:
         def __init__(self, stdout: str) -> None:

@@ -94,3 +94,44 @@ Measurement remains evidence, not semantic intent authority. The current source 
 A repeated deterministic drift such as a typed validation error exiting successfully may be promoted from issue evidence into an invariant tied to the current trust intent. If that intent is re-scoped or superseded, the requirement revision must be refreshed, retired, or marked non-current.
 
 A qualitative requirement such as “make the workflow understandable to a first-time maintainer” is not converted into a boolean gate merely for uniformity. Mechanical checks may support its evidence, while applicability, interpretation, residual risk, and final satisfaction remain agent- or human-owned.
+
+## Initial dogfood policy
+
+The first repo-owned catalogue is intentionally smaller than the issue history that motivated it. It promotes observable outcomes with current owners and maintained fixtures; historical issue numbers are provenance, never runtime authority.
+
+### Typed CLI and selector contract
+
+`typed_cli_selector_contract` merges typed result/process/session agreement with selector authority and fail-fast behavior. A typed usage, validation, or failed direct-action result declares and returns the same nonzero status. Pre-execution rejection remains mutation-free and happens before expensive payload construction; an effectful failure additionally reports retry and mutation posture. The shared selector authority must advertise only executable fields and expose one bounded inventory/correction route. `invalid_selector_rejection_budget` adds the repo-local two-second cold-process median; the deterministic invariant separately caps the structured envelope through the shared selector contract.
+
+### Proof execution integrity
+
+`proof_execution_integrity` merges affected-owner claim completeness, the ordinary one-operation execute/reconcile path, subject-stable publication, current-evidence reuse, and honest failed/blocked process status. `selected_proof_residue_budget` gives its deterministic persistence dimension a count measurement: ordinary successful selected proof creates zero tracked receipt residue.
+
+### Selected Planning read budget
+
+`selected_planning_read_budget` retains the two-second cold-process median for maintained exact-selector fixtures. `selected_planning_scaling_budget` retains the 1,000-history ratio at no more than 1.20 of the empty-history control, with a small timing tolerance for sub-clock-resolution fixtures. Both remain Planning/Verification-owned and exclude provider refresh or environment installation.
+
+### Direct work and optimization guidance
+
+`direct_no_signal` preserves the system-intent rule that irrelevant installed capabilities do not create first-line context, commands, network work, durable artifacts, or claim pressure. `total_completion_cost`, `query_shaped_operation`, and `stronger_owner_correction` merge the advisory list into three non-blocking preferences: optimize the whole successful path among safe/capable peers, prefer exact owner queries and progressive disclosure, and repair the strongest deterministic owner instead of accumulating compensating guidance. Reusing current evidence and enforcing outcomes rather than historical choreography are part of those three preferences, not separate gates.
+
+### Initial-policy disposition
+
+| Proposed policy | Disposition | Current owner and rationale |
+| --- | --- | --- |
+| typed result/process/session agreement | retained, merged | `typed_cli_selector_contract`; root CLI/runtime plus session logging |
+| selector authority and fail-fast | retained, merged | `typed_cli_selector_contract`; shared selector authority and lifecycle regression fixture |
+| proof claim completeness/execution integrity | retained, merged | `proof_execution_integrity`; existing proof admission and execution owners |
+| binding automatic assignment without second permission | deferred | remains owned by open #2817 until an explicitly authorized substantive non-local dispatch proves its acceptance boundary; no passing policy is fabricated here |
+| direct/no-signal stays direct | retained | `direct_no_signal`; system intent plus startup/implement proportionality fixtures |
+| selected Planning read latency/scaling | retained as two measurements | `selected_planning_read_budget` and `selected_planning_scaling_budget` |
+| invalid-selector latency/envelope | retained, split by semantics | latency is `invalid_selector_rejection_budget`; bounded recovery/envelope is deterministic selector-contract evidence |
+| narrow proof projection latency/size | adjusted | size stays under existing proof/output profile authority; latency is deferred until a stable maintained cold-process proof fixture exists rather than inventing evidence |
+| selected-proof persistence/reuse | retained, merged | zero tracked residue is measured; exact-revision reuse remains part of `proof_execution_integrity` |
+| startup/lifecycle/proof/report output | adjusted | existing versioned output-profile budgets remain authoritative (startup is currently 6 KiB, not the stale proposed 4 KiB); no duplicate threshold is added |
+| total successful-completion cost and capability-first selection | retained, merged guideline | `total_completion_cost`; safety and required capability remain preconditions |
+| query-shaped/progressive disclosure | retained guideline | `query_shaped_operation` |
+| stronger-owner repair | retained guideline | `stronger_owner_correction` |
+| reuse current evidence / outcomes over choreography | retained, merged guidelines | expressed through total-cost and stronger-owner preferences plus evidence identity semantics |
+
+This catalogue deliberately does not add a policy engine, benchmark daemon, provider-specific portable threshold, or global acceptance packet. The config remains the named requirement owner, Verification/proof remain evidence owners, scoped Markdown supplies readable references, and the existing instruction/operating-decision compiler supplies the only action, claim, or preference effect.

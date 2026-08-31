@@ -891,7 +891,10 @@ def test_summary_reuses_unchanged_projection_and_preserves_decision_deltas(tmp_p
     assert len(reused_text) <= len(first_text) + 64
 
     planning_state = target / ".agentic-workspace" / "planning" / "state.toml"
-    planning_state.write_text(planning_state.read_text(encoding="utf-8") + "\n# decision relevant planning change\n", encoding="utf-8")
+    planning_state.write_text(
+        "[todo]\nactive_items = []\nqueued_items = []\n\n[roadmap]\nlanes = []\ncandidates = []\n# decision relevant planning change\n",
+        encoding="utf-8",
+    )
     assert cli.main(["summary", "--target", str(target), "--format", "json"]) == 0
     changed = json.loads(capsys.readouterr().out)
     assert changed.get("kind") != "agentic-workspace/unchanged-projection/v1"

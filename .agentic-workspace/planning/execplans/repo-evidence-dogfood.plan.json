@@ -1,0 +1,168 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "repo-evidence-dogfood",
+  "title": "Dogfood repo evidence requirements",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "closeout",
+  "revision": 6,
+  "intent": {
+    "outcome": "Dogfood repo evidence requirements through a reviewed repo-local catalogue and close the lifecycle typed-exit regression without entering the research epic or authorization-gated dispatch work.",
+    "non_goals": [
+      "Do not close #2817 without its explicitly authorized substantive non-local dispatch.",
+      "Do not modify research epic #2821-#2827 or add a parallel policy/benchmark engine."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "Complete #2906/#2909 and re-close #2564 as the final implementation layer of the repo-requirements stack.",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "Repo-local assurance requirements, scoped dogfooding references, Verification evidence routing, lifecycle selector/result behavior, focused fixtures, disposition documentation, and closeout records."
+    ],
+    "effects": []
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected-local",
+      "owner": "repo-evidence-dogfood"
+    },
+    "proof_posture": {
+      "state": "accepted",
+      "refs": [
+        ".agentic-workspace/verification/assurance-evidence-records.json",
+        ".agentic-workspace/verification/manifest.toml"
+      ]
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    },
+    "integration": {
+      "status": "feature-complete-integration-pending",
+      "proposal_id": "repo-evidence-dogfood-archive-owner",
+      "proposal_ref": ".agentic-workspace/planning/integration-proposals/repo-evidence-dogfood-archive-owner.integration-proposal.json",
+      "requested_transition": "archive-owner",
+      "proof_refs": [
+        ".agentic-workspace/verification/assurance-evidence-records.json",
+        ".agentic-workspace/verification/manifest.toml"
+      ],
+      "authority": "feature-head declaration; target integration remains terminal authority"
+    }
+  },
+  "references": [
+    "#2564",
+    "#2906",
+    "#2909",
+    "docs/maintainer/repo-evidence-requirements.md#initial-dogfood-policy"
+  ],
+  "next_action": "Apply integration proposal 'repo-evidence-dogfood-archive-owner' from admitted target authority.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Dogfood repo evidence requirements is implemented, validated, and closed out honestly."
+    ],
+    "requirements": [
+      "Focused typed-exit/selector/session, config/instruction, Planning measurement, proof residue/reuse, direct-work, Verification, lint/type, maintainer, and Planning checks pass before canonical proof."
+    ],
+    "refs": [
+      ".agentic-workspace/verification/assurance-evidence-records.json",
+      ".agentic-workspace/verification/manifest.toml"
+    ]
+  },
+  "continuation": {
+    "owner": "none",
+    "residual_intent": "none"
+  },
+  "specialist_contracts": [],
+  "goal": [
+    "Resolve #2909 and #2564 and complete #2906 by seeding a reviewed repo-owned invariant/measurement/guideline set, fixing shared typed-result/process-exit coupling and selector fail-fast behavior, and proving deterministic, measurable, advisory, independent-owner, proportionality, currentness, minimal-install, and exact-reconciliation paths through the existing operating decision."
+  ],
+  "non_goals": [
+    "Do not close #2817 without an explicitly authorized substantive non-local dispatch; do not modify research epic #2821-#2827; do not add portable Agentic Workspace thresholds, a policy engine, benchmark daemon, telemetry store, or prose-to-authority parser."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "Implement every open issue outside #2821-#2827 in consolidated stacked PRs; #2817 remains authorization-gated until the user explicitly authorizes its required dispatch.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "GitHub issue #2817"
+  },
+  "execution_bounds": {
+    "allowed paths": "src/agentic_workspace/**; tests/**; .agentic-workspace/config.toml; .agentic-workspace/instructions/**; .agentic-workspace/verification/**; .agentic-workspace/planning/**; docs/**; SYSTEM_INTENT.md; .release/changes/**",
+    "max changed files": "35",
+    "required validation commands": "Typed exit/selector/session-log fixtures; repo policy config/static/conformance tests; maintained absolute/scaling/count/output/direct-work fixtures; lint/typecheck/docs/maintainer/planning; repository-selected proof.",
+    "ask-before-refactor threshold": "Stop if the fix requires command-specific exit mappings, a second operating decision, generic benchmark execution, or a policy DSL rather than the shared root CLI/evidence boundary.",
+    "stop before touching": "Research epic #2821-#2827; structured-executor runtime; automatic non-local dispatch without explicit user authorization; release/merge; unrelated user changes."
+  },
+  "touched_paths": [
+    "src/agentic_workspace/**",
+    "tests/**",
+    ".agentic-workspace/config.toml",
+    ".agentic-workspace/instructions/**",
+    ".agentic-workspace/verification/**",
+    ".agentic-workspace/planning/**",
+    "docs/**",
+    ".release/changes/**"
+  ],
+  "validation_commands": [
+    "uv run --active pytest tests/test_workspace_cli.py tests/test_workspace_config_cli.py tests/test_session_logging.py -k selector -q",
+    "uv run --active pytest tests/test_instruction_clause_ir.py tests/test_workspace_implement_cli.py -k measurement -q",
+    "make lint-workspace",
+    "make typecheck",
+    "make schema-reference-docs",
+    "make maintainer-surfaces",
+    "make check-planning-nosync",
+    "uv run --frozen --active --no-sync python scripts/run_agentic_workspace.py proof --target . --changed <paths> --format json"
+  ],
+  "completion_criteria": [
+    "All retained #2909 policies have a documented class, applicability, effect, source revision, evidence/check owner, and exact detail route; guidelines remain advisory.",
+    "The reopened lifecycle selector and selected-proof regressions use the shared typed-result exit convention: invalid selection is rejected before lifecycle construction, effectful failure reports retry/mutation posture, and typed/process/session statuses agree while successful and dry-run results remain zero.",
+    "Selectors are validated before expensive payload construction and mutation, with one bounded correction/inventory route.",
+    "Maintained repo-local fixtures cover selected Planning absolute/scaling budgets, invalid-selector time/output, selected-proof zero residue/current reuse, and existing authoritative output-profile budgets; unstable duplicate narrow-proof latency policy is explicitly deferred rather than fabricated.",
+    "Deterministic invariant, measurable requirement, guideline, scoped Markdown reference, independent specialized owner, stale/failed/unknown/unavailable evidence, and direct/no-signal proportionality all compile through the one operating decision.",
+    "#2817 policy is preserved without claiming its dispatch-dependent acceptance complete; #2821-#2827 remain unchanged."
+  ],
+  "proof_report": {
+    "validation proof": ".agentic-workspace/verification/assurance-evidence-records.json, .agentic-workspace/verification/manifest.toml",
+    "proof achieved now": "yes; integration-propose recorded accepted feature-head proof.",
+    "evidence for \"proof achieved\" state": ".agentic-workspace/verification/assurance-evidence-records.json, .agentic-workspace/verification/manifest.toml"
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "current planning owner",
+    "handoff source": "repo-evidence-dogfood",
+    "what happened": "Dogfood repo evidence requirements through a reviewed repo-local catalogue and close the lifecycle typed-exit regression without entering the research epic or authorization-gated dispatch work.",
+    "scope touched": "Repo-local assurance requirements, scoped dogfooding references, Verification evidence routing, lifecycle selector/result behavior, focused fixtures, disposition documentation, and closeout records.",
+    "changed surfaces": "Repo-local assurance requirements, scoped dogfooding references, Verification evidence routing, lifecycle selector/result behavior, focused fixtures, disposition documentation, and closeout records.",
+    "validations run": ".agentic-workspace/verification/assurance-evidence-records.json, .agentic-workspace/verification/manifest.toml",
+    "result for continuation": "feature-head complete; terminal lifecycle remains target-authoritative",
+    "next step": "Apply integration proposal 'repo-evidence-dogfood-archive-owner' from admitted target authority."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; bounded feature-head scope and proof were reviewed.",
+    "proof status": "passed",
+    "intent served": "yes; target integration remains the terminal lifecycle authority.",
+    "config compliance": "used planning integration-propose command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": ".agentic-workspace/planning/integration-proposals/repo-evidence-dogfood-archive-owner.integration-proposal.json"
+  },
+  "intent_satisfaction": {
+    "original intent": "Dogfood repo evidence requirements through a reviewed repo-local catalogue and close the lifecycle typed-exit regression without entering the research epic or authorization-gated dispatch work.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": ".agentic-workspace/verification/assurance-evidence-records.json, .agentic-workspace/verification/manifest.toml",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "Feature-head proof is accepted; terminal lifecycle truth awaits target integration.",
+    "evidence carried forward": ".agentic-workspace/verification/assurance-evidence-records.json, .agentic-workspace/verification/manifest.toml",
+    "reopen trigger": "New contradictory evidence or rejected target integration."
+  }
+}
