@@ -365,3 +365,178 @@ def test_snapshot_revision_changes_when_source_revision_changes() -> None:
     second = compile_instruction_program(_program(facts=[changed_fact], clauses=[_clause("docs", "surface", "surface:docs")]))
 
     assert first["snapshot_revision"] != second["snapshot_revision"]
+
+
+def test_named_repo_requirements_join_hard_evidence_and_advisory_preference() -> None:
+    mechanisms = {
+        "repo_requirements": [
+            {
+                "id": "typed-exit",
+                "owner": "SYSTEM_INTENT.md",
+                "revision": "intent-r1",
+                "requirement_class": "invariant",
+                "source_intent_ref": "SYSTEM_INTENT.md#trust",
+                "source_intent_revision": "intent-r1",
+                "source_intent_current": True,
+                "target": "claim:claim-work-complete",
+                "satisfier": "evidence:typed-exit",
+                "evidence_owner": "verification:typed-exit",
+                "evidence_state": "failed",
+                "detail_route": "agentic-workspace proof --select typed-exit",
+            },
+            {
+                "id": "query-shaped",
+                "owner": "SYSTEM_INTENT.md",
+                "revision": "intent-r1",
+                "requirement_class": "guideline",
+                "source_intent_ref": "SYSTEM_INTENT.md#query-shaped",
+                "source_intent_revision": "intent-r1",
+                "source_intent_current": True,
+                "target": "operation:summary.selected",
+                "evidence_state": "unknown",
+            },
+        ]
+    }
+    capabilities = [
+        {
+            "id": "evidence:typed-exit",
+            "kind": "evidence",
+            "current": False,
+            "evidence_state": "failed",
+            "detail_route": "agentic-workspace proof --select typed-exit",
+            "source": _source("verification"),
+        }
+    ]
+
+    projection = compile_instruction_program(
+        instruction_program_from_existing_mechanisms({"instruction_mechanisms": mechanisms, "instruction_capabilities": capabilities}),
+        current_targets=["claim:claim-work-complete", "operation:summary.selected"],
+    )
+
+    assert projection["status"] == "blocked"
+    assert projection["blockers"][0]["reason_code"] == "failed-evidence"
+    assert projection["blockers"][0]["repair"] == "agentic-workspace proof --select typed-exit"
+    hard = projection["effects"]["require"][0]
+    assert hard["requirement"]["source_intent_ref"] == "SYSTEM_INTENT.md#trust"
+    assert projection["effects"]["prefer"][0]["target"] == "operation:summary.selected"
+
+
+def test_named_repo_requirement_stale_intent_is_claim_scoped_and_invalid_contracts_fail_closed() -> None:
+    stale = {
+        "repo_requirements": [
+            {
+                "id": "stale-policy",
+                "owner": "repo-policy",
+                "revision": "r1",
+                "requirement_class": "current-evidence",
+                "source_intent_ref": "docs/requirements.md#old",
+                "source_intent_revision": "r1",
+                "source_intent_current": False,
+                "target": "claim:claim-work-complete",
+                "satisfier": "evidence:stale-policy",
+                "evidence_state": "stale-intent",
+                "detail_route": "review the superseded source requirement",
+            }
+        ]
+    }
+    capability = {
+        "id": "evidence:stale-policy",
+        "kind": "evidence",
+        "current": False,
+        "evidence_state": "stale-intent",
+        "detail_route": "review the superseded source requirement",
+        "source": _source("verification"),
+    }
+    program = instruction_program_from_existing_mechanisms({"instruction_mechanisms": stale, "instruction_capabilities": [capability]})
+
+    unrelated = compile_instruction_program(program, current_targets=["operation:summary"])
+    relevant = compile_instruction_program(program, current_targets=["claim:claim-work-complete"])
+
+    assert unrelated["blockers"] == []
+    assert relevant["blockers"][0]["reason_code"] == "stale-revision"
+    assert relevant["blockers"][0]["repair"] == "review the superseded source requirement"
+
+    invalid = instruction_program_from_existing_mechanisms(
+        {
+            "instruction_mechanisms": {
+                "repo_requirements": [{"id": "bad", "owner": "repo", "revision": "r1", "requirement_class": "hard", "target": "claim:x"}]
+            }
+        }
+    )
+    invalid_projection = compile_instruction_program(invalid, current_targets=["claim:x"])
+    assert invalid_projection["status"] == "invalid"
+    assert invalid_projection["diagnostics"][0]["code"] == "invalid-repo-requirement"
+
+
+def test_assurance_named_requirement_normalizes_into_the_existing_operating_decision() -> None:
+    assurance = {
+        "active": [
+            {
+                "id": "typed-exit",
+                "requirement_class": "invariant",
+                "source_intent_ref": "SYSTEM_INTENT.md#trust",
+                "source_intent_revision": "intent-r1",
+                "source_intent_current": True,
+                "required_evidence": ["typed-exit-fixture"],
+                "blocking_claims": ["claim-work-complete"],
+                "evidence_owner": "verification:typed-exit",
+                "detail_route": "agentic-workspace proof --select typed-exit",
+            }
+        ],
+        "evidence_status": [{"requirement_id": "typed-exit", "evidence_label": "typed-exit-fixture", "status": "failed"}],
+    }
+    mechanisms, capabilities = _projection_instruction_mechanisms({"assurance_requirements": assurance}, {"blocked_claim_classes": []})
+    decision = compile_operating_decision(
+        inputs={
+            "instruction_mechanisms": mechanisms,
+            "instruction_capabilities": capabilities,
+            "requested_claim_classes": ["claim-work-complete"],
+        }
+    )
+
+    assert decision["status"] == "blocked"
+    assert decision["external_blocker"]["reason_code"] == "failed-evidence"
+    effect = decision["instruction_clause_projection"]["effects"]["require"][0]
+    assert effect["requirement"]["evidence_owner"] == "verification:typed-exit"
+    assert decision["instruction_clause_projection"]["effects"]["restrict"] == []
+
+
+def test_named_repo_requirement_preserves_distinct_evidence_states() -> None:
+    expected = {
+        "failed": "failed-evidence",
+        "stale": "stale-revision",
+        "unknown": "unresolved-evidence",
+        "unavailable": "unavailable-evidence",
+        "invalid": "invalid-evidence",
+    }
+    for evidence_state, reason_code in expected.items():
+        mechanisms = {
+            "repo_requirements": [
+                {
+                    "id": evidence_state,
+                    "owner": "repo-policy",
+                    "revision": "r1",
+                    "requirement_class": "current-evidence",
+                    "source_intent_ref": "docs/requirements.md#budget",
+                    "source_intent_revision": "r1",
+                    "source_intent_current": True,
+                    "target": "claim:claim-work-complete",
+                    "satisfier": f"evidence:{evidence_state}",
+                    "evidence_state": evidence_state,
+                }
+            ]
+        }
+        capabilities = [
+            {
+                "id": f"evidence:{evidence_state}",
+                "kind": "evidence",
+                "current": False,
+                "evidence_state": evidence_state,
+                "source": _source("verification"),
+            }
+        ]
+        projection = compile_instruction_program(
+            instruction_program_from_existing_mechanisms({"instruction_mechanisms": mechanisms, "instruction_capabilities": capabilities}),
+            current_targets=["claim:claim-work-complete"],
+        )
+        assert projection["blockers"][0]["reason_code"] == reason_code

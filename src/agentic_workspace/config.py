@@ -121,6 +121,11 @@ SUPPORTED_ASSURANCE_REQUIREMENT_BLOCKING_CLAIMS = (
     "claim-work-complete",
     "close-parent-lane",
 )
+SUPPORTED_REPO_REQUIREMENT_CLASSES = (
+    "invariant",
+    "current-evidence",
+    "guideline",
+)
 SUPPORTED_DELEGATION_TARGET_STRENGTHS = (
     "strong",
     "medium",
@@ -506,6 +511,13 @@ class AssuranceRequirement:
     waiver: AssuranceRequirementDisposition | None
     dismissal: AssuranceRequirementDisposition | None
     notes: str | None
+    requirement_class: str | None
+    source_intent_ref: str | None
+    source_intent_revision: str | None
+    source_intent_current: bool | None
+    preference_target: str | None
+    evidence_owner: str | None
+    detail_route: str | None
 
 
 @dataclass(frozen=True)
@@ -1122,6 +1134,13 @@ def _load_assurance_requirements(
         "waiver",
         "dismissal",
         "notes",
+        "requirement_class",
+        "source_intent_ref",
+        "source_intent_revision",
+        "source_intent_current",
+        "preference_target",
+        "evidence_owner",
+        "detail_route",
     }
     activation_fields = {
         "applies_to_paths",
@@ -1144,6 +1163,61 @@ def _load_assurance_requirements(
         if not any(activation_values.values()):
             allowed = ", ".join(sorted(activation_fields))
             raise WorkspaceUsageError(f"{requirement_path.as_posix()} requires at least one activation signal: {allowed}.")
+        requirement_class = (
+            require_required_enum(
+                payload=raw_requirement,
+                key="requirement_class",
+                config_path=requirement_path,
+                allowed=SUPPORTED_REPO_REQUIREMENT_CLASSES,
+            )
+            if "requirement_class" in raw_requirement
+            else None
+        )
+        source_intent_ref = require_optional_string(payload=raw_requirement, key="source_intent_ref", config_path=requirement_path)
+        source_intent_revision = require_optional_string(
+            payload=raw_requirement, key="source_intent_revision", config_path=requirement_path
+        )
+        source_intent_current = require_optional_bool(payload=raw_requirement, key="source_intent_current", config_path=requirement_path)
+        preference_target = require_optional_string(payload=raw_requirement, key="preference_target", config_path=requirement_path)
+        evidence_owner = require_optional_string(payload=raw_requirement, key="evidence_owner", config_path=requirement_path)
+        detail_route = require_optional_string(payload=raw_requirement, key="detail_route", config_path=requirement_path)
+        blocking_claims = require_optional_string_list(
+            payload=raw_requirement,
+            key="blocking_claims",
+            config_path=requirement_path,
+            allowed=SUPPORTED_ASSURANCE_REQUIREMENT_BLOCKING_CLAIMS,
+        )
+        required_evidence = require_optional_string_list(payload=raw_requirement, key="required_evidence", config_path=requirement_path)
+        force = require_required_enum(
+            payload=raw_requirement,
+            key="force",
+            config_path=requirement_path,
+            allowed=SUPPORTED_WORKFLOW_OBLIGATION_FORCES,
+        )
+        if requirement_class is not None and not (source_intent_ref and source_intent_revision and source_intent_current is not None):
+            raise WorkspaceUsageError(
+                f"{requirement_path.as_posix()} named repo requirements require source_intent_ref, "
+                "source_intent_revision, and source_intent_current."
+            )
+        if requirement_class == "guideline":
+            if not preference_target or not preference_target.startswith(("surface:", "skill:", "operation:")):
+                raise WorkspaceUsageError(
+                    f"{requirement_path.as_posix()} guideline requires a surface:, skill:, or operation: preference_target."
+                )
+            if blocking_claims or force not in {"informational", "recommended"}:
+                raise WorkspaceUsageError(f"{requirement_path.as_posix()} guideline cannot block claims or use enforcing force.")
+        elif requirement_class in {"invariant", "current-evidence"}:
+            if not required_evidence or not blocking_claims or not evidence_owner or not detail_route:
+                raise WorkspaceUsageError(
+                    f"{requirement_path.as_posix()} hard named repo requirements require required_evidence, "
+                    "blocking_claims, evidence_owner, and detail_route."
+                )
+            if not evidence_owner.startswith(("assurance:", "verification:", "proof:", "module:")):
+                raise WorkspaceUsageError(
+                    f"{requirement_path.as_posix()} evidence_owner must name an assurance:, verification:, proof:, or module: owner."
+                )
+            if force not in {"required-before-closeout", "blocking"}:
+                raise WorkspaceUsageError(f"{requirement_path.as_posix()} hard named repo requirements require enforcing force.")
         requirements.append(
             AssuranceRequirement(
                 id=str(requirement_id).strip(),
@@ -1160,29 +1234,24 @@ def _load_assurance_requirements(
                 applies_to_risk_refs=activation_values["applies_to_risk_refs"],
                 applies_to_invariant_refs=activation_values["applies_to_invariant_refs"],
                 authority_refs=require_optional_string_list(payload=raw_requirement, key="authority_refs", config_path=requirement_path),
-                required_evidence=require_optional_string_list(
-                    payload=raw_requirement, key="required_evidence", config_path=requirement_path
-                ),
+                required_evidence=required_evidence,
                 proof_profile=require_optional_string(payload=raw_requirement, key="proof_profile", config_path=requirement_path),
                 workflow_obligation_refs=require_optional_string_list(
                     payload=raw_requirement, key="workflow_obligation_refs", config_path=requirement_path
                 ),
                 review_owner=require_optional_string(payload=raw_requirement, key="review_owner", config_path=requirement_path),
-                force=require_required_enum(
-                    payload=raw_requirement,
-                    key="force",
-                    config_path=requirement_path,
-                    allowed=SUPPORTED_WORKFLOW_OBLIGATION_FORCES,
-                ),
-                blocking_claims=require_optional_string_list(
-                    payload=raw_requirement,
-                    key="blocking_claims",
-                    config_path=requirement_path,
-                    allowed=SUPPORTED_ASSURANCE_REQUIREMENT_BLOCKING_CLAIMS,
-                ),
+                force=force,
+                blocking_claims=blocking_claims,
                 waiver=_require_disposition(payload=raw_requirement, key="waiver", config_path=requirement_path),
                 dismissal=_require_disposition(payload=raw_requirement, key="dismissal", config_path=requirement_path),
                 notes=require_optional_string(payload=raw_requirement, key="notes", config_path=requirement_path),
+                requirement_class=requirement_class,
+                source_intent_ref=source_intent_ref,
+                source_intent_revision=source_intent_revision,
+                source_intent_current=source_intent_current,
+                preference_target=preference_target,
+                evidence_owner=evidence_owner,
+                detail_route=detail_route,
             )
         )
     return (tuple(requirement for requirement in requirements if requirement.id), warnings)

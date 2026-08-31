@@ -108,6 +108,13 @@ Repo-owned Agentic Workspace configuration stored in .agentic-workspace/config.t
 | `assurance.requirements.<name>.dismissal.applicability.expires_at` | string | no |  | Time after which the disposition is inactive. |  |  |
 | `assurance.requirements.<name>.dismissal.applicability.review_after` | string | no |  | Time at which owner review is required and the disposition becomes inactive. |  |  |
 | `assurance.requirements.<name>.notes` | string | no |  | Optional repo-local note about this requirement. |  |  |
+| `assurance.requirements.<name>.requirement_class` | enum `"invariant"`, `"current-evidence"`, `"guideline"` | no |  | Optional standing repo requirement class. Omit for legacy task-scoped assurance requirements. |  |  |
+| `assurance.requirements.<name>.source_intent_ref` | string | no |  | Strongest current intent, requirement, or explicit repo-policy owner for this standing requirement. |  |  |
+| `assurance.requirements.<name>.source_intent_revision` | string | no |  | Revision of the source intent or requirement used to derive this observable contract. |  |  |
+| `assurance.requirements.<name>.source_intent_current` | boolean | no |  | Whether the source intent revision remains current; false forces re-evaluation instead of an immortal gate. |  |  |
+| `assurance.requirements.<name>.preference_target` | string | no |  | Existing surface, skill, or operation target influenced by a guideline. |  |  |
+| `assurance.requirements.<name>.evidence_owner` | string | no |  | Existing assurance, Verification, proof, or domain owner that produces the evidence. |  |  |
+| `assurance.requirements.<name>.detail_route` | string | no |  | Bounded owner route for evidence detail or recovery. |  |  |
 | `assurance.subsystem_profiles` | object | no | `{}` | Subsystem-scoped assurance profiles keyed by existing .agentic-workspace/OWNERSHIP.toml subsystem ids. |  |  |
 | `assurance.subsystem_profiles.<name>` | object | no |  | One host-owned assurance profile for an ownership subsystem. |  | x-agentic-workspace-unknown-properties: "warn" |
 | `assurance.subsystem_profiles.<name>.assurance_level` | enum `"low"`, `"medium"`, `"high"`, `"critical"` | yes |  | Repo-interpreted assurance level for the matched subsystem. |  |  |

@@ -57,6 +57,8 @@
           "id": {"type": "string", "minLength": 1},
           "kind": {"enum": ["surface", "skill", "operation", "evidence", "human-decision"]},
           "current": {"type": "boolean"},
+          "evidence_state": {"type": "string"},
+          "detail_route": {"type": "string"},
           "source": {"$ref": "#/$defs/source"}
         },
         "additionalProperties": false
@@ -114,7 +116,22 @@
         "kind": {"enum": ["surface", "prefer", "require", "restrict"]},
         "target": {"type": "string", "pattern": "^(surface|skill|operation|evidence|human|action|effect|claim):"},
         "satisfier": {"type": "string"},
-        "reason": {"type": "string"}
+        "reason": {"type": "string"},
+        "requirement": {
+          "type": "object",
+          "description": "Compact source/evidence metadata for a named repo requirement; effect authority remains in this clause.",
+          "properties": {
+            "id": {"type": "string"},
+            "requirement_class": {"enum": ["invariant", "current-evidence", "guideline"]},
+            "source_intent_ref": {"type": "string"},
+            "source_intent_revision": {"type": "string"},
+            "source_intent_current": {"type": "boolean"},
+            "evidence_owner": {"type": "string"},
+            "evidence_state": {"type": "string"},
+            "detail_route": {"type": "string"}
+          },
+          "additionalProperties": false
+        }
       },
       "additionalProperties": false
     }

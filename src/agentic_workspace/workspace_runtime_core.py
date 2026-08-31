@@ -3876,6 +3876,13 @@ def _assurance_requirement_payloads(config: WorkspaceConfig | None) -> list[dict
                 "waiver": _assurance_disposition_payload(requirement.waiver),
                 "dismissal": _assurance_disposition_payload(requirement.dismissal),
                 "notes": requirement.notes,
+                "requirement_class": requirement.requirement_class,
+                "source_intent_ref": requirement.source_intent_ref,
+                "source_intent_revision": requirement.source_intent_revision,
+                "source_intent_current": requirement.source_intent_current,
+                "preference_target": requirement.preference_target,
+                "evidence_owner": requirement.evidence_owner,
+                "detail_route": requirement.detail_route,
             }
         )
     return payloads
@@ -4441,6 +4448,13 @@ def _assurance_status_for_requirement(
         "review_owner": requirement.get("review_owner"),
         "force": str(requirement.get("force", "recommended")),
         "blocking_claims": _list_payload(requirement.get("blocking_claims")),
+        "requirement_class": requirement.get("requirement_class"),
+        "source_intent_ref": requirement.get("source_intent_ref"),
+        "source_intent_revision": requirement.get("source_intent_revision"),
+        "source_intent_current": requirement.get("source_intent_current"),
+        "preference_target": requirement.get("preference_target"),
+        "evidence_owner": requirement.get("evidence_owner"),
+        "detail_route": requirement.get("detail_route"),
         "next_action": {
             "id": "record-assurance-evidence" if missing_evidence else "none",
             "why": "Required assurance evidence is missing before broad completion claims."
@@ -4676,6 +4690,13 @@ def _compact_assurance_requirements(value: Any) -> dict[str, Any]:
                     "review_owner",
                     "force",
                     "blocking_claims",
+                    "requirement_class",
+                    "source_intent_ref",
+                    "source_intent_revision",
+                    "source_intent_current",
+                    "preference_target",
+                    "evidence_owner",
+                    "detail_route",
                 )
                 if isinstance(item, dict) and key in item
             }

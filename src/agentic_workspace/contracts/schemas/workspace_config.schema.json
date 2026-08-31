@@ -520,8 +520,69 @@
                 "description": "Optional repo-local note about this requirement.",
                 "type": "string",
                 "minLength": 1
+              },
+              "requirement_class": {
+                "description": "Optional standing repo requirement class. Omit for legacy task-scoped assurance requirements.",
+                "enum": ["invariant", "current-evidence", "guideline"]
+              },
+              "source_intent_ref": {
+                "description": "Strongest current intent, requirement, or explicit repo-policy owner for this standing requirement.",
+                "type": "string",
+                "minLength": 1
+              },
+              "source_intent_revision": {
+                "description": "Revision of the source intent or requirement used to derive this observable contract.",
+                "type": "string",
+                "minLength": 1
+              },
+              "source_intent_current": {
+                "description": "Whether the source intent revision remains current; false forces re-evaluation instead of an immortal gate.",
+                "type": "boolean"
+              },
+              "preference_target": {
+                "description": "Existing surface, skill, or operation target influenced by a guideline.",
+                "type": "string",
+                "pattern": "^(surface|skill|operation):"
+              },
+              "evidence_owner": {
+                "description": "Existing assurance, Verification, proof, or domain owner that produces the evidence.",
+                "type": "string",
+                "minLength": 1
+              },
+              "detail_route": {
+                "description": "Bounded owner route for evidence detail or recovery.",
+                "type": "string",
+                "minLength": 1
               }
             },
+            "allOf": [
+              {
+                "if": {"required": ["requirement_class"]},
+                "then": {"required": ["source_intent_ref", "source_intent_revision", "source_intent_current"]}
+              },
+              {
+                "if": {"properties": {"requirement_class": {"const": "guideline"}}, "required": ["requirement_class"]},
+                "then": {
+                  "required": ["preference_target"],
+                  "properties": {
+                    "force": {"enum": ["informational", "recommended"]},
+                    "blocking_claims": {"maxItems": 0}
+                  }
+                }
+              },
+              {
+                "if": {"properties": {"requirement_class": {"enum": ["invariant", "current-evidence"]}}, "required": ["requirement_class"]},
+                "then": {
+                  "required": ["required_evidence", "blocking_claims", "evidence_owner", "detail_route"],
+                  "properties": {
+                    "required_evidence": {"minItems": 1},
+                    "blocking_claims": {"minItems": 1},
+                    "evidence_owner": {"pattern": "^(assurance|verification|proof|module):"},
+                    "force": {"enum": ["required-before-closeout", "blocking"]}
+                  }
+                }
+              }
+            ],
             "additionalProperties": true
           }
         },

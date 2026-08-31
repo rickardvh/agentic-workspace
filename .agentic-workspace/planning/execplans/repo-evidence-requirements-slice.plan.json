@@ -1,0 +1,180 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "repo-evidence-requirements-slice",
+  "title": "Compile named repo requirements",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "closeout",
+  "revision": 5,
+  "intent": {
+    "outcome": "GitHub issues #2906 and #2908",
+    "non_goals": [
+      "Leave adjacent backlog or follow-on work out of this plan."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "GitHub issues #2906 and #2908",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "Fill in the concrete files before implementation starts."
+    ],
+    "effects": []
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected-local",
+      "owner": "repo-evidence-requirements-slice"
+    },
+    "proof_posture": {
+      "state": "accepted",
+      "refs": [
+        ".agentic-workspace/local/proof-receipts/last.json"
+      ]
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    },
+    "delegation": {
+      "state": "recorded",
+      "route": "keep-local",
+      "reason": "Current assignment policy is local-preferred; the slice is one cohesive shared-contract change, and non-local delegation is not explicitly authorized."
+    },
+    "integration": {
+      "status": "feature-complete-integration-pending",
+      "proposal_id": "repo-evidence-requirements-slice-archive-owner",
+      "proposal_ref": ".agentic-workspace/planning/integration-proposals/repo-evidence-requirements-slice-archive-owner.integration-proposal.json",
+      "requested_transition": "archive-owner",
+      "proof_refs": [
+        ".agentic-workspace/local/proof-receipts/last.json"
+      ],
+      "authority": "feature-head declaration; target integration remains terminal authority"
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "GitHub issues #2906 and #2908",
+      "label": "GitHub issues #2906 and #2908",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Apply integration proposal 'repo-evidence-requirements-slice-archive-owner' from admitted target authority.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Compile named repo requirements is implemented, validated, and closed out honestly."
+    ],
+    "requirements": [
+      "Fill in the narrowest command that proves the promoted work."
+    ],
+    "refs": [
+      ".agentic-workspace/local/proof-receipts/last.json"
+    ]
+  },
+  "continuation": {
+    "owner": "none",
+    "residual_intent": "none"
+  },
+  "specialist_contracts": [
+    {
+      "kind": "planning-delegation/v1",
+      "target": "planning://delegation/keep-local",
+      "revision": 1
+    }
+  ],
+  "goal": [
+    "Resolve #2908 and the named-requirement portion of #2906 by compiling source-owned invariant, current-evidence, and advisory requirement references through the existing instruction effects and operating decision, including authority/currentness/detail-route/static-validation fixtures."
+  ],
+  "non_goals": [
+    "Do not implement threshold/comparator measurement semantics owned by #2907, seed the full repository policy set owned by #2909, close #2564 or #2817, create a peer policy/acceptance engine, parse prose into authority, or modify research epic #2821-#2827."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "Resolve #2906-#2909 and #2564 as a consolidated stacked PR series while preserving the separate #2821-#2827 research epic and the authorization boundary on #2817.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/lanes/repo-evidence-requirements.lane.json"
+  },
+  "execution_bounds": {
+    "allowed paths": "src/agentic_workspace/**; tests/**; contracts/**; packages/**; .agentic-workspace/instructions/**; .agentic-workspace/verification/**; .agentic-workspace/planning/**; docs/**; .changeset/**",
+    "max changed files": "40",
+    "required validation commands": "Focused operating-decision, instruction, assurance, Verification, schema, and static-contract tests; repository-selected proof for changed paths.",
+    "ask-before-refactor threshold": "Stop if the join requires a new public command family, peer decision authority, general policy DSL, or changes outside existing instruction/assurance/Verification/proof ownership.",
+    "stop before touching": "Research epic #2821-#2827 semantics; structured-executor runtime; release branch; unrelated user changes; non-local delegation without explicit user authorization."
+  },
+  "touched_paths": [
+    "src/agentic_workspace/**",
+    "tests/**",
+    "contracts/**",
+    "packages/**",
+    ".agentic-workspace/instructions/**",
+    ".agentic-workspace/verification/**",
+    ".agentic-workspace/planning/**",
+    "docs/**",
+    ".changeset/**"
+  ],
+  "validation_commands": [
+    "uv run --frozen --active --no-sync pytest -q tests/test_instruction_clause_ir.py tests/test_scoped_instructions.py tests/test_workspace_config_cli.py",
+    "make lint-workspace",
+    "make typecheck",
+    "uv run --active python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run --active python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "make schema-reference-docs",
+    "make maintainer-surfaces",
+    "make check-planning-nosync",
+    "uv run --active pytest tests/test_workspace_cli.py -q",
+    "uv run --frozen --active --no-sync python scripts/run_agentic_workspace.py proof --target . --changed <paths> --format json"
+  ],
+  "completion_criteria": [
+    "A stable source-owned named requirement preserves intent/source revision, applicability/currentness, evidence/check identity, requirement class, target, and existing instruction effect.",
+    "Hard invariant and current-evidence fixtures restrict only relevant action/claim paths through the one operating decision; advisory guidance remains non-blocking.",
+    "Scoped Markdown and specialized owners can reference the join without exposing a new policy DSL or loading irrelevant evidence owners.",
+    "Static fixtures reject broken references, unauthorized hard effects, invalid targets/satisfiers, and conflicting owners.",
+    "At least one overlapping older gate projection is derived or removed, and focused proof passes without changes to #2821-#2827."
+  ],
+  "proof_report": {
+    "validation proof": ".agentic-workspace/local/proof-receipts/last.json",
+    "proof achieved now": "yes; integration-propose recorded accepted feature-head proof.",
+    "evidence for \"proof achieved\" state": ".agentic-workspace/local/proof-receipts/last.json"
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "current planning owner",
+    "handoff source": "repo-evidence-requirements-slice",
+    "what happened": "GitHub issues #2906 and #2908",
+    "scope touched": "Fill in the concrete files before implementation starts.",
+    "changed surfaces": "Fill in the concrete files before implementation starts.",
+    "validations run": ".agentic-workspace/local/proof-receipts/last.json",
+    "result for continuation": "feature-head complete; terminal lifecycle remains target-authoritative",
+    "next step": "Apply integration proposal 'repo-evidence-requirements-slice-archive-owner' from admitted target authority."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; bounded feature-head scope and proof were reviewed.",
+    "proof status": "passed",
+    "intent served": "yes; target integration remains the terminal lifecycle authority.",
+    "config compliance": "used planning integration-propose command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": ".agentic-workspace/planning/integration-proposals/repo-evidence-requirements-slice-archive-owner.integration-proposal.json"
+  },
+  "intent_satisfaction": {
+    "original intent": "GitHub issues #2906 and #2908",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": ".agentic-workspace/local/proof-receipts/last.json",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "Feature-head proof is accepted; terminal lifecycle truth awaits target integration.",
+    "evidence carried forward": ".agentic-workspace/local/proof-receipts/last.json",
+    "reopen trigger": "New contradictory evidence or rejected target integration."
+  }
+}

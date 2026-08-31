@@ -944,6 +944,56 @@ blocking_claims = ["certify-compliant"]
     assert "blocking_claims entries must be one of" in capsys.readouterr().err
 
 
+def test_config_command_accepts_source_bound_named_repo_requirement_and_rejects_enforcing_guideline(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[assurance.requirements.typed_exit]
+level = "high"
+applies_to_paths = ["src/**"]
+required_evidence = ["typed_exit_fixture"]
+force = "required-before-closeout"
+blocking_claims = ["claim-work-complete"]
+requirement_class = "invariant"
+source_intent_ref = "SYSTEM_INTENT.md#trust"
+source_intent_revision = "r1"
+source_intent_current = true
+evidence_owner = "verification:typed-exit"
+detail_route = "agentic-workspace proof --select typed-exit"
+""",
+    )
+
+    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
+    requirement = json.loads(capsys.readouterr().out)["assurance"]["requirements"][0]
+    assert requirement["requirement_class"] == "invariant"
+    assert requirement["source_intent_ref"] == "SYSTEM_INTENT.md#trust"
+    assert requirement["evidence_owner"] == "verification:typed-exit"
+
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[assurance.requirements.cheaper]
+level = "low"
+applies_to_task_markers = ["assignment"]
+force = "blocking"
+blocking_claims = ["claim-work-complete"]
+requirement_class = "guideline"
+source_intent_ref = "SYSTEM_INTENT.md#cost"
+source_intent_revision = "r1"
+source_intent_current = true
+preference_target = "operation:assignment.best-fit"
+""",
+    )
+    with pytest.raises(SystemExit):
+        cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"])
+    assert "guideline cannot block claims" in capsys.readouterr().err
+
+
 def test_config_command_reports_enabled_advanced_features(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     (tmp_path / ".agentic-workspace/config.toml").write_text(

@@ -2344,13 +2344,75 @@ def _projection_instruction_mechanisms(payload: dict[str, Any], posture: dict[st
     assurance = _as_dict(payload.get("assurance_requirements"))
     assurance_revision = "sha256:" + _digest(assurance) if assurance else ""
     requirements: list[dict[str, Any]] = []
+    repo_requirements: list[dict[str, Any]] = []
     capabilities: list[dict[str, Any]] = []
+    evidence_items = [_as_dict(value) for value in _as_list(assurance.get("evidence_status"))]
     evidence_status = {
-        (str(item.get("requirement_id") or ""), str(item.get("evidence_label") or "")): str(item.get("status") or "")
-        for item in [_as_dict(value) for value in _as_list(assurance.get("evidence_status"))]
+        (str(item.get("requirement_id") or ""), str(item.get("evidence_label") or "")): str(item.get("status") or item.get("state") or "")
+        for item in evidence_items
+    }
+    requirement_states = {
+        str(item.get("requirement_id") or ""): str(item.get("state") or item.get("status") or "") for item in evidence_items
     }
     for requirement in [_as_dict(item) for item in _as_list(assurance.get("active"))]:
         requirement_id = str(requirement.get("id") or "requirement")
+        requirement_class = str(requirement.get("requirement_class") or "")
+        if requirement_class:
+            intent_current = requirement.get("source_intent_current") is True
+            owner = str(requirement.get("source_intent_ref") or "repo-requirements")
+            revision = str(requirement.get("source_intent_revision") or assurance_revision)
+            common = {
+                "id": requirement_id,
+                "owner": owner,
+                "revision": revision,
+                "requirement_class": requirement_class,
+                "source_intent_ref": requirement.get("source_intent_ref"),
+                "source_intent_revision": requirement.get("source_intent_revision"),
+                "source_intent_current": intent_current,
+                "evidence_owner": requirement.get("evidence_owner") or "assurance-requirements",
+                "detail_route": requirement.get("detail_route")
+                or "agentic-workspace report --target ./repo --section assurance_requirements --format json",
+            }
+            if requirement_class == "guideline":
+                repo_requirements.append(
+                    {
+                        **common,
+                        "target": str(requirement.get("preference_target") or ""),
+                        "applicable": intent_current,
+                        "evidence_state": requirement_states.get(requirement_id, "unknown"),
+                    }
+                )
+                continue
+            for claim in _as_list(requirement.get("blocking_claims")):
+                for label in _as_list(requirement.get("required_evidence")) or ["owner-disposition"]:
+                    satisfier = f"evidence:{requirement_id}:{label}"
+                    state = evidence_status.get((requirement_id, str(label))) or requirement_states.get(requirement_id, "missing")
+                    if not intent_current:
+                        state = "stale-intent"
+                    repo_requirements.append(
+                        {
+                            **common,
+                            "id": f"{requirement_id}:{claim}:{label}",
+                            "target": f"claim:{claim}",
+                            "satisfier": satisfier,
+                            "evidence_state": state,
+                        }
+                    )
+                    capabilities.append(
+                        {
+                            "id": satisfier,
+                            "kind": "evidence",
+                            "current": intent_current and state == "satisfied",
+                            "evidence_state": state,
+                            "detail_route": common["detail_route"],
+                            "source": {
+                                "owner": common["evidence_owner"],
+                                "revision": assurance_revision,
+                                "current": True,
+                            },
+                        }
+                    )
+            continue
         for claim in _as_list(requirement.get("blocking_claims")):
             for label in _as_list(requirement.get("required_evidence")) or ["owner-disposition"]:
                 satisfier = f"evidence:{requirement_id}:{label}"
@@ -2439,6 +2501,7 @@ def _projection_instruction_mechanisms(payload: dict[str, Any], posture: dict[st
             "scoped_instructions": scoped,
             "skill_routing": skills,
             "assurance_requirements": requirements,
+            "repo_requirements": repo_requirements,
             "claim_restrictions": restrictions,
             "bounded_controls": bounded_controls,
             "source_facts": module_facts,
