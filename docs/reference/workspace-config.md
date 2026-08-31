@@ -115,6 +115,23 @@ Repo-owned Agentic Workspace configuration stored in .agentic-workspace/config.t
 | `assurance.requirements.<name>.preference_target` | string | no |  | Existing surface, skill, or operation target influenced by a guideline. |  |  |
 | `assurance.requirements.<name>.evidence_owner` | string | no |  | Existing assurance, Verification, proof, or domain owner that produces the evidence. |  |  |
 | `assurance.requirements.<name>.detail_route` | string | no |  | Bounded owner route for evidence detail or recovery. |  |  |
+| `assurance.requirements.<name>.measurement` | object | no |  | Optional source-owned measurable condition evaluated against compact assurance evidence; the evidence producer cannot redefine this threshold. |  |  |
+| `assurance.requirements.<name>.measurement.kind` | const `"agentic-workspace/measurement-requirement/v1"` | yes |  | Versioned measurable-condition discriminator. |  |  |
+| `assurance.requirements.<name>.measurement.evidence_label` | string | yes |  | Required-evidence label whose compact result satisfies this condition. |  |  |
+| `assurance.requirements.<name>.measurement.metric` | string | yes |  | Repo-owned identity of the quantity being measured. |  |  |
+| `assurance.requirements.<name>.measurement.unit` | string | yes |  | Unit shared by observations and the threshold. |  |  |
+| `assurance.requirements.<name>.measurement.comparator` | enum `"lte"`, `"gte"`, `"eq"`, `"ratio-lte"`, `"ratio-gte"` | yes |  | Small supported comparison applied by AW to the observed or evaluated value. |  |  |
+| `assurance.requirements.<name>.measurement.threshold` | number | yes |  | Source-owned acceptance bound; evidence cannot redefine it. |  |  |
+| `assurance.requirements.<name>.measurement.tolerance` | number | no | `0` | Explicit non-negative tolerance applied to the source-owned threshold. |  |  |
+| `assurance.requirements.<name>.measurement.aggregation` | enum `"single"`, `"median"`, `"percentile"`, `"ratio"`, `"count"` | yes |  | Maintained aggregation represented by the compact observation. |  |  |
+| `assurance.requirements.<name>.measurement.minimum_samples` | integer | yes |  | Minimum sample count required before evidence may be current and sufficient. |  |  |
+| `assurance.requirements.<name>.measurement.subject` | string | yes |  | Measured subject or loaded fixture identity. |  |  |
+| `assurance.requirements.<name>.measurement.subject_revision` | string | yes |  | Revision of the measured subject or loaded fixture. |  |  |
+| `assurance.requirements.<name>.measurement.control_subject` | string | no |  | Control or baseline subject for a relative/scaling condition. |  |  |
+| `assurance.requirements.<name>.measurement.control_revision` | string | no |  | Revision of the relative/scaling control subject. |  |  |
+| `assurance.requirements.<name>.measurement.environment` | string | yes |  | Maintained runtime or benchmark environment identity; use none for deterministic checks. |  |  |
+| `assurance.requirements.<name>.measurement.source_revision` | string | yes |  | Revision of the evidence-producing fixture or measurement method. |  |  |
+| `assurance.requirements.<name>.measurement.excluded_costs` | array of string | no | `[]` | Explicit costs excluded by the maintained measurement method. |  |  |
 | `assurance.subsystem_profiles` | object | no | `{}` | Subsystem-scoped assurance profiles keyed by existing .agentic-workspace/OWNERSHIP.toml subsystem ids. |  |  |
 | `assurance.subsystem_profiles.<name>` | object | no |  | One host-owned assurance profile for an ownership subsystem. |  | x-agentic-workspace-unknown-properties: "warn" |
 | `assurance.subsystem_profiles.<name>.assurance_level` | enum `"low"`, `"medium"`, `"high"`, `"critical"` | yes |  | Repo-interpreted assurance level for the matched subsystem. |  |  |

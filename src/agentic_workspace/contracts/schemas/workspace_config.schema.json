@@ -553,6 +553,58 @@
                 "description": "Bounded owner route for evidence detail or recovery.",
                 "type": "string",
                 "minLength": 1
+              },
+              "measurement": {
+                "description": "Optional source-owned measurable condition evaluated against compact assurance evidence; the evidence producer cannot redefine this threshold.",
+                "type": "object",
+                "required": [
+                  "kind",
+                  "evidence_label",
+                  "metric",
+                  "unit",
+                  "comparator",
+                  "threshold",
+                  "aggregation",
+                  "minimum_samples",
+                  "subject",
+                  "subject_revision",
+                  "environment",
+                  "source_revision"
+                ],
+                "properties": {
+                  "kind": {"description": "Versioned measurable-condition discriminator.", "const": "agentic-workspace/measurement-requirement/v1"},
+                  "evidence_label": {"description": "Required-evidence label whose compact result satisfies this condition.", "type": "string", "minLength": 1},
+                  "metric": {"description": "Repo-owned identity of the quantity being measured.", "type": "string", "minLength": 1},
+                  "unit": {"description": "Unit shared by observations and the threshold.", "type": "string", "minLength": 1},
+                  "comparator": {"description": "Small supported comparison applied by AW to the observed or evaluated value.", "enum": ["lte", "gte", "eq", "ratio-lte", "ratio-gte"]},
+                  "threshold": {"description": "Source-owned acceptance bound; evidence cannot redefine it.", "type": "number"},
+                  "tolerance": {"description": "Explicit non-negative tolerance applied to the source-owned threshold.", "type": "number", "minimum": 0, "default": 0},
+                  "aggregation": {"description": "Maintained aggregation represented by the compact observation.", "enum": ["single", "median", "percentile", "ratio", "count"]},
+                  "minimum_samples": {"description": "Minimum sample count required before evidence may be current and sufficient.", "type": "integer", "minimum": 1},
+                  "subject": {"description": "Measured subject or loaded fixture identity.", "type": "string", "minLength": 1},
+                  "subject_revision": {"description": "Revision of the measured subject or loaded fixture.", "type": "string", "minLength": 1},
+                  "control_subject": {"description": "Control or baseline subject for a relative/scaling condition.", "type": "string", "minLength": 1},
+                  "control_revision": {"description": "Revision of the relative/scaling control subject.", "type": "string", "minLength": 1},
+                  "environment": {"description": "Maintained runtime or benchmark environment identity; use none for deterministic checks.", "type": "string", "minLength": 1},
+                  "source_revision": {"description": "Revision of the evidence-producing fixture or measurement method.", "type": "string", "minLength": 1},
+                  "excluded_costs": {
+                    "description": "Explicit costs excluded by the maintained measurement method.",
+                    "type": "array",
+                    "items": {"type": "string", "minLength": 1},
+                    "uniqueItems": true,
+                    "default": []
+                  }
+                },
+                "allOf": [
+                  {
+                    "if": {"properties": {"comparator": {"enum": ["ratio-lte", "ratio-gte"]}}, "required": ["comparator"]},
+                    "then": {
+                      "required": ["control_subject", "control_revision"],
+                      "properties": {"aggregation": {"const": "ratio"}}
+                    }
+                  }
+                ],
+                "additionalProperties": false
               }
             },
             "allOf": [
@@ -580,6 +632,13 @@
                     "evidence_owner": {"pattern": "^(assurance|verification|proof|module):"},
                     "force": {"enum": ["required-before-closeout", "blocking"]}
                   }
+                }
+              },
+              {
+                "if": {"required": ["measurement"]},
+                "then": {
+                  "required": ["requirement_class", "evidence_owner", "detail_route"],
+                  "properties": {"requirement_class": {"enum": ["current-evidence", "guideline"]}}
                 }
               }
             ],

@@ -501,6 +501,94 @@ def test_assurance_named_requirement_normalizes_into_the_existing_operating_deci
     assert decision["instruction_clause_projection"]["effects"]["restrict"] == []
 
 
+def test_measurement_summary_flows_through_existing_claim_enforcement() -> None:
+    measurement = {
+        "kind": "agentic-workspace/measurement-evidence-summary/v1",
+        "status": "failed",
+        "metric": "selected-read-latency",
+        "unit": "seconds",
+        "observed_value": 2.4,
+        "evaluated_value": 2.4,
+        "comparator": "lte",
+        "threshold": 2.0,
+        "tolerance": 0,
+        "aggregation": "median",
+        "sample_count": 5,
+        "subject": "planning-record-selected-read",
+        "subject_revision": "fixture-r1",
+        "environment": "maintained-ci",
+        "source_revision": "benchmark-r1",
+        "requirement_revision": "policy-r1",
+        "detail_ref": "scratch/measurements/selected-read.json",
+    }
+    assurance = {
+        "active": [
+            {
+                "id": "selected-latency",
+                "requirement_class": "current-evidence",
+                "source_intent_ref": "docs/requirements.md#selected-latency",
+                "source_intent_revision": "policy-r1",
+                "source_intent_current": True,
+                "required_evidence": ["cold-median"],
+                "blocking_claims": ["claim-work-complete"],
+                "evidence_owner": "verification:selected-latency",
+                "detail_route": "agentic-workspace proof --select selected-latency",
+            }
+        ],
+        "evidence_status": [
+            {
+                "requirement_id": "selected-latency",
+                "evidence_label": "cold-median",
+                "state": "failed",
+                "measurement": measurement,
+            }
+        ],
+    }
+    mechanisms, capabilities = _projection_instruction_mechanisms({"assurance_requirements": assurance}, {"blocked_claim_classes": []})
+    decision = compile_operating_decision(
+        inputs={
+            "instruction_mechanisms": mechanisms,
+            "instruction_capabilities": capabilities,
+            "requested_claim_classes": ["claim-work-complete"],
+        }
+    )
+
+    assert decision["status"] == "blocked"
+    assert decision["external_blocker"]["reason_code"] == "failed-evidence"
+    effect = decision["instruction_clause_projection"]["effects"]["require"][0]
+    assert effect["requirement"]["measurement"]["observed_value"] == 2.4
+    assert effect["requirement"]["measurement"]["threshold"] == 2.0
+
+    advisory_assurance = {
+        "active": [
+            {
+                "id": "preferred-latency",
+                "requirement_class": "guideline",
+                "source_intent_ref": "docs/requirements.md#cost",
+                "source_intent_revision": "policy-r1",
+                "source_intent_current": True,
+                "preference_target": "operation:summary.selected",
+                "evidence_owner": "verification:selected-latency",
+                "detail_route": "inspect preferred latency",
+            }
+        ],
+        "evidence_status": [{"requirement_id": "preferred-latency", "state": "failed", "measurement": measurement}],
+    }
+    advisory_mechanisms, advisory_capabilities = _projection_instruction_mechanisms(
+        {"assurance_requirements": advisory_assurance}, {"blocked_claim_classes": []}
+    )
+    advisory = compile_operating_decision(
+        inputs={
+            "instruction_mechanisms": advisory_mechanisms,
+            "instruction_capabilities": advisory_capabilities,
+            "requested_claim_classes": ["claim-work-complete"],
+        }
+    )
+    assert advisory["status"] != "blocked"
+    assert advisory["instruction_clause_projection"]["blockers"] == []
+    assert advisory["instruction_clause_projection"]["effects"]["prefer"][0]["requirement"]["measurement"]["status"] == "failed"
+
+
 def test_named_repo_requirement_preserves_distinct_evidence_states() -> None:
     expected = {
         "failed": "failed-evidence",

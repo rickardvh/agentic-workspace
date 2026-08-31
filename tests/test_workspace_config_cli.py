@@ -1063,6 +1063,56 @@ detail_route = "agentic-workspace proof --select typed-exit"
     assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
     requirements = json.loads(capsys.readouterr().out)["assurance"]["requirements"]
     assert [item["id"] for item in requirements].count("typed_exit") == 1
+def test_config_command_validates_source_owned_measurement_requirements(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    config_path = tmp_path / ".agentic-workspace/config.toml"
+    _write(
+        config_path,
+        """
+schema_version = 1
+
+[assurance.requirements.scaling]
+level = "high"
+applies_to_paths = ["src/**"]
+required_evidence = ["history_scaling"]
+force = "required-before-closeout"
+blocking_claims = ["claim-work-complete"]
+requirement_class = "current-evidence"
+source_intent_ref = "docs/requirements.md#scaling"
+source_intent_revision = "policy-r1"
+source_intent_current = true
+evidence_owner = "verification:history-scaling"
+detail_route = "agentic-workspace proof --select history-scaling"
+
+[assurance.requirements.scaling.measurement]
+kind = "agentic-workspace/measurement-requirement/v1"
+evidence_label = "history_scaling"
+metric = "selected-read-latency"
+unit = "seconds"
+comparator = "ratio-lte"
+threshold = 1.2
+aggregation = "ratio"
+minimum_samples = 5
+subject = "history-1000"
+subject_revision = "loaded-r1"
+control_subject = "history-empty"
+control_revision = "control-r1"
+environment = "maintained-ci"
+source_revision = "fixture-r1"
+excluded_costs = ["environment bootstrap"]
+""",
+    )
+
+    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
+    measurement = json.loads(capsys.readouterr().out)["assurance"]["requirements"][0]["measurement"]
+    assert measurement["comparator"] == "ratio-lte"
+    assert measurement["threshold"] == 1.2
+    assert measurement["control_subject"] == "history-empty"
+
+    _write(config_path, config_path.read_text(encoding="utf-8").replace('evidence_label = "history_scaling"', 'evidence_label = "other"'))
+    with pytest.raises(SystemExit):
+        cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"])
+    assert "measurement evidence_label must appear in required_evidence" in capsys.readouterr().err
 
 
 def test_config_command_reports_enabled_advanced_features(tmp_path: Path, capsys) -> None:

@@ -48,12 +48,38 @@ checks:
 
 The Markdown reference surfaces the named requirement. It does not manufacture a second check capability or hard gate; the assurance/Verification owner remains authoritative.
 
+## Measurable evidence
+
+A `current-evidence` requirement may own a deliberately small measurable condition. The condition fixes the metric, unit, comparator, threshold, aggregation, minimum samples, subject/fixture revision, environment, and evidence-source revision. The compact evidence record supplies observations; it cannot change the condition.
+
+```toml
+[assurance.requirements.selected_latency.measurement]
+kind = "agentic-workspace/measurement-requirement/v1"
+evidence_label = "cold_median"
+metric = "selected-read-latency"
+unit = "seconds"
+comparator = "lte"
+threshold = 2.0
+tolerance = 0.1
+aggregation = "median"
+minimum_samples = 5
+subject = "planning-record-selected-read"
+subject_revision = "fixture-r1"
+environment = "windows-ci-python-3.13"
+source_revision = "benchmark-r1"
+excluded_costs = ["environment bootstrap"]
+```
+
+The corresponding `.agentic-workspace/verification/assurance-evidence-records.json` item uses `agentic-workspace/measurement-evidence/v1`. It repeats the comparison and freshness identities, binds `requirement_revision` to the source-intent revision, and records `observed_value`, `sample_count`, `status`, and an exact `detail_ref`. Ratio evidence additionally names a control subject/revision and `baseline_value`; deterministic zero-residue evidence uses `aggregation = "count"`, `comparator = "eq"`, `threshold = 0`, and `environment = "none"`.
+
+AW evaluates the observation against the requirement-owned threshold. Identity changes produce stale evidence; malformed values produce invalid evidence; failed, unknown, and unavailable results remain distinct. Current matching evidence is reused with no measurement action. Only a relevant requirement with missing or non-current evidence exposes its one bounded detail/recovery route. Raw samples and verbose environment output stay behind the evidence owner’s detail reference.
+
 ## Current-surface disposition
 
 | Existing surface | Disposition |
 | --- | --- |
 | scoped Markdown `checks` | retained as the readable reference surface; named requirement refs now surface the assurance-owned requirement instead of creating a duplicate inline gate |
-| assurance requirements | retained as repo authoring, applicability, evidence, review, and claim-pressure owner |
+| assurance requirements | retained as repo authoring, applicability, measurable-condition, evidence, review, and claim-pressure owner |
 | Verification protocols/scenarios | retained as specialized evidence producers and review routes |
 | proof profiles and evidence admission | retained as execution/admission/currentness owners |
 | instruction clause IR | extended only with compact source/evidence metadata; remains the sole bounded effect compiler |

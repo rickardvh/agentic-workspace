@@ -15,6 +15,7 @@ from agentic_workspace.authority_envelope import (
     revalidate_mutation_baseline,
 )
 from agentic_workspace.config import workspace_pointer_block
+from agentic_workspace.workspace_runtime_core import _measurement_status_for_requirement
 
 
 def _write_empty_planning_state(target_root: Path) -> None:
@@ -2190,6 +2191,225 @@ blocking_claims = ["claim-work-complete"]
     assert assurance["evidence_status"][0]["evidence_present"] == ["workspace_runtime_proof"]
     assert assurance["evidence_records"]["status"] == "recorded"
     assert assurance["evidence_records"]["records"][0]["command"] == "make test-workspace"
+
+
+def test_measurable_assurance_evidence_is_source_bound_reusable_and_claim_ready(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[assurance.requirements.selected_latency]
+level = "high"
+applies_to_paths = ["src/runtime.py"]
+required_evidence = ["cold_median"]
+force = "required-before-closeout"
+blocking_claims = ["claim-work-complete"]
+requirement_class = "current-evidence"
+source_intent_ref = "docs/requirements.md#selected-latency"
+source_intent_revision = "policy-r1"
+source_intent_current = true
+evidence_owner = "verification:selected-latency"
+detail_route = "agentic-workspace proof --select selected-latency"
+
+[assurance.requirements.selected_latency.measurement]
+kind = "agentic-workspace/measurement-requirement/v1"
+evidence_label = "cold_median"
+metric = "selected-read-latency"
+unit = "seconds"
+comparator = "lte"
+threshold = 2.0
+tolerance = 0.1
+aggregation = "median"
+minimum_samples = 3
+subject = "planning-record-selected-read"
+subject_revision = "fixture-r1"
+environment = "windows-ci-python-3.13"
+source_revision = "benchmark-r1"
+excluded_costs = ["uv environment bootstrap"]
+""",
+    )
+    _write(tmp_path / "src" / "runtime.py", "VALUE = 1\n")
+    evidence_path = tmp_path / ".agentic-workspace" / "verification" / "assurance-evidence-records.json"
+    result = {
+        "kind": "agentic-workspace/measurement-evidence/v1",
+        "metric": "selected-read-latency",
+        "unit": "seconds",
+        "observed_value": 1.82,
+        "comparator": "lte",
+        "threshold": 2.0,
+        "aggregation": "median",
+        "sample_count": 5,
+        "subject": "planning-record-selected-read",
+        "subject_revision": "fixture-r1",
+        "environment": "windows-ci-python-3.13",
+        "source_revision": "benchmark-r1",
+        "requirement_revision": "policy-r1",
+        "status": "passed",
+        "detail_ref": "scratch/measurements/selected-latency.json",
+    }
+    _write_json(
+        evidence_path,
+        {
+            "kind": "agentic-workspace/assurance-evidence-records/v1",
+            "records": [
+                {
+                    "requirement_id": "selected_latency",
+                    "evidence_label": "cold_median",
+                    "status": "passed",
+                    "measurement": result,
+                }
+            ],
+        },
+    )
+
+    argv = [
+        "implement",
+        "--target",
+        str(tmp_path),
+        "--changed",
+        "src/runtime.py",
+        "--select",
+        "assurance_requirements",
+        "--format",
+        "json",
+    ]
+    assert cli.main(argv) == 0
+    assurance = json.loads(capsys.readouterr().out)["values"]["assurance_requirements"]
+    status = assurance["evidence_status"][0]
+    assert status["state"] == "satisfied"
+    assert status["measurement"]["observed_value"] == 1.82
+    assert status["measurement"]["threshold"] == 2.0
+    assert status["measurement"]["detail_ref"] == "scratch/measurements/selected-latency.json"
+    assert status["next_action"]["id"] == "none"
+
+
+def test_measurement_evidence_supports_ratio_count_and_distinct_freshness_states() -> None:
+    base_requirement = {
+        "id": "measurement",
+        "source_intent_revision": "policy-r1",
+        "detail_route": "run focused measurement",
+    }
+    ratio_condition = {
+        "kind": "agentic-workspace/measurement-requirement/v1",
+        "evidence_label": "scaling",
+        "metric": "selected-read-latency",
+        "unit": "seconds",
+        "comparator": "ratio-lte",
+        "threshold": 1.2,
+        "tolerance": 0,
+        "aggregation": "ratio",
+        "minimum_samples": 3,
+        "subject": "history-1000",
+        "subject_revision": "loaded-r1",
+        "control_subject": "history-empty",
+        "control_revision": "control-r1",
+        "environment": "maintained-ci",
+        "source_revision": "fixture-r1",
+    }
+    ratio_result = {
+        "kind": "agentic-workspace/measurement-evidence/v1",
+        "metric": "selected-read-latency",
+        "unit": "seconds",
+        "observed_value": 1.1,
+        "baseline_value": 1.0,
+        "comparator": "ratio-lte",
+        "threshold": 1.2,
+        "aggregation": "ratio",
+        "sample_count": 5,
+        "subject": "history-1000",
+        "subject_revision": "loaded-r1",
+        "control_subject": "history-empty",
+        "control_revision": "control-r1",
+        "environment": "maintained-ci",
+        "source_revision": "fixture-r1",
+        "requirement_revision": "policy-r1",
+        "status": "passed",
+        "detail_ref": "scratch/measurements/scaling.json",
+    }
+    ratio = _measurement_status_for_requirement(
+        requirement={**base_requirement, "measurement": ratio_condition},
+        evidence_records=[{"requirement_id": "measurement", "evidence_label": "scaling", "measurement": ratio_result}],
+    )
+    assert ratio is not None
+    assert ratio["state"] == "satisfied"
+    assert ratio["measurement"]["evaluated_value"] == 1.1
+    failed_ratio = _measurement_status_for_requirement(
+        requirement={**base_requirement, "measurement": ratio_condition},
+        evidence_records=[
+            {
+                "requirement_id": "measurement",
+                "evidence_label": "scaling",
+                "measurement": {**ratio_result, "observed_value": 1.3},
+            }
+        ],
+    )
+    assert failed_ratio is not None and failed_ratio["state"] == "failed"
+
+    count_condition = {
+        **ratio_condition,
+        "evidence_label": "residue",
+        "metric": "tracked-proof-residue",
+        "unit": "count",
+        "comparator": "eq",
+        "threshold": 0,
+        "aggregation": "count",
+        "minimum_samples": 1,
+        "subject": "selected-proof-run",
+        "subject_revision": "run-r1",
+        "environment": "none",
+    }
+    count_condition.pop("control_subject")
+    count_condition.pop("control_revision")
+    count_result = {
+        **ratio_result,
+        "metric": "tracked-proof-residue",
+        "unit": "count",
+        "observed_value": 0,
+        "comparator": "eq",
+        "threshold": 0,
+        "aggregation": "count",
+        "sample_count": 1,
+        "subject": "selected-proof-run",
+        "subject_revision": "run-r1",
+        "environment": "none",
+    }
+    count_result.pop("baseline_value")
+    count_result.pop("control_subject")
+    count_result.pop("control_revision")
+    count = _measurement_status_for_requirement(
+        requirement={**base_requirement, "measurement": count_condition},
+        evidence_records=[{"requirement_id": "measurement", "evidence_label": "residue", "measurement": count_result}],
+    )
+    assert count is not None and count["state"] == "satisfied"
+
+    for evidence_state in ("stale", "unknown", "unavailable", "invalid"):
+        state = _measurement_status_for_requirement(
+            requirement={**base_requirement, "measurement": ratio_condition},
+            evidence_records=[
+                {
+                    "requirement_id": "measurement",
+                    "evidence_label": "scaling",
+                    "measurement": {"status": evidence_state, "metric": "selected-read-latency", "detail_ref": "detail"},
+                }
+            ],
+        )
+        assert state is not None and state["state"] == evidence_state
+
+    stale_identity = {**ratio_result, "subject_revision": "loaded-r0"}
+    stale = _measurement_status_for_requirement(
+        requirement={**base_requirement, "measurement": ratio_condition},
+        evidence_records=[{"requirement_id": "measurement", "evidence_label": "scaling", "measurement": stale_identity}],
+    )
+    assert stale is not None and stale["state"] == "stale"
+    rewritten_threshold = {**ratio_result, "threshold": 1.5}
+    invalid_policy = _measurement_status_for_requirement(
+        requirement={**base_requirement, "measurement": ratio_condition},
+        evidence_records=[{"requirement_id": "measurement", "evidence_label": "scaling", "measurement": rewritten_threshold}],
+    )
+    assert invalid_policy is not None and invalid_policy["state"] == "invalid"
 
 
 def test_assurance_reports_activation_kinds_for_changed_paths(tmp_path: Path, capsys) -> None:

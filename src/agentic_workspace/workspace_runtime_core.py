@@ -3883,6 +3883,7 @@ def _assurance_requirement_payloads(config: WorkspaceConfig | None) -> list[dict
                 "preference_target": requirement.preference_target,
                 "evidence_owner": requirement.evidence_owner,
                 "detail_route": requirement.detail_route,
+                "measurement": dict(requirement.measurement) if requirement.measurement is not None else None,
             }
         )
     return payloads
@@ -4065,7 +4066,8 @@ def _subsystem_assurance_payload(
     missing_required = [
         profile
         for profile in profile_matches
-        if _as_dict(profile.get("evidence_status")).get("state") in {"missing-evidence", "review-required"}
+        if _as_dict(profile.get("evidence_status")).get("state")
+        in {"missing-evidence", "review-required", "failed", "stale", "unknown", "unavailable", "invalid"}
         and str(profile.get("force", "recommended")) in {"required-before-closeout", "blocking"}
     ]
     return {
@@ -4213,8 +4215,9 @@ def _load_assurance_evidence_records(*, target_root: Path | None) -> dict[str, A
                     "review_ref",
                     "changed_paths",
                     "recorded_by",
+                    "measurement",
                 ],
-                "rule": "Record compact evidence labels and refs only; do not store raw command transcripts.",
+                "rule": "Record compact evidence labels, refs, and optional measurement summaries only; do not store raw samples or command transcripts.",
             },
         }
     try:
@@ -4248,7 +4251,18 @@ def _load_assurance_evidence_records(*, target_root: Path | None) -> dict[str, A
         requirement_id = str(item.get("requirement_id") or "").strip()
         evidence_label = str(item.get("evidence_label") or item.get("label") or "").strip()
         status = str(item.get("status") or "satisfied").strip()
-        if not requirement_id or not evidence_label or status not in {"satisfied", "reviewed", "waived", "stale"}:
+        supported_statuses = {
+            "satisfied",
+            "reviewed",
+            "waived",
+            "passed",
+            "failed",
+            "stale",
+            "unknown",
+            "unavailable",
+            "invalid",
+        }
+        if not requirement_id or not evidence_label or status not in supported_statuses:
             invalid_records.append(
                 {
                     "index": index,
@@ -4257,7 +4271,7 @@ def _load_assurance_evidence_records(*, target_root: Path | None) -> dict[str, A
                         for field, value in {
                             "requirement_id": requirement_id,
                             "evidence_label": evidence_label,
-                            "status": status if status in {"satisfied", "reviewed", "waived", "stale"} else "",
+                            "status": status if status in supported_statuses else "",
                         }.items()
                         if not value
                     ],
@@ -4275,9 +4289,10 @@ def _load_assurance_evidence_records(*, target_root: Path | None) -> dict[str, A
                 str(path).strip().replace("\\", "/") for path in _list_payload(item.get("changed_paths")) if str(path).strip()
             ],
             "recorded_by": str(item.get("recorded_by") or "").strip(),
+            "measurement": dict(item.get("measurement")) if isinstance(item.get("measurement"), dict) else None,
         }
         records.append(normalized)
-        if status in {"satisfied", "reviewed", "waived"}:
+        if status in {"satisfied", "reviewed", "waived"} and normalized["measurement"] is None:
             evidence_by_requirement.setdefault(requirement_id, [])
             if evidence_label not in evidence_by_requirement[requirement_id]:
                 evidence_by_requirement[requirement_id].append(evidence_label)
@@ -4374,6 +4389,192 @@ def _assurance_requirement_match(
     return (bool(applies_because), applies_because, activation_facts)
 
 
+def _measurement_status_for_requirement(
+    *,
+    requirement: dict[str, Any],
+    evidence_records: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    condition = _as_dict(requirement.get("measurement"))
+    if not condition:
+        return None
+    requirement_id = str(requirement.get("id") or "")
+    evidence_label = str(condition.get("evidence_label") or "")
+    candidates = [
+        item
+        for item in evidence_records
+        if str(item.get("requirement_id") or "") == requirement_id and str(item.get("evidence_label") or "") == evidence_label
+    ]
+    if not candidates:
+        return {
+            "state": "missing-evidence",
+            "evidence_label": evidence_label,
+            "measurement": None,
+            "next_action": {
+                "id": "obtain-measurement-evidence",
+                "why": "No current compact measurement result matches this applicable requirement.",
+                "detail_route": requirement.get("detail_route"),
+            },
+        }
+    record = candidates[-1]
+    result = _as_dict(record.get("measurement"))
+    external_state = str(result.get("status") or record.get("status") or "invalid")
+    if external_state in {"stale", "unknown", "unavailable", "invalid"}:
+        return {
+            "state": external_state,
+            "evidence_label": evidence_label,
+            "measurement": {
+                "kind": "agentic-workspace/measurement-evidence-summary/v1",
+                "status": external_state,
+                "metric": result.get("metric") or condition.get("metric"),
+                "detail_ref": result.get("detail_ref") or requirement.get("detail_route"),
+            },
+            "next_action": {
+                "id": "refresh-measurement-evidence" if external_state == "stale" else "obtain-measurement-evidence",
+                "why": f"Measurement evidence is {external_state}.",
+                "detail_route": requirement.get("detail_route"),
+            },
+        }
+    if result.get("kind") != "agentic-workspace/measurement-evidence/v1" or any(
+        field not in result
+        for field in (
+            "kind",
+            "metric",
+            "unit",
+            "observed_value",
+            "comparator",
+            "threshold",
+            "aggregation",
+            "sample_count",
+            "subject",
+            "subject_revision",
+            "environment",
+            "source_revision",
+            "requirement_revision",
+            "status",
+            "detail_ref",
+        )
+    ):
+        return {
+            "state": "invalid",
+            "evidence_label": evidence_label,
+            "measurement": {
+                "kind": "agentic-workspace/measurement-evidence-summary/v1",
+                "status": "invalid",
+                "metric": result.get("metric") or condition.get("metric"),
+                "detail_ref": result.get("detail_ref") or requirement.get("detail_route"),
+            },
+            "next_action": {
+                "id": "repair-measurement-evidence",
+                "why": "Measurement result is missing required compact identity or comparison fields.",
+                "detail_route": requirement.get("detail_route"),
+            },
+        }
+    policy_matches = all(
+        result.get(field) == condition.get(field) for field in ("metric", "unit", "comparator", "threshold", "aggregation")
+    )
+    policy_matches = policy_matches and result.get("requirement_revision") == requirement.get("source_intent_revision")
+    freshness_current = all(
+        result.get(field) == condition.get(field) for field in ("subject", "subject_revision", "environment", "source_revision")
+    )
+    if str(condition.get("comparator") or "").startswith("ratio-"):
+        freshness_current = freshness_current and result.get("control_subject") == condition.get("control_subject")
+        freshness_current = freshness_current and result.get("control_revision") == condition.get("control_revision")
+    observed = result.get("observed_value")
+    sample_count = result.get("sample_count")
+    invalid_observation = (
+        isinstance(observed, bool)
+        or not isinstance(observed, (int, float))
+        or isinstance(sample_count, bool)
+        or not isinstance(sample_count, int)
+        or sample_count < int(condition.get("minimum_samples") or 1)
+    )
+    if not policy_matches or not freshness_current or invalid_observation:
+        state = "invalid" if not policy_matches or invalid_observation else "stale"
+        return {
+            "state": state,
+            "evidence_label": evidence_label,
+            "measurement": {
+                "kind": "agentic-workspace/measurement-evidence-summary/v1",
+                "status": state,
+                "metric": condition.get("metric"),
+                "detail_ref": result.get("detail_ref") or requirement.get("detail_route"),
+            },
+            "next_action": {
+                "id": "refresh-measurement-evidence" if state == "stale" else "repair-measurement-evidence",
+                "why": "Measurement identity is stale." if state == "stale" else "Measurement value or sample count is invalid.",
+                "detail_route": requirement.get("detail_route"),
+            },
+        }
+    comparator = str(condition.get("comparator") or "")
+    evaluated_value = float(observed)
+    if comparator.startswith("ratio-"):
+        baseline = result.get("baseline_value")
+        if isinstance(baseline, bool) or not isinstance(baseline, (int, float)) or baseline == 0:
+            return {
+                "state": "invalid",
+                "evidence_label": evidence_label,
+                "measurement": {
+                    "kind": "agentic-workspace/measurement-evidence-summary/v1",
+                    "status": "invalid",
+                    "metric": condition.get("metric"),
+                    "detail_ref": result.get("detail_ref") or requirement.get("detail_route"),
+                },
+                "next_action": {
+                    "id": "repair-measurement-evidence",
+                    "why": "Ratio measurement requires a non-zero numeric baseline_value.",
+                    "detail_route": requirement.get("detail_route"),
+                },
+            }
+        evaluated_value = float(observed) / float(baseline)
+    threshold = float(condition.get("threshold") or 0)
+    tolerance = float(condition.get("tolerance") or 0)
+    passed = {
+        "lte": evaluated_value <= threshold + tolerance,
+        "gte": evaluated_value >= threshold - tolerance,
+        "eq": abs(evaluated_value - threshold) <= tolerance,
+        "ratio-lte": evaluated_value <= threshold + tolerance,
+        "ratio-gte": evaluated_value >= threshold - tolerance,
+    }.get(comparator, False)
+    state = "satisfied" if passed else "failed"
+    summary = {
+        "kind": "agentic-workspace/measurement-evidence-summary/v1",
+        "status": state,
+        "metric": condition.get("metric"),
+        "unit": condition.get("unit"),
+        "observed_value": observed,
+        "evaluated_value": evaluated_value,
+        "comparator": comparator,
+        "threshold": condition.get("threshold"),
+        "tolerance": tolerance,
+        "aggregation": condition.get("aggregation"),
+        "sample_count": sample_count,
+        "subject": condition.get("subject"),
+        "subject_revision": condition.get("subject_revision"),
+        "environment": condition.get("environment"),
+        "source_revision": condition.get("source_revision"),
+        "requirement_revision": requirement.get("source_intent_revision"),
+        "detail_ref": result.get("detail_ref"),
+    }
+    if comparator.startswith("ratio-"):
+        summary.update(
+            baseline_value=result.get("baseline_value"),
+            control_subject=condition.get("control_subject"),
+            control_revision=condition.get("control_revision"),
+        )
+    return {
+        "state": state,
+        "evidence_label": evidence_label,
+        "measurement": summary,
+        "next_action": {
+            "id": "none" if passed else "restore-measurement-threshold",
+            "why": "Current measurement satisfies the source-owned condition."
+            if passed
+            else "Current measurement does not satisfy the source-owned condition.",
+            "detail_route": requirement.get("detail_route"),
+        },
+    }
+
+
 def _assurance_status_for_requirement(
     *,
     requirement: dict[str, Any],
@@ -4392,6 +4593,15 @@ def _assurance_status_for_requirement(
             if str(item).strip()
         ]
     missing_evidence = [item for item in required_evidence if item not in evidence_present]
+    measurement_status = _measurement_status_for_requirement(
+        requirement=requirement,
+        evidence_records=[item for item in _list_payload(planning_facts.get("evidence_records")) if isinstance(item, dict)],
+    )
+    if measurement_status is not None:
+        measurement_label = str(measurement_status.get("evidence_label") or "")
+        if measurement_status.get("state") == "satisfied" and measurement_label:
+            evidence_present = _dedupe([*evidence_present, measurement_label])
+        missing_evidence = [item for item in required_evidence if item not in evidence_present]
     waiver = requirement.get("waiver", {}) if isinstance(requirement.get("waiver"), dict) else {}
     dismissal = requirement.get("dismissal", {}) if isinstance(requirement.get("dismissal"), dict) else {}
     classification_source = {key: value for key, value in requirement.items() if key not in {"waiver", "dismissal", "notes"}}
@@ -4418,7 +4628,11 @@ def _assurance_status_for_requirement(
         application=application,
         strict_policy=strict_policy,
     )
-    state = "satisfied" if not missing_evidence else "missing-evidence"
+    state = (
+        str(measurement_status.get("state"))
+        if measurement_status is not None
+        else ("satisfied" if not missing_evidence else "missing-evidence")
+    )
     if dismissal.get("status") == "recorded" and not dismissal_evaluation["requirement_active"]:
         state = "dismissed"
         missing_evidence = []
@@ -4455,7 +4669,11 @@ def _assurance_status_for_requirement(
         "preference_target": requirement.get("preference_target"),
         "evidence_owner": requirement.get("evidence_owner"),
         "detail_route": requirement.get("detail_route"),
-        "next_action": {
+        "measurement_requirement": requirement.get("measurement"),
+        "measurement": measurement_status.get("measurement") if measurement_status is not None else None,
+        "next_action": measurement_status.get("next_action")
+        if measurement_status is not None
+        else {
             "id": "record-assurance-evidence" if missing_evidence else "none",
             "why": "Required assurance evidence is missing before broad completion claims."
             if missing_evidence
@@ -4480,6 +4698,7 @@ def _assurance_requirements_report_payload(
         "evidence_by_requirement": _merge_evidence_by_requirement(
             planning_facts.get("evidence_by_requirement"), evidence_records.get("evidence_by_requirement")
         ),
+        "evidence_records": evidence_records.get("records", []),
     }
     subsystem_assurance = _subsystem_assurance_payload(
         config=config,
@@ -4598,7 +4817,7 @@ def _assurance_requirements_report_payload(
     required_missing = [
         item
         for item in evidence_status
-        if item.get("state") in {"missing-evidence", "review-required"}
+        if item.get("state") in {"missing-evidence", "review-required", "failed", "stale", "unknown", "unavailable", "invalid"}
         and str(item.get("force", "recommended")) in {"required-before-closeout", "blocking"}
     ]
     return {
@@ -4670,7 +4889,10 @@ def _compact_assurance_requirements(value: Any) -> dict[str, Any]:
     evidence_status = evidence_status if isinstance(evidence_status, list) else []
     subsystem_assurance = _as_dict(value.get("subsystem_assurance"))
     required_missing = [
-        item for item in evidence_status if isinstance(item, dict) and item.get("state") in {"missing-evidence", "review-required"}
+        item
+        for item in evidence_status
+        if isinstance(item, dict)
+        and item.get("state") in {"missing-evidence", "review-required", "failed", "stale", "unknown", "unavailable", "invalid"}
     ]
     return {
         "status": value.get("status", "absent"),
@@ -4697,6 +4919,7 @@ def _compact_assurance_requirements(value: Any) -> dict[str, Any]:
                     "preference_target",
                     "evidence_owner",
                     "detail_route",
+                    "measurement",
                 )
                 if isinstance(item, dict) and key in item
             }
@@ -4714,7 +4937,15 @@ def _compact_assurance_requirements(value: Any) -> dict[str, Any]:
         "evidence_status": [
             {
                 key: item.get(key)
-                for key in ("requirement_id", "state", "missing_evidence", "waiver", "dismissal", "next_action")
+                for key in (
+                    "requirement_id",
+                    "state",
+                    "missing_evidence",
+                    "measurement",
+                    "waiver",
+                    "dismissal",
+                    "next_action",
+                )
                 if key in item
             }
             for item in required_missing[:3]
@@ -24275,7 +24506,15 @@ def _assurance_claim_blockers(assurance_requirements: dict[str, Any] | None) -> 
             for claim in [str(item).strip() for item in _list_payload(gap.get("blocked_claims")) if str(item).strip()]:
                 if claim in blockers:
                     blockers[claim].append(f"verification_known_gap:{gap_id}")
-        if status.get("state") not in {"missing-evidence", "review-required"}:
+        if status.get("state") not in {
+            "missing-evidence",
+            "review-required",
+            "failed",
+            "stale",
+            "unknown",
+            "unavailable",
+            "invalid",
+        }:
             continue
         force = str(status.get("force", "recommended"))
         if force not in {"required-before-closeout", "blocking"}:
@@ -37793,7 +38032,7 @@ def _applicable_intent_status_payload(
             continue
         state = str(status.get("state") or "").strip()
         requirement = str(status.get("requirement_id") or status.get("id") or "assurance requirement").strip()
-        if state in {"missing-evidence", "review-required"}:
+        if state in {"missing-evidence", "review-required", "failed", "stale", "unknown", "unavailable", "invalid"}:
             manual_verification.append(f"{requirement}: {state}")
     for gap in _list_payload(verification.get("known_gaps")) + _list_payload(verification.get("active_known_gaps")):
         if not isinstance(gap, dict):

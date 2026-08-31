@@ -126,6 +126,8 @@ SUPPORTED_REPO_REQUIREMENT_CLASSES = (
     "current-evidence",
     "guideline",
 )
+SUPPORTED_MEASUREMENT_COMPARATORS = ("lte", "gte", "eq", "ratio-lte", "ratio-gte")
+SUPPORTED_MEASUREMENT_AGGREGATIONS = ("single", "median", "percentile", "ratio", "count")
 SUPPORTED_DELEGATION_TARGET_STRENGTHS = (
     "strong",
     "medium",
@@ -518,6 +520,7 @@ class AssuranceRequirement:
     preference_target: str | None
     evidence_owner: str | None
     detail_route: str | None
+    measurement: dict[str, Any] | None
 
 
 @dataclass(frozen=True)
@@ -1105,6 +1108,87 @@ def _require_disposition(
     return AssuranceRequirementDisposition(reason=reason, owner=owner, applicability=normalized_applicability)
 
 
+def _require_measurement_requirement(*, payload: dict[str, Any], config_path: Path) -> dict[str, Any] | None:
+    raw = payload.get("measurement")
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        raise WorkspaceUsageError(f"{config_path.as_posix()} measurement must be a table.")
+    measurement_path = Path(f"{config_path.as_posix()} measurement")
+    required = {
+        "kind",
+        "evidence_label",
+        "metric",
+        "unit",
+        "comparator",
+        "threshold",
+        "aggregation",
+        "minimum_samples",
+        "subject",
+        "subject_revision",
+        "environment",
+        "source_revision",
+    }
+    optional = {"tolerance", "excluded_costs", "control_subject", "control_revision"}
+    unknown = sorted(set(raw) - required - optional)
+    if unknown:
+        raise WorkspaceUsageError(f"{measurement_path.as_posix()} contains unsupported field(s): {', '.join(unknown)}.")
+    missing = sorted(required - set(raw))
+    if missing:
+        raise WorkspaceUsageError(f"{measurement_path.as_posix()} requires: {', '.join(missing)}.")
+    kind = require_optional_string(payload=raw, key="kind", config_path=measurement_path)
+    if kind != "agentic-workspace/measurement-requirement/v1":
+        raise WorkspaceUsageError(f"{measurement_path.as_posix()} kind must be agentic-workspace/measurement-requirement/v1.")
+    normalized: dict[str, Any] = {
+        "kind": kind,
+        "evidence_label": require_optional_string(payload=raw, key="evidence_label", config_path=measurement_path),
+        "metric": require_optional_string(payload=raw, key="metric", config_path=measurement_path),
+        "unit": require_optional_string(payload=raw, key="unit", config_path=measurement_path),
+        "comparator": require_required_enum(
+            payload=raw,
+            key="comparator",
+            config_path=measurement_path,
+            allowed=SUPPORTED_MEASUREMENT_COMPARATORS,
+        ),
+        "aggregation": require_required_enum(
+            payload=raw,
+            key="aggregation",
+            config_path=measurement_path,
+            allowed=SUPPORTED_MEASUREMENT_AGGREGATIONS,
+        ),
+        "subject": require_optional_string(payload=raw, key="subject", config_path=measurement_path),
+        "subject_revision": require_optional_string(payload=raw, key="subject_revision", config_path=measurement_path),
+        "environment": require_optional_string(payload=raw, key="environment", config_path=measurement_path),
+        "source_revision": require_optional_string(payload=raw, key="source_revision", config_path=measurement_path),
+        "excluded_costs": list(require_optional_string_list(payload=raw, key="excluded_costs", config_path=measurement_path)),
+    }
+    for field in ("evidence_label", "metric", "unit", "subject", "subject_revision", "environment", "source_revision"):
+        if not normalized[field]:
+            raise WorkspaceUsageError(f"{measurement_path.as_posix()} {field} must be a non-empty string.")
+    threshold = raw.get("threshold")
+    tolerance = raw.get("tolerance", 0)
+    minimum_samples = raw.get("minimum_samples")
+    if isinstance(threshold, bool) or not isinstance(threshold, (int, float)):
+        raise WorkspaceUsageError(f"{measurement_path.as_posix()} threshold must be a number.")
+    if isinstance(tolerance, bool) or not isinstance(tolerance, (int, float)) or tolerance < 0:
+        raise WorkspaceUsageError(f"{measurement_path.as_posix()} tolerance must be a non-negative number.")
+    if isinstance(minimum_samples, bool) or not isinstance(minimum_samples, int) or minimum_samples < 1:
+        raise WorkspaceUsageError(f"{measurement_path.as_posix()} minimum_samples must be a positive integer.")
+    normalized.update(threshold=threshold, tolerance=tolerance, minimum_samples=minimum_samples)
+    for field in ("control_subject", "control_revision"):
+        value = require_optional_string(payload=raw, key=field, config_path=measurement_path)
+        if value is not None:
+            normalized[field] = value
+    if normalized["comparator"].startswith("ratio-"):
+        if normalized["aggregation"] != "ratio" or not normalized.get("control_subject") or not normalized.get("control_revision"):
+            raise WorkspaceUsageError(
+                f"{measurement_path.as_posix()} ratio comparators require aggregation=ratio, control_subject, and control_revision."
+            )
+    elif normalized["aggregation"] == "ratio":
+        raise WorkspaceUsageError(f"{measurement_path.as_posix()} ratio aggregation requires a ratio comparator.")
+    return normalized
+
+
 def _load_assurance_requirements(
     *,
     raw_requirements: Any,
@@ -1142,6 +1226,7 @@ def _load_assurance_requirements(
         "preference_target",
         "evidence_owner",
         "detail_route",
+        "measurement",
     }
     activation_fields = {
         "applies_to_paths",
@@ -1182,6 +1267,7 @@ def _load_assurance_requirements(
         preference_target = require_optional_string(payload=raw_requirement, key="preference_target", config_path=requirement_path)
         evidence_owner = require_optional_string(payload=raw_requirement, key="evidence_owner", config_path=requirement_path)
         detail_route = require_optional_string(payload=raw_requirement, key="detail_route", config_path=requirement_path)
+        measurement = _require_measurement_requirement(payload=raw_requirement, config_path=requirement_path)
         blocking_claims = require_optional_string_list(
             payload=raw_requirement,
             key="blocking_claims",
@@ -1219,6 +1305,15 @@ def _load_assurance_requirements(
                 )
             if force not in {"required-before-closeout", "blocking"}:
                 raise WorkspaceUsageError(f"{requirement_path.as_posix()} hard named repo requirements require enforcing force.")
+        if measurement is not None:
+            if requirement_class not in {"current-evidence", "guideline"}:
+                raise WorkspaceUsageError(
+                    f"{requirement_path.as_posix()} measurement is supported only for current-evidence or guideline requirements."
+                )
+            if requirement_class == "current-evidence" and measurement["evidence_label"] not in required_evidence:
+                raise WorkspaceUsageError(f"{requirement_path.as_posix()} measurement evidence_label must appear in required_evidence.")
+            if not evidence_owner or not detail_route:
+                raise WorkspaceUsageError(f"{requirement_path.as_posix()} measurement requires evidence_owner and detail_route.")
         requirement = AssuranceRequirement(
             id=str(requirement_id).strip(),
             level=require_required_enum(
@@ -1252,6 +1347,7 @@ def _load_assurance_requirements(
             preference_target=preference_target,
             evidence_owner=evidence_owner,
             detail_route=detail_route,
+            measurement=measurement,
         )
         prior_declaration = requirement_declarations.get(requirement.id)
         if prior_declaration is not None:

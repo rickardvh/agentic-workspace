@@ -346,6 +346,7 @@ def compile_instruction_program(program: dict[str, Any], *, current_targets: lis
                 "id": item.get("id"),
                 "current": item.get("current"),
                 "evidence_state": item.get("evidence_state"),
+                "measurement": item.get("measurement"),
                 "source": item.get("source"),
             }
             for item in capabilities
@@ -476,6 +477,7 @@ def instruction_program_from_existing_mechanisms(inputs: dict[str, Any]) -> dict
                 "evidence_owner",
                 "evidence_state",
                 "detail_route",
+                "measurement",
             )
             if item.get(key) is not None
         }

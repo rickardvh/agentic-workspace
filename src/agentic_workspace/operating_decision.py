@@ -2354,6 +2354,9 @@ def _projection_instruction_mechanisms(payload: dict[str, Any], posture: dict[st
     requirement_states = {
         str(item.get("requirement_id") or ""): str(item.get("state") or item.get("status") or "") for item in evidence_items
     }
+    measurement_status = {
+        str(item.get("requirement_id") or ""): _as_dict(item.get("measurement")) for item in evidence_items if item.get("measurement")
+    }
     for requirement in [_as_dict(item) for item in _as_list(assurance.get("active"))]:
         requirement_id = str(requirement.get("id") or "requirement")
         requirement_class = str(requirement.get("requirement_class") or "")
@@ -2372,6 +2375,8 @@ def _projection_instruction_mechanisms(payload: dict[str, Any], posture: dict[st
                 "evidence_owner": requirement.get("evidence_owner") or "assurance-requirements",
                 "detail_route": requirement.get("detail_route")
                 or "agentic-workspace report --target ./repo --section assurance_requirements --format json",
+                "measurement_requirement": requirement.get("measurement"),
+                "measurement": measurement_status.get(requirement_id),
             }
             if requirement_class == "guideline":
                 repo_requirements.append(
@@ -2405,6 +2410,7 @@ def _projection_instruction_mechanisms(payload: dict[str, Any], posture: dict[st
                             "current": intent_current and state == "satisfied",
                             "evidence_state": state,
                             "detail_route": common["detail_route"],
+                            "measurement": common["measurement"],
                             "source": {
                                 "owner": common["evidence_owner"],
                                 "revision": assurance_revision,

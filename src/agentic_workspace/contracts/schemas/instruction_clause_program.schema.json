@@ -59,6 +59,7 @@
           "current": {"type": "boolean"},
           "evidence_state": {"type": "string"},
           "detail_route": {"type": "string"},
+          "measurement": {"$ref": "#/$defs/measurement_summary"},
           "source": {"$ref": "#/$defs/source"}
         },
         "additionalProperties": false
@@ -109,6 +110,32 @@
         {"type": "object", "required": ["none"], "properties": {"none": {"type": "array", "items": {"$ref": "#/$defs/predicate"}}}, "additionalProperties": false}
       ]
     },
+    "measurement_summary": {
+      "type": ["object", "null"],
+      "properties": {
+        "kind": {"const": "agentic-workspace/measurement-evidence-summary/v1"},
+        "status": {"enum": ["satisfied", "failed", "stale", "unknown", "unavailable", "invalid"]},
+        "metric": {"type": ["string", "null"]},
+        "unit": {"type": "string"},
+        "observed_value": {"type": "number"},
+        "evaluated_value": {"type": "number"},
+        "baseline_value": {"type": "number"},
+        "comparator": {"enum": ["lte", "gte", "eq", "ratio-lte", "ratio-gte"]},
+        "threshold": {"type": "number"},
+        "tolerance": {"type": "number", "minimum": 0},
+        "aggregation": {"enum": ["single", "median", "percentile", "ratio", "count"]},
+        "sample_count": {"type": "integer", "minimum": 1},
+        "subject": {"type": "string"},
+        "subject_revision": {"type": "string"},
+        "control_subject": {"type": "string"},
+        "control_revision": {"type": "string"},
+        "environment": {"type": "string"},
+        "source_revision": {"type": "string"},
+        "requirement_revision": {"type": "string"},
+        "detail_ref": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    },
     "effect": {
       "type": "object",
       "required": ["kind", "target"],
@@ -128,6 +155,7 @@
             "source_intent_current": {"type": "boolean"},
             "evidence_owner": {"type": "string"},
             "evidence_state": {"type": "string"},
+            "measurement": {"$ref": "#/$defs/measurement_summary"},
             "detail_route": {"type": "string"}
           },
           "additionalProperties": false
