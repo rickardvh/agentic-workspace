@@ -4,6 +4,7 @@ import copy
 import hashlib
 import importlib.util
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -1925,6 +1926,124 @@ def test_typescript_host_native_assignment_lifecycle_reenters_and_integrates_mat
     )
     assert receipt["materialized_delta_verified"] is True
     assert receipt["replayed"] is True
+
+
+def test_assignment_import_return_file_matches_inline_validation_in_python_and_typescript(tmp_path: Path) -> None:
+    def returned(identity: dict[str, object], host_execution: dict[str, object], run_id: str) -> dict[str, object]:
+        return {
+            "assignment_revision": identity["revision"],
+            "assignment_id": host_execution["assignment_id"],
+            "packet_integrity": host_execution["packet_integrity"],
+            "run_id": run_id,
+            "target": "worker",
+            "changed_paths": ["src/feature.py"],
+            "summary": "Imported from the delegated return file.",
+            "stop_conditions_hit": [],
+            "patch": "diff --git a/src/feature.py b/src/feature.py\n--- a/src/feature.py\n+++ b/src/feature.py\n@@ -1 +1 @@\n-old\n+new\n",
+            "result_delivery": {"mode": "already-materialized", "mutation_baseline": identity["mutation_baseline"]},
+        }
+
+    identity, invocation, host_execution = _prepare_shared_worktree_assignment(tmp_path, run_id="run-python-file")
+    return_path = tmp_path / "python-return.json"
+    return_path.write_text(json.dumps(returned(identity, host_execution, "run-python-file")), encoding="utf-8")
+    payload = returned(identity, host_execution, "run-python-file")
+    inline = assignment_import({"run_id": "run-python-file", "return_json": json.dumps(payload)}, target=tmp_path, invocation=invocation)
+    file_backed = assignment_import(
+        {"run_id": "run-python-file", "return_file": "python-return.json"}, target=tmp_path, invocation=invocation
+    )
+    assert inline["status"] == file_backed["status"] == "awaiting-admission"
+    assert inline["state"]["last_return_id"] == file_backed["state"]["last_return_id"]
+    return_id = inline["state"]["last_return_id"]
+    assert inline["state"]["returns"][return_id] == file_backed["state"]["returns"][return_id]
+
+    typescript_target = tmp_path / "typescript"
+    typescript_target.mkdir()
+    identity, _invocation, host_execution = _prepare_shared_worktree_assignment(
+        typescript_target, run_id="run-typescript-file", dispatch_runtime="typescript"
+    )
+    return_path = typescript_target / "typescript-return.json"
+    return_path.write_text(json.dumps(returned(identity, host_execution, "run-typescript-file")), encoding="utf-8")
+    imported = _run_typescript_assignment(
+        typescript_target, "import", {"run_id": "run-typescript-file", "return_file": "typescript-return.json"}
+    )
+    assert imported["status"] == "awaiting-admission"
+
+    conflict_target = tmp_path / "conflict"
+    conflict_target.mkdir()
+    identity, invocation, host_execution = _prepare_shared_worktree_assignment(conflict_target, run_id="run-conflict")
+    return_path = conflict_target / "conflict-return.json"
+    payload = returned(identity, host_execution, "run-conflict")
+    return_path.write_text(json.dumps(payload), encoding="utf-8")
+    conflict = assignment_import(
+        {"run_id": "run-conflict", "return_json": json.dumps(payload), "return_file": "conflict-return.json"},
+        target=conflict_target,
+        invocation=invocation,
+    )
+    assert conflict["status"] == "blocked"
+    assert conflict["failures"][0]["reason"] == "return-input-required"
+
+
+def test_assignment_import_large_return_file_through_session_logged_cli(tmp_path: Path) -> None:
+    run_id = "run-large-file"
+    identity, _invocation, host_execution = _prepare_shared_worktree_assignment(tmp_path, run_id=run_id)
+    (tmp_path / ".agentic-workspace/config.local.toml").write_text(
+        "schema_version = 1\n\n[session_logging]\nenabled = true\n",
+        encoding="utf-8",
+    )
+    patch = (
+        "diff --git a/src/feature.py b/src/feature.py\n--- a/src/feature.py\n+++ b/src/feature.py\n@@ -1 +1 @@\n-old\n+"
+        + ("x" * (40 * 1024))
+        + "\n"
+    )
+    returned = {
+        "assignment_revision": identity["revision"],
+        "assignment_id": host_execution["assignment_id"],
+        "packet_integrity": host_execution["packet_integrity"],
+        "run_id": run_id,
+        "target": "worker",
+        "changed_paths": ["src/feature.py"],
+        "summary": "Imported an over-limit delegated return from its canonical artifact.",
+        "stop_conditions_hit": [],
+        "patch": patch,
+        "result_delivery": {"mode": "unapplied-patch", "mutation_baseline": identity["mutation_baseline"]},
+    }
+    serialized = json.dumps(returned)
+    assert len(serialized) > 32_767
+    return_path = tmp_path / "large-return.json"
+    return_path.write_text(serialized, encoding="utf-8")
+    environment = os.environ.copy()
+    environment.pop("PYTEST_CURRENT_TEST", None)
+    environment["AW_SESSION_LOGICAL_IDENTITY"] = "large-return-file-regression"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts/run_agentic_workspace.py"),
+            "assignment",
+            "import",
+            "--target",
+            str(tmp_path),
+            "--run-id",
+            run_id,
+            "--return-file",
+            "large-return.json",
+            "--format",
+            "json",
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+        env=environment,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    imported = json.loads(completed.stdout)
+    assert imported["status"] == "awaiting-admission"
+    return_id = imported["state"]["last_return_id"]
+    artifact = tmp_path / imported["state"]["returns"][return_id]["artifact_ref"]
+    assert json.loads(artifact.read_text(encoding="utf-8"))["patch"] == patch
+    assert (tmp_path / ".agentic-workspace/local/logs").exists()
 
 
 def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_path: Path) -> None:

@@ -1,0 +1,162 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2958-large-return-file-import",
+  "title": "Large delegated-return file import",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "closeout",
+  "revision": 8,
+  "intent": {
+    "outcome": "#2958",
+    "non_goals": [
+      "Leave adjacent backlog or follow-on work out of this plan."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "#2958",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "src/agentic_workspace/contracts/command_package_ir.json",
+      "src/agentic_workspace/contracts/operations/assignment.import.json",
+      "src/agentic_workspace/contracts/schemas/assignment_lifecycle_input.schema.json",
+      "src/agentic_workspace/contracts/python_primitive_support.py",
+      "src/agentic_workspace/contracts/typescript_primitive_support.mjs",
+      "src/agentic_workspace/session_logging.py",
+      "tests/test_external_operation_clients.py",
+      "tests/test_workspace_session_logging.py",
+      ".release/changes/assignment-import-file-input.toml",
+      "generated/workspace/"
+    ],
+    "effects": [
+      "Normalize exactly one inline return_json or repo-contained return_file through the existing assignment import validation path.",
+      "Keep Python and TypeScript generated assignment import clients semantically equivalent.",
+      "Bound nested parent-command session metadata deterministically without changing ordinary command readability."
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected-local",
+      "owner": "issue-2958-large-return-file-import"
+    },
+    "proof_posture": {
+      "state": "worker-validation-recorded-awaiting-aw-admission",
+      "refs": [
+        "Focused Python/TypeScript assignment import and parent-command session logging tests are recorded in the delegated worker return."
+      ]
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "#2958",
+      "label": "#2958",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Commit and push #2958 on the existing open top stack PR, refresh exact-head checks and independent review, and do not merge.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "requirements": [
+      "Focused regressions and generated/public parity checks remain green on the committed exact head."
+    ],
+    "refs": [
+      "tests/test_external_operation_clients.py",
+      "tests/test_workspace_session_logging.py",
+      "src/agentic_workspace/contracts/external_operation_conformance_receipts.json"
+    ],
+    "claims": [
+      "File-backed and inline delegated returns share validation and replay identity.",
+      "A session-logged ordinary CLI import preserves an exact serialized patch larger than 32,767 characters.",
+      "Oversized parent-command environment metadata contains only bounded command identity, byte count, and digest, never raw oversized arguments."
+    ]
+  },
+  "continuation": {
+    "owner": "none",
+    "residual_intent": "none"
+  },
+  "specialist_contracts": [],
+  "goal": [
+    "Allow assignment import to consume a typed delegated-return artifact from disk while preserving inline return semantics and keeping nested session metadata within Windows environment limits."
+  ],
+  "completion_criteria": [
+    "assignment import accepts exactly one of inline return_json or a typed return_file path and normalizes both through the same validation path",
+    "a delegated return larger than the Windows command/environment limit imports through the file path without disabling session logging",
+    "nested session parent-command metadata is deterministic, bounded, and omits raw oversized arguments while ordinary small commands remain readable",
+    "Python and TypeScript generated clients preserve equivalent import semantics",
+    "the canonical generated-command-package proof lane covers the assignment import operation and lifecycle schema without broad fallback",
+    "focused regression tests and contract generation checks pass"
+  ],
+  "non_goals": [
+    "Do not change assignment admission, integration, or proof semantics.",
+    "Do not redesign unrelated CLI payload handling or session-log storage.",
+    "Do not merge any pull request."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "Implement all dogfooding issues on the existing stacked PR set without merging.",
+    "continuation surface": "Continue ingesting current dogfooding issues and blocking stack comments after #2958 closes.",
+    "this slice completes the larger intended outcome": "no"
+  },
+  "touched_paths": [
+    ".agentic-workspace/config.toml",
+    "src/agentic_workspace/contracts/command_package_ir.json",
+    "src/agentic_workspace/contracts/operations/assignment.import.json",
+    "src/agentic_workspace/contracts/schemas/assignment_lifecycle_input.schema.json",
+    "src/agentic_workspace/contracts/external_consumer_profile.json",
+    "src/agentic_workspace/contracts/external_operation_conformance_receipts.json",
+    "src/agentic_workspace/contracts/python_primitive_support.py",
+    "src/agentic_workspace/contracts/typescript_primitive_support.mjs",
+    "src/agentic_workspace/session_logging.py",
+    "tests/test_external_operation_clients.py",
+    "tests/test_workspace_session_logging.py",
+    "src/agentic_workspace/contracts/conformance/assignment.import.process.json",
+    ".release/changes/assignment-import-file-input.toml",
+    "generated/",
+    ".agentic-workspace/workspace-packages/",
+    ".agentic-workspace/planning/execplans/issue-2958-large-return-file-import.plan.json"
+  ],
+  "validation_commands": [
+    "uv run --frozen --active --no-sync pytest tests/test_external_operation_clients.py -k \"assignment_import_return_file or assignment_import_large_return_file\" -q",
+    "uv run --frozen --active --no-sync pytest tests/test_workspace_session_logging.py -k \"session_parent_command_is_bounded\" -q",
+    "uv run --frozen --active --no-sync python scripts/check/run_operation_conformance_tests.py --target all --require-node",
+    "uv run --frozen --active --no-sync python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run --frozen --active --no-sync python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run --frozen --active --no-sync python scripts/check/check_generated_command_packages.py --require-node",
+    "uv run --frozen --active --no-sync ruff check src/agentic_workspace/contracts/python_primitive_support.py src/agentic_workspace/session_logging.py tests/test_external_operation_clients.py tests/test_workspace_session_logging.py",
+    "git diff --check"
+  ],
+  "execution_bounds": {
+    "allowed paths": [
+      ".agentic-workspace/config.toml",
+      "src/agentic_workspace/contracts/command_package_ir.json",
+      "src/agentic_workspace/contracts/operations/assignment.import.json",
+      "src/agentic_workspace/contracts/schemas/assignment_lifecycle_input.schema.json",
+      "src/agentic_workspace/contracts/external_consumer_profile.json",
+      "src/agentic_workspace/contracts/external_operation_conformance_receipts.json",
+      "src/agentic_workspace/contracts/python_primitive_support.py",
+      "src/agentic_workspace/contracts/typescript_primitive_support.mjs",
+      "src/agentic_workspace/session_logging.py",
+      "tests/test_external_operation_clients.py",
+      "tests/test_workspace_session_logging.py",
+      "src/agentic_workspace/contracts/conformance/assignment.import.process.json",
+      ".release/changes/assignment-import-file-input.toml",
+      "generated/",
+      ".agentic-workspace/workspace-packages/",
+      ".agentic-workspace/planning/execplans/issue-2958-large-return-file-import.plan.json"
+    ],
+    "stop before touching": [
+      "assignment admission, integration, or proof policy",
+      "unrelated tests or runtime surfaces",
+      "PR merge operations"
+    ]
+  }
+}

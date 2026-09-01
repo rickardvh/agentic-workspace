@@ -57,7 +57,12 @@
     },
     {
       "name": "return_json",
-      "required": true,
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "return_file",
+      "required": false,
       "source": "cli-option"
     },
     {

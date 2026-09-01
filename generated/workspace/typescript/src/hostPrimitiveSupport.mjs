@@ -17,6 +17,7 @@ import {
   mkdirSync,
   readlinkSync,
   readFileSync,
+  realpathSync,
   readdirSync,
   rmSync,
   statSync,
@@ -1926,6 +1927,23 @@ function assignmentParseJson(value, field) {
   }
 }
 
+function assignmentImportReturnValue(values, targetRoot, failures) {
+  const inlineReturn = assignmentText(values.return_json);
+  const returnFile = assignmentText(values.return_file);
+  if (Boolean(inlineReturn) === Boolean(returnFile)) {
+    failures.push({ reason: 'return-input-required', field: 'return_json|return_file', recovery: 'Provide exactly one inline return_json or repo-contained return_file.' });
+    return {};
+  }
+  if (inlineReturn) return assignmentParseJson(inlineReturn, 'return_json');
+  try {
+    const path = resolveInside(realpathSync(targetRoot), realpathSync(resolveInside(targetRoot, returnFile)));
+    return assignmentParseJson(readFileSync(path, 'utf8'), 'return_file');
+  } catch (error) {
+    if (error instanceof RuntimeError) throw error;
+    throw new RuntimeError('assignment lifecycle return_file must be a readable repo-contained UTF-8 file');
+  }
+}
+
 function assignmentWrite(path, payload) {
   mkdirSync(dirname(path), { recursive: true });
   const text = typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2);
@@ -2372,7 +2390,7 @@ function assignmentLifecycleApply(values, operationId) {
     }
   } else if (transition === 'import') {
     requireField('run_id');
-    const returned = assignmentParseJson(requireField('return_json'), 'return_json');
+    const returned = assignmentImportReturnValue(values, targetRoot, failures);
     const returnId = assignmentText(values.return_id) || assignmentDigest(returned).replace('sha256:', '').slice(0, 16);
     const assignment = isObject(state.assignment) ? state.assignment : {};
     const identity = isObject(assignment.assignment_identity) ? assignment.assignment_identity : {};

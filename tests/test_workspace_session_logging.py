@@ -192,11 +192,34 @@ def test_session_logging_status_defaults_for_parent_command(tmp_path: Path, caps
     target = _target(tmp_path)
 
     assert source_cli.main(["session-log", "--target", str(target), "--format", "json"]) == 0
-
     payload = json.loads(capsys.readouterr().out)
     assert payload["kind"] == "agentic-workspace/session-logging-status/v1"
     assert payload["enabled"] is False
     assert not (target / ".agentic-workspace/local/logs").exists()
+
+
+def test_session_parent_command_is_bounded_deterministically(monkeypatch: pytest.MonkeyPatch) -> None:
+    small_argv = ["summary", "--target", "."]
+    with session_logging._session_parent_environment(small_argv):
+        assert os.environ["AW_SESSION_LOG_PARENT_COMMAND"] == "agentic-workspace summary --target ."
+
+    large_argv = ["assignment", "import", "--return-json", "x" * (64 * 1024)]
+    with session_logging._session_parent_environment(large_argv):
+        first = os.environ["AW_SESSION_LOG_PARENT_COMMAND"]
+    with session_logging._session_parent_environment(large_argv):
+        second = os.environ["AW_SESSION_LOG_PARENT_COMMAND"]
+
+    assert first == second
+    assert len(first.encode("utf-8")) <= session_logging.MAX_SESSION_PARENT_COMMAND_BYTES
+    assert first.startswith("agentic-workspace assignment import [oversized arguments omitted;")
+    assert "--return-json" not in first
+    assert "x" not in first
+    assert "sha256:" in first
+
+    with session_logging._session_parent_environment(["x" * (64 * 1024)]):
+        oversized_command = os.environ["AW_SESSION_LOG_PARENT_COMMAND"]
+    assert len(oversized_command.encode("utf-8")) <= session_logging.MAX_SESSION_PARENT_COMMAND_BYTES
+    assert "x" not in oversized_command
 
 
 def test_session_logging_enabled_reuses_one_session_log_and_records_config_prelude(tmp_path: Path, capsys) -> None:

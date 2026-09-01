@@ -9103,8 +9103,14 @@ const commandDefinitions = [
                 "--return-json"
               ],
               "help": "Returned worker-result JSON.",
-              "name": "return_json",
-              "required": true
+              "name": "return_json"
+            },
+            {
+              "flags": [
+                "--return-file"
+              ],
+              "help": "Repo-contained UTF-8 file holding returned worker-result JSON; mutually exclusive with --return-json.",
+              "name": "return_file"
             },
             {
               "flags": [

@@ -64,6 +64,10 @@
       "description": "Serialized worker return payload awaiting admission.",
       "type": "string"
     },
+    "return_file": {
+      "description": "Repo-contained UTF-8 file holding one serialized worker return payload awaiting admission; mutually exclusive with return_json.",
+      "type": "string"
+    },
     "review_result_json": {
       "description": "Serialized producer-owned independent-review result envelope to admit through assignment.admit.",
       "type": "string"

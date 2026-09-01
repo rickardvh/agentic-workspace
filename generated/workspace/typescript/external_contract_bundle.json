@@ -1,7 +1,7 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:2258e39f754279c3e54fc887ce3f6263d0ce45a279890e986fe15d68108602b3",
+  "profile_fingerprint": "sha256:bd71644c37d6e1d028adf2f86e74441c28ffeee05c1748a0bcdabb1b08ec0d0e",
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",
@@ -5468,8 +5468,8 @@
     "assignment.admit": {
       "identity": "assignment.admit",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:bd1888009642e4fa7294cbc217ff17e6c07f0433e605da3e8768ed85f8cdb3cc",
-      "compatibility_fingerprint": "sha256:100cb363c3a13681bea3e3db57b7f31159a2a19770240d958bcc46eb16a1c428",
+      "fingerprint": "sha256:1342265e23d3e4750a6bd654510a4f1a0b37cc514d46e8f8af263d1c0b31cf07",
+      "compatibility_fingerprint": "sha256:989c75161742260571cb8b513cdfc79d9727b41996d2805c31603790464af41d",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -5955,6 +5955,9 @@
                 "return_json": {
                   "type": "string"
                 },
+                "return_file": {
+                  "type": "string"
+                },
                 "review_result_json": {
                   "type": "string"
                 },
@@ -6129,8 +6132,8 @@
     "assignment.cleanup": {
       "identity": "assignment.cleanup",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:2f8e0500c7a3e9a602067f6dc875ed67307da85da51a2ddeb913930c7f603250",
-      "compatibility_fingerprint": "sha256:8e628e54b4b801f32b8338a4a33851d95febd96c4700a5fc9ee2795dc3242e12",
+      "fingerprint": "sha256:8bf53046a485d958d37d18fe19e85f4acac46d76d1ddbccf33b108f9ba821a24",
+      "compatibility_fingerprint": "sha256:037110427e14a0d3c60db1be74c63caaef67c2b47a92ca0dbf78c459a29edae6",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -6558,6 +6561,9 @@
                 "return_json": {
                   "type": "string"
                 },
+                "return_file": {
+                  "type": "string"
+                },
                 "review_result_json": {
                   "type": "string"
                 },
@@ -6732,8 +6738,8 @@
     "assignment.close": {
       "identity": "assignment.close",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:c7ca2496327669f0e1757aa26207fcc37dd5937dc526e9adc142dc48a641626f",
-      "compatibility_fingerprint": "sha256:ae5a46f4d6d4c870516b2b775c1034917c05d67bb26a9ff220c348d6cd1fd063",
+      "fingerprint": "sha256:32cb5866ba88d39a6304b0cb807a179d02dc20c9b3b8d120d0dfb5a75b4cef8c",
+      "compatibility_fingerprint": "sha256:d85705fa7366dc9f7ccd1afa675924e589263e7a83137bd285c0ee02d4b01b4e",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -7177,6 +7183,9 @@
                 "return_json": {
                   "type": "string"
                 },
+                "return_file": {
+                  "type": "string"
+                },
                 "review_result_json": {
                   "type": "string"
                 },
@@ -7351,8 +7360,8 @@
     "assignment.dispatch": {
       "identity": "assignment.dispatch",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:9843819c5ced53e0564d6b9408cfbf1c1a958f16f8ae397ff9827c4ff26952ef",
-      "compatibility_fingerprint": "sha256:f23f48b08ae6d08c48fc4582aaa718af70d0248cd2bd0615908d8bf7b21b1b37",
+      "fingerprint": "sha256:94c4431ead41c647987b3846c426a6fe356689edc8b8b0e05a4ae6b829bf6841",
+      "compatibility_fingerprint": "sha256:11e327fc45d61a7fd08dd57fd194728c7e5d188fe2e8a6b25f94ef41cfd8613e",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -7728,6 +7737,9 @@
                 "return_json": {
                   "type": "string"
                 },
+                "return_file": {
+                  "type": "string"
+                },
                 "review_result_json": {
                   "type": "string"
                 },
@@ -7902,8 +7914,8 @@
     "assignment.export": {
       "identity": "assignment.export",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:ea8e8f710b117fb92f9059f26dd4ea76babe0ace82f0dd0e0a698022709d3741",
-      "compatibility_fingerprint": "sha256:4045b3a281311ec243e370d135037fb9b7ddbb82a0c58982922c8a913da7efff",
+      "fingerprint": "sha256:90f45bd2c4d94e9cc7c7a139c17639b7212ff5d741ec7e4c7eeb93e7a8403c3c",
+      "compatibility_fingerprint": "sha256:8e38fb9fdd1d801d0629f7d2f9cfeaf92b58d0083fb9b8a2858ff119bb61dc14",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -8357,6 +8369,9 @@
                 "return_json": {
                   "type": "string"
                 },
+                "return_file": {
+                  "type": "string"
+                },
                 "review_result_json": {
                   "type": "string"
                 },
@@ -8531,8 +8546,8 @@
     "assignment.import": {
       "identity": "assignment.import",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:21d19b319947204ece6deeebbf08acb6b297ba7ea07b961b985c95b682964410",
-      "compatibility_fingerprint": "sha256:f44eb008d46bd543db873ea3f19ec21daf86183690d6f36884fd85181dd83269",
+      "fingerprint": "sha256:3af6a7bd8ee1b745781a4005d532a3666f00bd9a13ac71baef3a8c2106d85b5f",
+      "compatibility_fingerprint": "sha256:8cd488ce29e0e7360607a40259ac7c113e7edace72ffaef54fcddd56bc131f10",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -8592,7 +8607,12 @@
           },
           {
             "name": "return_json",
-            "required": true,
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "return_file",
+            "required": false,
             "source": "cli-option"
           },
           {
@@ -8849,7 +8869,12 @@
             },
             {
               "name": "return_json",
-              "required": true,
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "return_file",
+              "required": false,
               "source": "cli-option"
             },
             {
@@ -8958,6 +8983,9 @@
                   "type": "string"
                 },
                 "return_json": {
+                  "type": "string"
+                },
+                "return_file": {
                   "type": "string"
                 },
                 "review_result_json": {
@@ -9134,8 +9162,8 @@
     "assignment.integrate": {
       "identity": "assignment.integrate",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:f9f14e0e41cec170ffd330726bf47039e8032defbeb54fbe5dcd0daf2b26f294",
-      "compatibility_fingerprint": "sha256:5004ee59db012135c6b71594d664cad8ac37640c4aceac993dbe56e855bcb786",
+      "fingerprint": "sha256:96384792260cfc25b455424ca8d5c2e7ccb06e2b27debfc20326b9236d32ab4c",
+      "compatibility_fingerprint": "sha256:3a8d610c4a240abc40d2fd9ba0fd295a9017764e1f430cd0d39a8e0d2ffe859f",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -9563,6 +9591,9 @@
                 "return_json": {
                   "type": "string"
                 },
+                "return_file": {
+                  "type": "string"
+                },
                 "review_result_json": {
                   "type": "string"
                 },
@@ -9737,8 +9768,8 @@
     "assignment.override": {
       "identity": "assignment.override",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:0f79454aae41695dcbc30d86b3c4887933c3ad6852cb7b0db47360cadbba5632",
-      "compatibility_fingerprint": "sha256:28f83957be2b1f6613426cb2a6ee5e8311e9a66b73c5441eee2e4974aea26ce1",
+      "fingerprint": "sha256:2f87a16758e6e9c71dc0b93870a224010e61604544a9546d2606294389a622b5",
+      "compatibility_fingerprint": "sha256:3308ee551b59dbe35ab4f5b26d6d4d42f86936256dc79c9c4f28c20decabffe2",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -10166,6 +10197,9 @@
                 "return_json": {
                   "type": "string"
                 },
+                "return_file": {
+                  "type": "string"
+                },
                 "review_result_json": {
                   "type": "string"
                 },
@@ -10340,8 +10374,8 @@
     "assignment.reassign": {
       "identity": "assignment.reassign",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:0aac0e5ea3cf939aff77ad5f6b48aa464a2ca4a3ae2abbfe8ec36d3556e406a9",
-      "compatibility_fingerprint": "sha256:3007778779503c3879c7e0c99d81bec916796b85de0ec72a8d25ed20de78e703",
+      "fingerprint": "sha256:c2bda5a4199971f22b2beadfcd361ece57c0d04b46c0a24b54705f53f56e419f",
+      "compatibility_fingerprint": "sha256:28bc12b1f0ac48824113d682aad1f658cf7d319501776fa657f109b07071eac0",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -10769,6 +10803,9 @@
                 "return_json": {
                   "type": "string"
                 },
+                "return_file": {
+                  "type": "string"
+                },
                 "review_result_json": {
                   "type": "string"
                 },
@@ -10943,8 +10980,8 @@
     "assignment.reject": {
       "identity": "assignment.reject",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:5b11d68e13c0778dc4c1d294fa429329f6a8c369302786a08f81f9071ac55374",
-      "compatibility_fingerprint": "sha256:7112cd25098c8882aec648c0e4e0eb6c4263408d5db01a22db6dcfdb6b1409c4",
+      "fingerprint": "sha256:8d6648b69382beb1000bdbed3f20392e4296817b1d14351696c3dc3b8eac7b15",
+      "compatibility_fingerprint": "sha256:bb105ecdd10d8c2a56643c9f5d377a02fec0f60125a5d0a7e61ac00ceb450ca5",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -11372,6 +11409,9 @@
                 "return_json": {
                   "type": "string"
                 },
+                "return_file": {
+                  "type": "string"
+                },
                 "review_result_json": {
                   "type": "string"
                 },
@@ -11546,8 +11586,8 @@
     "assignment.repair": {
       "identity": "assignment.repair",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:ef7518ee33ed1ec2d5be803e7f69c94346b31852076daeb7208d75d0b6a41e5e",
-      "compatibility_fingerprint": "sha256:669aa4ba847498251d4adebcf3df2da3b81926cba7a2434abc0748f6bc084615",
+      "fingerprint": "sha256:b8acdd95a711029043ca50718eca4ac5ec278ae4b86eba00b357d6d070be2f1e",
+      "compatibility_fingerprint": "sha256:f478299683652a068508fa68b74bf810b1fbb79c49f2e8a168dad27eac4b1d46",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -11973,6 +12013,9 @@
                   "type": "string"
                 },
                 "return_json": {
+                  "type": "string"
+                },
+                "return_file": {
                   "type": "string"
                 },
                 "review_result_json": {
@@ -24440,6 +24483,10 @@
           },
           "return_json": {
             "description": "Serialized worker return payload awaiting admission.",
+            "type": "string"
+          },
+          "return_file": {
+            "description": "Repo-contained UTF-8 file holding one serialized worker return payload awaiting admission; mutually exclusive with return_json.",
             "type": "string"
           },
           "review_result_json": {

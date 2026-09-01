@@ -953,7 +953,7 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
                 )
     elif transition == "import":
         require("run_id")
-        returned = _assignment_json_value(require("return_json"), field="return_json")
+        returned = _assignment_import_return_value(values=values, target_root=target_root, failures=failures)
         if not isinstance(returned, dict):
             failures.append(
                 {
@@ -2077,6 +2077,29 @@ def _assignment_json_value(value: Any, *, field: str) -> Any:
         return json.loads(text)
     except json.JSONDecodeError as exc:
         raise PrimitiveExecutionError(f"assignment lifecycle {field} must be valid JSON") from exc
+
+
+def _assignment_import_return_value(*, values: Mapping[str, Any], target_root: Path, failures: list[dict[str, Any]]) -> Any:
+    inline_return = _optional_text(values.get("return_json"))
+    return_file = _optional_text(values.get("return_file"))
+    if bool(inline_return) == bool(return_file):
+        failures.append(
+            {
+                "reason": "return-input-required",
+                "field": "return_json|return_file",
+                "recovery": "Provide exactly one inline return_json or repo-contained return_file.",
+            }
+        )
+        return {}
+    if inline_return:
+        return _assignment_json_value(inline_return, field="return_json")
+    try:
+        path = (target_root / return_file).resolve()
+        path.relative_to(target_root.resolve())
+        payload = path.read_text(encoding="utf-8")
+    except (OSError, ValueError) as exc:
+        raise PrimitiveExecutionError("assignment lifecycle return_file must be a readable repo-contained UTF-8 file") from exc
+    return _assignment_json_value(payload, field="return_file")
 
 
 def _assignment_digest(value: Any) -> str:
