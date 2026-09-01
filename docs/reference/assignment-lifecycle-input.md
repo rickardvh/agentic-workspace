@@ -23,6 +23,7 @@ Input accepted by public assignment lifecycle operations that prepare handoff pa
 | `reason` | string | no |  | Human-readable reason for rejection, repair, reassignment, cleanup, close, or override actions. |  |  |
 | `return_id` | string | no |  | Stable identifier for a returned assignment result packet. |  |  |
 | `return_json` | string | no |  | Serialized worker return payload awaiting admission. |  |  |
+| `return_file` | string | no |  | Repo-contained UTF-8 file holding one serialized worker return payload awaiting admission; mutually exclusive with return_json. |  |  |
 | `review_result_json` | string | no |  | Serialized producer-owned independent-review result envelope to admit through assignment.admit. |  |  |
 | `review_result_ref` | string | no |  | Repo-relative path to a producer-owned independent-review result envelope. |  |  |
 | `host_result_ref` | string | no |  | Opaque host/adapter independent-review result ref to import and admit. |  |  |

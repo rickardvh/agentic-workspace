@@ -5,7 +5,7 @@
   "owner_level": "slice",
   "lifecycle": "live",
   "phase": "closeout",
-  "revision": 8,
+  "revision": 9,
   "intent": {
     "outcome": "#2958",
     "non_goals": [
@@ -108,6 +108,7 @@
   },
   "touched_paths": [
     ".agentic-workspace/config.toml",
+    "docs/reference/assignment-lifecycle-input.md",
     "src/agentic_workspace/contracts/command_package_ir.json",
     "src/agentic_workspace/contracts/operations/assignment.import.json",
     "src/agentic_workspace/contracts/schemas/assignment_lifecycle_input.schema.json",
@@ -131,12 +132,19 @@
     "uv run --frozen --active --no-sync python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
     "uv run --frozen --active --no-sync python scripts/check/check_structured_file_inventory.py --quiet-success",
     "uv run --frozen --active --no-sync python scripts/check/check_generated_command_packages.py --require-node",
+    "make schema-reference-docs",
     "uv run --frozen --active --no-sync ruff check src/agentic_workspace/contracts/python_primitive_support.py src/agentic_workspace/session_logging.py tests/test_external_operation_clients.py tests/test_workspace_session_logging.py",
     "git diff --check"
   ],
   "execution_bounds": {
+    "stop before touching": [
+      "assignment admission, integration, or proof policy",
+      "unrelated tests or runtime surfaces",
+      "PR merge operations"
+    ],
     "allowed paths": [
       ".agentic-workspace/config.toml",
+      "docs/reference/assignment-lifecycle-input.md",
       "src/agentic_workspace/contracts/command_package_ir.json",
       "src/agentic_workspace/contracts/operations/assignment.import.json",
       "src/agentic_workspace/contracts/schemas/assignment_lifecycle_input.schema.json",
@@ -152,11 +160,6 @@
       "generated/",
       ".agentic-workspace/workspace-packages/",
       ".agentic-workspace/planning/execplans/issue-2958-large-return-file-import.plan.json"
-    ],
-    "stop before touching": [
-      "assignment admission, integration, or proof policy",
-      "unrelated tests or runtime surfaces",
-      "PR merge operations"
     ]
   }
 }
