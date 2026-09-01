@@ -1192,7 +1192,10 @@ safe_to_auto_run_commands = false
     output = capsys.readouterr().out
     payload = json.loads(output)
     values = payload["values"]
-    assert values["warnings"] == []
+    assert values["warnings"] == [
+        "delegation-legacy-authoring/v1: compatibility-only field(s) mode are deprecated and scheduled for removal by 1.0.0; "
+        "migrate to canonical assignment/transport/override fields."
+    ]
     assert Path(values["target"]).name == tmp_path.name
     assert Path(values["config_path"]).as_posix().endswith(".agentic-workspace/config.toml")
     assert values["workspace.improvement_latitude"] == "proactive"
@@ -1888,6 +1891,9 @@ def test_config_command_surfaces_unknown_local_override_fields_as_warnings(tmp_p
     assert payload["warnings"] == [
         ".agentic-workspace/config.local.toml [runtime] contains unsupported field(s): mystery_flag.",
         ".agentic-workspace/config.local.toml delegation_targets.gpt_5_4_mini contains unsupported field(s): unexpected.",
+        "delegation-target-legacy-authoring/v1: .agentic-workspace/config.local.toml delegation_targets.gpt_5_4_mini "
+        "compatibility-only field(s) execution_methods are deprecated and scheduled for removal by 1.0.0; "
+        "migrate to transports and canonical target facts.",
     ]
 
 
@@ -2012,7 +2018,10 @@ def test_config_command_layers_shared_local_config_below_repo_local_override(tmp
         "source": "shared-local-config",
     }
     assert payload["mixed_agent"]["local_memory"]["source"] == "shared-local-config"
-    assert payload["warnings"] == []
+    assert payload["warnings"] == [
+        "delegation-legacy-authoring/v1: compatibility-only field(s) mode, runtime.cheap_bounded_executor_available are "
+        "deprecated and scheduled for removal by 1.0.0; migrate to canonical assignment/transport/override fields."
+    ]
 
 
 def test_config_command_warns_when_shared_local_config_is_missing(tmp_path: Path, capsys) -> None:
@@ -2057,7 +2066,10 @@ def test_config_command_resolves_relative_shared_local_config_from_repo_root(tmp
         "value": "manual",
         "source": "shared-local-config",
     }
-    assert payload["warnings"] == []
+    assert payload["warnings"] == [
+        "delegation-legacy-authoring/v1: compatibility-only field(s) mode are deprecated and scheduled for removal by 1.0.0; "
+        "migrate to canonical assignment/transport/override fields."
+    ]
 
 
 def test_config_command_reports_local_only_memory_override(tmp_path: Path, capsys) -> None:

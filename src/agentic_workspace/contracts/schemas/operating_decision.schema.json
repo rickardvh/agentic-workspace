@@ -137,6 +137,89 @@
       "type": "object",
       "description": "Admission of a repository-owned assurance classification, quiet when no external classifier is configured."
     },
+    "repo_evidence_strategy": {
+      "type": "object",
+      "description": "Repository-owned evidence methodology admitted by proof selection and composed into the canonical operating decision.",
+      "properties": {
+        "kind": {"const": "agentic-workspace/repo-evidence-strategy/v1", "description": "Schema discriminator for one composed repository evidence strategy."},
+        "status": {"enum": ["not-declared", "applicable", "blocked"], "description": "Whether no methodology applies, the strategy is usable, or hard evidence is missing."},
+        "clauses": {
+          "type": "array",
+          "description": "Source-owned named evidence requirements and their selected-command effects.",
+          "items": {
+            "type": "object",
+            "required": ["id", "class", "authority", "authority_revision", "source_current", "applicability", "required_evidence", "preference_target", "proof_profile", "selected_commands", "blocked_commands", "evidence_state", "effect"],
+            "properties": {
+              "id": {"type": "string", "minLength": 1},
+              "class": {"enum": ["invariant", "current-evidence", "guideline"]},
+              "authority": {"type": "string"},
+              "authority_revision": {"type": "string"},
+              "source_current": {"type": ["boolean", "null"]},
+              "applicability": {"type": "array", "items": {"type": "string"}},
+              "required_evidence": {"type": "array", "items": {"type": "string"}},
+              "preference_target": {"type": "string"},
+              "proof_profile": {"type": "string"},
+              "selected_commands": {"type": "array", "items": {"type": "string"}},
+              "blocked_commands": {"type": "array", "items": {"type": "string"}},
+              "evidence_state": {"type": "string", "minLength": 1},
+              "effect": {"enum": ["hard-claim-boundary", "advisory-proof-preference"]}
+            },
+            "additionalProperties": false
+          }
+        },
+        "hard_blockers": {
+          "type": "array",
+          "description": "Unsatisfied invariant or current-evidence clauses that block named claims.",
+          "items": {
+            "type": "object",
+            "required": ["reason_code", "owner", "requirement_id", "repair", "blocked_claims"],
+            "properties": {
+              "reason_code": {"enum": ["missing-capability", "missing-evidence"]},
+              "owner": {"type": "string", "minLength": 1},
+              "requirement_id": {"type": "string", "minLength": 1},
+              "repair": {"type": "string", "minLength": 1},
+              "blocked_claims": {"type": "array", "items": {"type": "string"}}
+            },
+            "additionalProperties": false
+          }
+        },
+        "advisory_preferences": {"type": "array", "description": "Guideline clauses retained as non-blocking preferences.", "items": {"type": "object"}},
+        "construction": {
+          "type": "object",
+          "description": "Deterministic proof-lane selection effects and unresolved owner decisions.",
+          "required": ["status", "effects", "owner_decisions"],
+          "properties": {
+            "status": {"enum": ["not-applicable", "not-evaluated", "applied", "owner-decision-required"], "description": "Construction outcome before the strategy is composed."},
+            "effects": {"type": "array", "description": "Declared requirement effects applied to proof lanes.", "items": {"type": "object"}},
+            "owner_decisions": {"type": "array", "description": "Named classifications the domain owner must still resolve.", "items": {"type": "object"}},
+            "authority_boundary": {"type": "string", "minLength": 1, "description": "Boundary preventing methodology inference from untyped prose."}
+          },
+          "additionalProperties": false
+        },
+        "selected_command_count": {"type": "integer", "minimum": 0, "description": "Distinct selected commands attributed to strategy clauses."},
+        "footprint": {
+          "type": "object",
+          "description": "Quiet-path execution and persistence cost when no strategy is declared.",
+          "required": ["first_line_cost", "mandatory_command_count", "durable_receipt_required", "strategy_packet_required_to_act"],
+          "properties": {
+            "first_line_cost": {"type": "string", "description": "Human-visible cost of the quiet path."},
+            "mandatory_command_count": {"type": "integer", "minimum": 0, "description": "Commands imposed solely by this strategy."},
+            "durable_receipt_required": {"type": "boolean", "description": "Whether this strategy alone requires durable evidence."},
+            "strategy_packet_required_to_act": {"type": "boolean", "description": "Whether ordinary work must load this packet before acting."}
+          },
+          "additionalProperties": false
+        },
+        "composition_rule": {"type": "string", "minLength": 1, "description": "How simultaneous hard and advisory clauses compose."},
+        "authority_boundary": {"type": "string", "minLength": 1, "description": "Division between host-owned facts and workspace composition."},
+        "rule": {"type": "string", "minLength": 1, "description": "Invariant governing this strategy result."}
+      },
+      "allOf": [
+        {"if": {"minProperties": 1}, "then": {"required": ["kind", "status", "clauses", "hard_blockers", "advisory_preferences", "construction", "selected_command_count", "rule"]}},
+        {"if": {"required": ["status"], "properties": {"status": {"const": "not-declared"}}}, "then": {"required": ["footprint"]}},
+        {"if": {"required": ["status"], "properties": {"status": {"enum": ["applicable", "blocked"]}}}, "then": {"required": ["composition_rule", "authority_boundary"]}}
+      ],
+      "additionalProperties": false
+    },
     "cross_owner_enforcement": {
       "type": "object",
       "description": "Registry-derived join identities, peer-surface dispositions, and fail-closed findings bound to this decision identity.",

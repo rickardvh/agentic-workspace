@@ -141,18 +141,34 @@ def evaluate_security_supply_chain(
             shell_true_paths.append(source.relative_to(root).as_posix())
     trusted_text = trusted_path.read_text(encoding="utf-8") if trusted_path.is_file() else ""
     missing_sources = [source for source in policy["trusted_shell_sources"] if source not in trusted_text]
-    shell_ok = shell_true_paths == [policy["trusted_shell_implementation"]] and not missing_sources
+    declared_boundary_present = all(
+        marker in trusted_text
+        for marker in (
+            "def run_trusted_shell(",
+            "SUPPORTED_SHELL_DIALECTS",
+            "shell=False",
+            "trust_source not in TRUSTED_SHELL_SOURCES",
+        )
+    )
+    shell_ok = not shell_true_paths and not missing_sources and declared_boundary_present
     controls.append(
         {
             "id": "trusted-shell-admission",
             "status": "pass" if shell_ok else "fail",
             "shell_true_paths": shell_true_paths,
             "missing_trust_sources": missing_sources,
+            "declared_boundary_present": declared_boundary_present,
         }
     )
     if not shell_ok:
         failures.append(
-            {"control": "trusted-shell-admission", "detail": f"shell paths={shell_true_paths}; missing sources={missing_sources}"}
+            {
+                "control": "trusted-shell-admission",
+                "detail": (
+                    f"implicit shell paths={shell_true_paths}; missing sources={missing_sources}; "
+                    f"declared boundary={declared_boundary_present}"
+                ),
+            }
         )
 
     release_text = workflow_text.get(".github/workflows/release.yml", "")
