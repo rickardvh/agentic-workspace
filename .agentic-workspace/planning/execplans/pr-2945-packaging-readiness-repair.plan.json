@@ -3,9 +3,9 @@
   "id": "pr-2945-packaging-readiness-repair",
   "title": "Repair semantic-route package readiness",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "closeout",
-  "revision": 4,
+  "lifecycle": "archived",
+  "phase": "complete",
+  "revision": 5,
   "intent": {
     "outcome": "Close #2946 by making ordinary generated-package proof reject stale external-operation conformance receipts and report the exact recovery command.",
     "non_goals": [
@@ -43,14 +43,17 @@
       "refs": []
     },
     "integration": {
-      "status": "feature-complete-integration-pending",
+      "status": "integrated",
       "proposal_id": "2946-archive-owner",
       "proposal_ref": ".agentic-workspace/planning/integration-proposals/2946-archive-owner.integration-proposal.json",
       "requested_transition": "archive-owner",
       "proof_refs": [
         ".agentic-workspace/verification/proof-decision.json"
       ],
-      "authority": "feature-head declaration; target integration remains terminal authority"
+      "authority": "feature-head declaration; target integration remains terminal authority",
+      "transition": "archive-owner",
+      "applied_at": "2026-09-01T21:25:11.815734Z",
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/2946-archive-owner.integration-receipt.json"
     }
   },
   "references": [
@@ -123,7 +126,9 @@
   "proof_report": {
     "validation proof": ".agentic-workspace/verification/proof-decision.json",
     "proof achieved now": "yes; integration-propose recorded accepted feature-head proof.",
-    "evidence for \"proof achieved\" state": ".agentic-workspace/verification/proof-decision.json"
+    "evidence for \"proof achieved\" state": ".agentic-workspace/verification/proof-decision.json",
+    "integration proof": ".agentic-workspace/verification/proof-decision.json",
+    "integration applied at": "2026-09-01T21:25:11.815734Z"
   },
   "execution_run": {
     "run status": "completed",
@@ -166,5 +171,10 @@
     "why this decision is honest": "Feature-head proof is accepted; terminal lifecycle truth awaits target integration.",
     "evidence carried forward": ".agentic-workspace/verification/proof-decision.json",
     "reopen trigger": "New contradictory evidence or rejected target integration."
+  },
+  "active_milestone": {
+    "status": "archived",
+    "ready": "ready",
+    "blocked": "none"
   }
 }

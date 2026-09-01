@@ -1,8 +1,8 @@
 {
   "kind": "planning-integration-proposal/v1",
   "id": "issue-2929-2930-semantic-task-routes-archive-owner",
-  "status": "pending",
-  "phase": "integration-pending",
+  "status": "integrated",
+  "phase": "integrated-lifecycle-truth",
   "requested_transition": "archive-owner",
   "owner": {
     "id": "issue-2929-2930-semantic-task-routes",
@@ -19,9 +19,9 @@
     "full-tree inventory proof remains fail-closed"
   ],
   "expected_subject_revision": "9272c0e896f4ffe4",
-  "expected_planning_revision": "f47272c15b6bf420",
+  "expected_planning_revision": "01b69224ca415474",
   "created_at": "2026-09-01T17:42:47.354094Z",
-  "updated_at": "2026-09-01T17:42:47.354094Z",
+  "updated_at": "2026-09-01T21:25:02.912442Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -37,5 +37,7 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "56f1388e5ca0efa6"
+  "proposal_revision": "f3bb7bb4fcd9dd5e",
+  "integrated_at": "2026-09-01T21:25:02.912442Z",
+  "integration_receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2929-2930-semantic-task-routes-archive-owner.integration-receipt.json"
 }

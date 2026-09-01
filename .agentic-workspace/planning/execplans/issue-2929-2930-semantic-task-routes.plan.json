@@ -3,9 +3,9 @@
   "id": "issue-2929-2930-semantic-task-routes",
   "title": "Add semantic task routes and issue-creation dogfood",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "closeout",
-  "revision": 4,
+  "lifecycle": "archived",
+  "phase": "complete",
+  "revision": 5,
   "intent": {
     "non_goals": [
       "Do not resume #2821-#2827 or move repo-maintainer structured-inventory policy into portable Workspace core."
@@ -45,14 +45,17 @@
       "refs": []
     },
     "integration": {
-      "status": "feature-complete-integration-pending",
+      "status": "integrated",
       "proposal_id": "issue-2929-2930-semantic-task-routes-archive-owner",
       "proposal_ref": ".agentic-workspace/planning/integration-proposals/issue-2929-2930-semantic-task-routes-archive-owner.integration-proposal.json",
       "requested_transition": "archive-owner",
       "proof_refs": [
         ".agentic-workspace/verification/proof-decision.json"
       ],
-      "authority": "feature-head declaration; target integration remains terminal authority"
+      "authority": "feature-head declaration; target integration remains terminal authority",
+      "transition": "archive-owner",
+      "applied_at": "2026-09-01T21:25:02.912442Z",
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2929-2930-semantic-task-routes-archive-owner.integration-receipt.json"
     }
   },
   "references": [
@@ -147,7 +150,9 @@
   "proof_report": {
     "validation proof": ".agentic-workspace/verification/proof-decision.json",
     "proof achieved now": "yes; integration-propose recorded accepted feature-head proof.",
-    "evidence for \"proof achieved\" state": ".agentic-workspace/verification/proof-decision.json"
+    "evidence for \"proof achieved\" state": ".agentic-workspace/verification/proof-decision.json",
+    "integration proof": ".agentic-workspace/verification/proof-decision.json",
+    "integration applied at": "2026-09-01T21:25:02.912442Z"
   },
   "execution_run": {
     "run status": "completed",
@@ -190,5 +195,10 @@
     "why this decision is honest": "Feature-head proof is accepted; terminal lifecycle truth awaits target integration.",
     "evidence carried forward": ".agentic-workspace/verification/proof-decision.json",
     "reopen trigger": "New contradictory evidence or rejected target integration."
+  },
+  "active_milestone": {
+    "status": "archived",
+    "ready": "ready",
+    "blocked": "none"
   }
 }
