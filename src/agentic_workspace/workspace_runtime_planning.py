@@ -822,12 +822,12 @@ def _work_shape_study_payload(
             ),
             None,
         )
-    if reusable_owner_route and selected_shape in {"bounded", "slice", "epic"}:
+    if reusable_owner_route and selected_shape in {"bounded", "epic"}:
         artifact_route = "existing-planning-owner"
         next_action = str(reusable_owner_route.get("next_action") or "select-existing-planning-owner")
 
     owner_writer: dict[str, Any]
-    if reusable_owner_route and selected_shape in {"bounded", "slice", "epic"}:
+    if reusable_owner_route and selected_shape in {"bounded", "epic"}:
         owner_surface = str(reusable_owner_route.get("owner_surface") or "").strip()
         expected_kind = "planning-lane-record" if owner_surface.endswith(".lane.json") else "planning-execplan"
         owner_writer = {
@@ -938,6 +938,125 @@ def _work_shape_study_payload(
                 "expected_owner_kind": "planning-lane-record",
             },
         }
+    elif selected_shape == "slice":
+        child_owner_route = reusable_owner_route
+        if child_owner_route is None:
+            issue_ids = {str(item.get("id") or "").strip() for item in raw_evidence if str(item.get("id") or "").strip()}
+            matched_children: list[tuple[Path, dict[str, Any]]] = []
+            execplan_root = target_root / ".agentic-workspace" / "planning" / "execplans"
+            for execplan_path in sorted(execplan_root.glob("*.plan.json")) if execplan_root.exists() else []:
+                try:
+                    execplan_payload = json.loads(execplan_path.read_text(encoding="utf-8-sig"))
+                except (OSError, json.JSONDecodeError):
+                    continue
+                references = execplan_payload.get("references", []) if isinstance(execplan_payload, dict) else []
+                targets = {str(reference.get("target") or "").strip() for reference in references if isinstance(reference, dict)}
+                if targets.intersection(issue_ids):
+                    matched_children.append((execplan_path, execplan_payload))
+            if len(matched_children) == 1:
+                matched_path, matched_payload = matched_children[0]
+                matched_surface = matched_path.relative_to(target_root).as_posix()
+                child_owner_route = {
+                    "id": str(matched_payload.get("id") or "").strip(),
+                    "owner_surface": matched_surface,
+                    "canonical_operation": "planning.owner-select.lifecycle",
+                    "next_action": "reuse-existing-execplan-owner",
+                    "mutation_required": False,
+                    "command": _command_with_cli_invoke(
+                        command=f'agentic-workspace planning owner-select --owner-ref "{matched_surface}" --target "{target_root.as_posix()}" --format json',
+                        cli_invoke=config.cli_invoke,
+                    ),
+                }
+        child_owner_surface = str((child_owner_route or {}).get("owner_surface") or "").strip()
+        child_parent_id = ""
+        if child_owner_surface:
+            try:
+                child_payload = json.loads((target_root / child_owner_surface).read_text(encoding="utf-8-sig"))
+            except (OSError, json.JSONDecodeError):
+                child_payload = {}
+            child_parent = child_payload.get("parent", {}) if isinstance(child_payload, dict) else {}
+            child_parent_id = str(child_parent.get("owner_id") or "").strip() if isinstance(child_parent, dict) else ""
+        parent_refs = sorted(
+            {str(item.get("parent_id") or "").strip() for item in raw_evidence if str(item.get("parent_id") or "").strip()}
+        )
+        parent_ref = parent_refs[0] if len(parent_refs) == 1 else ""
+        matching_lanes: list[tuple[str, str]] = []
+        lane_root = target_root / ".agentic-workspace" / "planning" / "lanes"
+        for lane_path in sorted(lane_root.glob("*.lane.json")) if lane_root.exists() and parent_ref else []:
+            try:
+                lane_payload = json.loads(lane_path.read_text(encoding="utf-8-sig"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            references = lane_payload.get("references", []) if isinstance(lane_payload, dict) else []
+            targets = {str(reference.get("target") or "").strip() for reference in references if isinstance(reference, dict)}
+            if parent_ref in targets:
+                matching_lanes.append((str(lane_payload.get("id") or lane_path.stem.removesuffix(".lane")), lane_path.as_posix()))
+        if child_owner_surface and child_parent_id not in {"", "none"}:
+            artifact_route = "existing-planning-owner"
+            next_action = str((child_owner_route or {}).get("next_action") or "reuse-existing-execplan-owner")
+            owner_writer = {
+                "required_artifact_kind": "planning-execplan",
+                "canonical_operation": str((child_owner_route or {}).get("canonical_operation") or "none"),
+                "selected_route": str((child_owner_route or {}).get("next_action") or "reuse-existing-execplan-owner"),
+                "mutation_required": bool((child_owner_route or {}).get("mutation_required")),
+                "id": str((child_owner_route or {}).get("id") or "").strip(),
+                "source_bucket": str((child_owner_route or {}).get("source_bucket") or "").strip(),
+                "command": str((child_owner_route or {}).get("command") or ""),
+                "readiness_requirements": ["existing child execplan and parent lane relation remain current"],
+                "postcondition": {
+                    "owner_path": child_owner_surface,
+                    "parent_owner_id": child_parent_id,
+                    "expected_owner_kind": "planning-execplan",
+                },
+            }
+        elif child_owner_surface and parent_ref and len(matching_lanes) <= 1:
+            parent_slug = re.sub(r"[^a-z0-9]+", "-", parent_ref.lower()).strip("-") or "parent"
+            lane_id = matching_lanes[0][0] if matching_lanes else f"issue-{parent_slug}"
+            command = _command_with_cli_invoke(
+                command=_command_with_expected_planning_revision(
+                    f"agentic-workspace planning lane-create --id {lane_id} "
+                    f"--title {json.dumps(f'Parent lane for {parent_ref}')} "
+                    f"--bind-execplan {json.dumps(child_owner_surface)} --source-ref {json.dumps(parent_ref)} "
+                    f'--target "{target_root.as_posix()}" --format json',
+                    planning_revision=planning_revision,
+                ),
+                cli_invoke=config.cli_invoke,
+            )
+            owner_writer = {
+                "required_artifact_kind": "planning-lane-child-binding",
+                "canonical_operation": "planning.lane-create.lifecycle",
+                "selected_route": "reuse-and-bind-parent-lane" if matching_lanes else "create-and-bind-parent-lane",
+                "mutation_required": True,
+                "command": command,
+                "readiness_requirements": [
+                    "existing child execplan remains current",
+                    "exactly one parent issue identity is available",
+                    "planning revision remains current",
+                ],
+                "postcondition": {
+                    "owner_path": f".agentic-workspace/planning/lanes/{lane_id}.lane.json",
+                    "child_owner_path": child_owner_surface,
+                    "child_parent_owner_id": lane_id,
+                    "selector_command": _command_with_cli_invoke(
+                        command=f'agentic-workspace summary --target "{target_root.as_posix()}" --select execplans,lanes --format json',
+                        cli_invoke=config.cli_invoke,
+                    ),
+                    "expected_owner_kind": "planning-lane-child-binding",
+                },
+            }
+        else:
+            owner_writer = {
+                "required_artifact_kind": "planning-lane-child-binding",
+                "canonical_operation": "planning.owner-relation-human-decision",
+                "selected_route": "resolve-parent-lane-ambiguity",
+                "mutation_required": False,
+                "command": "",
+                "readiness_requirements": [
+                    "one existing child execplan owner is identified",
+                    "one parent issue identity and at most one matching parent lane are identified",
+                ],
+                "postcondition": {"expected_owner_kind": "planning-lane-child-binding"},
+            }
     elif selected_shape == "epic":
         source_ref = next((str(item.get("id") or "") for item in raw_evidence if str(item.get("id") or "").strip()), "epic")
         epic_id = re.sub(r"[^a-z0-9]+", "-", source_ref.lower()).strip("-") or "epic"

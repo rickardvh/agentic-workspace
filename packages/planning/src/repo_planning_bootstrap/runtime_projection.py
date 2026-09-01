@@ -207,6 +207,8 @@ def apply_planning_lane_create_operation(values: dict, _arguments: dict, _contex
             ("outcome", "outcome", "str", ""),
             ("purpose", "purpose", "str", ""),
             ("proof_strategy", "proof_strategy", "str", ""),
+            ("bind_execplan", "bind_execplan", "str", ""),
+            ("source_ref", "source_ref", "str", ""),
             ("expected_planning_revision", "expect_planning_revision", "str", ""),
             ("dry_run", "dry_run", "bool", None),
         ),

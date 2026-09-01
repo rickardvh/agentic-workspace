@@ -91,6 +91,17 @@ def test_planning_help_text_is_actionable(capsys) -> None:
     assert "Unsafe-state recovery" in output
 
 
+def test_planning_reconcile_help_names_transition_specific_expected_execplan_requirements(capsys) -> None:
+    with pytest.raises(SystemExit) as excinfo:
+        cli.main(["planning", "reconcile", "--help"])
+
+    assert excinfo.value.code == 0
+    output = " ".join(capsys.readouterr().out.split())
+    assert "required for relink/supersede" in output
+    assert "optional for restore" in output
+    assert "not used by cancel/human" in output
+
+
 def test_memory_help_command_returns_workspace_front_door_guidance(capsys) -> None:
     assert cli.main(["memory", "--format", "json"]) == 0
     payload = json.loads(capsys.readouterr().out)

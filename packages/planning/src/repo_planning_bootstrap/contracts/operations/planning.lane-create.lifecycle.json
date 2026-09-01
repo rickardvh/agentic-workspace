@@ -15,6 +15,8 @@
     {"name": "outcome", "source": "cli-option", "required": false},
     {"name": "purpose", "source": "cli-option", "required": false},
     {"name": "proof_strategy", "source": "cli-option", "required": false},
+    {"name": "bind_execplan", "source": "cli-option", "required": false, "description": "Existing execplan owner to bind atomically as a child of the created or reused lane."},
+    {"name": "source_ref", "source": "cli-option", "required": false, "description": "External parent identity recorded on a newly created lane for deterministic reuse."},
     {"name": "target", "source": "cli-option", "required": false},
     {"name": "expect_planning_revision", "source": "cli-option", "required": false},
     {"name": "dry_run", "source": "cli-option", "required": false},
@@ -34,7 +36,10 @@
     "outside_repo_writes": "forbidden"
   },
   "reads": [{"surface": "target repository Planning state", "required": false}],
-  "writes": [{"surface": ".agentic-workspace/planning/lanes/", "required": false, "when": "not a dry run"}],
+  "writes": [
+    {"surface": ".agentic-workspace/planning/lanes/", "required": false, "when": "not a dry run"},
+    {"surface": ".agentic-workspace/planning/execplans/<owner>.plan.json", "required": false, "when": "--bind-execplan establishes the bounded parent relation"}
+  ],
   "steps": [
     {
       "id": "apply_lifecycle_operation",
@@ -49,7 +54,8 @@
   ],
   "guards": [
     "Respect dry-run mode by avoiding writes.",
-    "Keep lane strategy and proof aggregation in the lane record, not in execplans."
+    "Keep lane strategy and proof aggregation in the lane record, not in execplans.",
+    "When --bind-execplan is supplied, create or reuse exactly one compatible lane and atomically establish both sides of the parent relation."
   ],
   "proof": [
     "operation contract validates against operation.schema.json",

@@ -1,0 +1,114 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2926-2928-planning-repairs",
+  "title": "Fix parent binding, supersede contracts, and current-work continuity",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "implementation",
+  "revision": 3,
+  "intent": {
+    "outcome": "GitHub #2926 #2927 #2928",
+    "non_goals": [
+      "Leave adjacent backlog or follow-on work out of this plan."
+    ]
+  },
+  "parent": {
+    "owner_id": "issue-2923-2930-dogfooding",
+    "contribution": "GitHub #2926 #2927 #2928",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "Fill in the concrete files before implementation starts."
+    ],
+    "effects": []
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected-local",
+      "owner": "issue-2926-2928-planning-repairs"
+    },
+    "proof_posture": {
+      "state": "pending",
+      "refs": []
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "GitHub #2926 #2927 #2928",
+      "label": "GitHub #2926 #2927 #2928",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Fix parent binding, supersede contracts, and current-work continuity is implemented, validated, and closed out honestly."
+    ],
+    "requirements": [
+      "Fill in the narrowest command that proves the promoted work."
+    ],
+    "refs": []
+  },
+  "continuation": {
+    "owner": "none",
+    "residual_intent": "none"
+  },
+  "specialist_contracts": [],
+  "goal": [
+    "Make parent-lane repair atomic and revision-guarded, define canonical transition-specific reconcile inputs, preserve non-default current-work identity during activated plan creation and overwrite, and make blocked lane activation recover against the actual current relation."
+  ],
+  "non_goals": [
+    "Implement dogfooding issues #2929-#2930 or resume the #2821-#2827 epic in this slice.",
+    "Rewrite unrelated archived planning owners or integration records already present in the worktree."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "Implement all dogfooding issues #2923-#2930 in stacked PRs before resuming the original epic.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/lanes/issue-2923-2930-dogfooding.lane.json"
+  },
+  "execution_bounds": {
+    "allowed paths": "planning package runtime/contracts/tests, workspace planning router/contracts/generated command packages/reference docs, this execplan and parent lane, and one release note",
+    "max changed files": "60",
+    "required validation commands": "focused regressions; affected planning/workspace suites; planning lint/typecheck; generated Python/TypeScript/schema checks",
+    "ask-before-refactor threshold": "Any change outside the named planning and generated-contract surfaces or any incompatible public contract change",
+    "stop before touching": "Unrelated #2821 planning state, archived owners/integration records, release promotion lane state, or issue #2929-#2930 implementation"
+  },
+  "touched_paths": [
+    "packages/planning/src/repo_planning_bootstrap/**",
+    "packages/planning/tests/**",
+    "src/agentic_workspace/workspace_runtime_planning.py",
+    "src/agentic_workspace/contracts/**",
+    "generated/{planning,workspace,memory,verification}/**",
+    "tests/test_workspace_implement_cli.py",
+    "tests/test_workspace_planning_help_cli.py",
+    "docs/reference/{cli-catalogue,operation}.md",
+    ".agentic-workspace/planning/execplans/issue-2926-2928-planning-repairs.plan.json",
+    ".agentic-workspace/planning/lanes/issue-2923-2930-dogfooding.lane.json",
+    ".release/changes/dogfood-planning-repairs.toml"
+  ],
+  "validation_commands": [
+    "uv run --frozen --active --no-sync pytest packages/planning/tests/test_lanes.py packages/planning/tests/test_branch_safe_planning.py packages/planning/tests/test_runtime_projection.py tests/test_workspace_implement_cli.py tests/test_workspace_planning_help_cli.py -q",
+    "make lint-planning",
+    "make typecheck-planning",
+    "uv run --frozen --active --no-sync python scripts/check/check_generated_commands.py",
+    "uv run --frozen --active --no-sync python scripts/check/check_generated_typescript_conformance.py",
+    "make check-schema-reference"
+  ],
+  "completion_criteria": [
+    "A slice-shaped startup blocker offers one guarded lane-create command that creates or reuses the intended parent and binds the tightened child atomically.",
+    "Reconcile transition requirements come from the canonical operation contract and every uniquely actionable supersede route includes expected_execplan.",
+    "Activated new-plan creation and overwrite preserve an existing non-default current_work_id.",
+    "A blocked lane activation identifies the durable current relation and emits an executable supersede transaction for a requested replacement.",
+    "Focused and affected proof is green and the PR contains no unrelated dirty-worktree changes."
+  ]
+}

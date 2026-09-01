@@ -6031,6 +6031,81 @@ def test_start_routes_parent_lane_evidence_before_shape_specific_plan_creation(t
     assert lanes["record_count"] == 1
 
 
+def test_start_parent_lane_repair_binds_existing_tightened_child_without_overwrite(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    assert (
+        cli.main(
+            [
+                "planning",
+                "new-plan",
+                "--id",
+                "issue-2201-child",
+                "--title",
+                "Issue 2201 child",
+                "--source",
+                "#2201",
+                "--target",
+                str(tmp_path),
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    child_path = tmp_path / ".agentic-workspace/planning/execplans/issue-2201-child.plan.json"
+    child = json.loads(child_path.read_text(encoding="utf-8"))
+    child["next_action"] = "Preserve tightened execution intent."
+    child_path.write_text(json.dumps(child, indent=2) + "\n", encoding="utf-8")
+    _write(
+        tmp_path / ".agentic-workspace/local/cache/external-intent-evidence.json",
+        json.dumps(
+            {
+                "kind": "planning-external-intent-evidence/v1",
+                "items": [
+                    {
+                        "id": "#2201",
+                        "system": "github",
+                        "status": "open",
+                        "kind": "slice",
+                        "parent_id": "#2200",
+                        "title": "Child slice",
+                    }
+                ],
+            }
+        ),
+    )
+
+    task = "Implement issue #2201"
+    assert cli.main(["start", "--target", str(tmp_path), "--task", task, "--select", "planning_safety_gate", "--format", "json"]) == 0
+    gate = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]
+    writer = gate["work_shape_study"]["decision"]["owner_writer"]
+
+    assert gate["required_next_action"] == "create-or-promote-parent-lane-owner"
+    assert writer["selected_route"] == "create-and-bind-parent-lane"
+    assert writer["canonical_operation"] == "planning.lane-create.lifecycle"
+    assert "--bind-execplan" in writer["command"]
+    assert '--source-ref "#2200"' in writer["command"]
+    assert "new-plan" not in writer["command"]
+    argv = shlex.split(writer["command"])
+    assert cli.main(argv[1:]) == 0
+    capsys.readouterr()
+
+    bound_child = json.loads(child_path.read_text(encoding="utf-8"))
+    assert bound_child["parent"]["owner_id"] == "issue-2200"
+    assert bound_child["next_action"] == "Preserve tightened execution intent."
+    lane = json.loads((tmp_path / writer["postcondition"]["owner_path"]).read_text(encoding="utf-8"))
+    assert lane["slice_sequence"][0]["id"] == "issue-2201-child"
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", task, "--select", "planning_safety_gate", "--format", "json"]) == 0
+    restarted = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]
+    recognized = restarted["work_shape_study"]["decision"]["owner_writer"]
+    assert recognized["selected_route"] == "reuse-existing-execplan-owner"
+    assert recognized["mutation_required"] is False
+
+
 def test_start_epic_route_creates_and_recognizes_decomposition_owner(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0

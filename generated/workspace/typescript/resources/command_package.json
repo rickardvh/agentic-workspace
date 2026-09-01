@@ -1074,6 +1074,22 @@
                 "name": "proof_strategy"
               },
               {
+                "default": "",
+                "flags": [
+                  "--bind-execplan"
+                ],
+                "help": "Existing execplan owner to bind atomically as a child of the created or reused lane.",
+                "name": "bind_execplan"
+              },
+              {
+                "default": "",
+                "flags": [
+                  "--source-ref"
+                ],
+                "help": "External parent identity recorded on a newly created lane for deterministic reuse.",
+                "name": "source_ref"
+              },
+              {
                 "flags": [
                   "--target"
                 ],
@@ -2373,7 +2389,7 @@
                 "flags": [
                   "--expected-execplan"
                 ],
-                "help": "Repo-relative execplan source required for restore/relink reconciliation.",
+                "help": "Repo-relative execplan source: required for relink/supersede, optional for restore, and not used by cancel/human.",
                 "name": "expected_execplan"
               },
               {

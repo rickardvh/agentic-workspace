@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Repair parent-lane binding, transition-specific reconcile routes, activated-plan work identity, and lane-activation recovery identity."
+issues = [2926, 2927, 2928, 2938]

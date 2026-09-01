@@ -200,6 +200,37 @@ def test_new_plan_selects_locally_without_rewriting_legacy_aggregate(tmp_path: P
     assert planning_summary(target=tmp_path, profile="full")["todo"]["active_items"][0]["id"] == "owner-a"
 
 
+def test_new_plan_activation_preserves_existing_current_work_identity(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    create_execplan_scaffold(plan_id="owner-a", title="Owner A", activate=True, target=tmp_path)
+    selection_path = tmp_path / ".agentic-workspace/local/planning/owner-selection.json"
+    selection = json.loads(selection_path.read_text(encoding="utf-8"))
+    selection["current_work_id"] = "thread-dogfood-2928"
+    selection_path.write_text(json.dumps(selection, indent=2) + "\n", encoding="utf-8")
+
+    created = create_execplan_scaffold(plan_id="owner-b", title="Owner B", activate=True, switch_active=True, target=tmp_path)
+    after_create = json.loads(selection_path.read_text(encoding="utf-8"))
+
+    assert created.reason_code == ""
+    assert after_create["selected_owner"]["id"] == "owner-b"
+    assert after_create["current_work_id"] == "thread-dogfood-2928"
+    assert any("thread-dogfood-2928" in action.detail for action in created.actions)
+
+    overwritten = create_execplan_scaffold(
+        plan_id="owner-b",
+        title="Owner B tightened",
+        activate=True,
+        switch_active=True,
+        overwrite=True,
+        target=tmp_path,
+    )
+    after_overwrite = json.loads(selection_path.read_text(encoding="utf-8"))
+
+    assert overwritten.reason_code == ""
+    assert after_overwrite["selected_owner"]["id"] == "owner-b"
+    assert after_overwrite["current_work_id"] == "thread-dogfood-2928"
+
+
 def test_upgrade_retires_legacy_state_idempotently_and_preserves_natural_owners(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     owner_ref = _write_owner(tmp_path, "owner-a")

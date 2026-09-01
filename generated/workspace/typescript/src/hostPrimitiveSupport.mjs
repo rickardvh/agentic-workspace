@@ -1086,6 +1086,16 @@ function planningNewPlanResult(values, operationId) {
   const title = String(values.title ?? '').trim() || slug;
   const source = String(values.source ?? '').trim();
   const recordPath = join(result.target_root, owner);
+  const ownerSelectionPath = join(result.target_root, '.agentic-workspace/local/planning/owner-selection.json');
+  let preservedCurrentWorkId = 'default';
+  if (existsSync(ownerSelectionPath)) {
+    try {
+      const priorSelection = JSON.parse(readText(ownerSelectionPath));
+      if (priorSelection?.kind === 'agentic-planning/owner-selection/v1') {
+        preservedCurrentWorkId = String(priorSelection.current_work_id ?? '').trim() || 'default';
+      }
+    } catch { /* invalid prior selection uses deterministic initialization */ }
+  }
   const recordExisted = existsSync(recordPath);
   if (recordExisted && values.overwrite !== true) {
     result.reason_code = 'target-already-exists';
@@ -1120,6 +1130,7 @@ function planningNewPlanResult(values, operationId) {
   if (result.dry_run) {
     result.actions = [{ kind: existsSync(recordPath) ? 'would update' : 'would create', path: owner, detail: prepOnly ? 'schema-valid prep-only execplan scaffold' : 'schema-valid execplan scaffold' }];
     if (activate || queue) result.actions.push({ kind: 'would update', path: stateOwner, detail: `register '${slug}' in todo.${activate ? 'active_items' : 'queued_items'}` });
+    if (activate) result.actions.push({ kind: 'would update', path: '.agentic-workspace/local/planning/owner-selection.json', detail: `select '${slug}' for local work context '${preservedCurrentWorkId}'` });
     if (activate && switchActive && state.todo.active_items.length) result.actions.push({ kind: 'would update', path: stateOwner, detail: `demote ${state.todo.active_items.length} active planning item(s) into todo.queued_items` });
     if (lane) result.actions.push({ kind: 'would update', path: stateOwner, detail: `attach execplan '${slug}' to active lane '${lane}'` });
     return finalizeMutationOutcome(result);
@@ -1205,6 +1216,17 @@ function planningNewPlanResult(values, operationId) {
   if (laneItem) laneItem.execplan = owner;
   mkdirSync(dirname(recordPath), { recursive: true });
   writeFileSync(recordPath, `${JSON.stringify(plan, null, 2)}\n`, 'utf8');
+  if (activate) {
+    mkdirSync(dirname(ownerSelectionPath), { recursive: true });
+    writeFileSync(ownerSelectionPath, `${JSON.stringify({
+      kind: 'agentic-planning/owner-selection/v1',
+      mode: 'local',
+      current_work_id: preservedCurrentWorkId,
+      selected_owner: { id: slug, ref: owner },
+      planning_revision: planningRevision(result.target_root, state).revision_id,
+      reason: source || `Selected owner ${slug} for current work.`,
+    }, null, 2)}\n`, 'utf8');
+  }
   result.actions = [{ kind: recordExisted ? 'updated' : 'created', path: owner, detail: prepOnly ? 'schema-valid prep-only execplan scaffold' : 'schema-valid execplan scaffold' }];
   if (activate || queue || laneItem) {
     mkdirSync(dirname(statePath), { recursive: true });

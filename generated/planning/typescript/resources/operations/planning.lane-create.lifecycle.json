@@ -14,7 +14,8 @@
   },
   "guards": [
     "Respect dry-run mode by avoiding writes.",
-    "Keep lane strategy and proof aggregation in the lane record, not in execplans."
+    "Keep lane strategy and proof aggregation in the lane record, not in execplans.",
+    "When --bind-execplan is supplied, create or reuse exactly one compatible lane and atomically establish both sides of the parent relation."
   ],
   "id": "planning.lane-create.lifecycle",
   "inputs": [
@@ -45,6 +46,18 @@
     },
     {
       "name": "proof_strategy",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "description": "Existing execplan owner to bind atomically as a child of the created or reused lane.",
+      "name": "bind_execplan",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "description": "External parent identity recorded on a newly created lane for deterministic reuse.",
+      "name": "source_ref",
       "required": false,
       "source": "cli-option"
     },
@@ -133,6 +146,11 @@
       "required": false,
       "surface": ".agentic-workspace/planning/lanes/",
       "when": "not a dry run"
+    },
+    {
+      "required": false,
+      "surface": ".agentic-workspace/planning/execplans/<owner>.plan.json",
+      "when": "--bind-execplan establishes the bounded parent relation"
     }
   ]
 }
