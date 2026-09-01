@@ -703,6 +703,29 @@ def test_route_health_constructs_bounded_candidate_only_from_safe_refinement_evi
         proof_execution_evidence={},
     )
 
+    healthy_health = workspace_runtime_proof._proof_route_health_payload(
+        selected_commands=[focused],
+        stale_hints=[],
+        invalid_hints=[],
+        manual_missing=[],
+        changed_paths=changed_paths,
+        target_root=tmp_path,
+        cli_invoke="agentic-workspace",
+        focused_route_coverage_audit={},
+        route_refinement_required={},
+        unavailable_commands=[],
+        proof_execution_evidence={},
+    )
+    healthy_projection = bounded_adaptation_projection(
+        [item["bounded_adaptation_signal"] for item in healthy_health["findings"] if item.get("bounded_adaptation_signal")]
+    )
+    assert healthy_health["status"] == "quiet"
+    assert healthy_health["repair_packets"] == []
+    assert healthy_projection["candidate_count"] == 0
+    assert healthy_projection["first_line_cost"] == "none"
+    assert [item["command"] for item in [focused]] == ["pytest tests/test_example.py -q"]
+    assert not (tmp_path / ".agentic-workspace/local/proof-route-repairs/history.jsonl").exists()
+
     finding = next(item for item in health["findings"] if item.get("bounded_adaptation_signal"))
     candidate = bounded_adaptation_projection([finding["bounded_adaptation_signal"]])["candidates"][0]
     assert candidate["status"] == "promotion-ready"
@@ -710,6 +733,25 @@ def test_route_health_constructs_bounded_candidate_only_from_safe_refinement_evi
     assert candidate["authority_requirement"]["expected_owner_revision"] == finding["route_authority_revision"]
     assert len([common, focused]) == 2
     assert candidate["simulation"]["required_behaviors"] == candidate["simulation"]["preserved_behaviors"]
+
+    previous_config = config_path.read_bytes()
+    stale_candidate = deepcopy(candidate)
+    stale_candidate["authority_requirement"]["expected_owner_revision"] = "stale-route-authority"
+    stale_execution = execute_bounded_adaptation(stale_candidate, target_root=tmp_path)
+    assert stale_execution["status"] == "superseded"
+    assert stale_execution["operation_result"]["status"] == "blocked-stale-authority-revision"
+    assert config_path.read_bytes() == previous_config
+    assert candidate["simulation"]["required_behaviors"] == candidate["simulation"]["preserved_behaviors"]
+
+    monkeypatch.setattr(
+        workspace_runtime_proof,
+        "_proof_route_independent_validation_commands",
+        lambda **_: (['python -c "import sys; sys.exit(1)"'], "test-independent-validation-owner"),
+    )
+    with pytest.raises(workspace_runtime_proof.WorkspaceUsageError, match="validation command failed"):
+        execute_bounded_adaptation(candidate, target_root=tmp_path)
+    assert config_path.read_bytes() == previous_config
+    assert not (tmp_path / ".agentic-workspace/local/proof-route-repairs/history.jsonl").exists()
 
     monkeypatch.setattr(
         workspace_runtime_proof,
@@ -719,6 +761,16 @@ def test_route_health_constructs_bounded_candidate_only_from_safe_refinement_evi
     execution = execute_bounded_adaptation(candidate, target_root=tmp_path)
     assert execution["status"] == "quiet"
     assert execution["operation_id"] == "proof.report"
+    assert execution["validation_status"] == "passed"
+    assert execution["operation_result"]["apply_receipt"]["validation_authority"] == "test-independent-validation-owner"
+
+    replay_candidate = deepcopy(candidate)
+    replay_candidate["authority_requirement"]["expected_owner_revision"] = execution["post_owner_revision"]
+    replay_candidate["authority_requirement"]["current_owner_revision"] = execution["post_owner_revision"]
+    idempotent_execution = execute_bounded_adaptation(replay_candidate, target_root=tmp_path)
+    assert idempotent_execution["status"] == "quiet"
+    assert idempotent_execution["operation_result"]["status"] == "already-applied"
+    assert idempotent_execution["operation_result"]["apply_receipt"] == execution["operation_result"]["apply_receipt"]
 
     canonical = tomllib.loads(config_path.read_text(encoding="utf-8"))
     canonical_lane = canonical["assurance"]["domain_proof_lanes"]["example"]
