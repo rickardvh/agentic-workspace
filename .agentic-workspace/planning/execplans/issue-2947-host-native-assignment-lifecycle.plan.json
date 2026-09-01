@@ -5,7 +5,7 @@
   "owner_level": "slice",
   "lifecycle": "live",
   "phase": "implementation",
-  "revision": 5,
+  "revision": 6,
   "intent": {
     "outcome": "Make the canonical assignment lifecycle support commandless host-native execution/re-entry and baseline-verified shared-worktree integration.",
     "non_goals": [
@@ -41,6 +41,14 @@
     "external_posture": {
       "state": "unobserved",
       "refs": []
+    },
+    "delegation": {
+      "state": "recorded",
+      "route": "delegate-implementation",
+      "reason": "Provide the required real supported-host lifecycle evidence while limiting the worker edit to the stale #2947 plan.",
+      "scope": "active-plan-work-unit",
+      "parent_task_custody": "unchanged",
+      "bounded_child_authority": "separate-binding-decision"
     }
   },
   "references": [],
@@ -67,7 +75,13 @@
     "owner": "#2817",
     "residual_intent": "Run the unrelated substantive supported-host acceptance scenario after #2947 lands."
   },
-  "specialist_contracts": [],
+  "specialist_contracts": [
+    {
+      "kind": "planning-delegation/v1",
+      "target": "planning://delegation/delegate-implementation",
+      "revision": 1
+    }
+  ],
   "goal": [
     "Make commandless host-native assignment dispatch constructible and integrate explicitly declared shared-worktree returns exactly once through the canonical assignment lifecycle."
   ],
