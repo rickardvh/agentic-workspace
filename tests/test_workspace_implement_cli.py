@@ -9545,6 +9545,176 @@ def test_assignment_proof_obligation_selects_exact_integrated_intent_among_curre
     assert selected["id"] == "proof:two"
 
 
+def _write_closed_assignment_proof_fixture(
+    target_root: Path,
+    *,
+    suffix: str,
+    intent: str,
+    assignment_status: str = "closed",
+    attempt_status: str = "closed",
+    run_state: str = "closed",
+    closeout_run_id: str | None = None,
+    task_proof_receipt_ref: str | None = None,
+    allowed_paths: list[str] | None = None,
+) -> dict[str, object]:
+    assignment_id = f"assign-{suffix}"
+    run_id = f"run-{suffix}"
+    receipt_id = f"receipt-{suffix}"
+    proof_ref = f"proof://receipts/{receipt_id}"
+    paths = allowed_paths or ["src/shared.py"]
+    obligation: dict[str, object] = {
+        "kind": "agentic-workspace/assignment-task-proof-obligation/v1",
+        "id": f"proof:{suffix}",
+        "revision": f"proof-rev-{suffix}",
+        "subject": {
+            "assignment_id": assignment_id,
+            "run_id": run_id,
+            "human_intent_digest": hashlib.sha256(intent.encode("utf-8")).hexdigest(),
+        },
+    }
+    _write_json(
+        target_root / f".agentic-workspace/planning/assignments/{assignment_id}.assignment.json",
+        {
+            "kind": "agentic-workspace/planning-assignment/v1",
+            "assignment_id": assignment_id,
+            "status": assignment_status,
+            "assignment_gate": {
+                "human_intent": intent,
+                "allowed_paths": paths,
+                "proof_obligation": obligation,
+            },
+            "current_attempt": {"run_id": run_id, "status": attempt_status},
+            "closeout": {
+                "run_id": closeout_run_id if closeout_run_id is not None else run_id,
+                "task_proof_receipt_ref": proof_ref if task_proof_receipt_ref is None else task_proof_receipt_ref,
+            },
+        },
+    )
+    _write_json(
+        target_root / f".agentic-workspace/local/assignment-runs/{run_id}/state.json",
+        {"current_state": run_state, "run_id": run_id},
+    )
+    receipt: dict[str, object] = {
+        "kind": "agentic-workspace/proof-receipt/v1",
+        "command": "uv run pytest -q tests/test_workspace_implement_cli.py",
+        "result": "passed",
+        "recorded_at": "2026-09-01T00:00:00+00:00",
+        "changed_paths": paths,
+        "proof_subject": {"fingerprint": f"subject-{suffix}"},
+        "producer_class": "aw-proof",
+        "authority": "aw-proof",
+        "assignment_proof_obligation": obligation,
+        "receipt_id": receipt_id,
+        "source_ref": proof_ref,
+        "revision": "2026-09-01T00:00:00+00:00",
+    }
+    receipt["assignment_proof_binding"] = workspace_runtime_core.assignment_task_proof_binding(receipt)
+    _write_json(target_root / f".agentic-workspace/proof/receipts/{receipt_id}.json", receipt)
+    index_path = target_root / ".agentic-workspace/proof/receipts/index.json"
+    index = (
+        json.loads(index_path.read_text(encoding="utf-8"))
+        if index_path.exists()
+        else {
+            "kind": "agentic-workspace/trusted-producer-receipt-index/v1",
+            "receipts": {},
+        }
+    )
+    index["receipts"][receipt_id] = {
+        "path": f"{receipt_id}.json",
+        "producer_class": "aw-proof",
+        "revision": receipt["revision"],
+        "source_ref": proof_ref,
+        "status": "current",
+    }
+    _write_json(index_path, index)
+    return obligation
+
+
+def test_assignment_proof_obligation_selects_canonically_closed_assignment_with_prior_proof(tmp_path: Path) -> None:
+    obligation = _write_closed_assignment_proof_fixture(
+        tmp_path,
+        suffix="closed",
+        intent="record exact head proof",
+    )
+
+    selected = workspace_runtime_core._integrated_assignment_proof_obligation(
+        target_root=tmp_path,
+        changed_paths=["src/shared.py"],
+        task_text="record exact head proof",
+    )
+
+    assert selected == obligation
+
+
+@pytest.mark.parametrize(
+    (
+        "assignment_status",
+        "attempt_status",
+        "run_state",
+        "closeout_run_id",
+        "task_proof_receipt_ref",
+        "allowed_paths",
+        "changed_paths",
+    ),
+    [
+        ("rejected", "closed", "closed", None, None, ["src/shared.py"], ["src/shared.py"]),
+        ("closed", "integrated", "closed", None, None, ["src/shared.py"], ["src/shared.py"]),
+        ("closed", "closed", "closed", "run-other", None, ["src/shared.py"], ["src/shared.py"]),
+        ("closed", "closed", "closed", None, "", ["src/shared.py"], ["src/shared.py"]),
+        ("closed", "closed", "closed", None, None, ["src/other.py"], ["src/shared.py"]),
+    ],
+    ids=["rejected", "incomplete-attempt", "closeout-run-mismatch", "missing-prior-proof", "scope-mismatch"],
+)
+def test_assignment_proof_obligation_rejects_invalid_closed_assignment(
+    tmp_path: Path,
+    assignment_status: str,
+    attempt_status: str,
+    run_state: str,
+    closeout_run_id: str | None,
+    task_proof_receipt_ref: str | None,
+    allowed_paths: list[str],
+    changed_paths: list[str],
+) -> None:
+    _write_closed_assignment_proof_fixture(
+        tmp_path,
+        suffix="invalid",
+        intent="record exact head proof",
+        assignment_status=assignment_status,
+        attempt_status=attempt_status,
+        run_state=run_state,
+        closeout_run_id=closeout_run_id,
+        task_proof_receipt_ref=task_proof_receipt_ref,
+        allowed_paths=allowed_paths,
+    )
+
+    assert (
+        workspace_runtime_core._integrated_assignment_proof_obligation(
+            target_root=tmp_path,
+            changed_paths=changed_paths,
+            task_text="record exact head proof",
+        )
+        == {}
+    )
+
+
+def test_assignment_proof_obligation_rejects_ambiguous_closed_assignments(tmp_path: Path) -> None:
+    for suffix in ("one", "two"):
+        _write_closed_assignment_proof_fixture(
+            tmp_path,
+            suffix=suffix,
+            intent="record exact head proof",
+        )
+
+    assert (
+        workspace_runtime_core._integrated_assignment_proof_obligation(
+            target_root=tmp_path,
+            changed_paths=["src/shared.py"],
+            task_text="record exact head proof",
+        )
+        == {}
+    )
+
+
 def test_binding_automatic_assignment_needs_no_second_permission_and_forbids_local_fallback(tmp_path: Path) -> None:
     policy = {
         "execution_role": {"value": "orchestrator"},

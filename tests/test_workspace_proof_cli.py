@@ -6242,6 +6242,49 @@ def test_proof_record_receipt_successful_retry_is_byte_idempotent(tmp_path: Path
     assert len(history) == 1
 
 
+def test_proof_publication_distinguishes_assignment_proof_bindings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import agentic_workspace.workspace_runtime_core as runtime_core
+
+    _write_repo_local_proof_target(tmp_path)
+    changed_path = "src/agentic_workspace/workspace_runtime_proof.py"
+    _write(tmp_path / changed_path, "subject\n")
+    kwargs = {
+        "target_root": tmp_path,
+        "command": "make test-workspace",
+        "result": "passed",
+        "changed_paths": [changed_path],
+    }
+    unbound = runtime_core._record_proof_receipt_payload(**kwargs)
+
+    def obligation(suffix: str) -> dict[str, object]:
+        return {
+            "kind": "agentic-workspace/assignment-task-proof-obligation/v1",
+            "id": f"proof:{suffix}",
+            "revision": f"revision:{suffix}",
+            "subject": {"assignment_id": f"assignment:{suffix}", "run_id": f"run:{suffix}"},
+        }
+
+    first_obligation = obligation("one")
+    monkeypatch.setattr(runtime_core, "_integrated_assignment_proof_obligation", lambda **_: first_obligation)
+    first_bound = runtime_core._record_proof_receipt_payload(**kwargs)
+    repeated_first_bound = runtime_core._record_proof_receipt_payload(**kwargs)
+
+    second_obligation = obligation("two")
+    monkeypatch.setattr(runtime_core, "_integrated_assignment_proof_obligation", lambda **_: second_obligation)
+    second_bound = runtime_core._record_proof_receipt_payload(**kwargs)
+
+    refs = {
+        unbound["trusted_producer_receipt_ref"],
+        first_bound["trusted_producer_receipt_ref"],
+        second_bound["trusted_producer_receipt_ref"],
+    }
+    assert len(refs) == 3
+    assert repeated_first_bound["trusted_producer_receipt_ref"] == first_bound["trusted_producer_receipt_ref"]
+    assert "assignment_proof_obligation" not in unbound["receipt"]
+    assert first_bound["receipt"]["assignment_proof_obligation"] == first_obligation
+    assert second_bound["receipt"]["assignment_proof_obligation"] == second_obligation
+
+
 def test_proof_record_receipt_rejects_unresolved_template_before_persistence(tmp_path: Path) -> None:
     from agentic_workspace.config import WorkspaceUsageError
     from agentic_workspace.workspace_runtime_primitives import _record_proof_receipt_payload

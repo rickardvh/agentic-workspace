@@ -52414,7 +52414,16 @@ def _existing_proof_publication_receipt(
         receipt_path=receipt_path,
         receipt=existing,
     )
-    for field in ("command", "result", "changed_paths", "proof_subject", "target_context", "plan_id"):
+    for field in (
+        "command",
+        "result",
+        "changed_paths",
+        "proof_subject",
+        "target_context",
+        "plan_id",
+        "assignment_proof_obligation",
+        "assignment_proof_binding",
+    ):
         if existing.get(field) != receipt.get(field):
             raise WorkspaceUsageError("Prior proof publication identity collides with different receipt semantics.")
     return existing
@@ -52984,20 +52993,20 @@ def _record_proof_receipt_payload(
             + "; rerun the selected proof against the current subject."
         )
     receipt = _proof_receipt_redact_sensitive_data(receipt)
-    producer_receipt_id = hashlib.sha256(
-        json.dumps(
-            {
-                "command": command,
-                "result": result,
-                "changed_paths": receipt["changed_paths"],
-                "proof_subject": receipt.get("proof_subject", {}),
-                "target_context": target_context,
-                "proof_commands": aggregate_commands,
-            },
-            sort_keys=True,
-            ensure_ascii=True,
-        ).encode("utf-8")
-    ).hexdigest()[:16]
+    publication_identity = {
+        "command": command,
+        "result": result,
+        "changed_paths": receipt["changed_paths"],
+        "proof_subject": receipt.get("proof_subject", {}),
+        "target_context": target_context,
+        "proof_commands": aggregate_commands,
+    }
+    if "assignment_proof_obligation" in receipt:
+        publication_identity["assignment_proof_obligation"] = receipt["assignment_proof_obligation"]
+        publication_identity["assignment_proof_binding"] = receipt.get("assignment_proof_binding")
+    producer_receipt_id = hashlib.sha256(json.dumps(publication_identity, sort_keys=True, ensure_ascii=True).encode("utf-8")).hexdigest()[
+        :16
+    ]
     receipt["publication_id"] = producer_receipt_id
     producer_receipt_ref = (
         ""
@@ -53156,8 +53165,9 @@ def _integrated_assignment_proof_obligation(*, target_root: Path, changed_paths:
             assignment = json.loads(assignment_path.read_text(encoding="utf-8-sig"))
         except (OSError, json.JSONDecodeError):
             continue
-        if not isinstance(assignment, dict) or str(assignment.get("status") or "") != "current":
+        if not isinstance(assignment, dict):
             continue
+        assignment_status = str(assignment.get("status") or "")
         gate = _as_dict(assignment.get("assignment_gate"))
         obligation = _as_dict(gate.get("proof_obligation"))
         attempt = _as_dict(assignment.get("current_attempt"))
@@ -53170,7 +53180,31 @@ def _integrated_assignment_proof_obligation(*, target_root: Path, changed_paths:
             state = json.loads(state_path.read_text(encoding="utf-8-sig"))
         except (OSError, json.JSONDecodeError):
             continue
-        if not isinstance(state, dict) or state.get("current_state") != "integrated":
+        if not isinstance(state, dict):
+            continue
+        if assignment_status == "current" and state.get("current_state") != "integrated":
+            continue
+        if assignment_status == "closed":
+            closeout = _as_dict(assignment.get("closeout"))
+            task_proof_ref = str(closeout.get("task_proof_receipt_ref") or "").strip()
+            task_proof = load_indexed_assignment_task_proof(target_root=target_root, receipt_ref=task_proof_ref)
+            proved_paths = {str(path) for path in _list_payload(task_proof.get("changed_paths")) if str(path)}
+            subject = _as_dict(obligation.get("subject"))
+            if (
+                attempt.get("status") != "closed"
+                or state.get("current_state") != "closed"
+                or str(state.get("run_id") or "") != run_id
+                or str(closeout.get("run_id") or "") != run_id
+                or not task_proof_ref
+                or str(subject.get("assignment_id") or "") != str(assignment.get("assignment_id") or "")
+                or str(subject.get("run_id") or "") != run_id
+                or _as_dict(task_proof.get("assignment_proof_obligation")) != obligation
+                or task_proof.get("assignment_proof_binding") != assignment_task_proof_binding(task_proof)
+                or not proof_receipt_admission(task_proof).get("proof_sufficient")
+                or not allowed_paths.issubset(proved_paths)
+            ):
+                continue
+        elif assignment_status != "current":
             continue
         subject = _as_dict(obligation.get("subject"))
         intent_match = bool(
