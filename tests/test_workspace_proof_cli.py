@@ -6273,16 +6273,39 @@ def test_proof_publication_distinguishes_assignment_proof_bindings(tmp_path: Pat
     monkeypatch.setattr(runtime_core, "_integrated_assignment_proof_obligation", lambda **_: second_obligation)
     second_bound = runtime_core._record_proof_receipt_payload(**kwargs)
 
+    closeout_lineage = {
+        "kind": "agentic-workspace/assignment-closeout-proof-lineage/v1",
+        "assignment": {"id": "assignment:closed", "revision": "assignment-revision:closed"},
+        "run_id": "run:closed",
+        "task_proof": {
+            "obligation": obligation("closed"),
+            "binding": "sha256:task-proof-binding",
+            "receipt_ref": "proof://receipts/task-proof",
+        },
+        "close_transition": {
+            "receipt_ref": ".agentic-workspace/local/assignment-runs/run:closed/closeout/close.json",
+            "result": {"kind": "agentic-workspace/assignment-closeout-receipt/v1", "status": "closed", "run_id": "run:closed"},
+        },
+        "rule": "Closeout lineage projects a consumed task proof and close transition; it is not a second task-behavior proof.",
+    }
+    monkeypatch.setattr(runtime_core, "_integrated_assignment_proof_obligation", lambda **_: {})
+    monkeypatch.setattr(runtime_core, "_closed_assignment_closeout_lineage", lambda **_: closeout_lineage)
+    post_close = runtime_core._record_proof_receipt_payload(**kwargs)
+
     refs = {
         unbound["trusted_producer_receipt_ref"],
         first_bound["trusted_producer_receipt_ref"],
         second_bound["trusted_producer_receipt_ref"],
+        post_close["trusted_producer_receipt_ref"],
     }
-    assert len(refs) == 3
+    assert len(refs) == 4
     assert repeated_first_bound["trusted_producer_receipt_ref"] == first_bound["trusted_producer_receipt_ref"]
     assert "assignment_proof_obligation" not in unbound["receipt"]
     assert first_bound["receipt"]["assignment_proof_obligation"] == first_obligation
     assert second_bound["receipt"]["assignment_proof_obligation"] == second_obligation
+    assert "assignment_proof_obligation" not in post_close["receipt"]
+    assert post_close["receipt"]["assignment_closeout_lineage"]["assignment"]["id"] == "assignment:closed"
+    assert post_close["receipt"]["assignment_closeout_lineage"]["final_proof"]["relationship"] == "current-post-close-proof"
 
 
 def test_proof_record_receipt_rejects_unresolved_template_before_persistence(tmp_path: Path) -> None:

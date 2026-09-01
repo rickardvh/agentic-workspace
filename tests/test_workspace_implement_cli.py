@@ -9555,13 +9555,20 @@ def _write_closed_assignment_proof_fixture(
     run_state: str = "closed",
     closeout_run_id: str | None = None,
     task_proof_receipt_ref: str | None = None,
+    close_receipt_ref: str | None = None,
+    close_receipt_status: str = "closed",
     allowed_paths: list[str] | None = None,
+    plan_ref: str = "",
 ) -> dict[str, object]:
     assignment_id = f"assign-{suffix}"
     run_id = f"run-{suffix}"
     receipt_id = f"receipt-{suffix}"
     proof_ref = f"proof://receipts/{receipt_id}"
+    close_ref = f".agentic-workspace/local/assignment-runs/{run_id}/closeout/close.json"
     paths = allowed_paths or ["src/shared.py"]
+    for path in paths:
+        if "*" not in path:
+            _write(target_root / path, "initial\n")
     obligation: dict[str, object] = {
         "kind": "agentic-workspace/assignment-task-proof-obligation/v1",
         "id": f"proof:{suffix}",
@@ -9577,16 +9584,19 @@ def _write_closed_assignment_proof_fixture(
         {
             "kind": "agentic-workspace/planning-assignment/v1",
             "assignment_id": assignment_id,
+            "current_revision": f"assignment-rev-{suffix}",
             "status": assignment_status,
             "assignment_gate": {
                 "human_intent": intent,
                 "allowed_paths": paths,
                 "proof_obligation": obligation,
+                **({"plan_ref": plan_ref} if plan_ref else {}),
             },
             "current_attempt": {"run_id": run_id, "status": attempt_status},
             "closeout": {
                 "run_id": closeout_run_id if closeout_run_id is not None else run_id,
                 "task_proof_receipt_ref": proof_ref if task_proof_receipt_ref is None else task_proof_receipt_ref,
+                "receipt_ref": close_ref if close_receipt_ref is None else close_receipt_ref,
             },
         },
     )
@@ -9594,13 +9604,25 @@ def _write_closed_assignment_proof_fixture(
         target_root / f".agentic-workspace/local/assignment-runs/{run_id}/state.json",
         {"current_state": run_state, "run_id": run_id},
     )
+    _write_json(
+        target_root / close_ref,
+        {
+            "kind": "agentic-workspace/assignment-closeout-receipt/v1",
+            "run_id": run_id,
+            "status": close_receipt_status,
+        },
+    )
     receipt: dict[str, object] = {
         "kind": "agentic-workspace/proof-receipt/v1",
         "command": "uv run pytest -q tests/test_workspace_implement_cli.py",
         "result": "passed",
         "recorded_at": "2026-09-01T00:00:00+00:00",
         "changed_paths": paths,
-        "proof_subject": {"fingerprint": f"subject-{suffix}"},
+        "proof_subject": workspace_runtime_core.build_proof_subject(
+            target_root=target_root,
+            changed_paths=paths,
+            command="uv run pytest -q tests/test_workspace_implement_cli.py",
+        ),
         "producer_class": "aw-proof",
         "authority": "aw-proof",
         "assignment_proof_obligation": obligation,
@@ -9630,20 +9652,52 @@ def _write_closed_assignment_proof_fixture(
     return obligation
 
 
-def test_assignment_proof_obligation_selects_canonically_closed_assignment_with_prior_proof(tmp_path: Path) -> None:
-    obligation = _write_closed_assignment_proof_fixture(
+def test_assignment_closeout_lineage_projects_canonically_closed_assignment_without_task_rebinding(tmp_path: Path) -> None:
+    _write_closed_assignment_proof_fixture(
         tmp_path,
         suffix="closed",
         intent="record exact head proof",
     )
 
-    selected = workspace_runtime_core._integrated_assignment_proof_obligation(
+    assert (
+        workspace_runtime_core._integrated_assignment_proof_obligation(
+            target_root=tmp_path,
+            changed_paths=["src/shared.py"],
+            task_text="record exact head proof",
+        )
+        == {}
+    )
+    lineage = workspace_runtime_core._closed_assignment_closeout_lineage(
         target_root=tmp_path,
         changed_paths=["src/shared.py"],
         task_text="record exact head proof",
     )
 
-    assert selected == obligation
+    assert lineage["assignment"] == {"id": "assign-closed", "revision": "assignment-rev-closed"}
+    assert lineage["run_id"] == "run-closed"
+    assert lineage["task_proof"]["receipt_ref"] == "proof://receipts/receipt-closed"
+    assert lineage["close_transition"]["result"]["status"] == "closed"
+    assert lineage["close_transition"]["result"]["task_proof_receipt_ref"] == "proof://receipts/receipt-closed"
+    assert lineage["close_transition"]["receipt_sha256"]
+    assert lineage["dependency_classification"]["semantic_task_inputs"] == ["src/shared.py"]
+
+
+def test_assignment_closeout_lineage_requires_positive_intent_binding(tmp_path: Path) -> None:
+    _write_closed_assignment_proof_fixture(
+        tmp_path,
+        suffix="intent",
+        intent="record exact head proof",
+    )
+
+    for task_text in ("", "unrelated final proof"):
+        assert (
+            workspace_runtime_core._closed_assignment_closeout_lineage(
+                target_root=tmp_path,
+                changed_paths=["src/shared.py"],
+                task_text=task_text,
+            )
+            == {}
+        )
 
 
 @pytest.mark.parametrize(
@@ -9653,25 +9707,43 @@ def test_assignment_proof_obligation_selects_canonically_closed_assignment_with_
         "run_state",
         "closeout_run_id",
         "task_proof_receipt_ref",
+        "close_receipt_ref",
+        "close_receipt_status",
         "allowed_paths",
         "changed_paths",
     ),
     [
-        ("rejected", "closed", "closed", None, None, ["src/shared.py"], ["src/shared.py"]),
-        ("closed", "integrated", "closed", None, None, ["src/shared.py"], ["src/shared.py"]),
-        ("closed", "closed", "closed", "run-other", None, ["src/shared.py"], ["src/shared.py"]),
-        ("closed", "closed", "closed", None, "", ["src/shared.py"], ["src/shared.py"]),
-        ("closed", "closed", "closed", None, None, ["src/other.py"], ["src/shared.py"]),
+        ("rejected", "closed", "closed", None, None, None, "closed", ["src/shared.py"], ["src/shared.py"]),
+        ("cancelled", "closed", "closed", None, None, None, "closed", ["src/shared.py"], ["src/shared.py"]),
+        ("superseded", "closed", "closed", None, None, None, "closed", ["src/shared.py"], ["src/shared.py"]),
+        ("closed", "integrated", "closed", None, None, None, "closed", ["src/shared.py"], ["src/shared.py"]),
+        ("closed", "closed", "closed", "run-other", None, None, "closed", ["src/shared.py"], ["src/shared.py"]),
+        ("closed", "closed", "closed", None, "", None, "closed", ["src/shared.py"], ["src/shared.py"]),
+        ("closed", "closed", "closed", None, None, "", "closed", ["src/shared.py"], ["src/shared.py"]),
+        ("closed", "closed", "closed", None, None, None, "blocked", ["src/shared.py"], ["src/shared.py"]),
+        ("closed", "closed", "closed", None, None, None, "closed", ["src/other.py"], ["src/shared.py"]),
     ],
-    ids=["rejected", "incomplete-attempt", "closeout-run-mismatch", "missing-prior-proof", "scope-mismatch"],
+    ids=[
+        "rejected",
+        "cancelled",
+        "superseded",
+        "incomplete-attempt",
+        "closeout-run-mismatch",
+        "missing-task-proof",
+        "missing-close-receipt",
+        "stale-close-receipt",
+        "scope-mismatch",
+    ],
 )
-def test_assignment_proof_obligation_rejects_invalid_closed_assignment(
+def test_assignment_closeout_lineage_rejects_invalid_closed_assignment(
     tmp_path: Path,
     assignment_status: str,
     attempt_status: str,
     run_state: str,
     closeout_run_id: str | None,
     task_proof_receipt_ref: str | None,
+    close_receipt_ref: str | None,
+    close_receipt_status: str,
     allowed_paths: list[str],
     changed_paths: list[str],
 ) -> None:
@@ -9684,11 +9756,13 @@ def test_assignment_proof_obligation_rejects_invalid_closed_assignment(
         run_state=run_state,
         closeout_run_id=closeout_run_id,
         task_proof_receipt_ref=task_proof_receipt_ref,
+        close_receipt_ref=close_receipt_ref,
+        close_receipt_status=close_receipt_status,
         allowed_paths=allowed_paths,
     )
 
     assert (
-        workspace_runtime_core._integrated_assignment_proof_obligation(
+        workspace_runtime_core._closed_assignment_closeout_lineage(
             target_root=tmp_path,
             changed_paths=changed_paths,
             task_text="record exact head proof",
@@ -9697,7 +9771,7 @@ def test_assignment_proof_obligation_rejects_invalid_closed_assignment(
     )
 
 
-def test_assignment_proof_obligation_rejects_ambiguous_closed_assignments(tmp_path: Path) -> None:
+def test_assignment_closeout_lineage_rejects_ambiguous_closed_assignments(tmp_path: Path) -> None:
     for suffix in ("one", "two"):
         _write_closed_assignment_proof_fixture(
             tmp_path,
@@ -9706,7 +9780,107 @@ def test_assignment_proof_obligation_rejects_ambiguous_closed_assignments(tmp_pa
         )
 
     assert (
-        workspace_runtime_core._integrated_assignment_proof_obligation(
+        workspace_runtime_core._closed_assignment_closeout_lineage(
+            target_root=tmp_path,
+            changed_paths=["src/shared.py"],
+            task_text="record exact head proof",
+        )
+        == {}
+    )
+
+
+def test_assignment_closeout_lineage_rejects_task_proof_for_different_assignment(tmp_path: Path) -> None:
+    _write_closed_assignment_proof_fixture(
+        tmp_path,
+        suffix="wrong-assignment",
+        intent="record exact head proof",
+    )
+    receipt_path = tmp_path / ".agentic-workspace/proof/receipts/receipt-wrong-assignment.json"
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    receipt["assignment_proof_obligation"]["subject"]["assignment_id"] = "assign-other"
+    receipt["assignment_proof_binding"] = workspace_runtime_core.assignment_task_proof_binding(receipt)
+    _write_json(receipt_path, receipt)
+
+    assert (
+        workspace_runtime_core._closed_assignment_closeout_lineage(
+            target_root=tmp_path,
+            changed_paths=["src/shared.py"],
+            task_text="record exact head proof",
+        )
+        == {}
+    )
+
+
+def test_assignment_closeout_lineage_rejects_semantic_task_proof_mutation(tmp_path: Path) -> None:
+    _write_closed_assignment_proof_fixture(
+        tmp_path,
+        suffix="semantic-mutation",
+        intent="record exact head proof",
+    )
+    _write(tmp_path / "src/shared.py", "changed after task proof\n")
+
+    assert (
+        workspace_runtime_core._closed_assignment_closeout_lineage(
+            target_root=tmp_path,
+            changed_paths=["src/shared.py"],
+            task_text="record exact head proof",
+        )
+        == {}
+    )
+
+
+def test_assignment_closeout_lineage_classifies_exact_plan_ref_as_lifecycle_metadata(tmp_path: Path) -> None:
+    plan_ref = ".agentic-workspace/planning/execplans/task.plan.json"
+    _write_closed_assignment_proof_fixture(
+        tmp_path,
+        suffix="plan-closeout",
+        intent="record exact head proof",
+        allowed_paths=["src/shared.py", plan_ref],
+        plan_ref=plan_ref,
+    )
+    _write(tmp_path / plan_ref, "post-close lifecycle projection\n")
+
+    lineage = workspace_runtime_core._closed_assignment_closeout_lineage(
+        target_root=tmp_path,
+        changed_paths=["src/shared.py", plan_ref],
+        task_text="record exact head proof",
+    )
+
+    assert lineage["dependency_classification"]["semantic_task_inputs"] == ["src/shared.py"]
+    assert lineage["dependency_classification"]["lifecycle_metadata_inputs"] == [plan_ref]
+
+
+def test_assignment_closeout_lineage_rejects_mismatched_close_receipt_task_proof(tmp_path: Path) -> None:
+    _write_closed_assignment_proof_fixture(
+        tmp_path,
+        suffix="close-receipt-proof-mismatch",
+        intent="record exact head proof",
+    )
+    close_receipt_path = tmp_path / ".agentic-workspace/local/assignment-runs/run-close-receipt-proof-mismatch/closeout/close.json"
+    close_receipt = json.loads(close_receipt_path.read_text(encoding="utf-8"))
+    close_receipt["task_proof_receipt_ref"] = "proof://receipts/other"
+    _write_json(close_receipt_path, close_receipt)
+
+    assert (
+        workspace_runtime_core._closed_assignment_closeout_lineage(
+            target_root=tmp_path,
+            changed_paths=["src/shared.py"],
+            task_text="record exact head proof",
+        )
+        == {}
+    )
+
+
+def test_assignment_closeout_lineage_rejects_noncanonical_close_receipt_path(tmp_path: Path) -> None:
+    _write_closed_assignment_proof_fixture(
+        tmp_path,
+        suffix="close-path",
+        intent="record exact head proof",
+        close_receipt_ref=".agentic-workspace/local/other-close.json",
+    )
+
+    assert (
+        workspace_runtime_core._closed_assignment_closeout_lineage(
             target_root=tmp_path,
             changed_paths=["src/shared.py"],
             task_text="record exact head proof",

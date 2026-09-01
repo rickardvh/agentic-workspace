@@ -52423,6 +52423,7 @@ def _existing_proof_publication_receipt(
         "plan_id",
         "assignment_proof_obligation",
         "assignment_proof_binding",
+        "assignment_closeout_lineage",
     ):
         if existing.get(field) != receipt.get(field):
             raise WorkspaceUsageError("Prior proof publication identity collides with different receipt semantics.")
@@ -52992,6 +52993,21 @@ def _record_proof_receipt_payload(
             + (f" ({reasons})" if reasons else "")
             + "; rerun the selected proof against the current subject."
         )
+    closeout_lineage = _closed_assignment_closeout_lineage(
+        target_root=target_root,
+        changed_paths=receipt["changed_paths"],
+        task_text=str(task_text or ""),
+    )
+    if closeout_lineage:
+        closeout_lineage["final_proof"] = {
+            "proof_subject": copy.deepcopy(receipt["proof_subject"]),
+            "currentness": {
+                "status": str(subject_currentness.get("status") or ""),
+                "reasons": [str(reason) for reason in _list_payload(subject_currentness.get("reasons")) if str(reason)],
+            },
+            "relationship": "current-post-close-proof",
+        }
+        receipt["assignment_closeout_lineage"] = closeout_lineage
     receipt = _proof_receipt_redact_sensitive_data(receipt)
     publication_identity = {
         "command": command,
@@ -53004,6 +53020,8 @@ def _record_proof_receipt_payload(
     if "assignment_proof_obligation" in receipt:
         publication_identity["assignment_proof_obligation"] = receipt["assignment_proof_obligation"]
         publication_identity["assignment_proof_binding"] = receipt.get("assignment_proof_binding")
+    if "assignment_closeout_lineage" in receipt:
+        publication_identity["assignment_closeout_lineage"] = receipt["assignment_closeout_lineage"]
     producer_receipt_id = hashlib.sha256(json.dumps(publication_identity, sort_keys=True, ensure_ascii=True).encode("utf-8")).hexdigest()[
         :16
     ]
@@ -53167,7 +53185,8 @@ def _integrated_assignment_proof_obligation(*, target_root: Path, changed_paths:
             continue
         if not isinstance(assignment, dict):
             continue
-        assignment_status = str(assignment.get("status") or "")
+        if str(assignment.get("status") or "") != "current":
+            continue
         gate = _as_dict(assignment.get("assignment_gate"))
         obligation = _as_dict(gate.get("proof_obligation"))
         attempt = _as_dict(assignment.get("current_attempt"))
@@ -53180,31 +53199,7 @@ def _integrated_assignment_proof_obligation(*, target_root: Path, changed_paths:
             state = json.loads(state_path.read_text(encoding="utf-8-sig"))
         except (OSError, json.JSONDecodeError):
             continue
-        if not isinstance(state, dict):
-            continue
-        if assignment_status == "current" and state.get("current_state") != "integrated":
-            continue
-        if assignment_status == "closed":
-            closeout = _as_dict(assignment.get("closeout"))
-            task_proof_ref = str(closeout.get("task_proof_receipt_ref") or "").strip()
-            task_proof = load_indexed_assignment_task_proof(target_root=target_root, receipt_ref=task_proof_ref)
-            proved_paths = {str(path) for path in _list_payload(task_proof.get("changed_paths")) if str(path)}
-            subject = _as_dict(obligation.get("subject"))
-            if (
-                attempt.get("status") != "closed"
-                or state.get("current_state") != "closed"
-                or str(state.get("run_id") or "") != run_id
-                or str(closeout.get("run_id") or "") != run_id
-                or not task_proof_ref
-                or str(subject.get("assignment_id") or "") != str(assignment.get("assignment_id") or "")
-                or str(subject.get("run_id") or "") != run_id
-                or _as_dict(task_proof.get("assignment_proof_obligation")) != obligation
-                or task_proof.get("assignment_proof_binding") != assignment_task_proof_binding(task_proof)
-                or not proof_receipt_admission(task_proof).get("proof_sufficient")
-                or not allowed_paths.issubset(proved_paths)
-            ):
-                continue
-        elif assignment_status != "current":
+        if not isinstance(state, dict) or state.get("current_state") != "integrated":
             continue
         subject = _as_dict(obligation.get("subject"))
         intent_match = bool(
@@ -53218,6 +53213,164 @@ def _integrated_assignment_proof_obligation(*, target_root: Path, changed_paths:
     intent_matches = [obligation for intent_match, obligation in candidates if intent_match]
     eligible = intent_matches or [obligation for _, obligation in candidates]
     return eligible[0] if len(eligible) == 1 else {}
+
+
+def _closed_assignment_closeout_lineage(*, target_root: Path, changed_paths: list[str], task_text: str) -> dict[str, Any]:
+    """Project one closed assignment's canonical closeout chain onto final proof.
+
+    This is intentionally separate from `_integrated_assignment_proof_obligation`: it
+    does not grant a closed assignment a second task-behavior proof binding.
+    """
+    assignments_root = target_root / ".agentic-workspace" / "planning" / "assignments"
+    changed_scope = set(changed_paths)
+    normalized_task = " ".join(task_text.split())
+    task_digest = hashlib.sha256(normalized_task.encode("utf-8")).hexdigest() if normalized_task else ""
+    candidates: list[tuple[bool, dict[str, Any]]] = []
+    for assignment_path in sorted(assignments_root.glob("*.assignment.json")):
+        try:
+            assignment = json.loads(assignment_path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(assignment, dict) or str(assignment.get("status") or "") != "closed":
+            continue
+        assignment_id = str(assignment.get("assignment_id") or "")
+        assignment_revision = str(assignment.get("current_revision") or "")
+        gate = _as_dict(assignment.get("assignment_gate"))
+        obligation = _as_dict(gate.get("proof_obligation"))
+        attempt = _as_dict(assignment.get("current_attempt"))
+        run_id = str(attempt.get("run_id") or "")
+        allowed_paths = {str(path) for path in _list_payload(gate.get("allowed_paths")) if str(path)}
+        closeout = _as_dict(assignment.get("closeout"))
+        task_proof_ref = str(closeout.get("task_proof_receipt_ref") or "").strip()
+        close_receipt_ref = str(closeout.get("receipt_ref") or "").strip()
+        if (
+            not assignment_id
+            or not assignment_revision
+            or not obligation
+            or not run_id
+            or not allowed_paths
+            or not allowed_paths.issubset(changed_scope)
+            or attempt.get("status") != "closed"
+            or str(closeout.get("run_id") or "") != run_id
+            or not task_proof_ref
+            or not close_receipt_ref
+        ):
+            continue
+        state_path = target_root / ".agentic-workspace" / "local" / "assignment-runs" / run_id / "state.json"
+        try:
+            state = json.loads(state_path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(state, dict) or state.get("current_state") != "closed" or str(state.get("run_id") or "") != run_id:
+            continue
+        try:
+            close_receipt_path = (target_root / close_receipt_ref).resolve()
+            close_receipt_path.relative_to(target_root.resolve())
+            close_receipt = json.loads(close_receipt_path.read_text(encoding="utf-8-sig"))
+        except (OSError, ValueError, json.JSONDecodeError):
+            continue
+        task_proof = load_indexed_assignment_task_proof(target_root=target_root, receipt_ref=task_proof_ref)
+        subject = _as_dict(obligation.get("subject"))
+        proved_paths = {str(path) for path in _list_payload(task_proof.get("changed_paths")) if str(path)}
+        close_receipt_task_proof_ref = str(close_receipt.get("task_proof_receipt_ref") or "").strip()
+        canonical_close_receipt_ref = f".agentic-workspace/local/assignment-runs/{run_id}/closeout/close.json"
+        closeout_metadata_paths = {
+            assignment_path.relative_to(target_root).as_posix(),
+            canonical_close_receipt_ref,
+            str(gate.get("plan_ref") or "").strip(),
+        }
+        task_source_inputs = [
+            item for item in _list_payload(_as_dict(task_proof.get("proof_subject")).get("source_inputs")) if isinstance(item, dict)
+        ]
+
+        def task_input_in_assignment_scope(item: dict[str, Any]) -> bool:
+            path = str(item.get("path") or "")
+            return any(_path_matches_subsystem_pattern(path=path, pattern=pattern) for pattern in allowed_paths)
+
+        semantic_task_inputs = [
+            item
+            for item in task_source_inputs
+            if task_input_in_assignment_scope(item) and str(item.get("path") or "") not in closeout_metadata_paths
+        ]
+        lifecycle_task_inputs = [
+            str(item.get("path") or "")
+            for item in task_source_inputs
+            if task_input_in_assignment_scope(item) and str(item.get("path") or "") in closeout_metadata_paths
+        ]
+
+        def current_semantic_task_input(item: dict[str, Any]) -> bool:
+            path = str(item.get("path") or "")
+            try:
+                candidate = (target_root / path).resolve()
+                candidate.relative_to(target_root.resolve())
+            except ValueError:
+                return False
+            return bool(str(item.get("sha256") or "")) and _file_sha256(candidate) == str(item.get("sha256") or "")
+
+        semantic_task_proof_current = bool(semantic_task_inputs) and all(current_semantic_task_input(item) for item in semantic_task_inputs)
+        if (
+            not isinstance(close_receipt, dict)
+            or close_receipt.get("kind") != "agentic-workspace/assignment-closeout-receipt/v1"
+            or close_receipt.get("status") != "closed"
+            or str(close_receipt.get("run_id") or "") != run_id
+            or close_receipt_ref != canonical_close_receipt_ref
+            or str(subject.get("assignment_id") or "") != assignment_id
+            or str(subject.get("run_id") or "") != run_id
+            or _as_dict(task_proof.get("assignment_proof_obligation")) != obligation
+            or task_proof.get("assignment_proof_binding") != assignment_task_proof_binding(task_proof)
+            or str(task_proof.get("source_ref") or "") != task_proof_ref
+            or not proof_receipt_admission(task_proof).get("proof_sufficient")
+            or not allowed_paths.issubset(proved_paths)
+            or (close_receipt_task_proof_ref and close_receipt_task_proof_ref != task_proof_ref)
+            or not semantic_task_proof_current
+        ):
+            continue
+        intent_match = bool(
+            task_digest
+            and (
+                str(subject.get("human_intent_digest") or "") == task_digest
+                or " ".join(str(gate.get("human_intent") or "").split()) == normalized_task
+            )
+        )
+        candidates.append(
+            (
+                intent_match,
+                {
+                    "kind": "agentic-workspace/assignment-closeout-proof-lineage/v1",
+                    "assignment": {"id": assignment_id, "revision": assignment_revision},
+                    "run_id": run_id,
+                    "task_proof": {
+                        "obligation": copy.deepcopy(obligation),
+                        "binding": str(task_proof.get("assignment_proof_binding") or ""),
+                        "receipt_ref": task_proof_ref,
+                        "currentness": "semantic-inputs-match-current-head",
+                    },
+                    "close_transition": {
+                        "receipt_ref": close_receipt_ref,
+                        "receipt_sha256": _file_sha256(close_receipt_path),
+                        "result": {
+                            "kind": close_receipt["kind"],
+                            "status": close_receipt["status"],
+                            "assignment_revision": assignment_revision,
+                            "run_id": run_id,
+                            "task_proof_receipt_ref": task_proof_ref,
+                        },
+                    },
+                    "dependency_classification": {
+                        "semantic_task_inputs": [str(item.get("path") or "") for item in semantic_task_inputs],
+                        "lifecycle_metadata_inputs": lifecycle_task_inputs,
+                        "lifecycle_rule": (
+                            "Only the canonical assignment record, canonical close receipt, and assignment gate plan_ref "
+                            "are classified as lifecycle metadata; every other recorded in-scope task input must retain "
+                            "its task-proof hash."
+                        ),
+                    },
+                    "rule": "Closeout lineage projects a consumed task proof and close transition; it is not a second task-behavior proof.",
+                },
+            )
+        )
+    intent_matches = [lineage for intent_match, lineage in candidates if intent_match]
+    return intent_matches[0] if len(intent_matches) == 1 else {}
 
 
 def _proof_receipt_write_result(
