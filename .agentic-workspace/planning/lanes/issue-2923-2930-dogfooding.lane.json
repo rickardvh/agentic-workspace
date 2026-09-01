@@ -41,9 +41,19 @@
         "issue-2926-2928-planning-repairs"
       ],
       "purpose_for_lane": "Implement #2929-#2930 semantic task-route behavior after this slice reaches target integration."
+    },
+    {
+      "id": "pr-2939-test-assertion-correction",
+      "title": "Correct explicit-lane regression ownership",
+      "status": "integration-pending",
+      "execplan_ref": ".agentic-workspace/planning/execplans/pr-2939-test-assertion-correction.plan.json",
+      "depends_on": [],
+      "purpose_for_lane": "Replace the reproduced workflow blockers before resuming the #2821 epic.",
+      "proof": ".agentic-workspace/verification/proof-decision.json",
+      "residual_after_slice": "none"
     }
   ],
-  "current_slice": "issue-2926-2928-planning-repairs",
+  "current_slice": "pr-2939-test-assertion-correction",
   "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
   "proof_strategy": "Each child PR proves its issue acceptance criteria; the final stack replays the issue-creation dogfood path.",
   "proof_aggregation": {
@@ -53,17 +63,18 @@
     ],
     "known_gaps": [
       "issue-2923-2925-command-evidence-blockers awaits target integration via .agentic-workspace/planning/integration-proposals/issue-2923-2925-command-evidence-blockers-archive-owner.integration-proposal.json.",
-      "issue-2926-2928-planning-repairs awaits target integration via .agentic-workspace/planning/integration-proposals/issue-2926-2928-planning-repairs-archive-owner.integration-proposal.json."
+      "issue-2926-2928-planning-repairs awaits target integration via .agentic-workspace/planning/integration-proposals/issue-2926-2928-planning-repairs-archive-owner.integration-proposal.json.",
+      "pr-2939-test-assertion-correction awaits target integration via .agentic-workspace/planning/integration-proposals/pr-2939-test-assertion-correction-archive-owner.integration-proposal.json."
     ]
   },
-  "residual_lane_work": "Implement #2929-#2930 semantic task-route behavior after this slice reaches target integration.",
+  "residual_lane_work": "none",
   "lane_to_epic_contribution": "not evaluated",
   "parent_close_permission": "do-not-close-parent",
   "closeout_state": {
     "status": "open",
-    "summary": "issue-2926-2928-planning-repairs is feature-complete and awaits target integration proposal issue-2926-2928-planning-repairs-archive-owner.",
-    "residual_work": "Implement #2929-#2930 semantic task-route behavior after this slice reaches target integration.",
-    "next_owner": ".agentic-workspace/planning/execplans/issue-2929-2930-semantic-task-routes.plan.json"
+    "summary": "pr-2939-test-assertion-correction is feature-complete and awaits target integration proposal pr-2939-test-assertion-correction-archive-owner.",
+    "residual_work": "none",
+    "next_owner": "target integration authority"
   },
   "references": [],
   "notes": ""

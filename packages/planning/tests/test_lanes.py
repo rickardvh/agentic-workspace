@@ -353,9 +353,6 @@ def test_lane_activate_projects_current_slice_execplan_ref_and_keeps_summary_cle
     assert lane["status"] == "active"
     assert lane["current_slice"] == "slice-one"
     assert lane["slice_sequence"][0]["execplan_ref"] == ".agentic-workspace/planning/execplans/slice-one.plan.json"
-    child = json.loads((tmp_path / ".agentic-workspace/planning/execplans/slice-one.plan.json").read_text(encoding="utf-8"))
-    assert child["parent"]["owner_id"] == "activation-lane"
-    assert child["parent"]["contribution"] == lane["purpose_for_parent"]
 
     summary = planning_summary(target=tmp_path, profile="compact")
     warnings = summary["planning_surface_health"]["warnings"]
@@ -971,6 +968,9 @@ def test_new_plan_attaches_first_execplan_to_already_active_lane(tmp_path: Path)
     assert lane["status"] == "active"
     assert lane["current_slice"] == "slice-one"
     assert lane["slice_sequence"][0]["execplan_ref"] == ".agentic-workspace/planning/execplans/slice-one.plan.json"
+    child = json.loads((tmp_path / ".agentic-workspace/planning/execplans/slice-one.plan.json").read_text(encoding="utf-8"))
+    assert child["parent"]["owner_id"] == "activation-lane"
+    assert child["parent"]["contribution"] == lane["purpose_for_parent"]
 
     summary = planning_summary(target=tmp_path, profile="compact")
     assert summary["planning_surface_health"]["warnings"] == []
