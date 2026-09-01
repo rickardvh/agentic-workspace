@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Make commandless host-native assignment execution constructible and verify shared-worktree returns without duplicate patch application."
+issues = [2947]

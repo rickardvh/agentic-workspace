@@ -1,0 +1,112 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2947-host-native-assignment-lifecycle",
+  "title": "Host-native assignment lifecycle",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "implementation",
+  "revision": 5,
+  "intent": {
+    "outcome": "Make the canonical assignment lifecycle support commandless host-native execution/re-entry and baseline-verified shared-worktree integration.",
+    "non_goals": [
+      "Do not add provider-specific launchers, parallel stores, dirty-worktree heuristics, or worker proof authority."
+    ]
+  },
+  "parent": {
+    "owner_id": "#2817",
+    "contribution": "Close the commandless host-native dispatch and shared-worktree integration blocker while leaving supported-host substantive acceptance with #2817.",
+    "closure_boundary": "#2947 host-native lifecycle only"
+  },
+  "scope": {
+    "owned": [
+      "src/agentic_workspace/contracts/python_primitive_support.py",
+      "src/agentic_workspace/contracts/typescript_primitive_support.mjs",
+      "generated assignment primitive mirrors",
+      "tests/test_external_operation_clients.py"
+    ],
+    "effects": [
+      "Host-native dispatch may pause at a typed host-execution contract without a process command.",
+      "Integration verifies explicitly already-materialized patches without mutating the worktree."
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected-local",
+      "owner": "issue-2947-host-native-assignment-lifecycle"
+    },
+    "proof_posture": {
+      "state": "pending",
+      "refs": []
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    }
+  },
+  "references": [],
+  "next_action": "Complete fresh-context review, commit the proved slice, and open its stacked PR on #2948.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Commandless host-native dispatch returns a canonical assignment- and packet-bound execution contract.",
+      "Explicit already-materialized returns integrate only when every bounded path equals applying the returned patch to the sealed pre-dispatch commit.",
+      "Replay revalidates current bounded content, while ordinary process patch application and AW proof/closeout authority remain unchanged."
+    ],
+    "requirements": [
+      "Assignment-focused external-operation tests pass in Python and TypeScript.",
+      "Generated Python/TypeScript conformance and static package proof pass.",
+      "Canonical commandless host-native dispatch, import, admission, integration, and replay are exercised."
+    ],
+    "refs": [
+      "tests/test_external_operation_clients.py"
+    ]
+  },
+  "continuation": {
+    "owner": "#2817",
+    "residual_intent": "Run the unrelated substantive supported-host acceptance scenario after #2947 lands."
+  },
+  "specialist_contracts": [],
+  "goal": [
+    "Make commandless host-native assignment dispatch constructible and integrate explicitly declared shared-worktree returns exactly once through the canonical assignment lifecycle."
+  ],
+  "non_goals": [
+    "Do not add provider-specific launchers, a second assignment store, dirty-worktree heuristics, or weaken process patch application and AW proof authority."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "Make automatic best-fit host-native delegation ordinary and lifecycle-complete.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "#2817"
+  },
+  "execution_bounds": {
+    "allowed paths": "assignment primitive sources, generated mirrors, focused lifecycle tests, release note, and this execplan",
+    "max changed files": "20",
+    "required validation commands": "focused external-operation tests, generated command-package parity, Ruff, Node syntax, and pre-commit",
+    "ask-before-refactor threshold": "any new lifecycle/store or provider-specific adapter",
+    "stop before touching": "unrelated stack implementation or proof/claim authority"
+  },
+  "touched_paths": [
+    "src/agentic_workspace/contracts/python_primitive_support.py",
+    "src/agentic_workspace/contracts/typescript_primitive_support.mjs",
+    "generated/*/.agentic-workspace-cli-fingerprint.json",
+    "generated/*/python/primitives/host_primitive_support.py",
+    "generated/*/typescript/src/hostPrimitiveSupport.mjs",
+    "tests/test_external_operation_clients.py",
+    ".release/changes/host-native-assignment-lifecycle.toml",
+    ".agentic-workspace/planning/execplans/issue-2947-host-native-assignment-lifecycle.plan.json"
+  ],
+  "validation_commands": [
+    "uv run --frozen --active --no-sync pytest -q <focused #2947 tests>",
+    "uv run --frozen --active --no-sync python scripts/check/check_generated_command_packages.py --require-node",
+    "uv run --frozen --active --no-sync ruff check <touched Python>",
+    "node --check src/agentic_workspace/contracts/typescript_primitive_support.mjs",
+    "git diff --check"
+  ],
+  "completion_criteria": [
+    "Commandless host-native dispatch yields an assignment- and packet-bound host execution/re-entry contract instead of adapter-unavailable.",
+    "Already-materialized returns are checked against the exact baseline-plus-patch content without patch reapplication.",
+    "Replay revalidates current bounded content; ordinary unapplied process returns retain guarded forward application.",
+    "Python and generated TypeScript lifecycles remain equivalent and focused proof passes."
+  ]
+}
