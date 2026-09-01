@@ -17816,6 +17816,16 @@ def create_execplan_scaffold(
         if lane_record is None:
             result.add("manual review", lane_record_path, f"lane '{lane_id}' was not found; no plan was created")
             return result
+        parent = plan_record.get("parent")
+        updated_parent = dict(parent) if isinstance(parent, dict) else {}
+        updated_parent["owner_id"] = lane_id
+        updated_parent["contribution"] = source_text or str(lane_record.get("purpose_for_parent") or plan_title).strip()
+        updated_parent.setdefault("closure_boundary", "this slice only")
+        plan_record["parent"] = updated_parent
+        bound_owner_findings = _json_schema_findings(payload=plan_record, schema_path=EXECPLAN_RECORD_SCHEMA_PATH)
+        if bound_owner_findings:
+            result.add("manual review", record_path, f"lane-bound scaffold is invalid: {'; '.join(bound_owner_findings)}")
+            return result
         updated_lane_record = copy.deepcopy(lane_record)
         slices = list(updated_lane_record.get("slice_sequence", []))
         matching_slice = next((item for item in slices if isinstance(item, dict) and str(item.get("id") or "").strip() == slug), None)
