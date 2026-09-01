@@ -1118,6 +1118,95 @@ def test_proof_route_maintenance_selector_reports_route_health_repair_packet(tmp
     assert "5058804538" not in json.dumps(route_health)
 
 
+def test_repo_evidence_strategy_shapes_selected_proof_and_replays_without_steering(tmp_path: Path) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    config_path = tmp_path / ".agentic-workspace" / "config.toml"
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8")
+        + """
+
+[assurance.proof_profiles.property_evidence]
+required_commands = ['python -c "print(1)"']
+
+[assurance.proof_profiles.representative_examples]
+required_commands = ['python -c "print(2)"']
+
+[assurance.proof_profiles.public_contract]
+required_commands = ['python -c "print(3)"']
+disallowed_commands = ['python -c "print(4)"']
+
+[assurance.requirements.property_first]
+level = "medium"
+applies_to_paths = ["src/strategy.py"]
+proof_profile = "property_evidence"
+force = "recommended"
+requirement_class = "guideline"
+preference_target = "surface:property_evidence"
+source_intent_ref = "docs/testing.md#property-first"
+source_intent_revision = "strategy-r1"
+source_intent_current = true
+
+[assurance.requirements.representative_complement]
+level = "high"
+applies_to_paths = ["src/strategy.py"]
+proof_profile = "representative_examples"
+required_evidence = ["representative-public-example"]
+force = "required-before-closeout"
+blocking_claims = ["claim-work-complete"]
+requirement_class = "invariant"
+evidence_owner = "verification:representative-examples"
+detail_route = "run the representative external example owner"
+source_intent_ref = "docs/testing.md#representative-examples"
+source_intent_revision = "strategy-r1"
+source_intent_current = true
+
+[assurance.requirements.public_api_only]
+level = "high"
+applies_to_paths = ["src/strategy.py"]
+proof_profile = "public_contract"
+required_evidence = ["public-api-boundary-check"]
+force = "required-before-closeout"
+blocking_claims = ["claim-work-complete"]
+requirement_class = "invariant"
+evidence_owner = "module:host-api-classifier"
+detail_route = "run the host-owned API-surface classifier"
+source_intent_ref = "docs/testing.md#public-api-only"
+source_intent_revision = "strategy-r1"
+source_intent_current = true
+
+[assurance.domain_proof_lanes.strategy_fixture]
+purpose = "Host-classified ordinary strategy proof."
+applies_to_paths = ["src/strategy.py"]
+commands = ['python -c "print(4)"']
+evidence_concepts = ["host-classified-private-target"]
+owner = "host-test-owner"
+""",
+        encoding="utf-8",
+    )
+    _write(tmp_path / "src" / "strategy.py", "VALUE = 1\n")
+
+    first = workspace_runtime_proof._proof_selection_for_changed_paths(
+        changed_paths=["src/strategy.py"], target_root=tmp_path, include_durable_intent=False
+    )
+    replay = workspace_runtime_proof._proof_selection_for_changed_paths(
+        changed_paths=["src/strategy.py"], target_root=tmp_path, include_durable_intent=False
+    )
+    commands = first["required_commands"]
+    assert commands[:3] == [
+        'python -c "print(1)"',
+        'python -c "print(3)"',
+        'python -c "print(2)"',
+    ], first
+    assert 'python -c "print(4)"' not in commands
+    strategy = first["repo_evidence_strategy"]
+    assert strategy == replay["repo_evidence_strategy"]
+    assert strategy["construction"]["status"] == "applied"
+    assert strategy["advisory_preferences"][0]["selected_commands"] == ['python -c "print(1)"']
+    public_clause = next(item for item in strategy["clauses"] if item["id"] == "public_api_only")
+    assert public_clause["selected_commands"] == ['python -c "print(3)"']
+    assert public_clause["blocked_commands"] == ['python -c "print(4)"']
+
+
 def test_proof_route_health_retires_failed_broad_receipt_after_focused_root_route_repair(tmp_path: Path, capsys) -> None:
     _write_installed_host_proof_target(tmp_path)
     assert not (tmp_path / "scripts" / "run_agentic_workspace.py").exists()

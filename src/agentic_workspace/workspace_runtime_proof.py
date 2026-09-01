@@ -3589,6 +3589,8 @@ def _repo_evidence_strategy_payload(
     *,
     assurance_requirements: dict[str, Any],
     selected_commands: list[dict[str, Any]],
+    construction: dict[str, Any] | None = None,
+    blocked_commands: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Compose host-owned named evidence requirements without interpreting methodology prose."""
     active = [item for item in _list_payload(assurance_requirements.get("active")) if isinstance(item, dict)]
@@ -3600,6 +3602,7 @@ def _repo_evidence_strategy_payload(
             "clauses": [],
             "hard_blockers": [],
             "advisory_preferences": [],
+            "construction": {"status": "not-applicable", "effects": [], "owner_decisions": []},
             "selected_command_count": 0,
             "rule": "No applicable named evidence-strategy requirement means no portable testing methodology is imposed.",
         }
@@ -3612,6 +3615,8 @@ def _repo_evidence_strategy_payload(
     hard_blockers: list[dict[str, Any]] = []
     advisory_preferences: list[dict[str, Any]] = []
     selected_strategy_commands: list[str] = []
+    construction = construction or {"status": "not-evaluated", "effects": [], "owner_decisions": []}
+    blocked_commands = blocked_commands or []
     for requirement in named:
         requirement_id = str(requirement.get("id") or "")
         requirement_class = str(requirement.get("requirement_class") or "")
@@ -3635,6 +3640,15 @@ def _repo_evidence_strategy_payload(
             "preference_target": str(requirement.get("preference_target") or ""),
             "proof_profile": str(requirement.get("proof_profile") or ""),
             "selected_commands": selected,
+            "blocked_commands": [
+                str(item.get("command") or "")
+                for item in blocked_commands
+                if requirement_id
+                in {
+                    str(item.get("assurance_requirement_ref") or ""),
+                    *{str(ref) for ref in _list_payload(item.get("assurance_requirement_refs"))},
+                }
+            ],
             "evidence_state": str(status.get("state") or "not-recorded"),
             "effect": "hard-claim-boundary" if hard else "advisory-proof-preference",
         }
@@ -3657,12 +3671,100 @@ def _repo_evidence_strategy_payload(
         "clauses": clauses,
         "hard_blockers": hard_blockers,
         "advisory_preferences": advisory_preferences,
+        "construction": construction,
         "selected_command_count": len(_dedupe(selected_strategy_commands)),
         "composition_rule": "All applicable hard clauses compose; advisory clauses remain agent-resolvable.",
         "authority_boundary": (
             "Workspace composes named requirements and host-owned check results; it does not infer property testing, "
             "public/private API boundaries, test frameworks, or methodology from prose or names."
         ),
+    }
+
+
+def _apply_repo_evidence_strategy_to_lanes(
+    *, assurance_requirements: dict[str, Any], selected_lanes: list[dict[str, Any]]
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Apply explicit source-owned strategy identities before commands are constructed."""
+    named = [
+        item
+        for item in _list_payload(assurance_requirements.get("active"))
+        if isinstance(item, dict) and str(item.get("requirement_class") or "") in {"invariant", "current-evidence", "guideline"}
+    ]
+    if not named:
+        return selected_lanes, {"status": "not-applicable", "effects": [], "owner_decisions": []}
+
+    evidence_state = {
+        str(item.get("requirement_id") or ""): str(item.get("state") or "")
+        for item in _list_payload(assurance_requirements.get("evidence_status"))
+        if isinstance(item, dict)
+    }
+    effects: list[dict[str, Any]] = []
+    owner_decisions: list[dict[str, Any]] = []
+    preferred_lane_ids: list[str] = []
+    annotated = copy.deepcopy(selected_lanes)
+    for requirement in named:
+        requirement_id = str(requirement.get("id") or "")
+        requirement_class = str(requirement.get("requirement_class") or "")
+        preference_target = str(requirement.get("preference_target") or "")
+        surface_identity = preference_target.removeprefix("surface:") if preference_target.startswith("surface:") else ""
+        matched: list[dict[str, Any]] = []
+        for lane in annotated:
+            lane_refs = {
+                str(lane.get("requirement_id") or ""),
+                *{str(item) for item in _list_payload(lane.get("assurance_requirement_refs"))},
+            }
+            surface_refs = {
+                str(lane.get("id") or ""),
+                str(lane.get("proof_profile") or ""),
+                *{str(item) for item in _list_payload(lane.get("evidence_concepts"))},
+                *{str(item) for item in _list_payload(lane.get("authority_refs"))},
+            }
+            if requirement_id in lane_refs or (surface_identity and surface_identity in surface_refs):
+                matched.append(lane)
+        executable = [lane for lane in matched if _list_payload(lane.get("enough_proof"))]
+        if executable:
+            for lane in executable:
+                refs = _dedupe([*_list_payload(lane.get("assurance_requirement_refs")), requirement_id])
+                lane["assurance_requirement_refs"] = refs
+                lane["repo_evidence_strategy_effect"] = (
+                    "preferred-evidence-owner" if requirement_class == "guideline" else "required-evidence-owner"
+                )
+                if requirement_class == "guideline":
+                    preferred_lane_ids.append(str(lane.get("id") or ""))
+            effects.append(
+                {
+                    "requirement_id": requirement_id,
+                    "effect": "preferred-evidence-selected" if requirement_class == "guideline" else "required-evidence-selected",
+                    "lane_ids": [str(lane.get("id") or "") for lane in executable],
+                    "commands": [str(command) for lane in executable for command in _list_payload(lane.get("enough_proof"))],
+                }
+            )
+        elif requirement_class == "guideline":
+            owner_decisions.append(
+                {
+                    "requirement_id": requirement_id,
+                    "preference_target": preference_target,
+                    "owner": str(requirement.get("evidence_owner") or "repo evidence strategy owner"),
+                    "reason": "no explicitly classified admissible evidence owner matched the advisory preference",
+                }
+            )
+        elif evidence_state.get(requirement_id, "unknown") not in {"satisfied", "current", "accepted", "passed"}:
+            effects.append(
+                {
+                    "requirement_id": requirement_id,
+                    "effect": "exact-owner-route-required",
+                    "lane_ids": [],
+                    "commands": [],
+                    "detail_route": str(requirement.get("detail_route") or "produce current source-owned evidence"),
+                }
+            )
+    preferred = set(preferred_lane_ids)
+    ordered = sorted(enumerate(annotated), key=lambda item: (0 if str(item[1].get("id") or "") in preferred else 1, item[0]))
+    return [lane for _, lane in ordered], {
+        "status": "applied" if effects else "owner-decision-required" if owner_decisions else "no-command-effect",
+        "effects": effects,
+        "owner_decisions": owner_decisions,
+        "authority_boundary": "Only explicit named requirement, proof-profile, evidence-concept, and authority references may shape selection.",
     }
 
 
@@ -9360,6 +9462,10 @@ def _proof_selection_for_changed_paths(
         target_capabilities=target_capabilities, learned_route_hints=learned_route_hints
     )
     selected_lanes.extend(_learned_proof_lanes_for_changed_paths(changed_paths=changed_paths, learned_route_hints=learned_route_hints))
+    selected_lanes, repo_evidence_strategy_construction = _apply_repo_evidence_strategy_to_lanes(
+        assurance_requirements=active_assurance_requirements,
+        selected_lanes=selected_lanes,
+    )
     domain_route_inventory_audit = _domain_proof_route_inventory_audit(
         config=config,
         target_root=target_root,
@@ -9468,7 +9574,9 @@ def _proof_selection_for_changed_paths(
             broad_commands = [str(command) for command in _list_payload(lane.get("enough_proof")) if str(command).strip()]
             if not broad_commands:
                 continue
-            lane_is_broad_profile = bool(lane.get("proof_profile")) or str(lane.get("id", "")) in generic_broad_lane_ids
+            lane_is_broad_profile = (bool(lane.get("proof_profile")) and not lane.get("repo_evidence_strategy_effect")) or str(
+                lane.get("id", "")
+            ) in generic_broad_lane_ids
             lane_is_subsystem_broad = str(lane.get("id", "")).startswith("subsystem:") and any(
                 _proof_route_command_is_broad(command, proof_kind=str(lane.get("proof_kind", ""))) for command in broad_commands
             )
@@ -9494,6 +9602,7 @@ def _proof_selection_for_changed_paths(
                     or lane_is_subsystem_broad
                     or (
                         bool(lane.get("proof_profile"))
+                        and not lane.get("repo_evidence_strategy_effect")
                         and bool(generic_broad_commands.intersection(str(command).strip() for command in broad_commands))
                     )
                 )
@@ -9574,6 +9683,12 @@ def _proof_selection_for_changed_paths(
                     "command": resolved_command,
                     "configured_command": raw_command_text,
                     "reason": "host-configured proof profile disallows this command",
+                    "assurance_requirement_ref": str(
+                        next(
+                            iter(_list_payload(lane.get("assurance_requirement_refs"))),
+                            lane.get("requirement_id") or "",
+                        )
+                    ),
                 }
     host_policy_blocked_commands: list[dict[str, str]] = []
     for lane in selected_lanes:
@@ -9720,6 +9835,9 @@ def _proof_selection_for_changed_paths(
                     "lane": route_id,
                     "required": True,
                     "proof_requirement": str(lane.get("claim_boundary") or lane.get("proof_purpose") or _lane_activation_summary(lane)),
+                    "assurance_requirement_refs": _list_payload(lane.get("assurance_requirement_refs"))
+                    or ([str(lane.get("requirement_id"))] if lane.get("requirement_id") else []),
+                    "repo_evidence_strategy_effect": str(lane.get("repo_evidence_strategy_effect") or ""),
                     "subject_contract": {
                         "kind": "agentic-workspace/proof-subject-request/v1",
                         "changed_paths": changed_paths,
@@ -9935,6 +10053,8 @@ def _proof_selection_for_changed_paths(
     repo_evidence_strategy = _repo_evidence_strategy_payload(
         assurance_requirements=active_assurance_requirements,
         selected_commands=selected_commands,
+        construction=repo_evidence_strategy_construction,
+        blocked_commands=host_policy_blocked_commands,
     )
     proof_route_strategy_preservation = _proof_route_strategy_preservation_payload(
         proof_route_strategy_decision=proof_route_strategy_decision,
