@@ -2615,6 +2615,13 @@ def compile_projection_surface_operating_decision(
     )
     initiative_posture = _as_dict(_as_dict(task_posture_packet.get("operating_posture")).get("initiative_posture"))
     improvement_intake = _as_dict(payload.get("improvement_intake")) or _as_dict(payload_context.get("improvement_intake"))
+    proof_route_maintenance = _as_dict(payload.get("proof_route_maintenance")) or _as_dict(payload_context.get("proof_route_maintenance"))
+    proof_route_adaptation_signals = [
+        signal
+        for finding in _as_list(_as_dict(proof_route_maintenance.get("route_health")).get("findings"))
+        if isinstance(finding, dict) and (signal := _as_dict(finding.get("bounded_adaptation_signal")))
+    ]
+    repo_evidence_strategy = _as_dict(payload.get("repo_evidence_strategy")) or _as_dict(payload_context.get("repo_evidence_strategy"))
     improvement_candidate = next(
         (
             item
@@ -2659,7 +2666,9 @@ def compile_projection_surface_operating_decision(
             "improvement_latitude": str(initiative_posture.get("mode") or "conservative"),
             "adaptation_signals": [
                 item for item in _as_list(improvement_intake.get("improvement_signal_candidates")) if isinstance(item, dict)
-            ],
+            ]
+            + proof_route_adaptation_signals,
+            "repo_evidence_strategy": repo_evidence_strategy,
             "coverage_observations": [
                 item
                 for source in (
@@ -3525,6 +3534,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         coverage_signal_from_observation(item) for item in _as_list(inputs.get("coverage_observations")) if isinstance(item, dict)
     )
     bounded_adaptations = bounded_adaptation_projection(adaptation_signals)
+    repo_evidence_strategy = _as_dict(inputs.get("repo_evidence_strategy"))
     future_context_capture = _as_dict(inputs.get("future_context_capture"))
     if not future_context_capture and future_learning.get("evidence_count"):
         future_context_capture = {
@@ -3692,6 +3702,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         else embedded_invocation_revision
     )
     blockers = [item for item in _as_list(inputs.get("blockers")) if isinstance(item, dict)]
+    blockers.extend(_as_dict(item) for item in _as_list(repo_evidence_strategy.get("hard_blockers")) if isinstance(item, dict))
     blockers.extend(_as_dict(item) for item in _as_list(reconciliation.get("blockers")))
     instruction_blockers = [_as_dict(item) for item in _as_list(instruction_clause_projection.get("blockers")) if isinstance(item, dict)]
     instruction_claim_blockers = [item for item in instruction_blockers if str(item.get("target") or "").startswith("claim:")]
@@ -3888,6 +3899,12 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         dict.fromkeys(
             [
                 *[str(item) for item in _as_list(inputs.get("blocked_claim_classes"))],
+                *[
+                    str(claim)
+                    for blocker in _as_list(repo_evidence_strategy.get("hard_blockers"))
+                    if isinstance(blocker, dict)
+                    for claim in _as_list(blocker.get("blocked_claims"))
+                ],
                 *[str(item) for item in context_effects["blocked_claim_classes"]],
                 *[
                     str(_as_dict(item).get("target") or "").removeprefix("claim:")
@@ -3936,6 +3953,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         "repo_improvement_execution": repo_improvement_execution,
         "repo_improvement_effectiveness": repo_improvement_effectiveness,
         "instruction_clause_projection": instruction_clause_projection,
+        "repo_evidence_strategy": repo_evidence_strategy,
         "scoped_instruction_projection": scoped_instruction_projection,
         "reconciliation": reconciliation,
         "control_inputs": control_inputs,

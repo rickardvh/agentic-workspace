@@ -56,6 +56,8 @@ from agentic_workspace.config import (
     DEFAULT_IMPROVEMENT_LATITUDE,
     DEFAULT_OPTIMIZATION_BIAS,
     DEFAULT_WORKFLOW_ARTIFACT_PROFILE,
+    DELEGATION_LEGACY_COMPATIBILITY_POLICY,
+    DELEGATION_LEGACY_COMPATIBILITY_REMOVAL_VERSION,
     DELEGATION_OUTCOMES_KIND,
     MEMORY_POINTER_BLOCK,
     MEMORY_WORKFLOW_MARKER_END,
@@ -87,6 +89,7 @@ from agentic_workspace.config import (
     SUPPORTED_OPTIMIZATION_BIASES,
     SUPPORTED_ORCHESTRATION_EXECUTION_ROLES,
     SUPPORTED_REVIEW_BURDENS,
+    SUPPORTED_TRANSPORT_AUTHORITIES,
     SUPPORTED_UNDERFIT_BEHAVIORS,
     SUPPORTED_WORKFLOW_ARTIFACT_PROFILES,
     SUPPORTED_WORKFLOW_OBLIGATION_FORCES,
@@ -43253,7 +43256,13 @@ def _capability_posture_for_implementation(*, changed_paths: list[str], task_tex
 
 
 def _delegation_control_payload(local_override: MixedAgentLocalOverride) -> dict[str, Any]:
-    configured_mode = local_override.delegation_mode or "suggest"
+    configured_mode = (
+        "auto"
+        if local_override.transport_authority == "automatic"
+        else "manual"
+        if local_override.transport_authority == "manual"
+        else local_override.delegation_mode or "suggest"
+    )
     safe_to_auto = bool(local_override.safe_to_auto_run_commands)
     if configured_mode == "auto" and (not safe_to_auto):
         effective_mode = "suggest"
@@ -43275,9 +43284,17 @@ def _delegation_control_payload(local_override: MixedAgentLocalOverride) -> dict
         "configured_mode": configured_mode,
         "effective_mode": effective_mode,
         "supported_modes": list(SUPPORTED_DELEGATION_CONTROL_MODES),
-        "source": "local-override" if local_override.delegation_mode is not None else "default",
+        "source": (
+            local_override.field_sources.get("delegation.transport_authority", "local-override")
+            if local_override.transport_authority is not None
+            else "compatibility-alias"
+            if local_override.delegation_mode is not None
+            else "default"
+        ),
+        "transport_authority": local_override.transport_authority or ("automatic" if configured_mode == "auto" else "manual"),
         "execution_permitted": execution_permitted,
         "safe_to_auto_run_commands": safe_to_auto,
+        "supports_internal_delegation": bool(local_override.supports_internal_delegation),
         "disabled_reason": disabled_reason,
         "human_control": {
             "rule": "Local delegation posture may prepare or suggest work, but must not take control away from the human unless effective_mode is auto.",
@@ -43287,8 +43304,8 @@ def _delegation_control_payload(local_override: MixedAgentLocalOverride) -> dict
 
 
 def _assignment_policy_payload(local_override: MixedAgentLocalOverride, profile_payloads: list[dict[str, Any]]) -> dict[str, Any]:
-    configured_role = local_override.execution_role or "ordinary-executor"
     configured_policy = local_override.assignment_policy or "local-preferred"
+    configured_role = "orchestrator" if configured_policy != "local-preferred" else "ordinary-executor"
     configured_target = local_override.current_target
     target_matches = [
         profile
@@ -43306,7 +43323,7 @@ def _assignment_policy_payload(local_override: MixedAgentLocalOverride, profile_
     resolved_current_target = target_matches[0] if current_target_known else {}
     binding_requested = configured_policy == "required-best-fit"
     enforceable = not binding_requested or bool(current_target_known)
-    status = "configured" if local_override.assignment_policy is not None or local_override.execution_role is not None else "default-quiet"
+    status = "configured" if local_override.assignment_policy is not None else "default-quiet"
     if binding_requested and not current_target_known:
         status = "blocked-unknown-current-target"
     return {
@@ -43314,9 +43331,7 @@ def _assignment_policy_payload(local_override: MixedAgentLocalOverride, profile_
         "status": status,
         "execution_role": _sourced_value(
             configured_role,
-            source=local_override.field_sources.get("delegation.execution_role", "default")
-            if local_override.execution_role is not None
-            else "default",
+            source="derived:delegation.assignment_policy",
         ),
         "assignment_policy": _sourced_value(
             configured_policy,
@@ -43325,11 +43340,8 @@ def _assignment_policy_payload(local_override: MixedAgentLocalOverride, profile_
             else "default",
         ),
         "selection_objective": _sourced_value(
-            local_override.selection_objective
-            or "safe minimum expected total successful-completion cost with quality and proof before price",
-            source=local_override.field_sources.get("delegation.selection_objective", "default")
-            if local_override.selection_objective is not None
-            else "default",
+            "safe minimum expected total successful-completion cost with quality and proof before price",
+            source="derived:best-fit-ranking",
         ),
         "current_target": _sourced_value(
             configured_target,
@@ -43339,16 +43351,12 @@ def _assignment_policy_payload(local_override: MixedAgentLocalOverride, profile_
         "current_target_profile_name": resolved_current_target.get("name") if isinstance(resolved_current_target, dict) else None,
         "current_target_identity_ref": resolved_current_target.get("target_id") if isinstance(resolved_current_target, dict) else None,
         "underfit_behavior": _sourced_value(
-            local_override.underfit_behavior or "stay-when-safe",
-            source=local_override.field_sources.get("delegation.underfit_behavior", "default")
-            if local_override.underfit_behavior is not None
-            else "default",
+            "require-delegation" if configured_policy == "required-best-fit" else "stay-when-safe",
+            source="derived:delegation.assignment_policy",
         ),
         "down_routing_behavior": _sourced_value(
-            local_override.down_routing_behavior or "never",
-            source=local_override.field_sources.get("delegation.down_routing_behavior", "default")
-            if local_override.down_routing_behavior is not None
-            else "default",
+            "when-cheaper-safe-target-exists" if configured_policy == "required-best-fit" else "never",
+            source="derived:delegation.assignment_policy",
         ),
         "human_override_policy": _sourced_value(
             local_override.human_override_policy or "explicit-only",
@@ -43357,8 +43365,14 @@ def _assignment_policy_payload(local_override: MixedAgentLocalOverride, profile_
             else "default",
         ),
         "manual_transport_policy": _sourced_value(
-            local_override.manual_transport_policy or "allowed",
-            source=local_override.field_sources.get("delegation.manual_transport_policy", "default")
+            "required-when-no-automatic-method"
+            if local_override.transport_authority == "automatic"
+            else "allowed"
+            if local_override.transport_authority == "manual"
+            else local_override.manual_transport_policy or "allowed",
+            source="derived:delegation.transport_authority"
+            if local_override.transport_authority is not None
+            else "compatibility-alias"
             if local_override.manual_transport_policy is not None
             else "default",
         ),
@@ -43376,6 +43390,7 @@ def _assignment_policy_payload(local_override: MixedAgentLocalOverride, profile_
             "down_routing_behaviors": list(SUPPORTED_DOWN_ROUTING_BEHAVIORS),
             "human_override_policies": list(SUPPORTED_HUMAN_OVERRIDE_POLICIES),
             "manual_transport_policies": list(SUPPORTED_MANUAL_TRANSPORT_POLICIES),
+            "transport_authorities": list(SUPPORTED_TRANSPORT_AUTHORITIES),
         },
         "authority_order": [
             "explicit current-session human instruction",
@@ -43385,7 +43400,41 @@ def _assignment_policy_payload(local_override: MixedAgentLocalOverride, profile_
             "target metadata and learned evidence",
             "model self-assessment",
         ],
-        "separation_rule": "assignment_policy chooses who should own work; delegation_control.mode only governs how far tooling may execute a selected handoff.",
+        "separation_rule": "assignment_policy chooses who should own work; transport_authority independently governs execution after selection.",
+        "migration": {
+            "canonical_fields": [
+                "delegation.assignment_policy",
+                "delegation.transport_authority",
+                "delegation.human_override_policy",
+                "delegation.current_target",
+                "delegation_targets.<target>.transports",
+            ],
+            "compatibility_aliases": [
+                "delegation.mode",
+                "delegation.execution_role",
+                "delegation.selection_objective",
+                "delegation.underfit_behavior",
+                "delegation.down_routing_behavior",
+                "delegation.manual_transport_policy",
+                "runtime.cheap_bounded_executor_available",
+                "handoff.prefer_internal_delegation_when_available",
+                "delegation_targets.<target>.human_control_modes",
+                "delegation_targets.<target>.execution_methods",
+                "delegation_targets.<target>.dispatch_adapter_kind",
+                "delegation_targets.<target>.dispatch_command",
+                "delegation_targets.<target>.dispatch_output_mode",
+                "delegation_targets.<target>.dispatch_timeout_seconds",
+                "delegation_targets.<target>.escalation_target",
+            ],
+            "lifecycle": {
+                "kind": "agentic-workspace/delegation-compatibility-lifecycle/v1",
+                "status": "deprecated-removal-scheduled",
+                "policy": DELEGATION_LEGACY_COMPATIBILITY_POLICY,
+                "removal_version": DELEGATION_LEGACY_COMPATIBILITY_REMOVAL_VERSION,
+                "legacy_authoring_permitted_until_removal": True,
+                "canonical_precedence": "canonical fields win without pairwise reconciliation",
+            },
+        },
     }
 
 
@@ -43418,8 +43467,27 @@ def _effective_orchestration_posture_payload(
         {},
     )
     execution_methods = [str(item) for item in _list_payload(matching_profile.get("execution_methods")) if str(item)]
-    adapter_configured = bool(_list_payload(matching_profile.get("dispatch_command")))
-    automatic_methods = [item for item in execution_methods if adapter_configured and item in {"internal", "cli", "api"}]
+    transport_variants = [item for item in _list_payload(matching_profile.get("transports")) if isinstance(item, dict)]
+    automatic_methods = sorted(
+        {
+            str(item.get("method") or "")
+            for item in transport_variants
+            if (str(item.get("method") or "") == "internal" and delegation_control.get("supports_internal_delegation") is True)
+            or (
+                str(item.get("method") or "") in {"cli", "api"}
+                and str(item.get("readiness") or "") == "configured"
+                and bool(_list_payload(item.get("command")))
+            )
+        }
+    )
+    if not transport_variants:
+        adapter_configured = bool(_list_payload(matching_profile.get("dispatch_command")))
+        automatic_methods = [
+            item
+            for item in execution_methods
+            if (item == "internal" and (delegation_control.get("supports_internal_delegation") is True or adapter_configured))
+            or (item in {"cli", "api"} and adapter_configured)
+        ]
     current_target_ready = target_status == "known-profile"
     binding_requested = policy == "required-best-fit"
     orchestrator_role = role == "orchestrator"
@@ -43459,6 +43527,16 @@ def _effective_orchestration_posture_payload(
         summary = "Ordinary direct execution is active; best-fit assignment and automatic delegation transport are not binding."
         decisive_reasons = [f"assignment_policy={policy}", f"delegation_mode={effective_mode}"]
 
+    repair = (
+        {
+            "status": "required",
+            "owner": ".agentic-workspace/config.local.toml",
+            "field": f"delegation_targets.{current_target}.transports",
+            "action": "configure one constructible internal, process, API, or manual transport variant",
+        }
+        if status == "binding-active-transport-unavailable"
+        else {"status": "not-required"}
+    )
     return {
         "kind": "agentic-workspace/effective-orchestration-posture/v1",
         "status": status,
@@ -43475,6 +43553,7 @@ def _effective_orchestration_posture_payload(
             "automatic_methods": automatic_methods,
         },
         "transport": {
+            "authority": str(delegation_control.get("transport_authority") or "manual"),
             "configured_mode": configured_mode,
             "effective_mode": effective_mode,
             "execution_permitted": transport_permitted,
@@ -43484,6 +43563,7 @@ def _effective_orchestration_posture_payload(
             "authority": "explicit human instruction remains highest priority",
         },
         "decisive_reasons": decisive_reasons,
+        "repair": repair,
         "change_route": {
             "owner": ".agentic-workspace/config.local.toml",
             "detail_command": (
@@ -43491,12 +43571,12 @@ def _effective_orchestration_posture_payload(
             ),
         },
         "provenance": {
-            "execution_role": _as_dict(assignment_policy.get("execution_role")).get("source"),
+            "execution_role": "derived:delegation.assignment_policy",
             "assignment_policy": _as_dict(assignment_policy.get("assignment_policy")).get("source"),
             "current_target": _as_dict(assignment_policy.get("current_target")).get("source"),
-            "delegation_mode": delegation_control.get("source"),
+            "transport_authority": delegation_control.get("source"),
         },
-        "separation_rule": "Assignment policy chooses ownership; delegation mode only governs execution transport after a route is selected.",
+        "separation_rule": "Assignment policy chooses ownership; transport authority only governs execution after a route is selected.",
     }
 
 
@@ -45386,6 +45466,7 @@ def _execution_posture_payload(
                 "timeout_seconds": int((target or {}).get("dispatch_timeout_seconds") or 1800),
                 "model": str((target or {}).get("model_family") or ""),
                 "execution_methods": list((target or {}).get("execution_methods") or []),
+                "transports": [dict(item) for item in _list_payload((target or {}).get("transports")) if isinstance(item, dict)],
             },
             "proof_obligation": {
                 "kind": "agentic-workspace/assignment-task-proof-obligation/v1",
@@ -55532,6 +55613,7 @@ _CONFIG_POLICY_FIELDS: dict[str, dict[str, tuple[type, tuple[Any, ...] | None]]]
         "delegation.mode": (str, SUPPORTED_DELEGATION_CONTROL_MODES),
         "delegation.execution_role": (str, SUPPORTED_ORCHESTRATION_EXECUTION_ROLES),
         "delegation.assignment_policy": (str, SUPPORTED_ASSIGNMENT_POLICIES),
+        "delegation.transport_authority": (str, SUPPORTED_TRANSPORT_AUTHORITIES),
         "delegation.underfit_behavior": (str, SUPPORTED_UNDERFIT_BEHAVIORS),
         "delegation.down_routing_behavior": (str, SUPPORTED_DOWN_ROUTING_BEHAVIORS),
         "delegation.human_override_policy": (str, SUPPORTED_HUMAN_OVERRIDE_POLICIES),
@@ -60912,6 +60994,16 @@ _RUNTIME_RESOLUTION_GUIDANCE: dict[str, str] = {
 }
 
 
+def _delegation_transport_payloads(*, profile: Any, supports_internal: bool) -> list[dict[str, Any]]:
+    payloads: list[dict[str, Any]] = []
+    for raw in profile.transports:
+        item = dict(raw)
+        if str(item.get("method") or "") == "internal":
+            item["readiness"] = "configured" if supports_internal else "runtime-unavailable"
+        payloads.append(item)
+    return payloads
+
+
 def _runtime_resolution_payload(*, config: WorkspaceConfig, capability_posture: dict[str, Any] | None = None) -> dict[str, Any]:
     """Compact runtime-resolution answer combining work semantics and local execution posture."""
     local_override = config.local_override
@@ -60940,6 +61032,9 @@ def _runtime_resolution_payload(*, config: WorkspaceConfig, capability_posture: 
                 "strength": profile.strength,
                 "location": profile.location,
                 "execution_methods": list(profile.execution_methods),
+                "transports": _delegation_transport_payloads(
+                    profile=profile, supports_internal=bool(local_override.supports_internal_delegation)
+                ),
                 "model_family": profile.model_family,
                 "provider": profile.provider,
                 "dispatch_adapter_kind": profile.dispatch_adapter_kind,
@@ -60952,7 +61047,6 @@ def _runtime_resolution_payload(*, config: WorkspaceConfig, capability_posture: 
                 "latency_class": profile.latency_class,
                 "safe_task_classes": list(profile.safe_task_classes),
                 "forbidden_task_classes": list(profile.forbidden_task_classes),
-                "escalation_target": profile.escalation_target,
                 "confidence_source": profile.confidence_source,
                 "last_evaluation": profile.last_evaluation,
                 "human_control_modes": list(profile.human_control_modes),
@@ -61347,6 +61441,9 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
                 "task_fit": list(profile.task_fit),
                 "capability_classes": list(profile.capability_classes),
                 "execution_methods": list(profile.execution_methods),
+                "transports": _delegation_transport_payloads(
+                    profile=profile, supports_internal=bool(local_override.supports_internal_delegation)
+                ),
                 "model_family": profile.model_family,
                 "provider": profile.provider,
                 "dispatch_adapter_kind": profile.dispatch_adapter_kind,
@@ -61359,7 +61456,6 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
                 "latency_class": profile.latency_class,
                 "safe_task_classes": list(profile.safe_task_classes),
                 "forbidden_task_classes": list(profile.forbidden_task_classes),
-                "escalation_target": profile.escalation_target,
                 "confidence_source": profile.confidence_source,
                 "last_evaluation": profile.last_evaluation,
                 "human_control_modes": list(profile.human_control_modes),
@@ -61437,24 +61533,34 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
                 "delegation_targets.<target>.confidence",
                 "delegation_targets.<target>.task_fit",
                 "delegation_targets.<target>.capability_classes",
+                "delegation_targets.<target>.transports",
+                "delegation_targets.<target>.model_family",
+                "delegation_targets.<target>.provider",
+                "delegation_targets.<target>.context_capacity",
+                "delegation_targets.<target>.cost_class",
+                "delegation_targets.<target>.latency_class",
+                "delegation_targets.<target>.forbidden_task_classes",
+                "delegation_targets.<target>.confidence_source",
+                "delegation_targets.<target>.last_evaluation",
+            ],
+            "compatibility_aliases": [
                 "delegation_targets.<target>.execution_methods",
                 "delegation_targets.<target>.dispatch_adapter_kind",
                 "delegation_targets.<target>.dispatch_command",
                 "delegation_targets.<target>.dispatch_output_mode",
                 "delegation_targets.<target>.dispatch_timeout_seconds",
-                "delegation_targets.<target>.model_family",
-                "delegation_targets.<target>.provider",
-                "delegation_targets.<target>.context_capacity",
-                "delegation_targets.<target>.reasoning_profile",
-                "delegation_targets.<target>.cost_class",
-                "delegation_targets.<target>.latency_class",
-                "delegation_targets.<target>.safe_task_classes",
-                "delegation_targets.<target>.forbidden_task_classes",
                 "delegation_targets.<target>.escalation_target",
-                "delegation_targets.<target>.confidence_source",
-                "delegation_targets.<target>.last_evaluation",
+                "delegation_targets.<target>.reasoning_profile",
+                "delegation_targets.<target>.safe_task_classes",
                 "delegation_targets.<target>.human_control_modes",
             ],
+            "compatibility_lifecycle": {
+                "kind": "agentic-workspace/delegation-compatibility-lifecycle/v1",
+                "status": "deprecated-removal-scheduled",
+                "policy": DELEGATION_LEGACY_COMPATIBILITY_POLICY,
+                "removal_version": DELEGATION_LEGACY_COMPATIBILITY_REMOVAL_VERSION,
+            },
+            "supported_transport_kinds": ["internal", "process", "api", "manual"],
             "supported_strengths": list(SUPPORTED_DELEGATION_TARGET_STRENGTHS),
             "supported_locations": list(SUPPORTED_CAPABILITY_LOCATIONS),
             "supported_capability_classes": list(SUPPORTED_CAPABILITY_EXECUTION_CLASSES),
@@ -64775,8 +64881,14 @@ def _executor_availability(
             "repair": "Resolve an authoritative executor target before running Autopilot.",
         }
     execution_methods = [str(method) for method in _list_payload(selected_target.get("execution_methods")) if str(method).strip()]
-    adapter_configured = bool(_list_payload(selected_target.get("dispatch_command")))
-    automatic_methods = [method for method in execution_methods if adapter_configured and method in {"internal", "cli", "api"}]
+    transport_variants = [item for item in _list_payload(selected_target.get("transports")) if isinstance(item, dict)]
+    automatic_methods = [
+        str(item.get("method") or "")
+        for item in transport_variants
+        if str(item.get("method") or "") in {"internal", "cli", "api"}
+        and str(item.get("readiness") or "") == "configured"
+        and (str(item.get("method") or "") == "internal" or bool(_list_payload(item.get("command"))))
+    ]
     if not execution_methods:
         return {
             "status": "unavailable",

@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Compose repo-owned named evidence strategies into proof construction and ordinary claim posture without portable methodology inference."
+issues = [2914]

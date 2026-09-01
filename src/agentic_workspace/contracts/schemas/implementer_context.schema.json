@@ -251,6 +251,15 @@
           "description": "Whether auto mode may run command-based delegation.",
           "type": "boolean"
         },
+        "supports_internal_delegation": {
+          "description": "Whether the current host runtime can execute the internal transport variant.",
+          "type": "boolean"
+        },
+        "transport_authority": {
+          "description": "Canonical authority governing automatic versus manual transport execution.",
+          "type": "string",
+          "enum": ["automatic", "manual"]
+        },
         "source": {
           "description": "Where the effective delegation mode came from.",
           "type": "string"
@@ -4051,6 +4060,15 @@
         "safe_to_auto_run_commands": {
           "type": "boolean",
           "description": "Whether auto mode may run command-based delegation."
+        },
+        "supports_internal_delegation": {
+          "type": "boolean",
+          "description": "Whether the current host runtime can execute the internal transport variant."
+        },
+        "transport_authority": {
+          "type": "string",
+          "enum": ["automatic", "manual"],
+          "description": "Canonical authority governing automatic versus manual transport execution."
         },
         "disabled_reason": {
           "type": [

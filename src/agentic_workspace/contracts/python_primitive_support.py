@@ -1932,10 +1932,23 @@ def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, targe
 
     identity = _assignment_mapping(packet.get("assignment_identity"))
     adapter = _assignment_mapping(identity.get("dispatch_adapter"))
+    raw_variants = adapter.get("transports")
+    variants = (
+        [item for item in raw_variants if isinstance(item, Mapping)]
+        if isinstance(raw_variants, Sequence) and not isinstance(raw_variants, (str, bytes))
+        else []
+    )
+    selected_variant = next((item for item in variants if _optional_text(item.get("method")) == transport), None)
     adapter_kind = _optional_text(adapter.get("kind"))
     command_template = _assignment_list(adapter.get("command"))
     output_mode = _optional_text(adapter.get("output_mode")) or "stdout"
     timeout_seconds = adapter.get("timeout_seconds", 1800)
+    if selected_variant is not None:
+        variant_kind = _optional_text(selected_variant.get("kind"))
+        adapter_kind = "process" if variant_kind in {"process", "api"} else "host-native" if variant_kind == "internal" else ""
+        command_template = _assignment_list(selected_variant.get("command"))
+        output_mode = _optional_text(selected_variant.get("output_mode")) or "stdout"
+        timeout_seconds = selected_variant.get("timeout_seconds", 1800)
     methods = set(_assignment_list(adapter.get("execution_methods")))
     if transport not in methods:
         return {

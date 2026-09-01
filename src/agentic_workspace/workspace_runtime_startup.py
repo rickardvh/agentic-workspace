@@ -181,7 +181,18 @@ def _compact_start_effective_orchestration(posture: Any) -> dict[str, Any]:
         return {}
     compact = {
         key: posture[key]
-        for key in ("status", "summary", "surface_in_startup", "assignment", "transport", "decisive_reasons", "change_route")
+        for key in (
+            "status",
+            "summary",
+            "surface_in_startup",
+            "assignment",
+            "transport",
+            "human_override",
+            "decisive_reasons",
+            "repair",
+            "change_route",
+            "provenance",
+        )
         if key in posture
     }
     current_target = posture.get("current_target", {})

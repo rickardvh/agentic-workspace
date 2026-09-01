@@ -586,6 +586,258 @@ def test_disposed_or_absent_coverage_is_quiet() -> None:
     assert disposed["context_effects"]["status"] == "quiet"
 
 
+def test_projection_operating_decision_consumes_proof_route_adaptation_signal() -> None:
+    signal = {
+        "symptom": "broad command is safely subsumed",
+        "evidence_fingerprint": "proof-route-refinement-1",
+        "source": "proof_route_maintenance.route_refinement_evidence",
+        "observed_during": "proof-route-execution",
+        "cost": "disproportionate",
+        "recurrence": "observed",
+        "adaptation": {
+            "owner_class": "proof-route",
+            "source_owner": ".agentic-workspace/config.toml",
+            "proposed_delta": {"action": "upsert_domain_lane", "lane_id": "example"},
+            "authority_requirement": {
+                "mode": "existing-typed-operation",
+                "operation_id": "proof.report",
+                "expected_owner_revision": "rev-a",
+                "current_owner_revision": "rev-a",
+            },
+            "risk_class": "low",
+            "expected_effect": {"required_coverage": "preserved"},
+            "validation_route": ["pytest tests/test_example.py -q"],
+            "rollback": {"mode": "operation-transaction"},
+            "simulation": {
+                "required_behaviors": ["example-owner-claim"],
+                "preserved_behaviors": ["example-owner-claim"],
+                "authority_delta": "none",
+                "allowed_owner_paths": [".agentic-workspace/config.toml"],
+                "before_cost": 20,
+                "after_cost": 10,
+                "before_precision": 0.5,
+                "after_precision": 1.0,
+            },
+        },
+    }
+    admitted = admit_projection_surface_decision_input(input_revisions={"current_work": "rev-a"}, consumer="proof")
+    decision = compile_projection_surface_operating_decision(
+        payload={"proof_route_maintenance": {"route_health": {"findings": [{"bounded_adaptation_signal": signal}]}}},
+        admitted_input=admitted,
+        consumer="proof",
+    )
+
+    candidate = decision["bounded_adaptations"]["candidates"][0]
+    assert candidate["status"] == "promotion-ready"
+    assert candidate["promotion"]["operation_id"] == "proof.report"
+
+
+def test_repo_evidence_strategy_composes_hard_and_advisory_named_requirements() -> None:
+    from agentic_workspace.workspace_runtime_proof import (
+        _apply_repo_evidence_strategy_to_lanes,
+        _repo_evidence_strategy_payload,
+    )
+
+    requirements = {
+        "active": [
+            {
+                "id": "property_invariants",
+                "requirement_class": "guideline",
+                "preference_target": "surface:property-generative-evidence",
+                "proof_profile": "property_evidence",
+                "source_intent_ref": "docs/testing.md#properties",
+                "source_intent_revision": "rev-1",
+                "source_intent_current": True,
+                "applies_because": ["matched behavior package"],
+            },
+            {
+                "id": "representative_external_examples",
+                "requirement_class": "invariant",
+                "required_evidence": ["representative-public-example"],
+                "proof_profile": "public_examples",
+                "blocking_claims": ["claim-work-complete"],
+                "evidence_owner": "verification:public-examples",
+                "detail_route": "run the host-owned public example check",
+                "source_intent_ref": "docs/testing.md#examples",
+                "source_intent_revision": "rev-1",
+                "source_intent_current": True,
+                "applies_because": ["matched exported API"],
+            },
+            {
+                "id": "public_api_only",
+                "requirement_class": "invariant",
+                "required_evidence": ["public-api-boundary-check"],
+                "proof_profile": "public_api_boundary",
+                "blocking_claims": ["claim-work-complete"],
+                "evidence_owner": "module:host-api-classifier",
+                "detail_route": "run the host-owned API-surface classifier",
+                "source_intent_ref": "docs/testing.md#public-api-only",
+                "source_intent_revision": "rev-1",
+                "source_intent_current": True,
+                "applies_because": ["host classifier matched library package"],
+            },
+            {
+                "id": "compact_suite_budget",
+                "requirement_class": "current-evidence",
+                "required_evidence": ["workspace-suite-count-and-runtime"],
+                "blocking_claims": ["claim-work-complete"],
+                "evidence_owner": "verification:workspace-suite-budget",
+                "detail_route": "refresh the repo-owned suite budget measurement",
+                "source_intent_ref": "docs/maintainer/testing-strategy.md#budget",
+                "source_intent_revision": "budget-r1",
+                "source_intent_current": True,
+                "applies_because": ["ordinary Workspace evidence changed"],
+            },
+        ],
+        "evidence_status": [
+            {"requirement_id": "representative_external_examples", "state": "satisfied"},
+            {"requirement_id": "public_api_only", "state": "missing-evidence"},
+            {"requirement_id": "compact_suite_budget", "state": "stale"},
+        ],
+    }
+    selected = [
+        {
+            "command": "pytest tests/test_properties.py -q",
+            "assurance_requirement_refs": ["property_invariants"],
+        },
+        {
+            "command": "pytest tests/test_public_examples.py -q",
+            "assurance_requirement_refs": ["representative_external_examples"],
+        },
+        {
+            "command": "python scripts/check_public_api_tests.py",
+            "assurance_requirement_refs": ["public_api_only"],
+        },
+    ]
+
+    lanes = [
+        {
+            "id": "assurance-requirement:representative_external_examples",
+            "requirement_id": "representative_external_examples",
+            "proof_profile": "public_examples",
+            "enough_proof": ["pytest tests/test_public_examples.py -q"],
+        },
+        {
+            "id": "assurance-requirement:property_invariants",
+            "requirement_id": "property_invariants",
+            "proof_profile": "property_evidence",
+            "evidence_concepts": ["property-generative-evidence"],
+            "enough_proof": ["pytest tests/test_properties.py -q"],
+        },
+    ]
+    ordered, construction = _apply_repo_evidence_strategy_to_lanes(assurance_requirements=requirements, selected_lanes=lanes)
+    replay_ordered, replay_construction = _apply_repo_evidence_strategy_to_lanes(assurance_requirements=requirements, selected_lanes=lanes)
+    assert ordered[0]["id"] == "assurance-requirement:property_invariants"
+    assert construction == replay_construction
+    assert ordered == replay_ordered
+    assert {item["effect"] for item in construction["effects"]} == {
+        "preferred-evidence-selected",
+        "required-evidence-selected",
+        "exact-owner-route-required",
+    }
+
+    strategy = _repo_evidence_strategy_payload(
+        assurance_requirements=requirements,
+        selected_commands=selected,
+        construction=construction,
+        blocked_commands=[
+            {
+                "command": "pytest tests/test_private_helper.py -q",
+                "assurance_requirement_ref": "public_api_only",
+            }
+        ],
+    )
+    assert strategy["status"] == "blocked"
+    assert {item["class"] for item in strategy["clauses"]} == {"guideline", "invariant", "current-evidence"}
+    assert strategy["selected_command_count"] == 3
+    assert strategy["clauses"][2]["blocked_commands"] == ["pytest tests/test_private_helper.py -q"]
+    assert strategy["construction"]["status"] == "applied"
+    assert strategy["hard_blockers"] == [
+        {
+            "reason_code": "missing-evidence",
+            "owner": "module:host-api-classifier",
+            "requirement_id": "public_api_only",
+            "repair": "run the host-owned API-surface classifier",
+            "blocked_claims": ["claim-work-complete"],
+        },
+        {
+            "reason_code": "missing-evidence",
+            "owner": "verification:workspace-suite-budget",
+            "requirement_id": "compact_suite_budget",
+            "repair": "refresh the repo-owned suite budget measurement",
+            "blocked_claims": ["claim-work-complete"],
+        },
+    ]
+    assert strategy["advisory_preferences"][0]["id"] == "property_invariants"
+
+    admitted = admit_projection_surface_decision_input(input_revisions={"current_work": "rev-a"}, consumer="proof")
+    decision = compile_projection_surface_operating_decision(
+        payload={
+            "repo_evidence_strategy": strategy,
+            "proof_decision": {"status": "accepted", "source": "agent-authored"},
+            "manual_verification": {"status": "passed", "source": "agent-authored"},
+        },
+        admitted_input=admitted,
+        consumer="proof",
+    )
+    assert decision["status"] == "blocked"
+    assert "claim-work-complete" in decision["blocked_claim_classes"]
+    assert decision["external_blocker"]["owner"] == "module:host-api-classifier"
+    assert {item["requirement_id"] for item in decision["repo_evidence_strategy"]["hard_blockers"]} == {
+        "public_api_only",
+        "compact_suite_budget",
+    }
+
+
+def test_repo_evidence_strategy_has_no_default_methodology() -> None:
+    from agentic_workspace.workspace_runtime_proof import _apply_repo_evidence_strategy_to_lanes, _repo_evidence_strategy_payload
+
+    strategy = _repo_evidence_strategy_payload(assurance_requirements={}, selected_commands=[])
+    assert strategy["status"] == "not-declared"
+    assert strategy["clauses"] == []
+    lanes = [{"id": "private_helper_test", "enough_proof": ["pytest tests/test_private_helper.py -q"]}]
+    ordered, construction = _apply_repo_evidence_strategy_to_lanes(
+        assurance_requirements={
+            "framework_imports": ["hypothesis"],
+            "filenames": ["test_private_helper.py"],
+            "symbols": ["_private_helper"],
+            "strategy_prose": "prefer property tests and public APIs",
+        },
+        selected_lanes=lanes,
+    )
+    assert ordered == lanes
+    assert construction == {"status": "not-applicable", "effects": [], "owner_decisions": []}
+
+
+def test_repo_evidence_strategy_leaves_unclassified_preference_with_domain_owner() -> None:
+    from agentic_workspace.workspace_runtime_proof import _apply_repo_evidence_strategy_to_lanes
+
+    requirements = {
+        "active": [
+            {
+                "id": "property_preference",
+                "requirement_class": "guideline",
+                "preference_target": "surface:host-classified-property-owner",
+                "evidence_owner": "module:host-test-classifier",
+            }
+        ]
+    }
+    lanes, construction = _apply_repo_evidence_strategy_to_lanes(
+        assurance_requirements=requirements,
+        selected_lanes=[{"id": "ordinary-proof", "enough_proof": ["pytest -q"]}],
+    )
+    assert lanes == [{"id": "ordinary-proof", "enough_proof": ["pytest -q"]}]
+    assert construction["status"] == "owner-decision-required"
+    assert construction["owner_decisions"] == [
+        {
+            "requirement_id": "property_preference",
+            "preference_target": "surface:host-classified-property-owner",
+            "owner": "module:host-test-classifier",
+            "reason": "no explicitly classified admissible evidence owner matched the advisory preference",
+        }
+    ]
+
+
 def test_authorized_local_code_seam_reuses_ordinary_implementation_owner_and_proportionate_proof() -> None:
     candidate = _material_improvement_candidate(
         proposed_paths=["src/router.py"],

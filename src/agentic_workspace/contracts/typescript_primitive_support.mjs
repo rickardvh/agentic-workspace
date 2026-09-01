@@ -2148,10 +2148,13 @@ function assignmentDispatch(packet, prompt, targetRoot, transport) {
   const adapter = isObject(identity.dispatch_adapter) ? identity.dispatch_adapter : {};
   const methods = new Set(Array.isArray(adapter.execution_methods) ? adapter.execution_methods.map(String) : []);
   if (!methods.has(transport)) return { status: 'blocked', reason: 'transport-not-admitted-by-target' };
-  const adapterKind = assignmentText(adapter.kind);
-  const commandTemplate = Array.isArray(adapter.command) ? adapter.command.map(String) : [];
-  const outputMode = assignmentText(adapter.output_mode) || 'stdout';
-  const timeoutSeconds = Number(adapter.timeout_seconds ?? 1800);
+  const variants = Array.isArray(adapter.transports) ? adapter.transports.filter(isObject) : [];
+  const selectedVariant = variants.find((item) => assignmentText(item.method) === transport);
+  const variantKind = assignmentText(selectedVariant?.kind);
+  const adapterKind = selectedVariant ? (['process', 'api'].includes(variantKind) ? 'process' : variantKind === 'internal' ? 'host-native' : '') : assignmentText(adapter.kind);
+  const commandTemplate = Array.isArray(selectedVariant?.command) ? selectedVariant.command.map(String) : Array.isArray(adapter.command) ? adapter.command.map(String) : [];
+  const outputMode = assignmentText(selectedVariant?.output_mode) || assignmentText(adapter.output_mode) || 'stdout';
+  const timeoutSeconds = Number(selectedVariant?.timeout_seconds ?? adapter.timeout_seconds ?? 1800);
   if (!['process', 'host-native'].includes(adapterKind) || !commandTemplate.length) return { status: 'blocked', reason: 'configured-dispatch-adapter-unavailable' };
   if (!['stdout', 'json-file'].includes(outputMode)) return { status: 'blocked', reason: 'configured-dispatch-output-mode-unsupported' };
   if (!Number.isInteger(timeoutSeconds) || timeoutSeconds <= 0) return { status: 'blocked', reason: 'configured-dispatch-timeout-invalid' };

@@ -1118,6 +1118,178 @@ def test_proof_route_maintenance_selector_reports_route_health_repair_packet(tmp
     assert "5058804538" not in json.dumps(route_health)
 
 
+def test_repo_evidence_strategy_shapes_selected_proof_and_replays_without_steering(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    config_path = tmp_path / ".agentic-workspace" / "config.toml"
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8")
+        + """
+
+[assurance.proof_profiles.property_evidence]
+required_commands = ['python -c "print(1)"']
+
+[assurance.proof_profiles.representative_examples]
+required_commands = ['python -c "print(2)"']
+
+[assurance.proof_profiles.public_contract]
+required_commands = ['python -c "print(3)"']
+disallowed_commands = ['python -c "print(4)"']
+
+[assurance.requirements.property_first]
+level = "medium"
+applies_to_paths = ["src/strategy.py"]
+proof_profile = "property_evidence"
+force = "recommended"
+requirement_class = "guideline"
+preference_target = "surface:property_evidence"
+source_intent_ref = "docs/testing.md#property-first"
+source_intent_revision = "strategy-r1"
+source_intent_current = true
+
+[assurance.requirements.representative_complement]
+level = "high"
+applies_to_paths = ["src/strategy.py"]
+proof_profile = "representative_examples"
+required_evidence = ["representative-public-example"]
+force = "required-before-closeout"
+blocking_claims = ["claim-work-complete"]
+requirement_class = "invariant"
+evidence_owner = "verification:representative-examples"
+detail_route = "run the representative external example owner"
+source_intent_ref = "docs/testing.md#representative-examples"
+source_intent_revision = "strategy-r1"
+source_intent_current = true
+
+[assurance.requirements.public_api_only]
+level = "high"
+applies_to_paths = ["src/strategy.py"]
+proof_profile = "public_contract"
+required_evidence = ["public-api-boundary-check"]
+force = "required-before-closeout"
+blocking_claims = ["claim-work-complete"]
+requirement_class = "invariant"
+evidence_owner = "module:host-api-classifier"
+detail_route = "run the host-owned API-surface classifier"
+source_intent_ref = "docs/testing.md#public-api-only"
+source_intent_revision = "strategy-r1"
+source_intent_current = true
+
+[assurance.domain_proof_lanes.strategy_fixture]
+purpose = "Host-classified ordinary strategy proof."
+applies_to_paths = ["src/strategy.py"]
+commands = ['python -c "print(4)"']
+evidence_concepts = ["host-classified-private-target"]
+owner = "host-test-owner"
+""",
+        encoding="utf-8",
+    )
+    _write(tmp_path / "src" / "strategy.py", "VALUE = 1\n")
+
+    first = workspace_runtime_proof._proof_selection_for_changed_paths(
+        changed_paths=["src/strategy.py"], target_root=tmp_path, include_durable_intent=False
+    )
+    replay = workspace_runtime_proof._proof_selection_for_changed_paths(
+        changed_paths=["src/strategy.py"], target_root=tmp_path, include_durable_intent=False
+    )
+    commands = first["required_commands"]
+    assert commands[:3] == [
+        'python -c "print(1)"',
+        'python -c "print(3)"',
+        'python -c "print(2)"',
+    ], first
+    assert 'python -c "print(4)"' not in commands
+    strategy = first["repo_evidence_strategy"]
+    assert strategy == replay["repo_evidence_strategy"]
+    assert strategy["construction"]["status"] == "applied"
+    assert strategy["advisory_preferences"][0]["selected_commands"] == ['python -c "print(1)"']
+    public_clause = next(item for item in strategy["clauses"] if item["id"] == "public_api_only")
+    assert public_clause["selected_commands"] == ['python -c "print(3)"']
+    assert public_clause["blocked_commands"] == ['python -c "print(4)"']
+
+    public_answers = []
+    for _ in range(2):
+        assert (
+            cli.main(
+                [
+                    "proof",
+                    "--verbose",
+                    "--target",
+                    str(tmp_path),
+                    "--changed",
+                    "src/strategy.py",
+                    "--format",
+                    "json",
+                ]
+            )
+            == 0
+        )
+        payload = json.loads(capsys.readouterr().out)
+        public_answers.append(payload.get("answer", payload))
+    assert public_answers[0]["required_commands"][:3] == commands[:3]
+    assert public_answers[0]["repo_evidence_strategy"] == public_answers[1]["repo_evidence_strategy"]
+    assert public_answers[0]["proof_route_strategy_claim_gate"] == public_answers[1]["proof_route_strategy_claim_gate"]
+
+    calls: list[str] = []
+
+    def run(command: str, **_: object) -> subprocess.CompletedProcess[str]:
+        calls.append(command)
+        return subprocess.CompletedProcess(command, 0, stdout="passed", stderr="")
+
+    monkeypatch.setattr(workspace_runtime_core, "run_trusted_shell", run)
+    monkeypatch.setattr(
+        workspace_runtime_core,
+        "_record_proof_receipt_payload",
+        lambda **_: {
+            "status": "written",
+            "path": ".agentic-workspace/local/proof-receipts/last.json",
+            "receipt": {"admission": {"proof_sufficient": True}},
+            "publication": {"trusted_producer_published": False},
+        },
+    )
+    executed = workspace_runtime_core._execute_selected_proof_payload(
+        target_root=tmp_path,
+        changed_paths=["src/strategy.py"],
+        task_text=None,
+        run_id="repo-evidence-strategy-public-path",
+        timeout_seconds="30",
+        cancel_file="",
+        dry_run=False,
+    )
+    assert executed["status"] == "completed"
+    assert calls[:3] == commands[:3]
+    assert 'python -c "print(3)"' in calls
+    assert 'python -c "print(4)"' not in calls
+
+    _write(tmp_path / "src" / "direct.py", "VALUE = 1\n")
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/direct.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    direct_payload = json.loads(capsys.readouterr().out)
+    direct = direct_payload.get("answer", direct_payload)
+    assert direct["repo_evidence_strategy"]["status"] == "not-declared"
+    assert direct["repo_evidence_strategy"]["footprint"] == {
+        "first_line_cost": "none",
+        "mandatory_command_count": 0,
+        "durable_receipt_required": False,
+        "strategy_packet_required_to_act": False,
+    }
+    assert not (tmp_path / ".agentic-workspace/local/proof-receipts/last.json").exists()
+
+
 def test_proof_route_health_retires_failed_broad_receipt_after_focused_root_route_repair(tmp_path: Path, capsys) -> None:
     _write_installed_host_proof_target(tmp_path)
     assert not (tmp_path / "scripts" / "run_agentic_workspace.py").exists()
@@ -2298,7 +2470,7 @@ def test_proof_changed_selector_uses_focused_domain_route(tmp_path: Path, capsys
 
 
 def test_applicable_measurement_producer_executes_once_and_current_evidence_is_reused(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     _init_git_repo(tmp_path)
     _write(tmp_path / ".gitignore", ".agentic-workspace/local/\n")
@@ -2338,6 +2510,37 @@ producer_command = "python scripts/measure_selected_latency.py --compact"
     )
     _write(tmp_path / "src/runtime.py", "VALUE = 1\n")
     _write(tmp_path / "scripts/measure_selected_latency.py", "print('compact measurement')\n")
+    evidence_path = tmp_path / ".agentic-workspace/verification/assurance-evidence-records.json"
+    _write_json(
+        evidence_path,
+        {
+            "kind": "agentic-workspace/assurance-evidence-records/v1",
+            "records": [
+                {
+                    "requirement_id": "selected_latency",
+                    "evidence_label": "cold_median",
+                    "status": "passed",
+                    "measurement": {
+                        "kind": "agentic-workspace/measurement-evidence/v1",
+                        "metric": "selected-read-latency",
+                        "unit": "seconds",
+                        "observed_value": 1.8,
+                        "comparator": "lte",
+                        "threshold": 2.0,
+                        "aggregation": "median",
+                        "sample_count": 5,
+                        "subject": "planning-record-selected-read",
+                        "subject_revision": "stale-fixture-r0",
+                        "environment": "maintained-ci",
+                        "source_revision": "benchmark-r1",
+                        "requirement_revision": "policy-r1",
+                        "status": "passed",
+                        "detail_ref": ".agentic-workspace/local/measurements/selected-latency-stale.json",
+                    },
+                }
+            ],
+        },
+    )
 
     missing = workspace_runtime_proof._proof_selection_for_changed_paths(
         changed_paths=["src/runtime.py"], target_root=tmp_path, include_durable_intent=False
@@ -2345,6 +2548,13 @@ producer_command = "python scripts/measure_selected_latency.py --compact"
     producer = "python scripts/measure_selected_latency.py --compact"
     measurement_lanes = [lane for lane in missing["selected_lanes"] if lane["id"] == "measurement:selected_latency"]
     assert any(lane.get("required_commands") == [producer] for lane in measurement_lanes), measurement_lanes
+    stale_clause = next(item for item in missing["repo_evidence_strategy"]["clauses"] if item["id"] == "selected_latency")
+    assert stale_clause["evidence_state"] == "stale"
+
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "src/runtime.py", "--format", "json"]) == 0
+    stale_public_payload = json.loads(capsys.readouterr().out)
+    stale_public = stale_public_payload.get("answer", stale_public_payload)
+    assert producer in stale_public["required_commands"]
 
     calls: list[str] = []
 
@@ -2376,7 +2586,7 @@ producer_command = "python scripts/measure_selected_latency.py --compact"
     assert calls.count(producer) == 1
 
     _write_json(
-        tmp_path / ".agentic-workspace/verification/assurance-evidence-records.json",
+        evidence_path,
         {
             "kind": "agentic-workspace/assurance-evidence-records/v1",
             "records": [
@@ -2410,6 +2620,11 @@ producer_command = "python scripts/measure_selected_latency.py --compact"
     )
     assert all(lane["id"] != "measurement:selected_latency" for lane in current["selected_lanes"])
     assert producer not in current["required_commands"]
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "src/runtime.py", "--format", "json"]) == 0
+    current_public_payload = json.loads(capsys.readouterr().out)
+    current_public = current_public_payload.get("answer", current_public_payload)
+    assert producer not in current_public["required_commands"]
+    assert calls.count(producer) == 1
 
     unrelated = workspace_runtime_proof._proof_selection_for_changed_paths(
         changed_paths=["docs/unrelated.md"], target_root=tmp_path, include_durable_intent=False
