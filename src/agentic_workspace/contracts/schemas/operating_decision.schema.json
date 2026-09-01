@@ -137,6 +137,10 @@
       "type": "object",
       "description": "Admission of a repository-owned assurance classification, quiet when no external classifier is configured."
     },
+    "repo_evidence_strategy": {
+      "type": "object",
+      "description": "Repository-owned evidence methodology admitted by proof selection and composed into the canonical operating decision."
+    },
     "cross_owner_enforcement": {
       "type": "object",
       "description": "Registry-derived join identities, peer-surface dispositions, and fail-closed findings bound to this decision identity.",

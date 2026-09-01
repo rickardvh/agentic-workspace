@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import shlex
 import sys
 from pathlib import Path
 
@@ -27,8 +29,9 @@ def test_argv_execution_does_not_interpret_shell_metacharacters(tmp_path: Path) 
 
 
 def test_explicit_trusted_shell_preserves_declared_shell_semantics(tmp_path: Path) -> None:
+    python = f'& "{sys.executable}"' if os.name == "nt" else shlex.quote(sys.executable)
     completed = run_trusted_shell(
-        f'"{sys.executable}" -c "print(\'first\')" && "{sys.executable}" -c "print(\'second\')"',
+        f"{python} -c \"print('first')\" && {python} -c \"print('second')\"",
         trust_source="explicit-user-executor-command",
         admitted=True,
         cwd=tmp_path,
@@ -36,3 +39,20 @@ def test_explicit_trusted_shell_preserves_declared_shell_semantics(tmp_path: Pat
 
     assert completed.returncode == 0
     assert completed.stdout.splitlines() == ["first", "second"]
+
+
+def test_trusted_shell_preserves_quoted_multi_token_arguments(tmp_path: Path) -> None:
+    test_path = tmp_path / "test_selected_expression.py"
+    test_path.write_text(
+        "def test_alpha():\n    assert True\n\ndef test_beta():\n    assert True\n\ndef test_other():\n    assert False\n",
+        encoding="utf-8",
+    )
+    completed = run_trusted_shell(
+        f"uv run --active pytest \"{test_path}\" -k 'alpha or beta' -q",
+        trust_source="checked-repository-proof-route",
+        admitted=True,
+        cwd=tmp_path,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert "2 passed, 1 deselected" in completed.stdout
