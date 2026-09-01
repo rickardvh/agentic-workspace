@@ -4905,8 +4905,6 @@ def test_implement_objective_drift_understands_replacement_and_removal_terms(tmp
                 "src/api.py",
                 "--task",
                 "Use `embed=children` instead of `include_children=true`. Remove `include_children`.",
-                "--select",
-                "context",
                 "--format",
                 "json",
             ]
@@ -4938,8 +4936,7 @@ def test_implement_objective_drift_warns_when_replacement_target_is_absent(tmp_p
                 "src/api.py",
                 "--task",
                 "Replace `include_children=true` with `embed=children`.",
-                "--select",
-                "context",
+                "--verbose",
                 "--format",
                 "json",
             ]
@@ -9267,7 +9264,13 @@ candidates = []
     )
     _write_json(
         tmp_path / plan_ref,
-        {"kind": "planning-execplan/v1", "id": "delegated-config", "title": "Delegated config", "revision": 2},
+        {
+            "kind": "planning-execplan/v1",
+            "id": "delegated-config",
+            "title": "Delegated config",
+            "revision": 2,
+            "touched_paths": ["src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json"],
+        },
     )
     _write(
         tmp_path / ".agentic-workspace" / "config.local.toml",
@@ -9349,8 +9352,6 @@ candidates = []
                 str(tmp_path),
                 "--task",
                 "update delegation config schema",
-                "--changed",
-                "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
                 "--format",
                 "json",
             ]
@@ -9379,8 +9380,6 @@ candidates = []
                 str(tmp_path),
                 "--task",
                 "update delegation config schema",
-                "--changed",
-                "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
                 "--format",
                 "json",
             ]
@@ -9591,7 +9590,7 @@ def test_binding_automatic_assignment_needs_no_second_permission_and_forbids_loc
             "execution_methods": ["cli"],
             "dispatch_command": ["worker-bridge", "--output", "{output_file}"],
         },
-        delegation_control={"execution_permitted": True},
+        delegation_control={"execution_permitted": True, "supports_internal_delegation": True},
     )
     assert automatic_gate["status"] == "dispatch-required"
     assert automatic_gate["required_next_action"] == "dispatch-assigned-target"
@@ -9605,6 +9604,45 @@ def test_binding_automatic_assignment_needs_no_second_permission_and_forbids_loc
         "decision_revision": "decision-rev-1",
         "rule": "One binding assignment resolves retained-local, executable dispatch, admitted manual handoff, or exact blocked recovery before implementation.",
     }
+
+    internal_gate = workspace_runtime_core._assignment_implementation_gate_payload(
+        assignment_policy={
+            **policy,
+            "current_target": {"value": "orchestrator"},
+            "current_target_status": "known-profile",
+            "manual_transport_policy": {"value": "disabled"},
+            "binding": {"enforceable": True},
+        },
+        assignment_decision={**decision, "selected_target": "worker", "selected_transport": "internal"},
+        selected_target={
+            "name": "worker",
+            "target_id": "target:worker",
+            "execution_methods": ["internal"],
+        },
+        delegation_control={"execution_permitted": True, "supports_internal_delegation": True},
+    )
+    assert internal_gate["status"] == "dispatch-required"
+    assert internal_gate["executor_disposition"]["transport"] == "internal"
+    assert internal_gate["executor_disposition"]["adapter_configured"] is True
+
+    unavailable_internal_gate = workspace_runtime_core._assignment_implementation_gate_payload(
+        assignment_policy={
+            **policy,
+            "current_target": {"value": "orchestrator"},
+            "current_target_status": "known-profile",
+            "manual_transport_policy": {"value": "disabled"},
+            "binding": {"enforceable": True},
+        },
+        assignment_decision={**decision, "selected_target": "worker", "selected_transport": "internal"},
+        selected_target={
+            "name": "worker",
+            "target_id": "target:worker",
+            "execution_methods": ["internal"],
+            "dispatch_command": ["legacy-worker-bridge"],
+        },
+        delegation_control={"execution_permitted": True, "supports_internal_delegation": False},
+    )
+    assert unavailable_internal_gate["status"] == "blocked-transport-unavailable"
 
     cost_selected_gate = workspace_runtime_core._assignment_implementation_gate_payload(
         assignment_policy={
@@ -10359,6 +10397,40 @@ def test_delegated_return_admission_uses_canonical_scope_not_returned_allowed_pa
     assert result["admitted"] is False
     assert result["failures"][0]["reason"] == "changed-path-outside-scope"
 
+    assignment_gate["allowed_paths"] = ["src/**/*.py"]
+    assignment_gate["mutation_baseline"]["scope"]["allowed_paths"] = ["src/**/*.py"]
+    assignment_gate["live_mutation_baseline"]["scope"]["allowed_paths"] = ["src/**/*.py"]
+    glob_identity = workspace_runtime_core._assignment_identity_payload(
+        assignment_gate=assignment_gate,
+        assignment_policy=assignment_policy,
+        delegation_decision=delegation_decision,
+    )
+    matched = workspace_runtime_core._admit_delegated_return(
+        assignment_gate=assignment_gate,
+        assignment_policy=assignment_policy,
+        delegation_decision=delegation_decision,
+        returned_work={
+            "assignment_revision": glob_identity["revision"],
+            "target": "planner",
+            "changed_paths": ["src/package/feature.py"],
+        },
+        current_authorities=_current_delegated_authorities(assignment_gate, assignment_policy, delegation_decision),
+    )
+    assert all(failure["reason"] != "changed-path-outside-scope" for failure in matched["failures"])
+
+    root_match = workspace_runtime_core._admit_delegated_return(
+        assignment_gate=assignment_gate,
+        assignment_policy=assignment_policy,
+        delegation_decision=delegation_decision,
+        returned_work={
+            "assignment_revision": glob_identity["revision"],
+            "target": "planner",
+            "changed_paths": ["src/feature.py"],
+        },
+        current_authorities=_current_delegated_authorities(assignment_gate, assignment_policy, delegation_decision),
+    )
+    assert all(failure["reason"] != "changed-path-outside-scope" for failure in root_match["failures"])
+
 
 def test_delegated_return_admission_rejects_incomplete_identity_before_revision_match() -> None:
     assignment_gate = {"status": "handoff-required", "selected_target": "planner", "allowed_paths": ["src/feature.py"]}
@@ -10512,18 +10584,70 @@ def test_implement_epic_decomposition_prefers_reusable_worker_over_manual_relay(
                 "schema_version = 1",
                 "",
                 "[delegation]",
+                'execution_role = "orchestrator"',
+                'assignment_policy = "required-best-fit"',
+                'current_target = "orchestrator"',
                 'mode = "auto"',
+                "",
+                "[runtime]",
+                "supports_internal_delegation = true",
                 "",
                 "[safety]",
                 "safe_to_auto_run_commands = true",
                 "",
-                "[delegation_targets.chatgpt]",
+                "[delegation_targets.orchestrator]",
                 'strength = "strong"',
-                'location = "external"',
+                'location = "local"',
                 'capability_classes = ["boundary-shaping", "reasoning-heavy", "mixed"]',
-                'execution_methods = ["manual"]',
+                'cost_class = "premium"',
+                'latency_class = "slow"',
+                'transports = [{ kind = "internal" }]',
+                "",
+                "[delegation_targets.worker]",
+                'strength = "medium"',
+                'location = "local"',
+                'capability_classes = ["boundary-shaping"]',
+                'cost_class = "cheap"',
+                'latency_class = "fast"',
+                'transports = [{ kind = "internal" }]',
             ]
         ),
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        "\n".join(
+            [
+                'kind = "agentic-planning-state"',
+                'schema_version = "planning-state/v1"',
+                "",
+                "[todo]",
+                "active_items = [",
+                '  { id = "cache-refresh", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/cache-refresh.plan.json", why_now = "Restore cached projections and generated references." },',
+                "]",
+                "queued_items = []",
+                "",
+                "[roadmap]",
+                "lanes = []",
+                "candidates = []",
+            ]
+        ),
+    )
+    _write_json(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "cache-refresh.plan.json",
+        {
+            "kind": "planning-execplan/v1",
+            "id": "cache-refresh",
+            "title": "Restore cached projections and generated references",
+            "revision": 1,
+            "relationships": {"delegation": {"state": "pending", "route": "unselected"}},
+            "references": [
+                {
+                    "kind": "planning-decomposition",
+                    "target": ".agentic-workspace/planning/decompositions/codegen.decomposition.json",
+                    "label": "Bounded child candidates",
+                }
+            ],
+        },
     )
     _write(
         tmp_path / ".agentic-workspace" / "planning" / "decompositions" / "codegen.decomposition.json",
@@ -10566,9 +10690,8 @@ def test_implement_epic_decomposition_prefers_reusable_worker_over_manual_relay(
                 "--changed",
                 "generated/workspace/python/cli.py",
                 "--task",
-                "Continue the codegen epic and evaluate reusable-worker delegation",
-                "--select",
-                "context.delegation_decision",
+                "Restore cached workspace projections and refresh generated references",
+                "--verbose",
                 "--format",
                 "json",
             ]
@@ -10576,14 +10699,15 @@ def test_implement_epic_decomposition_prefers_reusable_worker_over_manual_relay(
         == 0
     )
 
-    payload = json.loads(capsys.readouterr().out)["values"]
-    decision = payload["context.delegation_decision"]
+    payload = json.loads(capsys.readouterr().out)
+    decision = payload["delegation_decision"]
+    disposition = payload["execution_posture"]["task_assignment_disposition"]
     assert decision["recommended_route"] == "suggest-delegation"
     assert decision["target"] == "reusable-worker"
     assert decision["required_next_action"] == "select-or-promote-bounded-lane"
     assert decision["token_savings_guidance"]["signal"] == "possible"
     assert decision["config_effect"]["execution_authority"] == "auto-execution-permitted"
-    assert "handoff_command" not in decision
+    assert decision["handoff_command"] is None
     assert decision["delegation_next_step"]["status"] == "prepare-or-report"
     assert decision["delegation_next_step"]["action"] == "select-or-promote-bounded-lane"
     assert decision["delegation_next_step"]["command"] is None
@@ -10591,10 +10715,47 @@ def test_implement_epic_decomposition_prefers_reusable_worker_over_manual_relay(
     assert decision["delegation_next_step"]["must_report_if_not_run"] is False
     assert decision["delegation_next_step"]["handoff_contract_status"] == "unavailable-without-active-planning"
     assert "proof run and result" in decision["delegation_next_step"]["return_contract"]
-    assert decision["decomposition_delegation"]["status"] == "available-without-active-planning"
+    assert decision["decomposition_delegation"]["status"] == "present"
     assert decision["delegation_candidates"][0]["candidate_route"] == "delegate-exploration"
     assert "reuse an existing worker" in decision["reason"]
-    assert "auto_delegation_audit" not in decision
+    assert decision["auto_delegation_audit"]["status"] == "not-applicable"
+    assert disposition["outcome"] == "orchestrate-here"
+    assert disposition["parent_custody"]["status"] == "retained-current-orchestrator"
+    assert disposition["bounded_child_assignment"]["status"] == "unresolved"
+    assert disposition["bounded_child_assignment"]["implementation_allowed"] is False
+    assert disposition["next_action"]["action"] == "promote-bounded-child"
+    assert disposition["next_action"]["operation_invocation"]["operation_id"] == "planning.promote-to-plan.lifecycle"
+    assert disposition["next_action"]["operation_invocation"]["arguments"]["item_id"] == "black-box-harness"
+    assert payload["execution_posture"]["implementation_allowed"] is False
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "generated/workspace/python/cli.py",
+                "--task",
+                "Restore cached workspace projections and refresh generated references",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    compact = json.loads(capsys.readouterr().out)
+    assert compact["task_assignment_disposition"]["outcome"] == "orchestrate-here"
+    assert compact["task_assignment_disposition"]["bounded_child_assignment"]["implementation_allowed"] is False
+    assert compact["decision_packet"]["effects"]["implementation_allowed"] is False
+
+    active_plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "cache-refresh.plan.json"
+    active_plan = json.loads(active_plan_path.read_text(encoding="utf-8"))
+    active_plan["references"] = []
+    _write_json(active_plan_path, active_plan)
+    unrelated = workspace_runtime_core._active_decomposition_delegation_payload(target_root=tmp_path)
+    assert unrelated["status"] == "none"
+    assert unrelated["candidates"] == []
 
 
 def test_implement_suppresses_manual_external_relay_for_code_local_changed_paths(tmp_path: Path, capsys) -> None:
@@ -11027,6 +11188,32 @@ routes_from = ["src/sample_app/*.py"]
 def test_implement_reuse_pressure_keeps_small_direct_task_unblocked(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(
+        tmp_path / ".agentic-workspace" / "config.local.toml",
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[delegation]",
+                'execution_role = "orchestrator"',
+                'assignment_policy = "required-best-fit"',
+                'current_target = "orchestrator"',
+                'mode = "auto"',
+                "",
+                "[runtime]",
+                "supports_internal_delegation = true",
+                "",
+                "[safety]",
+                "safe_to_auto_run_commands = true",
+                "",
+                "[delegation_targets.orchestrator]",
+                'strength = "strong"',
+                'location = "local"',
+                'capability_classes = ["mixed", "mechanical-follow-through"]',
+                'execution_methods = ["internal"]',
+            ]
+        ),
+    )
+    _write(
         tmp_path / "src" / "sample_app" / "single.py",
         "def parse_one(value):\n    return int(value)\n",
     )
@@ -11039,8 +11226,7 @@ def test_implement_reuse_pressure_keeps_small_direct_task_unblocked(tmp_path: Pa
                 str(tmp_path),
                 "--changed",
                 "src/sample_app/single.py",
-                "--select",
-                "reuse_pressure,context.workflow_sufficiency",
+                "--verbose",
                 "--format",
                 "json",
             ]
@@ -11049,13 +11235,17 @@ def test_implement_reuse_pressure_keeps_small_direct_task_unblocked(tmp_path: Pa
     )
 
     payload = json.loads(capsys.readouterr().out)
-    reuse_pressure = payload["values"]["reuse_pressure"]
+    reuse_pressure = payload["reuse_pressure"]
     assert reuse_pressure["state"] == "none_found"
     assert reuse_pressure["findings"] == []
     options = {option["id"]: option for option in reuse_pressure["next_decision_options"]}
     assert options["continue-direct"]["allowed"] is True
     assert options["route-extraction-follow-up"]["allowed"] is False
-    assert payload["values"]["context.workflow_sufficiency"]["sufficiency_result"] == "enough-for-bounded-implementation"
+    assert _implement_context(payload)["workflow_sufficiency"]["sufficiency_result"] == "enough-for-bounded-implementation"
+    disposition = payload["execution_posture"]["task_assignment_disposition"]
+    assert disposition["outcome"] == "execute-here"
+    assert disposition["bounded_child_assignment"]["status"] == "selected-current"
+    assert disposition["bounded_child_assignment"]["implementation_allowed"] is True
 
 
 def test_implement_reuse_pressure_demotes_generic_sibling_helpers_to_weak_hints(tmp_path: Path, capsys) -> None:

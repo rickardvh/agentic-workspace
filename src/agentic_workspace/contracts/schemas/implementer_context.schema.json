@@ -1528,7 +1528,7 @@
     },
     "task_assignment_disposition": {
       "additionalProperties": true,
-      "description": "Top-level typed task assignment disposition for ordinary execute, delegate, or blocked next-action consumers.",
+      "description": "Top-level typed parent-custody and bounded-child assignment disposition for ordinary execute, orchestrate, delegate, or blocked next-action consumers.",
       "type": "object"
     },
     "assignment_action": {
@@ -1613,7 +1613,7 @@
         },
         "task_assignment_disposition": {
           "additionalProperties": true,
-          "description": "Typed task-level execute-here, delegate-bounded-slice, or blocked-unavailable disposition.",
+          "description": "Typed parent-custody and bounded-child assignment disposition. Parent orchestrator custody does not authorize unresolved bounded-child implementation.",
           "type": "object"
         },
         "implementation_allowed": {
@@ -2557,7 +2557,7 @@
         },
         "task_assignment_disposition": {
           "type": "object",
-          "description": "Typed task-level execute-here, delegate-bounded-slice, or blocked-unavailable disposition.",
+          "description": "Typed parent-custody and bounded-child assignment disposition. Parent orchestrator custody does not authorize unresolved bounded-child implementation.",
           "additionalProperties": true
         },
         "implementation_allowed": {
@@ -2734,7 +2734,7 @@
     },
     "task_assignment_disposition": {
       "type": "object",
-      "description": "Top-level typed task assignment disposition for ordinary execute, delegate, or blocked next-action consumers.",
+      "description": "Top-level typed parent-custody and bounded-child assignment disposition for ordinary execute, orchestrate, delegate, or blocked next-action consumers.",
       "additionalProperties": true
     },
     "assignment_action": {

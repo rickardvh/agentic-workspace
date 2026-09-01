@@ -36143,6 +36143,22 @@ def _planning_hierarchy_owner_requirement(
 def _active_decomposition_delegation_payload(*, target_root: Path) -> dict[str, Any]:
     active_summary = _fast_planning_active_summary(target_root=target_root)
     has_active_planning = bool(active_summary.get("todo_active_count") or active_summary.get("active_execplan"))
+    active_plan_ref = str(active_summary.get("active_execplan") or "").strip()
+    active_plan_ids = {Path(active_plan_ref).name.removesuffix(".plan.json")} if active_plan_ref else set()
+    active_decomposition_refs: set[str] = set()
+    if active_plan_ref:
+        try:
+            active_plan = json.loads((target_root / active_plan_ref).read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+            active_plan = {}
+        if isinstance(active_plan, dict):
+            if str(active_plan.get("id") or "").strip():
+                active_plan_ids.add(str(active_plan["id"]).strip())
+            active_decomposition_refs = {
+                str(item.get("target") or "").strip()
+                for item in _list_payload(active_plan.get("references"))
+                if isinstance(item, dict) and str(item.get("target") or "").strip()
+            }
     decompositions_dir = target_root / ".agentic-workspace" / "planning" / "decompositions"
     if not decompositions_dir.exists():
         return {
@@ -36167,6 +36183,7 @@ def _active_decomposition_delegation_payload(*, target_root: Path) -> dict[str, 
         if status in {"closed", "retired", "superseded"}:
             continue
         inspected_records.append(rel_path)
+        decomposition_explicitly_linked = rel_path in active_decomposition_refs
         lanes = record.get("candidate_lanes", [])
         if not isinstance(lanes, list):
             continue
@@ -36180,8 +36197,13 @@ def _active_decomposition_delegation_payload(*, target_root: Path) -> dict[str, 
             title = str(lane.get("title", "")).strip()
             outcome = str(lane.get("outcome", "")).strip()
             owner_surface = str(lane.get("owner_surface", "")).strip()
+            normalized_owner_surface = owner_surface.removeprefix("proposed:").strip()
             proof = str(lane.get("proof", "")).strip()
             if not (lane_id and title and outcome):
+                continue
+            if has_active_planning and not (
+                decomposition_explicitly_linked or normalized_owner_surface == active_plan_ref or lane_id in active_plan_ids
+            ):
                 continue
             if readiness in {"ready", "ready-for-promotion", "ready-for-lane-promotion"}:
                 route = "delegate-implementation"
@@ -36225,7 +36247,10 @@ def _active_decomposition_delegation_payload(*, target_root: Path) -> dict[str, 
         "inspected_records": inspected_records,
         "candidate_count": len(candidates),
         "candidates": candidates[:5],
-        "rule": "Delegation candidates from decomposition records are advisory. Promote or hand off only bounded lanes with clear owner surface, proof expectation, and unchanged validation burden.",
+        "rule": (
+            "Delegation candidates are scoped to the selected Planning owner by an explicit decomposition reference, matching "
+            "lane owner surface, or matching lane id. Promote or hand off only bounded lanes with clear proof and unchanged validation burden."
+        ),
     }
 
 
@@ -43858,7 +43883,27 @@ def _admit_delegated_return(
     allowed_paths = identity.get("allowed_paths")
     changed_paths = returned_work.get("changed_paths")
     if isinstance(allowed_paths, list) and isinstance(changed_paths, list):
-        outside_scope = sorted({str(path) for path in changed_paths} - {str(path) for path in allowed_paths})
+        allowed_patterns = [str(path) for path in allowed_paths]
+
+        def assignment_scope_matches(*, path: str, pattern: str) -> bool:
+            candidate_patterns: set[str] = set()
+            pending_patterns = [pattern]
+            while pending_patterns:
+                candidate = pending_patterns.pop()
+                if candidate in candidate_patterns:
+                    continue
+                candidate_patterns.add(candidate)
+                if "**/" in candidate:
+                    pending_patterns.append(candidate.replace("**/", "", 1))
+            return any(_path_matches_subsystem_pattern(path=path, pattern=candidate) for candidate in candidate_patterns)
+
+        outside_scope = sorted(
+            {
+                str(path)
+                for path in changed_paths
+                if not any(assignment_scope_matches(path=str(path), pattern=pattern) for pattern in allowed_patterns)
+            }
+        )
         if outside_scope:
             reject("changed-path-outside-scope", "changed_paths", "Refresh or widen the handoff before admitting returned changes.")
     elif changed_paths and not allowed_paths:
@@ -44001,10 +44046,18 @@ def _delegation_next_action_decision(
         reasons = [
             f"auto delegation is permitted and target '{target_name}' fits bounded work; delegate a narrow implementation or validation slice only if proof expectations stay unchanged"
         ]
-    if decomposition_candidates and decomposition_routing_requested and (work_shape in {"lane", "epic"}) and (mode != "off"):
+    if (
+        decomposition_candidates
+        and decomposition_routing_requested
+        and (work_shape in {"lane", "epic"} or decomposition_status == "present")
+        and (mode != "off")
+    ):
         decision = "suggest-delegation"
+        parent_custody_retained = assignment_decision.get("parent_custody_retained") is True
         required_next_action = (
-            "execute-when-safe"
+            "select-or-promote-bounded-lane"
+            if parent_custody_retained
+            else "execute-when-safe"
             if mode == "auto" and delegation_control.get("execution_permitted") is True
             else "prepare-handoff"
             if mode == "manual"
@@ -44013,7 +44066,11 @@ def _delegation_next_action_decision(
         reusable_routes = sorted(
             {str(_candidate_route_label(candidate) or "") for candidate in decomposition_candidates if isinstance(candidate, dict)}
         )
-        if not target_name or not any((method in {"internal", "cli", "api"} for method in target_execution_methods)):
+        if (
+            parent_custody_retained
+            or not target_name
+            or not any((method in {"internal", "cli", "api"} for method in target_execution_methods))
+        ):
             target_name = "reusable-worker"
             target_execution_methods = ["internal", "cli"]
             target_location = "local"
@@ -44076,7 +44133,9 @@ def _delegation_next_action_decision(
             )
         ]
         handoff_command = None
-    decomposition_only_delegation = decision == "suggest-delegation" and decomposition_status == "available-without-active-planning"
+    decomposition_only_delegation = decision == "suggest-delegation" and (
+        decomposition_status == "available-without-active-planning" or assignment_decision.get("parent_custody_retained") is True
+    )
     if decomposition_only_delegation:
         required_next_action = "select-or-promote-bounded-lane"
     if (
@@ -44657,10 +44716,16 @@ def _assignment_implementation_gate_payload(
         selected_transport if selected_transport in automatic_methods else automatic_methods[0] if automatic_methods else ""
     )
     configured_dispatch_command = [str(part) for part in _list_payload((selected_target or {}).get("dispatch_command"))]
+    internal_transport_configured = bool(
+        selected_automatic_transport == "internal" and _as_dict(delegation_control).get("supports_internal_delegation") is True
+    )
+    selected_adapter_configured = (
+        internal_transport_configured if selected_automatic_transport == "internal" else bool(configured_dispatch_command)
+    )
     automatic_transport_authorized = bool(
         selected_transport != "manual"
         and selected_automatic_transport
-        and configured_dispatch_command
+        and selected_adapter_configured
         and _as_dict(delegation_control).get("execution_permitted") is True
     )
     manual_transport = _manual_transport_admission_payload(
@@ -44766,7 +44831,7 @@ def _assignment_implementation_gate_payload(
             "transport": transport,
             "automatic_methods": automatic_methods,
             **({"cost_selected_transport": selected_transport} if selected_transport else {}),
-            "adapter_configured": bool(configured_dispatch_command),
+            "adapter_configured": selected_adapter_configured,
             "decision_revision": assignment_decision.get("assignment_decision_revision"),
             "rule": "One binding assignment resolves retained-local, executable dispatch, admitted manual handoff, or exact blocked recovery before implementation.",
         },
@@ -45303,6 +45368,62 @@ def _execution_posture_payload(
             "candidates": [],
         }
     )
+    decomposition_candidates = [item for item in _list_payload(decomposition_delegation.get("candidates")) if isinstance(item, dict)]
+    policy_role = str(_as_dict(assignment_policy.get("execution_role")).get("value") or "ordinary-executor")
+    policy_value = str(_as_dict(assignment_policy.get("assignment_policy")).get("value") or "local-preferred")
+    current_target_name = str(_as_dict(assignment_policy.get("current_target")).get("value") or "")
+    parent_orchestration_scope = bool(
+        policy_role == "orchestrator"
+        and policy_value == "required-best-fit"
+        and decomposition_delegation.get("status") == "present"
+        and decomposition_candidates
+        and current_target_name
+    )
+    if parent_orchestration_scope:
+        whole_task_candidate = {
+            "selected_target": assignment_decision.get("selected_target"),
+            "selected_target_identity_ref": assignment_decision.get("selected_target_identity_ref"),
+            "selected_transport": assignment_decision.get("selected_transport"),
+            "assignment_decision_revision": assignment_decision.get("assignment_decision_revision"),
+            "claim_boundary": "non-authoritative whole-task candidate; active decomposition requires bounded-child assignment",
+        }
+        current_score = next(
+            (
+                item
+                for item in _list_payload(assignment_decision.get("candidate_scores"))
+                if isinstance(item, dict) and str(item.get("target") or "") == current_target_name
+            ),
+            {},
+        )
+        parent_revision = (
+            "sha256:"
+            + hashlib.sha256(
+                json.dumps(
+                    {
+                        "whole_task_assignment_revision": assignment_decision.get("assignment_decision_revision"),
+                        "parent_target": current_target_name,
+                        "candidate_lane_ids": [str(item.get("lane_id") or "") for item in decomposition_candidates],
+                    },
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ).encode("utf-8")
+            ).hexdigest()
+        )
+        assignment_decision = {
+            **assignment_decision,
+            "decision": "assign-current-target",
+            "canonical_outcome": "retain-local",
+            "selected_target": current_target_name,
+            "selected_target_identity_ref": current_score.get("target_identity_ref") or current_target_name,
+            "selected_target_revision": current_score.get("target_revision"),
+            "selected_transport": current_score.get("selected_transport"),
+            "assignment_decision_revision": parent_revision,
+            "next_action": "select or promote the smallest bounded child before implementation",
+            "claim_boundary": "parent orchestration custody only; bounded-child execution authority remains unresolved",
+            "parent_custody_retained": True,
+            "bounded_child_assignment_required": True,
+            "pre_decomposition_whole_task_candidate": whole_task_candidate,
+        }
     target = next(
         (
             profile
@@ -45416,11 +45537,12 @@ def _execution_posture_payload(
                 plan_record = loaded_plan if isinstance(loaded_plan, dict) else {}
             except (OSError, json.JSONDecodeError):
                 plan_record = {}
+        assignment_paths = _dedupe(list(changed_paths) or _plan_exact_list(plan_record, "canonical_core.touched_scope", "touched_paths"))
         decision_revision = str(assignment_gate.get("assignment_decision_revision") or "").strip()
         assignment_seed = {
             "assignment_decision_revision": decision_revision,
             "human_intent": " ".join(str(task_text or "").split()),
-            "changed_paths": sorted(set(changed_paths)),
+            "changed_paths": sorted(assignment_paths),
             "task_class": assignment_gate.get("task_class"),
             "scope_class": assignment_gate.get("scope_class"),
         }
@@ -45478,10 +45600,10 @@ def _execution_posture_payload(
             "slice_revision": decision_revision,
             "role": role,
             "human_intent": str(task_text or "").strip(),
-            "required_inputs": list(changed_paths),
+            "required_inputs": assignment_paths,
             "read_first": read_first_refs,
             "allowed_effects": allowed_effects,
-            "allowed_paths": list(changed_paths),
+            "allowed_paths": assignment_paths,
             "dispatch_adapter": {
                 "kind": str((target or {}).get("dispatch_adapter_kind") or ""),
                 "command": list((target or {}).get("dispatch_command") or []),
@@ -45584,6 +45706,8 @@ def _execution_posture_payload(
         assignment_gate=assignment_gate,
         assignment_action=assignment_action,
         effective_orchestration=effective_orchestration,
+        decomposition_delegation=decomposition_delegation,
+        delegation_decision=delegation_decision,
     )
     return {
         "kind": "agentic-workspace/execution-posture/v1",
@@ -45598,7 +45722,9 @@ def _execution_posture_payload(
         "assignment_action": assignment_action,
         "assignment_materialization": assignment_materialization,
         "task_assignment_disposition": task_assignment_disposition,
-        "implementation_allowed": assignment_gate["implementation_allowed"],
+        "implementation_allowed": _as_dict(task_assignment_disposition.get("next_action")).get(
+            "implementation_allowed", assignment_gate["implementation_allowed"]
+        ),
         "selected_target": target,
         "decomposition_delegation": decomposition_delegation,
         "capability_handoff_packets": _capability_handoff_packet_templates(),
@@ -45667,9 +45793,28 @@ def _task_assignment_disposition_payload(
     assignment_gate: dict[str, Any],
     assignment_action: dict[str, Any],
     effective_orchestration: dict[str, Any],
+    decomposition_delegation: dict[str, Any] | None = None,
+    delegation_decision: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    orchestration_assignment = _as_dict(effective_orchestration.get("assignment"))
+    binding_orchestrator = (
+        orchestration_assignment.get("execution_role") == "orchestrator"
+        and orchestration_assignment.get("policy") == "required-best-fit"
+        and orchestration_assignment.get("authority") == "binding"
+    )
+    decomposition = _as_dict(decomposition_delegation)
+    child_candidates = [item for item in _list_payload(decomposition.get("candidates")) if isinstance(item, dict)]
+    delegated_route = _as_dict(delegation_decision)
+    child_resolution_required = bool(
+        binding_orchestrator
+        and child_candidates
+        and delegated_route.get("recommended_route") in {"suggest-delegation", "delegate-bounded-slice"}
+    )
     action_status = str(assignment_action.get("status") or "not-applicable")
-    if action_status == "direct-current-target":
+    if action_status == "direct-current-target" and child_resolution_required:
+        outcome = "orchestrate-here"
+        evaluated_state = "parent-retained-child-unresolved"
+    elif action_status == "direct-current-target":
         outcome = "execute-here"
         evaluated_state = "evaluated-local"
     elif action_status in {"ready", "reconciliation-required"}:
@@ -45683,8 +45828,68 @@ def _task_assignment_disposition_payload(
     ranking = [item for item in assignment_decision.get("candidate_scores", []) if isinstance(item, dict)]
     selected_score = next((item for item in ranking if str(item.get("target") or "") == selected_target), {})
     operation = _as_dict(assignment_action.get("operation_invocation"))
+    if outcome == "orchestrate-here":
+        child_status = "unresolved"
+        child_implementation_allowed = False
+        child_target = None
+        candidate_lane_ids = [str(item.get("lane_id") or "") for item in child_candidates if item.get("lane_id")]
+        if len(candidate_lane_ids) == 1:
+            child_action = "promote-bounded-child"
+            operation = operation_invocation(
+                operation_id="planning.promote-to-plan.lifecycle",
+                arguments={"item_id": candidate_lane_ids[0], "target": ".", "format": "json"},
+                effect_class="planning-state-mutation",
+                expected_transition="bounded-child-plan-selected",
+                owner_context_revision={
+                    "assignment_decision_revision": assignment_action.get("assignment_decision_revision")
+                    or assignment_decision.get("assignment_decision_revision")
+                },
+                mutation_boundary={"writes_repo_state": True, "implementation_allowed": False},
+            )
+        else:
+            child_action = "select-bounded-child"
+            operation = {}
+    elif outcome == "execute-here":
+        child_status = "selected-current"
+        child_action = assignment_action.get("action") or assignment_gate.get("required_next_action")
+        child_implementation_allowed = True
+        child_target = selected_target or None
+    elif outcome == "delegate-bounded-slice":
+        child_status = "selected-nonlocal"
+        child_action = assignment_action.get("action") or assignment_gate.get("required_next_action")
+        child_implementation_allowed = False
+        child_target = selected_target or None
+    else:
+        child_status = "blocked"
+        child_action = assignment_action.get("action") or assignment_gate.get("required_next_action")
+        child_implementation_allowed = False
+        child_target = selected_target or None
+    parent_custody = {
+        "kind": "agentic-workspace/parent-task-custody/v1",
+        "status": "retained-current-orchestrator" if binding_orchestrator else "current-executor",
+        "target": current_target or selected_target or None,
+        "authority": ["decomposition", "integration", "shared-conflict-resolution", "proof-and-claim-judgment"]
+        if binding_orchestrator
+        else ["assigned-work-unit"],
+        "child_execution_authority": "separate-binding-decision" if binding_orchestrator else "same-assignment",
+    }
+    bounded_child_assignment = {
+        "kind": "agentic-workspace/bounded-child-assignment-gate/v1",
+        "status": child_status,
+        "selected_target": child_target,
+        "implementation_allowed": child_implementation_allowed,
+        "required_next_action": child_action,
+        "candidate_count": len(child_candidates) if child_resolution_required else 0,
+        "candidate_lane_ids": [str(item.get("lane_id") or "") for item in child_candidates if item.get("lane_id")]
+        if child_resolution_required
+        else [],
+        "rule": (
+            "Parent custody never grants bounded-child execution authority. Resolve each independently bounded child through "
+            "the binding assignment before local implementation, dispatch, or recovery."
+        ),
+    }
     return {
-        "kind": "agentic-workspace/task-assignment-disposition/v1",
+        "kind": "agentic-workspace/task-assignment-disposition/v2",
         "status": "evaluated",
         "outcome": outcome,
         "evaluation_state": evaluated_state,
@@ -45692,7 +45897,10 @@ def _task_assignment_disposition_payload(
         or assignment_decision.get("assignment_decision_revision"),
         "selected_target": selected_target or None,
         "current_target": current_target or None,
-        "current_target_deliberately_retained": outcome == "execute-here" and bool(selected_target and selected_target == current_target),
+        "current_target_deliberately_retained": outcome in {"execute-here", "orchestrate-here"}
+        and bool(selected_target and selected_target == current_target),
+        "parent_custody": parent_custody,
+        "bounded_child_assignment": bounded_child_assignment,
         "decisive_factors": {
             "task_class": assignment_decision.get("task_class"),
             "scope_class": assignment_decision.get("scope_class"),
@@ -45703,10 +45911,10 @@ def _task_assignment_disposition_payload(
             "transport_eligible": _as_dict(selected_score.get("eligibility")).get("execution_transport"),
         },
         "next_action": {
-            "action": assignment_action.get("action") or assignment_gate.get("required_next_action"),
+            "action": child_action,
             "command": assignment_action.get("command"),
             "operation_invocation": operation or None,
-            "implementation_allowed": assignment_gate.get("implementation_allowed"),
+            "implementation_allowed": child_implementation_allowed,
         },
         "external_receipt": {
             "required": outcome == "delegate-bounded-slice",
@@ -45715,7 +45923,10 @@ def _task_assignment_disposition_payload(
         },
         "transport": _as_dict(effective_orchestration.get("transport")),
         "detail_selector": "effective_orchestration",
-        "rule": "Binding assignment is evaluated once per task; execution consumes this disposition without reranking or silent local fallback.",
+        "rule": (
+            "Binding assignment is evaluated once per work unit. Parent task custody is not child execution authority; "
+            "each bounded child consumes its own disposition without reranking or silent local fallback."
+        ),
     }
 
 

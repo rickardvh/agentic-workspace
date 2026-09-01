@@ -1333,6 +1333,7 @@ def _implement_payload(
             "when_uncertain": "Run preflight or summary and promote to checked-in planning before implementation when scope, proof, or continuation is not obvious.",
         },
         "execution_posture": execution_posture,
+        "task_assignment_disposition": copy.deepcopy(_as_dict(execution_posture.get("task_assignment_disposition"))),
         "assignment_action": copy.deepcopy(_as_dict(execution_posture.get("assignment_action"))),
         "planning_safety_gate": planning_safety_gate,
         "planning_revision": planning_safety_gate.get("planning_revision", {}),
@@ -1929,6 +1930,10 @@ def _ordinary_implement_decision_payload(*, selected: dict[str, Any], source_pay
     signals = _as_dict(selected.get("action_signals"))
     proof = _as_dict(selected.get("proof"))
     context = _as_dict(selected.get("context"))
+    task_assignment_disposition = _as_dict(selected.get("task_assignment_disposition")) or _as_dict(
+        source_payload.get("task_assignment_disposition")
+    )
+    bounded_child_assignment = _as_dict(task_assignment_disposition.get("bounded_child_assignment"))
     operation_authority = _as_dict(context.get("operation_authority"))
     operating_decision = _as_dict(operation_authority.get("operating_decision"))
     typed_invocation = _as_dict(operation_authority.get("typed_invocation"))
@@ -2125,7 +2130,8 @@ def _ordinary_implement_decision_payload(*, selected: dict[str, Any], source_pay
         },
         "action": action,
         "effects": {
-            "implementation_allowed": bool(signals.get("implementation_allowed")),
+            "implementation_allowed": bool(signals.get("implementation_allowed"))
+            and bounded_child_assignment.get("status") != "unresolved",
             "read_only_allowed": bool(signals.get("read_only_allowed", True)),
             "allowed": allowed_effects,
             "restricted": restricted_effects,
@@ -2188,6 +2194,18 @@ def _ordinary_implement_decision_payload(*, selected: dict[str, Any], source_pay
         "kind": selected.get("kind", "implementer-context-tiny/v1"),
         "target": selected.get("target", "."),
         "decision_packet": decision,
+        **(
+            {
+                "task_assignment_disposition": {
+                    "outcome": task_assignment_disposition.get("outcome", "blocked-unavailable"),
+                    "parent_custody": copy.deepcopy(_as_dict(task_assignment_disposition.get("parent_custody"))),
+                    "bounded_child_assignment": copy.deepcopy(bounded_child_assignment),
+                    "next_action": copy.deepcopy(_as_dict(task_assignment_disposition.get("next_action"))),
+                }
+            }
+            if task_assignment_disposition
+            else {}
+        ),
     }
     projection_context = _as_dict(source_payload.get("context"))
     revalidation = _as_dict(projection_context.get("projection_decision_input_revalidation"))
@@ -2240,6 +2258,8 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         context_reuse_pressure["summary"] = reuse_pressure.get("summary") if isinstance(reuse_pressure, dict) else None
     optimization_posture = _as_dict(payload.get("optimization_posture"))
     delegation_decision = execution_posture.get("delegation_decision", {}) if isinstance(execution_posture, dict) else {}
+    task_assignment_disposition = _as_dict(execution_posture.get("task_assignment_disposition"))
+    bounded_child_assignment = _as_dict(task_assignment_disposition.get("bounded_child_assignment"))
     assignment_gate = _as_dict(execution_posture.get("assignment_gate")) if isinstance(execution_posture, dict) else {}
     assignment_action = _as_dict(execution_posture.get("assignment_action")) if isinstance(execution_posture, dict) else {}
     assignment_action_status = str(assignment_action.get("status") or "")
@@ -2251,7 +2271,9 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         and assignment_policy_value == "required-best-fit"
         and assignment_gate.get("implementation_allowed") is False
     )
-    assignment_blocks_implementation = assignment_changes_action and assignment_gate.get("implementation_allowed") is False
+    assignment_blocks_implementation = (
+        assignment_changes_action and assignment_gate.get("implementation_allowed") is False
+    ) or bounded_child_assignment.get("status") == "unresolved"
     planning_implementation_allowed = (
         bool(planning_safety_gate.get("implementation_allowed"))
         if isinstance(planning_safety_gate, dict) and "implementation_allowed" in planning_safety_gate
@@ -2268,7 +2290,8 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
     elif assignment_blocks_implementation:
         effective_implementation_allowed = False
         next_action = str(
-            assignment_action.get("action")
+            _as_dict(task_assignment_disposition.get("next_action")).get("action")
+            or assignment_action.get("action")
             or delegation_decision.get("required_next_action")
             or assignment_gate.get("required_next_action")
             or "Resolve assignment or delegation authority before implementation."
@@ -2428,6 +2451,12 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "target": payload.get("target"),
         "communication_contract": communication_contract,
         "assignment_action": copy.deepcopy(assignment_action),
+        "task_assignment_disposition": {
+            "outcome": task_assignment_disposition.get("outcome", "blocked-unavailable"),
+            "parent_custody": copy.deepcopy(_as_dict(task_assignment_disposition.get("parent_custody"))),
+            "bounded_child_assignment": copy.deepcopy(bounded_child_assignment),
+            "next_action": copy.deepcopy(_as_dict(task_assignment_disposition.get("next_action"))),
+        },
         "action_signals": _compact_action_signals_payload(
             surface="implement",
             allowed_next_action=str(next_action),
@@ -2605,6 +2634,12 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "operating_loop": payload.get("operating_loop", {}),
         "context": {
             "workflow_sufficiency": workflow_sufficiency,
+            "task_assignment_disposition": {
+                "outcome": task_assignment_disposition.get("outcome", "blocked-unavailable"),
+                "parent_custody": copy.deepcopy(_as_dict(task_assignment_disposition.get("parent_custody"))),
+                "bounded_child_assignment": copy.deepcopy(bounded_child_assignment),
+                "next_action": copy.deepcopy(_as_dict(task_assignment_disposition.get("next_action"))),
+            },
             **({"operation_authority": operation_authority} if operation_authority.get("status") == "admitted" else {}),
             "adaptive_routing": _tiny_adaptive_routing_payload(
                 surface="implement",

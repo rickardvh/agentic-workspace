@@ -122,6 +122,9 @@ candidates = []
     assert record["relationships"]["delegation"]["state"] == "recorded"
     assert record["relationships"]["delegation"]["route"] == "keep-local"
     assert record["relationships"]["delegation"]["reason"] == "tightly coupled root routing and package checker change"
+    assert record["relationships"]["delegation"]["scope"] == "active-plan-work-unit"
+    assert record["relationships"]["delegation"]["parent_task_custody"] == "retained-current"
+    assert record["relationships"]["delegation"]["bounded_child_authority"] == "separate-binding-decision"
     assert record["specialist_contracts"][0]["kind"] == "planning-delegation/v1"
 
 

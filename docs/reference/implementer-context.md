@@ -248,7 +248,7 @@ Cheap implementer context for a bounded changed-path scope.
 | `execution_posture.token_tradeoff` | string | yes |  | When token saving is acceptable or should be deferred. |  |  |
 | `execution_posture.ready_handoff` | anyOf | yes |  | Prompt or handoff packet to use when local mode allows manual or suggested delegation. |  |  |
 | `execution_posture.delegation_decision` | object | yes |  | Compact local delegation, escalation, clarification, or stay-local decision derived from local posture and changed-path signals. |  |  |
-| `execution_posture.task_assignment_disposition` | object | no |  | Typed task-level execute-here, delegate-bounded-slice, or blocked-unavailable disposition. |  |  |
+| `execution_posture.task_assignment_disposition` | object | no |  | Typed parent-custody and bounded-child assignment disposition. Parent orchestrator custody does not authorize unresolved bounded-child implementation. |  |  |
 | `execution_posture.implementation_allowed` | boolean | no |  | Whether the current implement posture may proceed under assignment and safety gates. |  |  |
 | `execution_posture.assignment_policy` | object | no |  | Configured best-fit assignment policy for the current target and task scope. |  |  |
 | `execution_posture.target_evidence` | object | no |  | Provenance-aware target suitability evidence for the current changed-path scope. |  |  |
@@ -277,7 +277,7 @@ Cheap implementer context for a bounded changed-path scope.
 | `durable_intent_promotion.acceptance_item_count` | integer | no |  | Number of acceptance items considered for durable promotion. |  |  |
 | `durable_intent_promotion.closeout_question` | string | no |  | Question agents should answer before discarding task intent after closeout. |  |  |
 | `delegation_decision` | object | yes |  | Top-level copy of the compact delegation decision for next-action consumers. |  |  |
-| `task_assignment_disposition` | object | no |  | Top-level typed task assignment disposition for ordinary execute, delegate, or blocked next-action consumers. |  |  |
+| `task_assignment_disposition` | object | no |  | Top-level typed parent-custody and bounded-child assignment disposition for ordinary execute, orchestrate, delegate, or blocked next-action consumers. |  |  |
 | `assignment_action` | object | no |  | Top-level copy of the revision-bound canonical assignment action for ordinary next-action consumers. |  |  |
 | `workflow_sufficiency` | object | no |  | Small decision record that says whether the current implementer packet is enough for the next implementation step or which exact detail field should be requested. |  |  |
 | `planning_safety_gate` | object | no |  | Planning ownership guard for broad, high-assurance, decomposed, or scope-widened implementation work. |  |  |

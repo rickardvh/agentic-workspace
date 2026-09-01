@@ -30,6 +30,11 @@ def canonical_planning_delegation(record: dict[str, Any]) -> dict[str, Any]:
         "status": str(delegation.get("state", "") or "").strip(),
         "route chosen": route,
         "canonical contract": True,
+        "scope": str(delegation.get("scope", "active-plan-work-unit") or "active-plan-work-unit"),
+        "parent task custody": str(delegation.get("parent_task_custody", "unchanged") or "unchanged"),
+        "bounded child authority": str(
+            delegation.get("bounded_child_authority", "separate-binding-decision") or "separate-binding-decision"
+        ),
     }
 
 

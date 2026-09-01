@@ -18624,6 +18624,9 @@ def record_delegation_decision(
             "state": "recorded",
             "route": route_value,
             "reason": skipped_reason.strip() or expected_savings.strip() or "recorded by Planning writer",
+            "scope": "active-plan-work-unit",
+            "parent_task_custody": "retained-current" if route_value == "keep-local" else "unchanged",
+            "bounded_child_authority": "separate-binding-decision",
         }
         updated["relationships"] = relationships
         specialist_contracts = updated.get("specialist_contracts")
