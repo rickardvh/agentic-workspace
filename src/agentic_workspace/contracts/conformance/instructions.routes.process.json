@@ -1,0 +1,35 @@
+{
+  "schema_version": "agentic-workspace/conformance/v1",
+  "id": "instructions.routes.process",
+  "operation_id": "instructions.routes",
+  "adapter": {
+    "kind": "process",
+    "command_template": ["{agentic_workspace_cli}", "instructions", "routes", "--target", ".", "--exact", "github/issues/create", "--format", "json"],
+    "cwd": "fixture_root"
+  },
+  "fixtures": [
+    {
+      "id": "semantic-route-registry",
+      "files": {
+        ".git/.keep": "",
+        "tools/skills/REGISTRY.json": "{\"schema_version\":\"skill-registry.v1\",\"skills\":[{\"id\":\"issue-shaping\",\"summary\":\"Shape issues.\",\"semantic_routes\":[{\"id\":\"github/issues/create\",\"match\":\"exact\",\"priority\":10}]}]}\n"
+      }
+    }
+  ],
+  "expectations": {
+    "exit": {"code": 0},
+    "stdout": {
+      "format": "json",
+      "field_assertions": [
+        {"path": ["operation_id"], "equals": "instructions.routes"},
+        {"path": ["level"], "equals": "exact"},
+        {"path": ["route_count"], "equals": 1},
+        {"path": ["full_catalogue_emitted"], "equals": true}
+      ]
+    },
+    "stderr": {"allow_non_empty": false},
+    "filesystem": {"allowed_write_paths": [], "required_paths": ["tools/skills/REGISTRY.json"], "forbidden_paths": []},
+    "idempotency": {"run_twice": true},
+    "safety": {"no_writes_outside_repo_root": true}
+  }
+}

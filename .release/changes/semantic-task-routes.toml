@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Add agent-selected semantic task-route facts with progressive discovery and shared instruction, skill, Memory, assurance, and Verification consumers."
+issues = [2929, 2930, 2935, 2936, 2937]

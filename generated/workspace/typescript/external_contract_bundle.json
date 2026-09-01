@@ -1,7 +1,7 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:2b0c87b5619b703afa81a0235efdd3214e4e5a40f5ffa96512c84803f191dec6",
+  "profile_fingerprint": "sha256:9fe49b871914ba34384b76be4c6e82cd9f0dbc48846d444841234251ab910d3a",
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",
@@ -21365,8 +21365,8 @@
     "instructions.check": {
       "identity": "instructions.check",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:cd3e4ed0b8944965985e8b9d222fc5c984b75ce410e8cc7a379caeb677fac4a9",
-      "compatibility_fingerprint": "sha256:0395f218aecec6e24c0985d1440ed2123807c918548fce81923e340f88423955",
+      "fingerprint": "sha256:123038dce55d67d5da4c8ef6298bc05a0e1eb5fb18159f9e916174be56f3b818",
+      "compatibility_fingerprint": "sha256:99afb3848f514a46a646e233e5aceaf57044065942399ecfcdbcc7ce9ae52b17",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
         "id": "instructions.check",
@@ -21617,6 +21617,32 @@
                 "source": {
                   "type": "string"
                 },
+                "parent": {
+                  "type": "string"
+                },
+                "exact": {
+                  "type": "string"
+                },
+                "posture": {
+                  "enum": [
+                    "selected",
+                    "none",
+                    "unresolved"
+                  ]
+                },
+                "route": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "current_work_id": {
+                  "type": "string"
+                },
+                "expected_source_revision": {
+                  "type": "string",
+                  "pattern": "^sha256:[0-9a-f]{64}$"
+                },
                 "adaptation_mode": {
                   "const": "apply"
                 },
@@ -21661,6 +21687,8 @@
                     "agentic-workspace/scoped-instruction-create-result/v1",
                     "agentic-workspace/scoped-instruction-adaptation-result/v1",
                     "agentic-workspace/scoped-instruction-migration-advice/v1",
+                    "agentic-workspace/semantic-task-route-discovery/v1",
+                    "agentic-workspace/semantic-task-route-selection/v1",
                     "agentic-workspace/scoped-instruction-error/v1"
                   ]
                 },
@@ -21670,7 +21698,9 @@
                     "instructions.create",
                     "instructions.check",
                     "instructions.explain",
-                    "instructions.migrate"
+                    "instructions.migrate",
+                    "instructions.routes",
+                    "instructions.route-select"
                   ]
                 },
                 "status": {
@@ -21728,8 +21758,8 @@
     "instructions.create": {
       "identity": "instructions.create",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:27c6bf55939a37d31e98a1f312439bf6d0da9142fb606c4b78b93111be950ee0",
-      "compatibility_fingerprint": "sha256:0f747f14859f8a478b0bdd9b441270f8de6fcfc859ecc26579067fe85097d7c5",
+      "fingerprint": "sha256:eaab9e697a6889a6565dea37a614e6d6bafc132850a0ff586b283bdd8889323a",
+      "compatibility_fingerprint": "sha256:632cefe78212d34daa0113b516c1cb5c348975c8883a028ea02425f260ee4b7d",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
         "id": "instructions.create",
@@ -22123,6 +22153,32 @@
                 "source": {
                   "type": "string"
                 },
+                "parent": {
+                  "type": "string"
+                },
+                "exact": {
+                  "type": "string"
+                },
+                "posture": {
+                  "enum": [
+                    "selected",
+                    "none",
+                    "unresolved"
+                  ]
+                },
+                "route": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "current_work_id": {
+                  "type": "string"
+                },
+                "expected_source_revision": {
+                  "type": "string",
+                  "pattern": "^sha256:[0-9a-f]{64}$"
+                },
                 "adaptation_mode": {
                   "const": "apply"
                 },
@@ -22167,6 +22223,8 @@
                     "agentic-workspace/scoped-instruction-create-result/v1",
                     "agentic-workspace/scoped-instruction-adaptation-result/v1",
                     "agentic-workspace/scoped-instruction-migration-advice/v1",
+                    "agentic-workspace/semantic-task-route-discovery/v1",
+                    "agentic-workspace/semantic-task-route-selection/v1",
                     "agentic-workspace/scoped-instruction-error/v1"
                   ]
                 },
@@ -22176,7 +22234,9 @@
                     "instructions.create",
                     "instructions.check",
                     "instructions.explain",
-                    "instructions.migrate"
+                    "instructions.migrate",
+                    "instructions.routes",
+                    "instructions.route-select"
                   ]
                 },
                 "status": {
@@ -22234,8 +22294,8 @@
     "instructions.explain": {
       "identity": "instructions.explain",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:bee14dd144a1cd59f7d636acc1b0d524ff83636907def5839de0864b1ceee808",
-      "compatibility_fingerprint": "sha256:7cf1ee34001c11098e8439f769eaad1841f003a3d3853cc86ec20ac494ea4ca4",
+      "fingerprint": "sha256:28f2e36b0b3ef259d099bcb3e66b7cd6b0fd2e22d2dacea90c71f2c5e9b51a3c",
+      "compatibility_fingerprint": "sha256:b490f565915a7e58e1bfd1a06f17e9eb9bf1292209d43d4b075d31976a090309",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
         "id": "instructions.explain",
@@ -22516,6 +22576,32 @@
                 "source": {
                   "type": "string"
                 },
+                "parent": {
+                  "type": "string"
+                },
+                "exact": {
+                  "type": "string"
+                },
+                "posture": {
+                  "enum": [
+                    "selected",
+                    "none",
+                    "unresolved"
+                  ]
+                },
+                "route": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "current_work_id": {
+                  "type": "string"
+                },
+                "expected_source_revision": {
+                  "type": "string",
+                  "pattern": "^sha256:[0-9a-f]{64}$"
+                },
                 "adaptation_mode": {
                   "const": "apply"
                 },
@@ -22560,6 +22646,8 @@
                     "agentic-workspace/scoped-instruction-create-result/v1",
                     "agentic-workspace/scoped-instruction-adaptation-result/v1",
                     "agentic-workspace/scoped-instruction-migration-advice/v1",
+                    "agentic-workspace/semantic-task-route-discovery/v1",
+                    "agentic-workspace/semantic-task-route-selection/v1",
                     "agentic-workspace/scoped-instruction-error/v1"
                   ]
                 },
@@ -22569,7 +22657,9 @@
                     "instructions.create",
                     "instructions.check",
                     "instructions.explain",
-                    "instructions.migrate"
+                    "instructions.migrate",
+                    "instructions.routes",
+                    "instructions.route-select"
                   ]
                 },
                 "status": {
@@ -22627,8 +22717,8 @@
     "instructions.list": {
       "identity": "instructions.list",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:3e2a0e10a92083e7d660058864876b0cf4efe9f56dff87f1c540010cd339ec45",
-      "compatibility_fingerprint": "sha256:b1be98827de8b51f347d9e9f64bf1048a5671ae5bf425522fb26537173bb6036",
+      "fingerprint": "sha256:6d57cab0ce302b3b008d37219fde6bfd030c0c2f93fc9688603a26525b6a1cfa",
+      "compatibility_fingerprint": "sha256:777b8ca5598492d54e3ebc804f9f5ea37e793417469469cdf00968643580563e",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
         "id": "instructions.list",
@@ -22879,6 +22969,32 @@
                 "source": {
                   "type": "string"
                 },
+                "parent": {
+                  "type": "string"
+                },
+                "exact": {
+                  "type": "string"
+                },
+                "posture": {
+                  "enum": [
+                    "selected",
+                    "none",
+                    "unresolved"
+                  ]
+                },
+                "route": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "current_work_id": {
+                  "type": "string"
+                },
+                "expected_source_revision": {
+                  "type": "string",
+                  "pattern": "^sha256:[0-9a-f]{64}$"
+                },
                 "adaptation_mode": {
                   "const": "apply"
                 },
@@ -22923,6 +23039,8 @@
                     "agentic-workspace/scoped-instruction-create-result/v1",
                     "agentic-workspace/scoped-instruction-adaptation-result/v1",
                     "agentic-workspace/scoped-instruction-migration-advice/v1",
+                    "agentic-workspace/semantic-task-route-discovery/v1",
+                    "agentic-workspace/semantic-task-route-selection/v1",
                     "agentic-workspace/scoped-instruction-error/v1"
                   ]
                 },
@@ -22932,7 +23050,9 @@
                     "instructions.create",
                     "instructions.check",
                     "instructions.explain",
-                    "instructions.migrate"
+                    "instructions.migrate",
+                    "instructions.routes",
+                    "instructions.route-select"
                   ]
                 },
                 "status": {
@@ -22990,8 +23110,8 @@
     "instructions.migrate": {
       "identity": "instructions.migrate",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:cc8d50dcb3b09d4d6425e4769058e9ce4a9c1e105cf143aea6341c8ddf678f32",
-      "compatibility_fingerprint": "sha256:dd0b4d48f5ed76fc54f6b296873105372bc5e59e5431da460485801aac88aa31",
+      "fingerprint": "sha256:7d43be55c97f7aee4241b2f2f8a78ce221049cb291f070045645998348c12f7b",
+      "compatibility_fingerprint": "sha256:d9711f71f02815a0558354a8104a13d5ded9cd0c6f65635b11c063d345af567d",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
         "id": "instructions.migrate",
@@ -23252,6 +23372,32 @@
                 "source": {
                   "type": "string"
                 },
+                "parent": {
+                  "type": "string"
+                },
+                "exact": {
+                  "type": "string"
+                },
+                "posture": {
+                  "enum": [
+                    "selected",
+                    "none",
+                    "unresolved"
+                  ]
+                },
+                "route": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "current_work_id": {
+                  "type": "string"
+                },
+                "expected_source_revision": {
+                  "type": "string",
+                  "pattern": "^sha256:[0-9a-f]{64}$"
+                },
                 "adaptation_mode": {
                   "const": "apply"
                 },
@@ -23296,6 +23442,8 @@
                     "agentic-workspace/scoped-instruction-create-result/v1",
                     "agentic-workspace/scoped-instruction-adaptation-result/v1",
                     "agentic-workspace/scoped-instruction-migration-advice/v1",
+                    "agentic-workspace/semantic-task-route-discovery/v1",
+                    "agentic-workspace/semantic-task-route-selection/v1",
                     "agentic-workspace/scoped-instruction-error/v1"
                   ]
                 },
@@ -23305,7 +23453,871 @@
                     "instructions.create",
                     "instructions.check",
                     "instructions.explain",
-                    "instructions.migrate"
+                    "instructions.migrate",
+                    "instructions.routes",
+                    "instructions.route-select"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "message": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "failure": {
+            "operation_failure.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "rejected",
+                    "failed",
+                    "retryable"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        }
+      }
+    },
+    "instructions.route-select": {
+      "identity": "instructions.route-select",
+      "version": "agentic-workspace/operation/v1",
+      "fingerprint": "sha256:93e9e1e0f004925716de9a1d2b851f45d5da4742fda747f3f75841494329105a",
+      "compatibility_fingerprint": "sha256:254a59541f368c923c3de549483462735390e6b8876caf41476c307e6225d207",
+      "contract": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "id": "instructions.route-select",
+        "command_surface": {
+          "command": "instructions",
+          "subcommand": "select-route",
+          "format_option": "format"
+        },
+        "summary": "Select current-work-bound semantic task-route applicability facts with source revision guards.",
+        "classification": "local-record-append",
+        "inputs": [
+          {
+            "name": "target",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "format",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "posture",
+            "source": "cli-option",
+            "required": true
+          },
+          {
+            "name": "route",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "current_work_id",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "expected_source_revision",
+            "source": "cli-option",
+            "required": true
+          },
+          {
+            "name": "dry_run",
+            "source": "cli-option",
+            "required": false
+          }
+        ],
+        "output": {
+          "kind": "json",
+          "schema_ref": "schemas/scoped_instruction_operation_result.schema.json"
+        },
+        "effects": {
+          "read_only": false,
+          "destructive": false,
+          "idempotent": true,
+          "writes_repo_state": false,
+          "requires_preflight_gate": false
+        },
+        "locality": {
+          "requires_repo": true,
+          "network": "forbidden",
+          "outside_repo_writes": "forbidden"
+        },
+        "reads": [
+          {
+            "surface": "canonical skill REGISTRY.json files",
+            "required": true
+          }
+        ],
+        "writes": [
+          {
+            "surface": ".agentic-workspace/local/current-task-routes.json",
+            "required": true,
+            "when": "revision and current-work guards pass and dry_run is false"
+          }
+        ],
+        "steps": [
+          {
+            "id": "resolve_root",
+            "uses": "workspace.target-root.resolve",
+            "description": "Resolve the target root."
+          },
+          {
+            "id": "execute_instruction_operation",
+            "uses": "instructions.execute",
+            "description": "Validate and write the authority-neutral route fact."
+          },
+          {
+            "id": "emit_output",
+            "uses": "output.emit",
+            "description": "Emit the guarded selection result."
+          }
+        ],
+        "ir_plan": {
+          "status": "complete",
+          "steps": [
+            {
+              "id": "resolve_root",
+              "uses": "workspace.target-root.resolve",
+              "description": "resolve_root",
+              "outputs": [
+                "target_root"
+              ]
+            },
+            {
+              "id": "execute_instruction_operation",
+              "uses": "instructions.execute",
+              "description": "execute_instruction_operation",
+              "outputs": [
+                "result"
+              ]
+            },
+            {
+              "id": "emit_output",
+              "uses": "output.emit",
+              "description": "emit_output",
+              "outputs": [
+                "emitted"
+              ]
+            }
+          ]
+        },
+        "guards": [
+          "Reject stale route-source revisions and mismatched current work.",
+          "Route selection supplies applicability only and grants no authority."
+        ],
+        "proof": [
+          "instructions.route-select.process",
+          "selected, none, unresolved, stale, replay, and current-work-switch fixtures"
+        ],
+        "migration_status": "runtime-consumed"
+      },
+      "schemas": [
+        "operation_failure.schema.json",
+        "scoped_instruction_operation_input.schema.json",
+        "scoped_instruction_operation_result.schema.json"
+      ],
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "instructions.route-select.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "scoped instruction semantics",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "instructions.route-select.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "instructions.route-select.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      },
+      "schema_roles": {
+        "input": [
+          "scoped_instruction_operation_input.schema.json"
+        ],
+        "output": [
+          "scoped_instruction_operation_result.schema.json"
+        ],
+        "failure": [
+          "operation_failure.schema.json"
+        ]
+      },
+      "compatibility_surface": {
+        "contract": {
+          "schema_version": "agentic-workspace/operation/v1",
+          "id": "instructions.route-select",
+          "classification": "local-record-append",
+          "inputs": [
+            {
+              "name": "target",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "format",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "posture",
+              "source": "cli-option",
+              "required": true
+            },
+            {
+              "name": "route",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "current_work_id",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "expected_source_revision",
+              "source": "cli-option",
+              "required": true
+            },
+            {
+              "name": "dry_run",
+              "source": "cli-option",
+              "required": false
+            }
+          ],
+          "output": {
+            "kind": "json",
+            "schema_ref": "schemas/scoped_instruction_operation_result.schema.json"
+          },
+          "effects": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "guards": [
+            "Reject stale route-source revisions and mismatched current work.",
+            "Route selection supplies applicability only and grants no authority."
+          ]
+        },
+        "schemas": {
+          "input": {
+            "scoped_instruction_operation_input.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "public-contract",
+              "type": "object",
+              "properties": {
+                "target": {
+                  "type": "string"
+                },
+                "format": {
+                  "enum": [
+                    "text",
+                    "json"
+                  ]
+                },
+                "name": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9][a-z0-9-]*$"
+                },
+                "paths": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "task": {
+                  "type": "string"
+                },
+                "changed": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "verbose": {
+                  "type": "boolean"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "parent": {
+                  "type": "string"
+                },
+                "exact": {
+                  "type": "string"
+                },
+                "posture": {
+                  "enum": [
+                    "selected",
+                    "none",
+                    "unresolved"
+                  ]
+                },
+                "route": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "current_work_id": {
+                  "type": "string"
+                },
+                "expected_source_revision": {
+                  "type": "string",
+                  "pattern": "^sha256:[0-9a-f]{64}$"
+                },
+                "adaptation_mode": {
+                  "const": "apply"
+                },
+                "adaptation_authority_path": {
+                  "type": "string"
+                },
+                "adaptation_expected_revision": {
+                  "type": "string",
+                  "pattern": "^sha256:[0-9a-f]{64}$"
+                },
+                "adaptation_delta_json": {
+                  "type": "string"
+                },
+                "owner_admission": {
+                  "const": "admitted"
+                },
+                "owner_admission_by": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "dry_run": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "output": {
+            "scoped_instruction_operation_result.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "public-contract",
+              "type": "object",
+              "required": [
+                "kind",
+                "operation_id",
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "agentic-workspace/scoped-instruction-inspection/v1",
+                    "agentic-workspace/scoped-instruction-create-result/v1",
+                    "agentic-workspace/scoped-instruction-adaptation-result/v1",
+                    "agentic-workspace/scoped-instruction-migration-advice/v1",
+                    "agentic-workspace/semantic-task-route-discovery/v1",
+                    "agentic-workspace/semantic-task-route-selection/v1",
+                    "agentic-workspace/scoped-instruction-error/v1"
+                  ]
+                },
+                "operation_id": {
+                  "enum": [
+                    "instructions.list",
+                    "instructions.create",
+                    "instructions.check",
+                    "instructions.explain",
+                    "instructions.migrate",
+                    "instructions.routes",
+                    "instructions.route-select"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "message": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "failure": {
+            "operation_failure.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "rejected",
+                    "failed",
+                    "retryable"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        }
+      }
+    },
+    "instructions.routes": {
+      "identity": "instructions.routes",
+      "version": "agentic-workspace/operation/v1",
+      "fingerprint": "sha256:186a198d98785628595da2bae77d8a8cf6a76655d0280545b112bf9e8ab1c924",
+      "compatibility_fingerprint": "sha256:29232962c6e5fae68971763b8edbef4b8533138d47ae52447fa7926a086a11da",
+      "contract": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "id": "instructions.routes",
+        "command_surface": {
+          "command": "instructions",
+          "subcommand": "routes",
+          "format_option": "format"
+        },
+        "summary": "Progressively discover repo-owned semantic task routes derived from registered capabilities.",
+        "classification": "read-only-report",
+        "inputs": [
+          {
+            "name": "target",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "format",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "parent",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "exact",
+            "source": "cli-option",
+            "required": false
+          }
+        ],
+        "output": {
+          "kind": "text-or-json",
+          "schema_ref": "schemas/scoped_instruction_operation_result.schema.json"
+        },
+        "effects": {
+          "read_only": true,
+          "destructive": false,
+          "idempotent": true,
+          "writes_repo_state": false,
+          "requires_preflight_gate": false
+        },
+        "locality": {
+          "requires_repo": true,
+          "network": "forbidden",
+          "outside_repo_writes": "forbidden"
+        },
+        "reads": [
+          {
+            "surface": "canonical skill REGISTRY.json files",
+            "required": true
+          }
+        ],
+        "writes": [],
+        "steps": [
+          {
+            "id": "resolve_root",
+            "uses": "workspace.target-root.resolve",
+            "description": "Resolve the target root."
+          },
+          {
+            "id": "execute_instruction_operation",
+            "uses": "instructions.execute",
+            "description": "Derive and progressively disclose semantic routes."
+          },
+          {
+            "id": "emit_output",
+            "uses": "output.emit",
+            "description": "Emit the route discovery result."
+          }
+        ],
+        "ir_plan": {
+          "status": "complete",
+          "steps": [
+            {
+              "id": "resolve_root",
+              "uses": "workspace.target-root.resolve",
+              "description": "resolve_root",
+              "outputs": [
+                "target_root"
+              ]
+            },
+            {
+              "id": "execute_instruction_operation",
+              "uses": "instructions.execute",
+              "description": "execute_instruction_operation",
+              "outputs": [
+                "result"
+              ]
+            },
+            {
+              "id": "emit_output",
+              "uses": "output.emit",
+              "description": "emit_output",
+              "outputs": [
+                "emitted"
+              ]
+            }
+          ]
+        },
+        "guards": [
+          "Derive identities from canonical capability declarations.",
+          "Do not emit the full route tree without exact or branch discovery."
+        ],
+        "proof": [
+          "instructions.routes.process",
+          "root, branch, and direct-leaf discovery fixtures"
+        ],
+        "migration_status": "runtime-consumed"
+      },
+      "schemas": [
+        "operation_failure.schema.json",
+        "scoped_instruction_operation_input.schema.json",
+        "scoped_instruction_operation_result.schema.json"
+      ],
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "instructions.routes.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "scoped instruction semantics",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "instructions.routes.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "instructions.routes.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      },
+      "schema_roles": {
+        "input": [
+          "scoped_instruction_operation_input.schema.json"
+        ],
+        "output": [
+          "scoped_instruction_operation_result.schema.json"
+        ],
+        "failure": [
+          "operation_failure.schema.json"
+        ]
+      },
+      "compatibility_surface": {
+        "contract": {
+          "schema_version": "agentic-workspace/operation/v1",
+          "id": "instructions.routes",
+          "classification": "read-only-report",
+          "inputs": [
+            {
+              "name": "target",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "format",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "parent",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "exact",
+              "source": "cli-option",
+              "required": false
+            }
+          ],
+          "output": {
+            "kind": "text-or-json",
+            "schema_ref": "schemas/scoped_instruction_operation_result.schema.json"
+          },
+          "effects": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "guards": [
+            "Derive identities from canonical capability declarations.",
+            "Do not emit the full route tree without exact or branch discovery."
+          ]
+        },
+        "schemas": {
+          "input": {
+            "scoped_instruction_operation_input.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "public-contract",
+              "type": "object",
+              "properties": {
+                "target": {
+                  "type": "string"
+                },
+                "format": {
+                  "enum": [
+                    "text",
+                    "json"
+                  ]
+                },
+                "name": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9][a-z0-9-]*$"
+                },
+                "paths": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "task": {
+                  "type": "string"
+                },
+                "changed": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "verbose": {
+                  "type": "boolean"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "parent": {
+                  "type": "string"
+                },
+                "exact": {
+                  "type": "string"
+                },
+                "posture": {
+                  "enum": [
+                    "selected",
+                    "none",
+                    "unresolved"
+                  ]
+                },
+                "route": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "current_work_id": {
+                  "type": "string"
+                },
+                "expected_source_revision": {
+                  "type": "string",
+                  "pattern": "^sha256:[0-9a-f]{64}$"
+                },
+                "adaptation_mode": {
+                  "const": "apply"
+                },
+                "adaptation_authority_path": {
+                  "type": "string"
+                },
+                "adaptation_expected_revision": {
+                  "type": "string",
+                  "pattern": "^sha256:[0-9a-f]{64}$"
+                },
+                "adaptation_delta_json": {
+                  "type": "string"
+                },
+                "owner_admission": {
+                  "const": "admitted"
+                },
+                "owner_admission_by": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "dry_run": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "output": {
+            "scoped_instruction_operation_result.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "public-contract",
+              "type": "object",
+              "required": [
+                "kind",
+                "operation_id",
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "agentic-workspace/scoped-instruction-inspection/v1",
+                    "agentic-workspace/scoped-instruction-create-result/v1",
+                    "agentic-workspace/scoped-instruction-adaptation-result/v1",
+                    "agentic-workspace/scoped-instruction-migration-advice/v1",
+                    "agentic-workspace/semantic-task-route-discovery/v1",
+                    "agentic-workspace/semantic-task-route-selection/v1",
+                    "agentic-workspace/scoped-instruction-error/v1"
+                  ]
+                },
+                "operation_id": {
+                  "enum": [
+                    "instructions.list",
+                    "instructions.create",
+                    "instructions.check",
+                    "instructions.explain",
+                    "instructions.migrate",
+                    "instructions.routes",
+                    "instructions.route-select"
                   ]
                 },
                 "status": {
@@ -24726,6 +25738,38 @@
             "type": "string",
             "description": "Repository-relative static instruction source used for migration advice."
           },
+          "parent": {
+            "type": "string",
+            "description": "Optional semantic route branch to expand one level."
+          },
+          "exact": {
+            "type": "string",
+            "description": "Optional known semantic route leaf to inspect directly."
+          },
+          "posture": {
+            "enum": [
+              "selected",
+              "none",
+              "unresolved"
+            ],
+            "description": "Explicit agent-selected semantic applicability posture."
+          },
+          "route": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "One or more existing semantic route leaf identities."
+          },
+          "current_work_id": {
+            "type": "string",
+            "description": "Optional exact current-work guard; defaults to the resolved current work."
+          },
+          "expected_source_revision": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "description": "Route catalogue source revision returned by discovery."
+          },
           "adaptation_mode": {
             "const": "apply",
             "description": "Select the explicitly owner-admitted guarded adaptation mode."
@@ -24782,6 +25826,8 @@
               "agentic-workspace/scoped-instruction-create-result/v1",
               "agentic-workspace/scoped-instruction-adaptation-result/v1",
               "agentic-workspace/scoped-instruction-migration-advice/v1",
+              "agentic-workspace/semantic-task-route-discovery/v1",
+              "agentic-workspace/semantic-task-route-selection/v1",
               "agentic-workspace/scoped-instruction-error/v1"
             ]
           },
@@ -24792,7 +25838,9 @@
               "instructions.create",
               "instructions.check",
               "instructions.explain",
-              "instructions.migrate"
+              "instructions.migrate",
+              "instructions.routes",
+              "instructions.route-select"
             ]
           },
           "status": {

@@ -507,6 +507,7 @@ class AssuranceRequirement:
     level: str
     applies_to_paths: tuple[str, ...]
     applies_to_task_markers: tuple[str, ...]
+    applies_to_semantic_routes: tuple[str, ...]
     applies_to_planning_refs: tuple[str, ...]
     applies_to_proof_profiles: tuple[str, ...]
     applies_to_risk_refs: tuple[str, ...]
@@ -1237,6 +1238,7 @@ def _load_assurance_requirements(
         "level",
         "applies_to_paths",
         "applies_to_task_markers",
+        "applies_to_semantic_routes",
         "applies_to_planning_refs",
         "applies_to_proof_profiles",
         "applies_to_risk_refs",
@@ -1263,6 +1265,7 @@ def _load_assurance_requirements(
     activation_fields = {
         "applies_to_paths",
         "applies_to_task_markers",
+        "applies_to_semantic_routes",
         "applies_to_planning_refs",
         "applies_to_proof_profiles",
         "applies_to_risk_refs",
@@ -1361,6 +1364,7 @@ def _load_assurance_requirements(
             ),
             applies_to_paths=activation_values["applies_to_paths"],
             applies_to_task_markers=activation_values["applies_to_task_markers"],
+            applies_to_semantic_routes=activation_values["applies_to_semantic_routes"],
             applies_to_planning_refs=activation_values["applies_to_planning_refs"],
             applies_to_proof_profiles=activation_values["applies_to_proof_profiles"],
             applies_to_risk_refs=activation_values["applies_to_risk_refs"],

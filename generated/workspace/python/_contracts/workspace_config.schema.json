@@ -406,6 +406,16 @@
                 "uniqueItems": true,
                 "default": []
               },
+              "applies_to_semantic_routes": {
+                "description": "Agent-selected semantic task-route selectors that provide applicability evidence without granting assurance authority.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9][a-z0-9-]*(/[a-z0-9][a-z0-9-]*)+(/\\*\\*)?$"
+                },
+                "uniqueItems": true,
+                "default": []
+              },
               "applies_to_planning_refs": {
                 "description": "Planning refs or requirement ids that activate this requirement from active planning state.",
                 "type": "array",

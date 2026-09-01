@@ -221,6 +221,7 @@ from agentic_workspace.runtime_compatibility import (
     READER_CONTRACT_EPOCH,
     current_runtime_compatibility_admission,
 )
+from agentic_workspace.semantic_task_routes import current_semantic_task_route_fact, route_selector_matches
 from agentic_workspace.target_evidence import assignment_decision_from_policy, target_evidence_posture
 from agentic_workspace.trusted_execution import host_shell_dialect, run_trusted_shell, trusted_shell_execution_identity
 from agentic_workspace.workspace_output import (
@@ -3865,6 +3866,7 @@ def _assurance_requirement_payloads(config: WorkspaceConfig | None) -> list[dict
                 "level": requirement.level,
                 "applies_to_paths": list(requirement.applies_to_paths),
                 "applies_to_task_markers": list(requirement.applies_to_task_markers),
+                "applies_to_semantic_routes": list(requirement.applies_to_semantic_routes),
                 "applies_to_planning_refs": list(requirement.applies_to_planning_refs),
                 "applies_to_proof_profiles": list(requirement.applies_to_proof_profiles),
                 "applies_to_risk_refs": list(requirement.applies_to_risk_refs),
@@ -4363,6 +4365,7 @@ def _assurance_requirement_match(
     changed_paths: list[str] | None,
     task_text: str | None,
     planning_facts: dict[str, Any],
+    selected_semantic_routes: list[str] | None = None,
 ) -> tuple[bool, list[str], list[dict[str, Any]]]:
     applies_because: list[str] = []
     activation_facts: list[dict[str, Any]] = []
@@ -4378,6 +4381,10 @@ def _assurance_requirement_match(
         marker_text = str(marker).strip()
         if marker_text and marker_text.lower() in normalized_task:
             applies_because.append(f"task marker matched {marker_text}")
+    for selector in _list_payload(requirement.get("applies_to_semantic_routes")):
+        selector_text = str(selector).strip()
+        if selector_text and route_selector_matches(selector_text, selected_semantic_routes or []):
+            applies_because.append(f"semantic task route matched {selector_text}")
     for field_name, fact_name, label in (
         ("applies_to_planning_refs", "refs", "planning ref"),
         ("applies_to_proof_profiles", "proof_profiles", "proof profile"),
@@ -4711,6 +4718,12 @@ def _assurance_requirements_report_payload(
 ) -> dict[str, Any]:
     configured = _assurance_requirement_payloads(config)
     planning_facts = _assurance_requirement_planning_facts(active_planning_record)
+    route_fact = current_semantic_task_route_fact(target_root) if target_root is not None else {}
+    selected_semantic_routes = (
+        [str(item) for item in _list_payload(route_fact.get("routes"))]
+        if route_fact.get("status") == "current" and route_fact.get("posture") == "selected"
+        else []
+    )
     evidence_records = _load_assurance_evidence_records(target_root=target_root)
     planning_facts = {
         **planning_facts,
@@ -4735,6 +4748,7 @@ def _assurance_requirements_report_payload(
             changed_paths=changed_paths,
             task_text=task_text,
             planning_facts=planning_facts,
+            selected_semantic_routes=selected_semantic_routes,
         )
         status = _assurance_status_for_requirement(
             requirement=requirement,
@@ -6012,6 +6026,7 @@ class RegisteredSkill:
     summary: str
     activation_hints: SkillActivationHints
     registration: str
+    semantic_routes: tuple[dict[str, Any], ...] = ()
     required_resources: tuple[str, ...] = ()
     availability: str = "available"
     blocked_reasons: tuple[str, ...] = ()
@@ -62637,6 +62652,7 @@ def _skills_recommendation_first_payload(payload: dict[str, Any], *, target_root
     def recommendation_projection(item: dict[str, Any]) -> dict[str, Any]:
         reasons = [str(reason) for reason in _list_payload(item.get("reasons"))]
         intent_level = has_intent_level_evidence(item)
+        semantic_route = any(reason.startswith("selected semantic task route:") for reason in reasons)
         primary_source = _as_dict(item.get("primary_source_resolution"))
         primary_source_projection = {
             key: primary_source.get(key)
@@ -62672,8 +62688,16 @@ def _skills_recommendation_first_payload(payload: dict[str, Any], *, target_root
                 "blocked_reasons": item.get("blocked_reasons"),
                 "repair_command": item.get("repair_command"),
                 "primary_source_resolution": primary_source_projection if not item.get("path") else None,
-                "activation_evidence_class": "intent-level" if intent_level else "lexical-candidate",
-                "recommendation_authority": "admitted" if intent_level else "candidate-only",
+                "activation_evidence_class": "semantic-task-route"
+                if semantic_route
+                else "intent-level"
+                if intent_level
+                else "lexical-candidate",
+                "recommendation_authority": "structured-applicability"
+                if semantic_route
+                else "admitted"
+                if intent_level
+                else "candidate-only",
             }.items()
             if value not in (None, "", []) or key == "repair_command"
         }
@@ -62729,8 +62753,23 @@ def _skills_payload(*, target_root: Path | None, task_text: str | None) -> dict[
     if target_root is None:
         return {"skills": [], "recommendations": [], "warnings": [], "sources": []}
     skills, warnings, sources = _discover_registered_skills(target_root=target_root)
-    recommendations = _recommend_skills(task_text=task_text, skills=skills) if task_text else []
-    blocked_recommendations = _recommend_skills(task_text=task_text, skills=skills, availability="blocked") if task_text else []
+    route_fact = current_semantic_task_route_fact(target_root)
+    selected_routes = (
+        [str(item) for item in route_fact.get("routes", [])]
+        if route_fact.get("status") == "current" and route_fact.get("posture") == "selected"
+        else []
+    )
+    recommendations = _recommend_skills(task_text=task_text, skills=skills, selected_routes=selected_routes) if task_text else []
+    blocked_recommendations = (
+        _recommend_skills(
+            task_text=task_text,
+            skills=skills,
+            availability="blocked",
+            selected_routes=selected_routes,
+        )
+        if task_text
+        else []
+    )
     agent_aids, aid_warnings = _checked_in_agent_aid_entries(target_root=target_root)
     installed_contract = _installed_contract_consumer_receipt(config=_load_workspace_config(target_root=target_root))
     visible_agent_aids = [aid for aid in agent_aids if aid["status"] != "retired"]
@@ -62780,6 +62819,12 @@ def _skills_payload(*, target_root: Path | None, task_text: str | None) -> dict[
         "warnings": warnings,
         "agent_aid_warnings": aid_warnings,
         "sources": sources,
+        "semantic_task_routes": route_fact,
+        "specialist_selection_authority": {
+            "structured_route_facts": "authoritative-applicability-input",
+            "activation_hints": "candidate-discovery-only",
+            "route_authority_effect": "none",
+        },
         **(
             {
                 "planning_route_decision": _summary_planning_route_decision_payload(
@@ -63116,6 +63161,7 @@ def _load_registered_skills(
         activation_hints = raw.get("activation_hints", {})
         if not isinstance(activation_hints, dict):
             activation_hints = {}
+        semantic_routes = tuple(item for item in raw.get("semantic_routes", []) if isinstance(item, dict))
         required_resources = tuple(str(value).strip() for value in raw.get("required_resources", []) if str(value).strip())
         skill_id = str(raw.get("id", "")).strip()
         primary_source_resolution = _skill_primary_source_resolution(
@@ -63182,6 +63228,7 @@ def _load_registered_skills(
                     when=tuple((str(value).strip() for value in activation_hints.get("when", []) if str(value).strip())),
                 ),
                 registration="explicit",
+                semantic_routes=semantic_routes,
                 required_resources=required_resources,
                 availability="blocked" if dependency_diagnostics else "inactive" if lifecycle_inactive else "available",
                 blocked_reasons=blocked_reasons,
@@ -63380,6 +63427,8 @@ def _skill_payload(*, skill: RegisteredSkill) -> dict[str, Any]:
             "phrases": list(skill.activation_hints.phrases),
             "when": list(skill.activation_hints.when),
         },
+        "activation_hint_authority": "candidate-discovery-only",
+        "semantic_routes": [dict(item) for item in skill.semantic_routes],
         "registration": skill.registration,
         "required_resources": list(skill.required_resources),
         "availability": skill.availability,
@@ -63410,7 +63459,13 @@ def _skill_repair_command(skill: RegisteredSkill) -> str:
     return ""
 
 
-def _recommend_skills(*, task_text: str, skills: list[RegisteredSkill], availability: str = "available") -> list[SkillRecommendation]:
+def _recommend_skills(
+    *,
+    task_text: str,
+    skills: list[RegisteredSkill],
+    availability: str = "available",
+    selected_routes: list[str] | None = None,
+) -> list[SkillRecommendation]:
     task_text_lower = task_text.lower()
     task_text_normalized = " ".join(_skill_match_tokens(task_text))
     if "setup" in task_text_lower:
@@ -63439,6 +63494,33 @@ def _recommend_skills(*, task_text: str, skills: list[RegisteredSkill], availabi
     recommendations: list[SkillRecommendation] = []
     for skill in skills:
         if skill.availability != availability:
+            continue
+        matching_routes = [
+            route
+            for route in skill.semantic_routes
+            if route_selector_matches(
+                str(route.get("id") or "") + ("/**" if str(route.get("match") or "exact") == "subtree" else ""),
+                selected_routes or [],
+            )
+        ]
+        if skill.semantic_routes:
+            if not matching_routes:
+                continue
+            priorities = [
+                int(value) if str(value).isdigit() else 100 for value in (route.get("priority", 100) for route in matching_routes)
+            ]
+            priority = min(priorities)
+            route_score = max(100, 1000 - priority)
+            recommendations.append(
+                SkillRecommendation(
+                    skill=skill,
+                    hint_score=route_score,
+                    score=route_score,
+                    reasons=(
+                        "selected semantic task route: " + ", ".join(sorted(str(route.get("id") or "") for route in matching_routes)),
+                    ),
+                )
+            )
             continue
         score = 0
         hint_score = 0

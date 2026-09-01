@@ -483,3 +483,23 @@ def instructions_migrate(values: Mapping[str, Any], *, target: str | Path, invoc
         invocation=invocation,
         allow_runtime_backed=True,
     )
+
+
+def instructions_route_select(values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None) -> dict[str, Any]:
+    return invoke_operation(
+        "instructions.route-select",
+        values,
+        target=target,
+        invocation=invocation,
+        allow_runtime_backed=True,
+    )
+
+
+def instructions_routes(values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None) -> dict[str, Any]:
+    return invoke_operation(
+        "instructions.routes",
+        values,
+        target=target,
+        invocation=invocation,
+        allow_runtime_backed=True,
+    )

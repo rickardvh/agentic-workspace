@@ -1,0 +1,122 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2929-2930-semantic-task-routes",
+  "title": "Add semantic task routes and issue-creation dogfood",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "implementation",
+  "revision": 2,
+  "intent": {
+    "outcome": "GitHub #2929 #2930",
+    "non_goals": [
+      "Leave adjacent backlog or follow-on work out of this plan."
+    ]
+  },
+  "parent": {
+    "owner_id": "issue-2923-2930-dogfooding",
+    "contribution": "GitHub #2929 #2930",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "Fill in the concrete files before implementation starts."
+    ],
+    "effects": []
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected-local",
+      "owner": "issue-2929-2930-semantic-task-routes"
+    },
+    "proof_posture": {
+      "state": "pending",
+      "refs": []
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "GitHub #2929 #2930",
+      "label": "GitHub #2929 #2930",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Add semantic task routes and issue-creation dogfood is implemented, validated, and closed out honestly."
+    ],
+    "requirements": [
+      "Fill in the narrowest command that proves the promoted work."
+    ],
+    "refs": []
+  },
+  "continuation": {
+    "owner": "none",
+    "residual_intent": "none"
+  },
+  "specialist_contracts": [],
+  "goal": [
+    "Implement the #2930 shared agent-selected semantic task-route fact, migrate scoped instructions and specialized skills to consume it, consolidate remaining semantic applicability owners enough to satisfy the generic contract, and replay #2929 through the repo-owned issue procedure."
+  ],
+  "non_goals": [
+    "Infer hard routes from task-text keywords or add a universal package-owned task taxonomy.",
+    "Let route selection grant mutation, network, publish, proof, review, policy, or completion authority.",
+    "Duplicate skill bodies, issue templates, Memory notes, or module semantics inside a route catalogue."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "Complete the 2026-09-01 dogfooding lane before resuming #2821-#2827.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": ".agentic-workspace/planning/lanes/issue-2923-2930-dogfooding.lane.json"
+  },
+  "execution_bounds": {
+    "allowed paths": "semantic route contracts/runtime/generated adapters; scoped instructions; canonical skill registries and skill recommendation; Memory/assurance/Verification consumers and tests where required; maintainer disposition docs; this plan/lane and release notes",
+    "max changed files": "160",
+    "required validation commands": "focused route/scoped-instruction/skill/Memory/Verification regressions; generated command conformance; workspace lint/typecheck; schema/reference checks; selected AW proof",
+    "ask-before-refactor threshold": "A new peer routing engine, persistent route history, universal taxonomy, or authority-bearing route semantics",
+    "stop before touching": "Unrelated #2821 implementation, unrelated archived planning state, provider-specific external mutation code, or portable module contracts that would become host-route dependent"
+  },
+  "touched_paths": [
+    "src/agentic_workspace/semantic_task_routes.py",
+    "src/agentic_workspace/scoped_instructions.py",
+    "src/agentic_workspace/operating_decision.py",
+    "src/agentic_workspace/workspace_runtime_core.py",
+    "src/agentic_workspace/contracts/**",
+    "generated/workspace/**",
+    ".agentic-workspace/instructions/**",
+    "tools/skills/REGISTRY.json",
+    "packages/memory/**",
+    "packages/verification/**",
+    "tests/test_scoped_instructions.py",
+    "tests/test_workspace_skills_cli.py",
+    "tests/test_workspace_operating_decision.py",
+    "docs/maintainer/**",
+    ".agentic-workspace/planning/execplans/issue-2929-2930-semantic-task-routes.plan.json",
+    ".agentic-workspace/planning/lanes/issue-2923-2930-dogfooding.lane.json",
+    ".release/changes/**"
+  ],
+  "validation_commands": [
+    "uv run --frozen --active --no-sync pytest tests/test_scoped_instructions.py tests/test_workspace_skills_cli.py tests/test_workspace_operating_decision.py -q",
+    "uv run --frozen --active --no-sync python scripts/generate/generate_command_packages.py --check",
+    "uv run --frozen --active --no-sync python scripts/check/check_generated_command_packages.py --require-node",
+    "make lint-workspace",
+    "make typecheck-workspace",
+    "make render-schema-reference"
+  ],
+  "completion_criteria": [
+    "Repo-owned route identities are derived from canonical skill/capability declarations and progressively discoverable without full-tree startup output.",
+    "An agent can select selected/none/unresolved current-work-bound route facts with source-revision guards and stale invalidation.",
+    "Scoped Markdown and at least one independent consumer use the same fact and registered capability identities without lexical hard classification.",
+    "Exact/subtree/multiple/no-route/stale and non-GitHub fixtures pass while route facts remain authority-neutral.",
+    "The #2929 issue-creation replay surfaces shaping then creation procedure before external write and preserves template/helper ownership.",
+    "Older semantic marker consumers have implemented dispositions and the net semantic classifier surface is reduced, not merely documented."
+  ]
+}

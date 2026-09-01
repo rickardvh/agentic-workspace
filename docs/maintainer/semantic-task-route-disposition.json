@@ -1,0 +1,88 @@
+{
+  "kind": "agentic-workspace/semantic-task-route-disposition/v1",
+  "issues": [2929, 2930, 2935, 2936, 2937],
+  "principle": "Semantic task meaning is an agent-selected, current-work-bound applicability fact. Deterministic path, operation, owner, state, evidence, and policy facts remain stronger and independent.",
+  "shared_contract": {
+    "schema": "src/agentic_workspace/contracts/schemas/semantic_task_routes.schema.json",
+    "identity_owner": "canonical skill registry declarations",
+    "selection_owner": "acting agent",
+    "currentness_owner": "current-work binding plus route-source revision",
+    "authority_effect": "applicability-only",
+    "persistent_history": "none"
+  },
+  "surfaces": [
+    {
+      "surface": "scoped Markdown instructions",
+      "previous_mechanism": "global or path-only applicability",
+      "question": "Which repo guidance applies to the current semantic task?",
+      "disposition": "consume-semantic-route",
+      "implementation": "routes frontmatter composes with path applicability and ordinary read/use/check/protect clauses"
+    },
+    {
+      "surface": "specialized skill recommendations",
+      "previous_mechanism": "activation_hints lexical score",
+      "question": "Which specialist procedure is semantically relevant?",
+      "disposition": "consume-semantic-route",
+      "removed_or_demoted": "route-declared specialist skills are no longer selected from lexical overlap; activation_hints remain catalogue/search metadata",
+      "stronger_facts_retained": ["required skill edges", "typed operation", "owner/transition/dependency state"]
+    },
+    {
+      "surface": "Memory context-authority curation",
+      "previous_mechanism": "task-token intersection with note type, subsystems, and surfaces",
+      "question": "Is a note relevant enough to surface?",
+      "disposition": "consume-semantic-route",
+      "removed_or_demoted": "a note with semantic_routes no longer uses lexical task matching; legacy matching is advisory candidate discovery for unmigrated notes",
+      "stronger_facts_retained": ["routes_from paths", "stale_when", "canonicality", "authority", "stronger-owner lifecycle"]
+    },
+    {
+      "surface": "assurance requirements",
+      "previous_mechanism": "applies_to_task_markers",
+      "question": "Does an agent-judged semantic task class make this source-owned requirement applicable?",
+      "disposition": "consume-semantic-route-and-retain-stronger-triggers",
+      "removed_or_demoted": "task markers remain advisory compatibility input and are not route authority",
+      "stronger_facts_retained": ["changed paths", "planning refs", "proof profiles", "risk refs", "invariant refs", "repository classifier results", "evidence state"]
+    },
+    {
+      "surface": "Verification protocols",
+      "previous_mechanism": "applies_to_task_markers",
+      "question": "Is a host protocol semantically relevant?",
+      "disposition": "consume-semantic-route-and-retain-structured-triggers",
+      "removed_or_demoted": "task markers remain advisory and require agent judgment",
+      "stronger_facts_retained": ["changed/stale paths", "planning refs", "assurance requirement refs", "proof profiles", "admitted evidence"]
+    },
+    {
+      "surface": "machine-local guidance and high-risk overlays",
+      "previous_mechanism": "applies_to_task_markers",
+      "question": "Should local-only guidance be considered?",
+      "disposition": "retain-advisory-pending-migration",
+      "authority_ceiling": "local-only; cannot manufacture shared repo policy",
+      "residual_owner": 2937
+    },
+    {
+      "surface": "workflow obligations scope_tags",
+      "previous_mechanism": "task/path/planning tag intersection",
+      "question": "Which compatibility-stage obligation should be considered?",
+      "disposition": "retain-compatibility-only-then-remove-or-derive",
+      "reason": "stage compatibility remains distinct; generic semantic applicability must migrate to instructions/routes",
+      "residual_owner": 2937
+    },
+    {
+      "surface": "portable module relevance.task_terms",
+      "previous_mechanism": "host task-term intersection",
+      "question": "Could an optional portable module be relevant?",
+      "disposition": "keep-domain-owned-advisory-discovery",
+      "reason": "portable modules must not depend on host-specific route ids; host instructions bridge selected routes to registered module capabilities"
+    }
+  ],
+  "net_reduction": {
+    "removed_equal_authority_paths": [
+      "lexical activation of route-declared specialist skills",
+      "lexical task matching for Memory notes that declare semantic_routes"
+    ],
+    "new_peer_engines": 0,
+    "new_route_registries": 0,
+    "new_task_cursors": 0,
+    "new_history_ledgers": 0
+  },
+  "direct_work_rule": "No selected route remains a valid quiet posture; route classification is required only by a narrowly declared affected procedure or claim."
+}

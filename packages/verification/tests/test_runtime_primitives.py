@@ -578,6 +578,45 @@ review_owner = "privacy-owner"
     assert {signal["priority"] for signal in record["match_signals"]} == {"structured", "advisory"}
 
 
+def test_verification_report_consumes_current_semantic_task_route(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    manifest = tmp_path / ".agentic-workspace" / "verification" / "manifest.toml"
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text(
+        """
+schema_version = "agentic-workspace/verification-manifest/v1"
+
+[protocols.issue_write_review]
+title = "Issue write review"
+purpose = "Check the repo-owned issue procedure before the write."
+applies_to_semantic_routes = ["github/issues/**"]
+review_owner = "workflow-owner"
+""".strip(),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        "agentic_workspace.semantic_task_routes.current_semantic_task_route_fact",
+        lambda _root: {"status": "current", "posture": "selected", "routes": ["github/issues/create"]},
+    )
+
+    payload = verification_report_payload(target_root=tmp_path, changed_paths=[], task_text="unrelated wording")
+
+    record = payload["match_evidence"]["matching"][0]
+    assert record["matched"] is True
+    assert record["structured_signal_count"] == 1
+    assert record["advisory_marker_count"] == 0
+    assert record["match_signals"] == [
+        {
+            "signal_type": "semantic_task_route",
+            "authority": "agent-selected-current-task-fact",
+            "priority": "structured",
+            "value": "github/issues/**",
+            "matched": "github/issues/**",
+            "reason": "semantic task route matched github/issues/**",
+            "authority_effect": "applicability-only",
+        }
+    ]
+
+
 def test_verification_report_rejects_protocol_without_activation(tmp_path: Path) -> None:
     manifest = tmp_path / ".agentic-workspace" / "verification" / "manifest.toml"
     manifest.parent.mkdir(parents=True)

@@ -19,6 +19,12 @@ Inputs shared by generated scoped Markdown instruction operations.
 | `changed` | array of string | no |  | Changed or target paths used to evaluate applicability. |  |  |
 | `verbose` | boolean | no |  | Whether explanation output includes the compiled instruction program. |  |  |
 | `source` | string | no |  | Repository-relative static instruction source used for migration advice. |  |  |
+| `parent` | string | no |  | Optional semantic route branch to expand one level. |  |  |
+| `exact` | string | no |  | Optional known semantic route leaf to inspect directly. |  |  |
+| `posture` | enum `"selected"`, `"none"`, `"unresolved"` | no |  | Explicit agent-selected semantic applicability posture. |  |  |
+| `route` | array of string | no |  | One or more existing semantic route leaf identities. |  |  |
+| `current_work_id` | string | no |  | Optional exact current-work guard; defaults to the resolved current work. |  |  |
+| `expected_source_revision` | string | no |  | Route catalogue source revision returned by discovery. |  |  |
 | `adaptation_mode` | const `"apply"` | no |  | Select the explicitly owner-admitted guarded adaptation mode. |  |  |
 | `adaptation_authority_path` | string | no |  | Existing canonical Markdown instruction inside .agentic-workspace/instructions. |  |  |
 | `adaptation_expected_revision` | string | no |  | Exact pre-apply instruction revision. |  |  |

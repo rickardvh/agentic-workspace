@@ -11,8 +11,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
+from agentic_workspace.semantic_task_routes import (
+    current_semantic_task_route_fact,
+    discover_semantic_routes,
+    route_selector_matches,
+    select_semantic_task_routes,
+)
+
 INSTRUCTION_DIR = Path(".agentic-workspace/instructions")
-FRONTMATTER_FIELDS = ("paths", "read", "use", "checks", "protect")
+FRONTMATTER_FIELDS = ("paths", "routes", "read", "use", "checks", "protect")
 _NAME = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 _DISPOSITION_PREFIX = "<!-- agentic-workspace:context-disposition "
 
@@ -150,6 +157,17 @@ def _validate_metadata(metadata: dict[str, list[Any]]) -> list[dict[str, str]]:
                         "message": "use a non-empty repo-relative path or glob without `..`, a drive, or a leading slash",
                     }
                 )
+    for index, value in enumerate(metadata["routes"]):
+        normalized = str(value).strip().strip("/")
+        route_id = normalized.removesuffix("/**")
+        if not isinstance(value, str) or not re.fullmatch(r"[a-z0-9][a-z0-9-]*(?:/[a-z0-9][a-z0-9-]*)+", route_id):
+            diagnostics.append(
+                {
+                    "field": f"routes[{index}]",
+                    "code": "invalid-semantic-route-selector",
+                    "message": "use an exact route id or an explicit /** subtree selector",
+                }
+            )
     for index, value in enumerate(metadata["use"]):
         if not isinstance(value, str) or not value.strip():
             diagnostics.append({"field": f"use[{index}]", "code": "invalid-reference", "message": "name one admitted capability"})
@@ -200,19 +218,44 @@ def _matched_paths(patterns: list[str], changed_paths: Iterable[str]) -> list[st
     return sorted({path for path in normalized for pattern in patterns if fnmatch.fnmatch(path, pattern)})
 
 
-def instruction_applies(document: InstructionDocument, *, changed_paths: list[str]) -> tuple[bool, str, list[str]]:
+def instruction_applies(
+    document: InstructionDocument,
+    *,
+    changed_paths: list[str],
+    selected_routes: list[str] | None = None,
+    route_posture: str = "unresolved",
+) -> tuple[bool, str, list[str]]:
     patterns = [str(item) for item in document.metadata["paths"]]
-    if not patterns:
-        return True, "global instruction", []
     matched = _matched_paths(patterns, changed_paths)
-    if matched:
-        return True, f"{matched[0]} matches {next(pattern for pattern in patterns if fnmatch.fnmatch(matched[0], pattern))}", matched
-    return False, "no changed or target path matches " + ", ".join(patterns), []
+    path_applies = not patterns or bool(matched)
+    route_selectors = [str(item) for item in document.metadata["routes"]]
+    route_applies = not route_selectors or (
+        route_posture == "selected" and any(route_selector_matches(selector, selected_routes or []) for selector in route_selectors)
+    )
+    if path_applies and route_applies:
+        reasons: list[str] = []
+        if patterns:
+            reasons.append(f"{matched[0]} matches {next(pattern for pattern in patterns if fnmatch.fnmatch(matched[0], pattern))}")
+        else:
+            reasons.append("global path scope")
+        if route_selectors:
+            reasons.append("selected semantic route matches " + ", ".join(route_selectors))
+        return True, "; ".join(reasons), matched
+    reasons = []
+    if not path_applies:
+        reasons.append("no changed or target path matches " + ", ".join(patterns))
+    if not route_applies:
+        reasons.append(
+            "semantic route selection is " + route_posture
+            if route_posture != "selected"
+            else "no selected semantic route matches " + ", ".join(route_selectors)
+        )
+    return False, "; ".join(reasons), matched
 
 
 def _capability_candidates(root: Path) -> dict[str, list[str]]:
     identities: set[str] = set()
-    for skills_root in (root / ".agentic-workspace/skills", root / ".agents/skills"):
+    for skills_root in (root / ".agentic-workspace/skills", root / ".agents/skills", root / "tools/skills"):
         if skills_root.is_dir():
             identities.update(f"skill:{path.parent.name}" for path in skills_root.glob("*/SKILL.md"))
     registry = Path(__file__).resolve().parent / "contracts" / "operation_contracts.json"
@@ -266,8 +309,11 @@ def inspect_instructions(
     include_ir: bool = False,
     evidence: dict[str, bool] | None = None,
 ) -> dict[str, Any]:
-    del task  # v1 applicability is deliberately path/global only.
+    del task  # Semantic applicability is an explicit current-task fact, never inferred from prompt text.
     changed = [str(item).replace("\\", "/") for item in (changed_paths or [])]
+    route_fact = current_semantic_task_route_fact(root)
+    route_posture = str(route_fact.get("posture") or "unresolved") if route_fact.get("status") == "current" else "unresolved"
+    selected_routes = [str(item) for item in route_fact.get("routes", [])] if route_posture == "selected" else []
     candidates = _capability_candidates(root)
     records: list[dict[str, Any]] = []
     diagnostics: list[dict[str, str]] = []
@@ -279,7 +325,12 @@ def inspect_instructions(
         "source_diagnostics": [],
     }
     for shallow in instruction_documents(root):
-        applies, reason, matched = instruction_applies(shallow, changed_paths=changed)
+        applies, reason, matched = instruction_applies(
+            shallow,
+            changed_paths=changed,
+            selected_routes=selected_routes,
+            route_posture=route_posture,
+        )
         document = read_instruction(root / shallow.source_ref, root=root, load_body=applies)
         item_diagnostics = [dict(item) for item in document.diagnostics]
         resolved_use: list[str] = []
@@ -325,6 +376,7 @@ def inspect_instructions(
             "source_ref": document.source_ref,
             "revision": document.revision,
             "scope": document.metadata["paths"] or ["global"],
+            "routes": document.metadata["routes"],
             "valid": not item_diagnostics,
             "applies": applies,
             "reason": reason,
@@ -334,6 +386,7 @@ def inspect_instructions(
                 name
                 for name, present in (
                     ("guidance", document.has_guidance),
+                    ("routes", bool(document.metadata["routes"])),
                     ("read", bool(document.metadata["read"])),
                     ("use", bool(document.metadata["use"])),
                     ("checks", bool(document.metadata["checks"])),
@@ -362,7 +415,13 @@ def inspect_instructions(
         if not applies or item_diagnostics:
             continue
         fact_id = f"instruction:{document.identity}:applies"
-        source = {"owner": "repo-instructions", "revision": document.revision, "current": True}
+        source = {
+            "owner": "repo-instructions",
+            "revision": _digest(
+                document.revision + str(route_fact.get("current_source_revision") or route_fact.get("source_revision") or "")
+            ),
+            "current": route_fact.get("status") != "stale",
+        }
         program["facts"].append({"id": fact_id, "type": "boolean", "value": True, "source": source})
         effects: list[dict[str, str]] = []
         if document.body:
@@ -404,9 +463,10 @@ def inspect_instructions(
         "applicable_count": sum(item["applies"] for item in records),
         "instructions": records,
         "diagnostics": diagnostics,
+        "semantic_task_routes": route_fact,
         "progressive_disclosure": {
             "irrelevant_bodies_loaded": sum(item["body_loaded"] for item in records if not item["applies"]),
-            "rule": "Only matching or global instruction bodies enter the current operating contract.",
+            "rule": "Only matching global, path, or explicitly selected-route instruction bodies enter the current operating contract.",
         },
     }
     if include_ir:
@@ -704,6 +764,21 @@ def apply_instruction_operation(*, target_root: Path, operation_id: str, values:
             )
         elif operation_id == "instructions.migrate":
             payload = _migration_advice(target_root, str(values.get("source") or ""))
+        elif operation_id == "instructions.routes":
+            payload = discover_semantic_routes(
+                target_root,
+                parent=str(values.get("parent") or ""),
+                exact=str(values.get("exact") or ""),
+            )
+        elif operation_id == "instructions.route-select":
+            payload = select_semantic_task_routes(
+                target_root,
+                posture=str(values.get("posture") or ""),
+                routes=[str(item) for item in values.get("route", [])],
+                expected_source_revision=str(values.get("expected_source_revision") or ""),
+                current_work_id=str(values.get("current_work_id") or ""),
+                dry_run=bool(values.get("dry_run", False)),
+            )
         elif operation_id in {"instructions.list", "instructions.check", "instructions.explain"}:
             payload = inspect_instructions(
                 target_root,
@@ -727,7 +802,12 @@ def apply_instruction_operation(*, target_root: Path, operation_id: str, values:
             "recovery_command": "agentic-workspace instructions check --target . --format json",
         }
     payload["operation_id"] = operation_id
-    payload["message"] = _render_text(payload)
+    if operation_id == "instructions.routes":
+        payload["message"] = "\n".join(str(item.get("id") or "") for item in payload.get("routes", []))
+    elif operation_id == "instructions.route-select":
+        payload["message"] = f"Semantic task route selection: {payload.get('status', 'unknown')}"
+    else:
+        payload["message"] = _render_text(payload)
     if operation_id == "instructions.check" and payload.get("status") == "invalid":
         payload["exit_status"] = 2
     if operation_id == "instructions.create" and values.get("adaptation_mode"):

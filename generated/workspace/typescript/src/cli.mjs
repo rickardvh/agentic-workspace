@@ -9,7 +9,7 @@ import { writeSync } from 'node:fs';
 import { runGeneratedOperation } from './runtime.mjs';
 
 const supportedCommands = new Set(["agent-guidance", "assignment", "autopilot", "checkpoint", "config", "config-policy", "correction-event", "defaults", "doctor", "evaluation", "external-evidence-query", "external-evidence-submit", "external-intent", "final-response", "implement", "init", "install", "instructions", "memory", "modules", "note-delegation-outcome", "ownership", "planning", "preflight", "prompt", "proof", "reconcile", "report", "session-log", "setup", "skills", "start", "status", "summary", "system-intent", "uninstall", "upgrade", "work-thread"]);
-const nativeOperationIds = new Set(["agent-guidance.delete", "agent-guidance.edit", "agent-guidance.merge", "agent-guidance.promote", "agent-guidance.retire", "agent-guidance.revalidate", "agent-guidance.split", "agent-guidance.supersede", "agent-guidance.suppress", "agent-guidance.weaken", "assignment.admit", "assignment.cleanup", "assignment.close", "assignment.dispatch", "assignment.export", "assignment.import", "assignment.integrate", "assignment.override", "assignment.reassign", "assignment.reject", "assignment.repair", "autopilot.run", "checkpoint.write", "config.policy-apply", "config.report", "correction-event.correct-dispute", "correction-event.identity-init", "correction-event.prune-compact", "correction-event.query", "correction-event.submit", "correction-event.withdraw-supersede", "defaults.report", "delegation-outcome.append", "doctor.report", "evaluation.authority-refresh", "evaluation.delivery-status", "evaluation.external-adapter-receipt", "evaluation.external-delivery", "evaluation.external-host-result-import", "evaluation.external-request", "evaluation.local-delivery", "evaluation.observe", "evaluation.prune", "evaluation.register", "evaluation.report-preview", "evaluation.retry", "evaluation.status", "evaluation.transition", "external-evidence.query", "external-evidence.submit", "external-intent.refresh-github", "final-response.admit", "implement.context", "init.lifecycle", "install.lifecycle", "instructions.check", "instructions.create", "instructions.explain", "instructions.list", "instructions.migrate", "memory.front-door", "modules.report", "ownership.report", "planning.front-door", "preflight.report", "prompt.init", "prompt.uninstall", "prompt.upgrade", "proof.report", "reconcile.report", "report.combined", "session-log.manage", "setup.guidance", "skills.report", "start.context", "status.report", "summary.report", "system-intent.sync", "uninstall.lifecycle", "upgrade.lifecycle", "work-thread.carry-inspect", "work-thread.carry-prune", "work-thread.carry-select", "work-thread.prune", "work-thread.select"]);
+const nativeOperationIds = new Set(["agent-guidance.delete", "agent-guidance.edit", "agent-guidance.merge", "agent-guidance.promote", "agent-guidance.retire", "agent-guidance.revalidate", "agent-guidance.split", "agent-guidance.supersede", "agent-guidance.suppress", "agent-guidance.weaken", "assignment.admit", "assignment.cleanup", "assignment.close", "assignment.dispatch", "assignment.export", "assignment.import", "assignment.integrate", "assignment.override", "assignment.reassign", "assignment.reject", "assignment.repair", "autopilot.run", "checkpoint.write", "config.policy-apply", "config.report", "correction-event.correct-dispute", "correction-event.identity-init", "correction-event.prune-compact", "correction-event.query", "correction-event.submit", "correction-event.withdraw-supersede", "defaults.report", "delegation-outcome.append", "doctor.report", "evaluation.authority-refresh", "evaluation.delivery-status", "evaluation.external-adapter-receipt", "evaluation.external-delivery", "evaluation.external-host-result-import", "evaluation.external-request", "evaluation.local-delivery", "evaluation.observe", "evaluation.prune", "evaluation.register", "evaluation.report-preview", "evaluation.retry", "evaluation.status", "evaluation.transition", "external-evidence.query", "external-evidence.submit", "external-intent.refresh-github", "final-response.admit", "implement.context", "init.lifecycle", "install.lifecycle", "instructions.check", "instructions.create", "instructions.explain", "instructions.list", "instructions.migrate", "instructions.route-select", "instructions.routes", "memory.front-door", "modules.report", "ownership.report", "planning.front-door", "preflight.report", "prompt.init", "prompt.uninstall", "prompt.upgrade", "proof.report", "reconcile.report", "report.combined", "session-log.manage", "setup.guidance", "skills.report", "start.context", "status.report", "summary.report", "system-intent.sync", "uninstall.lifecycle", "upgrade.lifecycle", "work-thread.carry-inspect", "work-thread.carry-prune", "work-thread.carry-select", "work-thread.prune", "work-thread.select"]);
 const commandDefinitions = [
   {
     "interface": {
@@ -7324,6 +7324,126 @@ const commandDefinitions = [
               ],
               "help": "Include the compiled instruction program.",
               "name": "verbose"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to current directory.",
+              "name": "target"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            }
+          ]
+        },
+        {
+          "help": "Discover repo-owned semantic task routes one branch or leaf at a time.",
+          "name": "routes",
+          "operation_ref": {
+            "id": "instructions.routes",
+            "path": "operations/instructions.routes.json"
+          },
+          "options": [
+            {
+              "default": "",
+              "flags": [
+                "--parent"
+              ],
+              "help": "Optional route branch to expand one level.",
+              "name": "parent"
+            },
+            {
+              "default": "",
+              "flags": [
+                "--exact"
+              ],
+              "help": "Optional known route leaf to inspect directly.",
+              "name": "exact"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to current directory.",
+              "name": "target"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            }
+          ]
+        },
+        {
+          "help": "Select existing semantic route facts for the resolved current work.",
+          "name": "select-route",
+          "operation_ref": {
+            "id": "instructions.route-select",
+            "path": "operations/instructions.route-select.json"
+          },
+          "options": [
+            {
+              "choices": [
+                "selected",
+                "none",
+                "unresolved"
+              ],
+              "flags": [
+                "--posture"
+              ],
+              "help": "Explicit semantic applicability posture.",
+              "name": "posture",
+              "required": true
+            },
+            {
+              "action": "append",
+              "default": [],
+              "flags": [
+                "--route"
+              ],
+              "help": "Existing route leaf. Repeat for multiple facets.",
+              "name": "route"
+            },
+            {
+              "default": "",
+              "flags": [
+                "--current-work-id"
+              ],
+              "help": "Optional exact current-work guard.",
+              "name": "current_work_id"
+            },
+            {
+              "flags": [
+                "--expect-source-revision"
+              ],
+              "help": "Exact source revision returned by route discovery.",
+              "name": "expected_source_revision",
+              "required": true
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--dry-run"
+              ],
+              "help": "Validate the selection without writing local state.",
+              "name": "dry_run"
             },
             {
               "flags": [

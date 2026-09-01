@@ -1867,7 +1867,7 @@
       },
       {
         "binding_kind": "runtime-facade-call",
-        "conformance_ref": "agent-guidance.promote.process, agent-guidance.edit.process, agent-guidance.merge.process, agent-guidance.split.process, agent-guidance.suppress.process, agent-guidance.revalidate.process, agent-guidance.weaken.process, agent-guidance.supersede.process, agent-guidance.retire.process, agent-guidance.delete.process, assignment.lifecycle.process, config.policy-apply.process, config.report.process, correction-event.identity-init.process, correction-event.submit.process, correction-event.query.process, correction-event.correct-dispute.process, correction-event.withdraw-supersede.process, correction-event.prune-compact.process, evaluation.lifecycle.process, instructions.list.process, instructions.create.process, instructions.check.process, instructions.explain.process, instructions.migrate.process, prompt.init.process, prompt.uninstall.process, prompt.upgrade.process, system-intent.sync.process",
+        "conformance_ref": "agent-guidance.promote.process, agent-guidance.edit.process, agent-guidance.merge.process, agent-guidance.split.process, agent-guidance.suppress.process, agent-guidance.revalidate.process, agent-guidance.weaken.process, agent-guidance.supersede.process, agent-guidance.retire.process, agent-guidance.delete.process, assignment.lifecycle.process, config.policy-apply.process, config.report.process, correction-event.identity-init.process, correction-event.submit.process, correction-event.query.process, correction-event.correct-dispute.process, correction-event.withdraw-supersede.process, correction-event.prune-compact.process, evaluation.lifecycle.process, instructions.list.process, instructions.create.process, instructions.check.process, instructions.explain.process, instructions.routes.process, instructions.route-select.process, instructions.migrate.process, prompt.init.process, prompt.uninstall.process, prompt.upgrade.process, system-intent.sync.process",
         "direct_edit_reasons_allowed": [
           "existing-primitive-bugfix",
           "new-primitive-implementation"
@@ -1927,6 +1927,8 @@
           "instructions.explain",
           "instructions.list",
           "instructions.migrate",
+          "instructions.route-select",
+          "instructions.routes",
           "external-evidence.query",
           "external-evidence.submit",
           "prompt.init",

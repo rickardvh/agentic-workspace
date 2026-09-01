@@ -1165,6 +1165,7 @@ def _protocol_activation_fingerprint(protocol: dict[str, Any]) -> tuple[str, ...
     for key in (
         "applies_to_paths",
         "applies_to_task_markers",
+        "applies_to_semantic_routes",
         "assurance_requirement_refs",
         "proof_profiles",
         "planning_refs",
@@ -1505,6 +1506,7 @@ def _load_manifest(*, target_root: Path) -> dict[str, Any]:
     activation_fields = {
         "applies_to_paths",
         "applies_to_task_markers",
+        "applies_to_semantic_routes",
         "assurance_requirement_refs",
         "proof_profiles",
         "planning_refs",
@@ -2161,6 +2163,7 @@ def _match_protocol(
     task_text: str | None,
     active_planning_record: dict[str, Any] | None,
     assurance_requirements: dict[str, Any] | None,
+    selected_semantic_routes: list[str] | None = None,
 ) -> tuple[bool, list[str], list[dict[str, Any]]]:
     applies_because: list[str] = []
     match_signals: list[dict[str, Any]] = []
@@ -2210,6 +2213,24 @@ def _match_protocol(
                     "matched": marker_text,
                     "reason": reason,
                     "agent_decision_required": True,
+                }
+            )
+    from agentic_workspace.semantic_task_routes import route_selector_matches
+
+    for selector in _list_payload(protocol.get("applies_to_semantic_routes")):
+        selector_text = str(selector).strip()
+        if selector_text and route_selector_matches(selector_text, selected_semantic_routes or []):
+            reason = f"semantic task route matched {selector_text}"
+            applies_because.append(reason)
+            match_signals.append(
+                {
+                    "signal_type": "semantic_task_route",
+                    "authority": "agent-selected-current-task-fact",
+                    "priority": "structured",
+                    "value": selector_text,
+                    "matched": selector_text,
+                    "reason": reason,
+                    "authority_effect": "applicability-only",
                 }
             )
     planning_refs = set(_planning_refs(active_planning_record))
@@ -2598,6 +2619,14 @@ def verification_report_payload(
     if target_root is None:
         return {"kind": "agentic-workspace/verification/v1", "status": "unavailable", "configured": False}
     manifest = _load_manifest(target_root=target_root)
+    from agentic_workspace.semantic_task_routes import current_semantic_task_route_fact
+
+    semantic_route_fact = current_semantic_task_route_fact(target_root)
+    selected_semantic_routes = (
+        [str(item) for item in semantic_route_fact.get("routes", [])]
+        if semantic_route_fact.get("status") == "current" and semantic_route_fact.get("posture") == "selected"
+        else []
+    )
     configured_protocols = manifest["protocols"]
     configured_scenarios = manifest["scenarios"]
     validation_evidence_admissions = _validation_evidence_admissions(target_root)
@@ -2632,6 +2661,7 @@ def verification_report_payload(
             task_text=task_text,
             active_planning_record=active_planning_record,
             assurance_requirements=assurance_requirements,
+            selected_semantic_routes=selected_semantic_routes,
         )
         match_records.append(
             {

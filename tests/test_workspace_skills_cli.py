@@ -1052,8 +1052,21 @@ def test_workspace_skill_hierarchy_activation_matrix(tmp_path: Path, capsys) -> 
         assert "Default visible output is the smallest decision-relevant delta" in skill_text
 
 
-def test_implement_open_issues_keeps_startup_authoritative_and_recommendations_bounded(capsys) -> None:
+def test_implement_open_issues_keeps_startup_authoritative_and_recommendations_bounded(capsys, monkeypatch) -> None:
     target = Path(__file__).resolve().parents[1]
+    route_state = {"posture": "none", "routes": []}
+    monkeypatch.setattr(
+        workspace_runtime_core,
+        "current_semantic_task_route_fact",
+        lambda _target: {
+            "kind": "agentic-workspace/semantic-task-route-fact/v1",
+            "status": "current",
+            "current_work_id": "test-work",
+            "source_revision": "sha256:" + "1" * 64,
+            "authority_effect": "applicability-only",
+            **route_state,
+        },
+    )
 
     argv = ["skills", "--target", str(target), "--task", "Implement all open GitHub issues", "--format", "json"]
     assert cli.main(argv) == 0
@@ -1062,9 +1075,7 @@ def test_implement_open_issues_keeps_startup_authoritative_and_recommendations_b
 
     assert len(rendered.encode("utf-8")) < 24 * 1024
     assert payload["recommendations"][0]["id"] == "workspace-startup"
-    issue_creation = next(item for item in payload["recommendations"] if item["id"] == "github-issue-creation")
-    assert issue_creation["activation_evidence_class"] == "lexical-candidate"
-    assert issue_creation["recommendation_authority"] == "candidate-only"
+    assert "github-issue-creation" not in {item["id"] for item in payload["recommendations"]}
     assert "consumer_projections" not in payload["planning_route_decision"]
     assert payload["planning_route_decision"]["detail_command"].endswith("--select planning_safety_gate --format json")
 
@@ -1073,6 +1084,7 @@ def test_implement_open_issues_keeps_startup_authoritative_and_recommendations_b
     assert detail["kind"] == "agentic-workspace/selected-output/v1"
     assert detail["values"]["recommendations"][0]["activation_hints"]
 
+    route_state.update({"posture": "selected", "routes": ["github/issues/create"]})
     assert (
         cli.main(
             [
@@ -1088,10 +1100,11 @@ def test_implement_open_issues_keeps_startup_authoritative_and_recommendations_b
         == 0
     )
     specialist_payload = json.loads(capsys.readouterr().out)
-    specialist = specialist_payload["recommendations"][0]
-    assert specialist["id"] == "github-issue-creation"
-    assert specialist["activation_evidence_class"] == "intent-level"
-    assert specialist["recommendation_authority"] == "admitted"
+    specialists = specialist_payload["recommendations"][:2]
+    assert [item["id"] for item in specialists] == ["github-issue-shaping", "github-issue-creation"]
+    assert {item["activation_evidence_class"] for item in specialists} == {"semantic-task-route"}
+    assert {item["recommendation_authority"] for item in specialists} == {"structured-applicability"}
+    assert all("selected semantic task route: github/issues/create" in item["reasons"] for item in specialists)
 
 
 def test_review_skill_routes_only_to_independent_external_reviewer(capsys) -> None:

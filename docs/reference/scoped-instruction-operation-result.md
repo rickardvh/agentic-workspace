@@ -11,8 +11,8 @@ Structured result shared by generated scoped Markdown instruction operations.
 | Field | Type | Required | Default | Description | Examples | Annotations |
 | --- | --- | --- | --- | --- | --- | --- |
 | (root) | object | yes |  | Structured result shared by generated scoped Markdown instruction operations. |  | x-agentic-workspace-doc-role: "public-contract" |
-| `kind` | enum `"agentic-workspace/scoped-instruction-inspection/v1"`, `"agentic-workspace/scoped-instruction-create-result/v1"`, `"agentic-workspace/scoped-instruction-adaptation-result/v1"`, `"agentic-workspace/scoped-instruction-migration-advice/v1"`, `"agentic-workspace/scoped-instruction-error/v1"` | yes |  | Versioned result-envelope identity. |  |  |
-| `operation_id` | enum `"instructions.list"`, `"instructions.create"`, `"instructions.check"`, `"instructions.explain"`, `"instructions.migrate"` | yes |  | Generated instruction operation that produced the result. |  |  |
+| `kind` | enum `"agentic-workspace/scoped-instruction-inspection/v1"`, `"agentic-workspace/scoped-instruction-create-result/v1"`, `"agentic-workspace/scoped-instruction-adaptation-result/v1"`, `"agentic-workspace/scoped-instruction-migration-advice/v1"`, `"agentic-workspace/semantic-task-route-discovery/v1"`, `"agentic-workspace/semantic-task-route-selection/v1"`, `"agentic-workspace/scoped-instruction-error/v1"` | yes |  | Versioned result-envelope identity. |  |  |
+| `operation_id` | enum `"instructions.list"`, `"instructions.create"`, `"instructions.check"`, `"instructions.explain"`, `"instructions.migrate"`, `"instructions.routes"`, `"instructions.route-select"` | yes |  | Generated instruction operation that produced the result. |  |  |
 | `status` | string | yes |  | Outcome status in scoped-instruction vocabulary. |  |  |
 | `message` | string | no |  | Human-readable rendering of the result. |  |  |
 | `exit_status` | integer | no |  | Non-zero process status requested for invalid or rejected results. |  |  |

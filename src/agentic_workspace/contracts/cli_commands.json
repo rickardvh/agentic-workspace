@@ -93,6 +93,37 @@
         },
         {
           "audience": "ordinary_host_repo",
+          "classification_note": "progressive semantic task-route discovery",
+          "help": "Discover repo-owned semantic task routes one branch or leaf at a time.",
+          "mutates_state": false,
+          "name": "routes",
+          "options": [
+            {"default": "", "flags": ["--parent"], "help": "Optional route branch to expand one level.", "name": "parent"},
+            {"default": "", "flags": ["--exact"], "help": "Optional known route leaf to inspect directly.", "name": "exact"},
+            {"flags": ["--target"], "help": "Target repository path. Defaults to current directory.", "name": "target"}
+          ],
+          "role": "core_context_router",
+          "uses_option_groups": ["format"]
+        },
+        {
+          "audience": "ordinary_host_repo",
+          "classification_note": "authority-neutral current-task route fact selection",
+          "help": "Select existing semantic route facts for the resolved current work.",
+          "mutates_state": true,
+          "name": "select-route",
+          "options": [
+            {"choices": ["selected", "none", "unresolved"], "flags": ["--posture"], "help": "Explicit semantic applicability posture.", "name": "posture", "required": true},
+            {"action": "append", "default": [], "flags": ["--route"], "help": "Existing route leaf. Repeat for multiple facets.", "name": "route"},
+            {"default": "", "flags": ["--current-work-id"], "help": "Optional exact current-work guard.", "name": "current_work_id"},
+            {"flags": ["--expect-source-revision"], "help": "Exact source revision returned by route discovery.", "name": "expected_source_revision", "required": true},
+            {"action": "store_true", "flags": ["--dry-run"], "help": "Validate the selection without writing local state.", "name": "dry_run"},
+            {"flags": ["--target"], "help": "Target repository path. Defaults to current directory.", "name": "target"}
+          ],
+          "role": "core_context_router",
+          "uses_option_groups": ["format"]
+        },
+        {
+          "audience": "ordinary_host_repo",
           "classification_note": "non-destructive static-instruction migration advice",
           "help": "Give non-destructive incremental migration guidance.",
           "mutates_state": false,

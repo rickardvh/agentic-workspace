@@ -13,7 +13,21 @@ def _matches(path: str, patterns: list[str]) -> bool:
     return any(fnmatch.fnmatch(normalized, pattern) for pattern in patterns)
 
 
-def _curate(root: Path, *, task: str, paths: list[str]) -> dict[str, Any]:
+def _route_matches(selector: str, selected_routes: set[str]) -> bool:
+    normalized = selector.strip().strip("/")
+    if normalized.endswith("/**"):
+        prefix = normalized.removesuffix("/**")
+        return any(route == prefix or route.startswith(prefix + "/") for route in selected_routes)
+    return normalized in selected_routes
+
+
+def _curate(
+    root: Path,
+    *,
+    task: str,
+    paths: list[str],
+    semantic_route_fact: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     manifest_path = root / ".agentic-workspace/memory/repo/manifest.toml"
     try:
         manifest = tomllib.loads(manifest_path.read_text(encoding="utf-8"))
@@ -24,6 +38,9 @@ def _curate(root: Path, *, task: str, paths: list[str]) -> dict[str, Any]:
     selected: list[dict[str, Any]] = []
     stale_count = 0
     review_only_count = 0
+    route_fact = semantic_route_fact or {}
+    route_fact_current = route_fact.get("status") == "current" and route_fact.get("posture") == "selected"
+    selected_routes = {str(item) for item in route_fact.get("routes", [])} if route_fact_current else set()
     task_terms = {term.strip("#.,:;()[]{}").lower() for term in task.split() if len(term.strip("#.,:;()[]{}")) > 2}
     for note_path, raw in notes.items():
         if not isinstance(raw, dict):
@@ -34,14 +51,20 @@ def _curate(root: Path, *, task: str, paths: list[str]) -> dict[str, Any]:
         canonical = str(raw.get("canonical_home") or note_path)
         routes = [str(item) for item in raw.get("routes_from", []) if str(item)]
         stale_when = [str(item) for item in raw.get("stale_when", []) if str(item)]
+        semantic_routes = [str(item) for item in raw.get("semantic_routes", []) if str(item)]
         matched = [path for path in paths if _matches(path, routes)]
         stale = [path for path in paths if _matches(path, stale_when)]
         note_terms = {
             str(value).lower() for value in [raw.get("note_type"), *raw.get("subsystems", []), *raw.get("surfaces", [])] if str(value)
         }
         task_matched = bool(task_terms & {part for term in note_terms for part in term.replace("-", " ").split()})
+        matched_semantic_routes = [selector for selector in semantic_routes if _route_matches(selector, selected_routes)]
         routing_only = bool(raw.get("routing_only")) or canonical == ".agentic-workspace/memory/repo/index.md"
-        if routing_only or matched or task_matched:
+        # A route declaration replaces lexical task matching for that note. Legacy
+        # task terms remain advisory candidate discovery only for unmigrated notes.
+        semantic_relevant = bool(matched_semantic_routes)
+        legacy_task_relevant = task_matched and not semantic_routes
+        if routing_only or matched or semantic_relevant or legacy_task_relevant:
             stale_count += bool(stale)
             selected.append(
                 {
@@ -51,6 +74,14 @@ def _curate(root: Path, *, task: str, paths: list[str]) -> dict[str, Any]:
                     "task_relevance": str(raw.get("task_relevance") or ""),
                     "routing_only": routing_only,
                     "matched_paths": sorted(matched),
+                    "matched_semantic_routes": sorted(matched_semantic_routes),
+                    "relevance_evidence": "semantic-task-route"
+                    if semantic_relevant
+                    else "path"
+                    if matched
+                    else "routing-baseline"
+                    if routing_only
+                    else "legacy-task-hint",
                     "stale_when_matched_paths": sorted(stale),
                 }
             )
@@ -64,6 +95,13 @@ def _curate(root: Path, *, task: str, paths: list[str]) -> dict[str, Any]:
         "selected_notes": selected,
         "stale_when_match_count": stale_count,
         "review_only_excluded_count": review_only_count,
+        "semantic_task_routes": {
+            "status": str(route_fact.get("status") or "missing"),
+            "posture": str(route_fact.get("posture") or "unresolved"),
+            "routes": sorted(selected_routes),
+            "authority_effect": "relevance-only",
+        },
+        "legacy_task_hint_disposition": "advisory-candidate-discovery-for-unmigrated-notes",
         "context_budget": {"max_selected_notes": 12, "actual_selected_notes": len(selected)},
         "repair_operation_id": "memory.route.report",
     }
@@ -75,8 +113,15 @@ def memory_context_authority_owner_operation(**kwargs: Any) -> dict[str, Any]:
     if kwargs.get("source_specific"):
         raise ValueError("memory owner operation derives semantic evidence from its canonical subsystem")
     from agentic_workspace._context_authority_owner_protocol import _issue_owner_result
+    from agentic_workspace.semantic_task_routes import current_semantic_task_route_fact
 
-    curation = _curate(kwargs["root"], task=str(kwargs.get("task") or ""), paths=list(kwargs.get("paths") or []))
+    route_fact = current_semantic_task_route_fact(kwargs["root"])
+    curation = _curate(
+        kwargs["root"],
+        task=str(kwargs.get("task") or ""),
+        paths=list(kwargs.get("paths") or []),
+        semantic_route_fact=route_fact,
+    )
     current = curation["status"] == "selected"
     status = "current" if current else "stale"
     reason = "" if current else f"memory-curation-{curation['status']}"

@@ -34,13 +34,13 @@
     },
     {
       "id": "issue-2929-2930-semantic-task-routes",
-      "title": "issue-2929-2930-semantic-task-routes",
+      "title": "Add semantic task routes and issue-creation dogfood",
       "status": "planned",
       "execplan_ref": ".agentic-workspace/planning/execplans/issue-2929-2930-semantic-task-routes.plan.json",
       "depends_on": [
         "issue-2926-2928-planning-repairs"
       ],
-      "purpose_for_lane": "Implement #2929-#2930 semantic task-route behavior after this slice reaches target integration."
+      "purpose_for_lane": "Implement #2929-#2930 semantic task-route behavior after the preceding Planning-repair slice reaches target integration."
     },
     {
       "id": "pr-2939-test-assertion-correction",

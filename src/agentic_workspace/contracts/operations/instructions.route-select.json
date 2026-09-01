@@ -1,0 +1,34 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "instructions.route-select",
+  "command_surface": {"command": "instructions", "subcommand": "select-route", "format_option": "format"},
+  "summary": "Select current-work-bound semantic task-route applicability facts with source revision guards.",
+  "classification": "local-record-append",
+  "inputs": [
+    {"name": "target", "source": "cli-option", "required": false},
+    {"name": "format", "source": "cli-option", "required": false},
+    {"name": "posture", "source": "cli-option", "required": true},
+    {"name": "route", "source": "cli-option", "required": false},
+    {"name": "current_work_id", "source": "cli-option", "required": false},
+    {"name": "expected_source_revision", "source": "cli-option", "required": true},
+    {"name": "dry_run", "source": "cli-option", "required": false}
+  ],
+  "output": {"kind": "json", "schema_ref": "schemas/scoped_instruction_operation_result.schema.json"},
+  "effects": {"read_only": false, "destructive": false, "idempotent": true, "writes_repo_state": false, "requires_preflight_gate": false},
+  "locality": {"requires_repo": true, "network": "forbidden", "outside_repo_writes": "forbidden"},
+  "reads": [{"surface": "canonical skill REGISTRY.json files", "required": true}],
+  "writes": [{"surface": ".agentic-workspace/local/current-task-routes.json", "required": true, "when": "revision and current-work guards pass and dry_run is false"}],
+  "steps": [
+    {"id": "resolve_root", "uses": "workspace.target-root.resolve", "description": "Resolve the target root."},
+    {"id": "execute_instruction_operation", "uses": "instructions.execute", "description": "Validate and write the authority-neutral route fact."},
+    {"id": "emit_output", "uses": "output.emit", "description": "Emit the guarded selection result."}
+  ],
+  "ir_plan": {"status": "complete", "steps": [
+    {"id": "resolve_root", "uses": "workspace.target-root.resolve", "description": "resolve_root", "outputs": ["target_root"]},
+    {"id": "execute_instruction_operation", "uses": "instructions.execute", "description": "execute_instruction_operation", "outputs": ["result"]},
+    {"id": "emit_output", "uses": "output.emit", "description": "emit_output", "outputs": ["emitted"]}
+  ]},
+  "guards": ["Reject stale route-source revisions and mismatched current work.", "Route selection supplies applicability only and grants no authority."],
+  "proof": ["instructions.route-select.process", "selected, none, unresolved, stale, replay, and current-work-switch fixtures"],
+  "migration_status": "runtime-consumed"
+}

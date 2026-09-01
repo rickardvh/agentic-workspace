@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/semantic_task_routes.schema.json",
+  "title": "Semantic task route contracts",
+  "description": "Repo-owned route identities and agent-selected current-work applicability facts. Routes do not grant mutation, proof, review, policy, or claim authority.",
+  "x-agentic-workspace-doc-role": "public-contract",
+  "$defs": {
+    "route_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*(/[a-z0-9][a-z0-9-]*)+$"
+    },
+    "route_declaration": {
+      "type": "object",
+      "required": ["id", "match", "capabilities"],
+      "properties": {
+        "id": {"$ref": "#/$defs/route_id"},
+        "description": {"type": "string"},
+        "match": {"enum": ["exact", "subtree"]},
+        "capabilities": {"type": "array", "items": {"type": "string", "pattern": "^skill:[a-z0-9][a-z0-9-]*$"}, "uniqueItems": true},
+        "capability_bindings": {"type": "array", "items": {"type": "object"}},
+        "sources": {"type": "array", "items": {"type": "object"}}
+      },
+      "additionalProperties": false
+    },
+    "current_task_fact": {
+      "type": "object",
+      "required": ["kind", "posture", "routes", "task_identity", "current_work_id", "source_revision", "provenance", "authority_effect"],
+      "properties": {
+        "kind": {"const": "agentic-workspace/semantic-task-route-fact/v1"},
+        "posture": {"enum": ["selected", "none", "unresolved"]},
+        "routes": {"type": "array", "items": {"$ref": "#/$defs/route_id"}, "uniqueItems": true},
+        "task_identity": {
+          "type": "object",
+          "required": ["kind", "id"],
+          "properties": {"kind": {"const": "current-work"}, "id": {"type": "string", "minLength": 1}},
+          "additionalProperties": false
+        },
+        "current_work_id": {"type": "string", "minLength": 1},
+        "source_revision": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "provenance": {"const": "agent-selected"},
+        "authority_effect": {"const": "applicability-only"}
+      },
+      "allOf": [
+        {"if": {"properties": {"posture": {"const": "selected"}}}, "then": {"properties": {"routes": {"minItems": 1}}}},
+        {"if": {"properties": {"posture": {"enum": ["none", "unresolved"]}}}, "then": {"properties": {"routes": {"maxItems": 0}}}}
+      ],
+      "additionalProperties": false
+    }
+  },
+  "oneOf": [
+    {"$ref": "#/$defs/current_task_fact"},
+    {
+      "type": "object",
+      "required": ["kind", "status", "source_revision", "routes", "authority_effect"],
+      "properties": {
+        "kind": {"const": "agentic-workspace/semantic-task-route-catalogue/v1"},
+        "status": {"enum": ["current", "invalid"]},
+        "source_revision": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "routes": {"type": "array", "items": {"$ref": "#/$defs/route_declaration"}},
+        "route_count": {"type": "integer", "minimum": 0},
+        "diagnostics": {"type": "array", "items": {"type": "object"}},
+        "ownership": {"const": "derived-from-canonical-skill-registries"},
+        "authority_effect": {"const": "applicability-only"}
+      },
+      "additionalProperties": false
+    }
+  ]
+}

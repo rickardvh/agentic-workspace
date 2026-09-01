@@ -686,6 +686,18 @@
     },
     {
       "adapter_kind": "process",
+      "id": "instructions.routes.process",
+      "operation_id": "instructions.routes",
+      "path": "conformance/instructions.routes.process.json"
+    },
+    {
+      "adapter_kind": "process",
+      "id": "instructions.route-select.process",
+      "operation_id": "instructions.route-select",
+      "path": "conformance/instructions.route-select.process.json"
+    },
+    {
+      "adapter_kind": "process",
       "id": "instructions.migrate.process",
       "operation_id": "instructions.migrate",
       "path": "conformance/instructions.migrate.process.json"
