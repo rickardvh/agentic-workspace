@@ -1148,7 +1148,7 @@
       "notes": "Disposition map for issues #2929, #2930, and their consumer/consolidation slices.",
       "owner": "workspace-maintainer-checks",
       "pattern": "docs/maintainer/semantic-task-route-disposition.json",
-      "schema_or_validator": "tests/test_scoped_instructions.py::test_semantic_task_route_disposition_records_subtractive_consumer_migrations",
+      "schema_or_validator": "validator: uv run pytest tests/test_scoped_instructions.py::test_semantic_task_route_disposition_records_subtractive_consumer_migrations",
       "status": "typed-validator-backed",
       "storage_class": "diagnostic-fixture"
     },

@@ -92,17 +92,72 @@ def test_unstructured_files_are_ignored() -> None:
     assert findings == []
 
 
-def test_changed_path_inventory_escalates_when_inventory_authority_changes(monkeypatch) -> None:
-    calls: list[str] = []
+def test_inventory_authority_patch_subject_isolates_ambient_deletion_without_weakening_full_audit(tmp_path: Path, monkeypatch) -> None:
+    inventory = {
+        "entries": [
+            {
+                "pattern": "*.json",
+                "format": "json",
+                "owner": "fixture",
+                "status": "typed-validator-backed",
+                "schema_or_validator": "scripts/check/fixture_validator.py",
+                "storage_class": "source-of-truth",
+                "checked_in_justification": "fixture",
+                "editable_by_agents": True,
+                "generated": False,
+                "notes": "Fixture entry.",
+            }
+        ],
+        "generated_mirrors": [],
+    }
+    monkeypatch.setattr(check_structured_file_inventory, "load_inventory", lambda root=tmp_path: inventory)
+    monkeypatch.setattr(check_structured_file_inventory, "validate_inventory_shape", lambda payload, root=tmp_path: [])
 
-    def fake_full_inventory_findings():
-        calls.append("full")
-        return []
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    checker = tmp_path / "scripts/check/check_structured_file_inventory.py"
+    checker.parent.mkdir(parents=True)
+    checker.write_text("# baseline\n", encoding="utf-8")
+    proposed = tmp_path / "known.json"
+    proposed.write_text('{"state":"baseline"}\n', encoding="utf-8")
+    ambient = tmp_path / "ambient.json"
+    ambient.write_text('{"state":"ambient"}\n', encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(
+        ["git", "-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "baseline"],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
 
-    monkeypatch.setattr(check_structured_file_inventory, "inventory_findings", fake_full_inventory_findings)
+    checker.write_text("# proposed authority change\n", encoding="utf-8")
+    proposed.write_text('{"state":"proposed"}\n', encoding="utf-8")
+    ambient.unlink()
+    changed = ["scripts/check/check_structured_file_inventory.py", "known.json"]
+    status_before = subprocess.run(["git", "status", "--porcelain=v1", "-z"], cwd=tmp_path, check=True, capture_output=True).stdout
 
-    assert check_structured_file_inventory.changed_path_inventory_findings(["scripts/check/check_structured_file_inventory.py"]) == []
-    assert calls == ["full"]
+    patch_findings = check_structured_file_inventory.changed_path_inventory_findings(changed, base_ref="HEAD", root=tmp_path)
+
+    assert patch_findings == []
+    assert subprocess.run(["git", "status", "--porcelain=v1", "-z"], cwd=tmp_path, check=True, capture_output=True).stdout == status_before
+    ambient_findings = check_structured_file_inventory.ambient_structured_state_findings(changed, root=tmp_path)
+    assert [finding.path for finding in ambient_findings] == ["ambient.json"]
+    full_findings = check_structured_file_inventory.inventory_findings(root=tmp_path)
+    assert len(full_findings) == 1
+    assert full_findings[0].path == "ambient.json"
+    assert "git add -A" in full_findings[0].message
+
+    invalid = tmp_path / "unclassified.toml"
+    invalid.write_text('state = "invalid"\n', encoding="utf-8")
+    invalid_findings = check_structured_file_inventory.changed_path_inventory_findings(
+        [*changed, "unclassified.toml"], base_ref="HEAD", root=tmp_path
+    )
+    assert any(finding.path == "unclassified.toml" and "not classified" in finding.message for finding in invalid_findings)
+    invalid.unlink()
+
+    assert check_structured_file_inventory.changed_path_inventory_findings([*changed, "ambient.json"], base_ref="HEAD", root=tmp_path) == []
+    subprocess.run(["git", "restore", "ambient.json"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    assert check_structured_file_inventory.changed_path_inventory_findings(changed, base_ref="HEAD", root=tmp_path) == []
 
 
 def test_changed_path_inventory_checks_narrow_structured_paths(monkeypatch) -> None:

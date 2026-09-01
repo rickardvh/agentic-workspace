@@ -35,12 +35,14 @@
     {
       "id": "issue-2929-2930-semantic-task-routes",
       "title": "Add semantic task routes and issue-creation dogfood",
-      "status": "planned",
+      "status": "integration-pending",
       "execplan_ref": ".agentic-workspace/planning/execplans/issue-2929-2930-semantic-task-routes.plan.json",
       "depends_on": [
         "issue-2926-2928-planning-repairs"
       ],
       "purpose_for_lane": "Implement #2929-#2930 semantic task-route behavior after the preceding Planning-repair slice reaches target integration."
+      "proof": ".agentic-workspace/verification/proof-decision.json",
+      "residual_after_slice": "none"
     },
     {
       "id": "pr-2939-test-assertion-correction",
@@ -53,7 +55,7 @@
       "residual_after_slice": "none"
     }
   ],
-  "current_slice": "pr-2939-test-assertion-correction",
+  "current_slice": "issue-2929-2930-semantic-task-routes",
   "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
   "proof_strategy": "Each child PR proves its issue acceptance criteria; the final stack replays the issue-creation dogfood path.",
   "proof_aggregation": {
@@ -64,7 +66,8 @@
     "known_gaps": [
       "issue-2923-2925-command-evidence-blockers awaits target integration via .agentic-workspace/planning/integration-proposals/issue-2923-2925-command-evidence-blockers-archive-owner.integration-proposal.json.",
       "issue-2926-2928-planning-repairs awaits target integration via .agentic-workspace/planning/integration-proposals/issue-2926-2928-planning-repairs-archive-owner.integration-proposal.json.",
-      "pr-2939-test-assertion-correction awaits target integration via .agentic-workspace/planning/integration-proposals/pr-2939-test-assertion-correction-archive-owner.integration-proposal.json."
+      "pr-2939-test-assertion-correction awaits target integration via .agentic-workspace/planning/integration-proposals/pr-2939-test-assertion-correction-archive-owner.integration-proposal.json.",
+      "issue-2929-2930-semantic-task-routes awaits target integration via .agentic-workspace/planning/integration-proposals/issue-2929-2930-semantic-task-routes-archive-owner.integration-proposal.json."
     ]
   },
   "residual_lane_work": "none",
@@ -72,7 +75,7 @@
   "parent_close_permission": "do-not-close-parent",
   "closeout_state": {
     "status": "open",
-    "summary": "pr-2939-test-assertion-correction is feature-complete and awaits target integration proposal pr-2939-test-assertion-correction-archive-owner.",
+    "summary": "issue-2929-2930-semantic-task-routes is feature-complete and awaits target integration proposal issue-2929-2930-semantic-task-routes-archive-owner.",
     "residual_work": "none",
     "next_owner": "target integration authority"
   },

@@ -2,9 +2,15 @@ from __future__ import annotations
 
 import argparse
 import fnmatch
+import io
 import json
+import shutil
 import subprocess
 import sys
+import tarfile
+import tempfile
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path, PurePosixPath
@@ -14,8 +20,10 @@ from jsonschema import Draft202012Validator
 from jsonschema import exceptions as jsonschema_exceptions
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-INVENTORY_PATH = REPO_ROOT / "src" / "agentic_workspace" / "contracts" / "structured_file_inventory.json"
-SCHEMA_PATH = REPO_ROOT / "src" / "agentic_workspace" / "contracts" / "schemas" / "structured_file_inventory.schema.json"
+INVENTORY_RELATIVE_PATH = Path("src/agentic_workspace/contracts/structured_file_inventory.json")
+SCHEMA_RELATIVE_PATH = Path("src/agentic_workspace/contracts/schemas/structured_file_inventory.schema.json")
+INVENTORY_PATH = REPO_ROOT / INVENTORY_RELATIVE_PATH
+SCHEMA_PATH = REPO_ROOT / SCHEMA_RELATIVE_PATH
 STRUCTURED_SUFFIXES = frozenset({".json", ".toml", ".yaml", ".yml"})
 GENERATED_MIRROR_REQUIRED_PATHS = frozenset(
     {
@@ -74,6 +82,14 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "the checker escalates to the full audit."
         ),
     )
+    parser.add_argument(
+        "--base-ref",
+        default="",
+        help=(
+            "With --changed, construct an isolated proof subject from this Git baseline plus the explicit changed paths. "
+            "Inventory-authority changes still receive a broad audit without adopting unrelated live-worktree dirt."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -97,16 +113,16 @@ def _structured_format(path: str) -> str | None:
     return None
 
 
-def load_inventory() -> dict[str, Any]:
-    return json.loads(INVENTORY_PATH.read_text(encoding="utf-8"))
+def load_inventory(root: Path = REPO_ROOT) -> dict[str, Any]:
+    return json.loads((root / INVENTORY_RELATIVE_PATH).read_text(encoding="utf-8"))
 
 
-def load_schema() -> dict[str, Any]:
-    return json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+def load_schema(root: Path = REPO_ROOT) -> dict[str, Any]:
+    return json.loads((root / SCHEMA_RELATIVE_PATH).read_text(encoding="utf-8"))
 
 
-def validate_inventory_shape(inventory: dict[str, Any]) -> list[Finding]:
-    schema = load_schema()
+def validate_inventory_shape(inventory: dict[str, Any], root: Path = REPO_ROOT) -> list[Finding]:
+    schema = load_schema(root)
     errors = sorted(Draft202012Validator(schema).iter_errors(inventory), key=lambda error: list(error.path))
     findings: list[Finding] = []
     for error in errors:
@@ -256,13 +272,13 @@ def _review_audit_retention_findings(path: str, payload: dict[str, Any]) -> list
     return []
 
 
-def _guardrail_findings(paths: list[str], entry: dict[str, Any]) -> list[Finding]:
+def _guardrail_findings(paths: list[str], entry: dict[str, Any], *, root: Path = REPO_ROOT) -> list[Finding]:
     guardrails = entry.get("guardrails")
     if not isinstance(guardrails, dict):
         return []
     findings: list[Finding] = []
     for path in _matched_files(paths, entry):
-        full_path = REPO_ROOT / path
+        full_path = root / path
         max_bytes = guardrails.get("max_bytes")
         if isinstance(max_bytes, int) and full_path.exists() and full_path.stat().st_size > max_bytes:
             findings.append(
@@ -445,7 +461,7 @@ def _entry_routes(entry: dict[str, Any]) -> set[str]:
     return routes
 
 
-def storage_policy_findings(paths: list[str], inventory: dict[str, Any]) -> list[Finding]:
+def storage_policy_findings(paths: list[str], inventory: dict[str, Any], *, root: Path = REPO_ROOT) -> list[Finding]:
     findings: list[Finding] = []
     for index, entry in enumerate(inventory["entries"]):
         location = f"{INVENTORY_PATH.relative_to(REPO_ROOT).as_posix()}#entries[{index}]"
@@ -477,7 +493,7 @@ def storage_policy_findings(paths: list[str], inventory: dict[str, Any]) -> list
             )
         if storage_class in SOURCE_CLASSES and entry["generated"]:
             findings.append(Finding(path=location, message=f"{storage_class} entries must not be marked generated"))
-        findings.extend(_guardrail_findings(paths, entry))
+        findings.extend(_guardrail_findings(paths, entry, root=root))
     return findings
 
 
@@ -522,7 +538,9 @@ def merge_safety_findings(paths: list[str], inventory: dict[str, Any], *, root: 
     return findings
 
 
-def generated_mirror_policy_findings(paths: list[str], inventory: dict[str, Any]) -> list[Finding]:
+def generated_mirror_policy_findings(
+    paths: list[str], inventory: dict[str, Any], *, root: Path = REPO_ROOT
+) -> list[Finding]:
     mirrors = inventory.get("generated_mirrors", [])
     findings: list[Finding] = []
     if not isinstance(mirrors, list):
@@ -545,7 +563,7 @@ def generated_mirror_policy_findings(paths: list[str], inventory: dict[str, Any]
         max_bytes = mirror.get("max_bytes")
         if isinstance(max_bytes, int):
             for path in matched:
-                full_path = REPO_ROOT / path
+                full_path = root / path
                 if full_path.exists() and full_path.stat().st_size > max_bytes:
                     findings.append(Finding(path=path, message=f"generated mirror exceeds max_bytes={max_bytes}"))
 
@@ -587,39 +605,148 @@ def _requires_full_inventory_audit(paths: list[str]) -> bool:
     return bool(changed.intersection(FULL_INVENTORY_AUTHORITY_PATHS))
 
 
+def _git_tree_files(base_ref: str, *, root: Path = REPO_ROOT) -> list[str]:
+    result = subprocess.run(
+        ["git", "ls-tree", "-r", "--name-only", "-z", base_ref],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+    return sorted(_as_posix(path.decode("utf-8")) for path in result.stdout.split(b"\0") if path)
+
+
+def _patch_subject_paths(*, base_ref: str, changed_paths: list[str], root: Path = REPO_ROOT) -> list[str]:
+    subject_paths = set(_git_tree_files(base_ref, root=root))
+    for path in _normalize_changed_paths(changed_paths):
+        source = root / path
+        if source.is_file() or source.is_symlink():
+            subject_paths.add(path)
+        else:
+            subject_paths.discard(path)
+    return sorted(subject_paths)
+
+
+def _safe_subject_path(subject_root: Path, path: str) -> Path:
+    candidate = (subject_root / _as_posix(path)).resolve()
+    if not candidate.is_relative_to(subject_root.resolve()):
+        raise ValueError(f"patch subject path escapes repository root: {path}")
+    return candidate
+
+
+@contextmanager
+def isolated_patch_subject(
+    *, base_ref: str, changed_paths: list[str], root: Path = REPO_ROOT
+) -> Iterator[tuple[Path, list[str]]]:
+    archive = subprocess.run(
+        ["git", "archive", "--format=tar", base_ref],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+    with tempfile.TemporaryDirectory(prefix="aw-structured-patch-") as temporary:
+        subject_root = Path(temporary).resolve()
+        with tarfile.open(fileobj=io.BytesIO(archive.stdout), mode="r:") as payload:
+            members = payload.getmembers()
+            for member in members:
+                _safe_subject_path(subject_root, member.name)
+            payload.extractall(subject_root, members=members, filter="fully_trusted")
+        for path in _normalize_changed_paths(changed_paths):
+            source = root / path
+            destination = _safe_subject_path(subject_root, path)
+            if source.is_symlink():
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination.unlink(missing_ok=True)
+                destination.symlink_to(source.readlink())
+            elif source.is_file():
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source, destination)
+            elif destination.is_dir():
+                shutil.rmtree(destination)
+            else:
+                destination.unlink(missing_ok=True)
+        yield subject_root, _patch_subject_paths(base_ref=base_ref, changed_paths=changed_paths, root=root)
+
+
+def ambient_structured_state_findings(paths: list[str], *, root: Path = REPO_ROOT) -> list[Finding]:
+    proposed = set(_normalize_changed_paths(paths))
+    result = subprocess.run(
+        ["git", "status", "--porcelain=v1", "-z", "--untracked-files=all"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    findings: list[Finding] = []
+    records = result.stdout.split("\0")
+    index = 0
+    while index < len(records):
+        record = records[index]
+        index += 1
+        if len(record) < 4:
+            continue
+        status = record[:2]
+        candidates = [_as_posix(record[3:])]
+        if "R" in status or "C" in status:
+            if index < len(records) and records[index]:
+                candidates.append(_as_posix(records[index]))
+                index += 1
+        for path in candidates:
+            if path in proposed or _structured_format(path) is None:
+                continue
+            findings.append(
+                Finding(
+                    path=path,
+                    message=f"ambient checkout state {status!r} is visible but excluded from the explicit patch proof subject",
+                )
+            )
+    return findings
+
+
 def inventory_findings(
     paths: list[str] | None = None,
     *,
     all_paths: list[str] | None = None,
     enforce_staged_precondition: bool = True,
+    root: Path = REPO_ROOT,
 ) -> list[Finding]:
-    inventory = load_inventory()
-    findings = validate_inventory_shape(inventory)
+    inventory = load_inventory(root)
+    findings = validate_inventory_shape(inventory, root)
     if findings:
         return findings
     if paths is None and enforce_staged_precondition:
-        precondition_findings = staged_index_precondition_findings()
+        precondition_findings = staged_index_precondition_findings(root)
         if precondition_findings:
             return precondition_findings
-    checked_paths = tracked_structured_files() if paths is None else paths
-    checked_all_paths = _tracked_files() if all_paths is None and paths is None else all_paths if all_paths is not None else checked_paths
+    checked_paths = tracked_structured_files(root) if paths is None else paths
+    checked_all_paths = _tracked_files(root) if all_paths is None and paths is None else all_paths if all_paths is not None else checked_paths
     return (
         unmatched_structured_files(checked_paths, inventory)
-        + claim_validation_findings(checked_paths, inventory)
-        + storage_policy_findings(checked_paths, inventory)
-        + merge_safety_findings(checked_all_paths, inventory)
-        + generated_mirror_policy_findings(checked_all_paths, inventory)
+        + claim_validation_findings(checked_paths, inventory, root=root)
+        + storage_policy_findings(checked_paths, inventory, root=root)
+        + merge_safety_findings(checked_all_paths, inventory, root=root)
+        + generated_mirror_policy_findings(checked_all_paths, inventory, root=root)
     )
 
 
-def changed_path_inventory_findings(paths: list[str]) -> list[Finding]:
+def changed_path_inventory_findings(
+    paths: list[str], *, base_ref: str = "", root: Path = REPO_ROOT
+) -> list[Finding]:
     changed_paths = _normalize_changed_paths(paths)
     if _requires_full_inventory_audit(changed_paths):
-        return inventory_findings()
+        if base_ref:
+            with isolated_patch_subject(base_ref=base_ref, changed_paths=changed_paths, root=root) as (subject_root, subject_paths):
+                structured_paths = [path for path in subject_paths if _structured_format(path) is not None]
+                return inventory_findings(
+                    paths=structured_paths,
+                    all_paths=subject_paths,
+                    enforce_staged_precondition=False,
+                    root=subject_root,
+                )
+        return inventory_findings(root=root)
     changed_structured = [path for path in changed_paths if _structured_format(path) is not None]
-    tracked_paths = _tracked_files()
+    tracked_paths = _tracked_files(root)
     all_paths = sorted(set(tracked_paths).union(changed_structured))
-    return inventory_findings(paths=changed_structured, all_paths=all_paths, enforce_staged_precondition=False)
+    return inventory_findings(paths=changed_structured, all_paths=all_paths, enforce_staged_precondition=False, root=root)
 
 
 def routed_storage_cleanup_issues(inventory: dict[str, Any]) -> set[str]:
@@ -631,12 +758,28 @@ def routed_storage_cleanup_issues(inventory: dict[str, Any]) -> set[str]:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
-    findings = changed_path_inventory_findings(args.changed) if args.changed is not None else inventory_findings()
+    if args.base_ref and args.changed is None:
+        print("--base-ref requires --changed so the proposed patch subject is explicit", file=sys.stderr)
+        return 2
+    findings = (
+        changed_path_inventory_findings(args.changed, base_ref=args.base_ref)
+        if args.changed is not None
+        else inventory_findings()
+    )
+    ambient = ambient_structured_state_findings(args.changed) if args.base_ref and args.changed is not None else []
     if findings:
         print("Structured file inventory check failed:", file=sys.stderr)
         for finding in findings:
             print(f"- {finding.path}: {finding.message}", file=sys.stderr)
+        if ambient:
+            print("Ambient structured checkout state (excluded from this patch proof):", file=sys.stderr)
+            for finding in ambient:
+                print(f"- {finding.path}: {finding.message}", file=sys.stderr)
         return 1
+    if ambient:
+        print("Ambient structured checkout state (excluded from this patch proof):", file=sys.stderr)
+        for finding in ambient:
+            print(f"- {finding.path}: {finding.message}", file=sys.stderr)
     if args.quiet_success:
         print("Structured file inventory check passed.")
     return 0
