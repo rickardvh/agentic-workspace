@@ -1,0 +1,40 @@
+{
+  "kind": "planning-integration-proposal/v1",
+  "id": "2946-archive-owner",
+  "status": "pending",
+  "phase": "integration-pending",
+  "requested_transition": "archive-owner",
+  "owner": {
+    "id": "pr-2945-packaging-readiness-repair",
+    "ref": ".agentic-workspace/planning/execplans/pr-2945-packaging-readiness-repair.plan.json"
+  },
+  "external_ref": "#2946",
+  "proof_refs": [
+    ".agentic-workspace/verification/proof-decision.json"
+  ],
+  "parent_boundary": "Keep the dogfooding lane open until all stacked PRs integrate.",
+  "preserved_invariants": [
+    "Executed receipts must match the current profile and operation fingerprints",
+    "Public external-operation support does not widen"
+  ],
+  "expected_subject_revision": "ad2b3b762d47e797",
+  "expected_planning_revision": "813ceb20b87ed584",
+  "created_at": "2026-09-01T18:11:21.961371Z",
+  "updated_at": "2026-09-01T18:11:21.961371Z",
+  "authority_boundary": {
+    "proposal": "feature-branch declaration",
+    "integrated_truth": "integration receipt after apply",
+    "non_authority": [
+      "current selection",
+      "aggregate indexes",
+      "unrelated owners",
+      "terminal parent truth"
+    ],
+    "branch_admission": {
+      "status": "inside-git",
+      "branch": "codex/2929-2930-semantic-task-routes",
+      "phase": "feature"
+    }
+  },
+  "proposal_revision": "df711dbe71e0951a"
+}

@@ -3,7 +3,7 @@
   "authority": "command_package_ir.json",
   "compatibility": {
     "protocol": "1.0.0",
-    "fingerprint": "sha256:9fe49b871914ba34384b76be4c6e82cd9f0dbc48846d444841234251ab910d3a",
+    "fingerprint": "sha256:2258e39f754279c3e54fc887ce3f6263d0ce45a279890e986fe15d68108602b3",
     "additive_fields": "allowed"
   },
   "support_rule": "Operations fail closed unless generated status, effects, conformance, and Python/TypeScript target accounting are present.",
@@ -11,10 +11,10 @@
     "kind": "agentic-workspace/external-readiness-authority/v1",
     "status": "current",
     "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:425a5834df23b26ab25d241fdc6500185b601f93d4eaa7e56b1fa285792f7419",
-    "client_semantics_revision": "sha256:cf48c91505d6aa41ccf99ccb74cac369c056f52f0a06d2ad06c15598a5f04dbd",
+    "client_semantics_revision": "sha256:b49ba51051a8246c0fa5bdef3fded46185ddb754c17df3816f192597159012f4",
     "client_artifact_revisions": {
       "public_python_client": "src/agentic_workspace/client.py@sha256:8269c72aa653ee28a46846f70ce3e7e12fa27ae67ac96bdf915c8056cbcc3ca1",
-      "generated_client_generator": "scripts/generate/generate_external_consumer_profile.py@sha256:57e84605780469781d5e4fd040db5b137049cf47607c88f246337501f1331e15",
+      "generated_client_generator": "scripts/generate/generate_external_consumer_profile.py@sha256:dbe669e73ff42e31b3627cbfd93bb2472d34c93fa65edd2f1fb50f70f46e4e90",
       "typescript_client_template": "scripts/generate/templates/external_client.mjs@sha256:99e55285734b7776d64794ffd0d810a6b9e0181c3ca11f55bc3cbb53d09e8a2c"
     }
   },
@@ -10087,7 +10087,7 @@
       "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.integration-propose.lifecycle.json",
       "operation_compatibility": {
         "schema_version": "agentic-workspace/operation/v1",
-        "fingerprint": "sha256:5945faae80c8f710a69157d70f976723ab9b91472803d82737fb57ab9883d714"
+        "fingerprint": "sha256:1083808ec7f633ce845233163964db727884b4074a58731ec35b1046dcfab9fe"
       },
       "operation_resources": {
         "python": {

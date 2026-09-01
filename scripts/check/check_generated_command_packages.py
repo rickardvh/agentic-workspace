@@ -6274,6 +6274,10 @@ def main(argv: list[str] | None = None) -> int:
     freshness = _run([_python_executable(), str(generator), "--check"])
     if freshness:
         return freshness
+    external_profile_generator = REPO_ROOT / "scripts" / "generate" / "generate_external_consumer_profile.py"
+    external_profile_freshness = _run([_python_executable(), str(external_profile_generator), "--check"])
+    if external_profile_freshness:
+        return external_profile_freshness
     errors = _validate_static_surfaces()
     if errors:
         for error in errors:

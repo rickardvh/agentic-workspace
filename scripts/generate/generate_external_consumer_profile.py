@@ -32,6 +32,10 @@ CONFORMANCE_RECEIPT_OUTPUTS = (
     REPO_ROOT / "generated/workspace/python/external_operation_conformance_receipts.json",
     REPO_ROOT / "generated/workspace/typescript/external_operation_conformance_receipts.json",
 )
+CONFORMANCE_RECEIPT_RECOVERY = (
+    "uv run --frozen --active --no-sync python "
+    "scripts/check/run_operation_conformance_tests.py --target all --require-node"
+)
 USABLE_MATURITY_LEVELS = {"runnable-read-only-adapter", "weak-agent-safe-adapter", "mutation-capable-adapter"}
 READINESS_TRANSPORTS = ("cli-json", "python", "typescript", "vendor-neutral")
 READINESS_EXECUTORS = {
@@ -649,6 +653,61 @@ def render_conformance_receipts(profile: dict[str, object]) -> str:
     return json.dumps(build_external_operation_conformance_receipts(profile), indent=2) + "\n"
 
 
+def conformance_receipt_freshness_errors(
+    profile: dict[str, object],
+    *,
+    receipt_payloads: dict[str, object] | None = None,
+) -> list[str]:
+    """Reject receipt mirrors that no longer prove the generated profile."""
+
+    current_profile_fingerprint = str((profile.get("compatibility") or {}).get("fingerprint") or "")
+    operations = {
+        str(entry.get("id") or ""): entry
+        for entry in profile.get("operations", [])
+        if isinstance(entry, dict) and entry.get("id")
+    }
+    payloads = receipt_payloads
+    if payloads is None:
+        payloads = {}
+        for path in CONFORMANCE_RECEIPT_OUTPUTS:
+            relative = path.relative_to(REPO_ROOT).as_posix()
+            if not path.is_file():
+                payloads[relative] = None
+                continue
+            try:
+                payloads[relative] = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                payloads[relative] = None
+
+    errors: list[str] = []
+    for label, payload in payloads.items():
+        if not isinstance(payload, dict):
+            errors.append(f"{label}: conformance receipt store is missing or malformed")
+            continue
+        receipts = payload.get("receipts")
+        if not isinstance(receipts, list) or not receipts:
+            errors.append(f"{label}: conformance receipt store has no executed receipts")
+            continue
+        for receipt in receipts:
+            if not isinstance(receipt, dict):
+                errors.append(f"{label}: conformance receipt entry is malformed")
+                continue
+            operation_id = str(receipt.get("operation_id") or "")
+            entry = operations.get(operation_id)
+            operation_fingerprint = (
+                str((entry.get("operation_compatibility") or {}).get("fingerprint") or "")
+                if isinstance(entry, dict)
+                else ""
+            )
+            if receipt.get("profile_fingerprint") != current_profile_fingerprint:
+                errors.append(f"{label}: {operation_id or '<unknown>'} receipt has a stale profile fingerprint")
+            if entry is None:
+                errors.append(f"{label}: {operation_id or '<unknown>'} receipt names an absent profile operation")
+            elif receipt.get("operation_fingerprint") != operation_fingerprint:
+                errors.append(f"{label}: {operation_id} receipt has a stale operation fingerprint")
+    return errors
+
+
 def _legacy_render_python_client() -> str:
     return """# Generated from command_package_ir.json. Do not edit.\nfrom __future__ import annotations\n\nimport json\nimport subprocess\nfrom importlib.resources import files\nfrom pathlib import Path\nfrom typing import Any, Sequence\n\n\ndef external_consumer_profile() -> dict[str, Any]:\n    resource = files("agentic_workspace._generated_cli_package_impl").joinpath("external_consumer_profile.json")\n    return json.loads(resource.read_text(encoding="utf-8"))\n\n\ndef require_operations(operation_ids: Sequence[str], *, allow_runtime_backed: bool = False) -> None:\n    entries = {entry["id"]: entry for entry in external_consumer_profile()["operations"]}\n    failures = []\n    for operation_id in operation_ids:\n        entry = entries.get(operation_id)\n        status = entry and entry["external_consumption"]["status"]\n        if entry is None or status == "internal" or (status == "runtime-backed" and not allow_runtime_backed):\n            failures.append(f"{operation_id}: {status or 'unknown'}")\n    if failures:\n        raise ValueError("incompatible operation requirements: " + ", ".join(failures))\n\n\ndef invoke_json(argv: Sequence[str], *, target: str | Path | None = None, executable: Sequence[str] = ("agentic-workspace",)) -> dict[str, Any]:\n    command = [*executable, *argv]\n    if target is not None and "--target" not in command:\n        command.extend(["--target", str(target)])\n    if "--format" not in command:\n        command.extend(["--format", "json"])\n    completed = subprocess.run(command, text=True, capture_output=True, check=False)\n    stream = completed.stdout or completed.stderr\n    try:\n        payload = json.loads(stream)\n    except json.JSONDecodeError as exc:\n        raise RuntimeError(f"AW returned non-JSON output (exit {completed.returncode})") from exc\n    if completed.returncode:\n        raise RuntimeError(json.dumps({"exit_code": completed.returncode, "error": payload}))\n    return payload\n"""
 
@@ -907,7 +966,12 @@ def main() -> int:
     if args.check:
         for path in stale:
             print(f"{path.relative_to(REPO_ROOT).as_posix()} is stale")
-        return int(bool(stale))
+        receipt_errors = conformance_receipt_freshness_errors(profile)
+        for error in receipt_errors:
+            print(error)
+        if receipt_errors:
+            print(f"Refresh complete external-operation conformance evidence with: {CONFORMANCE_RECEIPT_RECOVERY}")
+        return int(bool(stale or receipt_errors))
     for path, content in rendered.items():
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8", newline="\n")
