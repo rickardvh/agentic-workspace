@@ -1220,8 +1220,7 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
                     if replayed
                     else (
                         "verified-already-materialized"
-                        if _optional_text(_assignment_mapping(returned.get("result_delivery")).get("mode"))
-                        == "already-materialized"
+                        if _optional_text(_assignment_mapping(returned.get("result_delivery")).get("mode")) == "already-materialized"
                         else "applied-returned-patch"
                     )
                 )
@@ -1675,9 +1674,7 @@ def _verify_materialized_assignment_delta(
                     return False, f"materialized path type differs from baseline-plus-patch: {changed_path}"
                 if expected_type == "symlink" and os.readlink(expected_path) != os.readlink(observed_path):
                     return False, f"materialized symlink target differs from baseline-plus-patch: {changed_path}"
-                if expected_type == "file" and bool(expected_path.stat().st_mode & 0o111) != bool(
-                    observed_path.stat().st_mode & 0o111
-                ):
+                if expected_type == "file" and bool(expected_path.stat().st_mode & 0o111) != bool(observed_path.stat().st_mode & 0o111):
                     return False, f"materialized path executable mode differs from baseline-plus-patch: {changed_path}"
                 if expected_path.is_file():
                     expected_hash = subprocess.run(
@@ -1694,11 +1691,7 @@ def _verify_materialized_assignment_delta(
                         check=False,
                         timeout=30,
                     )
-                    if (
-                        expected_hash.returncode != 0
-                        or observed_hash.returncode != 0
-                        or expected_hash.stdout != observed_hash.stdout
-                    ):
+                    if expected_hash.returncode != 0 or observed_hash.returncode != 0 or expected_hash.stdout != observed_hash.stdout:
                         return False, f"materialized path content differs from baseline-plus-patch: {changed_path}"
     except (OSError, subprocess.SubprocessError, PrimitiveExecutionError) as exc:
         return False, str(exc)[-2000:]
