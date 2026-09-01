@@ -111,6 +111,7 @@ def test_repo_local_delegation_policy_uses_only_canonical_independent_controls()
         "delegation.transport_authority",
         "delegation.human_override_policy",
         "delegation.current_target",
+        "delegation_targets.<target>.transports",
     ]
 
 
@@ -139,6 +140,103 @@ human_control_modes = ["off"]
     assert profile.safe_task_classes == ("mechanical-follow-through",)
     assert profile.forbidden_task_classes == ("mixed",)
     assert profile.human_control_modes == ()
+
+
+def test_canonical_target_transports_are_constructible_and_override_legacy_siblings(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(
+        target / ".agentic-workspace/config.local.toml",
+        """
+schema_version = 1
+
+[runtime]
+supports_internal_delegation = true
+
+[safety]
+safe_to_auto_run_commands = true
+
+[delegation]
+assignment_policy = "required-best-fit"
+transport_authority = "automatic"
+current_target = "worker"
+
+[delegation_targets.worker]
+strength = "strong"
+execution_methods = ["manual"]
+dispatch_adapter_kind = "host-native"
+escalation_target = "fallback-worker"
+transports = [
+  { kind = "internal" },
+  { kind = "process", command = ["worker-cli", "--output", "{output_file}"], output_mode = "json-file" },
+  { kind = "api", command = ["worker-api", "--schema", "{output_schema}"] },
+  { kind = "manual" },
+]
+""",
+    )
+
+    config = cli._load_workspace_config(target_root=target)
+    profile = config.local_override.delegation_targets[0]
+    assert profile.execution_methods == ("internal", "cli", "api", "manual")
+    assert [item["source"] for item in profile.transports] == ["canonical-transports"] * 4
+    assert profile.transports[1]["command"] == ["worker-cli", "--output", "{output_file}"]
+    assert profile.transports[2]["command"] == ["worker-api", "--schema", "{output_schema}"]
+    assert profile.escalation_target is None
+    assert any("canonical transports override legacy" in warning for warning in config.warnings)
+    assert any("escalation_target is an ignored compatibility alias" in warning for warning in config.warnings)
+
+    mixed = workspace_runtime_core._mixed_agent_payload(config=config)
+    projected = mixed["delegation_targets"]["profiles"][0]
+    assert [item["readiness"] for item in projected["transports"]] == [
+        "configured",
+        "configured",
+        "configured",
+        "configured",
+    ]
+    assert mixed["effective_orchestration"]["current_target"]["automatic_methods"] == ["api", "cli", "internal"]
+    assert "escalation_target" not in projected
+
+
+def test_canonical_process_transport_requires_its_own_payload(tmp_path: Path) -> None:
+    from agentic_workspace.config import WorkspaceUsageError
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    _write(
+        target / ".agentic-workspace/config.local.toml",
+        'schema_version = 1\n\n[delegation_targets.worker]\nstrength = "strong"\ntransports = [{ kind = "process" }]\n',
+    )
+    with pytest.raises(WorkspaceUsageError, match="command is required for process transport"):
+        cli._load_workspace_config(target_root=target)
+
+
+def test_legacy_unconfigured_transport_is_factual_but_not_automatic(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(
+        target / ".agentic-workspace/config.local.toml",
+        """
+schema_version = 1
+[safety]
+safe_to_auto_run_commands = true
+[delegation]
+assignment_policy = "required-best-fit"
+transport_authority = "automatic"
+current_target = "worker"
+[delegation_targets.worker]
+strength = "strong"
+execution_methods = ["cli"]
+""",
+    )
+    config = cli._load_workspace_config(target_root=target)
+    profile = config.local_override.delegation_targets[0]
+    assert profile.execution_methods == ("cli",)
+    assert profile.transports[0]["readiness"] == "declared-unconfigured"
+    mixed = workspace_runtime_core._mixed_agent_payload(config=config)
+    assert mixed["effective_orchestration"]["status"] == "binding-active-transport-unavailable"
+    assert mixed["effective_orchestration"]["current_target"]["automatic_methods"] == []
 
 
 def test_config_rejects_overlapping_assurance_level_owners_with_structural_repair(tmp_path: Path) -> None:
@@ -1954,10 +2052,10 @@ def test_config_command_reports_local_delegation_target_profiles(tmp_path: Path,
     assert planner["capability_classes"] == ["boundary-shaping", "reasoning-heavy"]
     assert planner["safe_task_classes"] == ["boundary-shaping", "reasoning-heavy"]
     assert planner["forbidden_task_classes"] == ["mechanical-follow-through"]
-    assert planner["escalation_target"] == "human"
+    assert "escalation_target" not in planner
     assert planner["confidence_source"] == "local-evaluation"
     assert planner["last_evaluation"] == "2026-05-04"
-    assert planner["human_control_modes"] == ["manual", "suggest"]
+    assert planner["human_control_modes"] == []
     assert planner["execution_methods"] == ["internal", "api"]
     assert planner["advisory"] == {
         "handoff_detail": "compact",

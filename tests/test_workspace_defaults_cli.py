@@ -366,19 +366,15 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "delegation_targets.<target>.confidence",
         "delegation_targets.<target>.task_fit",
         "delegation_targets.<target>.capability_classes",
-        "delegation_targets.<target>.execution_methods",
+        "delegation_targets.<target>.transports",
         "delegation_targets.<target>.model_family",
         "delegation_targets.<target>.provider",
         "delegation_targets.<target>.context_capacity",
-        "delegation_targets.<target>.reasoning_profile",
         "delegation_targets.<target>.cost_class",
         "delegation_targets.<target>.latency_class",
-        "delegation_targets.<target>.safe_task_classes",
         "delegation_targets.<target>.forbidden_task_classes",
-        "delegation_targets.<target>.escalation_target",
         "delegation_targets.<target>.confidence_source",
         "delegation_targets.<target>.last_evaluation",
-        "delegation_targets.<target>.human_control_modes",
     ]
     assert payload["mixed_agent"]["local_override"]["supported_target_strengths"] == ["strong", "medium", "weak"]
     assert payload["mixed_agent"]["local_override"]["supported_target_locations"] == ["local", "external", "either"]
@@ -391,6 +387,12 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["mixed_agent"]["local_override"]["supported_target_execution_methods"] == [
         "internal",
         "cli",
+        "api",
+        "manual",
+    ]
+    assert payload["mixed_agent"]["local_override"]["supported_target_transport_kinds"] == [
+        "internal",
+        "process",
         "api",
         "manual",
     ]

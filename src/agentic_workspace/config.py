@@ -388,6 +388,7 @@ class DelegationTargetProfile:
     strength: str
     location: str
     execution_methods: tuple[str, ...]
+    transports: tuple[dict[str, Any], ...]
     confidence: float | None
     task_fit: tuple[str, ...]
     capability_classes: tuple[str, ...]
@@ -1924,6 +1925,7 @@ def load_delegation_target_profiles(
             "task_fit",
             "capability_classes",
             "execution_methods",
+            "transports",
             "model_family",
             "provider",
             "dispatch_adapter_kind",
@@ -1945,6 +1947,10 @@ def load_delegation_target_profiles(
         if unknown_fields:
             unknown_text = ", ".join(unknown_fields)
             warnings.append(f"{target_path.as_posix()} contains unsupported field(s): {unknown_text}.")
+        if "escalation_target" in raw_profile:
+            warnings.append(
+                f"{target_path.as_posix()} escalation_target is an ignored compatibility alias; assignment_policy best-fit ranking owns target selection."
+            )
 
         strength = raw_profile.get("strength")
         if not isinstance(strength, str) or strength not in SUPPORTED_DELEGATION_TARGET_STRENGTHS:
@@ -1954,14 +1960,12 @@ def load_delegation_target_profiles(
         if raw_location not in SUPPORTED_CAPABILITY_LOCATIONS:
             allowed_text = ", ".join(SUPPORTED_CAPABILITY_LOCATIONS)
             raise WorkspaceUsageError(f"{target_path.as_posix()} location must be one of: {allowed_text}.")
-        execution_methods = require_optional_string_list(
+        legacy_execution_methods = require_optional_string_list(
             payload=raw_profile,
             key="execution_methods",
             config_path=target_path,
             allowed=SUPPORTED_DELEGATION_TARGET_EXECUTION_METHODS,
         )
-        if not execution_methods:
-            raise WorkspaceUsageError(f"{target_path.as_posix()} execution_methods must list at least one supported method.")
         dispatch_command = require_optional_string_list(
             payload=raw_profile,
             key="dispatch_command",
@@ -1983,10 +1987,97 @@ def load_delegation_target_profiles(
         raw_dispatch_timeout = raw_profile.get("dispatch_timeout_seconds", 1800)
         if not isinstance(raw_dispatch_timeout, int) or isinstance(raw_dispatch_timeout, bool) or raw_dispatch_timeout <= 0:
             raise WorkspaceUsageError(f"{target_path.as_posix()} dispatch_timeout_seconds must be a positive integer.")
-        if dispatch_command and dispatch_adapter_kind is None:
+        raw_transports = raw_profile.get("transports")
+        if raw_transports is None and dispatch_command and dispatch_adapter_kind is None:
             dispatch_adapter_kind = "process"
-        if dispatch_adapter_kind is not None and not dispatch_command:
+        if raw_transports is None and dispatch_adapter_kind is not None and not dispatch_command:
             raise WorkspaceUsageError(f"{target_path.as_posix()} dispatch_command is required when dispatch_adapter_kind is configured.")
+        transports: list[dict[str, Any]] = []
+        if raw_transports is not None:
+            if not isinstance(raw_transports, list) or not raw_transports:
+                raise WorkspaceUsageError(f"{target_path.as_posix()} transports must be a non-empty array of transport tables.")
+            if legacy_execution_methods or dispatch_command or dispatch_adapter_kind is not None:
+                warnings.append(
+                    f"{target_path.as_posix()} canonical transports override legacy execution_methods/dispatch_adapter_* fields."
+                )
+            seen_methods: set[str] = set()
+            for index, raw_transport in enumerate(raw_transports):
+                transport_path = Path(f"{target_path.as_posix()} transports[{index}]")
+                if not isinstance(raw_transport, dict):
+                    raise WorkspaceUsageError(f"{transport_path.as_posix()} must be a table.")
+                transport_payload: dict[str, Any] = {str(key): value for key, value in raw_transport.items()}
+                unknown_transport = sorted(set(transport_payload) - {"kind", "command", "output_mode", "timeout_seconds"})
+                if unknown_transport:
+                    warnings.append(f"{transport_path.as_posix()} contains unsupported field(s): {', '.join(unknown_transport)}.")
+                kind = require_required_enum(
+                    payload=transport_payload,
+                    key="kind",
+                    config_path=transport_path,
+                    allowed=("internal", "process", "api", "manual"),
+                )
+                method = {"internal": "internal", "process": "cli", "api": "api", "manual": "manual"}[kind]
+                if method in seen_methods:
+                    raise WorkspaceUsageError(f"{target_path.as_posix()} transports may configure method {method!r} only once.")
+                seen_methods.add(method)
+                command = require_optional_string_list(payload=transport_payload, key="command", config_path=transport_path)
+                if kind in {"process", "api"} and not command:
+                    raise WorkspaceUsageError(f"{transport_path.as_posix()} command is required for {kind} transport.")
+                if kind in {"internal", "manual"} and command:
+                    raise WorkspaceUsageError(f"{transport_path.as_posix()} command is not allowed for {kind} transport.")
+                output_mode = require_optional_enum(
+                    payload=transport_payload,
+                    key="output_mode",
+                    config_path=transport_path,
+                    allowed=SUPPORTED_DELEGATION_DISPATCH_OUTPUT_MODES,
+                    default="stdout",
+                )
+                raw_timeout = transport_payload.get("timeout_seconds", 1800)
+                if not isinstance(raw_timeout, int) or isinstance(raw_timeout, bool) or raw_timeout <= 0:
+                    raise WorkspaceUsageError(f"{transport_path.as_posix()} timeout_seconds must be a positive integer.")
+                transports.append(
+                    {
+                        "kind": kind,
+                        "method": method,
+                        "command": list(command),
+                        "output_mode": output_mode,
+                        "timeout_seconds": raw_timeout,
+                        "readiness": "runtime-required" if kind == "internal" else "configured",
+                        "source": "canonical-transports",
+                    }
+                )
+        else:
+            if not legacy_execution_methods:
+                raise WorkspaceUsageError(
+                    f"{target_path.as_posix()} transports or legacy execution_methods must configure at least one method."
+                )
+            for method in legacy_execution_methods:
+                kind = {"internal": "internal", "cli": "process", "api": "api", "manual": "manual"}[method]
+                configured = method in {"internal", "manual"} or bool(dispatch_command)
+                transports.append(
+                    {
+                        "kind": kind,
+                        "method": method,
+                        "command": list(dispatch_command) if method in {"cli", "api"} and dispatch_command else [],
+                        "output_mode": dispatch_output_mode,
+                        "timeout_seconds": raw_dispatch_timeout,
+                        "readiness": "runtime-required"
+                        if method == "internal"
+                        else "configured"
+                        if configured
+                        else "declared-unconfigured",
+                        "source": "legacy-compatibility-decoder",
+                    }
+                )
+        execution_methods = tuple(str(item["method"]) for item in transports)
+        configured_adapter = next(
+            (item for item in transports if item["method"] in {"cli", "api"} and item["readiness"] == "configured"),
+            None,
+        )
+        if raw_transports is not None:
+            dispatch_adapter_kind = "process" if configured_adapter and configured_adapter["kind"] in {"process", "api"} else None
+            dispatch_command = tuple(configured_adapter["command"]) if configured_adapter else ()
+            dispatch_output_mode = str(configured_adapter["output_mode"]) if configured_adapter else "stdout"
+            raw_dispatch_timeout = int(configured_adapter["timeout_seconds"]) if configured_adapter else 1800
         capability_classes = require_optional_string_list(
             payload=raw_profile,
             key="capability_classes",
@@ -2030,6 +2121,7 @@ def load_delegation_target_profiles(
                 strength=strength,
                 location=raw_location,
                 execution_methods=execution_methods,
+                transports=tuple(transports),
                 confidence=require_optional_confidence(
                     payload=raw_profile,
                     key="confidence",
@@ -2071,7 +2163,7 @@ def load_delegation_target_profiles(
                 ),
                 safe_task_classes=safe_task_classes,
                 forbidden_task_classes=forbidden_task_classes,
-                escalation_target=require_optional_string(payload=raw_profile, key="escalation_target", config_path=target_path),
+                escalation_target=None,
                 confidence_source=require_optional_string(payload=raw_profile, key="confidence_source", config_path=target_path),
                 last_evaluation=require_optional_string(payload=raw_profile, key="last_evaluation", config_path=target_path),
                 human_control_modes=(),

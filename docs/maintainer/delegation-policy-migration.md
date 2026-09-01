@@ -26,6 +26,8 @@ Every assignment-policy, transport-authority, and human-override value is a lega
 | target `reasoning_profile` | duplicate strength axis | compatibility alias; derive from `strength` |
 | target `safe_task_classes` | duplicate eligibility list | compatibility alias; derive from `capability_classes - forbidden_task_classes` |
 | target `human_control_modes` | target-local policy authority | compatibility alias; global assignment/transport authority owns control |
-| target `execution_methods` plus adapter data | capability and readiness | retained facts; internal is ready only with runtime support, CLI/API only with adapter data |
+| target `transports` | constructible transport capability and readiness | canonical variant; process/API command payload lives inside the selected variant and internal readiness resolves against runtime support |
+| target `execution_methods` plus `dispatch_adapter_*` | legacy capability/readiness declaration | finite compatibility decoder only; ignored when canonical `transports` is present and never independently reconciled afterward |
+| target `escalation_target` | duplicate routing preference | ignored compatibility alias; canonical best-fit ranking owns the winner and no target-local fallback can change it |
 
 Compatibility aliases remain readable for a finite migration window and cannot override a present canonical field. New configuration should write only canonical fields. The effective config/start projection reports canonical provenance and derived values, so an agent never needs to solve the legacy knob matrix.

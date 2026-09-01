@@ -338,8 +338,15 @@
         "^.+$": {
           "type": "object",
           "required": [
-            "strength",
-            "execution_methods"
+            "strength"
+          ],
+          "anyOf": [
+            {
+              "required": ["transports"]
+            },
+            {
+              "required": ["execution_methods"]
+            }
           ],
           "properties": {
             "target_id": {
@@ -443,7 +450,48 @@
                 ],
                 "description": "One locally available way to reach this target."
               },
-              "description": "Human-owned execution boundary for this target. Automatic use still requires delegation.mode = \"auto\" and local safety permission."
+              "description": "Deprecated compatibility declaration. Canonical transports carry method-specific readiness and payload together."
+            },
+            "transports": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": ["kind"],
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": ["internal", "process", "api", "manual"]
+                  },
+                  "command": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {"type": "string", "minLength": 1}
+                  },
+                  "output_mode": {
+                    "type": "string",
+                    "enum": ["stdout", "json-file"],
+                    "default": "stdout"
+                  },
+                  "timeout_seconds": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "default": 1800
+                  }
+                },
+                "additionalProperties": false,
+                "allOf": [
+                  {
+                    "if": {"properties": {"kind": {"enum": ["process", "api"]}}},
+                    "then": {"required": ["command"]}
+                  },
+                  {
+                    "if": {"properties": {"kind": {"enum": ["internal", "manual"]}}},
+                    "then": {"not": {"required": ["command"]}}
+                  }
+                ]
+              },
+              "description": "Canonical constructible transport variants. Process/API payload is inseparable from its method; internal readiness is resolved against runtime support."
             },
             "model_family": {
               "type": "string",
@@ -560,7 +608,8 @@
             "escalation_target": {
               "type": "string",
               "minLength": 1,
-              "description": "Optional configured target name or route to prefer when this target is overmatched."
+              "deprecated": true,
+              "description": "Ignored compatibility alias. Canonical assignment-policy best-fit ranking owns target selection and escalation."
             },
             "confidence_source": {
               "type": "string",

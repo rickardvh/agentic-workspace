@@ -384,6 +384,70 @@ def test_assignment_process_and_host_native_adapters_share_one_prompt_and_return
     assert all(set(schema["required"]) == set(schema["properties"]) for schema in observed_schemas)
 
 
+def test_assignment_dispatch_selects_payload_from_exact_canonical_transport_variant(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from agentic_workspace.contracts import python_primitive_support
+
+    observed: dict[str, object] = {}
+
+    def fake_run(command: list[str], **kwargs: object) -> SimpleNamespace:
+        observed["command"] = command
+        return SimpleNamespace(
+            returncode=0,
+            stdout=json.dumps(
+                {
+                    "assignment_revision": "sha256:assignment",
+                    "run_id": "run-api",
+                    "target": "worker",
+                    "changed_paths": [],
+                    "summary": "API variant completed.",
+                    "stop_conditions_hit": [],
+                }
+            ),
+            stderr="",
+        )
+
+    monkeypatch.setattr(python_primitive_support.subprocess, "run", fake_run)
+    receipt = python_primitive_support._dispatch_assignment_packet(
+        packet={
+            "assignment_identity": {
+                "role": "validator",
+                "dispatch_adapter": {
+                    "kind": "process",
+                    "command": ["legacy-wrong-command"],
+                    "execution_methods": ["cli", "api"],
+                    "transports": [
+                        {
+                            "kind": "process",
+                            "method": "cli",
+                            "command": ["cli-worker"],
+                            "output_mode": "stdout",
+                            "timeout_seconds": 60,
+                            "readiness": "configured",
+                        },
+                        {
+                            "kind": "api",
+                            "method": "api",
+                            "command": ["api-worker", "--schema", "{output_schema}"],
+                            "output_mode": "stdout",
+                            "timeout_seconds": 30,
+                            "readiness": "configured",
+                        },
+                    ],
+                },
+            }
+        },
+        prompt="sealed packet",
+        target_root=tmp_path,
+        transport="api",
+    )
+
+    assert receipt["status"] == "returned"
+    assert receipt["adapter_kind"] == "process"
+    assert observed["command"][0] == "api-worker"  # type: ignore[index]
+
+
 def test_assignment_worker_context_projects_only_canonical_bounded_authority() -> None:
     from agentic_workspace.contracts import python_primitive_support
 

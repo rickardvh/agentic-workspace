@@ -43405,6 +43405,7 @@ def _assignment_policy_payload(local_override: MixedAgentLocalOverride, profile_
                 "delegation.transport_authority",
                 "delegation.human_override_policy",
                 "delegation.current_target",
+                "delegation_targets.<target>.transports",
             ],
             "compatibility_aliases": [
                 "delegation.mode",
@@ -43416,6 +43417,12 @@ def _assignment_policy_payload(local_override: MixedAgentLocalOverride, profile_
                 "runtime.cheap_bounded_executor_available",
                 "handoff.prefer_internal_delegation_when_available",
                 "delegation_targets.<target>.human_control_modes",
+                "delegation_targets.<target>.execution_methods",
+                "delegation_targets.<target>.dispatch_adapter_kind",
+                "delegation_targets.<target>.dispatch_command",
+                "delegation_targets.<target>.dispatch_output_mode",
+                "delegation_targets.<target>.dispatch_timeout_seconds",
+                "delegation_targets.<target>.escalation_target",
             ],
         },
     }
@@ -43450,13 +43457,27 @@ def _effective_orchestration_posture_payload(
         {},
     )
     execution_methods = [str(item) for item in _list_payload(matching_profile.get("execution_methods")) if str(item)]
-    adapter_configured = bool(_list_payload(matching_profile.get("dispatch_command")))
-    automatic_methods = [
-        item
-        for item in execution_methods
-        if (item == "internal" and (delegation_control.get("supports_internal_delegation") is True or adapter_configured))
-        or (item in {"cli", "api"} and adapter_configured)
-    ]
+    transport_variants = [item for item in _list_payload(matching_profile.get("transports")) if isinstance(item, dict)]
+    automatic_methods = sorted(
+        {
+            str(item.get("method") or "")
+            for item in transport_variants
+            if (str(item.get("method") or "") == "internal" and delegation_control.get("supports_internal_delegation") is True)
+            or (
+                str(item.get("method") or "") in {"cli", "api"}
+                and str(item.get("readiness") or "") == "configured"
+                and bool(_list_payload(item.get("command")))
+            )
+        }
+    )
+    if not transport_variants:
+        adapter_configured = bool(_list_payload(matching_profile.get("dispatch_command")))
+        automatic_methods = [
+            item
+            for item in execution_methods
+            if (item == "internal" and (delegation_control.get("supports_internal_delegation") is True or adapter_configured))
+            or (item in {"cli", "api"} and adapter_configured)
+        ]
     current_target_ready = target_status == "known-profile"
     binding_requested = policy == "required-best-fit"
     orchestrator_role = role == "orchestrator"
@@ -45424,6 +45445,7 @@ def _execution_posture_payload(
                 "timeout_seconds": int((target or {}).get("dispatch_timeout_seconds") or 1800),
                 "model": str((target or {}).get("model_family") or ""),
                 "execution_methods": list((target or {}).get("execution_methods") or []),
+                "transports": [dict(item) for item in _list_payload((target or {}).get("transports")) if isinstance(item, dict)],
             },
             "proof_obligation": {
                 "kind": "agentic-workspace/assignment-task-proof-obligation/v1",
@@ -60951,6 +60973,16 @@ _RUNTIME_RESOLUTION_GUIDANCE: dict[str, str] = {
 }
 
 
+def _delegation_transport_payloads(*, profile: Any, supports_internal: bool) -> list[dict[str, Any]]:
+    payloads: list[dict[str, Any]] = []
+    for raw in profile.transports:
+        item = dict(raw)
+        if str(item.get("method") or "") == "internal":
+            item["readiness"] = "configured" if supports_internal else "runtime-unavailable"
+        payloads.append(item)
+    return payloads
+
+
 def _runtime_resolution_payload(*, config: WorkspaceConfig, capability_posture: dict[str, Any] | None = None) -> dict[str, Any]:
     """Compact runtime-resolution answer combining work semantics and local execution posture."""
     local_override = config.local_override
@@ -60979,6 +61011,9 @@ def _runtime_resolution_payload(*, config: WorkspaceConfig, capability_posture: 
                 "strength": profile.strength,
                 "location": profile.location,
                 "execution_methods": list(profile.execution_methods),
+                "transports": _delegation_transport_payloads(
+                    profile=profile, supports_internal=bool(local_override.supports_internal_delegation)
+                ),
                 "model_family": profile.model_family,
                 "provider": profile.provider,
                 "dispatch_adapter_kind": profile.dispatch_adapter_kind,
@@ -60991,7 +61026,6 @@ def _runtime_resolution_payload(*, config: WorkspaceConfig, capability_posture: 
                 "latency_class": profile.latency_class,
                 "safe_task_classes": list(profile.safe_task_classes),
                 "forbidden_task_classes": list(profile.forbidden_task_classes),
-                "escalation_target": profile.escalation_target,
                 "confidence_source": profile.confidence_source,
                 "last_evaluation": profile.last_evaluation,
                 "human_control_modes": list(profile.human_control_modes),
@@ -61386,6 +61420,9 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
                 "task_fit": list(profile.task_fit),
                 "capability_classes": list(profile.capability_classes),
                 "execution_methods": list(profile.execution_methods),
+                "transports": _delegation_transport_payloads(
+                    profile=profile, supports_internal=bool(local_override.supports_internal_delegation)
+                ),
                 "model_family": profile.model_family,
                 "provider": profile.provider,
                 "dispatch_adapter_kind": profile.dispatch_adapter_kind,
@@ -61398,7 +61435,6 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
                 "latency_class": profile.latency_class,
                 "safe_task_classes": list(profile.safe_task_classes),
                 "forbidden_task_classes": list(profile.forbidden_task_classes),
-                "escalation_target": profile.escalation_target,
                 "confidence_source": profile.confidence_source,
                 "last_evaluation": profile.last_evaluation,
                 "human_control_modes": list(profile.human_control_modes),
@@ -61476,24 +61512,28 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
                 "delegation_targets.<target>.confidence",
                 "delegation_targets.<target>.task_fit",
                 "delegation_targets.<target>.capability_classes",
+                "delegation_targets.<target>.transports",
+                "delegation_targets.<target>.model_family",
+                "delegation_targets.<target>.provider",
+                "delegation_targets.<target>.context_capacity",
+                "delegation_targets.<target>.cost_class",
+                "delegation_targets.<target>.latency_class",
+                "delegation_targets.<target>.forbidden_task_classes",
+                "delegation_targets.<target>.confidence_source",
+                "delegation_targets.<target>.last_evaluation",
+            ],
+            "compatibility_aliases": [
                 "delegation_targets.<target>.execution_methods",
                 "delegation_targets.<target>.dispatch_adapter_kind",
                 "delegation_targets.<target>.dispatch_command",
                 "delegation_targets.<target>.dispatch_output_mode",
                 "delegation_targets.<target>.dispatch_timeout_seconds",
-                "delegation_targets.<target>.model_family",
-                "delegation_targets.<target>.provider",
-                "delegation_targets.<target>.context_capacity",
-                "delegation_targets.<target>.reasoning_profile",
-                "delegation_targets.<target>.cost_class",
-                "delegation_targets.<target>.latency_class",
-                "delegation_targets.<target>.safe_task_classes",
-                "delegation_targets.<target>.forbidden_task_classes",
                 "delegation_targets.<target>.escalation_target",
-                "delegation_targets.<target>.confidence_source",
-                "delegation_targets.<target>.last_evaluation",
+                "delegation_targets.<target>.reasoning_profile",
+                "delegation_targets.<target>.safe_task_classes",
                 "delegation_targets.<target>.human_control_modes",
             ],
+            "supported_transport_kinds": ["internal", "process", "api", "manual"],
             "supported_strengths": list(SUPPORTED_DELEGATION_TARGET_STRENGTHS),
             "supported_locations": list(SUPPORTED_CAPABILITY_LOCATIONS),
             "supported_capability_classes": list(SUPPORTED_CAPABILITY_EXECUTION_CLASSES),
@@ -64814,8 +64854,14 @@ def _executor_availability(
             "repair": "Resolve an authoritative executor target before running Autopilot.",
         }
     execution_methods = [str(method) for method in _list_payload(selected_target.get("execution_methods")) if str(method).strip()]
-    adapter_configured = bool(_list_payload(selected_target.get("dispatch_command")))
-    automatic_methods = [method for method in execution_methods if adapter_configured and method in {"internal", "cli", "api"}]
+    transport_variants = [item for item in _list_payload(selected_target.get("transports")) if isinstance(item, dict)]
+    automatic_methods = [
+        str(item.get("method") or "")
+        for item in transport_variants
+        if str(item.get("method") or "") in {"internal", "cli", "api"}
+        and str(item.get("readiness") or "") == "configured"
+        and (str(item.get("method") or "") == "internal" or bool(_list_payload(item.get("command"))))
+    ]
     if not execution_methods:
         return {
             "status": "unavailable",

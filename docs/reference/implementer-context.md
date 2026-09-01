@@ -231,6 +231,8 @@ Cheap implementer context for a bounded changed-path scope.
 | `execution_posture.delegation_control.source` | string | yes |  | Where the effective delegation mode came from. |  |  |
 | `execution_posture.delegation_control.execution_permitted` | boolean | yes |  | Whether the package may execute delegation automatically. |  |  |
 | `execution_posture.delegation_control.safe_to_auto_run_commands` | boolean | yes |  | Whether auto mode may run command-based delegation. |  |  |
+| `execution_posture.delegation_control.supports_internal_delegation` | boolean | no |  | Whether the current host runtime can execute the internal transport variant. |  |  |
+| `execution_posture.delegation_control.transport_authority` | enum `"automatic"`, `"manual"` | no |  | Canonical authority governing automatic versus manual transport execution. |  |  |
 | `execution_posture.delegation_control.disabled_reason` | string \| null | no |  | Reason delegation execution is disabled, when known. |  |  |
 | `execution_posture.delegation_control.human_control` | object | yes |  | Human-control boundary for delegation. |  |  |
 | `execution_posture.delegation_control.human_control.rule` | string | yes |  | Human-control rule for local delegation. |  |  |

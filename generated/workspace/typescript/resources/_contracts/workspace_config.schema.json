@@ -243,7 +243,7 @@
           "default": false
         },
         "classification_owner": {
-          "description": "Exclusive owner of assurance applicability classification: native workspace config or one repository-owned classifier.",
+          "description": "Exclusive owner of assurance applicability classification: config-native forbids classification_source, while repository-owned requires exactly one classification_source.",
           "enum": ["config-native", "repository-owned"],
           "default": "config-native"
         },
@@ -317,7 +317,7 @@
             "x-agentic-workspace-unknown-properties": "warn",
             "properties": {
               "required_commands": {
-                "description": "Commands that must pass for this proof profile.",
+                "description": "Commands that must pass for this proof profile. A command may occupy only one of the required, optional, or disallowed roles.",
                 "type": "array",
                 "items": {
                   "type": "string",
@@ -328,7 +328,7 @@
                 "default": []
               },
               "optional_commands": {
-                "description": "Commands that are useful but not required for this proof profile.",
+                "description": "Commands that are useful but not required for this proof profile. A command may occupy only one proof-command role.",
                 "type": "array",
                 "items": {
                   "type": "string",
@@ -350,7 +350,7 @@
                 "default": []
               },
               "disallowed_commands": {
-                "description": "Commands that this proof profile disallows for the matched assurance concern.",
+                "description": "Commands that this proof profile disallows for the matched assurance concern. A command may occupy only one proof-command role.",
                 "type": "array",
                 "items": {
                   "type": "string",
@@ -509,19 +509,141 @@
                 "default": []
               },
               "waiver": {
-                "description": "Recorded waiver with reason and owner for this requirement.",
+                "description": "Recorded waiver with reason and owner for this requirement. Waiver and dismissal are mutually exclusive terminal dispositions.",
                 "$ref": "#/$defs/assurance_requirement_disposition"
               },
               "dismissal": {
-                "description": "Recorded dismissal or not-applicable decision with reason and owner for this requirement.",
+                "description": "Recorded dismissal or not-applicable decision with reason and owner for this requirement. Dismissal and waiver are mutually exclusive terminal dispositions.",
                 "$ref": "#/$defs/assurance_requirement_disposition"
               },
               "notes": {
                 "description": "Optional repo-local note about this requirement.",
                 "type": "string",
                 "minLength": 1
+              },
+              "requirement_class": {
+                "description": "Optional standing repo requirement class. Omit for legacy task-scoped assurance requirements.",
+                "enum": ["invariant", "current-evidence", "guideline"]
+              },
+              "source_intent_ref": {
+                "description": "Strongest current intent, requirement, or explicit repo-policy owner for this standing requirement.",
+                "type": "string",
+                "minLength": 1
+              },
+              "source_intent_revision": {
+                "description": "Revision of the source intent or requirement used to derive this observable contract.",
+                "type": "string",
+                "minLength": 1
+              },
+              "source_intent_current": {
+                "description": "Whether the source intent revision remains current; false forces re-evaluation instead of an immortal gate.",
+                "type": "boolean"
+              },
+              "preference_target": {
+                "description": "Existing surface, skill, or operation target influenced by a guideline.",
+                "type": "string",
+                "pattern": "^(surface|skill|operation):"
+              },
+              "evidence_owner": {
+                "description": "Existing assurance, Verification, proof, or domain owner that produces the evidence.",
+                "type": "string",
+                "minLength": 1
+              },
+              "detail_route": {
+                "description": "Bounded owner route for evidence detail or recovery.",
+                "type": "string",
+                "minLength": 1
+              },
+              "measurement": {
+                "description": "Optional source-owned measurable condition evaluated against compact assurance evidence; the evidence producer cannot redefine this threshold.",
+                "type": "object",
+                "required": [
+                  "kind",
+                  "evidence_label",
+                  "metric",
+                  "unit",
+                  "comparator",
+                  "threshold",
+                  "aggregation",
+                  "minimum_samples",
+                  "subject",
+                  "subject_revision",
+                  "environment",
+                  "source_revision",
+                  "producer_command"
+                ],
+                "properties": {
+                  "kind": {"description": "Versioned measurable-condition discriminator.", "const": "agentic-workspace/measurement-requirement/v1"},
+                  "evidence_label": {"description": "Required-evidence label whose compact result satisfies this condition.", "type": "string", "minLength": 1},
+                  "metric": {"description": "Repo-owned identity of the quantity being measured.", "type": "string", "minLength": 1},
+                  "unit": {"description": "Unit shared by observations and the threshold.", "type": "string", "minLength": 1},
+                  "comparator": {"description": "Small supported comparison applied by AW to the observed or evaluated value.", "enum": ["lte", "gte", "eq", "ratio-lte", "ratio-gte"]},
+                  "threshold": {"description": "Source-owned acceptance bound; evidence cannot redefine it.", "type": "number"},
+                  "tolerance": {"description": "Explicit non-negative tolerance applied to the source-owned threshold.", "type": "number", "minimum": 0, "default": 0},
+                  "aggregation": {"description": "Maintained aggregation represented by the compact observation.", "enum": ["single", "median", "percentile", "ratio", "count"]},
+                  "minimum_samples": {"description": "Minimum sample count required before evidence may be current and sufficient.", "type": "integer", "minimum": 1},
+                  "subject": {"description": "Measured subject or loaded fixture identity.", "type": "string", "minLength": 1},
+                  "subject_revision": {"description": "Revision of the measured subject or loaded fixture.", "type": "string", "minLength": 1},
+                  "control_subject": {"description": "Control or baseline subject for a relative/scaling condition.", "type": "string", "minLength": 1},
+                  "control_revision": {"description": "Revision of the relative/scaling control subject.", "type": "string", "minLength": 1},
+                  "environment": {"description": "Maintained runtime or benchmark environment identity; use none for deterministic checks.", "type": "string", "minLength": 1},
+                  "source_revision": {"description": "Revision of the evidence-producing fixture or measurement method.", "type": "string", "minLength": 1},
+                  "producer_command": {"description": "Exact bounded command selected by the ordinary proof path when current measurement evidence is absent or stale.", "type": "string", "minLength": 1},
+                  "excluded_costs": {
+                    "description": "Explicit costs excluded by the maintained measurement method.",
+                    "type": "array",
+                    "items": {"type": "string", "minLength": 1},
+                    "uniqueItems": true,
+                    "default": []
+                  }
+                },
+                "allOf": [
+                  {
+                    "if": {"properties": {"comparator": {"enum": ["ratio-lte", "ratio-gte"]}}, "required": ["comparator"]},
+                    "then": {
+                      "required": ["control_subject", "control_revision"],
+                      "properties": {"aggregation": {"const": "ratio"}}
+                    }
+                  }
+                ],
+                "additionalProperties": false
               }
             },
+            "allOf": [
+              {
+                "if": {"required": ["requirement_class"]},
+                "then": {"required": ["source_intent_ref", "source_intent_revision", "source_intent_current"]}
+              },
+              {
+                "if": {"properties": {"requirement_class": {"const": "guideline"}}, "required": ["requirement_class"]},
+                "then": {
+                  "required": ["preference_target"],
+                  "properties": {
+                    "force": {"enum": ["informational", "recommended"]},
+                    "blocking_claims": {"maxItems": 0}
+                  }
+                }
+              },
+              {
+                "if": {"properties": {"requirement_class": {"enum": ["invariant", "current-evidence"]}}, "required": ["requirement_class"]},
+                "then": {
+                  "required": ["required_evidence", "blocking_claims", "evidence_owner", "detail_route"],
+                  "properties": {
+                    "required_evidence": {"minItems": 1},
+                    "blocking_claims": {"minItems": 1},
+                    "evidence_owner": {"pattern": "^(assurance|verification|proof|module):"},
+                    "force": {"enum": ["required-before-closeout", "blocking"]}
+                  }
+                }
+              },
+              {
+                "if": {"required": ["measurement"]},
+                "then": {
+                  "required": ["requirement_class", "evidence_owner", "detail_route"],
+                  "properties": {"requirement_class": {"enum": ["current-evidence", "guideline"]}}
+                }
+              }
+            ],
             "additionalProperties": true
           }
         },
@@ -548,7 +670,7 @@
                 ]
               },
               "level": {
-                "description": "Alias for assurance_level.",
+                "description": "Compatibility alias for assurance_level. It cannot be declared beside assurance_level; new configuration should use assurance_level.",
                 "enum": [
                   "low",
                   "medium",
@@ -953,7 +1075,7 @@
           ]
         },
         "minimum_capabilities": {
-          "description": "Payload capabilities that must be present in checked-in payload provenance before the target is satisfied.",
+          "description": "Payload-owned install-target capabilities that must be present in checked-in payload provenance before the target is satisfied. The same capability cannot also appear in cli_compatibility.required_capabilities.",
           "type": "array",
           "items": {
             "type": "string",
@@ -1061,7 +1183,7 @@
           "default": "agentic-workspace/installed-state-compatibility/v1"
         },
         "required_capabilities": {
-          "description": "Package capabilities required from the configured Agentic Workspace runtime.",
+          "description": "Reader/runtime compatibility capabilities required from the configured Agentic Workspace CLI. Install-target capabilities belong only in payload.minimum_capabilities and cannot be duplicated here.",
           "type": "array",
           "items": { "type": "string", "minLength": 1 },
           "uniqueItems": true,
