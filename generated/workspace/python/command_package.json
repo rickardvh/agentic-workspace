@@ -14980,10 +14980,6 @@
             "option": "--owner-ref"
           },
           {
-            "attr": "targeted_write_plan",
-            "option": "--plan"
-          },
-          {
             "attr": "patch",
             "option": "--patch"
           },
@@ -15288,6 +15284,12 @@
             "attr": "slug",
             "commands": [
               "create-review"
+            ]
+          },
+          {
+            "attr": "targeted_write_plan",
+            "commands": [
+              "targeted-write"
             ]
           }
         ],

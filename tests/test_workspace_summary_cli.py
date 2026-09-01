@@ -7,6 +7,7 @@ import subprocess
 import time
 import tomllib
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -14,7 +15,7 @@ from repo_planning_bootstrap import installer as planning_installer
 from repo_planning_bootstrap.installer import install_bootstrap
 from tests.workspace_cli_support import _init_git_repo, cli
 
-from agentic_workspace import workspace_runtime_core
+from agentic_workspace import workspace_runtime_core, workspace_runtime_planning
 from agentic_workspace.workspace_runtime_primitives import _memory_decision_packet_payload, _operating_loop_decision_payload
 
 
@@ -2277,6 +2278,109 @@ def test_github_native_sub_issue_hierarchy_preserves_historical_and_current_lane
     assert grouping["child_issue_clusters"][0]["child_count"] == child_count
     assert candidates["candidates"][0]["priority"] == "P0"
     assert all(item["relationships"]["source"] == "github-native-sub-issues" for item in items)
+
+
+def test_github_issue_refresh_uses_fetch_time_for_freshness_without_changing_external_revision() -> None:
+    item = workspace_runtime_core._github_issue_to_external_intent_item(
+        issue={
+            "number": 2923,
+            "title": "Old unchanged issue",
+            "state": "OPEN",
+            "url": "https://github.com/acme/project/issues/2923",
+            "labels": [],
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "body": "",
+        },
+        repo="acme/project",
+        observed_at="2026-09-01T12:00:00+00:00",
+    )
+
+    assert item is not None
+    assert item["external_revision"] == "2026-01-01T00:00:00Z"
+    assert item["observed_at"] == "2026-09-01T12:00:00+00:00"
+    assert item["freshness"] == {
+        "status": "current",
+        "observed_at": "2026-09-01T12:00:00+00:00",
+        "expires_at": "2026-09-02T12:00:00+00:00",
+        "max_age_seconds": 86400,
+    }
+    assert '--issue "#2923"' in item["refresh_route"]
+
+
+def test_github_refresh_advances_observation_without_revision_and_does_not_refresh_on_failure(tmp_path: Path, monkeypatch) -> None:
+    updated_at = "2026-01-01T00:00:00Z"
+
+    def fake_gh(args: list[str], cwd: Path) -> Any:
+        assert cwd == tmp_path
+        assert args[:2] == ["issue", "view"]
+        return {
+            "number": 42,
+            "title": "Unchanged issue",
+            "state": "OPEN",
+            "url": "https://github.com/acme/project/issues/42",
+            "labels": [],
+            "createdAt": "2025-12-01T00:00:00Z",
+            "updatedAt": updated_at,
+            "closedAt": "",
+            "body": "",
+            "comments": [],
+        }
+
+    monkeypatch.setattr(workspace_runtime_core, "_run_gh_json", fake_gh)
+    first = workspace_runtime_core._refresh_github_external_intent_evidence(
+        target_root=tmp_path,
+        repo="acme/project",
+        limit=None,
+        state=None,
+        storage="cache",
+        dry_run=False,
+        issue_refs=["#42"],
+    )
+    cache = tmp_path / ".agentic-workspace/local/cache/external-intent-evidence.json"
+    first_cache = json.loads(cache.read_text(encoding="utf-8"))
+    item = next(entry for entry in first_cache["items"] if entry["id"] == "#42")
+    assert item["external_revision"] == updated_at
+    assert item["observed_at"] == first["refreshed_at"]
+    current = workspace_runtime_planning._active_owner_external_reconciliation(
+        target_root=tmp_path,
+        active_summary={"active_execplan": "owner.plan.json", "active_owner_refs": ["#42"]},
+        config=SimpleNamespace(cli_invoke="agentic-workspace"),
+        planning_revision={"revision_id": "revision-42"},
+    )
+    assert current["status"] == "current"
+
+    updated_at = "2026-09-01T12:00:00Z"
+    changed = workspace_runtime_core._refresh_github_external_intent_evidence(
+        target_root=tmp_path,
+        repo="acme/project",
+        limit=None,
+        state=None,
+        storage="cache",
+        dry_run=False,
+        issue_refs=["#42"],
+    )
+    changed_cache = json.loads(cache.read_text(encoding="utf-8"))
+    changed_item = next(entry for entry in changed_cache["items"] if entry["id"] == "#42")
+    assert changed_item["external_revision"] == updated_at
+    assert changed_item["observed_at"] == changed["refreshed_at"]
+
+    before_failure = cache.read_bytes()
+
+    def unavailable(args: list[str], cwd: Path) -> Any:
+        raise workspace_runtime_core.WorkspaceUsageError("provider unavailable")
+
+    monkeypatch.setattr(workspace_runtime_core, "_run_gh_json", unavailable)
+    with pytest.raises(workspace_runtime_core.WorkspaceUsageError, match="provider unavailable"):
+        workspace_runtime_core._refresh_github_external_intent_evidence(
+            target_root=tmp_path,
+            repo="acme/project",
+            limit=None,
+            state=None,
+            storage="cache",
+            dry_run=False,
+            issue_refs=["#42"],
+        )
+    assert cache.read_bytes() == before_failure
 
 
 def test_github_native_sub_issue_partial_failure_is_not_flattened(tmp_path: Path, monkeypatch) -> None:

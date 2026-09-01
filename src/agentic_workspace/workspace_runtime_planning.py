@@ -78,7 +78,7 @@ def _active_owner_external_reconciliation(
     evidence_path = target_root / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json"
     if not evidence_path.is_file():
         evidence_path = target_root / ".agentic-workspace" / "planning" / "external-intent-evidence.json"
-    issue_args = " ".join(f"--issue {ref}" for ref in refs)
+    issue_args = " ".join(f'--issue "{ref}"' for ref in refs)
     refresh_command = _command_with_cli_invoke(
         command=(
             "agentic-workspace external-intent refresh-github --target . --storage cache "

@@ -65,7 +65,7 @@ def test_active_external_backed_owner_routes_refresh_then_reconciliation(tmp_pat
     assert stale["status"] == "refresh-required"
     assert stale["reason_code"] == "external-observation-stale"
     assert stale["refresh_command"].startswith("uv run agentic-workspace external-intent refresh-github")
-    assert "--issue #42" in stale["refresh_command"]
+    assert '--issue "#42"' in stale["refresh_command"]
     assert "--apply-planning-candidates" in stale["refresh_command"]
 
     assert workspace_runtime_planning._active_owner_external_reconciliation(
@@ -6610,8 +6610,8 @@ def test_planning_front_door_forwards_targeted_owner_write(monkeypatch, tmp_path
 
     actual = json.loads(capsys.readouterr().out)["argv"]
     assert actual[0] == "targeted-write"
+    assert actual[1] == "example-owner"
     for option, value in {
-        "--plan": "example-owner",
         "--patch": patch,
         "--target": str(tmp_path),
         "--expect-planning-revision": "planning-revision",
@@ -6620,7 +6620,48 @@ def test_planning_front_door_forwards_targeted_owner_write(monkeypatch, tmp_path
     }.items():
         assert actual[actual.index(option) + 1] == value
     assert "--apply" in actual
+    assert "--plan" not in actual
     assert forwarded == [actual]
+
+
+def test_planning_front_door_executes_lane_backed_targeted_write_from_readiness_argv(tmp_path: Path, capsys) -> None:
+    planning_installer.install_bootstrap(target=tmp_path)
+    planning_installer.create_lane_record(lane_id="delivery-lane", title="Delivery Lane", target=tmp_path)
+    planning_installer.create_execplan_scaffold(
+        plan_id="lane-plan",
+        title="Lane Plan",
+        target=tmp_path,
+        activate=True,
+        lane="delivery-lane",
+    )
+    tightening = planning_installer.planning_summary(target=tmp_path, profile="compact")["execution_readiness"]["implementation_tightening"]
+    patch = json.dumps({"goal": ["Make the lane plan executable."]}, separators=(",", ":"))
+
+    common = [
+        "planning",
+        "targeted-write",
+        "--plan",
+        tightening["owner"],
+        "--patch",
+        patch,
+        "--expect-planning-revision",
+        tightening["planning_revision"],
+        "--expect-owner-revision",
+        str(tightening["owner_revision"]),
+        "--expect-lane-revision",
+        tightening["lane_revision"],
+        "--target",
+        str(tmp_path),
+        "--format",
+        "json",
+    ]
+
+    assert cli.main(common) == 0
+    preview = json.loads(capsys.readouterr().out)
+    assert preview["status"] == "preview"
+    assert cli.main([*common[:-4], "--apply", *common[-4:]]) == 0
+    applied = json.loads(capsys.readouterr().out)
+    assert applied["status"] == "applied"
 
 
 def test_planning_front_door_matches_direct_integration_propose_semantics(tmp_path: Path) -> None:

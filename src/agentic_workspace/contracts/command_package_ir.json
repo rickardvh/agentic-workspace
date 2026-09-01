@@ -1253,6 +1253,12 @@
                   "create-review"
                 ],
                 "attr": "slug"
+              },
+              {
+                "commands": [
+                  "targeted-write"
+                ],
+                "attr": "targeted_write_plan"
               }
             ],
             "option_specs": [
@@ -1387,10 +1393,6 @@
               {
                 "option": "--owner-ref",
                 "attr": "owner_ref"
-              },
-              {
-                "option": "--plan",
-                "attr": "targeted_write_plan"
               },
               {
                 "option": "--patch",
@@ -16222,10 +16224,6 @@
                 "option": "--owner-ref"
               },
               {
-                "attr": "targeted_write_plan",
-                "option": "--plan"
-              },
-              {
                 "attr": "patch",
                 "option": "--patch"
               },
@@ -16530,6 +16528,12 @@
                 "attr": "slug",
                 "commands": [
                   "create-review"
+                ]
+              },
+              {
+                "attr": "targeted_write_plan",
+                "commands": [
+                  "targeted-write"
                 ]
               }
             ],

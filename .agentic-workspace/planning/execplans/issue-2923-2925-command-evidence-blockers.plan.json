@@ -1,0 +1,103 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2923-2925-command-evidence-blockers",
+  "title": "Fix dogfooding command and evidence blockers #2923-#2925",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "implementation",
+  "revision": 2,
+  "intent": {
+    "outcome": "GitHub issues #2923 #2924 #2925",
+    "non_goals": [
+      "Leave adjacent backlog or follow-on work out of this plan."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "GitHub issues #2923 #2924 #2925",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "Fill in the concrete files before implementation starts."
+    ],
+    "effects": []
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected-local",
+      "owner": "issue-2923-2925-command-evidence-blockers"
+    },
+    "proof_posture": {
+      "state": "pending",
+      "refs": []
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "GitHub issues #2923 #2924 #2925",
+      "label": "GitHub issues #2923 #2924 #2925",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Fix dogfooding command and evidence blockers #2923-#2925 is implemented, validated, and closed out honestly."
+    ],
+    "requirements": [
+      "Fill in the narrowest command that proves the promoted work."
+    ],
+    "refs": []
+  },
+  "continuation": {
+    "owner": "none",
+    "residual_intent": "none"
+  },
+  "specialist_contracts": [],
+  "goal": [
+    "Make external evidence refresh, routed issue arguments, and planning targeted-write executable and contract-consistent for #2923-#2925."
+  ],
+  "non_goals": [
+    "Do not implement Planning topology/current-work repairs #2926-#2928 or semantic task routes #2929/#2930 in this slice."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "Implement all 2026-09-01 dogfooding issues in a reviewable stack.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/lanes/issue-2923-2930-dogfooding.lane.json"
+  },
+  "execution_bounds": {
+    "allowed paths": "src/agentic_workspace/workspace_runtime_core.py; src/agentic_workspace/workspace_runtime_planning.py; src/agentic_workspace/contracts/**; generated/**; tests/test_workspace_cli.py; tests/test_workspace_summary_cli.py",
+    "max changed files": "15",
+    "required validation commands": "focused pytest plus generated command package checks and routed proof",
+    "ask-before-refactor threshold": "Any new command registry, provider-specific Planning logic, or authority change",
+    "stop before touching": "Planning relation/current-work semantics and scoped-instruction task routing"
+  },
+  "touched_paths": [
+    "src/agentic_workspace/workspace_runtime_core.py",
+    "src/agentic_workspace/workspace_runtime_planning.py",
+    "src/agentic_workspace/contracts/command_package_ir.json",
+    "generated/workspace/python/**",
+    "generated/*/.agentic-workspace-cli-fingerprint.json",
+    "tests/test_workspace_cli.py",
+    "tests/test_workspace_summary_cli.py"
+  ],
+  "validation_commands": [
+    "uv run --frozen --active --no-sync pytest tests/test_workspace_cli.py tests/test_workspace_summary_cli.py -q",
+    "uv run --frozen --active --no-sync python scripts/check/check_generated_command_packages.py --require-node"
+  ],
+  "completion_criteria": [
+    "Fresh unchanged GitHub observations remain current while preserving external revision.",
+    "Hash-prefixed issue args execute unchanged in PowerShell-compatible rendering.",
+    "Targeted-write preview/apply execute through the configured workspace front door with generated contract conformance."
+  ]
+}

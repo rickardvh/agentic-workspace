@@ -5520,6 +5520,21 @@ def _implementation_tightening_payload(*, target_root: Path, planning_record: di
     }
     patch_template = {field: templates[field] for field in missing}
     revision = str(planning_revision(target_root).get("revision_id") or "")
+    owner_id = str(owner.get("id") or (owner_path.stem.removesuffix(".plan") if owner_path is not None else ""))
+    lane_matches: list[dict[str, Any]] = []
+    for lane_path in sorted((target_root / ".agentic-workspace/planning/lanes").glob("*.lane.json")):
+        lane_record = _load_lane_record(lane_path)
+        if isinstance(lane_record, dict) and str(lane_record.get("current_slice") or "") == owner_id:
+            lane_matches.append(lane_record)
+    if len(lane_matches) > 1:
+        return {
+            "status": "ambiguous-lane-relation",
+            "missing_requirements": missing,
+            "owner": owner_ref,
+            "owner_revision": owner.get("revision"),
+            "rule": "Implementation tightening cannot choose among multiple lanes that claim the selected owner as current slice.",
+        }
+    lane_revision = _record_revision(lane_matches[0]) if lane_matches else ""
     base_argv = [
         *_workspace_cli_invoke(target_root).split(),
         "planning",
@@ -5532,16 +5547,16 @@ def _implementation_tightening_payload(*, target_root: Path, planning_record: di
         revision,
         "--expect-owner-revision",
         str(owner.get("revision") or ""),
-        "--target",
-        ".",
-        "--format",
-        "json",
     ]
+    if lane_revision:
+        base_argv.extend(["--expect-lane-revision", lane_revision])
+    base_argv.extend(["--target", ".", "--format", "json"])
     return {
         "status": "scaffold-tightening-required",
         "missing_requirements": missing,
         "owner": owner_ref,
         "owner_revision": owner.get("revision"),
+        "lane_revision": lane_revision,
         "planning_revision": revision,
         "patch_template": patch_template,
         "preview_argv": base_argv,

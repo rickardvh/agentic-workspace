@@ -28091,7 +28091,7 @@ def _infer_external_issue_negative_invariants(*, body: str, comments: Any) -> li
     return invariants
 
 
-def _github_issue_to_external_intent_item(*, issue: dict[str, Any], repo: str) -> dict[str, Any] | None:
+def _github_issue_to_external_intent_item(*, issue: dict[str, Any], repo: str, observed_at: str | None = None) -> dict[str, Any] | None:
     number = issue.get("number")
     if number is None:
         return None
@@ -28107,7 +28107,8 @@ def _github_issue_to_external_intent_item(*, issue: dict[str, Any], repo: str) -
     updated_at = str(issue.get("updatedAt", "")).strip()
     locator = str(issue.get("url", "")).strip()
     observation_revision = updated_at or str(issue.get("closedAt", "") or "").strip() or f"github-issue-{issue_number}"
-    observed_time = _parse_external_intent_timestamp(updated_at)
+    observation_time = observed_at or datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    observed_time = _parse_external_intent_timestamp(observation_time)
     expires_at = (observed_time + timedelta(hours=24)).replace(microsecond=0).isoformat() if observed_time else ""
     return {
         "system": "github",
@@ -28129,7 +28130,7 @@ def _github_issue_to_external_intent_item(*, issue: dict[str, Any], repo: str) -
             "child_ids": [],
             "source": "github-native-sub-issues",
             "repository": repo,
-            "observed_at": updated_at,
+            "observed_at": observation_time,
             "external_revision": observation_revision,
             "reason": "native relationship observation has not run",
         },
@@ -28141,10 +28142,10 @@ def _github_issue_to_external_intent_item(*, issue: dict[str, Any], repo: str) -
         "owner": {"id": f"#{issue_number}", "kind": "issue", "locator": locator or f"github:{repo}:issue:{issue_number}"},
         "status_class": "completed" if state == "closed" else "current",
         "external_revision": observation_revision,
-        "observed_at": updated_at or "unknown",
+        "observed_at": observation_time,
         "freshness": {
             "status": "current" if observed_time else "unknown",
-            "observed_at": updated_at,
+            "observed_at": observation_time,
             "expires_at": expires_at,
             "max_age_seconds": 86400,
         },
@@ -28156,7 +28157,9 @@ def _github_issue_to_external_intent_item(*, issue: dict[str, Any], repo: str) -
             "source_ref": locator or f"github:{repo}:issue:{issue_number}",
             "refresh_id": observation_revision,
         },
-        "refresh_route": f"agentic-workspace external-intent refresh-github --target . --issue #{issue_number} --storage cache --format json",
+        "refresh_route": (
+            f'agentic-workspace external-intent refresh-github --target . --issue "#{issue_number}" --storage cache --format json'
+        ),
         "availability": "available",
         "contradictions": [],
         "provider_detail": {
@@ -28272,7 +28275,9 @@ def _normalize_external_intent_issue_refs(raw_issue_refs: list[str] | None) -> l
     return normalized
 
 
-def _fetch_github_external_intent_issue_items(*, target_root: Path, repo: str, issue_refs: list[str]) -> list[dict[str, Any]]:
+def _fetch_github_external_intent_issue_items(
+    *, target_root: Path, repo: str, issue_refs: list[str], observed_at: str | None = None
+) -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
     for issue_ref in issue_refs:
         issue_number = issue_ref.lstrip("#")
@@ -28290,7 +28295,7 @@ def _fetch_github_external_intent_issue_items(*, target_root: Path, repo: str, i
         )
         if not isinstance(raw_issue, dict):
             raise WorkspaceUsageError(f"GitHub issue view for {issue_ref} did not return a JSON object.")
-        item = _github_issue_to_external_intent_item(issue=raw_issue, repo=repo)
+        item = _github_issue_to_external_intent_item(issue=raw_issue, repo=repo, observed_at=observed_at)
         if item is not None:
             items.append(item)
     return items
@@ -28899,6 +28904,7 @@ def _refresh_github_external_intent_evidence(
     apply_planning_candidates: bool = False,
     issue_refs: list[str] | None = None,
 ) -> dict[str, Any]:
+    refreshed_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     evidence_path, evidence_relative_path, storage_class = _external_intent_evidence_write_location(target_root, storage)
     previous_payload = _load_existing_external_intent_evidence(evidence_path)
     normalized_issue_refs = _normalize_external_intent_issue_refs(issue_refs)
@@ -28923,6 +28929,7 @@ def _refresh_github_external_intent_evidence(
             target_root=target_root,
             repo=resolved_repo,
             issue_refs=normalized_issue_refs,
+            observed_at=refreshed_at,
         )
         previous_items_for_merge = [item for item in _list_payload(previous_payload.get("items")) if isinstance(item, dict)]
         by_id = {str(item.get("id", "")).strip(): item for item in previous_items_for_merge if str(item.get("id", "")).strip()}
@@ -28950,7 +28957,9 @@ def _refresh_github_external_intent_evidence(
         fetched_items = [
             item
             for item in (
-                _github_issue_to_external_intent_item(issue=issue, repo=resolved_repo) for issue in raw_issues if isinstance(issue, dict)
+                _github_issue_to_external_intent_item(issue=issue, repo=resolved_repo, observed_at=refreshed_at)
+                for issue in raw_issues
+                if isinstance(issue, dict)
             )
             if item is not None
         ]
@@ -28979,11 +28988,11 @@ def _refresh_github_external_intent_evidence(
             },
             "status_class": "completed" if pr["state"] in {"closed", "merged"} else "current",
             "external_revision": pr["updated_at"] or pr["state"],
-            "observed_at": pr["updated_at"] or "unknown",
+            "observed_at": refreshed_at,
             "freshness": {
-                "status": "current" if pr["updated_at"] else "unknown",
-                "observed_at": pr["updated_at"],
-                "expires_at": _external_intent_expiry(pr["updated_at"]),
+                "status": "current",
+                "observed_at": refreshed_at,
+                "expires_at": _external_intent_expiry(refreshed_at),
                 "max_age_seconds": 86400,
             },
             "blockers": [],
@@ -29007,7 +29016,6 @@ def _refresh_github_external_intent_evidence(
     )
     items.sort(key=lambda item: (str(item.get("kind", "")), int(re.sub(r"\D", "", str(item["id"])) or "0")))
     previous_count = len([item for item in _list_payload(previous_payload.get("items")) if isinstance(item, dict)])
-    refreshed_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     fetched_item_count = len(items)
     fetched_open_count = sum((1 for item in items if item["status"] == "open"))
     fetched_closed_count = sum((1 for item in items if item["status"] == "closed"))

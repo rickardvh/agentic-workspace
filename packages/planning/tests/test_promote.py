@@ -879,6 +879,27 @@ def test_planning_cli_new_plan_creates_valid_active_scaffold(tmp_path: Path, cap
     assert tightened_summary["execution_readiness"]["broad_work_allowed"] is True
 
 
+def test_lane_backed_implementation_tightening_emits_required_lane_revision_guard(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    installer_mod.create_lane_record(lane_id="delivery-lane", title="Delivery Lane", target=tmp_path)
+    installer_mod.create_execplan_scaffold(
+        plan_id="lane-plan",
+        title="Lane Plan",
+        target=tmp_path,
+        activate=True,
+        lane="delivery-lane",
+    )
+
+    tightening = planning_summary(target=tmp_path, profile="compact")["execution_readiness"]["implementation_tightening"]
+    lane_path = tmp_path / ".agentic-workspace/planning/lanes/delivery-lane.lane.json"
+    expected_lane_revision = installer_mod._record_revision(json.loads(lane_path.read_text(encoding="utf-8")))
+
+    assert tightening["status"] == "scaffold-tightening-required"
+    assert tightening["lane_revision"] == expected_lane_revision
+    for argv in (tightening["preview_argv"], tightening["apply_argv"]):
+        assert argv[argv.index("--expect-lane-revision") + 1] == expected_lane_revision
+
+
 def test_compact_owner_rejects_unknown_lifecycle_and_phase(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     record = installer_mod._build_execplan_record_from_todo_item(

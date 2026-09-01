@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Refresh GitHub evidence by observation time, quote issue references safely, and repair lane-backed targeted-write forwarding."
+issues = [2923, 2924, 2925]
