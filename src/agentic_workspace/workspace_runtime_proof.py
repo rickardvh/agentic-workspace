@@ -56,7 +56,7 @@ from agentic_workspace.runtime_source_review import (
 )
 from agentic_workspace.runtime_symbol_working_set import LARGE_RUNTIME_PATHS, runtime_symbol_working_set_for_changed_paths
 from agentic_workspace.scoped_instructions import inspect_instructions
-from agentic_workspace.trusted_execution import run_trusted_shell
+from agentic_workspace.trusted_execution import host_shell_dialect, run_trusted_shell, trusted_shell_execution_identity
 from agentic_workspace.workspace_runtime_core import (
     _PROOF_EXECUTION_STATUSES,
     _PROOF_SELECTION_RULES,
@@ -918,6 +918,8 @@ def _proof_receipt_summary(receipt: dict[str, Any]) -> dict[str, Any]:
         "timeout": bool(raw_execution.get("timeout")) if "timeout" in raw_execution else False,
         "duration_seconds": duration_value,
         "route_budget_seconds": raw_execution.get("route_budget_seconds", ""),
+        "execution_kind": str(raw_execution.get("execution_kind") or "").strip(),
+        "shell_dialect": str(raw_execution.get("shell_dialect") or "").strip(),
         "environment": raw_execution.get("environment", receipt.get("environment", {})),
         "claim_sufficiency": str(raw_execution.get("claim_sufficiency") or "not-reviewed").strip(),
     }
@@ -3684,6 +3686,7 @@ def _repo_evidence_strategy_payload(
             "Workspace composes named requirements and host-owned check results; it does not infer property testing, "
             "public/private API boundaries, test frameworks, or methodology from prose or names."
         ),
+        "rule": "Named host requirements may select or block evidence, while the workspace only composes their declared effects.",
     }
 
 
@@ -4137,6 +4140,7 @@ def _proof_route_run_validation_commands(*, target_root: Path, commands: list[st
         try:
             completed = run_trusted_shell(
                 normalized,
+                shell_dialect=host_shell_dialect(),
                 trust_source="checked-repository-proof-route",
                 admitted=True,
                 cwd=target_root,
@@ -5102,8 +5106,12 @@ def _proof_route_execution_observations(
             route_budget_seconds: float | None = float(budget) if budget else None
         except (TypeError, ValueError):
             route_budget_seconds = None
-        expected_command_identity = hashlib.sha256(command.encode("utf-8")).hexdigest()[:16]
+        expected_shell_dialect = str(selected.get("shell_dialect") or "").strip()
+        expected_command_identity = (
+            str(selected.get("command_identity") or "").strip() or hashlib.sha256(command.encode("utf-8")).hexdigest()[:16]
+        )
         observed_command_id = str(execution.get("command_id") or "").strip()
+        observed_shell_dialect = str(execution.get("shell_dialect") or "").strip()
         observed_route_id = str(execution.get("route_id") or "").strip()
         expected_route_ids = {
             str(selected.get("route_id") or "").strip(),
@@ -5115,6 +5123,10 @@ def _proof_route_execution_observations(
             authority_mismatches.append("missing_command_id")
         elif observed_command_id and observed_command_id != expected_command_identity:
             authority_mismatches.append("command_id")
+        if selected and expected_shell_dialect and not observed_shell_dialect:
+            authority_mismatches.append("missing_shell_dialect")
+        elif observed_shell_dialect and expected_shell_dialect and observed_shell_dialect != expected_shell_dialect:
+            authority_mismatches.append("shell_dialect")
         if selected and expected_route_ids and not observed_route_id:
             authority_mismatches.append("missing_route_id")
         elif observed_route_id and expected_route_ids and observed_route_id not in expected_route_ids:
@@ -5130,6 +5142,7 @@ def _proof_route_execution_observations(
                 "route_id": observed_route_id,
                 "selected_authority_expected": {
                     "command_identity": expected_command_identity,
+                    "shell_dialect": expected_shell_dialect,
                     "route_ids": sorted(expected_route_ids),
                 },
                 "authority_mismatch": bool(authority_mismatches),
@@ -9800,7 +9813,8 @@ def _proof_selection_for_changed_paths(
         for command in lane.get("enough_proof", []):
             command_text = str(command)
             command_cwd, run_command = _split_validation_command(command_text)
-            command_identity = hashlib.sha256(command_text.encode("utf-8")).hexdigest()[:16]
+            shell_dialect = host_shell_dialect()
+            command_identity = trusted_shell_execution_identity(command=command_text, shell_dialect=shell_dialect)
             route_id = str(lane.get("id", ""))
             route_source = _proof_route_source_for_lane(
                 lane=lane, command=command_text, adjustments_by_replacement=adjustments_by_replacement
@@ -9828,6 +9842,8 @@ def _proof_selection_for_changed_paths(
                     "kind": "proof-command/v1",
                     "command": command_text,
                     "command_identity": command_identity,
+                    "execution_kind": "trusted-shell",
+                    "shell_dialect": shell_dialect,
                     "route_id": route_id,
                     "cwd": command_cwd,
                     "run": run_command,

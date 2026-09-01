@@ -747,6 +747,10 @@ def test_repo_evidence_strategy_composes_hard_and_advisory_named_requirements() 
             }
         ],
     )
+    decision_schema = _schema("operating_decision.schema.json")
+    strategy_schema = decision_schema["properties"]["repo_evidence_strategy"]
+    strategy_validator = Draft202012Validator(strategy_schema)
+    strategy_validator.validate(strategy)
     assert strategy["status"] == "blocked"
     assert {item["class"] for item in strategy["clauses"]} == {"guideline", "invariant", "current-evidence"}
     assert strategy["selected_command_count"] == 3
@@ -769,6 +773,10 @@ def test_repo_evidence_strategy_composes_hard_and_advisory_named_requirements() 
         },
     ]
     assert strategy["advisory_preferences"][0]["id"] == "property_invariants"
+    malformed = {**strategy, "selected_command_count": "three"}
+    assert list(strategy_validator.iter_errors(malformed))
+    unknown = {**strategy, "peer_strategy": {}}
+    assert list(strategy_validator.iter_errors(unknown))
 
     admitted = admit_projection_surface_decision_input(input_revisions={"current_work": "rev-a"}, consumer="proof")
     decision = compile_projection_surface_operating_decision(
@@ -787,12 +795,19 @@ def test_repo_evidence_strategy_composes_hard_and_advisory_named_requirements() 
         "public_api_only",
         "compact_suite_budget",
     }
+    changed_strategy = copy.deepcopy(strategy)
+    changed_strategy["clauses"][0]["authority_revision"] = "rev-2"
+    direct = compile_operating_decision(inputs={"revisions": {"current_work": "rev-a"}, "repo_evidence_strategy": strategy})
+    changed = compile_operating_decision(inputs={"revisions": {"current_work": "rev-a"}, "repo_evidence_strategy": changed_strategy})
+    assert changed["decision_id"] != direct["decision_id"]
+    assert changed["admitted_input_revision"] != direct["admitted_input_revision"]
 
 
 def test_repo_evidence_strategy_has_no_default_methodology() -> None:
     from agentic_workspace.workspace_runtime_proof import _apply_repo_evidence_strategy_to_lanes, _repo_evidence_strategy_payload
 
     strategy = _repo_evidence_strategy_payload(assurance_requirements={}, selected_commands=[])
+    Draft202012Validator(_schema("operating_decision.schema.json")["properties"]["repo_evidence_strategy"]).validate(strategy)
     assert strategy["status"] == "not-declared"
     assert strategy["clauses"] == []
     lanes = [{"id": "private_helper_test", "enough_proof": ["pytest tests/test_private_helper.py -q"]}]

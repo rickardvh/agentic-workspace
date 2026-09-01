@@ -11672,6 +11672,11 @@ def test_selected_proof_execution_reconciles_and_reuses_local_receipts(tmp_path:
     assert canonical["command"] == "check-one"
     assert canonical["proof_commands"] == commands
     assert canonical["proof_run"]["run_id"] == first["run"]["id"]
+    assert canonical["proof_run"]["execution_representation"]["kind"] == "trusted-shell"
+    assert canonical["proof_run"]["execution_representation"]["shell_dialect"] in {"posix-sh", "powershell"}
+    assert {item["shell_dialect"] for item in canonical["proof_run"]["commands"]} == {
+        canonical["proof_run"]["execution_representation"]["shell_dialect"]
+    }
     assert canonical["admission"]["proof_sufficient"] is True
     reconciliation = workspace_runtime_proof._proof_receipt_reconciliation_payload(
         target_root=tmp_path,

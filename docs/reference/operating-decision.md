@@ -52,6 +52,25 @@ Derived internal decision composed from admitted AW authority surfaces. It emits
 | `control_inputs` | object | no |  | Applicable host, local-runtime, module, and task-derived inputs reduced to their material effects on the current contract. |  |  |
 | `assurance` | object | no |  | Admission of a repository-owned assurance classification, quiet when no external classifier is configured. |  |  |
 | `repo_evidence_strategy` | object | no |  | Repository-owned evidence methodology admitted by proof selection and composed into the canonical operating decision. |  |  |
+| `repo_evidence_strategy.kind` | const `"agentic-workspace/repo-evidence-strategy/v1"` | no |  | Schema discriminator for one composed repository evidence strategy. |  |  |
+| `repo_evidence_strategy.status` | enum `"not-declared"`, `"applicable"`, `"blocked"` | no |  | Whether no methodology applies, the strategy is usable, or hard evidence is missing. |  |  |
+| `repo_evidence_strategy.clauses` | array of object | no |  | Source-owned named evidence requirements and their selected-command effects. |  |  |
+| `repo_evidence_strategy.hard_blockers` | array of object | no |  | Unsatisfied invariant or current-evidence clauses that block named claims. |  |  |
+| `repo_evidence_strategy.advisory_preferences` | array of object | no |  | Guideline clauses retained as non-blocking preferences. |  |  |
+| `repo_evidence_strategy.construction` | object | no |  | Deterministic proof-lane selection effects and unresolved owner decisions. |  |  |
+| `repo_evidence_strategy.construction.status` | enum `"not-applicable"`, `"not-evaluated"`, `"applied"`, `"owner-decision-required"` | yes |  | Construction outcome before the strategy is composed. |  |  |
+| `repo_evidence_strategy.construction.effects` | array of object | yes |  | Declared requirement effects applied to proof lanes. |  |  |
+| `repo_evidence_strategy.construction.owner_decisions` | array of object | yes |  | Named classifications the domain owner must still resolve. |  |  |
+| `repo_evidence_strategy.construction.authority_boundary` | string | no |  | Boundary preventing methodology inference from untyped prose. |  |  |
+| `repo_evidence_strategy.selected_command_count` | integer | no |  | Distinct selected commands attributed to strategy clauses. |  |  |
+| `repo_evidence_strategy.footprint` | object | no |  | Quiet-path execution and persistence cost when no strategy is declared. |  |  |
+| `repo_evidence_strategy.footprint.first_line_cost` | string | yes |  | Human-visible cost of the quiet path. |  |  |
+| `repo_evidence_strategy.footprint.mandatory_command_count` | integer | yes |  | Commands imposed solely by this strategy. |  |  |
+| `repo_evidence_strategy.footprint.durable_receipt_required` | boolean | yes |  | Whether this strategy alone requires durable evidence. |  |  |
+| `repo_evidence_strategy.footprint.strategy_packet_required_to_act` | boolean | yes |  | Whether ordinary work must load this packet before acting. |  |  |
+| `repo_evidence_strategy.composition_rule` | string | no |  | How simultaneous hard and advisory clauses compose. |  |  |
+| `repo_evidence_strategy.authority_boundary` | string | no |  | Division between host-owned facts and workspace composition. |  |  |
+| `repo_evidence_strategy.rule` | string | no |  | Invariant governing this strategy result. |  |  |
 | `cross_owner_enforcement` | object | yes |  | Registry-derived join identities, peer-surface dispositions, and fail-closed findings bound to this decision identity. |  |  |
 | `cross_owner_enforcement.kind` | const `"agentic-workspace/cross-owner-enforcement-projection/v1"` | yes |  | Schema discriminator for the decision-bound enforcement projection. |  |  |
 | `cross_owner_enforcement.status` | enum `"admitted"`, `"blocked"` | yes |  | Whether registry and peer identities satisfy the cross-owner gate. |  |  |

@@ -222,7 +222,7 @@ from agentic_workspace.runtime_compatibility import (
     current_runtime_compatibility_admission,
 )
 from agentic_workspace.target_evidence import assignment_decision_from_policy, target_evidence_posture
-from agentic_workspace.trusted_execution import run_trusted_shell
+from agentic_workspace.trusted_execution import host_shell_dialect, run_trusted_shell, trusted_shell_execution_identity
 from agentic_workspace.workspace_output import (
     _display_path,
     _emit_init_text,
@@ -52624,6 +52624,9 @@ def _record_proof_receipt_payload(
                 execution["submitted_route_budget_seconds"] = execution.get("route_budget_seconds")
             execution["route_id"] = str(selected.get("route_id") or selected.get("lane") or selected.get("selected_from") or "").strip()
             execution["command_id"] = str(selected.get("command_identity") or execution["command_identity"]).strip()
+            execution["command_identity"] = execution["command_id"]
+            execution["execution_kind"] = str(selected.get("execution_kind") or "trusted-shell")
+            execution["shell_dialect"] = str(selected.get("shell_dialect") or "")
             expected_budget = str(
                 selected.get("route_budget_seconds")
                 or selected.get("timeout_seconds")
@@ -53009,6 +53012,13 @@ def _proof_execution_subject(*, target_root: Path, changed_paths: list[str], req
         "identity_paths": identity_paths,
         "path_fingerprints": path_fingerprints,
         "required_commands": required_commands,
+        "execution_representation": {
+            "kind": "trusted-shell",
+            "shell_dialect": host_shell_dialect(),
+            "command_identities": [
+                trusted_shell_execution_identity(command=command, shell_dialect=host_shell_dialect()) for command in required_commands
+            ],
+        },
         "runtime": {
             "agentic_workspace": __version__,
             "python": f"{sys.version_info.major}.{sys.version_info.minor}",
@@ -53034,7 +53044,11 @@ def _materialized_proof_execution_selection(
         if not isinstance(selected, dict):
             continue
         selected["command"] = materialize(command=str(selected.get("command") or ""), changed_paths=changed_paths)
-        selected["command_identity"] = hashlib.sha256(selected["command"].encode("utf-8")).hexdigest()[:16]
+        selected["shell_dialect"] = str(selected.get("shell_dialect") or host_shell_dialect())
+        selected["execution_kind"] = "trusted-shell"
+        selected["command_identity"] = trusted_shell_execution_identity(
+            command=selected["command"], shell_dialect=selected["shell_dialect"]
+        )
     for lane in _list_payload(resolved.get("selected_lanes")):
         if not isinstance(lane, dict):
             continue
@@ -53198,12 +53212,16 @@ def _execute_selected_proof_payload(
     for index, command in enumerate(required_commands, start=1):
         if command in passed_commands:
             continue
-        command_id = hashlib.sha256(command.encode("utf-8")).hexdigest()[:16]
+        selected_command = _selected_proof_command_for_receipt(selection=selection, command=command)
+        shell_dialect = str(selected_command.get("shell_dialect") or "")
+        command_id = trusted_shell_execution_identity(command=command, shell_dialect=shell_dialect)
         if cancel_path is not None and cancel_path.exists():
             cancelled_receipt = {
                 "kind": "agentic-workspace/proof-execution-command-receipt/v1",
                 "command_id": command_id,
                 "command": command,
+                "execution_kind": "trusted-shell",
+                "shell_dialect": shell_dialect,
                 "status": "cancelled",
                 "exit_code": None,
                 "attempt": run["attempt"],
@@ -53223,6 +53241,7 @@ def _execute_selected_proof_payload(
         try:
             completed = run_trusted_shell(
                 command,
+                shell_dialect=shell_dialect,
                 trust_source="checked-repository-proof-route",
                 admitted=True,
                 cwd=target_root,
@@ -53242,6 +53261,8 @@ def _execute_selected_proof_payload(
             "kind": "agentic-workspace/proof-execution-command-receipt/v1",
             "command_id": command_id,
             "command": command,
+            "execution_kind": "trusted-shell",
+            "shell_dialect": shell_dialect,
             "status": status,
             "exit_code": exit_code,
             "duration_seconds": round(time.monotonic() - started, 3),
@@ -53269,9 +53290,22 @@ def _execute_selected_proof_payload(
             "kind": "agentic-workspace/selected-proof-run-summary/v1",
             "run_id": effective_run_id,
             "subject_revision": subject["revision"],
+            "execution_representation": copy.deepcopy(subject["execution_representation"]),
             "attempt": run["attempt"],
             "commands": [
-                {key: item.get(key) for key in ("command_id", "command", "status", "exit_code", "duration_seconds", "receipt_ref")}
+                {
+                    key: item.get(key)
+                    for key in (
+                        "command_id",
+                        "command",
+                        "execution_kind",
+                        "shell_dialect",
+                        "status",
+                        "exit_code",
+                        "duration_seconds",
+                        "receipt_ref",
+                    )
+                }
                 for item in records
                 if str(item.get("command") or "") in required_commands
             ],
@@ -65555,8 +65589,11 @@ def _run_final_response_executor_loop(
         started_at = datetime.now(timezone.utc).isoformat()
         completed_at = started_at
         try:
+            executor_binding["execution_kind"] = "trusted-shell"
+            executor_binding["shell_dialect"] = host_shell_dialect()
             result = run_trusted_shell(
                 executor_command,
+                shell_dialect=str(executor_binding["shell_dialect"]),
                 trust_source="explicit-user-executor-command",
                 admitted=True,
                 cwd=str(target_root),

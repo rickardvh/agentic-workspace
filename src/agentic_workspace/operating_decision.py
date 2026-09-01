@@ -3915,6 +3915,11 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
             ]
         )
     )
+    if repo_evidence_strategy:
+        revisions = {
+            **revisions,
+            "repo_evidence_strategy_revision": "sha256:" + _digest(repo_evidence_strategy),
+        }
     input_revisions = admitted_operating_decision_revisions(
         revisions=revisions,
         embedded_action_revision=embedded_invocation_revision if invocation else "",
