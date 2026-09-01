@@ -5,11 +5,11 @@
   "owner_level": "slice",
   "lifecycle": "live",
   "phase": "closeout",
-  "revision": 3,
+  "revision": 5,
   "intent": {
-    "outcome": "GitHub #2926 additional dogfood evidence on PR #2939",
+    "outcome": "Make explicit --lane new-plan creation write the reciprocal execplan parent binding in the same command-owned transaction.",
     "non_goals": [
-      "Leave adjacent backlog or follow-on work out of this plan."
+      "Do not change implicit lane selection, global Planning state, or unrelated lifecycle semantics."
     ]
   },
   "parent": {
@@ -19,9 +19,13 @@
   },
   "scope": {
     "owned": [
-      "Fill in the concrete files before implementation starts."
+      "packages/planning/src/repo_planning_bootstrap/installer.py explicit-lane new-plan transaction.",
+      "packages/planning/tests/test_lanes.py existing explicit-lane regression scenario.",
+      "This owner plus its proof and release records."
     ],
-    "effects": []
+    "effects": [
+      "Explicit-lane plan creation persists both the lane child reference and execplan parent reference atomically."
+    ]
   },
   "relationships": {
     "selection": {
@@ -64,18 +68,20 @@
   ],
   "proof": {
     "claims": [
-      "Bind new plans to explicit parent lanes is implemented, validated, and closed out honestly."
+      "Explicit --lane new-plan creation writes reciprocal lane-child and execplan-parent ownership in one transaction.",
+      "The existing focused lane scenario proves both relation directions without expanding test count."
     ],
     "requirements": [
-      "Fill in the narrowest command that proves the promoted work."
+      "Run packages/planning/tests/test_lanes.py::test_new_plan_attaches_first_execplan_to_already_active_lane.",
+      "Run Planning lint/typecheck through targeted pre-commit validation."
     ],
     "refs": [
       ".agentic-workspace/verification/proof-decision.json"
     ]
   },
   "continuation": {
-    "owner": "none",
-    "residual_intent": "none"
+    "owner": "issue-2926-2928-planning-repairs",
+    "residual_intent": "Retain terminal lifecycle authority at target integration for the containing #2926-#2928 slice."
   },
   "specialist_contracts": [],
   "non_goals": [
@@ -151,8 +157,8 @@
   "closure_check": {
     "closeout scope": "slice",
     "slice status": "completed",
-    "larger-intent status": "closed",
-    "closure decision": "archive-and-close",
+    "larger-intent status": "feature-complete-integration-pending",
+    "closure decision": "await-target-integration",
     "why this decision is honest": "Feature-head proof is accepted; terminal lifecycle truth awaits target integration.",
     "evidence carried forward": ".agentic-workspace/verification/proof-decision.json",
     "reopen trigger": "New contradictory evidence or rejected target integration."

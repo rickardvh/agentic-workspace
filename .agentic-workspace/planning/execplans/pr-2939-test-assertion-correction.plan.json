@@ -5,11 +5,11 @@
   "owner_level": "slice",
   "lifecycle": "live",
   "phase": "closeout",
-  "revision": 3,
+  "revision": 5,
   "intent": {
-    "outcome": "Create a bounded plan for Correct explicit-lane regression ownership.",
+    "outcome": "Keep reciprocal parent-binding assertions on the explicit-lane new-plan scenario that owns the behavior, not the adjacent lane-activation scenario.",
     "non_goals": [
-      "Leave adjacent backlog or follow-on work out of this plan."
+      "Do not change product behavior, add tests, or run broad suites."
     ]
   },
   "parent": {
@@ -19,9 +19,12 @@
   },
   "scope": {
     "owned": [
-      "Fill in the concrete files before implementation starts."
+      "packages/planning/tests/test_lanes.py existing lane-activation and explicit-lane new-plan scenarios.",
+      "This execplan, parent lane contribution, and accepted proof record."
     ],
-    "effects": []
+    "effects": [
+      "The regression assertion proves reciprocal ownership at the operation boundary that actually creates it while preserving the activation scenario boundary."
+    ]
   },
   "relationships": {
     "selection": {
@@ -56,10 +59,12 @@
   ],
   "proof": {
     "claims": [
-      "Correct explicit-lane regression ownership is implemented, validated, and closed out honestly."
+      "The reciprocal parent-binding assertion is owned by the explicit-lane new-plan scenario.",
+      "The adjacent lane-activation scenario retains its original assertion boundary and both focused tests pass."
     ],
     "requirements": [
-      "Fill in the narrowest command that proves the promoted work."
+      "Run exactly test_lane_activate_projects_current_slice_execplan_ref_and_keeps_summary_clean and test_new_plan_attaches_first_execplan_to_already_active_lane.",
+      "Run Ruff on packages/planning/tests/test_lanes.py and targeted Planning pre-commit validation."
     ],
     "refs": [
       ".agentic-workspace/verification/proof-decision.json"
@@ -142,8 +147,8 @@
   "closure_check": {
     "closeout scope": "slice",
     "slice status": "completed",
-    "larger-intent status": "closed",
-    "closure decision": "archive-and-close",
+    "larger-intent status": "feature-complete-integration-pending",
+    "closure decision": "await-target-integration",
     "why this decision is honest": "Feature-head proof is accepted; terminal lifecycle truth awaits target integration.",
     "evidence carried forward": ".agentic-workspace/verification/proof-decision.json",
     "reopen trigger": "New contradictory evidence or rejected target integration."
