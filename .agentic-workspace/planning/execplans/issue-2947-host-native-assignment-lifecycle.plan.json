@@ -4,8 +4,8 @@
   "title": "Host-native assignment lifecycle",
   "owner_level": "slice",
   "lifecycle": "live",
-  "phase": "implementation",
-  "revision": 6,
+  "phase": "closeout",
+  "revision": 9,
   "intent": {
     "outcome": "Make the canonical assignment lifecycle support commandless host-native execution/re-entry and baseline-verified shared-worktree integration.",
     "non_goals": [
@@ -35,8 +35,14 @@
       "owner": "issue-2947-host-native-assignment-lifecycle"
     },
     "proof_posture": {
-      "state": "pending",
-      "refs": []
+      "state": "aw-proof-admitted-assignment-closed",
+      "refs": [
+        "Baseline/current HEAD c833c758ed1fd75919910b74c91dac4c413de399; the #2947 implementation surfaces have no delta from that baseline.",
+        "Delegated host run run-49601ff0c6ab13c447d7b49bdb8c4bbc74a02b9146372a128ed82d6554842420-1: 6 focused lifecycle tests passed in 12.36s; generated package, Ruff, Node syntax, and diff checks passed.",
+        "AW imported the canonical delegated return, admitted it against sealed baseline c833c758ed1fd75919910b74c91dac4c413de399, and integrated the explicitly already-materialized plan patch with outcome applied.",
+        "AW admitted proof://receipts/7d5cab5368c5fe4d for the exact integrated assignment obligation and closed the run successfully.",
+        "The generic proof route expanded these planning/evidence-only paths to 16 commands outside the focused acceptance boundary; #2952 tracks that router defect, so closeout used bounded Planning, structure, generated-contract, and lifecycle proof."
+      ]
     },
     "external_posture": {
       "state": "unobserved",
@@ -52,7 +58,7 @@
     }
   },
   "references": [],
-  "next_action": "Complete fresh-context review, commit the proved slice, and open its stacked PR on #2948.",
+  "next_action": "Push the open stack head, refresh exact-head review and CI, address any remaining blocking comments, and keep #2817 as the substantive supported-host continuation.",
   "blockers": [
     "None."
   ],
@@ -68,12 +74,14 @@
       "Canonical commandless host-native dispatch, import, admission, integration, and replay are exercised."
     ],
     "refs": [
-      "tests/test_external_operation_clients.py"
+      "tests/test_external_operation_clients.py",
+      ".agentic-workspace/planning/assignments/ordinary-49601ff0c6ab13c447d7b49bdb8c4bbc74a02b9146372a128ed82d6554842420.assignment.json",
+      ".agentic-workspace/proof/receipts/ordinary-49601ff0c6ab13c447d7b49bdb8c4bbc74a02b9146372a128ed82d6554842420.assignment-proof.json"
     ]
   },
   "continuation": {
     "owner": "#2817",
-    "residual_intent": "Run the unrelated substantive supported-host acceptance scenario after #2947 lands."
+    "residual_intent": "After AW-owned handling of this #2947 delegated return, run the unrelated substantive supported-host acceptance scenario; this worker evidence neither completes #2817 nor grants proof or integration authority."
   },
   "specialist_contracts": [
     {
@@ -111,12 +119,21 @@
     ".agentic-workspace/planning/execplans/issue-2947-host-native-assignment-lifecycle.plan.json"
   ],
   "validation_commands": [
-    "uv run --frozen --active --no-sync pytest -q <focused #2947 tests>",
+    "uv run --frozen --active --no-sync pytest -q tests/test_external_operation_clients.py -k \"assignment_host_native_dispatch_without_process_command_returns_bound_execution_contract or assignment_shared_worktree_integration_verifies_materialized_delta_without_reapplying or assignment_shared_worktree_integration_rejects_unmaterialized_delta or typescript_host_native_assignment_lifecycle_reenters_and_integrates_materialized_delta or assignment_lifecycle_generated_wrappers_persist_local_artifacts or assignment_admit_host_result_ref_succeeds_with_protected_host_store\"",
     "uv run --frozen --active --no-sync python scripts/check/check_generated_command_packages.py --require-node",
-    "uv run --frozen --active --no-sync ruff check <touched Python>",
+    "uv run --frozen --active --no-sync ruff check src/agentic_workspace/contracts/python_primitive_support.py tests/test_external_operation_clients.py",
     "node --check src/agentic_workspace/contracts/typescript_primitive_support.mjs",
     "git diff --check"
   ],
+  "execution_run": {
+    "run status": "aw-proof-admitted-and-closed",
+    "executor": "codex_terra delegated worker with AW-owned import, admission, and integration",
+    "baseline": "c833c758ed1fd75919910b74c91dac4c413de399",
+    "what happened": "Bound assignment ordinary-49601ff0c6ab13c447d7b49bdb8c4bbc74a02b9146372a128ed82d6554842420, dispatched run run-49601ff0c6ab13c447d7b49bdb8c4bbc74a02b9146372a128ed82d6554842420-1 to codex_terra, and validated the existing #2947 lifecycle implementation at the current head without changing implementation surfaces.",
+    "validations run": "2026-09-01: focused host-native lifecycle pytest selection: 6 passed, 88 deselected in 12.36s; check_generated_command_packages.py --require-node: passed (local Git witness derived-clean-index, representative TypeScript native command proof, static proof); Ruff on the source and focused test: passed; node --check on the source plus all generated hostPrimitiveSupport.mjs mirrors: passed; git diff --check against the sealed baseline for #2947 implementation surfaces: passed.",
+    "result for continuation": "AW imported and admitted the delegated-return/v1 artifact, verified the sealed baseline and one-plan-file already-materialized patch, integrated it with outcome applied, admitted proof://receipts/7d5cab5368c5fe4d for the exact assignment obligation, and closed the run. Worker proof and closeout authority remained false throughout.",
+    "next step": "Push the open stack head, refresh exact-head PR review and CI, and keep #2817 open for the substantive supported-host acceptance scenario."
+  },
   "completion_criteria": [
     "Commandless host-native dispatch yields an assignment- and packet-bound host execution/re-entry contract instead of adapter-unavailable.",
     "Already-materialized returns are checked against the exact baseline-plus-patch content without patch reapplication.",

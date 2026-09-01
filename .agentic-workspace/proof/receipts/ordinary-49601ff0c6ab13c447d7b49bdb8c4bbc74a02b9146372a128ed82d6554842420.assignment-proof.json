@@ -1,0 +1,11 @@
+{
+  "assignment_decision_revision": "sha256:b2ba654fcfb8f9d66b582578dde615d44b9ee17bab6bac9523161df0ed1492ed",
+  "assignment_id": "ordinary-49601ff0c6ab13c447d7b49bdb8c4bbc74a02b9146372a128ed82d6554842420",
+  "assignment_revision": "sha256:277cffd0572643e03484bfc42f2fe7ad8000062af25493b7dc61a2c60b54ea19",
+  "claim_boundary": "assignment-identity-and-routing-only; task implementation and completion remain unproved",
+  "kind": "agentic-workspace/assignment-structural-proof-receipt/v1",
+  "mutation_baseline": "c833c758ed1fd75919910b74c91dac4c413de399",
+  "recorded_at": "2026-09-01T21:29:05+00:00",
+  "result": "passed",
+  "verified_by": "aw"
+}
