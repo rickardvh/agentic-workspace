@@ -2,14 +2,14 @@
   "kind": "agentic-workspace/verification-proof-decision/v1",
   "proof_decision": {
     "selected_decision": "merge",
-    "trust_question": "Does trusted proof execution reject missing, unsupported, or host-mismatched shell semantics before launch and bind selection, receipt, and resume identity to the declared dialect, while the repo evidence strategy remains schema-constrained?",
+    "trust_question": "Do the command-evidence repairs remain executable while feature completion refuses placeholder Planning truth, records admitted finish-run evidence, projects non-terminal parent-lane truth, and preserves target-authoritative terminal lifecycle semantics?",
     "host_strategy_source": ".agentic-workspace/verification/manifest.toml#scenarios.test_evidence_decision_review",
-    "proof_owner": "proof-execution-and-operating-decision-contracts",
+    "proof_owner": "workspace-command-routing-and-planning-integration-contracts",
     "proof_intent": "high-risk-workflow",
     "evidence_durability": "permanent",
-    "narrowest_evidence": "The existing trusted-execution rejection test is now one parameterized behavior-class matrix covering admission, source, missing dialect, unsupported dialect, and host mismatch. Existing shell-semantics and selected-proof receipt/reuse tests carry dialect identity assertions. Existing repo-evidence-strategy tests now validate applicable and quiet producer output against the typed schema, reject malformed and unknown fields, and prove decision identity sensitivity.",
-    "prune_or_replacement_condition": "Convert the deterministic dialect admission and evidence-strategy schema cases to contract-owned conformance only when the canonical operation contract can run them across supported Python and generated targets; retain one representative selected-proof black-box receipt/resume path.",
+    "narrowest_evidence": "Existing scenarios now absorb placeholder refusal, explicit evidence CLI projection, concrete owner-state derivation, atomic owner/lane/proposal rollback, single-apply lane promotion, and batch replay. Focused results are 19 branch-safe lifecycle tests, the one existing owner-scoped batch replay scenario, 6 workspace front-door routing tests, 3 closeout placeholder/derivation tests, Python compilation, Ruff on changed Python, and generated command-package static/native proof with Node required.",
+    "prune_or_replacement_condition": "Replace direct runtime-projection assertions when operation-contract conformance covers finish-run evidence admission and exact owner/lane writes across generated adapters; retain one atomic feature-to-target integration scenario, fold batch promotion into the existing replay scenario, and retain one parameterized refusal scenario.",
     "confidence": "high",
-    "residual_risk": "Hosted CI remains the cross-host proof for POSIX execution; local Windows coverage proves PowerShell invocation and rejects a POSIX dialect before launch without emulating another host."
+    "residual_risk": "Hosted CI remains the cross-platform proof for generated adapters and the stacked base; the local proof intentionally omits broad suites because the routed acceptance boundary marks them unnecessary for these focused semantics."
   }
 }

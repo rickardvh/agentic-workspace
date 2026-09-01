@@ -13,28 +13,44 @@
     {
       "id": "issue-2923-2925-command-evidence-blockers",
       "title": "Fix dogfooding command and evidence blockers #2923-#2925",
-      "status": "active",
+      "status": "integration-pending",
       "execplan_ref": ".agentic-workspace/planning/execplans/issue-2923-2925-command-evidence-blockers.plan.json",
       "depends_on": [],
-      "purpose_for_lane": "Replace the reproduced workflow blockers before resuming the #2821 epic."
+      "purpose_for_lane": "Replace the reproduced workflow blockers before resuming the #2821 epic.",
+      "proof": ".agentic-workspace/verification/proof-decision.json",
+      "residual_after_slice": "Continue the dogfooding lane with Planning topology and current-work repairs #2926-#2928 after this feature-complete slice reaches target integration."
+    },
+    {
+      "id": "issue-2926-2928-planning-repairs",
+      "title": "issue-2926-2928-planning-repairs",
+      "status": "planned",
+      "execplan_ref": ".agentic-workspace/planning/execplans/issue-2926-2928-planning-repairs.plan.json",
+      "depends_on": [
+        "issue-2923-2925-command-evidence-blockers"
+      ],
+      "purpose_for_lane": "Continue the dogfooding lane with Planning topology and current-work repairs #2926-#2928 after this feature-complete slice reaches target integration."
     }
   ],
   "current_slice": "issue-2923-2925-command-evidence-blockers",
   "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
   "proof_strategy": "Each child PR proves its issue acceptance criteria; the final stack replays the issue-creation dogfood path.",
   "proof_aggregation": {
-    "status": "not-started",
-    "evidence": [],
-    "known_gaps": []
+    "status": "partial",
+    "evidence": [
+      ".agentic-workspace/verification/proof-decision.json"
+    ],
+    "known_gaps": [
+      "issue-2923-2925-command-evidence-blockers awaits target integration via .agentic-workspace/planning/integration-proposals/issue-2923-2925-command-evidence-blockers-archive-owner.integration-proposal.json."
+    ]
   },
-  "residual_lane_work": "not evaluated",
+  "residual_lane_work": "Continue the dogfooding lane with Planning topology and current-work repairs #2926-#2928 after this feature-complete slice reaches target integration.",
   "lane_to_epic_contribution": "not evaluated",
-  "parent_close_permission": "not-evaluated",
+  "parent_close_permission": "do-not-close-parent",
   "closeout_state": {
     "status": "open",
-    "summary": "",
-    "residual_work": "",
-    "next_owner": ""
+    "summary": "issue-2923-2925-command-evidence-blockers is feature-complete and awaits target integration proposal issue-2923-2925-command-evidence-blockers-archive-owner.",
+    "residual_work": "Continue the dogfooding lane with Planning topology and current-work repairs #2926-#2928 after this feature-complete slice reaches target integration.",
+    "next_owner": ".agentic-workspace/planning/execplans/issue-2926-2928-planning-repairs.plan.json"
   },
   "references": [],
   "notes": ""

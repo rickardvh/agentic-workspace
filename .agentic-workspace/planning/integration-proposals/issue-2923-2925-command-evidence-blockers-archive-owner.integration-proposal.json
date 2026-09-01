@@ -1,0 +1,42 @@
+{
+  "kind": "planning-integration-proposal/v1",
+  "id": "issue-2923-2925-command-evidence-blockers-archive-owner",
+  "status": "pending",
+  "phase": "integration-pending",
+  "requested_transition": "archive-owner",
+  "owner": {
+    "id": "issue-2923-2925-command-evidence-blockers",
+    "ref": ".agentic-workspace/planning/execplans/issue-2923-2925-command-evidence-blockers.plan.json"
+  },
+  "external_ref": "",
+  "proof_refs": [
+    ".agentic-workspace/verification/proof-decision.json"
+  ],
+  "parent_boundary": "parent and lane remain open unless an independent boundary is satisfied",
+  "preserved_invariants": [
+    "feature branch does not select current work",
+    "feature branch does not rewrite aggregate Planning indexes",
+    "feature branch does not close parent/lane lifecycle truth",
+    "integration apply is target-branch authoritative"
+  ],
+  "expected_subject_revision": "6f4289332c414305",
+  "expected_planning_revision": "971c6272eb04c1aa",
+  "created_at": "2026-09-01T17:11:07.722475Z",
+  "updated_at": "2026-09-01T17:11:07.722475Z",
+  "authority_boundary": {
+    "proposal": "feature-branch declaration",
+    "integrated_truth": "integration receipt after apply",
+    "non_authority": [
+      "current selection",
+      "aggregate indexes",
+      "unrelated owners",
+      "terminal parent truth"
+    ],
+    "branch_admission": {
+      "status": "inside-git",
+      "branch": "codex/2923-2925-command-evidence-blockers",
+      "phase": "feature"
+    }
+  },
+  "proposal_revision": "c0f9ac99fb8cec33"
+}

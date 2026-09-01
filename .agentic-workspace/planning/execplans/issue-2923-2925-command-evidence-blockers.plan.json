@@ -4,12 +4,12 @@
   "title": "Fix dogfooding command and evidence blockers #2923-#2925",
   "owner_level": "slice",
   "lifecycle": "live",
-  "phase": "implementation",
-  "revision": 2,
+  "phase": "closeout",
+  "revision": 8,
   "intent": {
-    "outcome": "GitHub issues #2923 #2924 #2925",
+    "outcome": "Implement GitHub issues #2923, #2924, #2925, #2942, and #2943 in the command-evidence blocker slice.",
     "non_goals": [
-      "Leave adjacent backlog or follow-on work out of this plan."
+      "Do not implement Planning topology/current-work repairs #2926-#2928 or semantic task routes #2929/#2930 in this slice."
     ]
   },
   "parent": {
@@ -19,9 +19,14 @@
   },
   "scope": {
     "owned": [
-      "Fill in the concrete files before implementation starts."
+      "Workspace command routing and external evidence refresh for #2923-#2925.",
+      "Planning integration-propose feature-completion evidence admission for #2942.",
+      "Branch-safe parent-lane feature-completion contribution and target promotion for #2943.",
+      "Generated command packages and narrowly corresponding tests."
     ],
-    "effects": []
+    "effects": [
+      "The feature branch records truthful non-placeholder completion evidence and a non-terminal parent-lane contribution before target integration."
+    ]
   },
   "relationships": {
     "selection": {
@@ -29,12 +34,24 @@
       "owner": "issue-2923-2925-command-evidence-blockers"
     },
     "proof_posture": {
-      "state": "pending",
-      "refs": []
+      "state": "accepted",
+      "refs": [
+        ".agentic-workspace/verification/proof-decision.json"
+      ]
     },
     "external_posture": {
       "state": "unobserved",
       "refs": []
+    },
+    "integration": {
+      "status": "feature-complete-integration-pending",
+      "proposal_id": "issue-2923-2925-command-evidence-blockers-archive-owner",
+      "proposal_ref": ".agentic-workspace/planning/integration-proposals/issue-2923-2925-command-evidence-blockers-archive-owner.integration-proposal.json",
+      "requested_transition": "archive-owner",
+      "proof_refs": [
+        ".agentic-workspace/verification/proof-decision.json"
+      ],
+      "authority": "feature-head declaration; target integration remains terminal authority"
     }
   },
   "references": [
@@ -46,26 +63,31 @@
       "locator": ""
     }
   ],
-  "next_action": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+  "next_action": "Apply integration proposal 'issue-2923-2925-command-evidence-blockers-archive-owner' from admitted target authority.",
   "blockers": [
     "None."
   ],
   "proof": {
     "claims": [
-      "Fix dogfooding command and evidence blockers #2923-#2925 is implemented, validated, and closed out honestly."
+      "The #2923-#2925 command/evidence blockers remain fixed.",
+      "integration-propose refuses placeholder feature-completion records and writes admitted structured evidence atomically.",
+      "Feature completion and target apply keep child, proposal, and parent-lane contribution mutually consistent without terminal feature-branch overclaim."
     ],
     "requirements": [
-      "Fill in the narrowest command that proves the promoted work."
+      "Run only focused tests covering integration-propose feature completion, lane contribution promotion, affected closeout semantics, and generated command routing.",
+      "Record the exact focused proof before proposing integration."
     ],
-    "refs": []
+    "refs": [
+      ".agentic-workspace/verification/proof-decision.json"
+    ]
   },
   "continuation": {
-    "owner": "none",
-    "residual_intent": "none"
+    "owner": ".agentic-workspace/planning/execplans/issue-2926-2928-planning-repairs.plan.json",
+    "residual_intent": "Continue the dogfooding lane with Planning topology and current-work repairs #2926-#2928 after this feature-complete slice reaches target integration."
   },
   "specialist_contracts": [],
   "goal": [
-    "Make external evidence refresh, routed issue arguments, and planning targeted-write executable and contract-consistent for #2923-#2925."
+    "Make external evidence refresh, routed issue arguments, planning targeted-write, truthful feature completion, and parent-lane contribution promotion executable and contract-consistent for #2923-#2925, #2942, and #2943."
   ],
   "non_goals": [
     "Do not implement Planning topology/current-work repairs #2926-#2928 or semantic task routes #2929/#2930 in this slice."
@@ -76,9 +98,9 @@
     "continuation surface": ".agentic-workspace/planning/lanes/issue-2923-2930-dogfooding.lane.json"
   },
   "execution_bounds": {
-    "allowed paths": "src/agentic_workspace/workspace_runtime_core.py; src/agentic_workspace/workspace_runtime_planning.py; src/agentic_workspace/contracts/**; generated/**; tests/test_workspace_cli.py; tests/test_workspace_summary_cli.py",
-    "max changed files": "15",
-    "required validation commands": "focused pytest plus generated command package checks and routed proof",
+    "allowed paths": "src/agentic_workspace/workspace_runtime_core.py; src/agentic_workspace/workspace_runtime_planning.py; src/agentic_workspace/contracts/**; packages/planning/src/repo_planning_bootstrap/{installer.py,runtime_projection.py,contracts/**}; packages/planning/bootstrap/**; generated/**; docs/reference/{cli-catalogue.md,installed-surface-catalogue.md,support-bearing-install.md}; packages/planning/tests/test_branch_safe_planning.py; packages/planning/tests/test_promote.py; tests/test_workspace_cli.py; tests/test_workspace_summary_cli.py; .agentic-workspace/planning/**; .agentic-workspace/verification/proof-decision.json; .release/changes/**",
+    "max changed files": "27",
+    "required validation commands": "focused pytest for integration-propose and affected CLI/closeout cases; generated command package check; routed proof decision",
     "ask-before-refactor threshold": "Any new command registry, provider-specific Planning logic, or authority change",
     "stop before touching": "Planning relation/current-work semantics and scoped-instruction task routing"
   },
@@ -86,18 +108,80 @@
     "src/agentic_workspace/workspace_runtime_core.py",
     "src/agentic_workspace/workspace_runtime_planning.py",
     "src/agentic_workspace/contracts/command_package_ir.json",
-    "generated/workspace/python/**",
-    "generated/*/.agentic-workspace-cli-fingerprint.json",
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/src/repo_planning_bootstrap/runtime_projection.py",
+    "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.integration-propose.lifecycle.json",
+    "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-lane.schema.json",
+    "packages/planning/tests/test_branch_safe_planning.py",
+    "packages/planning/tests/test_promote.py",
+    "generated/**",
+    "docs/reference/cli-catalogue.md",
+    "docs/reference/installed-surface-catalogue.md",
+    "docs/reference/support-bearing-install.md",
     "tests/test_workspace_cli.py",
-    "tests/test_workspace_summary_cli.py"
+    "tests/test_workspace_summary_cli.py",
+    ".agentic-workspace/planning/**",
+    ".agentic-workspace/verification/proof-decision.json",
+    ".release/changes/**"
   ],
   "validation_commands": [
-    "uv run --frozen --active --no-sync pytest tests/test_workspace_cli.py tests/test_workspace_summary_cli.py -q",
+    "uv run --frozen --active --no-sync pytest packages/planning/tests/test_branch_safe_planning.py -k 'feature_completion or integration_proposal' -q",
+    "uv run --frozen --active --no-sync pytest tests/test_workspace_cli.py -k 'planning_front_door and (integration or targeted)' -q",
     "uv run --frozen --active --no-sync python scripts/check/check_generated_command_packages.py --require-node"
   ],
   "completion_criteria": [
     "Fresh unchanged GitHub observations remain current while preserving external revision.",
     "Hash-prefixed issue args execute unchanged in PowerShell-compatible rendering.",
-    "Targeted-write preview/apply execute through the configured workspace front door with generated contract conformance."
-  ]
+    "Targeted-write preview/apply execute through the configured workspace front door with generated contract conformance.",
+    "Feature-completion integration refuses missing or placeholder completion evidence and records admitted concrete evidence.",
+    "An applicable parent lane records a non-terminal feature-complete/integration-pending child contribution and admitted proof atomically.",
+    "Target integration promotes that contribution to completed while preserving unrelated slices and open residual lane work."
+  ],
+  "proof_report": {
+    "validation proof": ".agentic-workspace/verification/proof-decision.json",
+    "proof achieved now": "yes; integration-propose recorded accepted feature-head proof.",
+    "evidence for \"proof achieved\" state": ".agentic-workspace/verification/proof-decision.json"
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "current planning owner",
+    "handoff source": "issue-2923-2925-command-evidence-blockers",
+    "what happened": "Implement GitHub issues #2923, #2924, #2925, #2942, and #2943 in the command-evidence blocker slice.",
+    "scope touched": "Workspace command routing and external evidence refresh for #2923-#2925.; Planning integration-propose feature-completion evidence admission for #2942.; Branch-safe parent-lane feature-completion contribution and target promotion for #2943.; Generated command packages and narrowly corresponding tests.",
+    "changed surfaces": "Workspace command routing and external evidence refresh for #2923-#2925.; Planning integration-propose feature-completion evidence admission for #2942.; Branch-safe parent-lane feature-completion contribution and target promotion for #2943.; Generated command packages and narrowly corresponding tests.",
+    "validations run": ".agentic-workspace/verification/proof-decision.json",
+    "result for continuation": "feature-head complete; terminal lifecycle remains target-authoritative",
+    "next step": "Apply integration proposal 'issue-2923-2925-command-evidence-blockers-archive-owner' from admitted target authority."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Reviewed feature-head scope: Workspace command routing and external evidence refresh for #2923-#2925.; Planning integration-propose feature-completion evidence admission for #2942.; Branch-safe parent-lane feature-completion contribution and target promotion for #2943.; Generated command packages and narrowly corresponding tests.",
+    "proof status": "passed",
+    "intent served": "yes; target integration remains the terminal lifecycle authority.",
+    "config compliance": "used planning integration-propose command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": ".agentic-workspace/planning/integration-proposals/issue-2923-2925-command-evidence-blockers-archive-owner.integration-proposal.json"
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement GitHub issues #2923, #2924, #2925, #2942, and #2943 in the command-evidence blocker slice.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": ".agentic-workspace/verification/proof-decision.json",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Implement GitHub issues #2923, #2924, #2925, #2942, and #2943 in the command-evidence blocker slice.",
+    "validation confirmed": ".agentic-workspace/verification/proof-decision.json",
+    "follow-on routed to": ".agentic-workspace/planning/integration-proposals/issue-2923-2925-command-evidence-blockers-archive-owner.integration-proposal.json",
+    "post-work posterity capture": "target-authoritative integration proposal",
+    "resume from": "Apply integration proposal 'issue-2923-2925-command-evidence-blockers-archive-owner' from admitted target authority."
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "Feature-head proof is accepted; terminal lifecycle truth awaits target integration.",
+    "evidence carried forward": ".agentic-workspace/verification/proof-decision.json",
+    "reopen trigger": "New contradictory evidence or rejected target integration."
+  }
 }

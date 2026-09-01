@@ -101,6 +101,16 @@ def _write_owner(root: Path, owner_id: str) -> str:
     return owner_ref
 
 
+def _feature_completion_evidence(issue: str) -> dict[str, str]:
+    return {
+        "what_happened": f"Implemented issue {issue} on the feature head.",
+        "scope_touched": "Planning integration proposal lifecycle.",
+        "changed_surfaces": "installer.py and focused branch-safe Planning tests.",
+        "review_summary": "Reviewed the bounded feature-head scope and proof.",
+        "outcome_summary": f"Issue {issue} is feature-complete pending target integration.",
+    }
+
+
 def _write_lane(root: Path, lane_id: str) -> str:
     lane_ref = f".agentic-workspace/planning/lanes/{lane_id}.lane.json"
     lane_path = root / lane_ref
@@ -133,6 +143,24 @@ def _write_lane(root: Path, lane_id: str) -> str:
         encoding="utf-8",
     )
     return lane_ref
+
+
+def _attach_owner_to_lane(root: Path, lane_id: str, owner_id: str, owner_ref: str) -> Path:
+    lane_path = root / _write_lane(root, lane_id)
+    lane = json.loads(lane_path.read_text(encoding="utf-8"))
+    lane["slice_sequence"] = [
+        {
+            "id": owner_id,
+            "title": owner_id,
+            "status": "active",
+            "execplan_ref": owner_ref,
+            "depends_on": [],
+            "purpose_for_lane": "Deliver the current bounded slice.",
+        }
+    ]
+    lane["current_slice"] = owner_id
+    lane_path.write_text(json.dumps(lane, indent=2) + "\n", encoding="utf-8")
+    return lane_path
 
 
 def test_fresh_install_derives_planning_without_global_state(tmp_path: Path) -> None:
@@ -539,6 +567,7 @@ def test_integration_proposal_dry_run_projects_the_typed_apply_invocation(tmp_pa
         issue="#2865",
         requested_transition="archive-owner",
         proof="proof://feature-head/2865",
+        **_feature_completion_evidence("#2865"),
         record_feature_completion=True,
         expected_subject_revision=before_subject,
         expected_planning_revision=before_planning,
@@ -555,6 +584,7 @@ def test_integration_proposal_dry_run_projects_the_typed_apply_invocation(tmp_pa
     assert invocation["arguments"]["expected_subject_revision"] == before_subject
     assert invocation["arguments"]["expected_planning_revision"] == before_planning
     assert invocation["arguments"]["record_feature_completion"] is True
+    assert invocation["arguments"]["what_happened"] == "Implemented issue #2865 on the feature head."
     assert lifecycle_plan["next_safe_command"] == invocation["renderings"]["cli"]
     assert "archive-plan" not in lifecycle_plan["next_safe_command"]
 
@@ -721,6 +751,15 @@ def test_feature_completion_mode_atomically_records_proof_and_proposes_integrati
     install_bootstrap(target=tmp_path)
     owner_ref = _write_owner(tmp_path, "issue-2862")
     owner_path = tmp_path / owner_ref
+    owner_before = json.loads(owner_path.read_text(encoding="utf-8"))
+    owner_before["intent"] = {"outcome": "Implemented issue #2862 on the feature head."}
+    owner_before["scope"] = {"owned": ["Planning integration proposal lifecycle."]}
+    owner_before["continuation"] = {
+        "owner": ".agentic-workspace/planning/execplans/issue-2863-next.plan.json",
+        "residual_intent": "Continue with issue #2863 after target integration.",
+    }
+    owner_path.write_text(json.dumps(owner_before, indent=2) + "\n", encoding="utf-8")
+    lane_path = _attach_owner_to_lane(tmp_path, "delivery-lane", "issue-2862", owner_ref)
     _init_git(tmp_path)
     _commit_all(tmp_path, "baseline pending owner")
     _git(tmp_path, "checkout", "-b", "feature/2862-complete")
@@ -749,9 +788,19 @@ def test_feature_completion_mode_atomically_records_proof_and_proposes_integrati
     }
     assert owner["proof_report"]["validation proof"] == "proof://feature-head/2862, ci://feature-head/2862"
     assert owner["execution_run"]["run status"] == "completed"
+    assert owner["execution_run"]["what happened"] == "Implemented issue #2862 on the feature head."
+    assert owner["execution_run"]["scope touched"] == "Planning integration proposal lifecycle."
+    assert owner["execution_run"]["changed surfaces"] == "Planning integration proposal lifecycle."
     assert owner["finished_run_review"]["review status"] == "complete"
+    assert owner["finished_run_review"]["scope respected"] == "Reviewed feature-head scope: Planning integration proposal lifecycle."
+    assert owner["execution_summary"]["outcome delivered"] == "Implemented issue #2862 on the feature head."
     assert owner["intent_satisfaction"]["was original intent fully satisfied?"] == "yes"
     assert owner["relationships"]["integration"]["status"] == "feature-complete-integration-pending"
+    lane = json.loads(lane_path.read_text(encoding="utf-8"))
+    assert [item["status"] for item in lane["slice_sequence"]] == ["integration-pending", "planned"]
+    assert lane["slice_sequence"][0]["proof"] == "proof://feature-head/2862, ci://feature-head/2862"
+    assert lane["proof_aggregation"]["status"] == "partial"
+    assert lane["closeout_state"]["next_owner"] == ".agentic-workspace/planning/execplans/issue-2863-next.plan.json"
     assert proposal["proof_refs"] == ["proof://feature-head/2862", "ci://feature-head/2862"]
     assert proposal["expected_subject_revision"] == installer._integration_subject_revision(
         target_root=tmp_path, owner_ref=owner_ref, external_ref=""
@@ -770,15 +819,30 @@ def test_feature_completion_mode_atomically_records_proof_and_proposes_integrati
     assert replay.mutation_expected is False
     assert [action.kind for action in replay.actions] == ["no-op"]
 
+    _commit_all(tmp_path, "feature completion with lane contribution")
+    _git(tmp_path, "checkout", "main")
+    _git(tmp_path, "merge", "--no-ff", "feature/2862-complete", "-m", "merge feature completion")
+    applied = apply_integration_proposal(proposal="issue-2862-archive", target=tmp_path)
+
+    assert applied.reason_code == ""
+    integrated_owner = json.loads(owner_path.read_text(encoding="utf-8"))
+    integrated_lane = json.loads(lane_path.read_text(encoding="utf-8"))
+    assert integrated_owner["lifecycle"] == "archived"
+    assert [item["status"] for item in integrated_lane["slice_sequence"]] == ["completed", "ready"]
+    assert integrated_lane["current_slice"] == "issue-2863-next"
+    assert integrated_lane["status"] == "active"
+
 
 def test_feature_completion_mode_rolls_back_owner_when_proposal_write_fails(tmp_path: Path, monkeypatch) -> None:
     install_bootstrap(target=tmp_path)
     owner_ref = _write_owner(tmp_path, "issue-2862-rollback")
     owner_path = tmp_path / owner_ref
+    lane_path = _attach_owner_to_lane(tmp_path, "rollback-lane", "issue-2862-rollback", owner_ref)
     _init_git(tmp_path)
     _commit_all(tmp_path, "baseline pending owner")
     _git(tmp_path, "checkout", "-b", "feature/2862-rollback")
     before_owner = owner_path.read_bytes()
+    before_lane = lane_path.read_bytes()
     before_subject = installer._integration_subject_revision(target_root=tmp_path, owner_ref=owner_ref, external_ref="")
     before_planning = installer._planning_target_authority_revision(tmp_path)["revision_id"]
     original_write = installer._write_schema_backed_planning_record
@@ -787,7 +851,7 @@ def test_feature_completion_mode_rolls_back_owner_when_proposal_write_fails(tmp_
     def fail_proposal_write(*, record_path: Path, record: dict[str, Any], schema_path: Path) -> None:
         nonlocal write_count
         write_count += 1
-        if write_count == 2:
+        if write_count == 3:
             record_path.write_text("partial\n", encoding="utf-8")
             raise OSError("simulated proposal failure")
         original_write(record_path=record_path, record=record, schema_path=schema_path)
@@ -798,6 +862,7 @@ def test_feature_completion_mode_rolls_back_owner_when_proposal_write_fails(tmp_
         owner_ref=owner_ref,
         requested_transition="archive-owner",
         proof="proof://feature-head/2862",
+        **_feature_completion_evidence("#2862"),
         record_feature_completion=True,
         expected_subject_revision=before_subject,
         expected_planning_revision=before_planning,
@@ -806,6 +871,7 @@ def test_feature_completion_mode_rolls_back_owner_when_proposal_write_fails(tmp_
 
     assert proposed.reason_code == "integration-proposal-rolled-back"
     assert owner_path.read_bytes() == before_owner
+    assert lane_path.read_bytes() == before_lane
     assert not (tmp_path / ".agentic-workspace/planning/integration-proposals/issue-2862-rollback.integration-proposal.json").exists()
 
 
@@ -830,11 +896,27 @@ def test_feature_completion_rejects_stale_or_unproven_owner(tmp_path: Path) -> N
     assert _planning_persistent_snapshot(tmp_path) == before
 
     current_subject = installer._integration_subject_revision(target_root=tmp_path, owner_ref=owner_ref, external_ref="")
+    current_planning = installer._planning_target_authority_revision(tmp_path)["revision_id"]
+    missing_evidence = propose_integration_transition(
+        proposal_id="issue-2851-negative",
+        owner_ref=owner_ref,
+        requested_transition="archive-owner",
+        proof="proof://feature-head/2851",
+        record_feature_completion=True,
+        expected_subject_revision=current_subject,
+        expected_planning_revision=current_planning,
+        target=tmp_path,
+    )
+    assert missing_evidence.reason_code == "feature-completion-evidence-required"
+    assert all(option in missing_evidence.recovery_command for option in ("--what-happened", "--scope-touched", "--changed-surfaces"))
+    assert _planning_persistent_snapshot(tmp_path) == before
+
     missing_target_guard = propose_integration_transition(
         proposal_id="issue-2851-negative",
         owner_ref=owner_ref,
         requested_transition="archive-owner",
         proof="proof://feature-head/2851",
+        **_feature_completion_evidence("#2851"),
         record_feature_completion=True,
         expected_subject_revision=current_subject,
         target=tmp_path,
@@ -847,6 +929,7 @@ def test_feature_completion_rejects_stale_or_unproven_owner(tmp_path: Path) -> N
         owner_ref=owner_ref,
         requested_transition="archive-owner",
         proof="proof://feature-head/2851",
+        **_feature_completion_evidence("#2851"),
         record_feature_completion=True,
         expected_subject_revision="stale",
         expected_planning_revision=installer._planning_target_authority_revision(tmp_path)["revision_id"],
@@ -1373,23 +1456,49 @@ def test_reconcile_reports_structural_mutation_admission_inventory(tmp_path: Pat
 def test_issue_2328_2331_feature_replay_is_owner_scoped_and_repair_free(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     owner_refs = {issue: _write_owner(tmp_path, f"issue-{issue}") for issue in ("2328", "2329", "2330", "2331")}
+    lane_path = _attach_owner_to_lane(tmp_path, "issue-2328-lane", "issue-2328", owner_refs["2328"])
     _init_git(tmp_path)
     _commit_all(tmp_path, "baseline owners")
 
     for issue, owner_ref in owner_refs.items():
         _git(tmp_path, "checkout", "main")
         _git(tmp_path, "checkout", "-b", f"feature/issue-{issue}")
-        propose_integration_transition(
-            proposal_id=f"issue-{issue}-integrated",
-            owner=f"issue-{issue}",
-            owner_ref=owner_ref,
-            issue=issue,
-            requested_transition="mark-integrated",
-            proof=f"https://github.example/pr/{issue}",
-            target=tmp_path,
-        )
+        if issue == "2328":
+            propose_integration_transition(
+                proposal_id=f"issue-{issue}-integrated",
+                owner=f"issue-{issue}",
+                owner_ref=owner_ref,
+                issue=issue,
+                requested_transition="archive-owner",
+                proof=f"https://github.example/pr/{issue}",
+                **_feature_completion_evidence(f"#{issue}"),
+                record_feature_completion=True,
+                expected_subject_revision=installer._integration_subject_revision(
+                    target_root=tmp_path, owner_ref=owner_ref, external_ref=issue
+                ),
+                expected_planning_revision=installer._planning_target_authority_revision(tmp_path)["revision_id"],
+                target=tmp_path,
+            )
+        else:
+            propose_integration_transition(
+                proposal_id=f"issue-{issue}-integrated",
+                owner=f"issue-{issue}",
+                owner_ref=owner_ref,
+                issue=issue,
+                requested_transition="mark-integrated",
+                proof=f"https://github.example/pr/{issue}",
+                target=tmp_path,
+            )
         changed_files = _git(tmp_path, "status", "--short", "--untracked-files=all").stdout.splitlines()
-        assert changed_files == [f"?? .agentic-workspace/planning/integration-proposals/issue-{issue}-integrated.integration-proposal.json"]
+        proposal_status = f"?? .agentic-workspace/planning/integration-proposals/issue-{issue}-integrated.integration-proposal.json"
+        if issue == "2328":
+            assert set(changed_files) == {
+                f" M {owner_ref}",
+                " M .agentic-workspace/planning/lanes/issue-2328-lane.lane.json",
+                proposal_status,
+            }
+        else:
+            assert changed_files == [proposal_status]
         _commit_all(tmp_path, f"propose issue {issue}")
 
     for issue in ("2328", "2329", "2330", "2331"):
@@ -1406,8 +1515,11 @@ def test_issue_2328_2331_feature_replay_is_owner_scoped_and_repair_free(tmp_path
     assert len(proposals) == 4
     for issue, owner_ref in owner_refs.items():
         owner = json.loads((tmp_path / owner_ref).read_text(encoding="utf-8"))
-        assert owner["lifecycle"] == "live"
+        assert owner["lifecycle"] == ("archived" if issue == "2328" else "live")
         assert owner["relationships"]["integration"]["status"] == "integrated"
+    lane = json.loads(lane_path.read_text(encoding="utf-8"))
+    assert lane["slice_sequence"][0]["status"] == "completed"
+    assert lane["current_slice"] == "aggregate-final-lane-proof"
 
 
 def test_stacked_child_proposal_applies_with_parent_in_one_target_reconcile(tmp_path: Path) -> None:

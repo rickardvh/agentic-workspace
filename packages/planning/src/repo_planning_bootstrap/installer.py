@@ -268,7 +268,7 @@ ISSUE_RELATION_KIND = "planning-issue-relation/v1"
 INTEGRATION_PROPOSAL_KIND = "planning-integration-proposal/v1"
 INTEGRATION_RECEIPT_KIND = "planning-integration-receipt/v1"
 LANE_STATUS_VALUES = ("shaping", "ready", "active", "blocked", "closed", "archived")
-LANE_SLICE_STATUS_VALUES = ("planned", "ready", "active", "blocked", "completed", "skipped")
+LANE_SLICE_STATUS_VALUES = ("planned", "ready", "active", "blocked", "integration-pending", "completed", "skipped")
 ISSUE_RELATION_MATURITY_VALUES = ("observed", "shaped", "ready-to-promote", "blocked", "deferred")
 INTEGRATION_PROPOSAL_STATUS_VALUES = ("pending", "integrated", "rejected")
 REVIEW_RECORD_KIND = "planning-review/v1"
@@ -568,8 +568,14 @@ def _planning_target_authority_revision_after_record(
         owner_path.relative_to(target_root.resolve())
     except ValueError:
         return _planning_target_authority_revision(target_root)
-    content = (json.dumps(owner_record, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
-    return _planning_target_authority_revision(target_root, file_overrides={owner_path: content})
+    return _planning_target_authority_revision_after_records(target_root=target_root, records={owner_path: owner_record})
+
+
+def _planning_target_authority_revision_after_records(*, target_root: Path, records: Mapping[Path, dict[str, Any]]) -> dict[str, Any]:
+    overrides = {
+        path.resolve(): (json.dumps(record, ensure_ascii=False, indent=2) + "\n").encode("utf-8") for path, record in records.items()
+    }
+    return _planning_target_authority_revision(target_root, file_overrides=overrides)
 
 
 def planning_revision(target: str | Path | None = None) -> dict[str, Any]:
@@ -14707,10 +14713,82 @@ def _canonical_owner_subject_proof_refs(owner_record: dict[str, Any]) -> list[st
     return _dedupe(refs)
 
 
+_FINISH_RUN_PLACEHOLDER_VALUES = {
+    "",
+    "pending",
+    "todo",
+    "tbd",
+    "none yet",
+    "current milestone",
+    "execution has not started",
+    "pending delegated execution.",
+    "none yet; execution has not changed files.",
+    "not completed yet",
+    "last proof selected by closeout",
+    "planning closeout completed the run metadata and archive preconditions",
+    "bounded closeout scope",
+    ".agentic-workspace/planning/",
+    "bounded closeout accepted",
+    "bounded owner scope",
+    "see proof references",
+}
+
+
+def _is_finish_run_placeholder(value: Any) -> bool:
+    normalized = str(value or "").strip().lower()
+    return normalized in _FINISH_RUN_PLACEHOLDER_VALUES or normalized.startswith(
+        ("fill in ", "create a bounded plan", "replace this placeholder", "describe ")
+    )
+
+
+def _resolve_feature_completion_evidence(
+    *,
+    owner_record: dict[str, Any],
+    what_happened: str | None,
+    scope_touched: str | None,
+    changed_surfaces: str | None,
+    review_summary: str | None,
+    outcome_summary: str | None,
+) -> tuple[dict[str, str], list[str]]:
+    """Resolve concrete finish-run evidence without promoting scaffold fallbacks."""
+
+    execution_run = _record_section_dict(owner_record, "execution_run") or {}
+    finished_run_review = _record_section_dict(owner_record, "finished_run_review") or {}
+    execution_summary = _canonical_execution_summary(_record_section_dict(owner_record, "execution_summary") or {})
+    intent = _record_mapping(owner_record, "intent")
+    scope = _record_mapping(owner_record, "scope")
+    owned_scope_items = [str(item).strip() for item in scope.get("owned", []) if str(item).strip() and not _is_finish_run_placeholder(item)]
+    owned_scope = "; ".join(owned_scope_items)
+    intent_outcome = str(intent.get("outcome") or "").strip()
+    if _is_finish_run_placeholder(intent_outcome):
+        intent_outcome = ""
+
+    def first_concrete(*values: Any) -> str:
+        return next(
+            (str(value).strip() for value in values if str(value or "").strip() and not _is_finish_run_placeholder(value)),
+            "",
+        )
+
+    evidence = {
+        "what_happened": first_concrete(what_happened, execution_run.get("what happened"), intent_outcome),
+        "scope_touched": first_concrete(scope_touched, execution_run.get("scope touched"), owned_scope),
+        "changed_surfaces": first_concrete(changed_surfaces, execution_run.get("changed surfaces"), owned_scope),
+        "review_summary": first_concrete(review_summary, finished_run_review.get("scope respected")),
+        "outcome_summary": first_concrete(outcome_summary, execution_summary.get("outcome delivered"), intent_outcome),
+    }
+    if not evidence["review_summary"] and evidence["scope_touched"]:
+        evidence["review_summary"] = f"Reviewed feature-head scope: {evidence['scope_touched']}"
+    if not evidence["outcome_summary"]:
+        evidence["outcome_summary"] = evidence["what_happened"]
+    missing = [name for name, value in evidence.items() if _is_finish_run_placeholder(value)]
+    return evidence, missing
+
+
 def _prepare_feature_completion_record(
     *,
     owner_record: dict[str, Any],
     proof_refs: list[str],
+    completion_evidence: Mapping[str, str],
     proposal_id: str,
     proposal_ref: str,
     requested_transition: str,
@@ -14732,27 +14810,22 @@ def _prepare_feature_completion_record(
         'evidence for "proof achieved" state': proof_text,
     }
 
-    intent_value = updated.get("intent")
-    intent: dict[str, Any] = intent_value if isinstance(intent_value, dict) else {}
-    outcome = str(intent.get("outcome") or updated.get("title") or "feature-head outcome").strip()
-    scope_value = updated.get("scope")
-    scope: dict[str, Any] = scope_value if isinstance(scope_value, dict) else {}
-    owned_scope = "; ".join(str(item).strip() for item in scope.get("owned", []) if str(item).strip())
+    outcome = completion_evidence["what_happened"]
     next_step = f"Apply integration proposal '{proposal_id}' from admitted target authority."
     updated["execution_run"] = {
         "run status": "completed",
         "executor": "current planning owner",
         "handoff source": str(updated.get("id") or "feature owner"),
         "what happened": outcome,
-        "scope touched": owned_scope or "bounded owner scope",
-        "changed surfaces": owned_scope or "see proof references",
+        "scope touched": completion_evidence["scope_touched"],
+        "changed surfaces": completion_evidence["changed_surfaces"],
         "validations run": proof_text,
         "result for continuation": "feature-head complete; terminal lifecycle remains target-authoritative",
         "next step": next_step,
     }
     updated["finished_run_review"] = {
         "review status": "complete",
-        "scope respected": "yes; bounded feature-head scope and proof were reviewed.",
+        "scope respected": completion_evidence["review_summary"],
         "proof status": "passed",
         "intent served": "yes; target integration remains the terminal lifecycle authority.",
         "config compliance": "used planning integration-propose command-owned writer",
@@ -14767,6 +14840,13 @@ def _prepare_feature_completion_record(
         "evidence of intent satisfaction": proof_text,
         "unsolved intent passed to": "none",
     }
+    updated["execution_summary"] = {
+        "outcome delivered": completion_evidence["outcome_summary"],
+        "validation confirmed": proof_text,
+        "follow-on routed to": proposal_ref,
+        "post-work posterity capture": "target-authoritative integration proposal",
+        "resume from": next_step,
+    }
     updated["closure_check"] = {
         "closeout scope": "slice",
         "slice status": "completed",
@@ -14777,6 +14857,116 @@ def _prepare_feature_completion_record(
         "reopen trigger": "New contradictory evidence or rejected target integration.",
     }
     return updated
+
+
+def _execplan_id_from_ref(owner_ref: str) -> str:
+    name = Path(owner_ref.strip().replace("\\", "/")).name
+    return name.removesuffix(".plan.json") if name.endswith(".plan.json") else owner_ref.strip()
+
+
+def _feature_completion_parent_lane_update(
+    *,
+    target_root: Path,
+    owner_record: dict[str, Any],
+    owner_ref: str,
+    proof_refs: list[str],
+    proposal_id: str,
+    proposal_ref: str,
+    integrate: bool = False,
+    lane_overrides: Mapping[Path, dict[str, Any]] | None = None,
+) -> tuple[Path | None, dict[str, Any] | None, str]:
+    """Project one child contribution without granting feature branches terminal lane authority."""
+
+    owner_id = str(owner_record.get("id") or "").strip()
+    normalized_owner_ref = owner_ref.strip().replace("\\", "/")
+    matches: list[tuple[Path, dict[str, Any], int]] = []
+    lane_root = target_root / PLANNING_MANAGED_ROOT / "lanes"
+    for lane_path in sorted(lane_root.glob("*.lane.json")) if lane_root.exists() else []:
+        lane_record = copy.deepcopy((lane_overrides or {}).get(lane_path) or _load_lane_record(lane_path))
+        if not isinstance(lane_record, dict):
+            continue
+        for index, item in enumerate(lane_record.get("slice_sequence", [])):
+            if not isinstance(item, dict):
+                continue
+            slice_id = str(item.get("id") or "").strip()
+            slice_ref = str(item.get("execplan_ref") or "").strip().replace("\\", "/")
+            if (owner_id and slice_id == owner_id) or (normalized_owner_ref and slice_ref == normalized_owner_ref):
+                matches.append((lane_path, lane_record, index))
+    if len(matches) > 1:
+        return None, None, "feature-completion-parent-lane-ambiguous"
+    if not matches:
+        return None, None, ""
+
+    lane_path, updated, slice_index = matches[0]
+    slices = list(updated.get("slice_sequence", []))
+    child = copy.deepcopy(slices[slice_index])
+    proof_text = ", ".join(proof_refs)
+    continuation = _record_section_dict(owner_record, "continuation") or {}
+    next_owner = str(continuation.get("owner") or "").strip()
+    if next_owner.lower() in {"", "none", "n/a"}:
+        next_owner = ""
+    residual_intent = str(continuation.get("residual_intent") or "").strip()
+    pending_gap = f"{owner_id} awaits target integration via {proposal_ref}."
+
+    aggregation = dict(updated.get("proof_aggregation") or {}) if isinstance(updated.get("proof_aggregation"), dict) else {}
+    evidence = [str(item).strip() for item in aggregation.get("evidence", []) if str(item).strip()]
+    evidence.extend(proof_refs)
+    known_gaps = [
+        str(item).strip()
+        for item in aggregation.get("known_gaps", [])
+        if str(item).strip() and not str(item).strip().startswith(f"{owner_id} awaits target integration via ")
+    ]
+    aggregation.update({"status": "partial", "evidence": _dedupe(evidence), "known_gaps": known_gaps})
+
+    if integrate:
+        if str(child.get("status") or "").strip() != "integration-pending":
+            return None, None, ""
+        child["status"] = "completed"
+        next_owner_id = _execplan_id_from_ref(next_owner) if next_owner else ""
+        next_slice = next(
+            (item for item in slices if isinstance(item, dict) and str(item.get("id") or "").strip() == next_owner_id),
+            None,
+        )
+        if isinstance(next_slice, dict) and str(next_slice.get("status") or "").strip() == "planned":
+            next_slice["status"] = "ready"
+        updated["current_slice"] = next_owner_id or "aggregate-final-lane-proof"
+        summary = f"{owner_id} completed through target integration proposal {proposal_id}."
+    else:
+        child["status"] = "integration-pending"
+        child["proof"] = proof_text
+        child["residual_after_slice"] = residual_intent or "Target integration remains the next required transition."
+        known_gaps.append(pending_gap)
+        aggregation["known_gaps"] = known_gaps
+        next_owner_id = _execplan_id_from_ref(next_owner) if next_owner else ""
+        if next_owner_id and not any(isinstance(item, dict) and str(item.get("id") or "").strip() == next_owner_id for item in slices):
+            slices.append(
+                {
+                    "id": next_owner_id,
+                    "title": next_owner_id,
+                    "status": "planned",
+                    "execplan_ref": next_owner,
+                    "depends_on": [owner_id] if owner_id else [],
+                    "purpose_for_lane": residual_intent or f"Continue after {owner_id} reaches target integration.",
+                }
+            )
+        updated["current_slice"] = owner_id
+        summary = f"{owner_id} is feature-complete and awaits target integration proposal {proposal_id}."
+
+    slices[slice_index] = child
+    updated["slice_sequence"] = slices
+    updated["proof_aggregation"] = aggregation
+    updated["residual_lane_work"] = residual_intent or "Complete target integration and continue the next bounded lane slice."
+    updated["parent_close_permission"] = "do-not-close-parent"
+    updated["closeout_state"] = {
+        "status": "open",
+        "summary": summary,
+        "residual_work": updated["residual_lane_work"],
+        "next_owner": next_owner or "target integration authority",
+    }
+    findings = _json_schema_findings(payload=updated, schema_path=LANE_RECORD_SCHEMA_PATH)
+    if findings:
+        return lane_path, None, "feature-completion-parent-lane-validation-failed: " + "; ".join(findings)
+    return lane_path, updated, ""
 
 
 def _refresh_existing_integration_proposal(
@@ -14990,6 +15180,11 @@ def propose_integration_transition(
     external_ref: str = "",
     requested_transition: str = "",
     proof: str | Iterable[str] | None = None,
+    what_happened: str | None = None,
+    scope_touched: str | None = None,
+    changed_surfaces: str | None = None,
+    review_summary: str | None = None,
+    outcome_summary: str | None = None,
     parent_boundary: str = "",
     invariant: str | Iterable[str] | None = None,
     expected_subject_revision: str = "",
@@ -15044,6 +15239,11 @@ def propose_integration_transition(
             "external_ref": external_ref,
             "requested_transition": requested_transition,
             "proof": proof,
+            "what_happened": what_happened,
+            "scope_touched": scope_touched,
+            "changed_surfaces": changed_surfaces,
+            "review_summary": review_summary,
+            "outcome_summary": outcome_summary,
             "parent_boundary": parent_boundary,
             "invariant": invariant,
         }
@@ -15084,6 +15284,9 @@ def propose_integration_transition(
     admission = _git_branch_admission(target_root)
     feature_owner_update: dict[str, Any] | None = None
     feature_owner_path: Path | None = None
+    feature_lane_update: dict[str, Any] | None = None
+    feature_lane_path: Path | None = None
+    completion_evidence: dict[str, str] = {}
     if record_feature_completion and (
         admission.get("phase") != "feature"
         or transition not in {"close-owner", "archive-owner"}
@@ -15121,6 +15324,36 @@ def propose_integration_transition(
                 result.reason_code = "feature-completion-proof-required"
                 result.conflict_owner = owner_path_text
                 return result
+            completion_evidence, missing_completion_evidence = _resolve_feature_completion_evidence(
+                owner_record=owner_record,
+                what_happened=what_happened,
+                scope_touched=scope_touched,
+                changed_surfaces=changed_surfaces,
+                review_summary=review_summary,
+                outcome_summary=outcome_summary,
+            )
+            if missing_completion_evidence:
+                option_list = ", ".join(f"--{name.replace('_', '-')}" for name in missing_completion_evidence)
+                result.add(
+                    "manual review",
+                    target_root / owner_path_text,
+                    f"--record-feature-completion requires non-placeholder finish-run evidence for: {option_list}",
+                )
+                result.reason_code = "feature-completion-evidence-required"
+                result.conflict_owner = owner_path_text
+                result.recovery_command = (
+                    f"{_workspace_cli_invoke(target_root)} planning integration-propose --proposal-id {proposal_slug} "
+                    f"--owner-ref {owner_path_text} --requested-transition {transition} --record-feature-completion "
+                    f"--proof {','.join(requested_proof_refs)} "
+                    + " ".join(
+                        f"--{name.replace('_', '-')} {json.dumps(completion_evidence[name] or '<' + name.replace('_', '-') + '>')}"
+                        for name in completion_evidence
+                    )
+                    + f" --expect-subject-revision {current_subject_revision} "
+                    f"--expect-planning-revision {current_planning_revision} --target . --format json"
+                )
+                return result
+            completion_options = "".join(f" --{name.replace('_', '-')} {json.dumps(value)}" for name, value in completion_evidence.items())
             if not expected_subject_revision.strip():
                 result.add(
                     "manual review",
@@ -15132,7 +15365,8 @@ def propose_integration_transition(
                 result.recovery_command = (
                     f"{_workspace_cli_invoke(target_root)} planning integration-propose --proposal-id {proposal_slug} "
                     f"--owner-ref {owner_path_text} --requested-transition {transition} --record-feature-completion "
-                    f"--proof {','.join(requested_proof_refs)} --expect-subject-revision {current_subject_revision} "
+                    f"--proof {','.join(requested_proof_refs)}{completion_options} "
+                    f"--expect-subject-revision {current_subject_revision} "
                     f"--expect-planning-revision {current_planning_revision} --target . --format json"
                 )
                 return result
@@ -15147,7 +15381,8 @@ def propose_integration_transition(
                 result.recovery_command = (
                     f"{_workspace_cli_invoke(target_root)} planning integration-propose --proposal-id {proposal_slug} "
                     f"--owner-ref {owner_path_text} --requested-transition {transition} --record-feature-completion "
-                    f"--proof {','.join(requested_proof_refs)} --expect-subject-revision {current_subject_revision} "
+                    f"--proof {','.join(requested_proof_refs)}{completion_options} "
+                    f"--expect-subject-revision {current_subject_revision} "
                     f"--expect-planning-revision {current_planning_revision} --target . --format json"
                 )
                 return result
@@ -15175,13 +15410,15 @@ def propose_integration_transition(
                 result.recovery_command = (
                     f"{_workspace_cli_invoke(target_root)} planning integration-propose --proposal-id {proposal_slug} "
                     f"--owner-ref {owner_path_text} --requested-transition {transition} --record-feature-completion "
-                    f"--proof {','.join(requested_proof_refs)} --expect-subject-revision {current_subject_revision} "
+                    f"--proof {','.join(requested_proof_refs)}{completion_options} "
+                    f"--expect-subject-revision {current_subject_revision} "
                     f"--expect-planning-revision {current_planning_revision} --target . --format json"
                 )
                 return result
             owner_record = _prepare_feature_completion_record(
                 owner_record=owner_record,
                 proof_refs=requested_proof_refs,
+                completion_evidence=completion_evidence,
                 proposal_id=proposal_slug,
                 proposal_ref=_planning_surface_relative(target_root, proposal_path),
                 requested_transition=transition,
@@ -15287,6 +15524,26 @@ def propose_integration_transition(
             result.reason_code = "feature-completion-proof-required"
             result.conflict_owner = owner_path_text
             return result
+    if record_feature_completion and feature_owner_update is not None:
+        feature_lane_path, feature_lane_update, lane_error = _feature_completion_parent_lane_update(
+            target_root=target_root,
+            owner_record=feature_owner_update,
+            owner_ref=owner_path_text,
+            proof_refs=_canonical_owner_subject_proof_refs(feature_owner_update),
+            proposal_id=proposal_slug,
+            proposal_ref=_planning_surface_relative(target_root, proposal_path),
+        )
+        if lane_error:
+            result.add(
+                "manual review",
+                feature_lane_path or target_root / PLANNING_MANAGED_ROOT / "lanes",
+                lane_error,
+            )
+            result.reason_code = lane_error.split(":", 1)[0]
+            result.conflict_owner = (
+                _planning_surface_relative(target_root, feature_lane_path) if feature_lane_path is not None else owner_path_text
+            )
+            return result
     preserved_invariants = _csv_items(invariant) or [
         "feature branch does not select current work",
         "feature branch does not rewrite aggregate Planning indexes",
@@ -15310,12 +15567,16 @@ def propose_integration_transition(
         else (expected_subject_revision or expected_target_revision).strip()
         or _integration_subject_revision(target_root=target_root, owner_ref=owner_path_text, external_ref=external)
     )
+    feature_records: dict[Path, dict[str, Any]] = {}
+    if feature_owner_path is not None and feature_owner_update is not None:
+        feature_records[feature_owner_path] = feature_owner_update
+    if feature_lane_path is not None and feature_lane_update is not None:
+        feature_records[feature_lane_path] = feature_lane_update
     target_authority_revision = (
         str(
-            _planning_target_authority_revision_after_record(
+            _planning_target_authority_revision_after_records(
                 target_root=target_root,
-                owner_ref=owner_path_text,
-                owner_record=feature_owner_update,
+                records=feature_records,
             ).get("revision_id", "")
         )
         if feature_owner_update is not None
@@ -15361,6 +15622,11 @@ def propose_integration_transition(
         "external_ref": external,
         "requested_transition": transition,
         "proof": proof_refs,
+        "what_happened": completion_evidence.get("what_happened", ""),
+        "scope_touched": completion_evidence.get("scope_touched", ""),
+        "changed_surfaces": completion_evidence.get("changed_surfaces", ""),
+        "review_summary": completion_evidence.get("review_summary", ""),
+        "outcome_summary": completion_evidence.get("outcome_summary", ""),
         "parent_boundary": proposal["parent_boundary"],
         "invariant": preserved_invariants,
         "expected_subject_revision": invocation_subject_revision,
@@ -15411,7 +15677,15 @@ def propose_integration_transition(
         "expected_transition": "pending-integration-proposal-created",
         "proposal_id": proposal_slug,
         "proposal_revision": proposal["proposal_revision"],
-        "changed_fields": (["owner.feature_completion", "integration_proposal"] if feature_owner_update else ["integration_proposal"]),
+        "changed_fields": (
+            [
+                "owner.feature_completion",
+                *(["parent_lane.child_contribution"] if feature_lane_update is not None else []),
+                "integration_proposal",
+            ]
+            if feature_owner_update
+            else ["integration_proposal"]
+        ),
         "preserved_invariants": preserved_invariants,
         "expected_subject_revision": subject_revision,
         "expected_planning_revision": target_authority_revision,
@@ -15419,11 +15693,17 @@ def propose_integration_transition(
     if dry_run:
         if feature_owner_path is not None:
             result.add("would update", feature_owner_path, "record feature-head complete and target integration pending")
+        if feature_lane_path is not None:
+            result.add("would update", feature_lane_path, "record non-terminal child proof contribution and next owner")
         result.add("would create", proposal_path, "schema-valid pending integration proposal")
         result.add("would preserve", target_root / PLANNING_STATE_PATH, "; ".join(preserved_invariants))
         return result
     try:
-        write_paths = [proposal_path, *([feature_owner_path] if feature_owner_path is not None else [])]
+        write_paths = [
+            proposal_path,
+            *([feature_owner_path] if feature_owner_path is not None else []),
+            *([feature_lane_path] if feature_lane_path is not None else []),
+        ]
 
         def write_feature_completion_transaction() -> None:
             if feature_owner_path is not None and feature_owner_update is not None:
@@ -15431,6 +15711,12 @@ def propose_integration_transition(
                     record_path=feature_owner_path,
                     record=feature_owner_update,
                     schema_path=EXECPLAN_RECORD_SCHEMA_PATH,
+                )
+            if feature_lane_path is not None and feature_lane_update is not None:
+                _write_schema_backed_planning_record(
+                    record_path=feature_lane_path,
+                    record=feature_lane_update,
+                    schema_path=LANE_RECORD_SCHEMA_PATH,
                 )
             _write_schema_backed_planning_record(
                 record_path=proposal_path,
@@ -15448,6 +15734,8 @@ def propose_integration_transition(
         return result
     if feature_owner_path is not None:
         result.add("updated", feature_owner_path, "feature-head complete; terminal lifecycle remains target-authoritative")
+    if feature_lane_path is not None:
+        result.add("updated", feature_lane_path, "child contribution is integration-pending; lane remains open")
     result.add("created", proposal_path, "schema-valid pending integration proposal")
     result.add(
         "preserved", target_root / PLANNING_STATE_PATH, "proposal did not select, close, archive, or rewrite aggregate Planning state"
@@ -15558,6 +15846,7 @@ def _apply_pending_integration_proposals(
 
     writes: list[tuple[Path, dict[str, Any], Path]] = []
     owner_overrides: dict[Path, bytes] = {}
+    lane_overrides: dict[Path, dict[str, Any]] = {}
     receipts: list[dict[str, Any]] = []
     proposals_applied: list[str] = []
     skipped_proposals: list[dict[str, Any]] = []
@@ -15637,6 +15926,7 @@ def _apply_pending_integration_proposals(
         owner_schema_path = EXECPLAN_RECORD_SCHEMA_PATH
         owner_kind = ""
         owner_changed_fields: list[str] = []
+        related_lane_changed_fields: list[str] = []
         if transition != "keep-open":
             if owner_path_error or owner_path is None:
                 skip(
@@ -15736,6 +16026,29 @@ def _apply_pending_integration_proposals(
             if owner_path is not None and owner_changed_fields:
                 writes.append((owner_path, updated_owner, owner_schema_path))
                 owner_overrides[owner_path] = (json.dumps(updated_owner, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+            if owner_kind == EXECPLAN_RECORD_KIND:
+                related_lane_path, related_lane_update, lane_error = _feature_completion_parent_lane_update(
+                    target_root=target_root,
+                    owner_record=updated_owner,
+                    owner_ref=owner_ref,
+                    proof_refs=proof_refs,
+                    proposal_id=proposal_id,
+                    proposal_ref=proposal_path.relative_to(target_root).as_posix(),
+                    integrate=True,
+                    lane_overrides=lane_overrides,
+                )
+                if lane_error:
+                    result.add("manual review", related_lane_path or proposal_path, lane_error)
+                    result.reason_code = lane_error.split(":", 1)[0]
+                    break
+                if related_lane_path is not None and related_lane_update is not None:
+                    writes[:] = [item for item in writes if item[0] != related_lane_path]
+                    writes.append((related_lane_path, related_lane_update, LANE_RECORD_SCHEMA_PATH))
+                    lane_overrides[related_lane_path] = related_lane_update
+                    owner_overrides[related_lane_path] = (json.dumps(related_lane_update, ensure_ascii=False, indent=2) + "\n").encode(
+                        "utf-8"
+                    )
+                    related_lane_changed_fields = ["parent_lane.child_contribution"]
         subject_after_revision = (
             _integration_subject_revision_after_record(
                 target_root=target_root,
@@ -15766,7 +16079,13 @@ def _apply_pending_integration_proposals(
             "preserved_invariants": [str(item).strip() for item in record.get("preserved_invariants", []) if str(item).strip()]
             if isinstance(record.get("preserved_invariants"), list)
             else [],
-            "changed_fields": ["integration_proposal.status", "integration_proposal.phase", *owner_changed_fields, "integration_receipt"],
+            "changed_fields": [
+                "integration_proposal.status",
+                "integration_proposal.phase",
+                *owner_changed_fields,
+                *related_lane_changed_fields,
+                "integration_receipt",
+            ],
             "revisions": {
                 "expected_subject": expected_subject_revision,
                 "subject_before": current_subject_revision,
@@ -16083,6 +16402,9 @@ def apply_integration_proposal(
     owner_record: dict[str, Any] | None = None
     updated_owner: dict[str, Any] | None = None
     owner_changed_fields: list[str] = []
+    related_lane_path: Path | None = None
+    related_lane_update: dict[str, Any] | None = None
+    related_lane_changed_fields: list[str] = []
     owner_schema_path = EXECPLAN_RECORD_SCHEMA_PATH
     owner_kind = ""
     if transition != "keep-open":
@@ -16148,6 +16470,22 @@ def apply_integration_proposal(
             result.add("manual review", owner_path or proposal_path, f"integration owner update is invalid: {'; '.join(owner_findings)}")
             result.reason_code = "integration-owner-validation-failed"
             return result
+        if owner_kind == EXECPLAN_RECORD_KIND:
+            related_lane_path, related_lane_update, lane_error = _feature_completion_parent_lane_update(
+                target_root=target_root,
+                owner_record=updated_owner,
+                owner_ref=owner_ref,
+                proof_refs=proof_refs,
+                proposal_id=proposal_id,
+                proposal_ref=proposal_path.relative_to(target_root).as_posix(),
+                integrate=True,
+            )
+            if lane_error:
+                result.add("manual review", related_lane_path or proposal_path, lane_error)
+                result.reason_code = lane_error.split(":", 1)[0]
+                return result
+            if related_lane_update is not None:
+                related_lane_changed_fields = ["parent_lane.child_contribution"]
     subject_after_revision = (
         _integration_subject_revision_after_record(
             target_root=target_root,
@@ -16182,6 +16520,7 @@ def apply_integration_proposal(
             "integration_proposal.status",
             "integration_proposal.phase",
             *owner_changed_fields,
+            *related_lane_changed_fields,
             "integration_receipt",
         ],
         "revisions": {
@@ -16192,13 +16531,7 @@ def apply_integration_proposal(
             "proposal_after": updated_record["proposal_revision"],
             "expected_planning_revision": required_target_revision,
             "target_authority_before": str(current_target_revision.get("revision_id", "")),
-            "target_authority_after": str(
-                _planning_target_authority_revision_after_record(
-                    target_root=target_root,
-                    owner_ref=owner_ref,
-                    owner_record=updated_owner,
-                ).get("revision_id", "")
-            ),
+            "target_authority_after": "pending-final-target-authority-revision",
         },
         "authority_boundary": {
             "integrated_truth": "this receipt",
@@ -16209,6 +16542,14 @@ def apply_integration_proposal(
         },
         "created_at": now,
     }
+    target_records: dict[Path, dict[str, Any]] = {}
+    if owner_path is not None and updated_owner is not None and owner_changed_fields:
+        target_records[owner_path] = updated_owner
+    if related_lane_path is not None and related_lane_update is not None:
+        target_records[related_lane_path] = related_lane_update
+    receipt["revisions"]["target_authority_after"] = str(
+        _planning_target_authority_revision_after_records(target_root=target_root, records=target_records).get("revision_id", "")
+    )
     receipt["receipt_revision"] = _record_revision(receipt)
     proposal_findings = _json_schema_findings(payload=updated_record, schema_path=INTEGRATION_PROPOSAL_SCHEMA_PATH)
     receipt_findings = _json_schema_findings(payload=receipt, schema_path=INTEGRATION_RECEIPT_SCHEMA_PATH)
@@ -16222,6 +16563,8 @@ def apply_integration_proposal(
     if dry_run:
         if updated_owner is not None and owner_path is not None and owner_changed_fields:
             result.add("would update", owner_path, f"apply {transition} to integration owner")
+        if related_lane_path is not None:
+            result.add("would update", related_lane_path, "promote integration-pending child contribution to completed")
         result.add("would update", proposal_path, "mark pending proposal integrated")
         result.add("would create", receipt_path, "schema-valid integration receipt")
         result.add("would preserve", target_root / PLANNING_STATE_PATH, "current selection and aggregate indexes")
@@ -16233,6 +16576,8 @@ def apply_integration_proposal(
         owner_path=owner_path,
         owner_changed_fields=owner_changed_fields,
         owner_schema_path=owner_schema_path,
+        related_lane_path=related_lane_path,
+        related_lane_update=related_lane_update,
         proposal_path=proposal_path,
         updated_record=updated_record,
         receipt_path=receipt_path,
@@ -16240,7 +16585,16 @@ def apply_integration_proposal(
     )
 
     try:
-        affected_paths = [path for path in (owner_path if owner_changed_fields else None, proposal_path, receipt_path) if path is not None]
+        affected_paths = [
+            path
+            for path in (
+                owner_path if owner_changed_fields else None,
+                related_lane_path,
+                proposal_path,
+                receipt_path,
+            )
+            if path is not None
+        ]
         _apply_planning_writes_atomically(affected_paths, write_integration)
     except OSError as exc:
         result.add("manual review", proposal_path, f"integration apply rolled back after write failure: {exc}")
@@ -16248,6 +16602,8 @@ def apply_integration_proposal(
         return result
     if updated_owner is not None and owner_path is not None and owner_changed_fields:
         result.add("updated", owner_path, f"applied {transition} to integration owner")
+    if related_lane_path is not None:
+        result.add("updated", related_lane_path, "promoted child contribution to completed on target authority")
     result.add("updated", proposal_path, "marked pending proposal integrated")
     result.add("created", receipt_path, "schema-valid integration receipt")
     result.add("preserved", target_root / PLANNING_STATE_PATH, "current selection and aggregate indexes")
@@ -16261,6 +16617,8 @@ def _write_integration_records(
     owner_path: Path | None,
     owner_changed_fields: list[str],
     owner_schema_path: Path,
+    related_lane_path: Path | None,
+    related_lane_update: dict[str, Any] | None,
     proposal_path: Path,
     updated_record: dict[str, Any],
     receipt_path: Path,
@@ -16270,6 +16628,12 @@ def _write_integration_records(
 
     if updated_owner is not None and owner_path is not None and owner_changed_fields:
         _write_schema_backed_planning_record(record_path=owner_path, record=updated_owner, schema_path=owner_schema_path)
+    if related_lane_path is not None and related_lane_update is not None:
+        _write_schema_backed_planning_record(
+            record_path=related_lane_path,
+            record=related_lane_update,
+            schema_path=LANE_RECORD_SCHEMA_PATH,
+        )
     _write_schema_backed_planning_record(
         record_path=proposal_path,
         record=updated_record,
@@ -21374,29 +21738,8 @@ def closeout_execplan(
     if closure_decision == "archive-but-keep-lane-open" and not continuation_owner:
         continuation_owner = PLANNING_EXPLICIT_CONTINUATION_OWNER
 
-    placeholder_values = {
-        "",
-        "pending",
-        "todo",
-        "tbd",
-        "none yet",
-        "current milestone",
-        "execution has not started",
-        "pending delegated execution.",
-        "none yet; execution has not changed files.",
-        "not completed yet",
-        "last proof selected by closeout",
-        "planning closeout completed the run metadata and archive preconditions",
-        "bounded closeout scope",
-        ".agentic-workspace/planning/",
-        "bounded closeout accepted",
-    }
-
     def clean(value: Any) -> str:
         return str(value or "").strip()
-
-    def is_placeholder(value: Any) -> bool:
-        return clean(value).lower() in placeholder_values
 
     def provided(value: str | None) -> str:
         return clean(value)
@@ -21423,7 +21766,7 @@ def closeout_execplan(
     elif proof_request and proof_request.lower() != "last":
         proof = proof_request
         proof_source = "explicit"
-    elif existing_proof and not is_placeholder(existing_proof):
+    elif existing_proof and not _is_finish_run_placeholder(existing_proof):
         proof = existing_proof
         proof_source = "existing"
     else:
@@ -21486,12 +21829,14 @@ def closeout_execplan(
         "changed surfaces": "changed_surfaces",
     }
     missing_run_evidence = [
-        field for field, option_value in run_evidence_inputs.items() if not option_value and is_placeholder(execution_run.get(field))
+        field
+        for field, option_value in run_evidence_inputs.items()
+        if not option_value and _is_finish_run_placeholder(execution_run.get(field))
     ]
-    if not provided(review_summary) and is_placeholder(finished_run_review.get("scope respected")):
+    if not provided(review_summary) and _is_finish_run_placeholder(finished_run_review.get("scope respected")):
         missing_run_evidence.append("review summary")
         run_evidence_sources["review summary"] = "review_summary"
-    if not provided(outcome_summary) and is_placeholder(execution_summary.get("outcome delivered")):
+    if not provided(outcome_summary) and _is_finish_run_placeholder(execution_summary.get("outcome delivered")):
         missing_run_evidence.append("outcome summary")
         run_evidence_sources["outcome summary"] = "outcome_summary"
     if missing_run_evidence:
@@ -21680,7 +22025,7 @@ def closeout_execplan(
         active_milestone["blocked"] = "none"
         record["active_milestone"] = active_milestone
         execution_run["run status"] = "completed"
-        if is_placeholder(execution_run.get("executor")):
+        if _is_finish_run_placeholder(execution_run.get("executor")):
             execution_run["executor"] = "agentic-planning closeout"
         if run_evidence_inputs["what happened"]:
             execution_run["what happened"] = run_evidence_inputs["what happened"]
@@ -21701,7 +22046,7 @@ def closeout_execplan(
         finished_run_review["review status"] = "complete"
         if provided(review_summary):
             finished_run_review["scope respected"] = provided(review_summary)
-        elif is_placeholder(finished_run_review.get("scope respected")):
+        elif _is_finish_run_placeholder(finished_run_review.get("scope respected")):
             finished_run_review["scope respected"] = "yes; closeout accepted the bounded claim."
         finished_run_review["proof status"] = "passed"
         finished_run_review["intent served"] = (
@@ -21711,15 +22056,15 @@ def closeout_execplan(
             if normalized_intent == "satisfied"
             else f"no; intent-status={normalized_intent} keeps continuation explicit."
         )
-        if is_placeholder(finished_run_review.get("config compliance")):
+        if _is_finish_run_placeholder(finished_run_review.get("config compliance")):
             finished_run_review["config compliance"] = "used planning closeout command-owned writer"
-        if is_placeholder(finished_run_review.get("misinterpretation risk")):
+        if _is_finish_run_placeholder(finished_run_review.get("misinterpretation risk")):
             finished_run_review["misinterpretation risk"] = "low"
         finished_run_review["follow-on decision"] = continuation_owner if closure_decision == "archive-but-keep-lane-open" else "none"
         record["finished_run_review"] = finished_run_review
         if provided(outcome_summary):
             execution_summary["outcome delivered"] = provided(outcome_summary)
-        elif is_placeholder(execution_summary.get("outcome delivered")):
+        elif _is_finish_run_placeholder(execution_summary.get("outcome delivered")):
             execution_summary["outcome delivered"] = (
                 "closeout accepted the finished run evidence"
                 if normalized_intent == "satisfied"
@@ -21727,9 +22072,9 @@ def closeout_execplan(
             )
         execution_summary["validation confirmed"] = proof
         execution_summary["follow-on routed to"] = continuation_owner if closure_decision == "archive-but-keep-lane-open" else "none"
-        if is_placeholder(execution_summary.get("post-work posterity capture")):
+        if _is_finish_run_placeholder(execution_summary.get("post-work posterity capture")):
             execution_summary["post-work posterity capture"] = "archive closeout distillation"
-        if is_placeholder(execution_summary.get(EXECUTION_SUMMARY_KNOWLEDGE_KEY)):
+        if _is_finish_run_placeholder(execution_summary.get(EXECUTION_SUMMARY_KNOWLEDGE_KEY)):
             execution_summary[EXECUTION_SUMMARY_KNOWLEDGE_KEY] = "none"
         execution_summary["resume from"] = continuation_owner if closure_decision == "archive-but-keep-lane-open" else "archive"
         record["execution_summary"] = execution_summary
@@ -23766,6 +24111,11 @@ def _render_lifecycle_invocation(operation_id: str, arguments: dict[str, Any]) -
         ("external_ref", "--external-ref"),
         ("requested_transition", "--requested-transition"),
         ("proof", "--proof"),
+        ("what_happened", "--what-happened"),
+        ("scope_touched", "--scope-touched"),
+        ("changed_surfaces", "--changed-surfaces"),
+        ("review_summary", "--review-summary"),
+        ("outcome_summary", "--outcome-summary"),
         ("parent_boundary", "--parent-boundary"),
         ("invariant", "--invariant"),
         ("expected_subject_revision", "--expect-subject-revision"),

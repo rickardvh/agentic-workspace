@@ -162,6 +162,7 @@
             "ready",
             "active",
             "blocked",
+            "integration-pending",
             "completed",
             "skipped"
           ]
