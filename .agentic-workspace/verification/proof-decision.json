@@ -2,14 +2,14 @@
   "kind": "agentic-workspace/verification-proof-decision/v1",
   "proof_decision": {
     "selected_decision": "merge",
-    "trust_question": "Does trusted proof execution reject missing, unsupported, or host-mismatched shell semantics before launch and bind selection, receipt, and resume identity to the declared dialect, while the repo evidence strategy remains schema-constrained?",
+    "trust_question": "Do the Planning ownership repairs preserve truthful stacked-lane state, do unsynchronized source runtimes fail with executable recovery, are semantic task routes and inventory patches isolated from ambient state, and does ordinary package proof reject stale executed conformance evidence?",
     "host_strategy_source": ".agentic-workspace/verification/manifest.toml#scenarios.test_evidence_decision_review",
-    "proof_owner": "proof-execution-and-operating-decision-contracts",
+    "proof_owner": "planning-runtime-semantic-routes-inventory-and-external-conformance-validation",
     "proof_intent": "high-risk-workflow",
     "evidence_durability": "permanent",
-    "narrowest_evidence": "The existing trusted-execution rejection test is now one parameterized behavior-class matrix covering admission, source, missing dialect, unsupported dialect, and host mismatch. Existing shell-semantics and selected-proof receipt/reuse tests carry dialect identity assertions. Existing repo-evidence-strategy tests now validate applicable and quiet producer output against the typed schema, reject malformed and unknown fields, and prove decision identity sensitivity.",
-    "prune_or_replacement_condition": "Convert the deterministic dialect admission and evidence-strategy schema cases to contract-owned conformance only when the canonical operation contract can run them across supported Python and generated targets; retain one representative selected-proof black-box receipt/resume path.",
+    "narrowest_evidence": "The existing focused Planning scenarios pass, including atomic lane creation/binding, explicit-lane new-plan reciprocal parent binding, supersede input ownership, current-work preservation, and lane-activation recovery. Hosted package proof exposed that the reciprocal assertions were attached to the adjacent activation scenario; they now reside in the existing explicit-lane new-plan owner and both exact scenarios pass. All 34 existing source-checkout launcher scenarios pass with missing-dependency proof folded into the two-checkout runtime-identity scenario. Nine existing semantic-route owner scenarios pass. The single #2941 inventory fixture proves isolated baseline-plus-patch behavior. The existing external-consumer freshness test now also proves stale-receipt rejection; all-target executed conformance produced 302 passes, current receipt mirrors, and exact Python/TypeScript readiness passed. Ruff and generated command-package static/native Node proof pass.",
+    "prune_or_replacement_condition": "Keep assertions in their existing owner tests and retain the combined launcher, inventory, and external-profile freshness scenarios while they remain the narrowest faithful boundaries. Consolidate consumer-only route assertions when one typed conformance matrix can preserve source revision, staleness, and non-authority; do not add separate suites for already-covered runtime, inventory, or receipt-freshness paths.",
     "confidence": "high",
-    "residual_risk": "Hosted CI remains the cross-host proof for POSIX execution; local Windows coverage proves PowerShell invocation and rejects a POSIX dialect before launch without emulating another host."
+    "residual_risk": "Hosted CI remains the cross-platform proof for generated adapters, Git/tar behavior, and the final packaged-artifact rerun. The explicit patch audit is intentionally broad only over its isolated subject; unrelated broad pytest suites were omitted under the repository test strategy."
   }
 }

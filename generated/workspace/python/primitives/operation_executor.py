@@ -290,6 +290,8 @@ def run_operation_values(operation: dict[str, Any], *, initial_values: Mapping[s
         'instructions.explain',
         'instructions.list',
         'instructions.migrate',
+        'instructions.route-select',
+        'instructions.routes',
         'prompt.init',
         'prompt.uninstall',
         'prompt.upgrade',

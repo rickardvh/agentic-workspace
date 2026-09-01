@@ -12,6 +12,11 @@
     {"name": "external_ref", "source": "cli-option", "required": false},
     {"name": "requested_transition", "source": "cli-option", "required": false},
     {"name": "proof", "source": "cli-option", "required": false},
+    {"name": "what_happened", "source": "cli-option", "required": false, "description": "Concrete feature-head outcome when the owner cannot derive non-placeholder finish-run evidence."},
+    {"name": "scope_touched", "source": "cli-option", "required": false, "description": "Concrete feature-head scope touched when the owner cannot derive it."},
+    {"name": "changed_surfaces", "source": "cli-option", "required": false, "description": "Concrete feature-head changed surfaces when the owner cannot derive them."},
+    {"name": "review_summary", "source": "cli-option", "required": false, "description": "Concrete scope-review evidence, or a value derived from admitted owner scope."},
+    {"name": "outcome_summary", "source": "cli-option", "required": false, "description": "Concrete delivered outcome, or a value derived from admitted owner intent."},
     {"name": "parent_boundary", "source": "cli-option", "required": false},
     {"name": "invariant", "source": "cli-option", "required": false},
     {"name": "expect_subject_revision", "source": "cli-option", "required": false},
@@ -33,6 +38,7 @@
   ],
   "writes": [
     {"surface": ".agentic-workspace/planning/execplans/<owner>.plan.json", "required": false, "when": "record_feature_completion on an admitted feature branch"},
+    {"surface": ".agentic-workspace/planning/lanes/<parent>.lane.json", "required": false, "when": "record_feature_completion resolves exactly one parent-lane child relation"},
     {"surface": ".agentic-workspace/planning/integration-proposals/<id>.integration-proposal.json", "required": false, "when": "not a dry run"}
   ],
   "steps": [
@@ -43,7 +49,8 @@
     "Feature branches write proposals, not integrated lifecycle truth.",
     "Do not select current work, rewrite aggregate collections, close unrelated owners, or claim terminal parent truth.",
     "Record a subject revision so target-branch apply can reject stale proposals.",
-    "Feature-completion recording requires explicit proof plus current owner and target-authority revision guards; it writes owner proof/closeout posture and the proposal atomically without applying terminal lifecycle truth.",
+    "Feature-completion recording requires explicit proof, concrete non-placeholder finish-run evidence, and current owner and target-authority revision guards; it writes owner proof/closeout posture and the proposal atomically without applying terminal lifecycle truth.",
+    "When exactly one parent lane contains the feature owner, record a non-terminal integration-pending child contribution and next owner in the same transaction; target integration alone promotes it to completed.",
     "Refresh only an existing pending proposal, require proposal/subject/target revision guards, and preserve immutable lifecycle semantics.",
     "--expect-planning-revision is self-identifying as planning_revision.target_authority_revision in help, structured output, and stale recovery."
   ],

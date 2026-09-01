@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import importlib.util
 import json
 import shutil
@@ -37,6 +38,15 @@ def test_profile_is_fresh_and_fail_closed() -> None:
     assert profile["operations"]
     assert all(entry["operation_compatibility"]["fingerprint"].startswith("sha256:") for entry in profile["operations"])
     assert all(entry["external_consumption"]["status"] in {"supported", "runtime-backed", "internal"} for entry in profile["operations"])
+    assert module.conformance_receipt_freshness_errors(profile) == []
+
+    stale_receipts = copy.deepcopy(json.loads(module.CONFORMANCE_RECEIPT_OUTPUTS[0].read_text(encoding="utf-8")))
+    stale_receipts["receipts"][0]["profile_fingerprint"] = "sha256:stale"
+    errors = module.conformance_receipt_freshness_errors(
+        profile,
+        receipt_payloads={"fixture-receipts.json": stale_receipts},
+    )
+    assert errors == [f"fixture-receipts.json: {stale_receipts['receipts'][0]['operation_id']} receipt has a stale profile fingerprint"]
 
 
 def test_operation_resources_share_the_command_package_rendering_authority() -> None:

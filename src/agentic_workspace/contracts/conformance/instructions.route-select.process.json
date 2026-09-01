@@ -1,0 +1,34 @@
+{
+  "schema_version": "agentic-workspace/conformance/v1",
+  "id": "instructions.route-select.process",
+  "operation_id": "instructions.route-select",
+  "adapter": {
+    "kind": "process",
+    "command_template": ["{agentic_workspace_cli}", "instructions", "select-route", "--target", ".", "--posture", "selected", "--route", "github/issues/create", "--expect-source-revision", "sha256:0000000000000000000000000000000000000000000000000000000000000000", "--format", "json"],
+    "cwd": "fixture_root"
+  },
+  "fixtures": [
+    {
+      "id": "stale-route-selection",
+      "files": {
+        ".git/.keep": "",
+        "tools/skills/REGISTRY.json": "{\"schema_version\":\"skill-registry.v1\",\"skills\":[{\"id\":\"issue-shaping\",\"summary\":\"Shape issues.\",\"semantic_routes\":[{\"id\":\"github/issues/create\",\"match\":\"exact\",\"priority\":10}]}]}\n"
+      }
+    }
+  ],
+  "expectations": {
+    "exit": {"code": 0},
+    "stdout": {
+      "format": "json",
+      "field_assertions": [
+        {"path": ["operation_id"], "equals": "instructions.route-select"},
+        {"path": ["status"], "equals": "blocked"},
+        {"path": ["mutation_applied"], "equals": false}
+      ]
+    },
+    "stderr": {"allow_non_empty": false},
+    "filesystem": {"allowed_write_paths": [], "required_paths": ["tools/skills/REGISTRY.json"], "forbidden_paths": [".agentic-workspace/local/current-task-routes.json"]},
+    "idempotency": {"run_twice": true},
+    "safety": {"no_writes_outside_repo_root": true}
+  }
+}

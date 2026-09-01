@@ -71,6 +71,8 @@ from . import instructions_create as _command_instructions_create
 from . import instructions_explain as _command_instructions_explain
 from . import instructions_list as _command_instructions_list
 from . import instructions_migrate as _command_instructions_migrate
+from . import instructions_route_select as _command_instructions_route_select
+from . import instructions_routes as _command_instructions_routes
 from . import memory_front_door as _command_memory_front_door
 from . import modules_report as _command_modules_report
 from . import ownership_report as _command_ownership_report
@@ -159,6 +161,8 @@ GENERATED_COMMAND_HANDLERS = {
     'instructions.explain': _command_instructions_explain.run,
     'instructions.list': _command_instructions_list.run,
     'instructions.migrate': _command_instructions_migrate.run,
+    'instructions.route-select': _command_instructions_route_select.run,
+    'instructions.routes': _command_instructions_routes.run,
     'memory.front-door': _command_memory_front_door.run,
     'modules.report': _command_modules_report.run,
     'ownership.report': _command_ownership_report.run,

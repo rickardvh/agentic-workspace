@@ -1,0 +1,182 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2926-2928-planning-repairs",
+  "title": "Fix parent binding, supersede contracts, and current-work continuity",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "closeout",
+  "revision": 5,
+  "intent": {
+    "non_goals": [
+      "Leave #2929-#2930 semantic task-route implementation and the paused #2821 epic to their explicit continuation owners."
+    ],
+    "outcome": "Implement GitHub issues #2926, #2927, #2928, #2938, and #2944 in the planning-repairs slice."
+  },
+  "parent": {
+    "owner_id": "issue-2923-2930-dogfooding",
+    "contribution": "GitHub #2926 #2927 #2928",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "effects": [
+      "Preserve the preceding slice as integration-pending until target apply.",
+      "Keep broad suites out of local proof unless focused failures require expansion."
+    ],
+    "owned": [
+      "Planning lane ownership, reconcile transition inputs, current-work continuity, and lane-activation recovery for #2926-#2928 and #2938.",
+      "Source-checkout launcher dependency recovery and its existing focused launcher test for #2944.",
+      "Generated command packages, reference catalogues, the parent lane/owner records, and release notes derived from those changes."
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected-local",
+      "owner": "issue-2926-2928-planning-repairs"
+    },
+    "proof_posture": {
+      "state": "accepted",
+      "refs": [
+        ".agentic-workspace/verification/proof-decision.json"
+      ]
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    },
+    "integration": {
+      "status": "feature-complete-integration-pending",
+      "proposal_id": "issue-2926-2928-planning-repairs-archive-owner",
+      "proposal_ref": ".agentic-workspace/planning/integration-proposals/issue-2926-2928-planning-repairs-archive-owner.integration-proposal.json",
+      "requested_transition": "archive-owner",
+      "proof_refs": [
+        ".agentic-workspace/verification/proof-decision.json"
+      ],
+      "authority": "feature-head declaration; target integration remains terminal authority"
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "GitHub #2926 #2927 #2928",
+      "label": "GitHub #2926 #2927 #2928",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Apply integration proposal 'issue-2926-2928-planning-repairs-archive-owner' from admitted target authority.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "The #2926-#2928/#2938 Planning repairs remain valid after the stack rebase.",
+      "Fresh-worktree startup emits typed executable recovery for an unsynchronized runtime."
+    ],
+    "requirements": [
+      "Run only focused Planning ownership/reconcile/current-work/lane tests.",
+      "Run the existing launcher tests covering runtime identity and missing dependency recovery.",
+      "Regenerate and check command packages; rely on exact-head hosted CI for broad cross-platform proof."
+    ],
+    "refs": [
+      ".agentic-workspace/verification/proof-decision.json"
+    ]
+  },
+  "continuation": {
+    "owner": ".agentic-workspace/planning/execplans/issue-2929-2930-semantic-task-routes.plan.json",
+    "residual_intent": "Implement #2929-#2930 semantic task-route behavior after this slice reaches target integration."
+  },
+  "specialist_contracts": [],
+  "goal": [
+    "Make Planning ownership transitions deterministic and make fresh-worktree startup fail with a typed executable dependency recovery instead of an unhandled import."
+  ],
+  "non_goals": [
+    "Implement #2929-#2930 semantic task routes.",
+    "Resume the #2821-#2827 epic.",
+    "Add standalone test files when existing scenarios can absorb the assertions."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "Implement all dogfooding issues filed today in a small stacked PR set before resuming the original epic.",
+    "continuation surface": ".agentic-workspace/planning/execplans/issue-2929-2930-semantic-task-routes.plan.json",
+    "this slice completes the larger intended outcome": "no"
+  },
+  "execution_bounds": {
+    "required validation commands": "focused ownership/reconcile/current-work/lane tests; focused launcher tests; planning lint/typecheck; generated command-package proof",
+    "stop before touching": "#2929-#2930 implementation, the paused #2821 epic, unrelated archived owners, or broad test suites without a focused failure",
+    "ask-before-refactor threshold": "Any new registry/framework or behavior outside the named Planning and launcher recovery boundaries",
+    "max changed files": "65",
+    "allowed paths": "Existing #2939 Planning/workspace/generated surfaces plus scripts/run_agentic_workspace.py, tests/test_agentic_workspace_launcher.py, this execplan, parent lane, proof decision, and release notes"
+  },
+  "touched_paths": [
+    "packages/planning/src/repo_planning_bootstrap/**",
+    "packages/planning/tests/**",
+    "src/agentic_workspace/workspace_runtime_planning.py",
+    "src/agentic_workspace/contracts/**",
+    "generated/{planning,workspace,memory,verification}/**",
+    "tests/test_workspace_implement_cli.py",
+    "tests/test_workspace_planning_help_cli.py",
+    "scripts/run_agentic_workspace.py",
+    "tests/test_agentic_workspace_launcher.py",
+    "docs/reference/{cli-catalogue,operation}.md",
+    ".agentic-workspace/planning/execplans/issue-2926-2928-planning-repairs.plan.json",
+    ".agentic-workspace/planning/lanes/issue-2923-2930-dogfooding.lane.json",
+    ".agentic-workspace/verification/proof-decision.json",
+    ".release/changes/**"
+  ],
+  "validation_commands": [
+    "Focused pytest selections for Planning ownership/reconcile/current-work/lane behavior.",
+    "Focused tests/test_agentic_workspace_launcher.py runtime identity and missing dependency recovery scenarios.",
+    "Planning lint/typecheck and generated command-package static/native proof."
+  ],
+  "completion_criteria": [
+    "Issues #2926, #2927, #2928, and #2938 remain implemented with focused proof after rebase.",
+    "A fresh source-checkout environment receives typed executable synchronization recovery instead of an unhandled ModuleNotFoundError.",
+    "The parent lane preserves predecessor integration-pending truth and records this slice plus the #2929-#2930 continuation without terminal feature-branch overclaim."
+  ],
+  "proof_report": {
+    "validation proof": ".agentic-workspace/verification/proof-decision.json",
+    "proof achieved now": "yes; integration-propose recorded accepted feature-head proof.",
+    "evidence for \"proof achieved\" state": ".agentic-workspace/verification/proof-decision.json"
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "current planning owner",
+    "handoff source": "issue-2926-2928-planning-repairs",
+    "what happened": "Rebased and preserved the Planning ownership repairs, then added typed source-runtime synchronization recovery for #2944.",
+    "scope touched": "Planning ownership/reconcile/current-work/lane recovery plus the source-checkout launcher boundary.",
+    "changed surfaces": "Planning runtime/contracts/generated packages and focused tests; source launcher and its existing runtime-identity scenario; Planning/proof/release records.",
+    "validations run": ".agentic-workspace/verification/proof-decision.json",
+    "result for continuation": "feature-head complete; terminal lifecycle remains target-authoritative",
+    "next step": "Apply integration proposal 'issue-2926-2928-planning-repairs-archive-owner' from admitted target authority."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Scope remained owner-bounded, tests were consolidated into existing scenarios, and host-agnostic agent judgment was preserved because routing still consumes structured operation and runtime evidence rather than prose or host-specific policy.",
+    "proof status": "passed",
+    "intent served": "yes; target integration remains the terminal lifecycle authority.",
+    "config compliance": "used planning integration-propose command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": ".agentic-workspace/planning/integration-proposals/issue-2926-2928-planning-repairs-archive-owner.integration-proposal.json"
+  },
+  "intent_satisfaction": {
+    "original intent": "Rebased and preserved the Planning ownership repairs, then added typed source-runtime synchronization recovery for #2944.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": ".agentic-workspace/verification/proof-decision.json",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Issues #2926, #2927, #2928, #2938, and #2944 are implemented on the feature head; target integration and #2929-#2930 remain explicit.",
+    "validation confirmed": ".agentic-workspace/verification/proof-decision.json",
+    "follow-on routed to": ".agentic-workspace/planning/integration-proposals/issue-2926-2928-planning-repairs-archive-owner.integration-proposal.json",
+    "post-work posterity capture": "target-authoritative integration proposal",
+    "resume from": "Apply integration proposal 'issue-2926-2928-planning-repairs-archive-owner' from admitted target authority."
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "Feature-head proof is accepted; terminal lifecycle truth awaits target integration.",
+    "evidence carried forward": ".agentic-workspace/verification/proof-decision.json",
+    "reopen trigger": "New contradictory evidence or rejected target integration."
+  }
+}

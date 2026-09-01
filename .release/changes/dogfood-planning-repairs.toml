@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Repair Planning ownership transitions and return executable synchronization recovery for unsatisfied source-checkout runtimes."
+issues = [2926, 2927, 2928, 2938, 2944]

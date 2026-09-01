@@ -5,6 +5,42 @@
     "format_option": "format",
     "program": "agentic-planning"
   },
+  "conditional_inputs": [
+    {
+      "required_inputs": [],
+      "selector": "transition",
+      "selector_value": "restore",
+      "semantics": "Reuse the currently declared execplan unless an exact source is explicitly confirmed."
+    },
+    {
+      "required_inputs": [
+        "expected_execplan"
+      ],
+      "selector": "transition",
+      "selector_value": "relink",
+      "semantics": "Require the exact existing owner to relink."
+    },
+    {
+      "required_inputs": [
+        "expected_execplan"
+      ],
+      "selector": "transition",
+      "selector_value": "supersede",
+      "semantics": "Require the exact declared replacement owner."
+    },
+    {
+      "required_inputs": [],
+      "selector": "transition",
+      "selector_value": "cancel",
+      "semantics": "Do not require a replacement owner."
+    },
+    {
+      "required_inputs": [],
+      "selector": "transition",
+      "selector_value": "human",
+      "semantics": "Do not mutate until an exact owner is chosen."
+    }
+  ],
   "effects": {
     "destructive": false,
     "idempotent": true,

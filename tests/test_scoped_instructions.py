@@ -11,6 +11,11 @@ from agentic_workspace.scoped_instructions import (
     inspect_instructions,
     instruction_program_for_operating_decision,
 )
+from agentic_workspace.semantic_task_routes import (
+    current_semantic_task_route_fact,
+    discover_semantic_routes,
+    select_semantic_task_routes,
+)
 from agentic_workspace.workspace_runtime_proof import _proof_selection_for_changed_paths
 
 
@@ -25,6 +30,156 @@ def _skill(root: Path, name: str) -> None:
     path = root / ".agentic-workspace" / "skills" / name / "SKILL.md"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(f"# {name}\n", encoding="utf-8")
+
+
+def _route_skill_registry(root: Path) -> Path:
+    registry = root / "tools/skills/REGISTRY.json"
+    registry.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "schema_version": "skill-registry.v1",
+        "skills": [
+            {
+                "id": "issue-shaping",
+                "path": "issue-shaping/SKILL.md",
+                "summary": "Shape issues.",
+                "semantic_routes": [{"id": "github/issues/create", "match": "exact", "priority": 10, "description": "Create issues."}],
+            },
+            {
+                "id": "ownership-audit",
+                "path": "ownership-audit/SKILL.md",
+                "summary": "Audit ownership.",
+                "semantic_routes": [
+                    {"id": "workspace/ownership/audit", "match": "exact", "priority": 10, "description": "Audit ownership."}
+                ],
+            },
+        ],
+    }
+    registry.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    for skill in ("issue-shaping", "ownership-audit"):
+        path = root / "tools/skills" / skill / "SKILL.md"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"# {skill}\n", encoding="utf-8")
+    return registry
+
+
+def test_semantic_routes_are_progressive_current_work_bound_and_instruction_consumed(tmp_path: Path) -> None:
+    registry = _route_skill_registry(tmp_path)
+    _write(
+        tmp_path,
+        "issue-work",
+        "---\nroutes:\n  - github/issues/**\nuse:\n  - issue-shaping\n---\n\n# Issue work\n\nUse the procedure.\n",
+    )
+    _write(
+        tmp_path,
+        "ownership",
+        "---\nroutes:\n  - workspace/ownership/audit\nuse:\n  - ownership-audit\n---\n\n# Ownership\n",
+    )
+
+    roots = discover_semantic_routes(tmp_path)
+    assert [item["id"] for item in roots["routes"]] == ["github", "workspace"]
+    assert roots["full_catalogue_emitted"] is False
+    branch = discover_semantic_routes(tmp_path, parent="github/issues")
+    assert branch["routes"] == [{"id": "github/issues/create", "leaf": True, "child_count": 0}]
+    exact = discover_semantic_routes(tmp_path, exact="github/issues/create")
+    assert exact["routes"][0]["capabilities"] == ["skill:issue-shaping"]
+
+    stale = select_semantic_task_routes(
+        tmp_path,
+        posture="selected",
+        routes=["github/issues/create"],
+        expected_source_revision="sha256:" + "0" * 64,
+    )
+    assert stale["status"] == "blocked"
+    assert stale["reason_codes"] == ["route-source-revision-mismatch"]
+    selected = select_semantic_task_routes(
+        tmp_path,
+        posture="selected",
+        routes=["github/issues/create"],
+        expected_source_revision=roots["source_revision"],
+    )
+    assert selected["status"] == "selected"
+    assert selected["fact"]["task_identity"] == {
+        "kind": "current-work",
+        "id": selected["fact"]["current_work_id"],
+    }
+    assert selected["fact"]["authority_effect"] == "applicability-only"
+    replay = select_semantic_task_routes(
+        tmp_path,
+        posture="selected",
+        routes=["github/issues/create"],
+        expected_source_revision=roots["source_revision"],
+    )
+    assert replay["status"] == "already-current"
+    assert replay["mutation_applied"] is False
+    wrong_work = select_semantic_task_routes(
+        tmp_path,
+        posture="selected",
+        routes=["github/issues/create"],
+        expected_source_revision=roots["source_revision"],
+        current_work_id="different-work",
+    )
+    assert wrong_work["status"] == "blocked"
+    assert wrong_work["reason_codes"] == ["current-work-mismatch"]
+
+    inspection = inspect_instructions(tmp_path, task="words do not classify this task")
+    assert [item["id"] for item in inspection["instructions"] if item["applies"]] == ["issue-work"]
+    assert inspection["semantic_task_routes"]["status"] == "current"
+    program = instruction_program_for_operating_decision(root=tmp_path, task="unrelated prose", changed_paths=[])
+    assert next(effect for effect in program["clauses"][0]["effects"] if effect["kind"] == "prefer")["target"] == "skill:issue-shaping"
+
+    multiple = select_semantic_task_routes(
+        tmp_path,
+        posture="selected",
+        routes=["workspace/ownership/audit", "github/issues/create"],
+        expected_source_revision=roots["source_revision"],
+    )
+    assert multiple["fact"]["routes"] == ["github/issues/create", "workspace/ownership/audit"]
+    assert {item["id"] for item in inspect_instructions(tmp_path)["instructions"] if item["applies"]} == {
+        "issue-work",
+        "ownership",
+    }
+
+    none = select_semantic_task_routes(
+        tmp_path,
+        posture="none",
+        routes=[],
+        expected_source_revision=roots["source_revision"],
+    )
+    assert none["status"] == "classified-none"
+    quiet = inspect_instructions(tmp_path, task="create github issue")
+    assert quiet["applicable_count"] == 0
+
+    payload = json.loads(registry.read_text(encoding="utf-8"))
+    payload["skills"][0]["summary"] = "Changed route source."
+    registry.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    assert current_semantic_task_route_fact(tmp_path)["status"] == "stale"
+    assert current_semantic_task_route_fact(tmp_path)["stale_reasons"] == ["route-source-changed"]
+
+
+def test_selected_route_with_unavailable_procedure_blocks_ordinary_decision(tmp_path: Path) -> None:
+    registry = _route_skill_registry(tmp_path)
+    _write(
+        tmp_path,
+        "issue-work",
+        "---\nroutes:\n  - github/issues/create\nuse:\n  - missing-issue-procedure\n---\n\n# Issue work\n",
+    )
+    discovery = discover_semantic_routes(tmp_path, exact="github/issues/create")
+    selected = select_semantic_task_routes(
+        tmp_path,
+        posture="selected",
+        routes=["github/issues/create"],
+        expected_source_revision=discovery["source_revision"],
+    )
+    assert selected["status"] == "selected"
+
+    decision = compile_operating_decision(
+        inputs={"target_root": str(tmp_path), "task": "neutral wording", "requested_claim_classes": ["complete"]}
+    )
+
+    assert decision["status"] == "blocked"
+    assert decision["instruction_clause_projection"]["status"] == "invalid"
+    assert any(item["reason_code"] == "missing-authority" for item in decision["instruction_clause_projection"]["blockers"])
+    assert registry.is_file()
 
 
 def test_global_and_path_scoped_markdown_are_progressively_disclosed(tmp_path: Path) -> None:
@@ -277,16 +432,33 @@ def test_public_contract_stays_smaller_than_internal_ir_and_names_shared_targets
     contract = json.loads(Path("src/agentic_workspace/contracts/scoped_markdown_instructions.json").read_text(encoding="utf-8"))
     client = Path("generated/workspace/typescript/src/client.mjs").read_text(encoding="utf-8")
 
-    assert contract["frontmatter_fields"] == ["paths", "read", "use", "checks", "protect"]
+    assert contract["frontmatter_fields"] == ["paths", "routes", "read", "use", "checks", "protect"]
     assert set(contract["forbidden_public_fields"]) >= {"when", "surface", "prefer", "require", "restrict", "allow"}
     assert {item["id"] for item in contract["operations"]} == {
         "instructions.list",
         "instructions.create",
         "instructions.check",
         "instructions.explain",
+        "instructions.routes",
+        "instructions.route-select",
         "instructions.migrate",
     }
     assert "export function invokeJson" in client
+
+
+def test_semantic_task_route_disposition_records_subtractive_consumer_migrations() -> None:
+    disposition = json.loads(Path("docs/maintainer/semantic-task-route-disposition.json").read_text(encoding="utf-8"))
+
+    assert disposition["kind"] == "agentic-workspace/semantic-task-route-disposition/v1"
+    assert disposition["shared_contract"]["authority_effect"] == "applicability-only"
+    assert disposition["shared_contract"]["persistent_history"] == "none"
+    by_surface = {item["surface"]: item for item in disposition["surfaces"]}
+    assert by_surface["specialized skill recommendations"]["disposition"] == "consume-semantic-route"
+    assert by_surface["Memory context-authority curation"]["disposition"] == "consume-semantic-route"
+    assert by_surface["assurance requirements"]["stronger_facts_retained"]
+    assert by_surface["Verification protocols"]["stronger_facts_retained"]
+    assert disposition["net_reduction"]["new_peer_engines"] == 0
+    assert len(disposition["net_reduction"]["removed_equal_authority_paths"]) >= 2
 
 
 def test_repo_dogfooding_migration_is_scoped_and_keeps_bootstrap_thin() -> None:

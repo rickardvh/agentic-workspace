@@ -283,7 +283,7 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `operating_posture` | object | no |  | Compact statement of the current operating mode and risk posture. |  |  |
 | `repo_posture` | object | no |  | Compact effective repo posture ref, digest, reminder, provenance route, and reorientation triggers. |  |  |
 | `delegation_decision` | object | no |  | Compact local delegation, escalation, clarification, or stay-local decision derived from local posture and task signals. |  |  |
-| `task_assignment_disposition` | object | no |  | Typed task-level execute-here, delegate-bounded-slice, or blocked-unavailable disposition consumed by the ordinary action path. |  |  |
+| `task_assignment_disposition` | object | no |  | Typed parent-custody and bounded-child assignment disposition consumed by the ordinary action path. Under binding orchestration, orchestrate-here retains parent integration/proof custody without granting unresolved child execution authority; direct leaf work may still execute-here. |  |  |
 | `task_intent` | object | no |  | Compact task-intent carry-forward guidance for subsequent implement --changed calls, including acceptance expectations when task text is present. |  |  |
 | `acceptance` | object | no |  | Definition-of-done expectations inferred from task intent for selector-first startup drill-down. |  |  |
 | `durable_intent_promotion` | object | no |  | Guidance for promoting non-finishable task intent into durable memory, docs, subsystem intent, or system intent. |  |  |

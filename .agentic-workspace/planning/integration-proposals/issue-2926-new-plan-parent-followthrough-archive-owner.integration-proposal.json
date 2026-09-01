@@ -1,0 +1,41 @@
+{
+  "kind": "planning-integration-proposal/v1",
+  "id": "issue-2926-new-plan-parent-followthrough-archive-owner",
+  "status": "pending",
+  "phase": "integration-pending",
+  "requested_transition": "archive-owner",
+  "owner": {
+    "id": "issue-2926-new-plan-parent-followthrough",
+    "ref": ".agentic-workspace/planning/execplans/issue-2926-new-plan-parent-followthrough.plan.json"
+  },
+  "external_ref": "",
+  "proof_refs": [
+    ".agentic-workspace/verification/proof-decision.json"
+  ],
+  "parent_boundary": "This follow-through completes additional #2926 evidence; the original dogfooding lane and its existing integration proposal remain independently target-authoritative.",
+  "preserved_invariants": [
+    "explicit lane relations are reciprocal",
+    "global Planning state remains untouched",
+    "terminal closure remains target-authoritative"
+  ],
+  "expected_subject_revision": "2952f7765d9e186b",
+  "expected_planning_revision": "2d233f4932f2e820",
+  "created_at": "2026-09-01T18:02:54.863477Z",
+  "updated_at": "2026-09-01T18:02:54.863477Z",
+  "authority_boundary": {
+    "proposal": "feature-branch declaration",
+    "integrated_truth": "integration receipt after apply",
+    "non_authority": [
+      "current selection",
+      "aggregate indexes",
+      "unrelated owners",
+      "terminal parent truth"
+    ],
+    "branch_admission": {
+      "status": "inside-git",
+      "branch": "codex/2926-2928-planning-repairs",
+      "phase": "feature"
+    }
+  },
+  "proposal_revision": "ee6e75e6938a0b64"
+}

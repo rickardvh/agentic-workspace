@@ -457,6 +457,7 @@ class MemoryNoteRecord:
     surfaces: tuple[str, ...] = ()
     applies_to: tuple[str, ...] = ()
     use_when: tuple[str, ...] = ()
+    semantic_routes: tuple[str, ...] = ()
     routes_from: tuple[str, ...] = ()
     stale_when: tuple[str, ...] = ()
     last_confirmed: str = ""

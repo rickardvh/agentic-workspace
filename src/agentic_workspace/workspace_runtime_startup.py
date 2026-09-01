@@ -2344,9 +2344,35 @@ def _apply_required_payload_target_start_gate(
 
 
 def _compact_task_assignment_disposition(disposition: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "outcome": disposition.get("outcome", "blocked-unavailable"),
+    parent_custody = _as_dict(disposition.get("parent_custody"))
+    bounded_child = _as_dict(disposition.get("bounded_child_assignment"))
+    next_action = _as_dict(disposition.get("next_action"))
+    outcome = str(disposition.get("outcome") or "blocked-unavailable")
+    if parent_custody.get("child_execution_authority") != "separate-binding-decision":
+        return {"outcome": outcome}
+    compact = {
+        "outcome": outcome,
+        "parent_custody": {
+            key: copy.deepcopy(parent_custody[key])
+            for key in ("status", "child_execution_authority")
+            if parent_custody.get(key) not in (None, "", [], {})
+        },
+        "bounded_child_assignment": {
+            key: copy.deepcopy(bounded_child[key]) for key in ("status", "implementation_allowed") if key in bounded_child
+        },
     }
+    if outcome != "execute-here":
+        if parent_custody.get("target") not in (None, ""):
+            compact["parent_custody"]["target"] = copy.deepcopy(parent_custody["target"])
+        for key in ("selected_target", "required_next_action", "candidate_count", "candidate_lane_ids"):
+            if key in bounded_child and bounded_child.get(key) not in (None, "", [], {}):
+                compact["bounded_child_assignment"][key] = copy.deepcopy(bounded_child[key])
+        compact["next_action"] = {
+            key: copy.deepcopy(next_action[key])
+            for key in ("action", "command", "implementation_allowed", "operation_invocation")
+            if key in next_action and next_action.get(key) is not None
+        }
+    return compact
 
 
 def _ordinary_start_decision_payload(
@@ -2445,10 +2471,30 @@ def _ordinary_start_decision_payload(
     for diagnostic in ("overridden_allowed_claims", "non_authoritative_allowed_claims"):
         if claim_authority[diagnostic]:
             claim_effects[diagnostic] = claim_authority[diagnostic]
+    compact_assignment = (
+        _compact_task_assignment_disposition(copy.deepcopy(selected["task_assignment_disposition"]))
+        if isinstance(selected.get("task_assignment_disposition"), dict)
+        else {}
+    )
+    bounded_child_assignment = _as_dict(compact_assignment.get("bounded_child_assignment"))
+    child_implementation_blocked = bounded_child_assignment.get("status") == "unresolved"
+    child_next_action = _as_dict(compact_assignment.get("next_action"))
+    if child_implementation_blocked and child_next_action.get("action"):
+        child_operation = _as_dict(child_next_action.get("operation_invocation"))
+        action = {
+            "id": str(child_next_action["action"]),
+            "why": "Parent custody is retained here, but bounded-child execution authority must be resolved separately.",
+            "command_effect": str(child_operation.get("effect_class") or "none"),
+            **({"command": child_next_action["command"]} if child_next_action.get("command") else {}),
+            **({"operation": child_operation} if child_operation else {}),
+            "required_inputs": ["task_assignment_disposition.bounded_child_assignment"],
+        }
     effects = {
         "workflow_required": bounded_external_effect.get("status") != "direct-route-admitted",
-        "implementation_allowed": bool(next_action.get("implementation_allowed"))
-        or bounded_external_effect.get("status") == "direct-route-admitted",
+        "implementation_allowed": (
+            bool(next_action.get("implementation_allowed")) or bounded_external_effect.get("status") == "direct-route-admitted"
+        )
+        and not child_implementation_blocked,
         **({"external_write_allowed": True} if bounded_external_effect.get("status") == "direct-route-admitted" else {}),
         "read_only_allowed": bool(next_action.get("read_only_allowed")),
         "exploration_allowed": bool(next_action.get("exploration_allowed")),
@@ -2460,7 +2506,21 @@ def _ordinary_start_decision_payload(
         ],
         **claim_effects,
     }
+    if child_implementation_blocked and "implement-unresolved-bounded-child-locally" not in effects["forbidden_actions"]:
+        effects["forbidden_actions"].append("implement-unresolved-bounded-child-locally")
+    if child_implementation_blocked:
+        effects["allowed_next_actions"] = [str(child_next_action.get("action"))]
     claim_boundary = next_action.get("claim_boundary", legacy_decision.get("claim_boundary", "not-evaluated"))
+    if child_implementation_blocked:
+        inherited_boundary = _as_dict(claim_boundary)
+        claim_boundary = {
+            **inherited_boundary,
+            "implementation": "blocked-until-bounded-child-assignment",
+            "rule": (
+                "Parent custody retains orchestration authority only; resolve the bounded-child assignment before "
+                "claiming or performing implementation."
+            ),
+        }
 
     owner: dict[str, Any] = {
         key: copy.deepcopy(route[key])
@@ -2566,11 +2626,7 @@ def _ordinary_start_decision_payload(
             if isinstance(source_payload.get("task_posture_packet"), dict)
             else {}
         ),
-        **(
-            {"task_assignment_disposition": _compact_task_assignment_disposition(copy.deepcopy(selected["task_assignment_disposition"]))}
-            if isinstance(selected.get("task_assignment_disposition"), dict)
-            else {}
-        ),
+        **({"task_assignment_disposition": compact_assignment} if compact_assignment else {}),
         **(
             {"effective_orchestration": copy.deepcopy(selected["effective_orchestration"])}
             if isinstance(selected.get("effective_orchestration"), dict)

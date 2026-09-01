@@ -1,0 +1,170 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2817-binding-child-assignment",
+  "title": "Make binding orchestration consequential for bounded child work",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "closeout",
+  "revision": 6,
+  "intent": {
+    "outcome": "Separate parent-task custody from bounded-child execution authority so unresolved child work cannot inherit blanket local permission under binding orchestration.",
+    "non_goals": [
+      "Do not redesign target ranking, context-cost policy, delegation configuration, or the existing dispatch/return lifecycle; keep direct single-slice work local."
+    ]
+  },
+  "parent": {
+    "owner_id": "#2817",
+    "contribution": "Complete the parent-custody versus bounded-child execution-authority contract while preserving the unrelated supported-host acceptance residue.",
+    "closure_boundary": "contract slice only; #2817 remains open"
+  },
+  "scope": {
+    "owned": [
+      "workspace_runtime_core/startup/implement parent-custody and bounded-child authority projections.",
+      "Planning and Memory projections that preserve the parent-child distinction.",
+      "Startup/implementer schemas and generated references.",
+      "Existing focused assignment, decomposition, admission, and orchestration-evidence scenarios plus release and owner records."
+    ],
+    "effects": [
+      "Unresolved bounded-child work blocks local implementation and routes through canonical assignment/decomposition authority.",
+      "Direct leaf work retains local execution authority without a decomposition tax."
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected-local",
+      "owner": "issue-2817-binding-child-assignment"
+    },
+    "proof_posture": {
+      "state": "accepted",
+      "refs": [
+        "tests/test_workspace_cli.py",
+        "tests/test_workspace_implement_cli.py",
+        "tests/test_external_agent_evaluation_lane.py"
+      ]
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    }
+  },
+  "references": [],
+  "next_action": "Land the stacked contract PR without closing #2817, then use #2817 as the owner for the unrelated supported-host acceptance run and #2947 for host-native lifecycle friction.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Parent custody no longer grants unresolved bounded-child execution authority.",
+      "Selected-current, selected-nonlocal, unavailable, unresolved, and direct-leaf cases preserve consequential binding dispositions across ordinary projections.",
+      "The contract slice is complete while #2817 retains the unrelated supported-host acceptance residue."
+    ],
+    "requirements": [
+      "Run the focused assignment/decomposition/dispatch/admission/Planning scenarios recorded in the PR.",
+      "Run Ruff, generated-reference freshness, diff-check, and targeted pre-commit validation."
+    ],
+    "refs": [
+      "tests/test_workspace_cli.py",
+      "tests/test_workspace_implement_cli.py",
+      "tests/test_external_agent_evaluation_lane.py"
+    ]
+  },
+  "continuation": {
+    "owner": "#2817",
+    "residual_intent": "Run the unrelated substantive supported-host scenario through nonlocal child dispatch and the existing return/proof/reconcile lifecycle, plus a same-policy retained-local sibling/counterexample."
+  },
+  "specialist_contracts": [],
+  "intent_continuity": {
+    "larger intended outcome": "Fully satisfy #2817 with authoritative action semantics and checked-in supported-host dogfood evidence.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "#2817"
+  },
+  "execution_bounds": {
+    "required validation commands": "focused assignment/start/implement tests plus maintained external-agent evaluation proof and AW proof/report routes",
+    "allowed paths": "assignment/start/implement runtime semantics, their schemas/generated references, the maintained orchestration evaluation evidence/test, release note, and this plan",
+    "stop before touching": "unrelated stack work, user-owned dirty root files, target ranking/cost policy, or broad test suites",
+    "ask-before-refactor threshold": "stop if satisfying the issue requires ranking redesign, transport redesign, or more than 25 changed files",
+    "max changed files": "25"
+  },
+  "completion_criteria": [
+    "An orchestrator parent retained on the current target cannot authorize unresolved bounded-child implementation locally.",
+    "Each bounded child has a consequential binding disposition: selected-current executes locally, selected-nonlocal dispatches through the existing revision-bound transport, unavailable recovers or blocks, and unresolved routes to smallest decomposition/assignment action.",
+    "Direct single-slice work still receives local execution authority without mandatory decomposition.",
+    "Compact ordinary output preserves the child authority/gate needed to prevent a bare execute-here interpretation.",
+    "Focused deterministic contracts and maintained real-session evidence satisfy #2817 without adding a parallel regression suite.",
+    "The stacked PR is based on PR #2945 and contains a release note and honest proof/claim boundary."
+  ],
+  "validation_commands": [
+    "uv run --frozen --active --no-sync pytest -q tests/test_workspace_cli.py::test_task_assignment_disposition_distinguishes_deliberate_local_and_external_action tests/test_workspace_implement_cli.py::test_implement_required_best_fit_compiles_authorized_automatic_dispatch tests/test_workspace_implement_cli.py::test_binding_automatic_assignment_needs_no_second_permission_and_forbids_local_fallback tests/test_workspace_implement_cli.py::test_delegated_return_admission_disabled_manual_allows_current_automatic_route tests/test_workspace_implement_cli.py::test_implement_epic_decomposition_prefers_reusable_worker_over_manual_relay tests/test_external_agent_evaluation_lane.py::test_configured_orchestration_evaluation_matrix_covers_receipts_failures_cost_and_availability",
+    "uv run --frozen --active --no-sync python scripts/run_agentic_workspace.py proof --target . --changed <final-paths> --format json",
+    "uv run --frozen --active --no-sync python scripts/run_agentic_workspace.py report --target . --section verification --format json"
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/workspace_runtime_core.py",
+    "src/agentic_workspace/workspace_runtime_startup.py",
+    "src/agentic_workspace/workspace_runtime_implement.py",
+    "src/agentic_workspace/memory_effectiveness.py",
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_handoff.py",
+    "src/agentic_workspace/contracts/schemas/startup_context.schema.json",
+    "src/agentic_workspace/contracts/schemas/implementer_context.schema.json",
+    "docs/reference/startup-context.md",
+    "docs/reference/implementer-context.md",
+    "tests/test_workspace_cli.py",
+    "tests/test_workspace_implement_cli.py",
+    "tests/test_external_agent_evaluation_lane.py",
+    "tools/model-cli-harness/external-agent-evaluation/*2817*",
+    ".release/changes/*.toml",
+    ".agentic-workspace/planning/execplans/issue-2817-binding-child-assignment.plan.json"
+  ],
+  "goal": [
+    "Separate parent-task custody from bounded-child executor authority so orchestrator + required-best-fit cannot expose whole-task execute-here as blanket local implementation permission.",
+    "Prove direct leaf work remains local while a nonlocal bounded child follows the existing automatic dispatch and return lifecycle under the same binding policy."
+  ],
+  "non_goals": [
+    "Do not redesign target ranking, context-cost policy, or capability scoring owned by #2818.",
+    "Do not redesign delegation configuration owned by #2916 or reimplement dispatch/return mechanics already landed.",
+    "Do not impose decomposition or delegation overhead on direct single-slice work."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "current stack owner",
+    "handoff source": "issue-2817-binding-child-assignment",
+    "what happened": "Separated parent-task custody from bounded-child execution authority across ordinary action, effect, and claim projections.",
+    "scope touched": "Workspace start/implement assignment semantics, Planning and Memory projections, generated references, focused existing tests, release and owner records.",
+    "changed surfaces": "Runtime projections, schemas/references, Planning/Memory projection, and focused assignment/decomposition/admission tests.",
+    "validations run": "Ten focused scenarios plus Ruff, generated-reference freshness, diff-check, and pre-commit.",
+    "result for continuation": "contract slice complete; unrelated supported-host acceptance remains with #2817",
+    "next step": "Run the residual #2817 supported-host scenario after the stack lands."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "The slice changes binding action semantics without redesigning target ranking, configuration, or transport.",
+    "proof status": "passed",
+    "intent served": "yes for this contract slice; the larger #2817 acceptance outcome remains open",
+    "config compliance": "focused tests and repository validation strategy followed",
+    "misinterpretation risk": "low",
+    "follow-on decision": "#2817 owns the remaining supported-host acceptance run"
+  },
+  "intent_satisfaction": {
+    "original intent": "Make binding orchestration consequential for bounded child work without treating parent custody as blanket local permission.",
+    "was original intent fully satisfied?": "yes for this bounded contract slice",
+    "evidence of intent satisfaction": "focused tests referenced by proof.refs and PR #2948 validation",
+    "unsolved intent passed to": "#2817 retains the unrelated supported-host acceptance scenario"
+  },
+  "execution_summary": {
+    "outcome delivered": "Parent custody and bounded-child execution authority are now distinct and consequential across ordinary projections.",
+    "validation confirmed": "focused assignment/decomposition/dispatch/admission/Planning validation",
+    "follow-on routed to": "#2817",
+    "post-work posterity capture": "this execplan and PR #2948",
+    "resume from": "Run the residual supported-host scenario without reopening the completed contract slice."
+  },
+  "closure_check": {
+    "closeout scope": "contract slice",
+    "slice status": "completed",
+    "larger-intent status": "open-with-continuation",
+    "closure decision": "retain-#2817-continuation",
+    "why this decision is honest": "The contract repair is proved, but #2817 explicitly retains an unrelated supported-host acceptance requirement.",
+    "evidence carried forward": "proof.refs and PR #2948 validation",
+    "reopen trigger": "Contradictory action projection evidence or failure of the residual supported-host scenario."
+  }
+}

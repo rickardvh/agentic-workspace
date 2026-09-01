@@ -7,6 +7,7 @@ from typing import Any
 
 from repo_planning_bootstrap.installer import (
     _build_execplan_record_from_todo_item,
+    _lane_current_slice_transition_contracts,
     _write_execplan_record,
     activate_lane_record,
     archive_lane_record,
@@ -157,6 +158,62 @@ def test_lane_create_projects_first_class_lane_record(tmp_path: Path) -> None:
     assert summary["lanes"]["records"][0]["id"] == "planning-lane"
     assert summary["lanes"]["migration"]["preferred_owner"] == ".agentic-workspace/planning/lanes/<id>.lane.json"
     assert "lanes" in summary["schema"]["shared_fields"]
+
+
+def test_lane_create_atomically_creates_or_reuses_parent_and_binds_existing_slice(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    child_path = tmp_path / ".agentic-workspace/planning/execplans/tightened-child.plan.json"
+    _write_execplan_fixture(child_path, item_id="tightened-child", status="active")
+    child = json.loads(child_path.read_text(encoding="utf-8"))
+    child["next_action"] = "Preserve this tightened child intent."
+    child_path.write_text(json.dumps(child, indent=2) + "\n", encoding="utf-8")
+    create_lane_record(lane_id="unrelated", title="Unrelated", target=tmp_path)
+    unrelated_path = tmp_path / ".agentic-workspace/planning/lanes/unrelated.lane.json"
+    unrelated_before = unrelated_path.read_bytes()
+    revision = planning_revision(tmp_path)["revision_id"]
+
+    created = create_lane_record(
+        lane_id="parent-lane",
+        title="Parent Lane",
+        target=tmp_path,
+        bind_execplan=".agentic-workspace/planning/execplans/tightened-child.plan.json",
+        source_ref="#2926-parent",
+        expected_planning_revision=revision,
+    )
+
+    assert created.reason_code == ""
+    lane_path = tmp_path / ".agentic-workspace/planning/lanes/parent-lane.lane.json"
+    lane = json.loads(lane_path.read_text(encoding="utf-8"))
+    bound = json.loads(child_path.read_text(encoding="utf-8"))
+    assert lane["current_slice"] == "tightened-child"
+    assert lane["slice_sequence"][0]["execplan_ref"] == ".agentic-workspace/planning/execplans/tightened-child.plan.json"
+    assert lane["references"][0]["target"] == "#2926-parent"
+    assert bound["parent"]["owner_id"] == "parent-lane"
+    assert bound["next_action"] == "Preserve this tightened child intent."
+    assert unrelated_path.read_bytes() == unrelated_before
+
+    lane_before = lane_path.read_bytes()
+    child_before = child_path.read_bytes()
+    replay = create_lane_record(
+        lane_id="parent-lane",
+        title="Parent Lane",
+        target=tmp_path,
+        bind_execplan=".agentic-workspace/planning/execplans/tightened-child.plan.json",
+        source_ref="#2926-parent",
+        expected_planning_revision=planning_revision(tmp_path)["revision_id"],
+    )
+    assert replay.reason_code == ""
+    assert lane_path.read_bytes() == lane_before
+    assert child_path.read_bytes() == child_before
+
+    stale = create_lane_record(
+        lane_id="parent-lane",
+        title="Parent Lane",
+        target=tmp_path,
+        bind_execplan=".agentic-workspace/planning/execplans/tightened-child.plan.json",
+        expected_planning_revision="stale",
+    )
+    assert stale.reason_code == "planning-revision-mismatch"
 
 
 def test_promote_decomposition_lane_creates_lane_owner_without_execplan(tmp_path: Path) -> None:
@@ -379,6 +436,47 @@ def test_lane_health_rejects_current_slice_missing_execplan(tmp_path: Path) -> N
     )
 
 
+def test_stale_current_slice_with_unique_successor_emits_replayable_supersede_transaction(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    create_lane_record(lane_id="activation-lane", title="Activation Lane", target=tmp_path)
+    lane_path = tmp_path / ".agentic-workspace/planning/lanes/activation-lane.lane.json"
+    lane = json.loads(lane_path.read_text(encoding="utf-8"))
+    lane["status"] = "active"
+    lane["current_slice"] = "stale-slice"
+    lane["slice_sequence"] = [
+        {
+            "id": "stale-slice",
+            "title": "Stale Slice",
+            "status": "active",
+            "execplan_ref": ".agentic-workspace/planning/execplans/missing.plan.json",
+            "depends_on": [],
+            "purpose_for_lane": "Expose a stale current relation.",
+        },
+        {
+            "id": "successor-slice",
+            "title": "Successor Slice",
+            "status": "ready",
+            "execplan_ref": "",
+            "depends_on": ["stale-slice"],
+            "purpose_for_lane": "Provide the unique executable successor.",
+        },
+    ]
+    lane_path.write_text(json.dumps(lane, indent=2) + "\n", encoding="utf-8")
+    successor_ref = ".agentic-workspace/planning/execplans/successor-slice.plan.json"
+    _write_execplan_fixture(tmp_path / successor_ref, item_id="successor-slice", status="planned")
+
+    warning = next(
+        item
+        for item in planning_summary(target=tmp_path, profile="compact")["planning_surface_health"]["warnings"]
+        if item.get("repair_affordance", {}).get("reason_code") == "current-slice-execplan-missing"
+    )
+    option = next(item for item in warning["repair_affordance"]["repair_options"] if item["action"] == "supersede-stale-relation")
+    assert f"--expected-execplan {successor_ref}" in option["preview_command"]
+    assert "--transition supersede" in option["preview_command"]
+    assert option["apply_command"] == f"{option['preview_command']} --apply-lane-current-slice-reconcile"
+    assert warning["repair_affordance"]["repair_route"] == option["preview_command"]
+
+
 def test_lane_current_slice_reconcile_requires_exact_guards_and_is_idempotent(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     create_lane_record(lane_id="activation-lane", title="Activation Lane", target=tmp_path)
@@ -469,6 +567,39 @@ def test_lane_current_slice_reconcile_requires_exact_guards_and_is_idempotent(tm
     )["lane_current_slice_reconciliation"]
     assert replay["status"] == "already-applied"
     assert replay["reason_code"] == "idempotent-replay"
+
+
+def test_reconciliation_transition_contract_owns_supersede_execplan_requirement(tmp_path: Path) -> None:
+    contracts = _lane_current_slice_transition_contracts()
+    assert contracts["restore"]["required_inputs"] == []
+    assert contracts["relink"]["required_inputs"] == ["expected_execplan"]
+    assert contracts["supersede"]["required_inputs"] == ["expected_execplan"]
+    assert contracts["cancel"]["required_inputs"] == []
+    assert contracts["human"]["required_inputs"] == []
+
+    install_bootstrap(target=tmp_path)
+    create_lane_record(lane_id="transition-lane", title="Transition Lane", target=tmp_path)
+    lane_path = tmp_path / ".agentic-workspace/planning/lanes/transition-lane.lane.json"
+    lane = json.loads(lane_path.read_text(encoding="utf-8"))
+    lane["status"] = "active"
+    lane["current_slice"] = "slice-one"
+    lane["slice_sequence"] = [
+        {
+            "id": "slice-one",
+            "title": "Slice One",
+            "status": "active",
+            "execplan_ref": ".agentic-workspace/planning/execplans/slice-one.plan.json",
+            "depends_on": [],
+            "purpose_for_lane": "Current stale relation.",
+        }
+    ]
+    lane_path.write_text(json.dumps(lane, indent=2) + "\n", encoding="utf-8")
+    _write_execplan_fixture(tmp_path / ".agentic-workspace/planning/execplans/slice-one.plan.json", item_id="slice-one", status="planned")
+
+    missing = planning_reconcile(target=tmp_path, lane="transition-lane", transition="supersede")["lane_current_slice_reconciliation"]
+    assert missing["reason_code"] == "expected-execplan-required"
+    assert missing["missing_fields"] == ["expected_execplan"]
+    assert missing["transition_contract"] == contracts["supersede"]
 
 
 def test_missing_current_slice_emits_replayable_absent_relation_transaction(tmp_path: Path) -> None:
@@ -714,11 +845,74 @@ def test_lane_activate_rejects_multiple_active_slices_without_claiming_completio
     assert [action.kind for action in result.actions] == ["manual review"]
     assert result.reason_code == "multiple-active-slices"
     assert "new-plan" not in result.recovery_command
+    assert "--relation-identity lane:activation-lane:current_slice:slice-two" in result.recovery_command
+    assert "--subject slice-two" in result.recovery_command
+    assert "--transition human" in result.recovery_command
+    assert "--expected-execplan" not in result.recovery_command
     unchanged = json.loads(lane_path.read_text(encoding="utf-8"))
     assert {item["id"]: item["status"] for item in unchanged["slice_sequence"]} == {
         "slice-one": "active",
         "slice-two": "active",
     }
+
+
+def test_lane_activate_recovery_supersedes_actual_current_relation_with_requested_slice(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    create_lane_record(lane_id="activation-lane", title="Activation Lane", target=tmp_path)
+    lane_path = tmp_path / ".agentic-workspace/planning/lanes/activation-lane.lane.json"
+    lane = json.loads(lane_path.read_text(encoding="utf-8"))
+    lane["status"] = "active"
+    lane["current_slice"] = "slice-one"
+    lane["slice_sequence"] = [
+        {
+            "id": "slice-one",
+            "title": "Slice One",
+            "status": "active",
+            "execplan_ref": ".agentic-workspace/planning/execplans/slice-one.plan.json",
+            "depends_on": [],
+            "purpose_for_lane": "Actual current relation.",
+        },
+        {
+            "id": "slice-two",
+            "title": "Slice Two",
+            "status": "ready",
+            "execplan_ref": ".agentic-workspace/planning/execplans/slice-two.plan.json",
+            "depends_on": ["slice-one"],
+            "purpose_for_lane": "Requested executable replacement.",
+        },
+    ]
+    lane_path.write_text(json.dumps(lane, indent=2) + "\n", encoding="utf-8")
+    _write_execplan_fixture(tmp_path / ".agentic-workspace/planning/execplans/slice-one.plan.json", item_id="slice-one", status="active")
+    _write_execplan_fixture(tmp_path / ".agentic-workspace/planning/execplans/slice-two.plan.json", item_id="slice-two", status="planned")
+
+    result = activate_lane_record("activation-lane", target=tmp_path, current_slice="slice-two")
+
+    assert result.reason_code == "multiple-active-slices"
+    assert "--relation-identity lane:activation-lane:current_slice:slice-one" in result.recovery_command
+    assert "--subject slice-one" in result.recovery_command
+    assert "--transition supersede" in result.recovery_command
+    assert "--expected-execplan .agentic-workspace/planning/execplans/slice-two.plan.json" in result.recovery_command
+    preview = planning_reconcile(
+        target=tmp_path,
+        lane="activation-lane",
+        transition="supersede",
+        expected_execplan=".agentic-workspace/planning/execplans/slice-two.plan.json",
+    )["lane_current_slice_reconciliation"]
+    applied = planning_reconcile(
+        target=tmp_path,
+        lane="activation-lane",
+        owner_surface=".agentic-workspace/planning/lanes/activation-lane.lane.json",
+        relation_identity="lane:activation-lane:current_slice:slice-one",
+        subject="slice-one",
+        expected_lane_revision=preview["current_lane_revision"],
+        expected_planning_revision=preview["current_planning_revision"],
+        transition="supersede",
+        expected_execplan=".agentic-workspace/planning/execplans/slice-two.plan.json",
+        apply_lane_current_slice_reconcile=True,
+    )["lane_current_slice_reconciliation"]
+    assert applied["status"] == "applied"
+    updated = json.loads(lane_path.read_text(encoding="utf-8"))
+    assert updated["current_slice"] == "slice-two"
 
 
 def test_lane_activate_infers_current_slice_execplan_when_slice_sequence_is_minimal(tmp_path: Path) -> None:
@@ -774,6 +968,9 @@ def test_new_plan_attaches_first_execplan_to_already_active_lane(tmp_path: Path)
     assert lane["status"] == "active"
     assert lane["current_slice"] == "slice-one"
     assert lane["slice_sequence"][0]["execplan_ref"] == ".agentic-workspace/planning/execplans/slice-one.plan.json"
+    child = json.loads((tmp_path / ".agentic-workspace/planning/execplans/slice-one.plan.json").read_text(encoding="utf-8"))
+    assert child["parent"]["owner_id"] == "activation-lane"
+    assert child["parent"]["contribution"] == lane["purpose_for_parent"]
 
     summary = planning_summary(target=tmp_path, profile="compact")
     assert summary["planning_surface_health"]["warnings"] == []

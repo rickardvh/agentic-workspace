@@ -1,0 +1,95 @@
+{
+  "kind": "planning-lane/v1",
+  "id": "issue-2923-2930-dogfooding",
+  "title": "Implement dogfooding issues #2923-#2930",
+  "status": "active",
+  "parent_decomposition_ref": "",
+  "lane_outcome": "All dogfooding defects and the semantic task-route dependency are implemented through focused stacked PRs with ordinary-path proof.",
+  "purpose_for_parent": "Replace the reproduced workflow blockers before resuming the #2821 epic.",
+  "subsystems": [],
+  "technical_strategy": "Tighten the lane strategy before the first slice starts.",
+  "technology_choices": [],
+  "slice_sequence": [
+    {
+      "id": "issue-2923-2925-command-evidence-blockers",
+      "title": "Fix dogfooding command and evidence blockers #2923-#2925",
+      "status": "integration-pending",
+      "execplan_ref": ".agentic-workspace/planning/execplans/issue-2923-2925-command-evidence-blockers.plan.json",
+      "depends_on": [],
+      "purpose_for_lane": "Replace the reproduced workflow blockers before resuming the #2821 epic.",
+      "proof": ".agentic-workspace/verification/proof-decision.json",
+      "residual_after_slice": "Continue the dogfooding lane with Planning topology and current-work repairs #2926-#2928 after this feature-complete slice reaches target integration."
+    },
+    {
+      "id": "issue-2926-2928-planning-repairs",
+      "title": "Fix parent binding, supersede contracts, current-work continuity, and lane recovery",
+      "status": "integration-pending",
+      "execplan_ref": ".agentic-workspace/planning/execplans/issue-2926-2928-planning-repairs.plan.json",
+      "depends_on": [
+        "issue-2923-2925-command-evidence-blockers"
+      ],
+      "purpose_for_lane": "Implement GitHub #2926, #2927, #2928, and #2938 after the preceding command-evidence slice reaches target integration.",
+      "proof": ".agentic-workspace/verification/proof-decision.json",
+      "residual_after_slice": "Implement #2929-#2930 semantic task-route behavior after this slice reaches target integration."
+    },
+    {
+      "id": "issue-2929-2930-semantic-task-routes",
+      "title": "Add semantic task routes and issue-creation dogfood",
+      "status": "integration-pending",
+      "execplan_ref": ".agentic-workspace/planning/execplans/issue-2929-2930-semantic-task-routes.plan.json",
+      "depends_on": [
+        "issue-2926-2928-planning-repairs"
+      ],
+      "purpose_for_lane": "Implement #2929-#2930 semantic task-route behavior after the preceding Planning-repair slice reaches target integration.",
+      "proof": ".agentic-workspace/verification/proof-decision.json",
+      "residual_after_slice": "none"
+    },
+    {
+      "id": "pr-2939-test-assertion-correction",
+      "title": "Correct explicit-lane regression ownership",
+      "status": "integration-pending",
+      "execplan_ref": ".agentic-workspace/planning/execplans/pr-2939-test-assertion-correction.plan.json",
+      "depends_on": [],
+      "purpose_for_lane": "Replace the reproduced workflow blockers before resuming the #2821 epic.",
+      "proof": ".agentic-workspace/verification/proof-decision.json",
+      "residual_after_slice": "none"
+    },
+    {
+      "id": "pr-2945-packaging-readiness-repair",
+      "title": "Repair semantic-route package readiness",
+      "status": "integration-pending",
+      "execplan_ref": ".agentic-workspace/planning/execplans/pr-2945-packaging-readiness-repair.plan.json",
+      "depends_on": [],
+      "purpose_for_lane": "Replace the reproduced workflow blockers before resuming the #2821 epic.",
+      "proof": ".agentic-workspace/verification/proof-decision.json",
+      "residual_after_slice": "none"
+    }
+  ],
+  "current_slice": "pr-2945-packaging-readiness-repair",
+  "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
+  "proof_strategy": "Each child PR proves its issue acceptance criteria; the final stack replays the issue-creation dogfood path.",
+  "proof_aggregation": {
+    "status": "partial",
+    "evidence": [
+      ".agentic-workspace/verification/proof-decision.json"
+    ],
+    "known_gaps": [
+      "issue-2923-2925-command-evidence-blockers awaits target integration via .agentic-workspace/planning/integration-proposals/issue-2923-2925-command-evidence-blockers-archive-owner.integration-proposal.json.",
+      "issue-2926-2928-planning-repairs awaits target integration via .agentic-workspace/planning/integration-proposals/issue-2926-2928-planning-repairs-archive-owner.integration-proposal.json.",
+      "pr-2939-test-assertion-correction awaits target integration via .agentic-workspace/planning/integration-proposals/pr-2939-test-assertion-correction-archive-owner.integration-proposal.json.",
+      "issue-2929-2930-semantic-task-routes awaits target integration via .agentic-workspace/planning/integration-proposals/issue-2929-2930-semantic-task-routes-archive-owner.integration-proposal.json.",
+      "pr-2945-packaging-readiness-repair awaits target integration via .agentic-workspace/planning/integration-proposals/2946-archive-owner.integration-proposal.json."
+    ]
+  },
+  "residual_lane_work": "none",
+  "lane_to_epic_contribution": "not evaluated",
+  "parent_close_permission": "do-not-close-parent",
+  "closeout_state": {
+    "status": "open",
+    "summary": "pr-2945-packaging-readiness-repair is feature-complete and awaits target integration proposal 2946-archive-owner.",
+    "residual_work": "none",
+    "next_owner": "target integration authority"
+  },
+  "references": [],
+  "notes": ""
+}

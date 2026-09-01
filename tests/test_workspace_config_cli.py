@@ -4,6 +4,32 @@ from __future__ import annotations
 from tests.workspace_cli_support import *
 
 
+def test_assurance_semantic_route_is_applicability_only_and_does_not_replace_path_authority() -> None:
+    route_requirement = {"applies_to_semantic_routes": ["github/issues/**"]}
+    matched, reasons, facts = workspace_runtime_core._assurance_requirement_match(
+        requirement=route_requirement,
+        changed_paths=[],
+        task_text="wording without issue terminology",
+        planning_facts={},
+        selected_semantic_routes=["github/issues/create"],
+    )
+    assert matched is True
+    assert reasons == ["semantic task route matched github/issues/**"]
+    assert facts == []
+
+    path_requirement = {"applies_to_paths": ["src/**"], "applies_to_semantic_routes": ["github/issues/**"]}
+    path_matched, path_reasons, path_facts = workspace_runtime_core._assurance_requirement_match(
+        requirement=path_requirement,
+        changed_paths=["src/runtime.py"],
+        task_text="",
+        planning_facts={},
+        selected_semantic_routes=[],
+    )
+    assert path_matched is True
+    assert path_reasons == ["changed path matched src/**"]
+    assert path_facts[0]["activation_kind"] == "source-behavior"
+
+
 def test_repo_binding_automatic_assignment_requirement_is_hard_with_honest_unavailable_evidence() -> None:
     repo_root = Path(__file__).resolve().parents[1]
     config = cli._load_workspace_config(target_root=repo_root)

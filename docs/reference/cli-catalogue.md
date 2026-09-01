@@ -3,9 +3,9 @@
 
 Exact current command values generated from `cli_commands.json` and `cli_option_groups.json`. The schema-shape references remain at `cli-commands.md` and `cli-option-groups.md`.
 
-- Contract digest: `sha256:54d1e6fd7200ecf6708f82ce0d1927b3caaee1724152eda81305452b5d9c4d52`
+- Contract digest: `sha256:1e0b7199a711b37176bf6f2aed3dbdf201338ff7c1094ed3873555aeefa6196c`
 - Program: `agentic-workspace`
-- Command/subcommand count: 127
+- Command/subcommand count: 129
 
 Shared-state mutability and ignored local diagnostics are separate. A `no` below means the command contract does not mutate shared workspace state. When local session logging is enabled, any command may still write ignored machine-local diagnostics:
 
@@ -23,6 +23,8 @@ Shared-state mutability and ignored local diagnostics are separate. A `no` below
 | `agentic-workspace instructions new` | `core_context_router` | `ordinary_host_repo` | yes | 4 | Scaffold one global or path-scoped Markdown instruction. |
 | `agentic-workspace instructions check` | `core_context_router` | `ordinary_host_repo` | no | 2 | Validate instruction syntax and references without executing checks. |
 | `agentic-workspace instructions explain` | `core_context_router` | `ordinary_host_repo` | no | 5 | Explain task-specific applicability in repository vocabulary. |
+| `agentic-workspace instructions routes` | `core_context_router` | `ordinary_host_repo` | no | 4 | Discover repo-owned semantic task routes one branch or leaf at a time. |
+| `agentic-workspace instructions select-route` | `core_context_router` | `ordinary_host_repo` | yes | 7 | Select existing semantic route facts for the resolved current work. |
 | `agentic-workspace instructions migrate` | `core_context_router` | `ordinary_host_repo` | no | 3 | Give non-destructive incremental migration guidance. |
 | `agentic-workspace summary` | `core_context_router` | `ordinary_host_repo` | no | 6 | Show the active execution summary from the planning module. |
 | `agentic-workspace planning` | `core_context_router` | `ordinary_host_repo` | no | 2 | Show planning workflow help or run Planning operations through the workspace front door. |
@@ -31,7 +33,7 @@ Shared-state mutability and ignored local diagnostics are separate. A `no` below
 | `agentic-workspace planning promote-to-plan` | `core_context_router` | `ordinary_host_repo` | yes | 5 | Promote a planning item into an execplan scaffold. |
 | `agentic-workspace planning owner-select` | `core_context_router` | `ordinary_host_repo` | yes | 10 | Select an existing Planning owner without creating or overwriting it. |
 | `agentic-workspace planning decomposition-create` | `core_context_router` | `ordinary_host_repo` | yes | 7 | Create a first-class Planning decomposition record. |
-| `agentic-workspace planning lane-create` | `core_context_router` | `ordinary_host_repo` | yes | 9 | Create a first-class Planning lane record. |
+| `agentic-workspace planning lane-create` | `core_context_router` | `ordinary_host_repo` | yes | 11 | Create a first-class Planning lane record. |
 | `agentic-workspace planning lane-promote` | `core_context_router` | `ordinary_host_repo` | yes | 5 | Promote a decomposition candidate lane into a first-class lane record. |
 | `agentic-workspace planning lane-activate` | `core_context_router` | `ordinary_host_repo` | yes | 5 | Mark a lane record active and optionally select its current slice. |
 | `agentic-workspace planning lane-close` | `core_context_router` | `ordinary_host_repo` | yes | 9 | Record lane proof aggregation, residual work, and parent contribution. |
@@ -204,6 +206,31 @@ task-scoped instruction applicability explanation
 | `--verbose` | no | `—` | — | `store_true` | Include the compiled instruction program. |
 | `--target` | no | `—` | — | `value` | Target repository path. Defaults to current directory. |
 
+## `agentic-workspace instructions routes`
+
+progressive semantic task-route discovery
+
+| Flags | Required | Default | Choices | Action / nargs | Description |
+| --- | --- | --- | --- | --- | --- |
+| `--format` | no | `text` | text, json | `value` | Output format. |
+| `--parent` | no | `—` | — | `value` | Optional route branch to expand one level. |
+| `--exact` | no | `—` | — | `value` | Optional known route leaf to inspect directly. |
+| `--target` | no | `—` | — | `value` | Target repository path. Defaults to current directory. |
+
+## `agentic-workspace instructions select-route`
+
+authority-neutral current-task route fact selection
+
+| Flags | Required | Default | Choices | Action / nargs | Description |
+| --- | --- | --- | --- | --- | --- |
+| `--format` | no | `text` | text, json | `value` | Output format. |
+| `--posture` | yes | `—` | selected, none, unresolved | `value` | Explicit semantic applicability posture. |
+| `--route` | no | `—` | — | `append` | Existing route leaf. Repeat for multiple facets. |
+| `--current-work-id` | no | `—` | — | `value` | Optional exact current-work guard. |
+| `--expect-source-revision` | yes | `—` | — | `value` | Exact source revision returned by route discovery. |
+| `--dry-run` | no | `—` | — | `store_true` | Validate the selection without writing local state. |
+| `--target` | no | `—` | — | `value` | Target repository path. Defaults to current directory. |
+
 ## `agentic-workspace instructions migrate`
 
 non-destructive static-instruction migration advice
@@ -326,6 +353,8 @@ Planning lane artifact mutation front door
 | `--outcome` | no | `—` | — | `value` | Lane-level outcome. |
 | `--purpose` | no | `—` | — | `value` | How this lane advances the parent decomposition. |
 | `--proof-strategy` | no | `—` | — | `value` | How slice proofs aggregate into lane proof. |
+| `--bind-execplan` | no | `—` | — | `value` | Existing execplan owner to bind atomically as a child of the created or reused lane. |
+| `--source-ref` | no | `—` | — | `value` | External parent identity recorded on a newly created lane for deterministic reuse. |
 | `--target` | no | `—` | — | `value` | Optional repository path. |
 | `--dry-run` | no | `—` | — | `store_true` | Show planned changes without mutating files. |
 
@@ -532,7 +561,7 @@ Planning owner-specific reconciliation front door
 | `--subject` | no | `—` | — | `value` | Expected current-slice subject id. |
 | `--expect-lane-revision` | no | `—` | — | `value` | Current lane-record revision required before applying current-slice reconciliation. |
 | `--transition` | no | `—` | restore, relink, supersede, cancel, human | `value` | Requested current-slice reconciliation transition. |
-| `--expected-execplan` | no | `—` | — | `value` | Repo-relative execplan source required for restore/relink reconciliation. |
+| `--expected-execplan` | no | `—` | — | `value` | Repo-relative execplan source: required for relink/supersede, optional for restore, and not used by cancel/human. |
 | `--expect-planning-revision` | no | `—` | — | `value` | Planning revision returned by preview and required before applying current-slice reconciliation. |
 
 ## `agentic-workspace memory`

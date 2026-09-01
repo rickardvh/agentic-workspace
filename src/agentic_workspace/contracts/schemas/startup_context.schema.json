@@ -426,7 +426,7 @@
     },
     "task_assignment_disposition": {
       "type": "object",
-      "description": "Typed task-level execute-here, delegate-bounded-slice, or blocked-unavailable disposition consumed by the ordinary action path.",
+      "description": "Typed parent-custody and bounded-child assignment disposition consumed by the ordinary action path. Under binding orchestration, orchestrate-here retains parent integration/proof custody without granting unresolved child execution authority; direct leaf work may still execute-here.",
       "additionalProperties": true
     },
     "task_intent": {

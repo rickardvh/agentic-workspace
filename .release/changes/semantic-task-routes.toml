@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Add shared semantic task-route facts, isolate broad inventory-authority proof to an explicit patch subject, and fail generated-package proof on stale external conformance receipts."
+issues = [2929, 2930, 2935, 2936, 2937, 2941, 2946]

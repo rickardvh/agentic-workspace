@@ -16,7 +16,8 @@
     "Feature branches write proposals, not integrated lifecycle truth.",
     "Do not select current work, rewrite aggregate collections, close unrelated owners, or claim terminal parent truth.",
     "Record a subject revision so target-branch apply can reject stale proposals.",
-    "Feature-completion recording requires explicit proof plus current owner and target-authority revision guards; it writes owner proof/closeout posture and the proposal atomically without applying terminal lifecycle truth.",
+    "Feature-completion recording requires explicit proof, concrete non-placeholder finish-run evidence, and current owner and target-authority revision guards; it writes owner proof/closeout posture and the proposal atomically without applying terminal lifecycle truth.",
+    "When exactly one parent lane contains the feature owner, record a non-terminal integration-pending child contribution and next owner in the same transaction; target integration alone promotes it to completed.",
     "Refresh only an existing pending proposal, require proposal/subject/target revision guards, and preserve immutable lifecycle semantics.",
     "--expect-planning-revision is self-identifying as planning_revision.target_authority_revision in help, structured output, and stale recovery."
   ],
@@ -54,6 +55,36 @@
     },
     {
       "name": "proof",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "description": "Concrete feature-head outcome when the owner cannot derive non-placeholder finish-run evidence.",
+      "name": "what_happened",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "description": "Concrete feature-head scope touched when the owner cannot derive it.",
+      "name": "scope_touched",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "description": "Concrete feature-head changed surfaces when the owner cannot derive them.",
+      "name": "changed_surfaces",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "description": "Concrete scope-review evidence, or a value derived from admitted owner scope.",
+      "name": "review_summary",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "description": "Concrete delivered outcome, or a value derived from admitted owner intent.",
+      "name": "outcome_summary",
       "required": false,
       "source": "cli-option"
     },
@@ -182,6 +213,11 @@
       "required": false,
       "surface": ".agentic-workspace/planning/execplans/<owner>.plan.json",
       "when": "record_feature_completion on an admitted feature branch"
+    },
+    {
+      "required": false,
+      "surface": ".agentic-workspace/planning/lanes/<parent>.lane.json",
+      "when": "record_feature_completion resolves exactly one parent-lane child relation"
     },
     {
       "required": false,

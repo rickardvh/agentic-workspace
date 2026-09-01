@@ -56,6 +56,8 @@ def test_lane_create_operation_declares_value_defaults_and_coercions(monkeypatch
         "outcome": "Done",
         "purpose": "",
         "proof_strategy": "",
+        "bind_execplan": "",
+        "source_ref": "",
         "expected_planning_revision": "",
         "dry_run": True,
     }

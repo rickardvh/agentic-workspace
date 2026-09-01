@@ -136,6 +136,21 @@
       },
       "description": "Inputs the operation accepts and where they come from."
     },
+    "conditional_inputs": {
+      "type": "array",
+      "description": "Selector-specific input requirements owned by this operation contract.",
+      "items": {
+        "type": "object",
+        "required": ["selector", "selector_value", "required_inputs", "semantics"],
+        "properties": {
+          "selector": {"type": "string", "minLength": 1},
+          "selector_value": {"type": "string", "minLength": 1},
+          "required_inputs": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+          "semantics": {"type": "string", "minLength": 1}
+        },
+        "additionalProperties": false
+      }
+    },
     "output": {
       "type": "object",
       "required": [

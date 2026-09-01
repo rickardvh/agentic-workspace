@@ -2296,6 +2296,63 @@ routes_from = ["src/agentic_workspace/**"]
     assert owner_result["status"] == "current"
 
 
+def test_context_authority_projection_consumes_semantic_route_without_task_text(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _write_context_authority_sources(tmp_path)
+    (tmp_path / ".agentic-workspace/memory/repo/domains").mkdir(parents=True, exist_ok=True)
+    (tmp_path / ".agentic-workspace/memory/repo/domains/issue-procedure.md").write_text("Issue procedure\n", encoding="utf-8")
+    (tmp_path / ".agentic-workspace/memory/repo/manifest.toml").write_text(
+        """
+[notes.".agentic-workspace/memory/repo/index.md"]
+note_type = "routing"
+canonical_home = ".agentic-workspace/memory/repo/index.md"
+authority = "canonical"
+task_relevance = "required"
+routes_from = [".agentic-workspace/memory/repo/**/*.md"]
+routing_only = true
+
+[notes.".agentic-workspace/memory/repo/domains/issue-procedure.md"]
+note_type = "domain"
+canonical_home = ".agentic-workspace/memory/repo/domains/issue-procedure.md"
+authority = "advisory"
+task_relevance = "conditional"
+surfaces = ["generic"]
+semantic_routes = ["github/issues/**"]
+routes_from = []
+""",
+        encoding="utf-8",
+    )
+    route_fact = {
+        "kind": "agentic-workspace/semantic-task-route-fact/v1",
+        "status": "current",
+        "posture": "selected",
+        "routes": ["github/issues/create"],
+        "current_work_id": "work-1",
+        "source_revision": "sha256:" + "1" * 64,
+        "authority_effect": "applicability-only",
+    }
+    monkeypatch.setattr("agentic_workspace.semantic_task_routes.current_semantic_task_route_fact", lambda _root: route_fact)
+
+    projection = resolve_context_authority_projection(
+        consumer="start", task="curate memory before the next external write", changed_paths=[], target_root=tmp_path
+    )
+
+    memory = next(item for item in projection["authorities"] if item["surface"] == "memory")
+    curation = memory["source"]["selection"]["memory_curation"]
+    routed = next(item for item in curation["selected_notes"] if item["path"].endswith("issue-procedure.md"))
+    assert routed["matched_semantic_routes"] == ["github/issues/**"]
+    assert routed["relevance_evidence"] == "semantic-task-route"
+    assert curation["semantic_task_routes"]["authority_effect"] == "relevance-only"
+
+    route_fact.update({"posture": "selected", "routes": ["workspace/ownership/audit"]})
+    unrelated = resolve_context_authority_projection(
+        consumer="start", task="curate memory where generic issue words still overlap", changed_paths=[], target_root=tmp_path
+    )
+    unrelated_memory = next(item for item in unrelated["authorities"] if item["surface"] == "memory")
+    assert not any(
+        item["path"].endswith("issue-procedure.md") for item in unrelated_memory["source"]["selection"]["memory_curation"]["selected_notes"]
+    )
+
+
 def test_context_authority_projection_rejects_stale_memory_note_matches(tmp_path: Path) -> None:
     _write_context_authority_sources(tmp_path)
     (tmp_path / ".agentic-workspace/memory/repo/domains").mkdir(parents=True, exist_ok=True)

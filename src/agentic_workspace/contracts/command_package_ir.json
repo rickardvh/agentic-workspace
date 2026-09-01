@@ -1253,6 +1253,12 @@
                   "create-review"
                 ],
                 "attr": "slug"
+              },
+              {
+                "commands": [
+                  "targeted-write"
+                ],
+                "attr": "targeted_write_plan"
               }
             ],
             "option_specs": [
@@ -1295,6 +1301,14 @@
               {
                 "option": "--proof-strategy",
                 "attr": "proof_strategy"
+              },
+              {
+                "option": "--bind-execplan",
+                "attr": "bind_execplan"
+              },
+              {
+                "option": "--source-ref",
+                "attr": "source_ref"
               },
               {
                 "option": "--target",
@@ -1387,10 +1401,6 @@
               {
                 "option": "--owner-ref",
                 "attr": "owner_ref"
-              },
-              {
-                "option": "--plan",
-                "attr": "targeted_write_plan"
               },
               {
                 "option": "--patch",
@@ -2883,6 +2893,46 @@
                   {
                     "default": "",
                     "flags": [
+                      "--what-happened"
+                    ],
+                    "help": "Concrete feature-head outcome; required when the owner cannot derive non-placeholder finish-run evidence.",
+                    "name": "what_happened"
+                  },
+                  {
+                    "default": "",
+                    "flags": [
+                      "--scope-touched"
+                    ],
+                    "help": "Concrete feature-head scope touched; required when the owner cannot derive it.",
+                    "name": "scope_touched"
+                  },
+                  {
+                    "default": "",
+                    "flags": [
+                      "--changed-surfaces"
+                    ],
+                    "help": "Concrete feature-head changed surfaces; required when the owner cannot derive them.",
+                    "name": "changed_surfaces"
+                  },
+                  {
+                    "default": "",
+                    "flags": [
+                      "--review-summary"
+                    ],
+                    "help": "Concrete feature-head scope review, or derive it from admitted owner scope.",
+                    "name": "review_summary"
+                  },
+                  {
+                    "default": "",
+                    "flags": [
+                      "--outcome-summary"
+                    ],
+                    "help": "Concrete delivered outcome, or derive it from admitted owner intent.",
+                    "name": "outcome_summary"
+                  },
+                  {
+                    "default": "",
+                    "flags": [
                       "--parent-boundary"
                     ],
                     "help": "Boundary that keeps parent/lane truth independent.",
@@ -3073,6 +3123,22 @@
                     ],
                     "help": "How slice proofs aggregate into lane proof.",
                     "name": "proof_strategy"
+                  },
+                  {
+                    "default": "",
+                    "flags": [
+                      "--bind-execplan"
+                    ],
+                    "help": "Existing execplan owner to bind atomically as a child of the created or reused lane.",
+                    "name": "bind_execplan"
+                  },
+                  {
+                    "default": "",
+                    "flags": [
+                      "--source-ref"
+                    ],
+                    "help": "External parent identity recorded on a newly created lane for deterministic reuse.",
+                    "name": "source_ref"
                   },
                   {
                     "flags": [
@@ -10370,6 +10436,8 @@
             "instructions.create.process",
             "instructions.check.process",
             "instructions.explain.process",
+            "instructions.routes.process",
+            "instructions.route-select.process",
             "instructions.migrate.process"
           ],
           "effect_hints": {
@@ -10423,6 +10491,31 @@
                   {"default": "", "flags": ["--task"], "help": "Optional task text used during applicability explanation.", "name": "task"},
                   {"action": "append", "default": [], "flags": ["--changed"], "help": "Changed or target path. Repeat for multiple paths.", "name": "changed"},
                   {"action": "store_true", "flags": ["--verbose"], "help": "Include the compiled instruction program.", "name": "verbose"},
+                  {"flags": ["--target"], "help": "Target repository path. Defaults to current directory.", "name": "target"},
+                  {"choices": ["text", "json"], "default": "text", "flags": ["--format"], "help": "Output format.", "name": "format"}
+                ]
+              },
+              {
+                "help": "Discover repo-owned semantic task routes one branch or leaf at a time.",
+                "name": "routes",
+                "operation_ref": {"id": "instructions.routes", "path": "operations/instructions.routes.json"},
+                "options": [
+                  {"default": "", "flags": ["--parent"], "help": "Optional route branch to expand one level.", "name": "parent"},
+                  {"default": "", "flags": ["--exact"], "help": "Optional known route leaf to inspect directly.", "name": "exact"},
+                  {"flags": ["--target"], "help": "Target repository path. Defaults to current directory.", "name": "target"},
+                  {"choices": ["text", "json"], "default": "text", "flags": ["--format"], "help": "Output format.", "name": "format"}
+                ]
+              },
+              {
+                "help": "Select existing semantic route facts for the resolved current work.",
+                "name": "select-route",
+                "operation_ref": {"id": "instructions.route-select", "path": "operations/instructions.route-select.json"},
+                "options": [
+                  {"choices": ["selected", "none", "unresolved"], "flags": ["--posture"], "help": "Explicit semantic applicability posture.", "name": "posture", "required": true},
+                  {"action": "append", "default": [], "flags": ["--route"], "help": "Existing route leaf. Repeat for multiple facets.", "name": "route"},
+                  {"default": "", "flags": ["--current-work-id"], "help": "Optional exact current-work guard.", "name": "current_work_id"},
+                  {"flags": ["--expect-source-revision"], "help": "Exact source revision returned by route discovery.", "name": "expected_source_revision", "required": true},
+                  {"action": "store_true", "flags": ["--dry-run"], "help": "Validate the selection without writing local state.", "name": "dry_run"},
                   {"flags": ["--target"], "help": "Target repository path. Defaults to current directory.", "name": "target"},
                   {"choices": ["text", "json"], "default": "text", "flags": ["--format"], "help": "Output format.", "name": "format"}
                 ]
@@ -15655,6 +15748,8 @@
             "instructions.create",
             "instructions.check",
             "instructions.explain",
+            "instructions.routes",
+            "instructions.route-select",
             "instructions.migrate",
             "agent-guidance.promote",
             "agent-guidance.edit",
@@ -16130,6 +16225,14 @@
                 "option": "--proof-strategy"
               },
               {
+                "attr": "bind_execplan",
+                "option": "--bind-execplan"
+              },
+              {
+                "attr": "source_ref",
+                "option": "--source-ref"
+              },
+              {
                 "attr": "target",
                 "option": "--target"
               },
@@ -16220,10 +16323,6 @@
               {
                 "attr": "owner_ref",
                 "option": "--owner-ref"
-              },
-              {
-                "attr": "targeted_write_plan",
-                "option": "--plan"
               },
               {
                 "attr": "patch",
@@ -16530,6 +16629,12 @@
                 "attr": "slug",
                 "commands": [
                   "create-review"
+                ]
+              },
+              {
+                "attr": "targeted_write_plan",
+                "commands": [
+                  "targeted-write"
                 ]
               }
             ],
@@ -18691,6 +18796,22 @@
                 "name": "proof_strategy"
               },
               {
+                "default": "",
+                "flags": [
+                  "--bind-execplan"
+                ],
+                "help": "Existing execplan owner to bind atomically as a child of the created or reused lane.",
+                "name": "bind_execplan"
+              },
+              {
+                "default": "",
+                "flags": [
+                  "--source-ref"
+                ],
+                "help": "External parent identity recorded on a newly created lane for deterministic reuse.",
+                "name": "source_ref"
+              },
+              {
                 "flags": [
                   "--target"
                 ],
@@ -19377,6 +19498,46 @@
                 ],
                 "help": "Comma-separated proof references for the requested transition.",
                 "name": "proof"
+              },
+              {
+                "default": "",
+                "flags": [
+                  "--what-happened"
+                ],
+                "help": "Concrete feature-head outcome; required when the owner cannot derive non-placeholder finish-run evidence.",
+                "name": "what_happened"
+              },
+              {
+                "default": "",
+                "flags": [
+                  "--scope-touched"
+                ],
+                "help": "Concrete feature-head scope touched; required when the owner cannot derive it.",
+                "name": "scope_touched"
+              },
+              {
+                "default": "",
+                "flags": [
+                  "--changed-surfaces"
+                ],
+                "help": "Concrete feature-head changed surfaces; required when the owner cannot derive them.",
+                "name": "changed_surfaces"
+              },
+              {
+                "default": "",
+                "flags": [
+                  "--review-summary"
+                ],
+                "help": "Concrete feature-head scope review, or derive it from admitted owner scope.",
+                "name": "review_summary"
+              },
+              {
+                "default": "",
+                "flags": [
+                  "--outcome-summary"
+                ],
+                "help": "Concrete delivered outcome, or derive it from admitted owner intent.",
+                "name": "outcome_summary"
               },
               {
                 "default": "",
@@ -20488,7 +20649,7 @@
                 "flags": [
                   "--expected-execplan"
                 ],
-                "help": "Repo-relative execplan source required for restore/relink reconciliation.",
+                "help": "Repo-relative execplan source: required for relink/supersede, optional for restore, and not used by cancel/human.",
                 "name": "expected_execplan"
               },
               {

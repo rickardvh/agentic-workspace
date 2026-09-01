@@ -108,6 +108,47 @@ def test_review_issue_body_defaults_dropdowns_and_labels() -> None:
     assert "## Acceptance criteria\nTODO:" in rendered["body"]
 
 
+def test_issue_creation_semantic_route_resolves_canonical_skills_and_current_template() -> None:
+    registry = json.loads((_REPO_ROOT / "tools/skills/REGISTRY.json").read_text(encoding="utf-8"))
+    routed = []
+    for skill in registry["skills"]:
+        for declaration in skill.get("semantic_routes", []):
+            if declaration.get("id") == "github/issues/create":
+                routed.append((declaration["priority"], skill["id"]))
+    assert sorted(routed) == [(10, "github-issue-shaping"), (20, "github-issue-creation")]
+
+    instruction = (_REPO_ROOT / ".agentic-workspace/instructions/github-issue-creation.md").read_text(encoding="utf-8")
+    assert "routes:\n  - github/issues/create" in instruction
+    assert "github-issue-shaping" in instruction
+    assert "github-issue-creation" in instruction
+
+    rendered = issue_body.render_issue(
+        kind="review",
+        title="Semantic-route replay",
+        fields={
+            "issue_kind": "Dogfooding friction",
+            "observed_problem": "The issue procedure was previously bypassed.",
+            "evidence": ".github/ISSUE_TEMPLATE/03-review-friction.yml",
+            "desired_signal": "Route to the repository-owned issue procedure.",
+            "intended_outcome": "The current form and labels are preserved.",
+            "acceptance": "- [ ] The current form headings and labels are emitted.",
+        },
+    )
+    assert rendered["template"] == "03-review-friction.yml"
+    assert rendered["labels"] == ["review"]
+    for heading in (
+        "## Issue kind",
+        "## Observed problem",
+        "## Evidence",
+        "## Intended outcome",
+        "## Acceptance criteria",
+        "## Final satisfaction",
+        "## Evidence required for final completion",
+        "## Completion rule",
+    ):
+        assert heading in rendered["body"]
+
+
 def test_bug_issue_body_defaults_final_completion_fields() -> None:
     rendered = issue_body.render_issue(
         kind="bug",

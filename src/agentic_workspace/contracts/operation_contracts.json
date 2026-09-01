@@ -114,6 +114,18 @@
     },
     {
       "command": "instructions",
+      "id": "instructions.routes",
+      "migration_status": "runtime-consumed",
+      "path": "operations/instructions.routes.json"
+    },
+    {
+      "command": "instructions",
+      "id": "instructions.route-select",
+      "migration_status": "runtime-consumed",
+      "path": "operations/instructions.route-select.json"
+    },
+    {
+      "command": "instructions",
       "id": "instructions.migrate",
       "migration_status": "runtime-consumed",
       "path": "operations/instructions.migrate.json"

@@ -23,6 +23,7 @@ Contract for one Agentic Workspace operation, including command shape, effects, 
 | `intent` | string | no |  | User or system intent the operation is designed to satisfy. |  |  |
 | `classification` | enum `"read-only-report"`, `"metadata-refresh"`, `"lifecycle-mutation"`, `"local-record-append"`, `"derived-output"` | yes |  | Output and authority classification for the operation. |  |  |
 | `inputs` | array of object | yes |  | Inputs the operation accepts and where they come from. |  |  |
+| `conditional_inputs` | array of object | no |  | Selector-specific input requirements owned by this operation contract. |  |  |
 | `output` | object | yes |  | Output kind and schema produced by the operation. |  |  |
 | `output.kind` | enum `"text-or-json"`, `"json"`, `"text"`, `"module-result"` | yes |  | Discriminator identifying the payload or record shape. |  |  |
 | `output.schema_ref` | string | no |  | Schema reference used to validate the output payload. |  |  |

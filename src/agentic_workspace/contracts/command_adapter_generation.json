@@ -7128,6 +7128,8 @@
           "new",
           "check",
           "explain",
+          "routes",
+          "select-route",
           "migrate"
         ]
       },
@@ -7136,6 +7138,8 @@
         "instructions.create.process",
         "instructions.check.process",
         "instructions.explain.process",
+        "instructions.routes.process",
+        "instructions.route-select.process",
         "instructions.migrate.process"
       ],
       "effect_hints": {

@@ -1141,6 +1141,18 @@
       "storage_class": "diagnostic-fixture"
     },
     {
+      "checked_in_justification": "Maintainer-reviewed migration and removal map proving that semantic task routes replace or demote overlapping classifiers instead of becoming another equal authority.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "notes": "Disposition map for issues #2929, #2930, and their consumer/consolidation slices.",
+      "owner": "workspace-maintainer-checks",
+      "pattern": "docs/maintainer/semantic-task-route-disposition.json",
+      "schema_or_validator": "validator: uv run pytest tests/test_scoped_instructions.py::test_semantic_task_route_disposition_records_subtractive_consumer_migrations",
+      "status": "typed-validator-backed",
+      "storage_class": "diagnostic-fixture"
+    },
+    {
       "checked_in_justification": "Maintainer-reviewed dogfooding evidence used to prove validation execution cost, duplicate prevention, and CI/local target boundaries.",
       "editable_by_agents": true,
       "format": "json",

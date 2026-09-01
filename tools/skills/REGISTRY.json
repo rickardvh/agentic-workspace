@@ -22,6 +22,14 @@
       "scope": "repo-owned",
       "stability": "repo-managed",
       "summary": "recheck the workspace ownership ledger against current planning, memory, and module boundaries",
+      "semantic_routes": [
+        {
+          "id": "workspace/ownership/audit",
+          "match": "exact",
+          "priority": 10,
+          "description": "Audit workspace ownership and module boundaries."
+        }
+      ],
       "activation_hints": {
         "verbs": ["recheck", "verify", "audit"],
         "nouns": ["ownership ledger", "module boundaries", "workspace ownership"],
@@ -61,6 +69,14 @@
       "scope": "repo-owned",
       "stability": "repo-managed",
       "summary": "shape or refine repo GitHub issues before creation or update while preserving intent, scope, evidence, and closure boundaries",
+      "semantic_routes": [
+        {
+          "id": "github/issues/create",
+          "match": "exact",
+          "priority": 10,
+          "description": "Create repository issues through the repo-owned shaping and creation procedure."
+        }
+      ],
       "activation_hints": {
         "verbs": ["shape", "refine", "split", "prune", "update", "create", "file"],
         "nouns": ["github issue", "issue lane", "issue refinement", "child issue", "parent issue", "final satisfaction", "non-solutions"],
@@ -122,6 +138,14 @@
       "scope": "repo-owned",
       "stability": "repo-managed",
       "summary": "create GitHub issues from repo issue templates with correct fields, labels, and refresh/reconcile follow-through",
+      "semantic_routes": [
+        {
+          "id": "github/issues/create",
+          "match": "exact",
+          "priority": 20,
+          "description": "Create repository issues through the repo-owned shaping and creation procedure."
+        }
+      ],
       "activation_hints": {
         "verbs": ["create", "file", "open"],
         "nouns": ["github issue", "issue template", "tracker issue", "dogfooding finding", "review finding"],

@@ -80,6 +80,13 @@
       "description": "Compare-and-swap Planning revision required when applying a proposal."
     }
   ],
+  "conditional_inputs": [
+    {"selector": "transition", "selector_value": "restore", "required_inputs": [], "semantics": "Reuse the currently declared execplan unless an exact source is explicitly confirmed."},
+    {"selector": "transition", "selector_value": "relink", "required_inputs": ["expected_execplan"], "semantics": "Require the exact existing owner to relink."},
+    {"selector": "transition", "selector_value": "supersede", "required_inputs": ["expected_execplan"], "semantics": "Require the exact declared replacement owner."},
+    {"selector": "transition", "selector_value": "cancel", "required_inputs": [], "semantics": "Do not require a replacement owner."},
+    {"selector": "transition", "selector_value": "human", "required_inputs": [], "semantics": "Do not mutate until an exact owner is chosen."}
+  ],
   "output": {
     "kind": "text-or-json"
   },

@@ -4,9 +4,10 @@
   "canonical_location": ".agentic-workspace/instructions/*.md",
   "identity_rule": "The filename stem is the human-facing identity; directory layout does not imply scope.",
   "body_rule": "The Markdown body is guidance. No frontmatter means globally applicable guidance.",
-  "frontmatter_fields": ["paths", "read", "use", "checks", "protect"],
+  "frontmatter_fields": ["paths", "routes", "read", "use", "checks", "protect"],
   "field_projection": {
     "paths": "derive a source-owned applicability fact",
+    "routes": "match an agent-selected current-work semantic applicability fact using explicit exact or /** subtree semantics",
     "read": "surface a canonical repo-owned resource reference",
     "use": "prefer an already admitted skill or capability",
     "checks": "require current evidence before claim:complete",
@@ -18,6 +19,8 @@
     {"id": "instructions.create", "effect": "create-one-file-no-overwrite", "result_kind": "agentic-workspace/scoped-instruction-create-result/v1"},
     {"id": "instructions.check", "effect": "read-only-static-validation", "result_kind": "agentic-workspace/scoped-instruction-inspection/v1"},
     {"id": "instructions.explain", "effect": "read-only-applicability-simulation", "result_kind": "agentic-workspace/scoped-instruction-inspection/v1"},
+    {"id": "instructions.routes", "effect": "read-only-progressive-route-discovery", "result_kind": "agentic-workspace/semantic-task-route-discovery/v1"},
+    {"id": "instructions.route-select", "effect": "guarded-local-current-task-fact-write", "result_kind": "agentic-workspace/semantic-task-route-selection/v1"},
     {"id": "instructions.migrate", "effect": "read-only-human-review-advice", "result_kind": "agentic-workspace/scoped-instruction-migration-advice/v1"}
   ],
   "target_projection": {

@@ -65,7 +65,7 @@ def test_active_external_backed_owner_routes_refresh_then_reconciliation(tmp_pat
     assert stale["status"] == "refresh-required"
     assert stale["reason_code"] == "external-observation-stale"
     assert stale["refresh_command"].startswith("uv run agentic-workspace external-intent refresh-github")
-    assert "--issue #42" in stale["refresh_command"]
+    assert '--issue "#42"' in stale["refresh_command"]
     assert "--apply-planning-candidates" in stale["refresh_command"]
 
     assert workspace_runtime_planning._active_owner_external_reconciliation(
@@ -1612,7 +1612,7 @@ def _assert_implement_select_next_matches_tiny_payload(
     if selected.get("command"):
         assert decision["action"]["command"] == selected["command"]
     assert "--select next" in decision["detail_routes"]["decision_detail"]
-    assert ordinary.keys() == {"kind", "target", "decision_packet"}
+    assert ordinary.keys() == {"kind", "target", "decision_packet", "task_assignment_disposition"}
 
 
 def test_implement_select_next_matches_tiny_payload_for_normal_changed_paths(tmp_path: Path, capsys) -> None:
@@ -6610,8 +6610,8 @@ def test_planning_front_door_forwards_targeted_owner_write(monkeypatch, tmp_path
 
     actual = json.loads(capsys.readouterr().out)["argv"]
     assert actual[0] == "targeted-write"
+    assert actual[1] == "example-owner"
     for option, value in {
-        "--plan": "example-owner",
         "--patch": patch,
         "--target": str(tmp_path),
         "--expect-planning-revision": "planning-revision",
@@ -6620,7 +6620,48 @@ def test_planning_front_door_forwards_targeted_owner_write(monkeypatch, tmp_path
     }.items():
         assert actual[actual.index(option) + 1] == value
     assert "--apply" in actual
+    assert "--plan" not in actual
     assert forwarded == [actual]
+
+
+def test_planning_front_door_executes_lane_backed_targeted_write_from_readiness_argv(tmp_path: Path, capsys) -> None:
+    planning_installer.install_bootstrap(target=tmp_path)
+    planning_installer.create_lane_record(lane_id="delivery-lane", title="Delivery Lane", target=tmp_path)
+    planning_installer.create_execplan_scaffold(
+        plan_id="lane-plan",
+        title="Lane Plan",
+        target=tmp_path,
+        activate=True,
+        lane="delivery-lane",
+    )
+    tightening = planning_installer.planning_summary(target=tmp_path, profile="compact")["execution_readiness"]["implementation_tightening"]
+    patch = json.dumps({"goal": ["Make the lane plan executable."]}, separators=(",", ":"))
+
+    common = [
+        "planning",
+        "targeted-write",
+        "--plan",
+        tightening["owner"],
+        "--patch",
+        patch,
+        "--expect-planning-revision",
+        tightening["planning_revision"],
+        "--expect-owner-revision",
+        str(tightening["owner_revision"]),
+        "--expect-lane-revision",
+        tightening["lane_revision"],
+        "--target",
+        str(tmp_path),
+        "--format",
+        "json",
+    ]
+
+    assert cli.main(common) == 0
+    preview = json.loads(capsys.readouterr().out)
+    assert preview["status"] == "preview"
+    assert cli.main([*common[:-4], "--apply", *common[-4:]]) == 0
+    applied = json.loads(capsys.readouterr().out)
+    assert applied["status"] == "applied"
 
 
 def test_planning_front_door_matches_direct_integration_propose_semantics(tmp_path: Path) -> None:
@@ -18837,7 +18878,13 @@ def test_selected_start_decision_route_is_narrow_and_preserves_claim_and_assignm
     assert signals["construction_profile"]["broad_start_payload_constructed"] is False
     assert "blocked_claims" in signals["claim_boundary"]
     disposition = payload["values"]["task_assignment_disposition"]
-    assert disposition["evaluation_state"] in {"evaluated-local", "delegated", "transport-blocked", "unevaluated"}
+    assert disposition["evaluation_state"] in {
+        "evaluated-local",
+        "delegated",
+        "parent-retained-child-unresolved",
+        "transport-blocked",
+        "unevaluated",
+    }
     assert disposition["assignment_decision_revision"]
 
 
@@ -18851,11 +18898,76 @@ def test_task_assignment_disposition_distinguishes_deliberate_local_and_external
         },
         assignment_gate={"implementation_allowed": True, "required_next_action": "continue"},
         assignment_action={"status": "direct-current-target", "selected_target": "current", "action": "continue"},
-        effective_orchestration={"transport": {"effective_mode": "auto"}},
+        effective_orchestration={
+            "assignment": {"execution_role": "orchestrator", "policy": "required-best-fit", "authority": "binding"},
+            "transport": {"effective_mode": "auto"},
+        },
     )
     assert local["outcome"] == "execute-here"
+    assert local["bounded_child_assignment"]["status"] == "selected-current"
+    assert local["bounded_child_assignment"]["implementation_allowed"] is True
     assert local["current_target_deliberately_retained"] is True
     assert local["external_receipt"]["required"] is False
+
+    parent_with_unresolved_child = workspace_runtime_core._task_assignment_disposition_payload(
+        assignment_decision={
+            "selected_target": "current",
+            "current_target": "current",
+            "assignment_decision_revision": "sha256:parent",
+            "candidate_scores": [{"target": "current", "ranking_components": {}, "eligibility": {}}],
+        },
+        assignment_gate={"implementation_allowed": True, "required_next_action": "continue"},
+        assignment_action={"status": "direct-current-target", "selected_target": "current", "action": "continue"},
+        effective_orchestration={
+            "assignment": {"execution_role": "orchestrator", "policy": "required-best-fit", "authority": "binding"},
+            "transport": {"effective_mode": "auto"},
+        },
+        decomposition_delegation={
+            "status": "present",
+            "candidates": [{"lane_id": "bounded-child", "candidate_route": "delegate-implementation"}],
+        },
+        delegation_decision={"recommended_route": "suggest-delegation"},
+    )
+    assert parent_with_unresolved_child["outcome"] == "orchestrate-here"
+    assert parent_with_unresolved_child["parent_custody"]["status"] == "retained-current-orchestrator"
+    assert parent_with_unresolved_child["bounded_child_assignment"]["status"] == "unresolved"
+    assert parent_with_unresolved_child["bounded_child_assignment"]["implementation_allowed"] is False
+    assert parent_with_unresolved_child["next_action"]["action"] == "promote-bounded-child"
+    assert parent_with_unresolved_child["next_action"]["operation_invocation"]["operation_id"] == ("planning.promote-to-plan.lifecycle")
+    assert parent_with_unresolved_child["next_action"]["operation_invocation"]["arguments"]["item_id"] == "bounded-child"
+    compact_parent = workspace_runtime_startup._compact_task_assignment_disposition(parent_with_unresolved_child)
+    assert compact_parent["outcome"] == "orchestrate-here"
+    assert compact_parent["parent_custody"]["child_execution_authority"] == "separate-binding-decision"
+    assert compact_parent["bounded_child_assignment"]["implementation_allowed"] is False
+    ordinary = workspace_runtime_startup._ordinary_start_decision_payload(
+        selected={
+            "kind": "startup-context/v1",
+            "target": ".",
+            "next_safe_action": {
+                "next_safe_action": "continue-active-plan",
+                "implementation_allowed": True,
+                "read_only_allowed": True,
+                "exploration_allowed": True,
+                "allowed_next_actions": ["continue-active-plan"],
+            },
+            "action_signals": {},
+            "decision_packet": {},
+            "task_assignment_disposition": parent_with_unresolved_child,
+        },
+        source_payload={
+            "route_decision": {},
+            "immediate_next_allowed_action": {},
+            "bounded_external_effect": {},
+            "active_state_summary": {},
+        },
+        cli_invoke="agentic-workspace",
+    )
+    assert ordinary["decision_packet"]["effects"]["implementation_allowed"] is False
+    assert "implement-unresolved-bounded-child-locally" in ordinary["decision_packet"]["effects"]["forbidden_actions"]
+    assert ordinary["decision_packet"]["action"]["id"] == "promote-bounded-child"
+    assert ordinary["decision_packet"]["action"]["operation"]["operation_id"] == "planning.promote-to-plan.lifecycle"
+    assert ordinary["decision_packet"]["effects"]["allowed_next_actions"] == ["promote-bounded-child"]
+    assert ordinary["decision_packet"]["claim_boundary"]["implementation"] == "blocked-until-bounded-child-assignment"
 
     delegated = workspace_runtime_core._task_assignment_disposition_payload(
         assignment_decision={
@@ -18871,9 +18983,14 @@ def test_task_assignment_disposition_distinguishes_deliberate_local_and_external
             "action": "dispatch",
             "operation_invocation": {"operation_id": "assignment.export"},
         },
-        effective_orchestration={"transport": {"effective_mode": "auto"}},
+        effective_orchestration={
+            "assignment": {"execution_role": "orchestrator", "policy": "required-best-fit", "authority": "binding"},
+            "transport": {"effective_mode": "auto"},
+        },
     )
     assert delegated["outcome"] == "delegate-bounded-slice"
+    assert delegated["parent_custody"]["status"] == "retained-current-orchestrator"
+    assert delegated["bounded_child_assignment"]["status"] == "selected-nonlocal"
     assert delegated["next_action"]["operation_invocation"]["operation_id"] == "assignment.export"
     assert delegated["external_receipt"]["required"] is True
 

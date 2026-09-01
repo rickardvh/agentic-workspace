@@ -1164,6 +1164,22 @@ const commandDefinitions = [
           "name": "proof_strategy"
         },
         {
+          "default": "",
+          "flags": [
+            "--bind-execplan"
+          ],
+          "help": "Existing execplan owner to bind atomically as a child of the created or reused lane.",
+          "name": "bind_execplan"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--source-ref"
+          ],
+          "help": "External parent identity recorded on a newly created lane for deterministic reuse.",
+          "name": "source_ref"
+        },
+        {
           "flags": [
             "--target"
           ],
@@ -1615,6 +1631,46 @@ const commandDefinitions = [
           ],
           "help": "Comma-separated proof references for the requested transition.",
           "name": "proof"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--what-happened"
+          ],
+          "help": "Concrete feature-head outcome; required when the owner cannot derive non-placeholder finish-run evidence.",
+          "name": "what_happened"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--scope-touched"
+          ],
+          "help": "Concrete feature-head scope touched; required when the owner cannot derive it.",
+          "name": "scope_touched"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--changed-surfaces"
+          ],
+          "help": "Concrete feature-head changed surfaces; required when the owner cannot derive them.",
+          "name": "changed_surfaces"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--review-summary"
+          ],
+          "help": "Concrete feature-head scope review, or derive it from admitted owner scope.",
+          "name": "review_summary"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--outcome-summary"
+          ],
+          "help": "Concrete delivered outcome, or derive it from admitted owner intent.",
+          "name": "outcome_summary"
         },
         {
           "default": "",
@@ -2354,7 +2410,7 @@ const commandDefinitions = [
           "flags": [
             "--expected-execplan"
           ],
-          "help": "Repo-relative execplan source required for restore/relink reconciliation.",
+          "help": "Repo-relative execplan source: required for relink/supersede, optional for restore, and not used by cancel/human.",
           "name": "expected_execplan"
         },
         {
