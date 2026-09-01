@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import tomllib
 from copy import deepcopy
 from pathlib import Path
 
@@ -640,13 +641,18 @@ def test_real_route_health_signal_executes_registered_owner_operation(tmp_path: 
     )
 
 
-def test_route_health_constructs_bounded_candidate_only_from_safe_refinement_evidence(tmp_path: Path) -> None:
+def test_route_health_constructs_bounded_candidate_only_from_safe_refinement_evidence(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     from agentic_workspace import workspace_runtime_proof
 
     config_path = tmp_path / ".agentic-workspace" / "config.toml"
     config_path.parent.mkdir(parents=True)
     config_path.write_text("schema_version = 1\n", encoding="utf-8")
     changed_paths = ["src/example.py"]
+    test_path = tmp_path / "tests" / "test_example.py"
+    test_path.parent.mkdir(parents=True)
+    test_path.write_text("def test_example():\n    assert True\n", encoding="utf-8")
     common = {
         "command": "make test-workspace",
         "lane": "domain:example",
@@ -677,8 +683,14 @@ def test_route_health_constructs_bounded_candidate_only_from_safe_refinement_evi
             "expected_effect": {"required_coverage": "preserved", "summed_work_seconds": "lower"},
         },
     }
+    focused = {
+        "command": "pytest tests/test_example.py -q",
+        "lane": "domain:example",
+        "route_id": "domain:example",
+        "claim_boundary": "example-owner-claim",
+    }
     health = workspace_runtime_proof._proof_route_health_payload(
-        selected_commands=[common],
+        selected_commands=[common, focused],
         stale_hints=[],
         invalid_hints=[],
         manual_missing=[],
@@ -696,6 +708,46 @@ def test_route_health_constructs_bounded_candidate_only_from_safe_refinement_evi
     assert candidate["status"] == "promotion-ready"
     assert candidate["proposed_delta"]["lane"]["commands"] == ["pytest tests/test_example.py -q"]
     assert candidate["authority_requirement"]["expected_owner_revision"] == finding["route_authority_revision"]
+    assert len([common, focused]) == 2
+    assert candidate["simulation"]["required_behaviors"] == candidate["simulation"]["preserved_behaviors"]
+
+    monkeypatch.setattr(
+        workspace_runtime_proof,
+        "_proof_route_independent_validation_commands",
+        lambda **_: (["python -c \"print('independent ok')\""], "test-independent-validation-owner"),
+    )
+    execution = execute_bounded_adaptation(candidate, target_root=tmp_path)
+    assert execution["status"] == "quiet"
+    assert execution["operation_id"] == "proof.report"
+
+    canonical = tomllib.loads(config_path.read_text(encoding="utf-8"))
+    canonical_lane = canonical["assurance"]["domain_proof_lanes"]["example"]
+    later_commands = [
+        {
+            "command": command,
+            "lane": "domain:example",
+            "route_id": "domain:example",
+            "claim_boundary": "example-owner-claim",
+        }
+        for command in canonical_lane["commands"]
+    ]
+    later_health = workspace_runtime_proof._proof_route_health_payload(
+        selected_commands=later_commands,
+        stale_hints=[],
+        invalid_hints=[],
+        manual_missing=[],
+        changed_paths=changed_paths,
+        target_root=tmp_path,
+        cli_invoke="agentic-workspace",
+        focused_route_coverage_audit={},
+        route_refinement_required={},
+        unavailable_commands=[],
+        proof_execution_evidence={},
+    )
+    assert [item["command"] for item in later_commands] == ["pytest tests/test_example.py -q"]
+    assert len(later_commands) < 2
+    assert not any(item.get("bounded_adaptation_signal") for item in later_health["findings"])
+    assert all(item.get("command") != "make test-workspace" for item in later_commands)
 
     ambiguous = deepcopy(common)
     ambiguous["route_refinement_evidence"] = {"classification": "ambiguous"}
