@@ -23,15 +23,27 @@
     {
       "id": "issue-2926-2928-planning-repairs",
       "title": "Fix parent binding, supersede contracts, current-work continuity, and lane recovery",
-      "status": "planned",
+      "status": "integration-pending",
       "execplan_ref": ".agentic-workspace/planning/execplans/issue-2926-2928-planning-repairs.plan.json",
       "depends_on": [
         "issue-2923-2925-command-evidence-blockers"
       ],
-      "purpose_for_lane": "Implement GitHub #2926, #2927, #2928, and #2938 after the preceding command-evidence slice reaches target integration."
+      "purpose_for_lane": "Implement GitHub #2926, #2927, #2928, and #2938 after the preceding command-evidence slice reaches target integration.",
+      "proof": ".agentic-workspace/verification/proof-decision.json",
+      "residual_after_slice": "Implement #2929-#2930 semantic task-route behavior after this slice reaches target integration."
+    },
+    {
+      "id": "issue-2929-2930-semantic-task-routes",
+      "title": "issue-2929-2930-semantic-task-routes",
+      "status": "planned",
+      "execplan_ref": ".agentic-workspace/planning/execplans/issue-2929-2930-semantic-task-routes.plan.json",
+      "depends_on": [
+        "issue-2926-2928-planning-repairs"
+      ],
+      "purpose_for_lane": "Implement #2929-#2930 semantic task-route behavior after this slice reaches target integration."
     }
   ],
-  "current_slice": "issue-2923-2925-command-evidence-blockers",
+  "current_slice": "issue-2926-2928-planning-repairs",
   "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
   "proof_strategy": "Each child PR proves its issue acceptance criteria; the final stack replays the issue-creation dogfood path.",
   "proof_aggregation": {
@@ -40,17 +52,18 @@
       ".agentic-workspace/verification/proof-decision.json"
     ],
     "known_gaps": [
-      "issue-2923-2925-command-evidence-blockers awaits target integration via .agentic-workspace/planning/integration-proposals/issue-2923-2925-command-evidence-blockers-archive-owner.integration-proposal.json."
+      "issue-2923-2925-command-evidence-blockers awaits target integration via .agentic-workspace/planning/integration-proposals/issue-2923-2925-command-evidence-blockers-archive-owner.integration-proposal.json.",
+      "issue-2926-2928-planning-repairs awaits target integration via .agentic-workspace/planning/integration-proposals/issue-2926-2928-planning-repairs-archive-owner.integration-proposal.json."
     ]
   },
-  "residual_lane_work": "Continue the dogfooding lane with Planning topology and current-work repairs #2926-#2928 after this feature-complete slice reaches target integration.",
+  "residual_lane_work": "Implement #2929-#2930 semantic task-route behavior after this slice reaches target integration.",
   "lane_to_epic_contribution": "not evaluated",
   "parent_close_permission": "do-not-close-parent",
   "closeout_state": {
     "status": "open",
-    "summary": "issue-2923-2925-command-evidence-blockers is feature-complete and awaits target integration proposal issue-2923-2925-command-evidence-blockers-archive-owner.",
-    "residual_work": "Continue the dogfooding lane with Planning topology and current-work repairs #2926-#2928 after this feature-complete slice reaches target integration.",
-    "next_owner": ".agentic-workspace/planning/execplans/issue-2926-2928-planning-repairs.plan.json"
+    "summary": "issue-2926-2928-planning-repairs is feature-complete and awaits target integration proposal issue-2926-2928-planning-repairs-archive-owner.",
+    "residual_work": "Implement #2929-#2930 semantic task-route behavior after this slice reaches target integration.",
+    "next_owner": ".agentic-workspace/planning/execplans/issue-2929-2930-semantic-task-routes.plan.json"
   },
   "references": [],
   "notes": ""

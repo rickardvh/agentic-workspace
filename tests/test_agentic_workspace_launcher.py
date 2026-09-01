@@ -261,6 +261,9 @@ def test_active_no_sync_runtime_identity_is_stable_across_two_checkouts(tmp_path
     _write(checkout_b / "src/agentic_workspace/__init__.py", "")
     _write(
         checkout_b / "src/agentic_workspace/cli.py",
+        "import os\n"
+        "if os.environ.get('AW_TEST_MISSING_RUNTIME_DEPENDENCY') == '1':\n"
+        "    import aw_test_dependency_that_is_not_installed\n"
         "def main(argv=None):\n    print('dispatched:' + str((argv or [''])[0]))\n    return 0\n",
     )
 
@@ -296,7 +299,7 @@ def test_active_no_sync_runtime_identity_is_stable_across_two_checkouts(tmp_path
         "AW_SKIP_GENERATED_CLI_REFRESH": "1",
     }
 
-    def invoke(command: str) -> subprocess.CompletedProcess[str]:
+    def invoke(command: str, *, extra_environment: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             [
                 "uv",
@@ -312,7 +315,7 @@ def test_active_no_sync_runtime_identity_is_stable_across_two_checkouts(tmp_path
                 "json",
             ],
             cwd=checkout_b,
-            env=environment,
+            env={**environment, **(extra_environment or {})},
             capture_output=True,
             text=True,
             check=False,
@@ -327,6 +330,14 @@ def test_active_no_sync_runtime_identity_is_stable_across_two_checkouts(tmp_path
     assert snapshot() == mismatch_before
 
     bind_active_runtime(checkout_b)
+    missing_dependency = invoke("start", extra_environment={"AW_TEST_MISSING_RUNTIME_DEPENDENCY": "1"})
+    assert missing_dependency.returncode == 2
+    recovery = json.loads(missing_dependency.stdout)
+    assert recovery["reason_code"] == "unsynchronized-source-runtime"
+    assert recovery["missing_module"] == "aw_test_dependency_that_is_not_installed"
+    assert recovery["recovery_argv"] == ["uv", "sync", "--frozen", "--project", checkout_b.as_posix()]
+    assert recovery["recovery_command"].startswith("uv sync --frozen --project ")
+
     matching_before = snapshot()
     for command in ("start", "summary", "report", "doctor"):
         result = invoke(command)

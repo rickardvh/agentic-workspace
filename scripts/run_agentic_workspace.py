@@ -475,12 +475,64 @@ def ensure_generated_cli_current(
     return True
 
 
+def _powershell_command(parts: Sequence[str]) -> str:
+    def quote(part: str) -> str:
+        return part if re.fullmatch(r"[A-Za-z0-9_./:-]+", part) else "'" + part.replace("'", "''") + "'"
+
+    return " ".join(quote(part) for part in parts)
+
+
+def _missing_runtime_dependency_result(*, missing_module: str, argv: Sequence[str]) -> int:
+    sync_argv = ["uv", "sync", "--frozen", "--project", REPO_ROOT.as_posix()]
+    retry_argv = [
+        "uv",
+        "run",
+        "--project",
+        REPO_ROOT.as_posix(),
+        "--frozen",
+        "--active",
+        "--no-sync",
+        "python",
+        "scripts/run_agentic_workspace.py",
+        *argv,
+    ]
+    payload = {
+        "kind": "agentic-workspace/source-runtime-recovery/v1",
+        "outcome": "blocked",
+        "reason_code": "unsynchronized-source-runtime",
+        "missing_module": missing_module,
+        "message": "The source-checkout runtime is missing a required dependency; synchronize this checkout before retrying.",
+        "recovery_command": _powershell_command(sync_argv),
+        "recovery_argv": sync_argv,
+        "retry_command": _powershell_command(retry_argv),
+        "retry_argv": retry_argv,
+    }
+    json_requested = any(
+        arg == "--format=json" or (arg == "json" and index > 0 and argv[index - 1] == "--format")
+        for index, arg in enumerate(argv)
+    )
+    if json_requested:
+        print(json.dumps(payload, indent=2))
+    else:
+        print(payload["message"], file=sys.stderr)
+        print(f"Missing module: {missing_module}", file=sys.stderr)
+        print(f"Recovery: {payload['recovery_command']}", file=sys.stderr)
+        print(f"Retry: {payload['retry_command']}", file=sys.stderr)
+    return 2
+
+
 def _dispatch_to_source_cli(argv: Sequence[str]) -> int:
     source_root = REPO_ROOT / "src"
     for path in (str(source_root), str(REPO_ROOT)):
         if path not in sys.path:
             sys.path.insert(0, path)
-    from agentic_workspace.cli import main as cli_main
+    try:
+        from agentic_workspace.cli import main as cli_main
+    except ModuleNotFoundError as exc:
+        missing_module = str(exc.name or "").strip()
+        if not missing_module or missing_module == "agentic_workspace" or missing_module.startswith("agentic_workspace."):
+            raise
+        return _missing_runtime_dependency_result(missing_module=missing_module, argv=argv)
 
     return int(cli_main(list(argv)))
 
