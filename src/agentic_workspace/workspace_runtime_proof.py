@@ -3604,6 +3604,12 @@ def _repo_evidence_strategy_payload(
             "advisory_preferences": [],
             "construction": {"status": "not-applicable", "effects": [], "owner_decisions": []},
             "selected_command_count": 0,
+            "footprint": {
+                "first_line_cost": "none",
+                "mandatory_command_count": 0,
+                "durable_receipt_required": False,
+                "strategy_packet_required_to_act": False,
+            },
             "rule": "No applicable named evidence-strategy requirement means no portable testing methodology is imposed.",
         }
     evidence_status_by_id = {
