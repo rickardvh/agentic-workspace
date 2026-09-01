@@ -101,6 +101,8 @@ SUPPORTED_ADVANCED_FEATURES = (
 )
 DEFAULT_MAINTAINER_MODE = False
 DEFAULT_CLI_INVOKE = "agentic-workspace"
+DELEGATION_LEGACY_COMPATIBILITY_REMOVAL_VERSION = "1.0.0"
+DELEGATION_LEGACY_COMPATIBILITY_POLICY = "remove-on-or-before-declared-major"
 DEFAULT_ASSURANCE_LEVEL = "low"
 SUPPORTED_ASSURANCE_LEVELS = ("low", "medium", "high", "critical")
 SUPPORTED_WORKFLOW_OBLIGATION_STAGES = (
@@ -1951,6 +1953,26 @@ def load_delegation_target_profiles(
             warnings.append(
                 f"{target_path.as_posix()} escalation_target is an ignored compatibility alias; assignment_policy best-fit ranking owns target selection."
             )
+        legacy_target_fields = sorted(
+            set(raw_profile)
+            & {
+                "execution_methods",
+                "dispatch_adapter_kind",
+                "dispatch_command",
+                "dispatch_output_mode",
+                "dispatch_timeout_seconds",
+                "escalation_target",
+                "reasoning_profile",
+                "safe_task_classes",
+                "human_control_modes",
+            }
+        )
+        if legacy_target_fields:
+            warnings.append(
+                "delegation-target-legacy-authoring/v1: "
+                f"{target_path.as_posix()} compatibility-only field(s) {', '.join(legacy_target_fields)} are deprecated and "
+                f"scheduled for removal by {DELEGATION_LEGACY_COMPATIBILITY_REMOVAL_VERSION}; migrate to transports and canonical target facts."
+            )
 
         strength = raw_profile.get("strength")
         if not isinstance(strength, str) or strength not in SUPPORTED_DELEGATION_TARGET_STRENGTHS:
@@ -3093,6 +3115,32 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
         raw_delegation = {}
     if not isinstance(raw_delegation, dict):
         raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [delegation] section must be a table.")
+    legacy_delegation_fields = sorted(
+        field
+        for field in {
+            "mode",
+            "execution_role",
+            "selection_objective",
+            "underfit_behavior",
+            "down_routing_behavior",
+            "manual_transport_policy",
+        }
+        if field in raw_delegation
+    )
+    legacy_delegation_fields.extend(
+        field
+        for field, present in (
+            ("runtime.cheap_bounded_executor_available", "cheap_bounded_executor_available" in raw_runtime),
+            ("handoff.prefer_internal_delegation_when_available", "prefer_internal_delegation_when_available" in raw_handoff),
+        )
+        if present
+    )
+    if legacy_delegation_fields:
+        warnings.append(
+            "delegation-legacy-authoring/v1: compatibility-only field(s) "
+            f"{', '.join(legacy_delegation_fields)} are deprecated and scheduled for removal by "
+            f"{DELEGATION_LEGACY_COMPATIBILITY_REMOVAL_VERSION}; migrate to canonical assignment/transport/override fields."
+        )
     unknown_delegation = sorted(
         set(raw_delegation)
         - {

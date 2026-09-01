@@ -3,6 +3,13 @@
   "$id": "agentic-workspace/workspace-local-override.schema.json",
   "title": "Agentic Workspace Local Mixed-Agent Override",
   "description": "Machine-local override schema for invocation preferences, delegation capabilities, safety posture, and local memory.",
+  "x-delegation-compatibility-lifecycle": {
+    "kind": "agentic-workspace/delegation-compatibility-lifecycle/v1",
+    "status": "deprecated-removal-scheduled",
+    "removal_version": "1.0.0",
+    "policy": "remove-on-or-before-declared-major",
+    "canonical_precedence": "canonical fields win without pairwise reconciliation"
+  },
   "type": "object",
   "required": [
     "schema_version"
@@ -50,7 +57,9 @@
         },
         "cheap_bounded_executor_available": {
           "type": "boolean",
-          "description": "Whether this local environment has a lower-cost executor suitable for bounded implementation when quality is not compromised."
+          "deprecated": true,
+          "x-removal-version": "1.0.0",
+          "description": "Deprecated compatibility summary scheduled for removal by 1.0.0. Canonical target capability, cost, and transport readiness derive availability."
         }
       },
       "additionalProperties": false,
@@ -61,7 +70,9 @@
       "properties": {
         "prefer_internal_delegation_when_available": {
           "type": "boolean",
-          "description": "Prefer an in-session or same-runtime handoff when it is available and safe, instead of preparing an external handoff."
+          "deprecated": true,
+          "x-removal-version": "1.0.0",
+          "description": "Deprecated compatibility preference scheduled for removal by 1.0.0. Canonical constructible transports own transport ranking."
         }
       },
       "additionalProperties": false,
@@ -94,7 +105,9 @@
             "auto"
           ],
           "default": "suggest",
-          "description": "Local control mode for delegation: disable target recommendations, prepare manual handoff prompts, suggest targets without execution, or allow automatic delegation only when safety settings permit it."
+          "deprecated": true,
+          "x-removal-version": "1.0.0",
+          "description": "Deprecated compatibility control scheduled for removal by 1.0.0. Use delegation.transport_authority for execution authority."
         },
         "execution_role": {
           "type": "string",
@@ -104,7 +117,9 @@
             "bounded-worker"
           ],
           "default": "ordinary-executor",
-          "description": "Role of the current runtime in assignment decisions. This is separate from how a selected delegation handoff is executed."
+          "deprecated": true,
+          "x-removal-version": "1.0.0",
+          "description": "Deprecated compatibility role scheduled for removal by 1.0.0. Execution role derives from delegation.assignment_policy."
         },
         "assignment_policy": {
           "type": "string",
@@ -128,7 +143,9 @@
         "selection_objective": {
           "type": "string",
           "minLength": 1,
-          "description": "Human-readable objective for assignment selection, such as minimizing expected total successful-completion cost while preserving quality and proof."
+          "deprecated": true,
+          "x-removal-version": "1.0.0",
+          "description": "Deprecated compatibility objective scheduled for removal by 1.0.0. Canonical best fit ranks safety, capability, quality, and proof before total successful-completion cost."
         },
         "current_target": {
           "type": "string",
@@ -143,7 +160,9 @@
             "require-delegation"
           ],
           "default": "stay-when-safe",
-          "description": "What the current runtime should do when it appears underfit for the selected task class."
+          "deprecated": true,
+          "x-removal-version": "1.0.0",
+          "description": "Deprecated compatibility behavior scheduled for removal by 1.0.0. It derives from delegation.assignment_policy."
         },
         "down_routing_behavior": {
           "type": "string",
@@ -153,7 +172,9 @@
             "when-cheaper-safe-target-exists"
           ],
           "default": "never",
-          "description": "Whether a capable orchestrator should route bounded mechanical work to a cheaper safe target."
+          "deprecated": true,
+          "x-removal-version": "1.0.0",
+          "description": "Deprecated compatibility behavior scheduled for removal by 1.0.0. It derives from delegation.assignment_policy."
         },
         "human_override_policy": {
           "type": "string",
@@ -173,7 +194,9 @@
             "required-when-no-automatic-method"
           ],
           "default": "allowed",
-          "description": "Whether a human may carry a prepared assignment packet when no automatic execution method is available."
+          "deprecated": true,
+          "x-removal-version": "1.0.0",
+          "description": "Deprecated compatibility policy scheduled for removal by 1.0.0. Manual fallback derives from delegation.transport_authority."
         }
       },
       "additionalProperties": false,
@@ -440,6 +463,8 @@
             "execution_methods": {
               "type": "array",
               "minItems": 1,
+              "deprecated": true,
+              "x-removal-version": "1.0.0",
               "items": {
                 "type": "string",
                 "enum": [
@@ -505,6 +530,8 @@
             },
             "dispatch_adapter_kind": {
               "type": "string",
+              "deprecated": true,
+              "x-removal-version": "1.0.0",
               "enum": [
                 "process",
                 "host-native"
@@ -514,6 +541,8 @@
             "dispatch_command": {
               "type": "array",
               "minItems": 1,
+              "deprecated": true,
+              "x-removal-version": "1.0.0",
               "items": {
                 "type": "string",
                 "minLength": 1
@@ -522,6 +551,8 @@
             },
             "dispatch_output_mode": {
               "type": "string",
+              "deprecated": true,
+              "x-removal-version": "1.0.0",
               "enum": [
                 "stdout",
                 "json-file"
@@ -531,6 +562,8 @@
             },
             "dispatch_timeout_seconds": {
               "type": "integer",
+              "deprecated": true,
+              "x-removal-version": "1.0.0",
               "minimum": 1,
               "default": 1800,
               "description": "Maximum configured adapter execution time in seconds."
@@ -548,6 +581,8 @@
             },
             "reasoning_profile": {
               "type": "string",
+              "deprecated": true,
+              "x-removal-version": "1.0.0",
               "enum": [
                 "weak",
                 "balanced",
@@ -581,6 +616,8 @@
             },
             "safe_task_classes": {
               "type": "array",
+              "deprecated": true,
+              "x-removal-version": "1.0.0",
               "items": {
                 "type": "string",
                 "enum": [
@@ -609,6 +646,7 @@
               "type": "string",
               "minLength": 1,
               "deprecated": true,
+              "x-removal-version": "1.0.0",
               "description": "Ignored compatibility alias. Canonical assignment-policy best-fit ranking owns target selection and escalation."
             },
             "confidence_source": {
@@ -623,6 +661,8 @@
             },
             "human_control_modes": {
               "type": "array",
+              "deprecated": true,
+              "x-removal-version": "1.0.0",
               "items": {
                 "type": "string",
                 "enum": [

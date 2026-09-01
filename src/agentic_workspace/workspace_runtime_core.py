@@ -56,6 +56,8 @@ from agentic_workspace.config import (
     DEFAULT_IMPROVEMENT_LATITUDE,
     DEFAULT_OPTIMIZATION_BIAS,
     DEFAULT_WORKFLOW_ARTIFACT_PROFILE,
+    DELEGATION_LEGACY_COMPATIBILITY_POLICY,
+    DELEGATION_LEGACY_COMPATIBILITY_REMOVAL_VERSION,
     DELEGATION_OUTCOMES_KIND,
     MEMORY_POINTER_BLOCK,
     MEMORY_WORKFLOW_MARKER_END,
@@ -43424,6 +43426,14 @@ def _assignment_policy_payload(local_override: MixedAgentLocalOverride, profile_
                 "delegation_targets.<target>.dispatch_timeout_seconds",
                 "delegation_targets.<target>.escalation_target",
             ],
+            "lifecycle": {
+                "kind": "agentic-workspace/delegation-compatibility-lifecycle/v1",
+                "status": "deprecated-removal-scheduled",
+                "policy": DELEGATION_LEGACY_COMPATIBILITY_POLICY,
+                "removal_version": DELEGATION_LEGACY_COMPATIBILITY_REMOVAL_VERSION,
+                "legacy_authoring_permitted_until_removal": True,
+                "canonical_precedence": "canonical fields win without pairwise reconciliation",
+            },
         },
     }
 
@@ -43517,6 +43527,16 @@ def _effective_orchestration_posture_payload(
         summary = "Ordinary direct execution is active; best-fit assignment and automatic delegation transport are not binding."
         decisive_reasons = [f"assignment_policy={policy}", f"delegation_mode={effective_mode}"]
 
+    repair = (
+        {
+            "status": "required",
+            "owner": ".agentic-workspace/config.local.toml",
+            "field": f"delegation_targets.{current_target}.transports",
+            "action": "configure one constructible internal, process, API, or manual transport variant",
+        }
+        if status == "binding-active-transport-unavailable"
+        else {"status": "not-required"}
+    )
     return {
         "kind": "agentic-workspace/effective-orchestration-posture/v1",
         "status": status,
@@ -43543,6 +43563,7 @@ def _effective_orchestration_posture_payload(
             "authority": "explicit human instruction remains highest priority",
         },
         "decisive_reasons": decisive_reasons,
+        "repair": repair,
         "change_route": {
             "owner": ".agentic-workspace/config.local.toml",
             "detail_command": (
@@ -61533,6 +61554,12 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
                 "delegation_targets.<target>.safe_task_classes",
                 "delegation_targets.<target>.human_control_modes",
             ],
+            "compatibility_lifecycle": {
+                "kind": "agentic-workspace/delegation-compatibility-lifecycle/v1",
+                "status": "deprecated-removal-scheduled",
+                "policy": DELEGATION_LEGACY_COMPATIBILITY_POLICY,
+                "removal_version": DELEGATION_LEGACY_COMPATIBILITY_REMOVAL_VERSION,
+            },
             "supported_transport_kinds": ["internal", "process", "api", "manual"],
             "supported_strengths": list(SUPPORTED_DELEGATION_TARGET_STRENGTHS),
             "supported_locations": list(SUPPORTED_CAPABILITY_LOCATIONS),

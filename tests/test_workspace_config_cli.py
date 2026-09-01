@@ -185,6 +185,9 @@ transports = [
     assert profile.escalation_target is None
     assert any("canonical transports override legacy" in warning for warning in config.warnings)
     assert any("escalation_target is an ignored compatibility alias" in warning for warning in config.warnings)
+    lifecycle_warnings = [warning for warning in config.warnings if warning.startswith("delegation-target-legacy-authoring/v1:")]
+    assert len(lifecycle_warnings) == 1
+    assert "scheduled for removal by 1.0.0" in lifecycle_warnings[0]
 
     mixed = workspace_runtime_core._mixed_agent_payload(config=config)
     projected = mixed["delegation_targets"]["profiles"][0]
@@ -196,6 +199,14 @@ transports = [
     ]
     assert mixed["effective_orchestration"]["current_target"]["automatic_methods"] == ["api", "cli", "internal"]
     assert "escalation_target" not in projected
+    assert mixed["assignment_policy"]["migration"]["lifecycle"] == {
+        "kind": "agentic-workspace/delegation-compatibility-lifecycle/v1",
+        "status": "deprecated-removal-scheduled",
+        "policy": "remove-on-or-before-declared-major",
+        "removal_version": "1.0.0",
+        "legacy_authoring_permitted_until_removal": True,
+        "canonical_precedence": "canonical fields win without pairwise reconciliation",
+    }
 
 
 def test_canonical_process_transport_requires_its_own_payload(tmp_path: Path) -> None:
@@ -237,6 +248,137 @@ execution_methods = ["cli"]
     mixed = workspace_runtime_core._mixed_agent_payload(config=config)
     assert mixed["effective_orchestration"]["status"] == "binding-active-transport-unavailable"
     assert mixed["effective_orchestration"]["current_target"]["automatic_methods"] == []
+    assert mixed["effective_orchestration"]["repair"] == {
+        "status": "required",
+        "owner": ".agentic-workspace/config.local.toml",
+        "field": "delegation_targets.worker.transports",
+        "action": "configure one constructible internal, process, API, or manual transport variant",
+    }
+    lifecycle_warnings = [warning for warning in config.warnings if warning.startswith("delegation-target-legacy-authoring/v1:")]
+    assert len(lifecycle_warnings) == 1
+    assert "execution_methods" in lifecycle_warnings[0]
+
+
+@pytest.mark.parametrize(
+    ("assignment_policy", "transport_authority", "human_override_policy", "transport_kind", "expected_status"),
+    [
+        ("local-preferred", "manual", "explicit-only", "manual", "direct-local"),
+        ("best-fit-advisory", "manual", "explicit-only", "manual", "advisory-best-fit"),
+        ("required-best-fit", "automatic", "explicit-only", "internal", "binding-active"),
+        ("required-best-fit", "manual", "explicit-only", "manual", "binding-active-transport-unavailable"),
+        ("required-best-fit", "automatic", "explicit-only", "manual", "binding-active-transport-unavailable"),
+        ("required-best-fit", "automatic", "allowed-with-recorded-reason", "internal", "binding-active"),
+    ],
+)
+def test_public_effective_orchestration_matrix_exposes_only_canonical_acting_state(
+    tmp_path: Path,
+    assignment_policy: str,
+    transport_authority: str,
+    human_override_policy: str,
+    transport_kind: str,
+    expected_status: str,
+) -> None:
+    from agentic_workspace.workspace_runtime_startup import _compact_start_effective_orchestration
+
+    target = tmp_path / f"repo-{assignment_policy}-{transport_authority}-{human_override_policy}-{transport_kind}"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(
+        target / ".agentic-workspace/config.local.toml",
+        f"""
+schema_version = 1
+
+[runtime]
+supports_internal_delegation = true
+
+[safety]
+safe_to_auto_run_commands = true
+
+[delegation]
+assignment_policy = "{assignment_policy}"
+transport_authority = "{transport_authority}"
+human_override_policy = "{human_override_policy}"
+current_target = "worker"
+
+[delegation_targets.worker]
+strength = "strong"
+capability_classes = ["boundary-shaping", "reasoning-heavy", "mixed", "mechanical-follow-through"]
+transports = [{{ kind = "{transport_kind}" }}]
+""",
+    )
+
+    mixed = workspace_runtime_core._mixed_agent_payload(config=cli._load_workspace_config(target_root=target))
+    posture = mixed["effective_orchestration"]
+    startup = _compact_start_effective_orchestration(posture)
+    assert posture["status"] == expected_status
+    assert startup["assignment"]["policy"] == assignment_policy
+    assert startup["transport"]["authority"] == transport_authority
+    assert startup["human_override"]["policy"] == human_override_policy
+    assert startup["provenance"]["execution_role"] == "derived:delegation.assignment_policy"
+    assert startup["repair"] == posture["repair"]
+    assert "underfit_behavior" not in json.dumps(startup)
+    assert "down_routing_behavior" not in json.dumps(startup)
+    assert "execution_methods" not in json.dumps(startup)
+    assert "escalation_target" not in json.dumps(startup)
+
+
+def test_fresh_process_start_reconstructs_binding_automatic_canonical_policy_without_second_permission(tmp_path: Path) -> None:
+    import os
+    import subprocess
+    import sys
+
+    target = tmp_path / "fresh-session-repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(
+        target / ".agentic-workspace/config.local.toml",
+        """
+schema_version = 1
+
+[runtime]
+supports_internal_delegation = true
+
+[safety]
+safe_to_auto_run_commands = true
+
+[delegation]
+assignment_policy = "required-best-fit"
+transport_authority = "automatic"
+human_override_policy = "explicit-only"
+current_target = "worker"
+
+[delegation_targets.worker]
+strength = "strong"
+capability_classes = ["boundary-shaping", "reasoning-heavy", "mixed", "mechanical-follow-through"]
+transports = [{ kind = "internal" }]
+""",
+    )
+    source_root = Path(__file__).resolve().parents[1] / "src"
+    environment = os.environ.copy()
+    environment["PYTHONPATH"] = os.pathsep.join([str(source_root), environment.get("PYTHONPATH", "")]).rstrip(os.pathsep)
+    code = (
+        "from agentic_workspace import cli; import sys; "
+        "raise SystemExit(cli.main(['start','--target',sys.argv[1],'--task','fresh canonical delegation','--format','json']))"
+    )
+    payloads = []
+    for _ in range(2):
+        completed = subprocess.run(
+            [sys.executable, "-c", code, str(target)],
+            check=True,
+            capture_output=True,
+            text=True,
+            env=environment,
+        )
+        payloads.append(json.loads(completed.stdout))
+    first = payloads[0]["effective_orchestration"]
+    second = payloads[1]["effective_orchestration"]
+    assert first == second
+    assert first["status"] == "binding-active"
+    assert first["assignment"] == {"execution_role": "orchestrator", "policy": "required-best-fit", "authority": "binding"}
+    assert first["transport"]["authority"] == "automatic"
+    assert first["transport"]["execution_permitted"] is True
+    assert first["current_target"]["automatic_methods"] == ["internal"]
+    assert first["repair"] == {"status": "not-required"}
 
 
 def test_config_rejects_overlapping_assurance_level_owners_with_structural_repair(tmp_path: Path) -> None:
