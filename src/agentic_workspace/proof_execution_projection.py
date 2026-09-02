@@ -128,6 +128,7 @@ def proof_execution_result_payload(
         )
     passed_count = sum(record_by_command.get(command, {}).get("status") == "passed" for command in required_commands)
     failure_records = [item for item in command_records if item.get("status") in {"failed", "timeout", "cancelled", "admission-rejected"}]
+    completed_failures = [item for item in failure_records if item.get("status") == "failed"]
     commands_complete = bool(required_commands) and passed_count == len(required_commands)
     aggregate_receipt = _as_dict(run.get("aggregate_receipt"))
     aggregate_admission = _as_dict(aggregate_receipt.get("admission"))
@@ -191,6 +192,16 @@ def proof_execution_result_payload(
         }
         if commands_complete and selection_blockers
         else {
+            "action": "diagnose-failed-proof",
+            "command": "agentic-workspace proof --target . --changed <paths> --format json",
+            "reason": "completed-command-failure",
+            "revalidation_command": (
+                "agentic-workspace proof --target . --changed <paths> --execute-selected --proof-run-id <new-run-id> --format json"
+            ),
+            "rule": "A completed failing command remains immutable in this run; diagnose or fix it, then revalidate under a new run identity.",
+        }
+        if completed_failures
+        else {
             "action": "resume-selected-proof",
             "command": f"agentic-workspace proof --target . --changed <paths> --execute-selected --proof-run-id {run['run_id']} --format json",
         }
@@ -199,7 +210,7 @@ def proof_execution_result_payload(
         "kind": "agentic-workspace/proof-execution-result/v1",
         "exit_status": exit_status,
         "exit_class": "success" if process_success else "proof-incomplete-or-failed",
-        "safe_to_retry": not process_success,
+        "safe_to_retry": not process_success and not completed_failures,
         "mutation_occurred": status != "dry-run" and bool(command_records or aggregate_receipt),
         "status": "completed-with-unresolved-obligations" if commands_complete and selection_blockers else status,
         "outcome": "passed"
@@ -243,6 +254,7 @@ def proof_execution_result_payload(
             "command_receipts": [str(item.get("receipt_ref") or "") for item in command_records],
             "aggregate_receipt": str(aggregate_receipt.get("receipt_ref") or ""),
             "resume": next_action.get("command"),
+            "revalidation": next_action.get("revalidation_command"),
         },
         "persistence": {
             "owner": ".agentic-workspace/local/proof-receipts/runs",

@@ -8,6 +8,7 @@ RUN apt-get update \
     && python3 -m pip install --break-system-packages --no-cache-dir jsonschema "command-generation @ git+https://github.com/rickardvh/command-generation.git@ac1b9c00bf41352010929de196e7d45e20014615"
 
 COPY pyproject.toml ./pyproject.toml
+COPY README.md ./README.md
 COPY uv.lock ./uv.lock
 COPY LICENSE ./LICENSE
 COPY tests/test_workspace_packaging.py ./tests/test_workspace_packaging.py
@@ -21,7 +22,10 @@ COPY packages ./packages
 COPY generated ./generated
 COPY .github/release-ownership.json ./.github/release-ownership.json
 
-ENV PYTHONPATH=/work:/work/src:/work/packages/planning/src:/work/packages/memory/src
+RUN python3 -m pip install --break-system-packages --no-cache-dir --no-deps \
+    ./packages/planning ./packages/memory ./packages/verification .
+
+ENV PYTHONPATH=/work:/work/src:/work/packages/planning/src:/work/packages/memory/src:/work/packages/verification/src
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV AGENTIC_GENERATED_CONFORMANCE_CONTAINER=typescript
 

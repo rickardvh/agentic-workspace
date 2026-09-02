@@ -787,6 +787,10 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             },
         }
         packet["worker_context"] = _assignment_worker_context(packet)
+        transport = _optional_text(values.get("transport")) or "manual"
+        dispatch_configuration = _assignment_dispatch_configuration(identity=identity, transport=transport)
+        if transition == "dispatch" and dispatch_configuration["kind"] == "host-native" and not dispatch_configuration["command"]:
+            packet = _assignment_seal_host_native_packet(packet)
         packet_path = artifact("export/packet.json")
         prompt_path = artifact("export/prompt.md")
         manifest_path = artifact("export/manifest.json")
@@ -798,11 +802,10 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             "run_id": run_id,
             "packet_ref": _assignment_relative(packet_path, root=target_root),
             "prompt_ref": _assignment_relative(prompt_path, root=target_root),
-            "integrity": _assignment_digest(packet),
+            "integrity": _optional_text(packet.get("packet_integrity")) or _assignment_digest(packet),
             "worker_context_integrity": _assignment_digest(packet["worker_context"]),
         }
         artifact_paths.extend([packet_path, prompt_path, manifest_path])
-        transport = _optional_text(values.get("transport")) or "manual"
         if transition == "dispatch" and transport == "manual":
             failures.append(
                 {
@@ -1152,7 +1155,7 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
         if admitted and patch_text and not dry_run and not failures:
             integration_patch_path = artifact("integration/returned.patch")
             integration_patch_path.parent.mkdir(parents=True, exist_ok=True)
-            integration_patch_path.write_bytes(patch_text.encode("utf-8"))
+            integration_patch_path.write_bytes(_normalize_assignment_patch_transport(patch_text).encode("utf-8"))
             artifact_paths.append(integration_patch_path)
             already_materialized = delivery_mode == "already-materialized"
             apply_patch: subprocess.CompletedProcess[bytes] | None = None
@@ -1342,12 +1345,30 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
                 )
             expected_paths = set(_assignment_list(_assignment_mapping(planning_assignment.get("assignment_gate")).get("allowed_paths")))
             proved_paths = set(_assignment_list(task_proof.get("changed_paths")))
-            if not expected_paths or not expected_paths.issubset(proved_paths):
+            proof_subject = _assignment_mapping(task_proof.get("proof_subject"))
+            try:
+                integration_receipt = _assignment_mapping(json.loads(artifact("integration/integration.json").read_text(encoding="utf-8")))
+            except (OSError, json.JSONDecodeError):
+                integration_receipt = {}
+            integrated_paths = set(_assignment_list(integration_receipt.get("changed_paths")))
+            integration_current = (
+                integration_receipt.get("kind") == "agentic-workspace/assignment-integration-receipt/v1"
+                and integration_receipt.get("status") == "integrated"
+                and _optional_text(integration_receipt.get("run_id")) == run_id
+            )
+            if (
+                not expected_paths
+                or not proved_paths
+                or not integration_current
+                or proof_subject.get("identity_complete") is not True
+                or any(not _assignment_path_allowed(path, expected_paths) for path in proved_paths)
+                or not integrated_paths.issubset(proved_paths)
+            ):
                 failures.append(
                     {
                         "reason": "assignment-proof-scope-mismatch",
                         "field": "task_proof_receipt_ref.changed_paths",
-                        "recovery": "Record proof covering every allowed path in the integrated assignment.",
+                        "recovery": "Record complete proof for every concrete integrated path within the assignment's allowed scope.",
                     }
                 )
             if planning_assignment and not failures:
@@ -1937,7 +1958,7 @@ def _assignment_admit_with_current_authority(*, current_authorities: Mapping[str
             }
         )
     allowed_paths = set(_assignment_list(identity.get("allowed_paths")))
-    if patch_paths and any(path not in allowed_paths for path in patch_paths):
+    if patch_paths and any(not _assignment_path_allowed(path, allowed_paths) for path in patch_paths):
         failures.append(
             {
                 "reason": "returned-patch-outside-assignment-scope",
@@ -1955,7 +1976,7 @@ def _assignment_admit_with_current_authority(*, current_authorities: Mapping[str
             }
         )
     for changed_path in changed_paths:
-        if changed_path not in allowed_paths:
+        if not _assignment_path_allowed(changed_path, allowed_paths):
             failures.append(
                 {
                     "reason": "scope-escape",
@@ -1979,6 +2000,44 @@ def _assignment_admit_with_current_authority(*, current_authorities: Mapping[str
         },
         "rule": "Returned delegated work is executable only after AW re-resolves current assignment/run identity, transport authority, canonical scope, AW-owned proof, stop conditions, and baseline immediately before admission.",
     }
+
+
+def _assignment_path_allowed(path: str, allowed_paths: set[str]) -> bool:
+    normalized = _assignment_canonical_relative_path(path)
+    if not normalized:
+        return False
+    for raw_pattern in allowed_paths:
+        pattern = _assignment_canonical_relative_path(raw_pattern)
+        if not pattern:
+            continue
+        if normalized == pattern:
+            return True
+        expression: list[str] = []
+        offset = 0
+        while offset < len(pattern):
+            character = pattern[offset]
+            if character == "*" and offset + 1 < len(pattern) and pattern[offset + 1] == "*":
+                expression.append(".*")
+                offset += 2
+                continue
+            expression.append("[^/]*" if character == "*" else "[^/]" if character == "?" else re.escape(character))
+            offset += 1
+        if re.fullmatch("".join(expression), normalized):
+            return True
+    return False
+
+
+def _assignment_canonical_relative_path(value: object) -> str:
+    normalized = str(value or "").replace("\\", "/")
+    if (
+        not normalized
+        or normalized.startswith("/")
+        or re.match(r"^[A-Za-z]:", normalized)
+        or "\x00" in normalized
+        or any(part in {"", ".", ".."} for part in normalized.split("/"))
+    ):
+        return ""
+    return normalized
 
 
 def _assignment_mapping(value: Any) -> dict[str, Any]:
@@ -2127,13 +2186,31 @@ def _write_assignment_artifact(*, path: Path, payload: Any) -> None:
 def _assignment_export_prompt(packet: Any) -> str:
     packet_mapping = _assignment_mapping(packet)
     worker_context = _assignment_mapping(packet_mapping.get("worker_context")) or _assignment_worker_context(packet_mapping)
+    delivery_mode = (
+        _optional_text(
+            _assignment_mapping(_assignment_mapping(worker_context.get("return_contract")).get("result_delivery")).get("default")
+        )
+        or "unapplied-patch"
+    )
+    delivery_instruction = (
+        "The selected result delivery mode is `already-materialized`: edit only the assigned shared worktree paths, and return the exact baseline-relative unified diff plus its sealed mutation baseline."
+        if delivery_mode == "already-materialized"
+        else "The selected result delivery mode is `unapplied-patch`: do not edit the target checkout; return the proposed unified diff in a `patch` field."
+    )
+    required_identity = _assignment_mapping(_assignment_mapping(worker_context.get("return_contract")).get("required_identity"))
+    identity_instruction = (
+        "Copy every value in `return_contract.required_identity` exactly and include the selected `result_delivery` mode."
+        if required_identity
+        else "Return every field named by `return_contract.required_fields` and include the selected `result_delivery` mode."
+    )
     return "\n".join(
         [
             "You are receiving a bounded Agentic Workspace worker context.",
             "Use only the intent, scope, effects, inputs, proof burden, stop conditions, authority limits, and return contract below.",
             "Acquire deeper repository context only through the listed read-first references; omitted parent conversation and broad workspace state are not part of this assignment.",
             "Return a structured result for `agentic-workspace assignment import`; do not claim AW proof or integration.",
-            "Do not edit the host checkout. For repo-write assignments, return the proposed unified diff in a `patch` field.",
+            delivery_instruction,
+            identity_instruction,
             "The patch must be a complete git-compatible unified diff beginning with `diff --git`; generate or verify it with diff tooling so hunk counts are exact, and never use apply_patch markers, ellipses, placeholder `@@` markers, or omitted context.",
             "",
             "```json",
@@ -2189,6 +2266,67 @@ def _assignment_worker_context(packet: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _assignment_dispatch_configuration(*, identity: Mapping[str, Any], transport: str) -> dict[str, Any]:
+    adapter = _assignment_mapping(identity.get("dispatch_adapter"))
+    variants = [item for item in adapter.get("transports", []) if isinstance(item, Mapping)]
+    selected = next((item for item in variants if _optional_text(item.get("method")) == transport), None)
+    selected_mapping = _assignment_mapping(selected)
+    variant_kind = _optional_text(selected_mapping.get("kind"))
+    kind = (
+        "process"
+        if variant_kind in {"process", "api"}
+        else "host-native"
+        if variant_kind == "internal"
+        else _optional_text(adapter.get("kind"))
+    )
+    return {
+        "admitted": transport in set(_assignment_list(adapter.get("execution_methods"))),
+        "kind": kind,
+        "command": (
+            _assignment_list(selected_mapping.get("command")) if selected is not None else _assignment_list(adapter.get("command"))
+        ),
+        "output_mode": _optional_text(selected_mapping.get("output_mode")) or _optional_text(adapter.get("output_mode")) or "stdout",
+        "timeout_seconds": selected_mapping.get("timeout_seconds", adapter.get("timeout_seconds", 1800)),
+        "adapter": adapter,
+    }
+
+
+def _assignment_packet_integrity(packet: Mapping[str, Any]) -> str:
+    subject = json.loads(json.dumps(packet, default=str))
+    subject["packet_integrity"] = ""
+    for contract in (
+        _assignment_mapping(subject.get("return_contract")),
+        _assignment_mapping(_assignment_mapping(subject.get("worker_context")).get("return_contract")),
+    ):
+        if isinstance(contract.get("required_identity"), dict):
+            contract["required_identity"]["packet_integrity"] = ""
+    return _assignment_digest(subject)
+
+
+def _assignment_seal_host_native_packet(packet: Mapping[str, Any]) -> dict[str, Any]:
+    sealed = json.loads(json.dumps(packet, default=str))
+    return_contract = _assignment_mapping(sealed.get("return_contract"))
+    return_contract["required_fields"] = list(
+        dict.fromkeys([*_assignment_list(return_contract.get("required_fields")), "assignment_id", "packet_integrity", "result_delivery"])
+    )
+    return_contract["required_identity"] = {
+        "assignment_id": sealed.get("assignment_id"),
+        "assignment_revision": sealed.get("assignment_revision"),
+        "run_id": sealed.get("run_id"),
+        "target": sealed.get("target"),
+        "packet_integrity": "",
+    }
+    sealed["return_contract"] = return_contract
+    sealed["worker_context"] = _assignment_worker_context(sealed)
+    integrity = _assignment_packet_integrity(sealed)
+    sealed["packet_integrity"] = integrity
+    sealed["return_contract"]["required_identity"]["packet_integrity"] = integrity
+    sealed["worker_context"] = _assignment_worker_context(sealed)
+    if _assignment_packet_integrity(sealed) != integrity:
+        raise PrimitiveExecutionError("host-native assignment packet integrity did not stabilize")
+    return sealed
+
+
 def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, target_root: Path, transport: str) -> dict[str, Any]:
     """Execute a sealed packet through its configured adapter command.
 
@@ -2197,26 +2335,13 @@ def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, targe
     """
 
     identity = _assignment_mapping(packet.get("assignment_identity"))
-    adapter = _assignment_mapping(identity.get("dispatch_adapter"))
-    raw_variants = adapter.get("transports")
-    variants = (
-        [item for item in raw_variants if isinstance(item, Mapping)]
-        if isinstance(raw_variants, Sequence) and not isinstance(raw_variants, (str, bytes))
-        else []
-    )
-    selected_variant = next((item for item in variants if _optional_text(item.get("method")) == transport), None)
-    adapter_kind = _optional_text(adapter.get("kind"))
-    command_template = _assignment_list(adapter.get("command"))
-    output_mode = _optional_text(adapter.get("output_mode")) or "stdout"
-    timeout_seconds = adapter.get("timeout_seconds", 1800)
-    if selected_variant is not None:
-        variant_kind = _optional_text(selected_variant.get("kind"))
-        adapter_kind = "process" if variant_kind in {"process", "api"} else "host-native" if variant_kind == "internal" else ""
-        command_template = _assignment_list(selected_variant.get("command"))
-        output_mode = _optional_text(selected_variant.get("output_mode")) or "stdout"
-        timeout_seconds = selected_variant.get("timeout_seconds", 1800)
-    methods = set(_assignment_list(adapter.get("execution_methods")))
-    if transport not in methods:
+    configuration = _assignment_dispatch_configuration(identity=identity, transport=transport)
+    adapter = _assignment_mapping(configuration.get("adapter"))
+    adapter_kind = _optional_text(configuration.get("kind"))
+    command_template = _assignment_list(configuration.get("command"))
+    output_mode = _optional_text(configuration.get("output_mode"))
+    timeout_seconds = configuration.get("timeout_seconds", 1800)
+    if not configuration.get("admitted"):
         return {
             "kind": "agentic-workspace/assignment-dispatch-receipt/v1",
             "status": "blocked",
@@ -2226,12 +2351,20 @@ def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, targe
         }
     if adapter_kind == "host-native" and not command_template:
         host_return_contract = dict(_assignment_mapping(packet.get("return_contract")))
-        host_return_contract["required_fields"] = [
-            *_assignment_list(host_return_contract.get("required_fields")),
-            "assignment_id",
-            "packet_integrity",
-            "result_delivery",
-        ]
+        packet_integrity = _optional_text(packet.get("packet_integrity"))
+        required_identity = _assignment_mapping(host_return_contract.get("required_identity"))
+        if (
+            not packet_integrity
+            or packet_integrity != _assignment_packet_integrity(packet)
+            or required_identity.get("packet_integrity") != packet_integrity
+        ):
+            return {
+                "kind": "agentic-workspace/assignment-dispatch-receipt/v1",
+                "status": "blocked",
+                "reason": "host-native-packet-unsealed",
+                "transport": transport,
+                "adapter_kind": adapter_kind,
+            }
         return {
             "kind": "agentic-workspace/assignment-dispatch-receipt/v1",
             "status": "host-execution-required",
@@ -2244,7 +2377,7 @@ def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, targe
                 "assignment_revision": packet.get("assignment_revision") or identity.get("revision"),
                 "run_id": packet.get("run_id"),
                 "target": packet.get("target") or identity.get("target"),
-                "packet_integrity": _assignment_digest(packet),
+                "packet_integrity": packet_integrity,
                 "worker_context": packet.get("worker_context") or _assignment_worker_context(packet),
                 "return_contract": host_return_contract,
                 "reentry_operation": "assignment.import",
@@ -2496,6 +2629,15 @@ def _assignment_patch_paths(patch_text: str) -> list[str]:
                 add_path(header[2])
                 add_path(header[3])
     return sorted(paths)
+
+
+def _normalize_assignment_patch_transport(patch_text: str) -> str:
+    """Normalize CRLF unified-diff transport only at the Git application boundary.
+
+    Return identity, scope admission, and receipt integrity continue to use the
+    original worker payload.  Git still validates every normalized hunk.
+    """
+    return patch_text.replace("\r\n", "\n")
 
 
 def _correction_event_apply(*, values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> dict[str, Any]:

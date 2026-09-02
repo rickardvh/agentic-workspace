@@ -1145,6 +1145,31 @@ def test_review_skill_routes_only_to_independent_external_reviewer(capsys) -> No
     assert "pr-review-recheck" in {entry["id"] for entry in reviewer_payload["recommendations"]}
 
 
+def test_selected_pr_review_route_surfaces_eligibility_procedure_without_review_authority(capsys, monkeypatch) -> None:
+    target = Path(__file__).resolve().parents[1]
+    monkeypatch.setattr(
+        workspace_runtime_core,
+        "current_semantic_task_route_fact",
+        lambda _target: {
+            "kind": "agentic-workspace/semantic-task-route-fact/v1",
+            "status": "current",
+            "posture": "selected",
+            "routes": ["github/pr/review"],
+            "current_work_id": "pr-review-fixture",
+            "source_revision": "sha256:" + "1" * 64,
+            "authority_effect": "applicability-only",
+        },
+    )
+
+    assert cli.main(["skills", "--target", str(target), "--task", "review this submitted patch", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    procedure = next(item for item in payload["recommendations"] if item["id"] == "pr-review-recheck")
+
+    assert procedure["activation_evidence_class"] == "semantic-task-route"
+    assert procedure["recommendation_authority"] == "structured-applicability"
+    assert procedure["reasons"] == ["selected semantic task route: github/pr/review"]
+
+
 def test_skills_command_recommends_memory_router_for_note_selection_task(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

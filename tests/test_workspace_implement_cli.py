@@ -9545,6 +9545,40 @@ def test_assignment_proof_obligation_selects_exact_integrated_intent_among_curre
     assert selected["id"] == "proof:two"
 
 
+def test_assignment_proof_obligation_matches_concrete_paths_within_glob_scope(tmp_path: Path) -> None:
+    intent = "implement glob-scoped task"
+    run_id = "run-glob-scope"
+    obligation = {
+        "kind": "agentic-workspace/assignment-task-proof-obligation/v1",
+        "id": "proof:glob-scope",
+        "revision": "proof-rev-glob-scope",
+        "subject": {"assignment_id": "assign-glob-scope", "run_id": run_id},
+    }
+    _write_json(
+        tmp_path / ".agentic-workspace/planning/assignments/assign-glob-scope.assignment.json",
+        {
+            "kind": "agentic-workspace/planning-assignment/v1",
+            "assignment_id": "assign-glob-scope",
+            "status": "current",
+            "assignment_gate": {"human_intent": intent, "allowed_paths": ["src/**"], "proof_obligation": obligation},
+            "current_attempt": {"run_id": run_id, "status": "integrated"},
+        },
+    )
+    _write_json(
+        tmp_path / f".agentic-workspace/local/assignment-runs/{run_id}/state.json",
+        {"current_state": "integrated", "run_id": run_id},
+    )
+
+    assert (
+        workspace_runtime_core._integrated_assignment_proof_obligation(
+            target_root=tmp_path,
+            changed_paths=["src/feature.py"],
+            task_text=intent,
+        )
+        == obligation
+    )
+
+
 def _write_closed_assignment_proof_fixture(
     target_root: Path,
     *,
@@ -9558,6 +9592,7 @@ def _write_closed_assignment_proof_fixture(
     close_receipt_ref: str | None = None,
     close_receipt_status: str = "closed",
     allowed_paths: list[str] | None = None,
+    proved_paths: list[str] | None = None,
     plan_ref: str = "",
 ) -> dict[str, object]:
     assignment_id = f"assign-{suffix}"
@@ -9566,7 +9601,8 @@ def _write_closed_assignment_proof_fixture(
     proof_ref = f"proof://receipts/{receipt_id}"
     close_ref = f".agentic-workspace/local/assignment-runs/{run_id}/closeout/close.json"
     paths = allowed_paths or ["src/shared.py"]
-    for path in paths:
+    receipt_paths = proved_paths or paths
+    for path in receipt_paths:
         if "*" not in path:
             _write(target_root / path, "initial\n")
     obligation: dict[str, object] = {
@@ -9617,10 +9653,10 @@ def _write_closed_assignment_proof_fixture(
         "command": "uv run pytest -q tests/test_workspace_implement_cli.py",
         "result": "passed",
         "recorded_at": "2026-09-01T00:00:00+00:00",
-        "changed_paths": paths,
+        "changed_paths": receipt_paths,
         "proof_subject": workspace_runtime_core.build_proof_subject(
             target_root=target_root,
-            changed_paths=paths,
+            changed_paths=receipt_paths,
             command="uv run pytest -q tests/test_workspace_implement_cli.py",
         ),
         "producer_class": "aw-proof",
@@ -9680,6 +9716,27 @@ def test_assignment_closeout_lineage_projects_canonically_closed_assignment_with
     assert lineage["close_transition"]["result"]["task_proof_receipt_ref"] == "proof://receipts/receipt-closed"
     assert lineage["close_transition"]["receipt_sha256"]
     assert lineage["dependency_classification"]["semantic_task_inputs"] == ["src/shared.py"]
+
+
+def test_assignment_closeout_lineage_accepts_concrete_proof_paths_within_glob_scope(tmp_path: Path) -> None:
+    _write_closed_assignment_proof_fixture(
+        tmp_path,
+        suffix="glob-scope",
+        intent="record glob-scoped proof",
+        allowed_paths=["src/**", ".agentic-workspace/planning/**"],
+        proved_paths=["src/shared.py"],
+    )
+
+    lineage = workspace_runtime_core._closed_assignment_closeout_lineage(
+        target_root=tmp_path,
+        changed_paths=["src/shared.py"],
+        task_text="record glob-scoped proof",
+    )
+
+    assert lineage["assignment"]["id"] == "assign-glob-scope"
+    assert lineage["task_proof"]["receipt_ref"] == "proof://receipts/receipt-glob-scope"
+    assert not workspace_runtime_core._assignment_proof_paths_within_scope(paths={"src/nested/shared.py"}, allowed_paths={"src/*"})
+    assert not workspace_runtime_core._assignment_proof_paths_within_scope(paths={"src/../secret.py"}, allowed_paths={"src/**"})
 
 
 def test_assignment_closeout_lineage_requires_positive_intent_binding(tmp_path: Path) -> None:
@@ -10159,6 +10216,7 @@ def test_binding_automatic_assignment_needs_no_second_permission_and_forbids_loc
     assert returned["operation_invocation"]["preconditions"]["run_state"] == "awaiting-admission"
 
     _write_json(state_path, {"current_state": "integrated", "run_id": "run-1"})
+    _write_json(state_path.parent / "integration/integration.json", {"changed_paths": ["src/feature.py"]})
     integrated = workspace_runtime_core._assignment_primary_action_payload(
         target_root=tmp_path,
         assignment_policy=policy,
@@ -10170,6 +10228,7 @@ def test_binding_automatic_assignment_needs_no_second_permission_and_forbids_loc
     )
     assert integrated["action"] == "prove-integrated-assignment"
     assert integrated["status"] == "proof-required"
+    assert '--changed "src/feature.py"' in integrated["command"]
     assert "operation_invocation" not in integrated
 
     _write_json(state_path, {"current_state": "closed", "run_id": "run-1"})
@@ -10229,6 +10288,95 @@ def test_configured_orchestrator_uses_manual_export_when_automatic_transport_is_
     assert action["operation_invocation"]["operation_id"] == "assignment.export"
     assert action["operation_invocation"]["arguments"]["transport"] == "manual"
     assert action["implementation_allowed"] is False
+
+
+def test_plan_binding_drift_supersedes_assignment_before_rematerialization(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    plan_ref = ".agentic-workspace/planning/execplans/owner.plan.json"
+    _write_json(
+        tmp_path / plan_ref,
+        {
+            "kind": "planning-execplan/v1",
+            "id": "owner",
+            "revision": 2,
+            "touched_paths": ["src/current.py"],
+        },
+    )
+    monkeypatch.setattr(
+        workspace_runtime_core,
+        "resolve_current_work_context",
+        lambda **_: {"selected_plan_id": "owner"},
+    )
+    stale_ref = ".agentic-workspace/planning/assignments/assign-stale.assignment.json"
+    _write_json(
+        tmp_path / stale_ref,
+        {
+            "kind": "agentic-workspace/planning-assignment/v1",
+            "assignment_id": "assign-stale",
+            "current_revision": "assignment-rev-1",
+            "status": "current",
+            "target_name": "worker",
+            "assignment_gate": {
+                "assignment_decision_revision": "decision-rev-1",
+                "selected_target": "worker",
+                "plan_ref": plan_ref,
+                "plan_revision": 1,
+                "allowed_paths": ["src/stale.py"],
+            },
+            "current_attempt": {"run_id": "run-stale", "owner": "worker", "status": "selected"},
+        },
+    )
+    policy = {
+        "execution_role": {"value": "orchestrator"},
+        "assignment_policy": {"value": "required-best-fit"},
+    }
+    decision = {"decision": "assign-best-fit", "assignment_decision_revision": "decision-rev-1"}
+    gate = {
+        "status": "dispatch-required",
+        "implementation_allowed": False,
+        "selected_target": "worker",
+        "target_identity_ref": "target:worker",
+        "executor_disposition": {"status": "executable-nonlocal-dispatch", "transport": "cli"},
+    }
+    action = workspace_runtime_core._assignment_primary_action_payload(
+        target_root=tmp_path,
+        assignment_policy=policy,
+        assignment_decision=decision,
+        assignment_gate=gate,
+        selected_target={"name": "worker", "execution_methods": ["cli"]},
+        delegation_control={"execution_permitted": True},
+        cli_invoke="agentic-workspace",
+        task_text="implement current owner",
+    )
+
+    assert action["action"] == "materialize-canonical-assignment"
+    assert action["stale_assignment_binding"] == {
+        "status": "stale-plan-binding",
+        "plan_ref": plan_ref,
+        "plan_revision": "2",
+        "allowed_paths": ["src/current.py"],
+        "rule": "A plan revision or allowed-path change supersedes the old assignment before any redispatch.",
+    }
+
+    superseded = workspace_runtime_core._supersede_stale_plan_assignments(
+        target_root=tmp_path,
+        live_binding=workspace_runtime_core._live_assignment_plan_binding(
+            target_root=tmp_path,
+            task_text="implement current owner",
+            changed_paths=[],
+        ),
+        replacement_assignment_id="assign-current",
+    )
+    persisted = json.loads((tmp_path / stale_ref).read_text(encoding="utf-8"))
+    assert superseded == [stale_ref]
+    assert persisted["status"] == "superseded"
+    assert persisted["current_attempt"]["status"] == "superseded"
+    assert persisted["superseded_by"] == {
+        "assignment_id": "assign-current",
+        "reason": "plan-binding-changed",
+        "plan_ref": plan_ref,
+        "plan_revision": "2",
+        "allowed_paths": ["src/current.py"],
+    }
 
 
 @pytest.mark.parametrize(

@@ -611,11 +611,20 @@ def test_assignment_host_native_dispatch_without_process_command_returns_bound_e
             "revision": "sha256:assignment",
             "target": "worker",
             "dispatch_adapter": {
+                "kind": "process",
+                "command": ["must-not-run-parent-adapter"],
                 "execution_methods": ["internal"],
                 "transports": [{"kind": "internal", "method": "internal", "command": [], "readiness": "configured"}],
             },
         },
     }
+
+    packet = python_primitive_support._assignment_seal_host_native_packet(packet)
+    derived_slots_changed = json.loads(json.dumps(packet))
+    derived_slots_changed["packet_integrity"] = "different-copy"
+    derived_slots_changed["return_contract"]["required_identity"]["packet_integrity"] = "different-copy"
+    derived_slots_changed["worker_context"]["return_contract"]["required_identity"]["packet_integrity"] = "different-copy"
+    assert python_primitive_support._assignment_packet_integrity(derived_slots_changed) == packet["packet_integrity"]
 
     receipt = python_primitive_support._dispatch_assignment_packet(
         packet=packet,
@@ -632,15 +641,23 @@ def test_assignment_host_native_dispatch_without_process_command_returns_bound_e
         "assignment_revision": "sha256:assignment",
         "run_id": "run-1",
         "target": "worker",
-        "packet_integrity": python_primitive_support._assignment_digest(packet),
+        "packet_integrity": packet["packet_integrity"],
         "worker_context": packet["worker_context"],
-        "return_contract": {
-            **packet["return_contract"],
-            "required_fields": ["assignment_id", "packet_integrity", "result_delivery"],
-        },
+        "return_contract": packet["return_contract"],
         "reentry_operation": "assignment.import",
         "result_delivery_required": True,
     }
+    tampered = json.loads(json.dumps(packet))
+    tampered["target"] = "other-worker"
+    assert (
+        python_primitive_support._dispatch_assignment_packet(
+            packet=tampered,
+            prompt="tampered packet",
+            target_root=tmp_path,
+            transport="internal",
+        )["reason"]
+        == "host-native-packet-unsealed"
+    )
 
 
 @pytest.mark.parametrize("timeout", [0, -1, True, 1.5])
@@ -757,6 +774,67 @@ def test_assignment_admission_accepts_no_change_but_rejects_changed_paths_withou
     assert "result-delivery-baseline-mismatch" in [failure["reason"] for failure in stale_delivery["failures"]]
     assert "result-delivery-scope-mismatch" in [failure["reason"] for failure in mismatched_scope["failures"]]
     assert "missing-result-delivery" in [failure["reason"] for failure in missing_host_delivery["failures"]]
+
+
+def test_assignment_admission_matches_returned_paths_against_declared_globs(monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentic_workspace.contracts import python_primitive_support
+
+    identity = {
+        "complete": True,
+        "revision": "sha256:assignment",
+        "target": "worker",
+        "role": "implementer",
+        "mutation_baseline": "baseline-1",
+        "allowed_paths": ["src/exact.py", "generated/**"],
+    }
+    monkeypatch.setattr(python_primitive_support, "_assignment_identity", lambda _authorities: identity)
+    authorities = {
+        "assignment_gate": {"status": "handoff-required"},
+        "assignment_policy": {"assignment_policy": "required-best-fit"},
+        "delegation_decision": {"decision": "assign-best-fit"},
+        "structural_proof_receipt": {
+            "kind": "agentic-workspace/assignment-structural-proof-receipt/v1",
+            "result": "passed",
+            "verified_by": "aw",
+            "assignment_revision": "sha256:assignment",
+        },
+        "run_state": {"run_id": "run-1", "status": "awaiting-admission"},
+        "live_mutation_baseline": "baseline-1",
+    }
+    patch = (
+        "diff --git a/generated/pkg/value.py b/generated/pkg/value.py\n"
+        "--- a/generated/pkg/value.py\n+++ b/generated/pkg/value.py\n@@ -1 +1 @@\n-old\n+new\n"
+    )
+
+    admitted = python_primitive_support._assignment_admit_with_current_authority(
+        current_authorities=authorities,
+        returned_work={
+            "assignment_revision": "sha256:assignment",
+            "run_id": "run-1",
+            "target": "worker",
+            "changed_paths": ["generated/pkg/value.py"],
+            "stop_conditions_hit": [],
+            "patch": patch,
+        },
+    )
+    escaped = python_primitive_support._assignment_admit_with_current_authority(
+        current_authorities=authorities,
+        returned_work={
+            "assignment_revision": "sha256:assignment",
+            "run_id": "run-1",
+            "target": "worker",
+            "changed_paths": ["generated-other/value.py"],
+            "stop_conditions_hit": [],
+            "patch": patch.replace("generated/pkg/value.py", "generated-other/value.py"),
+        },
+    )
+
+    assert admitted["status"] == "admitted"
+    assert escaped["status"] == "rejected"
+    assert {failure["reason"] for failure in escaped["failures"]} == {
+        "scope-escape",
+        "returned-patch-outside-assignment-scope",
+    }
 
 
 def _guidance_host_signature(payload: dict[str, object]) -> dict[str, object]:
@@ -1685,7 +1763,7 @@ def test_assignment_dispatch_public_operation_rejects_missing_current_authority(
 
 
 def _prepare_shared_worktree_assignment(
-    target: Path, *, run_id: str, dispatch_runtime: str = "python"
+    target: Path, *, run_id: str, dispatch_runtime: str = "python", allowed_paths: list[str] | None = None
 ) -> tuple[dict[str, object], list[str], dict[str, object]]:
     from agentic_workspace import workspace_runtime_core
 
@@ -1719,7 +1797,7 @@ def _prepare_shared_worktree_assignment(
         "role": "implementer",
         "human_intent": "Implement the bounded feature change.",
         "allowed_effects": ["repo-write"],
-        "allowed_paths": ["src/feature.py"],
+        "allowed_paths": allowed_paths or ["src/feature.py"],
         "required_inputs": ["current checkout"],
         "read_first": ["src/feature.py"],
         "proof_obligation": {
@@ -1825,6 +1903,32 @@ def _run_typescript_assignment(target: Path, transition: str, values: dict[str, 
     return json.loads(completed.stdout)
 
 
+@pytest.mark.parametrize("runtime", ["python", "typescript"])
+def test_host_native_export_projects_bound_return_identity_and_selected_delivery(tmp_path: Path, runtime: str) -> None:
+    run_id = f"run-export-{runtime}"
+    _identity, _invocation, execution = _prepare_shared_worktree_assignment(tmp_path, run_id=run_id, dispatch_runtime=runtime)
+    export_dir = tmp_path / f".agentic-workspace/local/assignment-runs/{run_id}/export"
+    packet = json.loads((export_dir / "packet.json").read_text(encoding="utf-8"))
+    manifest = json.loads((export_dir / "manifest.json").read_text(encoding="utf-8"))
+    prompt = (export_dir / "prompt.md").read_text(encoding="utf-8")
+    required_identity = packet["return_contract"]["required_identity"]
+
+    assert set(("assignment_id", "packet_integrity", "result_delivery")).issubset(packet["return_contract"]["required_fields"])
+    assert required_identity == {
+        "assignment_id": execution["assignment_id"],
+        "assignment_revision": execution["assignment_revision"],
+        "run_id": execution["run_id"],
+        "target": execution["target"],
+        "packet_integrity": execution["packet_integrity"],
+    }
+    assert packet["worker_context"]["return_contract"] == packet["return_contract"] == execution["return_contract"]
+    assert packet["packet_integrity"] == manifest["integrity"] == execution["packet_integrity"]
+    assert execution["packet_integrity"] in prompt
+    assert "selected result delivery mode is `unapplied-patch`" in prompt
+    assert "Acquire deeper repository context only through the listed read-first references" in prompt
+    assert "Do not edit the host checkout" not in prompt
+
+
 def test_assignment_shared_worktree_integration_verifies_materialized_delta_without_reapplying(tmp_path: Path) -> None:
     identity, invocation, host_execution = _prepare_shared_worktree_assignment(tmp_path, run_id="run-shared")
     feature = tmp_path / "src/feature.py"
@@ -1926,6 +2030,125 @@ def test_typescript_host_native_assignment_lifecycle_reenters_and_integrates_mat
     )
     assert receipt["materialized_delta_verified"] is True
     assert receipt["replayed"] is True
+
+
+@pytest.mark.parametrize(("runtime", "dispatch_runtime"), [("python", "python"), ("typescript", "typescript")])
+def test_assignment_integration_accepts_crlf_unified_diff_transport(tmp_path: Path, runtime: str, dispatch_runtime: str) -> None:
+    run_id = f"run-crlf-{runtime}"
+    identity, invocation, host_execution = _prepare_shared_worktree_assignment(
+        tmp_path, run_id=run_id, dispatch_runtime=dispatch_runtime, allowed_paths=["src/**"]
+    )
+    lf_patch = "diff --git a/src/feature.py b/src/feature.py\n--- a/src/feature.py\n+++ b/src/feature.py\n@@ -1 +1 @@\n-old\n+new\n"
+    returned = {
+        "assignment_revision": identity["revision"],
+        "assignment_id": host_execution["assignment_id"],
+        "packet_integrity": host_execution["packet_integrity"],
+        "run_id": run_id,
+        "target": "worker",
+        "changed_paths": ["src/feature.py"],
+        "summary": "Return a valid bounded patch with CRLF transport terminators.",
+        "stop_conditions_hit": [],
+        "patch": lf_patch.replace("\n", "\r\n"),
+        "result_delivery": {"mode": "unapplied-patch"},
+    }
+    if runtime == "typescript":
+        imported = _run_typescript_assignment(tmp_path, "import", {"run_id": run_id, "return_json": returned})
+        admitted = _run_typescript_assignment(tmp_path, "admit", {"run_id": run_id})
+        integrated = _run_typescript_assignment(tmp_path, "integrate", {"run_id": run_id})
+    else:
+        imported = assignment_import({"run_id": run_id, "return_json": json.dumps(returned)}, target=tmp_path, invocation=invocation)
+        admitted = assignment_admit({"run_id": run_id}, target=tmp_path, invocation=invocation)
+        integrated = assignment_integrate({"run_id": run_id}, target=tmp_path, invocation=invocation)
+
+    assert imported["status"] == "awaiting-admission"
+    assert admitted["status"] == "admitted", admitted["failures"]
+    assert integrated["status"] == "integrated", integrated["failures"]
+    assert (tmp_path / "src/feature.py").read_text(encoding="utf-8") == "new\n"
+    state = json.loads((tmp_path / f".agentic-workspace/local/assignment-runs/{run_id}/state.json").read_text(encoding="utf-8"))
+    returned_artifact = tmp_path / state["returns"][state["last_return_id"]]["artifact_ref"]
+    assert json.loads(returned_artifact.read_text(encoding="utf-8"))["patch"] == returned["patch"]
+    returned_patch = tmp_path / f".agentic-workspace/local/assignment-runs/{run_id}/integration/returned.patch"
+    assert returned_patch.read_bytes() == lf_patch.encode("utf-8")
+
+
+@pytest.mark.parametrize(("runtime", "dispatch_runtime"), [("python", "python"), ("typescript", "typescript")])
+def test_assignment_integration_keeps_crlf_invalid_hunks_fail_closed(tmp_path: Path, runtime: str, dispatch_runtime: str) -> None:
+    run_id = f"run-crlf-invalid-{runtime}"
+    identity, invocation, host_execution = _prepare_shared_worktree_assignment(
+        tmp_path, run_id=run_id, dispatch_runtime=dispatch_runtime, allowed_paths=["src/**"]
+    )
+    invalid_patch = (
+        "diff --git a/src/feature.py b/src/feature.py\n--- a/src/feature.py\n+++ b/src/feature.py\n@@ -1 +1 @@\n-missing\n+new\n"
+    ).replace("\n", "\r\n")
+    returned = {
+        "assignment_revision": identity["revision"],
+        "assignment_id": host_execution["assignment_id"],
+        "packet_integrity": host_execution["packet_integrity"],
+        "run_id": run_id,
+        "target": "worker",
+        "changed_paths": ["src/feature.py"],
+        "summary": "Return an invalid CRLF patch to preserve hunk rejection.",
+        "stop_conditions_hit": [],
+        "patch": invalid_patch,
+        "result_delivery": {"mode": "unapplied-patch"},
+    }
+    if runtime == "typescript":
+        _run_typescript_assignment(tmp_path, "import", {"run_id": run_id, "return_json": returned})
+        _run_typescript_assignment(tmp_path, "admit", {"run_id": run_id})
+        integrated = _run_typescript_assignment(tmp_path, "integrate", {"run_id": run_id})
+    else:
+        assignment_import({"run_id": run_id, "return_json": json.dumps(returned)}, target=tmp_path, invocation=invocation)
+        assignment_admit({"run_id": run_id}, target=tmp_path, invocation=invocation)
+        integrated = assignment_integrate({"run_id": run_id}, target=tmp_path, invocation=invocation)
+
+    assert integrated["status"] == "blocked"
+    assert integrated["reason_code"] == "assignment-patch-apply-failed"
+    assert (tmp_path / "src/feature.py").read_text(encoding="utf-8") == "old\n"
+
+
+@pytest.mark.parametrize("runtime", ["python", "typescript"])
+@pytest.mark.parametrize(
+    ("allowed_path", "returned_path", "expected_status"),
+    [
+        ("generated/*", "generated/nested/feature.py", "blocked"),
+        ("generated/**", "generated/../../src/feature.py", "blocked"),
+        ("s?c/feature.py", "src/feature.py", "admitted"),
+    ],
+)
+def test_assignment_admission_glob_boundaries_match_across_runtimes(
+    tmp_path: Path, runtime: str, allowed_path: str, returned_path: str, expected_status: str
+) -> None:
+    run_id = f"run-glob-{runtime}"
+    identity, invocation, host_execution = _prepare_shared_worktree_assignment(
+        tmp_path, run_id=run_id, dispatch_runtime=runtime, allowed_paths=[allowed_path]
+    )
+    returned = {
+        "assignment_revision": identity["revision"],
+        "assignment_id": host_execution["assignment_id"],
+        "packet_integrity": host_execution["packet_integrity"],
+        "run_id": run_id,
+        "target": "worker",
+        "changed_paths": [returned_path],
+        "summary": "Exercise assignment glob admission boundaries.",
+        "stop_conditions_hit": [],
+        "patch": (
+            f"diff --git a/{returned_path} b/{returned_path}\n--- a/{returned_path}\n+++ b/{returned_path}\n@@ -1 +1 @@\n-old\n+new\n"
+        ),
+        "result_delivery": {"mode": "unapplied-patch"},
+    }
+    if runtime == "typescript":
+        _run_typescript_assignment(tmp_path, "import", {"run_id": run_id, "return_json": returned})
+        admitted = _run_typescript_assignment(tmp_path, "admit", {"run_id": run_id})
+    else:
+        assignment_import({"run_id": run_id, "return_json": json.dumps(returned)}, target=tmp_path, invocation=invocation)
+        admitted = assignment_admit({"run_id": run_id}, target=tmp_path, invocation=invocation)
+
+    assert admitted["status"] == expected_status
+    if expected_status == "blocked":
+        assert {failure["reason"] for failure in admitted["failures"]} == {
+            "scope-escape",
+            "returned-patch-outside-assignment-scope",
+        }
 
 
 def test_assignment_import_return_file_matches_inline_validation_in_python_and_typescript(tmp_path: Path) -> None:
@@ -2070,7 +2293,7 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
         "role": "implementer",
         "human_intent": "Implement the bounded feature change.",
         "allowed_effects": ["repo-write"],
-        "allowed_paths": ["src/feature.py"],
+        "allowed_paths": ["src/**"],
         "required_inputs": ["current checkout"],
         "read_first": ["src/feature.py", "summary:planning_record"],
         "proof_obligation": {
@@ -2303,6 +2526,17 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
     reopened_state = json.loads(state_path.read_text(encoding="utf-8"))
     reopened_state["current_state"] = "integrated"
     state_path.write_text(json.dumps(reopened_state), encoding="utf-8")
+    integration_path = tmp_path / ".agentic-workspace/local/assignment-runs/run-1/integration/integration.json"
+    integration_bytes = integration_path.read_bytes()
+    integration_path.unlink()
+    missing_integration_close = assignment_close(
+        {"run_id": "run-1", "task_proof_receipt_ref": task_proof_ref},
+        target=tmp_path,
+        invocation=invocation,
+    )
+    assert missing_integration_close["status"] == "blocked"
+    assert missing_integration_close["reason_code"] == "assignment-proof-scope-mismatch"
+    integration_path.write_bytes(integration_bytes)
     typescript_closed = subprocess.run(
         [
             "node",
@@ -2356,7 +2590,7 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
     assert packet["return_contract"]["worker_completion_authority"] is False
     assert packet["assignment_identity"]["claim_authority"]["completion"] == "orchestrator-owned"
     assert packet["worker_context"]["intent"]["outcome"] == "Implement the bounded feature change."
-    assert packet["worker_context"]["scope"]["allowed_paths"] == ["src/feature.py"]
+    assert packet["worker_context"]["scope"]["allowed_paths"] == ["src/**"]
     assert packet["worker_context"]["inputs"]["read_first"] == ["src/feature.py", "summary:planning_record"]
     assert packet["worker_context"]["authority"]["scope_widening_allowed"] is False
     prompt_ref = next(ref for ref in export["artifact_refs"] if ref.endswith("export/prompt.md"))
@@ -2365,6 +2599,8 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
     assert "dispatch_adapter" not in prompt
     assert "authority_refs" not in prompt
     assert "current_authorities" not in export["state"]
+    assert "Copy every value in `return_contract.required_identity` exactly" not in prompt
+    assert "Return every field named by `return_contract.required_fields`" in prompt
 
 
 def test_assignment_lifecycle_public_admit_rejects_caller_authority_strings(tmp_path: Path) -> None:

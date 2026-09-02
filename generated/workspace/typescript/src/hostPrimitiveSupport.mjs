@@ -2164,12 +2164,36 @@ function assignmentAdmitWithCurrentAuthority(authorities, returned) {
   if (deliveryMode === 'already-materialized' && (patchPaths.length !== new Set(changed.map(String)).size || patchPaths.some((path) => !new Set(changed.map(String)).has(path)))) failures.push({ reason: 'result-delivery-scope-mismatch', field: 'result_delivery|changed_paths|patch', recovery: 'Return the exact bounded changed-path set represented by the already-materialized patch.' });
   if (!allowed.size) failures.push({ reason: 'missing-canonical-scope', field: 'assignment_identity.allowed_paths', recovery: 'Refresh the assignment so AW can compare returned paths.' });
   for (const path of changed) {
-    if (!allowed.has(path)) failures.push({ reason: 'scope-escape', field: 'changed_paths', recovery: 'Repair returned work to stay inside the assigned scope.' });
+    if (!assignmentPathAllowed(path, allowed)) failures.push({ reason: 'scope-escape', field: 'changed_paths', recovery: 'Repair returned work to stay inside the assigned scope.' });
   }
   for (const path of assignmentPatchPaths(assignmentText(returned.patch))) {
-    if (!allowed.has(path)) failures.push({ reason: 'returned-patch-outside-assignment-scope', field: 'patch', recovery: 'Return a unified diff touching only the assignment allowed paths.' });
+    if (!assignmentPathAllowed(path, allowed)) failures.push({ reason: 'returned-patch-outside-assignment-scope', field: 'patch', recovery: 'Return a unified diff touching only the assignment allowed paths.' });
   }
   return { admitted: failures.length === 0, status: failures.length ? 'rejected' : 'admitted', failures, assignment_revision: identity.revision, assignment_identity: identity, current_authority: { planning_assignment: authorities.planning_assignment_ref, structural_proof_receipt: proof, proof_source: authorities.proof_receipt_ref, mutation_baseline: authorities.live_mutation_baseline, baseline_source: 'host-resolved:git-or-aw-baseline' }, rule: 'Returned delegated work is executable only after AW re-resolves current assignment/run identity, transport authority, canonical scope, structural proof, stop conditions, and baseline immediately before admission.' };
+}
+
+function assignmentPathAllowed(path, allowedPaths) {
+  const normalized = assignmentCanonicalRelativePath(path);
+  if (!normalized) return false;
+  return [...allowedPaths].some((rawPattern) => {
+    const pattern = assignmentCanonicalRelativePath(rawPattern);
+    if (!pattern) return false;
+    if (normalized === pattern) return true;
+    const expression = pattern
+      .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+      .replaceAll('**', '\u0000')
+      .replaceAll('*', '[^/]*')
+      .replaceAll('?', '[^/]')
+      .replaceAll('\u0000', '.*');
+    return new RegExp(`^${expression}$`).test(normalized);
+  });
+}
+
+function assignmentCanonicalRelativePath(value) {
+  const normalized = String(value ?? '').replaceAll('\\', '/');
+  if (!normalized || normalized.startsWith('/') || /^[A-Za-z]:/.test(normalized) || normalized.includes('\0')) return '';
+  if (normalized.split('/').some((part) => !part || part === '.' || part === '..')) return '';
+  return normalized;
 }
 
 function diffGitPathTokens(line) {
@@ -2224,6 +2248,12 @@ export function assignmentPatchPaths(patchText) {
   return [...paths].sort();
 }
 
+function normalizeAssignmentPatchTransport(patchText) {
+  // Keep return identity and admission on the original payload; normalize
+  // only standard CRLF transport terminators before Git validates its hunks.
+  return String(patchText ?? '').replaceAll('\r\n', '\n');
+}
+
 function assignmentIndexedTaskProof(targetRoot, receiptRef, failures) {
   const storeRoot = resolveInside(targetRoot, '.agentic-workspace/proof/receipts');
   const ref = assignmentText(receiptRef);
@@ -2267,22 +2297,84 @@ function assignmentTaskProofBinding(receipt) {
   return assignmentDigest({ assignment_proof_obligation: receipt.assignment_proof_obligation, proof_subject_fingerprint: subject.fingerprint, command: receipt.command, result: receipt.result, changed_paths: Array.isArray(receipt.changed_paths) ? [...receipt.changed_paths].map(String).sort() : [], authority: receipt.authority, producer_class: receipt.producer_class });
 }
 
-function assignmentDispatch(packet, prompt, targetRoot, transport) {
-  const identity = isObject(packet.assignment_identity) ? packet.assignment_identity : {};
+function assignmentDispatchConfiguration(identity, transport) {
   const adapter = isObject(identity.dispatch_adapter) ? identity.dispatch_adapter : {};
   const methods = new Set(Array.isArray(adapter.execution_methods) ? adapter.execution_methods.map(String) : []);
-  if (!methods.has(transport)) return { status: 'blocked', reason: 'transport-not-admitted-by-target' };
   const variants = Array.isArray(adapter.transports) ? adapter.transports.filter(isObject) : [];
   const selectedVariant = variants.find((item) => assignmentText(item.method) === transport);
   const variantKind = assignmentText(selectedVariant?.kind);
-  const adapterKind = selectedVariant ? (['process', 'api'].includes(variantKind) ? 'process' : variantKind === 'internal' ? 'host-native' : '') : assignmentText(adapter.kind);
-  const commandTemplate = Array.isArray(selectedVariant?.command) ? selectedVariant.command.map(String) : Array.isArray(adapter.command) ? adapter.command.map(String) : [];
-  const outputMode = assignmentText(selectedVariant?.output_mode) || assignmentText(adapter.output_mode) || 'stdout';
-  const timeoutSeconds = Number(selectedVariant?.timeout_seconds ?? adapter.timeout_seconds ?? 1800);
+  return {
+    admitted: methods.has(transport),
+    kind: selectedVariant ? (['process', 'api'].includes(variantKind) ? 'process' : variantKind === 'internal' ? 'host-native' : '') : assignmentText(adapter.kind),
+    command: Array.isArray(selectedVariant?.command) ? selectedVariant.command.map(String) : Array.isArray(adapter.command) ? adapter.command.map(String) : [],
+    outputMode: assignmentText(selectedVariant?.output_mode) || assignmentText(adapter.output_mode) || 'stdout',
+    timeoutSeconds: Number(selectedVariant?.timeout_seconds ?? adapter.timeout_seconds ?? 1800),
+    adapter,
+  };
+}
+
+function assignmentWorkerContext(packet) {
+  const identity = isObject(packet.assignment_identity) ? packet.assignment_identity : {};
+  return {
+    kind: 'agentic-workspace/assignment-worker-context/v1',
+    assignment: { id: assignmentText(packet.assignment_id), revision: assignmentText(packet.assignment_revision) || assignmentText(identity.revision), run_id: assignmentText(packet.run_id), target: assignmentText(packet.target) || assignmentText(identity.target) },
+    intent: { outcome: assignmentText(identity.human_intent), task_class: assignmentText(identity.task_class), role: assignmentText(identity.role) },
+    scope: { class: assignmentText(identity.scope_class), allowed_paths: Array.isArray(identity.allowed_paths) ? identity.allowed_paths.map(String) : [] },
+    effects: { allowed: Array.isArray(identity.allowed_effects) ? identity.allowed_effects.map(String) : [], prohibited: Array.isArray(identity.prohibited_effects) ? identity.prohibited_effects.map(String) : [] },
+    inputs: { required: Array.isArray(identity.required_inputs) ? identity.required_inputs.map(String) : [], read_first: Array.isArray(identity.read_first) ? identity.read_first.map(String) : [], lazy_expansion_rule: 'Read only these exact references first; request or resolve deeper context only when the assignment requires it.' },
+    proof: { obligation_id: assignmentText(identity.proof_obligation_id), obligation_revision: assignmentText(identity.proof_obligation_revision), worker_authority: false },
+    stop_conditions: Array.isArray(identity.stop_conditions) ? identity.stop_conditions.map(String) : [],
+    authority: { semantic_source: 'canonical-assignment-identity', claim_authority: isObject(identity.claim_authority) ? identity.claim_authority : {}, scope_widening_allowed: false },
+    return_contract: isObject(packet.return_contract) ? packet.return_contract : {},
+  };
+}
+
+function assignmentPacketIntegrity(packet) {
+  const subject = JSON.parse(JSON.stringify(packet));
+  subject.packet_integrity = '';
+  for (const contract of [subject.return_contract, subject.worker_context?.return_contract]) {
+    if (isObject(contract?.required_identity)) contract.required_identity.packet_integrity = '';
+  }
+  return assignmentDigest(subject);
+}
+
+function assignmentSealHostNativePacket(packet) {
+  const sealed = JSON.parse(JSON.stringify(packet));
+  const contract = isObject(sealed.return_contract) ? sealed.return_contract : {};
+  contract.required_fields = [...new Set([...(Array.isArray(contract.required_fields) ? contract.required_fields.map(String) : []), 'assignment_id', 'packet_integrity', 'result_delivery'])];
+  contract.required_identity = { assignment_id: sealed.assignment_id, assignment_revision: sealed.assignment_revision, run_id: sealed.run_id, target: sealed.target, packet_integrity: '' };
+  sealed.return_contract = contract;
+  sealed.worker_context = assignmentWorkerContext(sealed);
+  const integrity = assignmentPacketIntegrity(sealed);
+  sealed.packet_integrity = integrity;
+  sealed.return_contract.required_identity.packet_integrity = integrity;
+  sealed.worker_context = assignmentWorkerContext(sealed);
+  if (assignmentPacketIntegrity(sealed) !== integrity) throw new Error('host-native assignment packet integrity did not stabilize');
+  return sealed;
+}
+
+function assignmentExportPrompt(packet) {
+  const context = isObject(packet.worker_context) ? packet.worker_context : assignmentWorkerContext(packet);
+  const mode = assignmentText(context.return_contract?.result_delivery?.default) || 'unapplied-patch';
+  const delivery = mode === 'already-materialized'
+    ? 'The selected result delivery mode is `already-materialized`: edit only the assigned shared worktree paths, and return the exact baseline-relative unified diff plus its sealed mutation baseline.'
+    : 'The selected result delivery mode is `unapplied-patch`: do not edit the target checkout; return the proposed unified diff in a `patch` field.';
+  const identityInstruction = isObject(context.return_contract?.required_identity)
+    ? 'Copy every value in return_contract.required_identity exactly and include the selected result_delivery mode.'
+    : 'Return every field named by return_contract.required_fields and include the selected result_delivery mode.';
+  return `You are receiving a bounded Agentic Workspace worker context.\nUse only the intent, scope, effects, inputs, proof burden, stop conditions, authority limits, and return contract below.\nAcquire deeper repository context only through the listed read-first references; omitted parent conversation and broad workspace state are not part of this assignment.\nReturn a structured result for agentic-workspace assignment import; do not claim AW proof or integration.\n${delivery}\n${identityInstruction}\nThe patch must be a complete git-compatible unified diff beginning with diff --git; generate or verify it with diff tooling so hunk counts are exact.\n\n\`\`\`json\n${JSON.stringify(context, null, 2)}\n\`\`\``;
+}
+
+function assignmentDispatch(packet, prompt, targetRoot, transport) {
+  const identity = isObject(packet.assignment_identity) ? packet.assignment_identity : {};
+  const configuration = assignmentDispatchConfiguration(identity, transport);
+  const { adapter, kind: adapterKind, command: commandTemplate, outputMode, timeoutSeconds } = configuration;
+  if (!configuration.admitted) return { status: 'blocked', reason: 'transport-not-admitted-by-target' };
   if (adapterKind === 'host-native' && !commandTemplate.length) {
-    const baseReturnContract = isObject(packet.return_contract) ? packet.return_contract : {};
-    const hostReturnContract = { ...baseReturnContract, required_fields: [...(Array.isArray(baseReturnContract.required_fields) ? baseReturnContract.required_fields : []), 'assignment_id', 'packet_integrity', 'result_delivery'] };
-    return { kind: 'agentic-workspace/assignment-dispatch-receipt/v1', status: 'host-execution-required', reason: 'execute-canonical-assignment-with-host-native-transport', transport, adapter_kind: adapterKind, execution_contract: { kind: 'agentic-workspace/host-native-assignment-execution/v1', assignment_id: packet.assignment_id ?? null, assignment_revision: packet.assignment_revision ?? identity.revision ?? null, run_id: packet.run_id ?? null, target: packet.target ?? identity.target ?? null, packet_integrity: assignmentDigest(packet), worker_context: packet.worker_context ?? {}, return_contract: hostReturnContract, reentry_operation: 'assignment.import', result_delivery_required: true }, claim_boundary: 'transport-only; host result still requires AW import, admission, integration, proof, and closeout' };
+    const hostReturnContract = isObject(packet.return_contract) ? packet.return_contract : {};
+    const packetIntegrity = assignmentText(packet.packet_integrity);
+    if (!packetIntegrity || packetIntegrity !== assignmentPacketIntegrity(packet) || assignmentText(hostReturnContract.required_identity?.packet_integrity) !== packetIntegrity) return { kind: 'agentic-workspace/assignment-dispatch-receipt/v1', status: 'blocked', reason: 'host-native-packet-unsealed', transport, adapter_kind: adapterKind };
+    return { kind: 'agentic-workspace/assignment-dispatch-receipt/v1', status: 'host-execution-required', reason: 'execute-canonical-assignment-with-host-native-transport', transport, adapter_kind: adapterKind, execution_contract: { kind: 'agentic-workspace/host-native-assignment-execution/v1', assignment_id: packet.assignment_id ?? null, assignment_revision: packet.assignment_revision ?? identity.revision ?? null, run_id: packet.run_id ?? null, target: packet.target ?? identity.target ?? null, packet_integrity: packetIntegrity, worker_context: packet.worker_context ?? {}, return_contract: hostReturnContract, reentry_operation: 'assignment.import', result_delivery_required: true }, claim_boundary: 'transport-only; host result still requires AW import, admission, integration, proof, and closeout' };
   }
   if (!['process', 'host-native'].includes(adapterKind) || !commandTemplate.length) return { status: 'blocked', reason: 'configured-dispatch-adapter-unavailable' };
   if (!['stdout', 'json-file'].includes(outputMode)) return { status: 'blocked', reason: 'configured-dispatch-output-mode-unsupported' };
@@ -2348,15 +2440,18 @@ function assignmentLifecycleApply(values, operationId) {
     if (!targetName) failures.push({ reason: 'missing-required-input', field: 'target_name', recovery: 'Retry assignment export with a current Planning assignment target.' });
     const transport = assignmentText(values.transport) || 'manual';
     if (transition === 'dispatch' && transport === 'manual') failures.push({ reason: 'automatic-transport-required', field: 'transport', recovery: 'Use assignment export for manual handoff or retry dispatch with an authorized automatic transport.' });
-    const effectivePacket = { kind: 'agentic-workspace/assignment-export-packet/v1', assignment_id: id, assignment_revision: identity.revision, run_id: runId, target: targetName, transport, scope: identity.allowed_paths ?? [], assignment_identity: identity, authority_refs: { planning_assignment: authorities.planning_assignment_ref, structural_proof_receipt: authorities.proof_receipt_ref, mutation_baseline: 'host-resolved:git-or-aw-baseline' }, dispatch_contract: { transport, adapter_authority: 'execution-only', semantic_authority: 'assignment_identity', dispatch_input: 'this exact packet', silent_local_fallback_allowed: false }, return_contract: { required_fields: ['assignment_revision', 'run_id', 'target', 'changed_paths', 'summary', 'stop_conditions_hit', ...(identity.role === 'implementer' ? ['patch'] : [])], result_delivery: { field: 'result_delivery', modes: ['unapplied-patch', 'already-materialized'], default: 'unapplied-patch', already_materialized_requires: ['mutation_baseline'] }, worker_proof_authority: false, worker_completion_authority: false } };
+    let effectivePacket = { kind: 'agentic-workspace/assignment-export-packet/v1', assignment_id: id, assignment_revision: identity.revision, run_id: runId, target: targetName, transport, scope: identity.allowed_paths ?? [], assignment_identity: identity, authority_refs: { planning_assignment: authorities.planning_assignment_ref, structural_proof_receipt: authorities.proof_receipt_ref, mutation_baseline: 'host-resolved:git-or-aw-baseline' }, dispatch_contract: { transport, adapter_authority: 'execution-only', semantic_authority: 'assignment_identity', dispatch_input: 'this exact packet', silent_local_fallback_allowed: false }, return_contract: { required_fields: ['assignment_revision', 'run_id', 'target', 'changed_paths', 'summary', 'stop_conditions_hit', ...(identity.role === 'implementer' ? ['patch'] : [])], result_delivery: { field: 'result_delivery', modes: ['unapplied-patch', 'already-materialized'], default: 'unapplied-patch', already_materialized_requires: ['mutation_baseline'] }, worker_proof_authority: false, worker_completion_authority: false } };
+    effectivePacket.worker_context = assignmentWorkerContext(effectivePacket);
+    const dispatchConfiguration = assignmentDispatchConfiguration(identity, transport);
+    if (transition === 'dispatch' && dispatchConfiguration.kind === 'host-native' && !dispatchConfiguration.command.length) effectivePacket = assignmentSealHostNativePacket(effectivePacket);
     const packetPath = artifact('export/packet.json');
     const promptPath = artifact('export/prompt.md');
     const manifestPath = artifact('export/manifest.json');
     artifactPaths.push(packetPath, promptPath, manifestPath);
     writes.set(packetPath, effectivePacket);
-    const prompt = `You are receiving an Agentic Workspace assignment packet. Do not edit the host checkout. For repo-write assignments, return the proposed unified diff in a patch field. The patch must be a complete git-compatible unified diff beginning with diff --git; generate or verify it with diff tooling so hunk counts are exact, and never use apply_patch markers, ellipses, placeholder @@ markers, or omitted context.\n\n\`\`\`json\n${JSON.stringify(effectivePacket, null, 2)}\n\`\`\``;
+    const prompt = assignmentExportPrompt(effectivePacket);
     writes.set(promptPath, prompt);
-    writes.set(manifestPath, { kind: 'agentic-workspace/assignment-export-manifest/v1', assignment_id: id, assignment_revision: rev, run_id: runId, integrity: assignmentDigest(effectivePacket) });
+    writes.set(manifestPath, { kind: 'agentic-workspace/assignment-export-manifest/v1', assignment_id: id, assignment_revision: rev, run_id: runId, integrity: assignmentText(effectivePacket.packet_integrity) || assignmentDigest(effectivePacket) });
     Object.assign(state, { assignment: effectivePacket, planning_assignment_ref: authorities.planning_assignment_ref, structural_proof_receipt_ref: authorities.proof_receipt_ref, current_state: 'handoff-prepared', run_id: runId, assignment_id: id });
     if (transport !== 'manual' && !failures.length) {
       const dispatch = assignmentDispatch(effectivePacket, prompt, targetRoot, transport);
@@ -2454,7 +2549,7 @@ function assignmentLifecycleApply(values, operationId) {
     if (!failures.length && patch && !Boolean(values.dry_run)) {
       const integrationPatchPath = artifact('integration/returned.patch');
       mkdirSync(dirname(integrationPatchPath), { recursive: true });
-      writeFileSync(integrationPatchPath, patch, 'utf8');
+      writeFileSync(integrationPatchPath, normalizeAssignmentPatchTransport(patch), 'utf8');
       artifactPaths.push(integrationPatchPath);
       const alreadyMaterialized = deliveryMode === 'already-materialized';
       if (!alreadyMaterialized && !replayed) {
@@ -2487,7 +2582,11 @@ function assignmentLifecycleApply(values, operationId) {
     if (!assignmentTaskProofSufficient(taskProof)) failures.push({ reason: 'assignment-task-proof-not-admitted', field: 'task_proof_receipt_ref', recovery: 'Run AW proof for the integrated assignment and supply its admitted passed receipt.' });
     const expectedPaths = new Set(Array.isArray(planning.assignment_gate?.allowed_paths) ? planning.assignment_gate.allowed_paths.map(String) : []);
     const provedPaths = new Set(Array.isArray(taskProof.changed_paths) ? taskProof.changed_paths.map(String) : []);
-    if (!expectedPaths.size || [...expectedPaths].some((path) => !provedPaths.has(path))) failures.push({ reason: 'assignment-proof-scope-mismatch', field: 'task_proof_receipt_ref.changed_paths', recovery: 'Record proof covering every allowed path in the integrated assignment.' });
+    let integrationReceipt = {};
+    try { integrationReceipt = readJson(artifact('integration/integration.json')); } catch (_error) { integrationReceipt = {}; }
+    const integratedPaths = new Set(Array.isArray(integrationReceipt.changed_paths) ? integrationReceipt.changed_paths.map(String) : []);
+    const integrationCurrent = integrationReceipt.kind === 'agentic-workspace/assignment-integration-receipt/v1' && integrationReceipt.status === 'integrated' && assignmentText(integrationReceipt.run_id) === runId;
+    if (!expectedPaths.size || !provedPaths.size || !integrationCurrent || taskProof.proof_subject?.identity_complete !== true || [...provedPaths].some((path) => !assignmentPathAllowed(path, expectedPaths)) || [...integratedPaths].some((path) => !provedPaths.has(path))) failures.push({ reason: 'assignment-proof-scope-mismatch', field: 'task_proof_receipt_ref.changed_paths', recovery: 'Record complete proof for every concrete integrated path within the assignment allowed scope.' });
     const receiptPath = artifact('closeout/close.json');
     artifactPaths.push(receiptPath);
     writes.set(receiptPath, { kind: 'agentic-workspace/assignment-closeout-receipt/v1', run_id: runId, status: failures.length ? 'blocked' : 'closed', task_proof_receipt_ref: taskProofRef });

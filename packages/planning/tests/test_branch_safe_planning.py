@@ -937,9 +937,10 @@ def _completion_correction_fixture(tmp_path: Path, owner_id: str) -> tuple[str, 
     return owner_ref, owner_path, lane_path, _proposal_record(tmp_path, proposal_id)
 
 
-def _completion_correction_request(*, tmp_path: Path, owner_ref: str, proposal: dict[str, Any], disposition: str) -> dict[str, Any]:
+def _completion_correction_request(
+    *, tmp_path: Path, owner_ref: str, lane_path: Path, proposal: dict[str, Any], disposition: str
+) -> dict[str, Any]:
     owner = json.loads((tmp_path / owner_ref).read_text(encoding="utf-8"))
-    lane_path = next((tmp_path / ".agentic-workspace/planning/lanes").glob("*.lane.json"))
     return {
         "target": tmp_path,
         "plan": owner_ref,
@@ -974,7 +975,9 @@ def test_targeted_write_completion_correction_reopens_and_invalidates_proposal(t
     owner_ref, owner_path, lane_path, proposal = _completion_correction_fixture(tmp_path, "issue-2951-reopen")
     unrelated_ref = _write_owner(tmp_path, "unrelated-owner")
     unrelated_before = (tmp_path / unrelated_ref).read_bytes()
-    request = _completion_correction_request(tmp_path=tmp_path, owner_ref=owner_ref, proposal=proposal, disposition="reopen")
+    request = _completion_correction_request(
+        tmp_path=tmp_path, owner_ref=owner_ref, lane_path=lane_path, proposal=proposal, disposition="reopen"
+    )
 
     preview = installer.targeted_execplan_write(**request)
     applied = installer.targeted_execplan_write(**request, apply=True)
@@ -1010,7 +1013,9 @@ def test_targeted_write_completion_correction_reopen_retracts_only_child_evidenc
     )
     lane["proof_aggregation"]["evidence"].append("proof://other-slice")
     lane_path.write_text(json.dumps(lane, indent=2) + "\n", encoding="utf-8")
-    request = _completion_correction_request(tmp_path=tmp_path, owner_ref=owner_ref, proposal=proposal, disposition="reopen")
+    request = _completion_correction_request(
+        tmp_path=tmp_path, owner_ref=owner_ref, lane_path=lane_path, proposal=proposal, disposition="reopen"
+    )
 
     assert installer.targeted_execplan_write(**request, apply=True)["status"] == "applied"
 
@@ -1035,7 +1040,9 @@ def test_targeted_write_completion_correction_preserves_later_sibling_shared_evi
         }
     )
     lane_path.write_text(json.dumps(lane, indent=2) + "\n", encoding="utf-8")
-    request = _completion_correction_request(tmp_path=tmp_path, owner_ref=owner_ref, proposal=proposal, disposition="reopen")
+    request = _completion_correction_request(
+        tmp_path=tmp_path, owner_ref=owner_ref, lane_path=lane_path, proposal=proposal, disposition="reopen"
+    )
 
     assert installer.targeted_execplan_write(**request, apply=True)["status"] == "applied"
 
@@ -1047,7 +1054,9 @@ def test_targeted_write_completion_correction_no_material_source_patch_is_byte_p
     owner_ref, owner_path, lane_path, proposal = _completion_correction_fixture(tmp_path, "issue-2951-noop")
     proposal_path = tmp_path / f".agentic-workspace/planning/integration-proposals/{proposal['id']}.integration-proposal.json"
     before = {path: path.read_bytes() for path in (owner_path, lane_path, proposal_path)}
-    request = _completion_correction_request(tmp_path=tmp_path, owner_ref=owner_ref, proposal=proposal, disposition="reopen")
+    request = _completion_correction_request(
+        tmp_path=tmp_path, owner_ref=owner_ref, lane_path=lane_path, proposal=proposal, disposition="reopen"
+    )
     request["patch"] = {"intent": json.loads(owner_path.read_text(encoding="utf-8"))["intent"]}
 
     preview = installer.targeted_execplan_write(**request)
@@ -1058,10 +1067,11 @@ def test_targeted_write_completion_correction_no_material_source_patch_is_byte_p
 
 
 def test_targeted_write_completion_correction_refreshes_current_proposal_and_rejects_stale_guard(tmp_path: Path) -> None:
-    owner_ref, owner_path, _lane_path, proposal = _completion_correction_fixture(tmp_path, "issue-2951-complete")
+    owner_ref, owner_path, lane_path, proposal = _completion_correction_fixture(tmp_path, "issue-2951-complete")
     request = _completion_correction_request(
         tmp_path=tmp_path,
         owner_ref=owner_ref,
+        lane_path=lane_path,
         proposal=proposal,
         disposition="remain-feature-complete",
     )
@@ -1087,7 +1097,9 @@ def test_targeted_write_completion_correction_rolls_back_owner_lane_and_proposal
     owner_ref, owner_path, lane_path, proposal = _completion_correction_fixture(tmp_path, "issue-2951-rollback")
     proposal_path = tmp_path / f".agentic-workspace/planning/integration-proposals/{proposal['id']}.integration-proposal.json"
     before = {path: path.read_bytes() for path in (owner_path, lane_path, proposal_path)}
-    request = _completion_correction_request(tmp_path=tmp_path, owner_ref=owner_ref, proposal=proposal, disposition="reopen")
+    request = _completion_correction_request(
+        tmp_path=tmp_path, owner_ref=owner_ref, lane_path=lane_path, proposal=proposal, disposition="reopen"
+    )
     original_write = installer._write_schema_backed_planning_record
 
     def fail_proposal(*, record_path: Path, record: dict[str, Any], schema_path: Path) -> None:

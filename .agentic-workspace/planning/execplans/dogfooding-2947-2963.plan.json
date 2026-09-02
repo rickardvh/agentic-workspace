@@ -1,0 +1,125 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "dogfooding-2947-2963",
+  "title": "Complete active dogfooding owners #2947, #2561, #2727, and #2963",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "implementation",
+  "revision": 5,
+  "intent": {
+    "outcome": "Complete the active dogfooding implementation owners #2947, #2561, #2727, and #2963 on the existing stacked PR.",
+    "non_goals": [
+      "Do not merge PRs, self-review, post review-decision markers, add portable reviewer authority, or run broad tests unless selected proof requires them."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "https://github.com/rickardvh/agentic-workspace/issues/2947",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "Host-native assignment lifecycle and stale plan binding (#2947/#2699).",
+      "Selected-proof result classification and resume (#2561/#2727).",
+      "Repository PR-review semantic-route adoption (#2963)."
+    ],
+    "effects": [
+      "Repository source, generated mirrors, focused tests, release note, and Planning/proof records only."
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected-local",
+      "owner": "dogfooding-2947-2963"
+    },
+    "proof_posture": {
+      "state": "pending",
+      "refs": []
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2947",
+      "label": "https://github.com/rickardvh/agentic-workspace/issues/2947",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Implement only #2561/#2727 selected-proof completed-result and resume semantics, then run their focused fixtures.",
+  "blockers": [],
+  "proof": {
+    "claims": [
+      "Complete active dogfooding owners #2947, #2561, #2727, and #2963 is implemented, validated, and closed out honestly."
+    ],
+    "requirements": [
+      "Fill in the narrowest command that proves the promoted work."
+    ],
+    "refs": []
+  },
+  "continuation": {
+    "owner": "none",
+    "residual_intent": "none"
+  },
+  "specialist_contracts": [],
+  "goal": [
+    "Complete the active dogfooding implementation owners #2947, #2561, #2727, and #2963 on the existing stacked PR."
+  ],
+  "non_goals": [
+    "Do not merge PRs, self-review, post review-decision markers, add portable reviewer authority, or run broad tests unless selected proof requires them."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "Resolve all current dogfooding regressions on the compact top-of-stack PR.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "execution_bounds": {
+    "allowed paths": "source/runtime contracts, focused tests, generated mirrors, repo-owned PR-review skill/instruction/Memory declarations, release note, and Planning/proof evidence",
+    "max changed files": "bounded to existing consolidated stack surfaces plus the smallest #2963 declarations/fixtures",
+    "required validation commands": "focused assignment, selected-proof, semantic-route, generated closure, lint/type checks, then repository-selected proof",
+    "ask-before-refactor threshold": "stop before portable review-policy design or a second proof state machine",
+    "stop before touching": "PR merge, review-decision markers, unrelated backlog, or target-branch integration truth"
+  },
+  "touched_paths": [
+    "src/agentic_workspace/contracts/python_primitive_support.py",
+    "src/agentic_workspace/contracts/typescript_primitive_support.mjs",
+    "src/agentic_workspace/workspace_runtime_core.py",
+    "src/agentic_workspace/workspace_runtime_implement.py",
+    "tests/test_external_operation_clients.py",
+    "tests/test_workspace_proof_cli.py",
+    "tests/test_workspace_implement_cli.py",
+    "generated/**",
+    ".agentic-workspace/planning/**",
+    ".agentic-workspace/proof/receipts/**",
+    ".release/changes/**",
+    "tools/skills/REGISTRY.json",
+    "tools/skills/pr-review-recheck/SKILL.md",
+    ".agentic-workspace/instructions/**",
+    ".agentic-workspace/memory/repo/manifest.toml",
+    "tests/test_scoped_instructions.py",
+    "tests/test_workspace_skills_cli.py",
+    "tests/test_operating_decision.py",
+    "packages/memory/**",
+    "scripts/check/check_generated_command_packages.py",
+    "tests/test_command_generation_release_promotion.py",
+    "packages/planning/tests/test_branch_safe_planning.py",
+    "src/agentic_workspace/proof_execution_projection.py"
+  ],
+  "validation_commands": [
+    "uv run --frozen --active --no-sync pytest -q tests/test_workspace_implement_cli.py::test_plan_binding_drift_supersedes_assignment_before_rematerialization",
+    "uv run --frozen --active --no-sync pytest -q tests/test_workspace_proof_cli.py -k \"execute_selected or timeout\"",
+    "uv run --frozen --active --no-sync pytest -q tests/test_scoped_instructions.py tests/test_workspace_skills_cli.py tests/test_operating_decision.py -k \"semantic_route or route\"",
+    "uv run --frozen --active --no-sync pytest -q tests/test_external_operation_clients.py tests/test_command_generation_release_promotion.py -k \"assignment or docker or generated\""
+  ],
+  "completion_criteria": [
+    "Stale plan-bound assignments are superseded before current authority is rematerialized.",
+    "Completed selected-proof failures retain their real exit code/evidence while genuine timeouts remain distinct.",
+    "Resume retains completed failing constituents and runs only unfinished or explicitly retriable proof work.",
+    "The explicit github/pr/review route surfaces the existing procedure and Memory anti-trap without lexical inference or authority grants.",
+    "Python/TypeScript generated packages and Docker closure remain consistent under focused checks."
+  ]
+}

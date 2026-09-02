@@ -45054,6 +45054,102 @@ def _delegated_run_lifecycle_payload(
     }
 
 
+def _live_assignment_plan_binding(*, target_root: Path, task_text: str, changed_paths: list[str]) -> dict[str, Any]:
+    """Resolve the plan identity and scope that a fresh assignment must bind."""
+
+    current_work = resolve_current_work_context(root=target_root, task=task_text, relation_hint="plan-continuation")
+    plan_id = str(current_work.get("selected_plan_id") or current_work.get("plan_id") or "").strip()
+    plan_ref = f".agentic-workspace/planning/execplans/{plan_id}.plan.json" if plan_id else ""
+    if not plan_ref:
+        active_plan_ref, _active_plan = _active_execplan_record_payload(target_root=target_root)
+        plan_ref = str(active_plan_ref or "").strip()
+    plan_path = target_root / plan_ref if plan_ref else None
+    plan_record: dict[str, Any] = {}
+    if plan_path is not None:
+        try:
+            loaded_plan = json.loads(plan_path.read_text(encoding="utf-8-sig"))
+            plan_record = loaded_plan if isinstance(loaded_plan, dict) else {}
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+            plan_record = {}
+    allowed_paths = _dedupe(list(changed_paths) or _plan_exact_list(plan_record, "canonical_core.touched_scope", "touched_paths"))
+    return {
+        "plan_ref": plan_ref,
+        "plan_revision": str(plan_record.get("revision") or "").strip(),
+        "allowed_paths": allowed_paths,
+        "plan_record": plan_record,
+    }
+
+
+def _assignment_plan_binding_matches(*, assignment: dict[str, Any], live_binding: dict[str, Any]) -> bool:
+    """Fail closed when a current-looking record no longer matches its plan."""
+
+    plan_ref = str(live_binding.get("plan_ref") or "").strip()
+    plan_revision = str(live_binding.get("plan_revision") or "").strip()
+    allowed_paths = sorted({str(path) for path in _list_payload(live_binding.get("allowed_paths")) if str(path).strip()})
+    if not plan_ref or not plan_revision:
+        return True
+    if not allowed_paths:
+        return False
+    gate = _as_dict(assignment.get("assignment_gate"))
+    bound_paths = sorted({str(path) for path in _list_payload(gate.get("allowed_paths")) if str(path).strip()})
+    return (
+        str(gate.get("plan_ref") or "").strip() == plan_ref
+        and str(gate.get("plan_revision") or "").strip() == plan_revision
+        and bound_paths == allowed_paths
+    )
+
+
+def _supersede_stale_plan_assignments(
+    *,
+    target_root: Path,
+    live_binding: dict[str, Any],
+    replacement_assignment_id: str,
+) -> list[str]:
+    """Retire only current records displaced by a revised plan binding."""
+
+    plan_ref = str(live_binding.get("plan_ref") or "").strip()
+    plan_revision = str(live_binding.get("plan_revision") or "").strip()
+    allowed_paths = sorted({str(path) for path in _list_payload(live_binding.get("allowed_paths")) if str(path).strip()})
+    if not plan_ref or not plan_revision or not allowed_paths:
+        return []
+    assignment_root = target_root / ".agentic-workspace" / "planning" / "assignments"
+    if not assignment_root.exists():
+        return []
+    superseded: list[str] = []
+    now = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    for path in sorted(assignment_root.glob("*.assignment.json")):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+            continue
+        if not isinstance(payload, dict) or str(payload.get("status") or "").strip() != "current":
+            continue
+        if str(payload.get("assignment_id") or "").strip() == replacement_assignment_id:
+            continue
+        if _assignment_plan_binding_matches(assignment=payload, live_binding=live_binding):
+            continue
+        gate = _as_dict(payload.get("assignment_gate"))
+        if str(gate.get("plan_ref") or "").strip() != plan_ref:
+            continue
+        attempt = _as_dict(payload.get("current_attempt"))
+        if attempt:
+            payload["current_attempt"] = {**attempt, "status": "superseded", "updated_at": now}
+        payload["status"] = "superseded"
+        payload["superseded_by"] = {
+            "assignment_id": replacement_assignment_id,
+            "reason": "plan-binding-changed",
+            "plan_ref": plan_ref,
+            "plan_revision": plan_revision,
+            "allowed_paths": allowed_paths,
+        }
+        payload["updated_at"] = now
+        rendered = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+        if path.read_text(encoding="utf-8-sig") != rendered:
+            path.write_text(rendered, encoding="utf-8")
+            superseded.append(path.relative_to(target_root).as_posix())
+    return superseded
+
+
 def _assignment_primary_action_payload(
     *,
     target_root: Path | None,
@@ -45133,6 +45229,11 @@ def _assignment_primary_action_payload(
         return base
 
     assignment = _current_assignment_lifecycle_record(target_root=target_root)
+    live_plan_binding = _live_assignment_plan_binding(
+        target_root=target_root,
+        task_text=task_text,
+        changed_paths=list(changed_paths or []),
+    )
     assignment_target = str(assignment.get("target_name") or _as_dict(assignment.get("assignment_gate")).get("selected_target") or "")
     selected_name = str(assignment_gate.get("selected_target") or "")
     assignment_revision = str(assignment.get("current_revision") or "")
@@ -45150,6 +45251,7 @@ def _assignment_primary_action_payload(
         and bool(assignment_id and assignment_revision and run_id)
         and assignment_target in {selected_name, str(assignment_gate.get("target_identity_ref") or "")}
         and (not assignment_decision_ref or assignment_decision_ref == decision_revision)
+        and _assignment_plan_binding_matches(assignment=assignment, live_binding=live_plan_binding)
     )
     if not assignment_current:
         prepare_paths = list(changed_paths or [])
@@ -45177,7 +45279,7 @@ def _assignment_primary_action_payload(
             owner_context_revision={"assignment_decision_revision": decision_revision},
             mutation_boundary={"writes_repo_state": True, "implementation_allowed": False},
         )
-        return {
+        action = {
             **base,
             "status": "assignment-authority-required",
             "action": "materialize-canonical-assignment",
@@ -45186,6 +45288,15 @@ def _assignment_primary_action_payload(
             "command": prepare_command,
             "missing_authority": ["current checked-in Planning assignment bound to the canonical decision revision"],
         }
+        if assignment and not _assignment_plan_binding_matches(assignment=assignment, live_binding=live_plan_binding):
+            action["stale_assignment_binding"] = {
+                "status": "stale-plan-binding",
+                "plan_ref": live_plan_binding.get("plan_ref"),
+                "plan_revision": live_plan_binding.get("plan_revision"),
+                "allowed_paths": live_plan_binding.get("allowed_paths"),
+                "rule": "A plan revision or allowed-path change supersedes the old assignment before any redispatch.",
+            }
+        return action
 
     local_state_path = target_root / ".agentic-workspace" / "local" / "assignment-runs" / run_id / "state.json"
     local_state: dict[str, Any] = {}
@@ -45211,7 +45322,12 @@ def _assignment_primary_action_payload(
     if local_state_name == "integrated":
         task_proof_ref = _current_assignment_task_proof_ref(target_root=target_root, assignment=assignment)
         if not task_proof_ref:
-            proof_paths = [str(path) for path in _list_payload(_as_dict(assignment.get("assignment_gate")).get("allowed_paths"))]
+            integration_ref = target_root / ".agentic-workspace" / "local" / "assignment-runs" / run_id / "integration" / "integration.json"
+            try:
+                integration_receipt = _as_dict(json.loads(integration_ref.read_text(encoding="utf-8-sig")))
+            except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+                integration_receipt = {}
+            proof_paths = [str(path) for path in _list_payload(integration_receipt.get("changed_paths")) if str(path)]
             changed_args = " ".join(f"--changed {_shell_quote(path)}" for path in proof_paths)
             proof_command = _command_with_cli_invoke(
                 command=f"agentic-workspace proof --target . {changed_args} --format json",
@@ -45523,26 +45639,22 @@ def _execution_posture_payload(
             "handoff-required",
         }
     ):
-        current_work = resolve_current_work_context(root=target_root, task=str(task_text or ""), relation_hint="plan-continuation")
-        plan_id = str(current_work.get("selected_plan_id") or current_work.get("plan_id") or "").strip()
-        plan_ref = f".agentic-workspace/planning/execplans/{plan_id}.plan.json" if plan_id else ""
-        if not plan_ref:
-            active_plan_ref, _active_plan = _active_execplan_record_payload(target_root=target_root)
-            plan_ref = str(active_plan_ref or "").strip()
-        plan_path = target_root / plan_ref if plan_ref else None
-        plan_record: dict[str, Any] = {}
-        if plan_path is not None:
-            try:
-                loaded_plan = json.loads(plan_path.read_text(encoding="utf-8-sig"))
-                plan_record = loaded_plan if isinstance(loaded_plan, dict) else {}
-            except (OSError, json.JSONDecodeError):
-                plan_record = {}
-        assignment_paths = _dedupe(list(changed_paths) or _plan_exact_list(plan_record, "canonical_core.touched_scope", "touched_paths"))
+        live_plan_binding = _live_assignment_plan_binding(
+            target_root=target_root,
+            task_text=str(task_text or ""),
+            changed_paths=list(changed_paths),
+        )
+        plan_ref = str(live_plan_binding.get("plan_ref") or "")
+        plan_record = _as_dict(live_plan_binding.get("plan_record"))
+        assignment_paths = [str(path) for path in _list_payload(live_plan_binding.get("allowed_paths")) if str(path).strip()]
+        plan_revision = str(live_plan_binding.get("plan_revision") or "").strip()
         decision_revision = str(assignment_gate.get("assignment_decision_revision") or "").strip()
         assignment_seed = {
             "assignment_decision_revision": decision_revision,
             "human_intent": " ".join(str(task_text or "").split()),
             "changed_paths": sorted(assignment_paths),
+            "plan_ref": plan_ref,
+            "plan_revision": plan_revision,
             "task_class": assignment_gate.get("task_class"),
             "scope_class": assignment_gate.get("scope_class"),
         }
@@ -45595,7 +45707,7 @@ def _execution_posture_payload(
         enhanced_gate = {
             **assignment_gate,
             "plan_ref": plan_ref,
-            "plan_revision": plan_record.get("revision") or decision_revision,
+            "plan_revision": plan_revision or decision_revision,
             "slice_id": f"slice-{assignment_digest}",
             "slice_revision": decision_revision,
             "role": role,
@@ -45646,6 +45758,11 @@ def _execution_posture_payload(
         if identity.get("complete"):
             proof_ref = f".agentic-workspace/proof/receipts/{assignment_id}.assignment-proof.json"
             now = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+            superseded_assignment_refs = _supersede_stale_plan_assignments(
+                target_root=target_root,
+                live_binding=live_plan_binding,
+                replacement_assignment_id=assignment_id,
+            )
             assignment_materialization = materialize_canonical_assignment(
                 target_root=target_root,
                 assignment={
@@ -45682,6 +45799,11 @@ def _execution_posture_payload(
                     "claim_boundary": "assignment-identity-and-routing-only; task implementation and completion remain unproved",
                 },
             )
+            if superseded_assignment_refs:
+                assignment_materialization["superseded_assignment_refs"] = superseded_assignment_refs
+                assignment_materialization["supersession_rule"] = (
+                    "A plan revision or allowed-path change supersedes the prior assignment before a new run is dispatched."
+                )
             assignment_gate = enhanced_gate
             delegation_decision = enhanced_delegation
         else:
@@ -53192,7 +53314,7 @@ def _integrated_assignment_proof_obligation(*, target_root: Path, changed_paths:
         attempt = _as_dict(assignment.get("current_attempt"))
         run_id = str(attempt.get("run_id") or "")
         allowed_paths = {str(path) for path in _list_payload(gate.get("allowed_paths")) if str(path)}
-        if not obligation or not run_id or not allowed_paths or not allowed_paths.issubset(changed_scope):
+        if not obligation or not run_id or not _assignment_proof_paths_within_scope(paths=changed_scope, allowed_paths=allowed_paths):
             continue
         state_path = target_root / ".agentic-workspace" / "local" / "assignment-runs" / run_id / "state.json"
         try:
@@ -53213,6 +53335,42 @@ def _integrated_assignment_proof_obligation(*, target_root: Path, changed_paths:
     intent_matches = [obligation for intent_match, obligation in candidates if intent_match]
     eligible = intent_matches or [obligation for _, obligation in candidates]
     return eligible[0] if len(eligible) == 1 else {}
+
+
+def _assignment_proof_paths_within_scope(*, paths: set[str], allowed_paths: set[str]) -> bool:
+    if not paths or not allowed_paths:
+        return False
+
+    def canonical(value: str) -> str:
+        normalized = str(value or "").replace("\\", "/")
+        if (
+            not normalized
+            or normalized.startswith("/")
+            or re.match(r"^[A-Za-z]:", normalized)
+            or "\x00" in normalized
+            or any(part in {"", ".", ".."} for part in normalized.split("/"))
+        ):
+            return ""
+        return normalized
+
+    def matches(path: str, pattern: str) -> bool:
+        normalized = canonical(path)
+        normalized_pattern = canonical(pattern)
+        if not normalized or not normalized_pattern:
+            return False
+        expression: list[str] = []
+        offset = 0
+        while offset < len(normalized_pattern):
+            character = normalized_pattern[offset]
+            if character == "*" and offset + 1 < len(normalized_pattern) and normalized_pattern[offset + 1] == "*":
+                expression.append(".*")
+                offset += 2
+                continue
+            expression.append("[^/]*" if character == "*" else "[^/]" if character == "?" else re.escape(character))
+            offset += 1
+        return normalized == normalized_pattern or re.fullmatch("".join(expression), normalized) is not None
+
+    return all(any(matches(path, pattern) for pattern in allowed_paths) for path in paths)
 
 
 def _closed_assignment_closeout_lineage(*, target_root: Path, changed_paths: list[str], task_text: str) -> dict[str, Any]:
@@ -53249,7 +53407,7 @@ def _closed_assignment_closeout_lineage(*, target_root: Path, changed_paths: lis
             or not obligation
             or not run_id
             or not allowed_paths
-            or not allowed_paths.issubset(changed_scope)
+            or not _assignment_proof_paths_within_scope(paths=changed_scope, allowed_paths=allowed_paths)
             or attempt.get("status") != "closed"
             or str(closeout.get("run_id") or "") != run_id
             or not task_proof_ref
@@ -53320,7 +53478,7 @@ def _closed_assignment_closeout_lineage(*, target_root: Path, changed_paths: lis
             or task_proof.get("assignment_proof_binding") != assignment_task_proof_binding(task_proof)
             or str(task_proof.get("source_ref") or "") != task_proof_ref
             or not proof_receipt_admission(task_proof).get("proof_sufficient")
-            or not allowed_paths.issubset(proved_paths)
+            or not _assignment_proof_paths_within_scope(paths=proved_paths, allowed_paths=allowed_paths)
             or (close_receipt_task_proof_ref and close_receipt_task_proof_ref != task_proof_ref)
             or not semantic_task_proof_current
         ):
@@ -53622,6 +53780,11 @@ def _execute_selected_proof_payload(
     aggregate_receipt = _as_dict(run.get("aggregate_receipt"))
     if len(passed_commands.intersection(required_commands)) == len(required_commands) and aggregate_receipt.get("status") == "written":
         return _proof_execution_result_payload(run=run, selection=selection, status="reused-fresh-evidence")
+    if any(item.get("status") == "failed" for item in records):
+        # A completed process failure is evidence, not an interrupted attempt.
+        # Reusing this run must preserve that outcome; revalidation starts a new
+        # run identity after the underlying diagnosis or fix.
+        return _proof_execution_result_payload(run=run, selection=selection, status="completed-failure")
     if dry_run:
         run["attempt"] = int(run.get("attempt") or 0) + 1
         return _proof_execution_result_payload(run=run, selection=selection, status="dry-run")
@@ -53759,7 +53922,13 @@ def _execute_selected_proof_payload(
         run["updated_at"] = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
         _write_json_file(destination=run_path, payload=run, dry_run=False)
     aggregate_written = _as_dict(run.get("aggregate_receipt")).get("status") == "written"
-    result_status = "completed" if commands_passed and aggregate_written else "partial"
+    result_status = (
+        "completed"
+        if commands_passed and aggregate_written
+        else "completed-failure"
+        if any(item.get("status") == "failed" for item in records)
+        else "partial"
+    )
     return _proof_execution_result_payload(run=run, selection=selection, status=result_status)
 
 

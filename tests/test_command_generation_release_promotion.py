@@ -77,6 +77,14 @@ def _strict_health_receipt(*, subject: str = "sha256:candidate") -> dict[str, ob
     }
 
 
+def test_typescript_conformance_dockerfile_exposes_verification_runtime_source() -> None:
+    dockerfile = (REPO_ROOT / "generated/typescript.conformance.Dockerfile").read_text(encoding="utf-8")
+
+    assert "COPY README.md ./README.md" in dockerfile
+    assert "/work/packages/verification/src" in dockerfile
+    assert "./packages/verification ." in dockerfile
+
+
 def test_promote_command_generation_release_updates_pyproject_and_dockerfiles(tmp_path: Path) -> None:
     module = _load_module()
     old_url = (
