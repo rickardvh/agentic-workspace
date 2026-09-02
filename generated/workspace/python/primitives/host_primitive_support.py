@@ -638,9 +638,7 @@ def _assignment_lifecycle_decision_state(state: Mapping[str, Any]) -> dict[str, 
             projection[field] = value
     if current_attempt:
         projection["current_attempt"] = {
-            field: current_attempt[field]
-            for field in ("run_id", "target", "status")
-            if _optional_text(current_attempt.get(field))
+            field: current_attempt[field] for field in ("run_id", "target", "status") if _optional_text(current_attempt.get(field))
         }
     return projection
 
