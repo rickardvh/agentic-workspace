@@ -444,7 +444,7 @@ const commandDefinitions = [
           "name": "plan"
         }
       ],
-      "help": "Preview or apply a guarded owner patch or typed completion-truth correction to one canonical execplan.",
+      "help": "Preview or apply one owner-scoped semantic mutation; ordinary use resolves currentness internally.",
       "name": "targeted-write",
       "options": [
         {
@@ -471,20 +471,22 @@ const commandDefinitions = [
           "name": "completion_correction"
         },
         {
+          "default": "",
           "flags": [
             "--expect-planning-revision"
           ],
-          "help": "Planning revision id observed before the write.",
+          "help": "Optional low-level Planning revision guard; ordinary semantic mutation resolves currentness internally.",
           "name": "expect_planning_revision",
-          "required": true
+          "required": false
         },
         {
+          "default": "",
           "flags": [
             "--expect-owner-revision"
           ],
-          "help": "Owner record revision observed before the write.",
+          "help": "Optional low-level owner revision guard; omit all revision guards for ordinary semantic mutation.",
           "name": "expect_owner_revision",
-          "required": true
+          "required": false
         },
         {
           "default": "",

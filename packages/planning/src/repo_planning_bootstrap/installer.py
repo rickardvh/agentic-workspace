@@ -19134,13 +19134,82 @@ def _targeted_write_replay_result(
             "receipt_path": _planning_surface_relative(target_root, receipt_path),
             "receipt": receipt,
             "postcondition_admission": postcondition,
+            "next_current_continuation": {
+                "kind": "agentic-workspace/action-result-continuation/v1",
+                "status": "re-resolution-required",
+                "owner": "planning-frontier",
+                "action": "derive-current-orchestration-frontier",
+                "reason": "The admitted semantic mutation is already current; derive the current frontier without replaying it.",
+            },
         }
+    request_patch_raw = request.get("patch")
+    request_patch: Mapping[str, Any] = cast(Mapping[str, Any], request_patch_raw) if isinstance(request_patch_raw, Mapping) else {}
     return {
-        "kind": "agentic-planning/targeted-execplan-write/v1",
-        "status": "stale-applied-receipt",
+        **_targeted_write_stale_result(
+            status="stale-applied-receipt",
+            plan=str(request.get("owner") or ""),
+            patch=request_patch,
+            current={"postcondition_reasons": postcondition.get("reasons", [])},
+        ),
         "receipt_path": _planning_surface_relative(target_root, receipt_path),
         "postcondition_admission": postcondition,
-        "repair": "The recorded result is no longer current; rerun targeted-write preview with live revisions.",
+    }
+
+
+def _targeted_write_stale_result(
+    *, status: str, plan: str, patch: Mapping[str, Any], current: Mapping[str, Any], detail: Mapping[str, Any] | None = None
+) -> dict[str, Any]:
+    """Return a non-retryable stale result with one current semantic re-resolution action."""
+
+    arguments = {"plan": plan, "patch": dict(patch), "apply": True}
+    continuation = {
+        "kind": "agentic-workspace/action-result-continuation/v1",
+        "status": "re-resolution-required",
+        "owner": "planning-owner",
+        "action": "resolve-current-semantic-mutation",
+        "operation_invocation": {
+            "kind": "agentic-workspace/operation-invocation/v1",
+            "operation_id": "planning.targeted-write.lifecycle",
+            "arguments": arguments,
+            "authority_class": "current-planning-owner",
+            "expected_input_revision": _targeted_write_revision({"arguments": arguments, "current": dict(current)}),
+            "owner_context_revision": dict(current),
+            "stale_action_rejection": {
+                "status": "prior-action-non-current",
+                "repair": "Use this current semantic action; do not retry or repair the old CAS arguments.",
+            },
+        },
+    }
+    payload = {
+        "kind": "agentic-planning/targeted-execplan-write/v1",
+        "status": status,
+        "currentness": dict(current),
+        "next_current_continuation": continuation,
+    }
+    if detail:
+        payload["result"] = dict(detail)
+    return payload
+
+
+def _targeted_write_actionable_continuation(*, plan: str, patch: Mapping[str, Any], current: Mapping[str, Any]) -> dict[str, Any]:
+    arguments = {"plan": plan, "patch": dict(patch), "apply": True}
+    return {
+        "kind": "agentic-workspace/action-result-continuation/v1",
+        "status": "actionable",
+        "owner": "planning-owner",
+        "action": "apply-current-semantic-mutation",
+        "operation_invocation": {
+            "kind": "agentic-workspace/operation-invocation/v1",
+            "operation_id": "planning.targeted-write.lifecycle",
+            "arguments": arguments,
+            "authority_class": "current-planning-owner",
+            "expected_input_revision": _targeted_write_revision({"arguments": arguments, "current": dict(current)}),
+            "owner_context_revision": dict(current),
+            "stale_action_rejection": {
+                "status": "reject-on-owner-input-change",
+                "repair": "Resolve the current semantic mutation; callers never repair opaque Planning revisions.",
+            },
+        },
     }
 
 
@@ -19149,8 +19218,8 @@ def targeted_execplan_write(
     target: str | Path | None = None,
     plan: str,
     patch: Mapping[str, Any] | str,
-    expected_planning_revision: str,
-    expected_owner_revision: int | str,
+    expected_planning_revision: str = "",
+    expected_owner_revision: int | str = "",
     expected_lane_revision: int | str = "",
     apply: bool = False,
     preflight_token: str = "",
@@ -19177,7 +19246,10 @@ def targeted_execplan_write(
             "status": "caller-preflight-token-rejected",
             "preflight_admission": preflight_admission,
         }
-    if not str(expected_planning_revision or "").strip() or not str(expected_owner_revision or "").strip():
+    ordinary_semantic_mode = not any(
+        str(value or "").strip() for value in (expected_planning_revision, expected_owner_revision, expected_lane_revision)
+    )
+    if not ordinary_semantic_mode and (not str(expected_planning_revision or "").strip() or not str(expected_owner_revision or "").strip()):
         return {
             "kind": "agentic-planning/targeted-execplan-write/v1",
             "status": "missing-revision-guard",
@@ -19195,35 +19267,53 @@ def targeted_execplan_write(
             "status": "owner-not-live",
             "owner": _planning_surface_relative(target_root, record_path),
         }
-    request = {
-        "owner": _planning_surface_relative(target_root, record_path),
-        "patch": dict(patch),
-        "planning_revision": expected_planning_revision,
-        "owner_revision": expected_owner_revision,
-        "lane_revision": expected_lane_revision,
-    }
-    if correction:
-        request["completion_correction"] = correction
-    receipt_id = hashlib.sha256(json.dumps(request, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:20]
-    receipt_path = target_root / ".agentic-workspace/local/planning/targeted-execplan-receipts" / f"{receipt_id}.json"
-    if apply and receipt_path.is_file():
-        replay_result = _targeted_write_replay_result(target_root=target_root, receipt_path=receipt_path, request=request, record=record)
-        if replay_result is not None:
-            return replay_result
     if _execplan_lifecycle(record) != "live":
         return {
             "kind": "agentic-planning/targeted-execplan-write/v1",
             "status": "owner-not-live",
             "owner": _planning_surface_relative(target_root, record_path),
         }
-    if not _planning_revision_guard(result, expected_planning_revision=expected_planning_revision, target_root=target_root):
-        return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "stale-planning-revision", "result": result.to_dict()}
-    if str(record.get("revision") or "") != str(expected_owner_revision):
+    current_planning_revision = str(planning_revision(target_root).get("revision_id") or "")
+    effective_planning_revision = current_planning_revision if ordinary_semantic_mode else str(expected_planning_revision or "").strip()
+    effective_owner_revision = record.get("revision") if ordinary_semantic_mode else expected_owner_revision
+    if apply and not ordinary_semantic_mode:
+        replay_request = {
+            "owner": _planning_surface_relative(target_root, record_path),
+            "patch": dict(patch),
+            "planning_revision": effective_planning_revision,
+            "owner_revision": effective_owner_revision,
+            "lane_revision": str(expected_lane_revision or "").strip(),
+            "mutation_mode": "explicit-guard-low-level",
+        }
+        if correction:
+            replay_request["completion_correction"] = correction
+        replay_id = hashlib.sha256(json.dumps(replay_request, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:20]
+        replay_path = target_root / ".agentic-workspace/local/planning/targeted-execplan-receipts" / f"{replay_id}.json"
+        if replay_path.is_file():
+            replay_result = _targeted_write_replay_result(
+                target_root=target_root,
+                receipt_path=replay_path,
+                request=replay_request,
+                record=record,
+            )
+            if replay_result is not None:
+                return replay_result
+    if not _planning_revision_guard(result, expected_planning_revision=effective_planning_revision, target_root=target_root):
+        return _targeted_write_stale_result(
+            status="stale-planning-revision",
+            plan=plan,
+            patch=patch,
+            current={"planning_revision": current_planning_revision, "owner_revision": record.get("revision")},
+            detail=result.to_dict(),
+        )
+    if str(record.get("revision") or "") != str(effective_owner_revision):
         return {
-            "kind": "agentic-planning/targeted-execplan-write/v1",
-            "status": "stale-owner-revision",
-            "owner_revision": record.get("revision"),
-            "planning_revision": planning_revision(target_root).get("revision_id"),
+            **_targeted_write_stale_result(
+                status="stale-owner-revision",
+                plan=plan,
+                patch=patch,
+                current={"planning_revision": current_planning_revision, "owner_revision": record.get("revision")},
+            ),
         }
     owner_relative = _planning_surface_relative(target_root, record_path)
     plan_id = str(record.get("id") or record_path.stem.removesuffix(".plan"))
@@ -19236,14 +19326,40 @@ def targeted_execplan_write(
         return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "ambiguous-lane-relation"}
     lane_path, lane_record = lane_matches[0] if lane_matches else (None, None)
     lane_revision = _record_revision(lane_record) if isinstance(lane_record, dict) else ""
-    if lane_path is not None and not str(expected_lane_revision or "").strip():
+    effective_lane_revision = lane_revision if ordinary_semantic_mode else str(expected_lane_revision or "").strip()
+    if lane_path is not None and not effective_lane_revision:
         return {
             "kind": "agentic-planning/targeted-execplan-write/v1",
             "status": "missing-lane-revision-guard",
             "lane": _planning_surface_relative(target_root, lane_path),
         }
-    if lane_path is not None and str(expected_lane_revision) != lane_revision:
-        return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "stale-lane-revision", "lane_revision": lane_revision}
+    if lane_path is not None and effective_lane_revision != lane_revision:
+        return _targeted_write_stale_result(
+            status="stale-lane-revision",
+            plan=plan,
+            patch=patch,
+            current={
+                "planning_revision": current_planning_revision,
+                "owner_revision": record.get("revision"),
+                "lane_revision": lane_revision,
+            },
+        )
+    request = {
+        "owner": owner_relative,
+        "patch": dict(patch),
+        "planning_revision": effective_planning_revision,
+        "owner_revision": effective_owner_revision,
+        "lane_revision": effective_lane_revision,
+        "mutation_mode": "ordinary-semantic" if ordinary_semantic_mode else "explicit-guard-low-level",
+    }
+    if correction:
+        request["completion_correction"] = correction
+    receipt_id = hashlib.sha256(json.dumps(request, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:20]
+    receipt_path = target_root / ".agentic-workspace/local/planning/targeted-execplan-receipts" / f"{receipt_id}.json"
+    if apply and receipt_path.is_file():
+        replay_result = _targeted_write_replay_result(target_root=target_root, receipt_path=receipt_path, request=request, record=record)
+        if replay_result is not None:
+            return replay_result
     proposal_path: Path | None = None
     proposal_before: dict[str, Any] | None = None
     if correction:
@@ -19311,6 +19427,26 @@ def targeted_execplan_write(
     unknown = sorted(set(patch).difference(allowed))
     if unknown or not patch:
         return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "invalid-patch", "unknown_fields": unknown}
+    field_disposition = {
+        field: ("derived-lifecycle-owner" if field in {"lifecycle", "phase", "proof", "relationships", "parent"} else "semantic-input")
+        for field in patch
+    }
+    derived_lifecycle_fields = sorted(field for field, disposition in field_disposition.items() if disposition == "derived-lifecycle-owner")
+    if ordinary_semantic_mode and derived_lifecycle_fields:
+        return {
+            "kind": "agentic-planning/targeted-execplan-write/v1",
+            "status": "source-transition-required",
+            "unsupported_fields": derived_lifecycle_fields,
+            "field_disposition": field_disposition,
+            "next_current_continuation": {
+                "kind": "agentic-workspace/action-result-continuation/v1",
+                "status": "decision-required",
+                "owner": "planning-source-transition",
+                "decision": "supply-the-admitted-assignment-proof-review-or-integration-result",
+                "source_facts": {"owner": owner_relative, "derived_fields": derived_lifecycle_fields},
+            },
+            "reason": "Ordinary semantic mutation cannot author lifecycle consequences that Planning derives from admitted source transitions.",
+        }
     if "relationships" in patch:
         current_relationships = record.get("relationships")
         proposed_relationships = patch.get("relationships")
@@ -19583,6 +19719,11 @@ def targeted_execplan_write(
         "planning_revision": planning_revision(target_root).get("revision_id"),
         "lane_revision": lane_revision or None,
         "changes": changed,
+        "mutation_contract": {
+            "mode": "ordinary-semantic" if ordinary_semantic_mode else "explicit-guard-low-level",
+            "field_disposition": field_disposition,
+            "caller_managed_revision_tokens": False if ordinary_semantic_mode else True,
+        },
         "projection_effects": {
             "state": state_projection_changes,
             "lane": lane_projection_changes,
@@ -19617,6 +19758,15 @@ def targeted_execplan_write(
             ],
             "caller_bearer_tokens": "rejected",
         }
+        payload["next_current_continuation"] = _targeted_write_actionable_continuation(
+            plan=plan,
+            patch=patch,
+            current={
+                "planning_revision": current_planning_revision,
+                "owner_revision": record.get("revision"),
+                "lane_revision": lane_revision or None,
+            },
+        )
         return payload
     try:
         internal_preflight = _run_targeted_write_preflight(
@@ -19710,6 +19860,14 @@ def targeted_execplan_write(
             return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "rolled-back", "reason": str(exc)}
         payload = final_payload or payload
         payload["receipt_path"] = _planning_surface_relative(target_root, receipt_path)
+    if apply:
+        payload["next_current_continuation"] = {
+            "kind": "agentic-workspace/action-result-continuation/v1",
+            "status": "re-resolution-required",
+            "owner": "planning-frontier",
+            "action": "derive-current-orchestration-frontier",
+            "reason": "The semantic mutation changed Planning authority; derive only the current frontier dependencies.",
+        }
     return payload
 
 

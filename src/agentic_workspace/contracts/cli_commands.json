@@ -327,21 +327,23 @@
               "required": true
             },
             {
+              "default": "",
               "flags": ["--expect-planning-revision"],
-              "help": "Planning revision guard emitted by summary or targeted-write preview.",
+              "help": "Optional low-level Planning revision guard; ordinary semantic mutation resolves current owner authority internally.",
               "name": "expect_planning_revision",
-              "required": true
+              "required": false
             },
             {
+              "default": "",
               "flags": ["--expect-owner-revision"],
-              "help": "Integer revision of the selected execplan owner.",
+              "help": "Optional low-level execplan owner revision guard; omit with the other guards for ordinary semantic mutation.",
               "name": "expect_owner_revision",
-              "required": true
+              "required": false
             },
             {
               "default": "",
               "flags": ["--expect-lane-revision"],
-              "help": "Lane revision guard when the execplan is an active lane slice.",
+              "help": "Optional low-level lane revision guard; ordinary semantic mutation resolves the current bound lane internally.",
               "name": "expect_lane_revision"
             },
             {

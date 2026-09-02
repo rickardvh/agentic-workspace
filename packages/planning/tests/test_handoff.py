@@ -245,10 +245,12 @@ def test_targeted_execplan_writer_previews_applies_and_rejects_stale_owner(tmp_p
         apply=True,
     )
     assert stale["status"] == "stale-owner-revision"
+    assert stale["next_current_continuation"]["action"] == "resolve-current-semantic-mutation"
+    assert "expected_owner_revision" not in stale["next_current_continuation"]["operation_invocation"]["arguments"]
     assert json.loads(plan_path.read_text(encoding="utf-8"))["next_action"] == "run the focused proof"
 
 
-def test_targeted_execplan_writer_requires_both_revision_guards(tmp_path: Path) -> None:
+def test_targeted_execplan_writer_requires_complete_explicit_revision_guards(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
 
     result = installer_mod.targeted_execplan_write(
@@ -256,7 +258,7 @@ def test_targeted_execplan_writer_requires_both_revision_guards(tmp_path: Path) 
         plan="active-plan",
         patch={"next_action": "must not write"},
         expected_planning_revision="",
-        expected_owner_revision="",
+        expected_owner_revision="1",
         apply=True,
     )
 
@@ -265,6 +267,87 @@ def test_targeted_execplan_writer_requires_both_revision_guards(tmp_path: Path) 
         "status": "missing-revision-guard",
         "required": ["expected_planning_revision", "expected_owner_revision"],
     }
+
+
+def test_targeted_execplan_writer_ordinary_semantic_mode_resolves_currentness_and_continues(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    plan_path = tmp_path / ".agentic-workspace/planning/execplans/active-plan.plan.json"
+    _write_live_execplan_state(tmp_path, item_id="active-plan")
+    _write_execplan_record(plan_path, item_id="active-plan", status="in-progress")
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    record["revision"] = 1
+    plan_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    patch = {"goal": ["Deliver the revised bounded outcome."], "continuation": {"residual_intent": "Run focused proof."}}
+
+    preview = installer_mod.targeted_execplan_write(target=tmp_path, plan="active-plan", patch=patch)
+    unrelated_path = tmp_path / ".agentic-workspace/planning/execplans/unrelated.plan.json"
+    _write_execplan_record(unrelated_path, item_id="unrelated", status="in-progress")
+    applied = installer_mod.targeted_execplan_write(target=tmp_path, plan="active-plan", patch=patch, apply=True)
+
+    assert preview["status"] == "preview"
+    assert preview["mutation_contract"] == {
+        "mode": "ordinary-semantic",
+        "field_disposition": {"goal": "semantic-input", "continuation": "semantic-input"},
+        "caller_managed_revision_tokens": False,
+    }
+    invocation = preview["next_current_continuation"]["operation_invocation"]
+    assert invocation["operation_id"] == "planning.targeted-write.lifecycle"
+    assert set(invocation["arguments"]) == {"plan", "patch", "apply"}
+    assert applied["status"] == "applied"
+    assert applied["next_current_continuation"]["action"] == "derive-current-orchestration-frontier"
+    assert json.loads(plan_path.read_text(encoding="utf-8"))["goal"] == patch["goal"]
+
+
+def test_targeted_execplan_writer_ordinary_mode_rejects_caller_authored_lifecycle_consequences(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    plan_path = tmp_path / ".agentic-workspace/planning/execplans/active-plan.plan.json"
+    _write_execplan_record(plan_path, item_id="active-plan", status="in-progress")
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    record["revision"] = 1
+    plan_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+
+    result = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="active-plan",
+        patch={"phase": "complete", "proof": {"refs": ["proof://caller-authored"]}},
+        apply=True,
+    )
+
+    assert result["status"] == "source-transition-required"
+    assert result["unsupported_fields"] == ["phase", "proof"]
+    assert result["next_current_continuation"]["status"] == "decision-required"
+    assert json.loads(plan_path.read_text(encoding="utf-8"))["revision"] == 1
+
+
+def test_targeted_execplan_writer_generated_cli_supports_revision_free_semantic_apply(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    plan_path = tmp_path / ".agentic-workspace/planning/execplans/active-plan.plan.json"
+    _write_execplan_record(plan_path, item_id="active-plan", status="in-progress")
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    record["revision"] = 1
+    plan_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+
+    assert (
+        planning_cli.main(
+            [
+                "targeted-write",
+                "active-plan",
+                "--target",
+                str(tmp_path),
+                "--patch",
+                json.dumps({"goal": ["Revision-free semantic CLI mutation."]}),
+                "--apply",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    result = json.loads(capsys.readouterr().out)
+
+    assert result["status"] == "applied"
+    assert result["mutation_contract"]["caller_managed_revision_tokens"] is False
+    assert result["next_current_continuation"]["action"] == "derive-current-orchestration-frontier"
 
 
 def test_targeted_execplan_writer_replay_rejects_invalidated_postcondition(tmp_path: Path) -> None:
