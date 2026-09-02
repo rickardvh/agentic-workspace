@@ -18858,6 +18858,19 @@ def _targeted_write_receipt_postcondition(
             for item in [*_state_active_items(state), *_state_queued_items(state)]
         ):
             reasons.append("terminal-state-projection")
+    correction = postcondition.get("completion_correction")
+    if isinstance(correction, Mapping):
+        proposal_ref = str(correction.get("proposal_ref") or "")
+        if proposal_ref:
+            proposal_path = (target_root / proposal_ref).resolve()
+            try:
+                proposal_path.relative_to(target_root.resolve())
+            except ValueError:
+                reasons.append("completion-correction-proposal-ref")
+            else:
+                proposal = _load_integration_proposal(proposal_path)
+                if proposal is None or str(proposal.get("proposal_revision") or "") != str(correction.get("proposal_revision") or ""):
+                    reasons.append("completion-correction-proposal")
     return {
         "status": "current" if not reasons else "stale",
         "reasons": reasons,
@@ -18873,6 +18886,232 @@ def _parse_targeted_execplan_patch(patch: Mapping[str, Any] | str) -> Mapping[st
     except json.JSONDecodeError:
         return None
     return parsed if isinstance(parsed, dict) else None
+
+
+def _parse_completion_correction(value: Mapping[str, Any] | str | None) -> dict[str, Any] | None:
+    """Parse the semantic completion-correction extension of targeted-write.
+
+    This deliberately remains separate from the ordinary patch mapping: callers
+    may correct source-owner facts, but completion projections are recomputed by
+    Planning rather than being exposed as arbitrary patch keys.
+    """
+
+    if value in (None, ""):
+        return {}
+    parsed: Any = value
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            return None
+    if not isinstance(parsed, Mapping):
+        return None
+    correction = copy.deepcopy(dict(parsed))
+    allowed = {
+        "id",
+        "disposition",
+        "review_refs",
+        "proof_refs",
+        "completion_evidence",
+        "next_action",
+        "expected_proposal_revision",
+        "expected_target_authority_revision",
+    }
+    if set(correction).difference(allowed):
+        return None
+    correction_id = str(correction.get("id") or "").strip()
+    disposition = str(correction.get("disposition") or "").strip()
+    review_refs = correction.get("review_refs")
+    if not correction_id or disposition not in {"reopen", "remain-feature-complete"}:
+        return None
+    if not isinstance(review_refs, list) or not review_refs or not all(isinstance(item, str) and item.strip() for item in review_refs):
+        return None
+    correction["id"] = correction_id
+    correction["disposition"] = disposition
+    correction["review_refs"] = _dedupe([str(item).strip() for item in review_refs])
+    for key in ("proof_refs",):
+        raw = correction.get(key, [])
+        if raw and (not isinstance(raw, list) or not all(isinstance(item, str) and item.strip() for item in raw)):
+            return None
+        correction[key] = _dedupe([str(item).strip() for item in raw]) if isinstance(raw, list) else []
+    evidence = correction.get("completion_evidence", {})
+    if evidence and not isinstance(evidence, Mapping):
+        return None
+    correction["completion_evidence"] = dict(evidence) if isinstance(evidence, Mapping) else {}
+    for key in ("expected_proposal_revision", "expected_target_authority_revision", "next_action"):
+        correction[key] = str(correction.get(key) or "").strip()
+    if disposition == "remain-feature-complete":
+        if not correction["proof_refs"]:
+            return None
+        required_evidence = {"what_happened", "scope_touched", "changed_surfaces", "review_summary", "outcome_summary"}
+        if set(correction["completion_evidence"]) != required_evidence or any(
+            not isinstance(correction["completion_evidence"][key], str) or not correction["completion_evidence"][key].strip()
+            for key in required_evidence
+        ):
+            return None
+    return correction
+
+
+def _completion_truth_recorded(record: Mapping[str, Any]) -> bool:
+    """Return whether this live owner currently carries completion-derived truth."""
+
+    execution_run = _record_section_dict(dict(record), "execution_run") or {}
+    review = _record_section_dict(dict(record), "finished_run_review") or {}
+    satisfaction = _record_section_dict(dict(record), "intent_satisfaction") or {}
+    closure = _record_section_dict(dict(record), "closure_check") or {}
+    relationships = record.get("relationships") if isinstance(record.get("relationships"), Mapping) else {}
+    integration = relationships.get("integration") if isinstance(relationships, Mapping) else {}
+    return any(
+        (
+            str(record.get("phase") or "").strip().lower() in {"closeout", "complete"},
+            str(execution_run.get("run status") or "").strip().lower() == "completed",
+            str(review.get("review status") or "").strip().lower() == "complete",
+            str(satisfaction.get("was original intent fully satisfied?") or "").strip().lower() == "yes",
+            str(closure.get("slice status") or "").strip().lower() == "completed",
+            isinstance(integration, Mapping) and str(integration.get("status") or "").strip() == "feature-complete-integration-pending",
+        )
+    )
+
+
+def _completion_correction_pending_proposal(
+    *, target_root: Path, record: Mapping[str, Any], owner_ref: str
+) -> tuple[Path | None, dict[str, Any] | None, str]:
+    """Resolve exactly the pending proposal currently bound to this owner."""
+
+    relationships = record.get("relationships") if isinstance(record.get("relationships"), Mapping) else {}
+    integration = relationships.get("integration") if isinstance(relationships, Mapping) else {}
+    proposal_id = str(integration.get("proposal_id") or "").strip() if isinstance(integration, Mapping) else ""
+    matches = _pending_integration_proposals_for_owner(
+        target_root=target_root,
+        owner_refs=[owner_ref],
+        owner_ids=[str(record.get("id") or "")],
+    )
+    if not proposal_id:
+        return (None, None, "completion-correction-pending-proposal-present" if matches else "")
+    if len(matches) != 1 or str(matches[0].get("id") or "") != proposal_id:
+        return None, None, "completion-correction-ambiguous-proposal"
+    proposal_path = target_root / str(matches[0]["path"])
+    proposal = _load_integration_proposal(proposal_path)
+    if proposal is None:
+        return None, None, "completion-correction-proposal-invalid"
+    owner_raw = proposal.get("owner")
+    if not isinstance(owner_raw, Mapping):
+        return None, None, "completion-correction-proposal-owner-mismatch"
+    owner: Mapping[str, Any] = owner_raw
+    if (
+        str(owner.get("ref") or "").strip().replace("\\", "/") != owner_ref
+        or str(owner.get("id") or "").strip() != str(record.get("id") or "").strip()
+    ):
+        return None, None, "completion-correction-proposal-owner-mismatch"
+    return proposal_path, proposal, ""
+
+
+def _completion_correction_reopen_record(*, owner: dict[str, Any], correction: Mapping[str, Any], proposal_ref: str) -> dict[str, Any]:
+    """Demote all completion projections to one truthful repair posture."""
+
+    updated = copy.deepcopy(owner)
+    review_refs = list(correction["review_refs"])
+    next_action = str(correction.get("next_action") or "Address the admitted blocking review and rerun focused validation.")
+    relationships = dict(updated.get("relationships") or {}) if isinstance(updated.get("relationships"), Mapping) else {}
+    relationships["proof_posture"] = {"state": "pending", "refs": review_refs}
+    if proposal_ref:
+        relationships["integration"] = {
+            "status": "completion-truth-invalidated",
+            "proposal_ref": proposal_ref,
+            "authority": "Admitted review invalidated feature-complete truth; create a new proposal only after repair proof.",
+        }
+    updated["relationships"] = relationships
+    proof = dict(updated.get("proof") or {}) if isinstance(updated.get("proof"), Mapping) else {}
+    proof["refs"] = review_refs
+    updated["proof"] = proof
+    updated["phase"] = "implementation"
+    updated["next_action"] = next_action
+    updated["proof_report"] = {
+        "validation proof": ", ".join(review_refs),
+        "proof achieved now": "no; admitted review invalidated the prior completion claim.",
+        'evidence for "proof achieved" state': ", ".join(review_refs),
+    }
+    updated["execution_run"] = {
+        "run status": "invalidated",
+        "executor": "planning completion-truth correction",
+        "handoff source": str(updated.get("id") or "planning owner"),
+        "what happened": "An admitted review corrected previously recorded completion truth.",
+        "scope touched": "current execplan completion projections",
+        "changed surfaces": "owner, lane contribution, and pending integration proposal",
+        "validations run": ", ".join(review_refs),
+        "result for continuation": "repair required before feature completion can be asserted again",
+        "next step": next_action,
+    }
+    updated["finished_run_review"] = {
+        "review status": "blocking",
+        "scope respected": "Admitted review requires a material correction before completion.",
+        "proof status": "invalidated",
+        "intent served": "no; repair is required.",
+        "misinterpretation risk": "guarded by completion-truth correction",
+        "follow-on decision": next_action,
+    }
+    updated["intent_satisfaction"] = {
+        "original intent": str((updated.get("intent") or {}).get("outcome") or "current owner intent"),
+        "was original intent fully satisfied?": "no",
+        "evidence of intent satisfaction": ", ".join(review_refs),
+        "unsolved intent passed to": str(updated.get("id") or "current owner"),
+    }
+    updated["execution_summary"] = {
+        "outcome delivered": "Prior completion summary superseded by admitted review.",
+        "validation confirmed": ", ".join(review_refs),
+        "follow-on routed to": str(updated.get("id") or "current owner"),
+        "post-work posterity capture": "completion-truth correction",
+        "resume from": next_action,
+    }
+    updated["closure_check"] = {
+        "closeout scope": "slice",
+        "slice status": "in-progress",
+        "larger-intent status": "open",
+        "closure decision": "continue",
+        "why this decision is honest": "Admitted review invalidated the stronger completion and closure claims.",
+        "evidence carried forward": ", ".join(review_refs),
+        "reopen trigger": "already reopened by completion-truth correction",
+    }
+    return updated
+
+
+def _completion_correction_lane_reopen(*, lane: dict[str, Any], owner_id: str, next_action: str) -> dict[str, Any]:
+    updated = copy.deepcopy(lane)
+    slices = list(updated.get("slice_sequence") or [])
+    superseded_proof_refs: set[str] = set()
+    other_slice_proof_refs: set[str] = set()
+    corrected_slice_seen = False
+    for index, raw in enumerate(slices):
+        if not isinstance(raw, Mapping):
+            continue
+        slice_proof_refs = set(_csv_items(str(raw.get("proof") or "")))
+        if str(raw.get("id") or "") != owner_id or corrected_slice_seen:
+            other_slice_proof_refs.update(slice_proof_refs)
+            continue
+        superseded_proof_refs.update(slice_proof_refs)
+        child = dict(raw)
+        child["status"] = "active"
+        child.pop("proof", None)
+        child["residual_after_slice"] = next_action
+        slices[index] = child
+        corrected_slice_seen = True
+    updated["slice_sequence"] = slices
+    updated["current_slice"] = owner_id
+    aggregation = dict(updated.get("proof_aggregation") or {}) if isinstance(updated.get("proof_aggregation"), Mapping) else {}
+    evidence = [str(item) for item in aggregation.get("evidence", []) if str(item)]
+    aggregation["evidence"] = [item for item in evidence if item not in superseded_proof_refs or item in other_slice_proof_refs]
+    gaps = [str(item) for item in aggregation.get("known_gaps", []) if owner_id not in str(item)]
+    gaps.append(f"{owner_id} requires repair after completion-truth correction.")
+    aggregation.update({"status": "partial", "known_gaps": _dedupe(gaps)})
+    updated["proof_aggregation"] = aggregation
+    updated["residual_lane_work"] = next_action
+    updated["closeout_state"] = {
+        "status": "open",
+        "summary": f"{owner_id} reopened after admitted completion-truth correction.",
+        "residual_work": next_action,
+        "next_owner": owner_id,
+    }
+    return updated
 
 
 def _targeted_write_replay_result(
@@ -18916,6 +19155,7 @@ def targeted_execplan_write(
     apply: bool = False,
     preflight_token: str = "",
     preflight_max_age_seconds: int = 900,
+    completion_correction: Mapping[str, Any] | str | None = None,
 ) -> dict[str, Any]:
     """Patch one exact live execplan while preserving target-bound revision guards."""
     target_root = resolve_target_root(target)
@@ -18923,6 +19163,9 @@ def targeted_execplan_write(
     if parsed_patch is None:
         return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "invalid-patch-json"}
     patch = parsed_patch
+    correction = _parse_completion_correction(completion_correction)
+    if correction is None:
+        return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "invalid-completion-correction"}
     if apply and str(preflight_token or "").strip():
         preflight_admission = {
             "kind": "agentic-planning/targeted-write-preflight-admission/v1",
@@ -18959,6 +19202,8 @@ def targeted_execplan_write(
         "owner_revision": expected_owner_revision,
         "lane_revision": expected_lane_revision,
     }
+    if correction:
+        request["completion_correction"] = correction
     receipt_id = hashlib.sha256(json.dumps(request, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:20]
     receipt_path = target_root / ".agentic-workspace/local/planning/targeted-execplan-receipts" / f"{receipt_id}.json"
     if apply and receipt_path.is_file():
@@ -18999,6 +19244,50 @@ def targeted_execplan_write(
         }
     if lane_path is not None and str(expected_lane_revision) != lane_revision:
         return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "stale-lane-revision", "lane_revision": lane_revision}
+    proposal_path: Path | None = None
+    proposal_before: dict[str, Any] | None = None
+    if correction:
+        if not patch:
+            return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "completion-correction-source-patch-required"}
+        if not _completion_truth_recorded(record):
+            return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "owner-not-completion-derived"}
+        proposal_path, proposal_before, proposal_error = _completion_correction_pending_proposal(
+            target_root=target_root,
+            record=record,
+            owner_ref=owner_relative,
+        )
+        if proposal_error:
+            return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": proposal_error}
+        if proposal_before is None and correction["disposition"] == "remain-feature-complete":
+            return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "completion-correction-proposal-required"}
+        if proposal_before is not None:
+            expected_proposal_revision = str(correction.get("expected_proposal_revision") or "")
+            actual_proposal_revision = str(proposal_before.get("proposal_revision") or "")
+            if not expected_proposal_revision:
+                return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "missing-integration-proposal-revision-guard"}
+            if expected_proposal_revision != actual_proposal_revision:
+                return {
+                    "kind": "agentic-planning/targeted-execplan-write/v1",
+                    "status": "stale-integration-proposal-revision",
+                    "proposal_revision": actual_proposal_revision,
+                }
+            actual_subject = _integration_subject_revision(
+                target_root=target_root,
+                owner_ref=owner_relative,
+                external_ref=str(proposal_before.get("external_ref") or ""),
+            )
+            if str(proposal_before.get("expected_subject_revision") or "") != actual_subject:
+                return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "stale-integration-proposal-subject"}
+            actual_target_authority = str(_planning_target_authority_revision(target_root).get("revision_id") or "")
+            expected_target_authority = str(correction.get("expected_target_authority_revision") or "")
+            if not expected_target_authority:
+                return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "missing-target-authority-revision-guard"}
+            if expected_target_authority != actual_target_authority:
+                return {
+                    "kind": "agentic-planning/targeted-execplan-write/v1",
+                    "status": "stale-target-authority-revision",
+                    "target_authority_revision": actual_target_authority,
+                }
     allowed = {
         "intent",
         "parent",
@@ -19081,6 +19370,21 @@ def targeted_execplan_write(
     updated = copy.deepcopy(record)
     for key, value in patch.items():
         updated[key] = copy.deepcopy(value)
+    if correction and all(record.get(key) == value for key, value in patch.items()):
+        return {
+            "kind": "agentic-planning/targeted-execplan-write/v1",
+            "status": "no-op",
+            "owner": owner_relative,
+            "owner_revision_before": record.get("revision"),
+            "owner_revision_after": record.get("revision"),
+            "planning_revision": planning_revision(target_root).get("revision_id"),
+            "changes": {},
+            "completion_correction": {
+                "id": correction["id"],
+                "disposition": correction["disposition"],
+                "reason": "source-patch-has-no-material-owner-change",
+            },
+        }
     canonical_core = updated.get("canonical_core")
     if isinstance(canonical_core, dict):
         if "next_action" in patch:
@@ -19108,10 +19412,102 @@ def targeted_execplan_write(
             if isinstance(execution_contract, dict) and patch["validation_commands"]:
                 execution_contract["proof"] = str(patch["validation_commands"][0])
     updated["revision"] = int(record.get("revision") or 0) + 1
+    proposal_after: dict[str, Any] | None = None
+    correction_lane_after: dict[str, Any] | None = None
+    correction_lane_path: Path | None = None
+    if correction:
+        proposal_ref = _planning_surface_relative(target_root, proposal_path) if proposal_path is not None else ""
+        if correction["disposition"] == "reopen":
+            updated = _completion_correction_reopen_record(owner=updated, correction=correction, proposal_ref=proposal_ref)
+            if lane_path is not None and isinstance(lane_record, dict):
+                correction_lane_path = lane_path
+                correction_lane_after = _completion_correction_lane_reopen(
+                    lane=lane_record,
+                    owner_id=plan_id,
+                    next_action=str(updated["next_action"]),
+                )
+            if proposal_before is not None:
+                proposal_after = copy.deepcopy(proposal_before)
+                proposal_after["status"] = "rejected"
+                proposal_after["phase"] = "rejected"
+                boundary = dict(proposal_after.get("authority_boundary") or {})
+                boundary["completion_truth_correction"] = {
+                    "id": correction["id"],
+                    "review_refs": list(correction["review_refs"]),
+                    "reason": "owner completion truth was reopened by an admitted review",
+                    "recovery": str(updated["next_action"]),
+                }
+                proposal_after["authority_boundary"] = boundary
+                proposal_after["updated_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+                proposal_after["proposal_revision"] = _record_revision(proposal_after)
+        else:
+            if proposal_before is None or proposal_path is None:
+                return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "completion-correction-proposal-required"}
+            updated = _prepare_feature_completion_record(
+                owner_record=updated,
+                proof_refs=list(correction["proof_refs"]),
+                completion_evidence=cast(Mapping[str, str], correction["completion_evidence"]),
+                proposal_id=str(proposal_before["id"]),
+                proposal_ref=proposal_ref,
+                requested_transition=str(proposal_before["requested_transition"]),
+            )
+            relationships = dict(updated.get("relationships") or {}) if isinstance(updated.get("relationships"), Mapping) else {}
+            relationships["integration"] = {
+                "status": "feature-complete-integration-pending",
+                "proposal_id": str(proposal_before["id"]),
+                "proposal_ref": proposal_ref,
+                "requested_transition": str(proposal_before["requested_transition"]),
+                "proof_refs": list(correction["proof_refs"]),
+                "authority": "feature-head declaration; target integration remains terminal authority",
+            }
+            updated["relationships"] = relationships
+            feature_lane_path, feature_lane_update, lane_error = _feature_completion_parent_lane_update(
+                target_root=target_root,
+                owner_record=updated,
+                owner_ref=owner_relative,
+                proof_refs=list(correction["proof_refs"]),
+                proposal_id=str(proposal_before["id"]),
+                proposal_ref=proposal_ref,
+            )
+            if lane_error:
+                return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": lane_error.split(":", 1)[0]}
+            correction_lane_path, correction_lane_after = feature_lane_path, feature_lane_update
+            records: dict[Path, dict[str, Any]] = {record_path: updated}
+            if correction_lane_path is not None and correction_lane_after is not None:
+                records[correction_lane_path] = correction_lane_after
+            proposal_after = copy.deepcopy(proposal_before)
+            proposal_after["expected_subject_revision"] = _integration_subject_revision_after_record(
+                target_root=target_root,
+                owner_ref=owner_relative,
+                owner_record=updated,
+                external_ref=str(proposal_before.get("external_ref") or ""),
+            )
+            proposal_after["expected_planning_revision"] = str(
+                _planning_target_authority_revision_after_records(target_root=target_root, records=records).get("revision_id") or ""
+            )
+            proposal_after["updated_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+            proposal_after["proposal_revision"] = _record_revision(proposal_after)
     findings = _json_schema_findings(payload=updated, schema_path=EXECPLAN_RECORD_SCHEMA_PATH)
     if findings:
         return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "invalid-result", "findings": findings}
+    if proposal_after is not None:
+        proposal_findings = _json_schema_findings(payload=proposal_after, schema_path=INTEGRATION_PROPOSAL_SCHEMA_PATH)
+        if proposal_findings:
+            return {
+                "kind": "agentic-planning/targeted-execplan-write/v1",
+                "status": "invalid-completion-proposal",
+                "findings": proposal_findings,
+            }
+    if correction_lane_after is not None:
+        lane_findings = _json_schema_findings(payload=correction_lane_after, schema_path=LANE_RECORD_SCHEMA_PATH)
+        if lane_findings:
+            return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "invalid-completion-lane", "findings": lane_findings}
     changed = {key: {"before": record.get(key), "after": updated.get(key)} for key in patch if record.get(key) != updated.get(key)}
+    if correction:
+        changed["completion_truth"] = {
+            "before": "recorded-completion-derived-state",
+            "after": correction["disposition"],
+        }
     state_path = target_root / PLANNING_STATE_PATH
     state_before = _read_state_from_toml(target_root) or {}
     state_after = copy.deepcopy(state_before)
@@ -19148,6 +19544,14 @@ def targeted_execplan_write(
             state_after["todo"][bucket] = retained_items
     lane_after = copy.deepcopy(lane_record) if isinstance(lane_record, dict) else None
     lane_projection_changes: dict[str, Any] = {}
+    if correction_lane_after is not None:
+        if correction_lane_path is not None and correction_lane_path != lane_path:
+            return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "completion-correction-unbound-lane"}
+        lane_after = correction_lane_after
+        lane_projection_changes["completion_truth"] = {
+            "before": copy.deepcopy(lane_record),
+            "after": copy.deepcopy(lane_after),
+        }
     if changed and isinstance(lane_after, dict):
         if terminal_lifecycle and str(lane_after.get("current_slice") or "") == plan_id:
             before_current = lane_after.get("current_slice")
@@ -19185,6 +19589,18 @@ def targeted_execplan_write(
             "unsupported": [],
         },
     }
+    if correction:
+        payload["completion_correction"] = {
+            "id": correction["id"],
+            "disposition": correction["disposition"],
+            "review_refs": list(correction["review_refs"]),
+            "proposal": _planning_surface_relative(target_root, proposal_path) if proposal_path is not None else None,
+            "proposal_outcome": "refreshed"
+            if correction["disposition"] == "remain-feature-complete"
+            else "rejected"
+            if proposal_after
+            else "none",
+        }
     lane_ref = _planning_surface_relative(target_root, lane_path) if lane_path is not None else ""
     if not apply:
         payload["apply_preflight"] = {
@@ -19240,6 +19656,8 @@ def targeted_execplan_write(
             transaction_paths.append(state_path)
         if lane_path is not None and lane_projection_changes:
             transaction_paths.append(lane_path)
+        if proposal_path is not None and proposal_after is not None:
+            transaction_paths.append(proposal_path)
         final_payload: dict[str, Any] = {}
 
         def write_transaction() -> None:
@@ -19248,6 +19666,12 @@ def targeted_execplan_write(
                 _write_state_to_toml(target_root, state_after)
             if lane_path is not None and isinstance(lane_after, dict) and lane_projection_changes:
                 _write_lane_record(record_path=lane_path, record=lane_after)
+            if proposal_path is not None and proposal_after is not None:
+                _write_schema_backed_planning_record(
+                    record_path=proposal_path,
+                    record=proposal_after,
+                    schema_path=INTEGRATION_PROPOSAL_SCHEMA_PATH,
+                )
             state_revision_after = planning_revision(target_root).get("revision_id")
             lane_revision_after = (
                 _record_revision(lane_after) if isinstance(lane_after, dict) and lane_projection_changes else lane_revision or None
@@ -19263,6 +19687,16 @@ def targeted_execplan_write(
                         "lane_ref": lane_ref,
                         "lane_revision": lane_revision_after,
                         "terminal_owner_absent_from_active_state": bool(terminal_lifecycle and state_projection_changes),
+                        "completion_correction": (
+                            {
+                                "id": correction["id"],
+                                "disposition": correction["disposition"],
+                                "proposal_ref": _planning_surface_relative(target_root, proposal_path) if proposal_path is not None else "",
+                                "proposal_revision": str(proposal_after.get("proposal_revision") or "") if proposal_after else "",
+                            }
+                            if correction
+                            else None
+                        ),
                     },
                 }
             )

@@ -1,0 +1,190 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2951-completion-truth-correction",
+  "title": "Implement canonical completed-run truth correction",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "closeout",
+  "revision": 4,
+  "intent": {
+    "outcome": "https://github.com/rickardvh/agentic-workspace/issues/2951",
+    "non_goals": [
+      "Leave adjacent backlog or follow-on work out of this plan."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "https://github.com/rickardvh/agentic-workspace/issues/2951",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "Fill in the concrete files before implementation starts."
+    ],
+    "effects": []
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected-local",
+      "owner": "issue-2951-completion-truth-correction"
+    },
+    "proof_posture": {
+      "state": "accepted",
+      "refs": [
+        "command://pytest-completion-correction",
+        "command://planning-typecheck",
+        "command://generated-package-static",
+        "review://terra-no-blockers"
+      ]
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    },
+    "delegation": {
+      "state": "recorded",
+      "route": "delegate-implementation",
+      "reason": "Delegate bounded Planning implementation while parent retains integration, proof, and stack custody.",
+      "scope": "active-plan-work-unit",
+      "parent_task_custody": "unchanged",
+      "bounded_child_authority": "separate-binding-decision"
+    },
+    "integration": {
+      "status": "feature-complete-integration-pending",
+      "proposal_id": "issue-2951-completion-truth-correction",
+      "proposal_ref": ".agentic-workspace/planning/integration-proposals/issue-2951-completion-truth-correction.integration-proposal.json",
+      "requested_transition": "archive-owner",
+      "proof_refs": [
+        "command://pytest-completion-correction",
+        "command://planning-typecheck",
+        "command://generated-package-static",
+        "review://terra-no-blockers"
+      ],
+      "authority": "feature-head declaration; target integration remains terminal authority"
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2951",
+      "label": "https://github.com/rickardvh/agentic-workspace/issues/2951",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Apply integration proposal 'issue-2951-completion-truth-correction' from admitted target authority.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Implement canonical completed-run truth correction is implemented, validated, and closed out honestly."
+    ],
+    "requirements": [
+      "Fill in the narrowest command that proves the promoted work."
+    ],
+    "refs": [
+      "command://pytest-completion-correction",
+      "command://planning-typecheck",
+      "command://generated-package-static",
+      "review://terra-no-blockers"
+    ]
+  },
+  "continuation": {
+    "owner": "none",
+    "residual_intent": "none"
+  },
+  "specialist_contracts": [
+    {
+      "kind": "planning-delegation/v1",
+      "target": "planning://delegation/delegate-implementation",
+      "revision": 1
+    }
+  ],
+  "validation_commands": [
+    "uv run --frozen --active --no-sync pytest packages/planning/tests -k completion_truth_correction",
+    "uv run --frozen --active --no-sync python scripts/run_agentic_workspace.py proof --target . --changed <changed-paths> --format json"
+  ],
+  "intent_continuity": {
+    "continuation surface": "none",
+    "larger intended outcome": "Implement issue #2951 completely on the current stacked branch.",
+    "this slice completes the larger intended outcome": "yes"
+  },
+  "completion_criteria": [
+    "One caller-visible revision-bound action corrects source and dependent completion truth without durable contradictory intermediate state.",
+    "Corrected-complete, corrected-noncomplete, contradiction, stale revision, idempotent replay, downstream currentness, and unrelated-state preservation are covered by focused tests.",
+    "Generated/public Planning operation surfaces remain equivalent and canonical proof accepts the exact changed paths.",
+    "PR #2949 is updated in the existing stack; no PR is merged."
+  ],
+  "non_goals": [
+    "Do not expose arbitrary lifecycle JSON patching or make archived records generally mutable.",
+    "Do not implement #2950 merge transport or merge any PR."
+  ],
+  "goal": [
+    "Provide one guarded Planning correction action that atomically reconciles a current completed-run owner after admitted review changes completion truth, including downstream revision currentness."
+  ],
+  "touched_paths": [
+    "packages/planning/src/repo_planning_bootstrap/**",
+    "packages/planning/tests/**",
+    "src/agentic_workspace/**",
+    "tests/**",
+    "generated/**",
+    "docs/reference/**",
+    ".agentic-workspace/planning/**",
+    ".release/changes/**"
+  ],
+  "execution_bounds": {
+    "stop before touching": "PR merge operations, unrelated issue #2950 behavior, archived historical mutation policy.",
+    "required validation commands": "Focused Planning correction tests, generated operation parity checks, and canonical AW proof for changed paths.",
+    "allowed paths": "packages/planning/**, src/agentic_workspace/**, tests/**, generated/**, docs/reference/**, .agentic-workspace/planning/**, .release/changes/**",
+    "max changed files": "40",
+    "ask-before-refactor threshold": "Stop if satisfying acceptance requires a new second ledger or changes outside Planning/workspace command surfaces."
+  },
+  "proof_report": {
+    "validation proof": "command://pytest-completion-correction, command://planning-typecheck, command://generated-package-static, review://terra-no-blockers",
+    "proof achieved now": "yes; integration-propose recorded accepted feature-head proof.",
+    "evidence for \"proof achieved\" state": "command://pytest-completion-correction, command://planning-typecheck, command://generated-package-static, review://terra-no-blockers"
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "current planning owner",
+    "handoff source": "issue-2951-completion-truth-correction",
+    "what happened": "Added one guarded semantic correction path for completed-run truth with atomic owner, lane, proposal, and receipt updates.",
+    "scope touched": "Planning targeted-write runtime, public and generated operation contracts, focused tests, and proof-route ownership.",
+    "changed surfaces": "Planning installer, targeted-write operation contract, command package IR and generated clients, focused tests, release metadata, and generated-package proof configuration.",
+    "validations run": "command://pytest-completion-correction, command://planning-typecheck, command://generated-package-static, review://terra-no-blockers",
+    "result for continuation": "feature-head complete; terminal lifecycle remains target-authoritative",
+    "next step": "Apply integration proposal 'issue-2951-completion-truth-correction' from admitted target authority."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Independent review blockers for no-op mutation and lane evidence retraction were fixed and re-reviewed with no blockers.",
+    "proof status": "passed",
+    "intent served": "yes; target integration remains the terminal lifecycle authority.",
+    "config compliance": "used planning integration-propose command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": ".agentic-workspace/planning/integration-proposals/issue-2951-completion-truth-correction.integration-proposal.json"
+  },
+  "intent_satisfaction": {
+    "original intent": "Added one guarded semantic correction path for completed-run truth with atomic owner, lane, proposal, and receipt updates.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "command://pytest-completion-correction, command://planning-typecheck, command://generated-package-static, review://terra-no-blockers",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Blocking reviews can reopen or refresh a completed owner without direct managed-file editing or stale proposal and lane truth.",
+    "validation confirmed": "command://pytest-completion-correction, command://planning-typecheck, command://generated-package-static, review://terra-no-blockers",
+    "follow-on routed to": ".agentic-workspace/planning/integration-proposals/issue-2951-completion-truth-correction.integration-proposal.json",
+    "post-work posterity capture": "target-authoritative integration proposal",
+    "resume from": "Apply integration proposal 'issue-2951-completion-truth-correction' from admitted target authority."
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "Feature-head proof is accepted; terminal lifecycle truth awaits target integration.",
+    "evidence carried forward": "command://pytest-completion-correction, command://planning-typecheck, command://generated-package-static, review://terra-no-blockers",
+    "reopen trigger": "New contradictory evidence or rejected target integration."
+  }
+}
