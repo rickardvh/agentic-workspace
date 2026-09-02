@@ -1,0 +1,44 @@
+{
+  "kind": "planning-integration-proposal/v1",
+  "id": "issue-2959-tightened-handoff-projection",
+  "status": "pending",
+  "phase": "integration-pending",
+  "requested_transition": "archive-owner",
+  "owner": {
+    "id": "issue-2959-tightened-handoff-projection",
+    "ref": ".agentic-workspace/planning/execplans/issue-2959-tightened-handoff-projection.plan.json"
+  },
+  "external_ref": "https://github.com/rickardvh/agentic-workspace/pull/2949",
+  "proof_refs": [
+    "proof://receipts/ee768ae27b361abe",
+    "command://planning-typecheck",
+    "command://ruff",
+    "review://terra-no-blockers"
+  ],
+  "parent_boundary": "Issues #2947 and #2960 remain separate assignment-lifecycle stack layers; no PR merge is requested or performed.",
+  "preserved_invariants": [
+    "unrelated owner fields preserved",
+    "exact replay remains byte-stable",
+    "root and package handoff parity"
+  ],
+  "expected_subject_revision": "dec308521dfb3181",
+  "expected_planning_revision": "0bcf89285d371306",
+  "created_at": "2026-09-02T01:01:39.191184Z",
+  "updated_at": "2026-09-02T01:01:39.191184Z",
+  "authority_boundary": {
+    "proposal": "feature-branch declaration",
+    "integrated_truth": "integration receipt after apply",
+    "non_authority": [
+      "current selection",
+      "aggregate indexes",
+      "unrelated owners",
+      "terminal parent truth"
+    ],
+    "branch_admission": {
+      "status": "inside-git",
+      "branch": "codex/2947-host-native-assignment-integration",
+      "phase": "feature"
+    }
+  },
+  "proposal_revision": "a5c1ff38f74b45fc"
+}

@@ -1,0 +1,162 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2959-tightened-handoff-projection",
+  "title": "Make tightened execplan contract drive handoff",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "closeout",
+  "revision": 4,
+  "intent": {
+    "outcome": "Create a bounded plan for Make tightened execplan contract drive handoff.",
+    "non_goals": [
+      "Leave adjacent backlog or follow-on work out of this plan."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "Create a bounded plan for Make tightened execplan contract drive handoff.",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "Fill in the concrete files before implementation starts."
+    ],
+    "effects": []
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected-local",
+      "owner": "issue-2959-tightened-handoff-projection"
+    },
+    "proof_posture": {
+      "state": "accepted",
+      "refs": [
+        "proof://receipts/ee768ae27b361abe",
+        "command://planning-typecheck",
+        "command://ruff",
+        "review://terra-no-blockers"
+      ]
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    },
+    "integration": {
+      "status": "feature-complete-integration-pending",
+      "proposal_id": "issue-2959-tightened-handoff-projection",
+      "proposal_ref": ".agentic-workspace/planning/integration-proposals/issue-2959-tightened-handoff-projection.integration-proposal.json",
+      "requested_transition": "archive-owner",
+      "proof_refs": [
+        "proof://receipts/ee768ae27b361abe",
+        "command://planning-typecheck",
+        "command://ruff",
+        "review://terra-no-blockers"
+      ],
+      "authority": "feature-head declaration; target integration remains terminal authority"
+    }
+  },
+  "references": [],
+  "next_action": "Apply integration proposal 'issue-2959-tightened-handoff-projection' from admitted target authority.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Make tightened execplan contract drive handoff is implemented, validated, and closed out honestly."
+    ],
+    "requirements": [
+      "Fill in the narrowest command that proves the promoted work."
+    ],
+    "refs": [
+      "proof://receipts/ee768ae27b361abe",
+      "command://planning-typecheck",
+      "command://ruff",
+      "review://terra-no-blockers"
+    ]
+  },
+  "continuation": {
+    "owner": "none",
+    "residual_intent": "none"
+  },
+  "specialist_contracts": [],
+  "touched_paths": [
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_handoff.py",
+    ".agentic-workspace/planning/**",
+    ".release/changes/**"
+  ],
+  "execution_bounds": {
+    "ask-before-refactor threshold": "Stop if the fix requires schema redesign or a new projection owner.",
+    "stop before touching": "PR merge operations and unrelated Planning lifecycle behavior.",
+    "max changed files": "6",
+    "allowed paths": "packages/planning/src/repo_planning_bootstrap/installer.py, packages/planning/tests/test_handoff.py, .agentic-workspace/planning/**, .release/changes/**",
+    "required validation commands": "focused handoff tests, Planning typecheck, Ruff, diff check"
+  },
+  "completion_criteria": [
+    "A new-plan tightened only by targeted-write produces a handoff and worker prompt containing its concrete goal, paths, validation, completion, and next action with no superseded scaffold placeholder.",
+    "JSON and compatibility owner shapes plus root/package front-door parity remain covered."
+  ],
+  "non_goals": [
+    "Do not redesign execplan schemas or create a second handoff authority.",
+    "Do not merge PR #2949."
+  ],
+  "goal": [
+    "Make every Planning handoff and assignment projection consume the accepted tightened execplan contract."
+  ],
+  "validation_commands": [
+    "uv run --frozen --active --no-sync pytest packages/planning/tests/test_handoff.py -k tightened -q",
+    "make typecheck-planning"
+  ],
+  "intent_continuity": {
+    "continuation surface": "none",
+    "this slice completes the larger intended outcome": "yes",
+    "larger intended outcome": "Complete dogfooding issues filed today on the existing stack."
+  },
+  "proof_report": {
+    "validation proof": "proof://receipts/ee768ae27b361abe, command://planning-typecheck, command://ruff, review://terra-no-blockers",
+    "proof achieved now": "yes; integration-propose recorded accepted feature-head proof.",
+    "evidence for \"proof achieved\" state": "proof://receipts/ee768ae27b361abe, command://planning-typecheck, command://ruff, review://terra-no-blockers"
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "current planning owner",
+    "handoff source": "issue-2959-tightened-handoff-projection",
+    "what happened": "Planning handoff now overlays accepted targeted-write goal, scope, proof, completion, and next-action fields over scaffold compatibility values.",
+    "scope touched": "Planning handoff projection source, focused regression fixture, feature owner and release note.",
+    "changed surfaces": "packages/planning/src/repo_planning_bootstrap/installer.py,packages/planning/tests/test_handoff.py,.release/changes/planning-tightened-handoff.toml",
+    "validations run": "proof://receipts/ee768ae27b361abe, command://planning-typecheck, command://ruff, review://terra-no-blockers",
+    "result for continuation": "feature-head complete; terminal lifecycle remains target-authoritative",
+    "next step": "Apply integration proposal 'issue-2959-tightened-handoff-projection' from admitted target authority."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Independent Terra review found no blockers after root Workspace handoff parity was added to the focused fixture.",
+    "proof status": "passed",
+    "intent served": "yes; target integration remains the terminal lifecycle authority.",
+    "config compliance": "used planning integration-propose command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": ".agentic-workspace/planning/integration-proposals/issue-2959-tightened-handoff-projection.integration-proposal.json"
+  },
+  "intent_satisfaction": {
+    "original intent": "Planning handoff now overlays accepted targeted-write goal, scope, proof, completion, and next-action fields over scaffold compatibility values.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "proof://receipts/ee768ae27b361abe, command://planning-typecheck, command://ruff, review://terra-no-blockers",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "A new-plan owner tightened only through the supported targeted-write route now yields an executable handoff and worker prompt without stale scaffold residue.",
+    "validation confirmed": "proof://receipts/ee768ae27b361abe, command://planning-typecheck, command://ruff, review://terra-no-blockers",
+    "follow-on routed to": ".agentic-workspace/planning/integration-proposals/issue-2959-tightened-handoff-projection.integration-proposal.json",
+    "post-work posterity capture": "target-authoritative integration proposal",
+    "resume from": "Apply integration proposal 'issue-2959-tightened-handoff-projection' from admitted target authority."
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "Feature-head proof is accepted; terminal lifecycle truth awaits target integration.",
+    "evidence carried forward": "proof://receipts/ee768ae27b361abe, command://planning-typecheck, command://ruff, review://terra-no-blockers",
+    "reopen trigger": "New contradictory evidence or rejected target integration."
+  }
+}

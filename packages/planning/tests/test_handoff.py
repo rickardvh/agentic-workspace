@@ -7,6 +7,8 @@ import sys as _sys
 from pathlib import Path as _Path
 
 _sys.path.insert(0, str(_Path(__file__).resolve().parent))
+from agentic_workspace import cli as workspace_cli
+
 from planning_test_support import *
 from repo_planning_bootstrap import cli as planning_cli
 
@@ -1307,7 +1309,11 @@ def test_planning_handoff_derives_compact_worker_contract(tmp_path: Path) -> Non
     assert handoff["schema"]["schema_version"] == "planning-handoff-schema/v1"
     assert handoff["schema"]["canonical_doc"] == ".agentic-workspace/docs/execution-flow-contract.md"
     assert handoff["handoff_contract"]["status"] == "present"
+    assert handoff["handoff_contract"]["requested_outcome"] == "Keep scope clear."
     assert handoff["handoff_contract"]["next_action"] == "Add one checker."
+    assert handoff["handoff_contract"]["owned_write_scope"] == ["scripts/check/check_planning_surfaces.py"]
+    assert handoff["handoff_contract"]["proof_expectations"] == ["uv run pytest tests/test_check_planning_surfaces.py"]
+    assert handoff["handoff_contract"]["completion_criteria"] == ["Warning classes are emitted for known drift."]
     assert handoff["handoff_contract"]["capability_posture"]["execution class"] == "mechanical-follow-through"
     assert handoff["handoff_contract"]["capability_posture"]["recommended strength"] == "weak"
     assert handoff["handoff_contract"]["post_decomposition_delegation"]["status"] == "evaluated"
@@ -1354,6 +1360,106 @@ def test_planning_handoff_derives_compact_worker_contract(tmp_path: Path) -> Non
     assert prompt["return_template"]["fields"]["finished_run_review"][0] == "review status"
     assert prompt["return_template"]["fields"]["delegation_outcome_feedback"][0] == "route chosen"
     assert "Do not broaden beyond the plan's owned write scope." in prompt["constraints"]
+
+
+def test_tightened_new_plan_handoff_uses_accepted_owner_contract_and_replays(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    created = installer_mod.create_execplan_scaffold(
+        plan_id="tightened-plan",
+        title="Tightened Plan",
+        target=tmp_path,
+        activate=True,
+    )
+    assert any(action.kind == "created" for action in created.actions)
+    plan_path = tmp_path / ".agentic-workspace/planning/execplans/tightened-plan.plan.json"
+    before = json.loads(plan_path.read_text(encoding="utf-8"))
+    patch = {
+        "goal": ["Make the narrowed handoff executable without rereading scaffold fields."],
+        "non_goals": ["Do not alter unrelated planning owners."],
+        "intent_continuity": {
+            "larger intended outcome": "Keep the worker handoff faithful to its accepted owner contract.",
+            "this slice completes the larger intended outcome": "yes",
+            "continuation surface": "none",
+        },
+        "execution_bounds": {
+            "allowed paths": "src/alpha.py and tests/test_alpha.py",
+            "max changed files": "2",
+            "required validation commands": "uv run pytest tests/test_alpha.py -q",
+            "ask-before-refactor threshold": "a third file",
+            "stop before touching": "unrelated planning owners",
+        },
+        "touched_paths": ["src/alpha.py", "tests/test_alpha.py"],
+        "validation_commands": ["uv run pytest tests/test_alpha.py -q"],
+        "completion_criteria": ["The focused alpha test passes for the bounded handoff."],
+        "next_action": "Implement the focused alpha change and run its test.",
+    }
+    preview = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="tightened-plan",
+        patch=patch,
+        expected_planning_revision=planning_revision(tmp_path)["revision_id"],
+        expected_owner_revision=before["revision"],
+    )
+    assert preview["status"] == "preview"
+    applied = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="tightened-plan",
+        patch=patch,
+        expected_planning_revision=planning_revision(tmp_path)["revision_id"],
+        expected_owner_revision=before["revision"],
+        apply=True,
+    )
+    assert applied["status"] == "applied"
+    after = json.loads(plan_path.read_text(encoding="utf-8"))
+    assert after["intent"] == before["intent"]
+    assert after["scope"] == before["scope"]
+    assert after["proof"] == before["proof"]
+
+    handoff = planning_handoff(target=tmp_path)
+    contract = handoff["handoff_contract"]
+    assert contract["requested_outcome"] == patch["goal"][0]
+    assert contract["next_action"] == patch["next_action"]
+    assert contract["owned_write_scope"] == patch["touched_paths"]
+    assert contract["proof_expectations"] == patch["validation_commands"]
+    assert contract["completion_criteria"] == patch["completion_criteria"]
+    assert contract["execution_bounds"] == patch["execution_bounds"]
+    prompt = contract["ready_worker_prompt"]["copy_paste"]
+    for expected in [
+        patch["goal"][0],
+        patch["next_action"],
+        *patch["touched_paths"],
+        *patch["validation_commands"],
+        *patch["completion_criteria"],
+    ]:
+        assert expected in prompt
+    assert "Fill in the concrete files before implementation starts." not in prompt
+    assert "Fill in the narrowest command that proves the promoted work." not in prompt
+
+    assert planning_cli.main(["handoff", "--target", str(tmp_path), "--format", "json"]) == 0
+    package_handoff = json.loads(capsys.readouterr().out)["handoff_contract"]
+    for field in ("next_action", "owned_write_scope", "proof_expectations"):
+        assert package_handoff[field] == contract[field]
+    assert package_handoff["ready_worker_prompt"]["copy_paste"] == prompt
+
+    assert workspace_cli.main(["planning", "handoff", "--target", str(tmp_path), "--format", "json"]) == 0
+    root_handoff = json.loads(capsys.readouterr().out)
+    assert root_handoff.get("kind") != "agentic-workspace/planning-handoff-proof-route-gate/v1"
+    root_contract = root_handoff["handoff_contract"]
+    for field in ("next_action", "owned_write_scope", "proof_expectations"):
+        assert root_contract[field] == contract[field]
+    assert root_contract["ready_worker_prompt"]["copy_paste"] == prompt
+
+    bytes_before_replay = plan_path.read_bytes()
+    replay = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="tightened-plan",
+        patch=patch,
+        expected_planning_revision=planning_revision(tmp_path)["revision_id"],
+        expected_owner_revision=after["revision"],
+        apply=True,
+    )
+    assert replay["status"] == "no-op"
+    assert plan_path.read_bytes() == bytes_before_replay
 
 
 def test_planning_handoff_includes_manual_external_relay_prompt_for_epic_intent_shaping(tmp_path: Path) -> None:

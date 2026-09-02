@@ -25334,6 +25334,26 @@ def _execplan_canonical_core(plan_path: Path) -> dict[str, Any]:
     }
     if isinstance(canonical_core, dict):
         derived.update(canonical_core)
+
+    # Targeted tightening writes these top-level fields as the accepted live
+    # owner contract.  Compact new-plan owners deliberately retain their
+    # initial intent/scope/proof compatibility fields, so they must not
+    # override a later accepted tightening in handoff or worker projection.
+    goal = _record_section_list(record, "goal")
+    touched_paths = _record_section_list(record, "touched_paths")
+    validation_commands = _record_section_list(record, "validation_commands")
+    completion_criteria = _record_section_list(record, "completion_criteria")
+    next_action = str(record.get("next_action") or "").strip()
+    if goal:
+        derived["requested_outcome"] = goal[0]
+    if touched_paths:
+        derived["touched_scope"] = touched_paths
+    if validation_commands:
+        derived["proof_expectations"] = validation_commands
+    if completion_criteria:
+        derived["completion_criteria"] = completion_criteria
+    if next_action:
+        derived["next_action"] = next_action
     for key, fallback in (
         ("hard_constraints", "Keep work within the compact owner scope."),
         ("agent_may_decide", "Bounded implementation and proof details."),

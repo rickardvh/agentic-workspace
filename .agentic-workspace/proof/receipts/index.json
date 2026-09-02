@@ -3683,6 +3683,13 @@
       "source_ref": "proof://receipts/ee60beb375adb70a",
       "status": "current"
     },
+    "ee768ae27b361abe": {
+      "path": "ee768ae27b361abe.json",
+      "producer_class": "aw-proof",
+      "revision": "2026-09-02T01:00:28+00:00",
+      "source_ref": "proof://receipts/ee768ae27b361abe",
+      "status": "current"
+    },
     "eedb4f0e1bfbbc74": {
       "path": "eedb4f0e1bfbbc74.json",
       "producer_class": "aw-proof",
