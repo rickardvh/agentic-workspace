@@ -5,7 +5,7 @@
   "owner_level": "slice",
   "lifecycle": "live",
   "phase": "closeout",
-  "revision": 9,
+  "revision": 10,
   "intent": {
     "outcome": "#2958",
     "non_goals": [
@@ -42,14 +42,31 @@
       "owner": "issue-2958-large-return-file-import"
     },
     "proof_posture": {
-      "state": "worker-validation-recorded-awaiting-aw-admission",
+      "state": "accepted",
       "refs": [
-        "Focused Python/TypeScript assignment import and parent-command session logging tests are recorded in the delegated worker return."
+        "command://pytest-assignment-import-file",
+        "command://pytest-session-parent-bounds",
+        "command://generated-package-conformance"
       ]
     },
     "external_posture": {
       "state": "unobserved",
       "refs": []
+    },
+    "integration": {
+      "status": "feature-complete-integration-pending",
+      "proposal_id": "issue-2958-large-return-file-import",
+      "proposal_ref": ".agentic-workspace/planning/integration-proposals/issue-2958-large-return-file-import.integration-proposal.json",
+      "requested_transition": "archive-owner",
+      "proof_refs": [
+        "tests/test_external_operation_clients.py",
+        "tests/test_workspace_session_logging.py",
+        "src/agentic_workspace/contracts/external_operation_conformance_receipts.json",
+        "command://pytest-assignment-import-file",
+        "command://pytest-session-parent-bounds",
+        "command://generated-package-conformance"
+      ],
+      "authority": "feature-head declaration; target integration remains terminal authority"
     }
   },
   "references": [
@@ -61,7 +78,7 @@
       "locator": ""
     }
   ],
-  "next_action": "Commit and push #2958 on the existing open top stack PR, refresh exact-head checks and independent review, and do not merge.",
+  "next_action": "Apply integration proposal 'issue-2958-large-return-file-import' from admitted target authority.",
   "blockers": [
     "None."
   ],
@@ -72,7 +89,10 @@
     "refs": [
       "tests/test_external_operation_clients.py",
       "tests/test_workspace_session_logging.py",
-      "src/agentic_workspace/contracts/external_operation_conformance_receipts.json"
+      "src/agentic_workspace/contracts/external_operation_conformance_receipts.json",
+      "command://pytest-assignment-import-file",
+      "command://pytest-session-parent-bounds",
+      "command://generated-package-conformance"
     ],
     "claims": [
       "File-backed and inline delegated returns share validation and replay identity.",
@@ -161,5 +181,52 @@
       ".agentic-workspace/workspace-packages/",
       ".agentic-workspace/planning/execplans/issue-2958-large-return-file-import.plan.json"
     ]
+  },
+  "proof_report": {
+    "validation proof": "command://pytest-assignment-import-file, command://pytest-session-parent-bounds, command://generated-package-conformance",
+    "proof achieved now": "yes; integration-propose recorded accepted feature-head proof.",
+    "evidence for \"proof achieved\" state": "command://pytest-assignment-import-file, command://pytest-session-parent-bounds, command://generated-package-conformance"
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "current planning owner",
+    "handoff source": "issue-2958-large-return-file-import",
+    "what happened": "Added repo-contained file-backed assignment return import and bounded oversized parent-command metadata.",
+    "scope touched": "Assignment import contracts and primitives, session logging, generated clients, focused tests, and release metadata.",
+    "changed surfaces": "assignment lifecycle input/operation contracts, Python and TypeScript primitives, session logging, generated packages, tests, and durable owner truth.",
+    "validations run": "command://pytest-assignment-import-file, command://pytest-session-parent-bounds, command://generated-package-conformance",
+    "result for continuation": "feature-head complete; terminal lifecycle remains target-authoritative",
+    "next step": "Apply integration proposal 'issue-2958-large-return-file-import' from admitted target authority."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Reviewed exact byte preservation, inline/file replay identity, containment, and oversized metadata redaction boundaries.",
+    "proof status": "passed",
+    "intent served": "yes; target integration remains the terminal lifecycle authority.",
+    "config compliance": "used planning integration-propose command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": ".agentic-workspace/planning/integration-proposals/issue-2958-large-return-file-import.integration-proposal.json"
+  },
+  "intent_satisfaction": {
+    "original intent": "Added repo-contained file-backed assignment return import and bounded oversized parent-command metadata.",
+    "was original intent fully satisfied?": "feature-head complete; target integration pending",
+    "evidence of intent satisfaction": "command://pytest-assignment-import-file, command://pytest-session-parent-bounds, command://generated-package-conformance",
+    "unsolved intent passed to": ".agentic-workspace/planning/integration-proposals/issue-2958-large-return-file-import.integration-proposal.json"
+  },
+  "execution_summary": {
+    "outcome delivered": "Large delegated returns import through the ordinary logged CLI without Windows argument overflow or raw payload inheritance.",
+    "validation confirmed": "command://pytest-assignment-import-file, command://pytest-session-parent-bounds, command://generated-package-conformance",
+    "follow-on routed to": ".agentic-workspace/planning/integration-proposals/issue-2958-large-return-file-import.integration-proposal.json",
+    "post-work posterity capture": "target-authoritative integration proposal",
+    "resume from": "Apply integration proposal 'issue-2958-large-return-file-import' from admitted target authority."
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "feature-complete-integration-pending",
+    "larger-intent status": "open-pending-target-integration",
+    "closure decision": "await-target-integration",
+    "why this decision is honest": "Feature-head proof is accepted; terminal lifecycle truth awaits target integration.",
+    "evidence carried forward": "command://pytest-assignment-import-file, command://pytest-session-parent-bounds, command://generated-package-conformance",
+    "reopen trigger": "New contradictory evidence or rejected target integration."
   }
 }

@@ -603,6 +603,45 @@
               "default": "unknown",
               "description": "Advisory relative cost class used for down-routing only when quality and proof remain safe."
             },
+            "current_economic_evidence": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Bounded provider-neutral evidence about this target's current marginal opportunity cost. Hard capability, proof, trust, and expected repair burden continue to outrank it.",
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "enum": ["available", "unavailable", "exhausted", "contradictory", "unknown"],
+                  "default": "unknown",
+                  "description": "Whether the current economic observation is usable; non-available states never imply a discount."
+                },
+                "marginal_cost": {
+                  "type": "string",
+                  "enum": ["near-zero", "lower", "equivalent", "higher", "unknown"],
+                  "default": "unknown",
+                  "description": "Provider-neutral current marginal opportunity-cost class."
+                },
+                "resource_domain": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Optional resource-pool identity used to explain shared or separate economics."
+                },
+                "source": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Provenance for the current economic observation."
+                },
+                "observed_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "Timestamp when the economic observation was made."
+                },
+                "expires_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "Timestamp after which the observation must not affect ranking."
+                }
+              }
+            },
             "latency_class": {
               "type": "string",
               "enum": [

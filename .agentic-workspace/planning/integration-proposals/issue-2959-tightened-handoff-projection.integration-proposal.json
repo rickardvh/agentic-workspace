@@ -21,10 +21,10 @@
     "exact replay remains byte-stable",
     "root and package handoff parity"
   ],
-  "expected_subject_revision": "dec308521dfb3181",
-  "expected_planning_revision": "0bcf89285d371306",
+  "expected_subject_revision": "40353e7ad64195d7",
+  "expected_planning_revision": "12e58f2bd9656d92",
   "created_at": "2026-09-02T01:01:39.191184Z",
-  "updated_at": "2026-09-02T01:01:39.191184Z",
+  "updated_at": "2026-09-02T10:34:26.658992Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -40,5 +40,5 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "a5c1ff38f74b45fc"
+  "proposal_revision": "86c1b285a4ac2d2d"
 }

@@ -11,6 +11,14 @@
       },
       "type": "array"
     },
+    "assignment_id": {
+      "description": "Current assignment identifier when one is resolved.",
+      "type": ["string", "null"]
+    },
+    "assignment_revision": {
+      "description": "Current assignment identity revision when one is resolved.",
+      "type": ["string", "null"]
+    },
     "kind": {
       "description": "Versioned result envelope discriminator for assignment lifecycle operations.",
       "const": "agentic-workspace/assignment-lifecycle-result/v1"
@@ -51,9 +59,37 @@
       "description": "Assignment run identifier associated with the transition.",
       "type": "string"
     },
+    "return_id": {
+      "description": "Most recent delegated return identifier when relevant.",
+      "type": ["string", "null"]
+    },
     "state": {
-      "description": "Current local lifecycle state after applying or evaluating the transition.",
+      "description": "Bounded decision-state projection after applying or evaluating the transition. Full disposable state remains available through state_ref.",
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {"const": "agentic-workspace/assignment-lifecycle-decision-state/v1", "description": "Versioned compact lifecycle decision-state discriminator."},
+        "current_state": {"type": "string", "description": "Current lifecycle state needed to choose the next action."},
+        "assignment_id": {"type": "string", "description": "Current assignment identifier when known."},
+        "run_id": {"type": "string", "description": "Current assignment run identifier."},
+        "last_return_id": {"type": "string", "description": "Most recently imported return identifier when relevant."},
+        "last_admission_status": {"type": "string", "description": "Most recent return-admission disposition when relevant."},
+        "current_attempt": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Bounded current Planning attempt identity when available.",
+          "properties": {
+            "run_id": {"type": "string", "description": "Current attempt run identifier."},
+            "target": {"type": "string", "description": "Current attempt target identity."},
+            "status": {"type": "string", "description": "Current attempt status."}
+          }
+        }
+      },
+      "required": ["schema_version", "current_state"],
       "type": "object"
+    },
+    "state_ref": {
+      "description": "Repo-relative reference to the complete disposable lifecycle state when it exists.",
+      "type": ["string", "null"]
     },
     "status": {
       "description": "Specific lifecycle status, such as handoff-prepared, awaiting-admission, admitted, integrated, or blocked.",

@@ -5468,8 +5468,8 @@
     "assignment.admit": {
       "identity": "assignment.admit",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:1342265e23d3e4750a6bd654510a4f1a0b37cc514d46e8f8af263d1c0b31cf07",
-      "compatibility_fingerprint": "sha256:989c75161742260571cb8b513cdfc79d9727b41996d2805c31603790464af41d",
+      "fingerprint": "sha256:12fbb2e757d6f809b77db91c9c4efaf44635bba519fba0275c03cec3408bcd16",
+      "compatibility_fingerprint": "sha256:fe443f935beefc776dd658d4360d312910f0931ef0e77fbb9ad49b7f33ad2ebb",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -6033,6 +6033,18 @@
                   },
                   "type": "array"
                 },
+                "assignment_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "assignment_revision": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "kind": {
                   "const": "agentic-workspace/assignment-lifecycle-result/v1"
                 },
@@ -6066,8 +6078,60 @@
                 "run_id": {
                   "type": "string"
                 },
+                "return_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "state": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "schema_version": {
+                      "const": "agentic-workspace/assignment-lifecycle-decision-state/v1"
+                    },
+                    "current_state": {
+                      "type": "string"
+                    },
+                    "assignment_id": {
+                      "type": "string"
+                    },
+                    "run_id": {
+                      "type": "string"
+                    },
+                    "last_return_id": {
+                      "type": "string"
+                    },
+                    "last_admission_status": {
+                      "type": "string"
+                    },
+                    "current_attempt": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "run_id": {
+                          "type": "string"
+                        },
+                        "target": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "schema_version",
+                    "current_state"
+                  ],
                   "type": "object"
+                },
+                "state_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "status": {
                   "type": "string"
@@ -6132,8 +6196,8 @@
     "assignment.cleanup": {
       "identity": "assignment.cleanup",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:8bf53046a485d958d37d18fe19e85f4acac46d76d1ddbccf33b108f9ba821a24",
-      "compatibility_fingerprint": "sha256:037110427e14a0d3c60db1be74c63caaef67c2b47a92ca0dbf78c459a29edae6",
+      "fingerprint": "sha256:6189bbc31c56e6f0e82a92410990b2bc1f4369132b6860ed61f69c50dadeb76f",
+      "compatibility_fingerprint": "sha256:f4fbb1b6486cbcd552a2cfd5d8d5eecf1ce3b48eae42301b34dd19dbaaebf753",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -6639,6 +6703,18 @@
                   },
                   "type": "array"
                 },
+                "assignment_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "assignment_revision": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "kind": {
                   "const": "agentic-workspace/assignment-lifecycle-result/v1"
                 },
@@ -6672,8 +6748,60 @@
                 "run_id": {
                   "type": "string"
                 },
+                "return_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "state": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "schema_version": {
+                      "const": "agentic-workspace/assignment-lifecycle-decision-state/v1"
+                    },
+                    "current_state": {
+                      "type": "string"
+                    },
+                    "assignment_id": {
+                      "type": "string"
+                    },
+                    "run_id": {
+                      "type": "string"
+                    },
+                    "last_return_id": {
+                      "type": "string"
+                    },
+                    "last_admission_status": {
+                      "type": "string"
+                    },
+                    "current_attempt": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "run_id": {
+                          "type": "string"
+                        },
+                        "target": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "schema_version",
+                    "current_state"
+                  ],
                   "type": "object"
+                },
+                "state_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "status": {
                   "type": "string"
@@ -6738,8 +6866,8 @@
     "assignment.close": {
       "identity": "assignment.close",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:32cb5866ba88d39a6304b0cb807a179d02dc20c9b3b8d120d0dfb5a75b4cef8c",
-      "compatibility_fingerprint": "sha256:d85705fa7366dc9f7ccd1afa675924e589263e7a83137bd285c0ee02d4b01b4e",
+      "fingerprint": "sha256:abf0dd483ab4b4d282e27d55fd68604737e362b6ad39a522670719086bb21744",
+      "compatibility_fingerprint": "sha256:39f56bccd56a1ddccdfdd244c2ec20b56f879b5a689143f60b2bce0cc4652889",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -7261,6 +7389,18 @@
                   },
                   "type": "array"
                 },
+                "assignment_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "assignment_revision": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "kind": {
                   "const": "agentic-workspace/assignment-lifecycle-result/v1"
                 },
@@ -7294,8 +7434,60 @@
                 "run_id": {
                   "type": "string"
                 },
+                "return_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "state": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "schema_version": {
+                      "const": "agentic-workspace/assignment-lifecycle-decision-state/v1"
+                    },
+                    "current_state": {
+                      "type": "string"
+                    },
+                    "assignment_id": {
+                      "type": "string"
+                    },
+                    "run_id": {
+                      "type": "string"
+                    },
+                    "last_return_id": {
+                      "type": "string"
+                    },
+                    "last_admission_status": {
+                      "type": "string"
+                    },
+                    "current_attempt": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "run_id": {
+                          "type": "string"
+                        },
+                        "target": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "schema_version",
+                    "current_state"
+                  ],
                   "type": "object"
+                },
+                "state_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "status": {
                   "type": "string"
@@ -7360,8 +7552,8 @@
     "assignment.dispatch": {
       "identity": "assignment.dispatch",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:94c4431ead41c647987b3846c426a6fe356689edc8b8b0e05a4ae6b829bf6841",
-      "compatibility_fingerprint": "sha256:11e327fc45d61a7fd08dd57fd194728c7e5d188fe2e8a6b25f94ef41cfd8613e",
+      "fingerprint": "sha256:c2f24dc5f263f34f501caf1610ee4e5c67759e51f0c60884a2bbdba4da7d62ca",
+      "compatibility_fingerprint": "sha256:81e61c7da07ef3592b832faabd6f1455851fe5299cbc79461b99b9baf3217723",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -7815,6 +8007,18 @@
                   },
                   "type": "array"
                 },
+                "assignment_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "assignment_revision": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "kind": {
                   "const": "agentic-workspace/assignment-lifecycle-result/v1"
                 },
@@ -7848,8 +8052,60 @@
                 "run_id": {
                   "type": "string"
                 },
+                "return_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "state": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "schema_version": {
+                      "const": "agentic-workspace/assignment-lifecycle-decision-state/v1"
+                    },
+                    "current_state": {
+                      "type": "string"
+                    },
+                    "assignment_id": {
+                      "type": "string"
+                    },
+                    "run_id": {
+                      "type": "string"
+                    },
+                    "last_return_id": {
+                      "type": "string"
+                    },
+                    "last_admission_status": {
+                      "type": "string"
+                    },
+                    "current_attempt": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "run_id": {
+                          "type": "string"
+                        },
+                        "target": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "schema_version",
+                    "current_state"
+                  ],
                   "type": "object"
+                },
+                "state_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "status": {
                   "type": "string"
@@ -7914,8 +8170,8 @@
     "assignment.export": {
       "identity": "assignment.export",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:90f45bd2c4d94e9cc7c7a139c17639b7212ff5d741ec7e4c7eeb93e7a8403c3c",
-      "compatibility_fingerprint": "sha256:8e38fb9fdd1d801d0629f7d2f9cfeaf92b58d0083fb9b8a2858ff119bb61dc14",
+      "fingerprint": "sha256:4db4de89238eed0493a005723409c1dc78fb117f940a83f4ba935d0876ff94d5",
+      "compatibility_fingerprint": "sha256:8bb67bdbbfab59c861dbb3a70612cf9a08066e15fb649dd1f1589253e561632d",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -8447,6 +8703,18 @@
                   },
                   "type": "array"
                 },
+                "assignment_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "assignment_revision": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "kind": {
                   "const": "agentic-workspace/assignment-lifecycle-result/v1"
                 },
@@ -8480,8 +8748,60 @@
                 "run_id": {
                   "type": "string"
                 },
+                "return_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "state": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "schema_version": {
+                      "const": "agentic-workspace/assignment-lifecycle-decision-state/v1"
+                    },
+                    "current_state": {
+                      "type": "string"
+                    },
+                    "assignment_id": {
+                      "type": "string"
+                    },
+                    "run_id": {
+                      "type": "string"
+                    },
+                    "last_return_id": {
+                      "type": "string"
+                    },
+                    "last_admission_status": {
+                      "type": "string"
+                    },
+                    "current_attempt": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "run_id": {
+                          "type": "string"
+                        },
+                        "target": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "schema_version",
+                    "current_state"
+                  ],
                   "type": "object"
+                },
+                "state_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "status": {
                   "type": "string"
@@ -8546,8 +8866,8 @@
     "assignment.import": {
       "identity": "assignment.import",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:3af6a7bd8ee1b745781a4005d532a3666f00bd9a13ac71baef3a8c2106d85b5f",
-      "compatibility_fingerprint": "sha256:8cd488ce29e0e7360607a40259ac7c113e7edace72ffaef54fcddd56bc131f10",
+      "fingerprint": "sha256:86664b6a813290e257447433b10edd6dac2ec296a9b22aeb9e1e64b4557c38f0",
+      "compatibility_fingerprint": "sha256:bcaf031339cd80490e534fa1693983a4f1b3cc8fe55e56e4c8f885d7e99b6371",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -9063,6 +9383,18 @@
                   },
                   "type": "array"
                 },
+                "assignment_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "assignment_revision": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "kind": {
                   "const": "agentic-workspace/assignment-lifecycle-result/v1"
                 },
@@ -9096,8 +9428,60 @@
                 "run_id": {
                   "type": "string"
                 },
+                "return_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "state": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "schema_version": {
+                      "const": "agentic-workspace/assignment-lifecycle-decision-state/v1"
+                    },
+                    "current_state": {
+                      "type": "string"
+                    },
+                    "assignment_id": {
+                      "type": "string"
+                    },
+                    "run_id": {
+                      "type": "string"
+                    },
+                    "last_return_id": {
+                      "type": "string"
+                    },
+                    "last_admission_status": {
+                      "type": "string"
+                    },
+                    "current_attempt": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "run_id": {
+                          "type": "string"
+                        },
+                        "target": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "schema_version",
+                    "current_state"
+                  ],
                   "type": "object"
+                },
+                "state_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "status": {
                   "type": "string"
@@ -9162,8 +9546,8 @@
     "assignment.integrate": {
       "identity": "assignment.integrate",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:96384792260cfc25b455424ca8d5c2e7ccb06e2b27debfc20326b9236d32ab4c",
-      "compatibility_fingerprint": "sha256:3a8d610c4a240abc40d2fd9ba0fd295a9017764e1f430cd0d39a8e0d2ffe859f",
+      "fingerprint": "sha256:962033c4be40887bbf9ef9a99d7c55e76a5d8a99f9c90b2d23624d77f0c2ffce",
+      "compatibility_fingerprint": "sha256:59b01af129384a020d87ac6687fe77d58e7af7ed59281f3e6c7cf3ffba286db6",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -9669,6 +10053,18 @@
                   },
                   "type": "array"
                 },
+                "assignment_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "assignment_revision": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "kind": {
                   "const": "agentic-workspace/assignment-lifecycle-result/v1"
                 },
@@ -9702,8 +10098,60 @@
                 "run_id": {
                   "type": "string"
                 },
+                "return_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "state": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "schema_version": {
+                      "const": "agentic-workspace/assignment-lifecycle-decision-state/v1"
+                    },
+                    "current_state": {
+                      "type": "string"
+                    },
+                    "assignment_id": {
+                      "type": "string"
+                    },
+                    "run_id": {
+                      "type": "string"
+                    },
+                    "last_return_id": {
+                      "type": "string"
+                    },
+                    "last_admission_status": {
+                      "type": "string"
+                    },
+                    "current_attempt": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "run_id": {
+                          "type": "string"
+                        },
+                        "target": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "schema_version",
+                    "current_state"
+                  ],
                   "type": "object"
+                },
+                "state_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "status": {
                   "type": "string"
@@ -9768,8 +10216,8 @@
     "assignment.override": {
       "identity": "assignment.override",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:2f87a16758e6e9c71dc0b93870a224010e61604544a9546d2606294389a622b5",
-      "compatibility_fingerprint": "sha256:3308ee551b59dbe35ab4f5b26d6d4d42f86936256dc79c9c4f28c20decabffe2",
+      "fingerprint": "sha256:a1ab73890de18e12bac27be269d587ab6033d916802dc337bf49ec90b4b7834c",
+      "compatibility_fingerprint": "sha256:fe62a3dbc4a759cad9a56bfe2553067e8a7bad42f5de73ae2fb6b26c47f95077",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -10275,6 +10723,18 @@
                   },
                   "type": "array"
                 },
+                "assignment_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "assignment_revision": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "kind": {
                   "const": "agentic-workspace/assignment-lifecycle-result/v1"
                 },
@@ -10308,8 +10768,60 @@
                 "run_id": {
                   "type": "string"
                 },
+                "return_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "state": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "schema_version": {
+                      "const": "agentic-workspace/assignment-lifecycle-decision-state/v1"
+                    },
+                    "current_state": {
+                      "type": "string"
+                    },
+                    "assignment_id": {
+                      "type": "string"
+                    },
+                    "run_id": {
+                      "type": "string"
+                    },
+                    "last_return_id": {
+                      "type": "string"
+                    },
+                    "last_admission_status": {
+                      "type": "string"
+                    },
+                    "current_attempt": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "run_id": {
+                          "type": "string"
+                        },
+                        "target": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "schema_version",
+                    "current_state"
+                  ],
                   "type": "object"
+                },
+                "state_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "status": {
                   "type": "string"
@@ -10374,8 +10886,8 @@
     "assignment.reassign": {
       "identity": "assignment.reassign",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:c2bda5a4199971f22b2beadfcd361ece57c0d04b46c0a24b54705f53f56e419f",
-      "compatibility_fingerprint": "sha256:28bc12b1f0ac48824113d682aad1f658cf7d319501776fa657f109b07071eac0",
+      "fingerprint": "sha256:47eb0e1ec5bdc3e262e5cb1827870266cb1e83553fa9e8ebffe6d257c09a365a",
+      "compatibility_fingerprint": "sha256:4b22d23bccbea506df4b3eaebfbb8477c67a9b6c3555f517f3c72843b55bf1aa",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -10881,6 +11393,18 @@
                   },
                   "type": "array"
                 },
+                "assignment_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "assignment_revision": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "kind": {
                   "const": "agentic-workspace/assignment-lifecycle-result/v1"
                 },
@@ -10914,8 +11438,60 @@
                 "run_id": {
                   "type": "string"
                 },
+                "return_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "state": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "schema_version": {
+                      "const": "agentic-workspace/assignment-lifecycle-decision-state/v1"
+                    },
+                    "current_state": {
+                      "type": "string"
+                    },
+                    "assignment_id": {
+                      "type": "string"
+                    },
+                    "run_id": {
+                      "type": "string"
+                    },
+                    "last_return_id": {
+                      "type": "string"
+                    },
+                    "last_admission_status": {
+                      "type": "string"
+                    },
+                    "current_attempt": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "run_id": {
+                          "type": "string"
+                        },
+                        "target": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "schema_version",
+                    "current_state"
+                  ],
                   "type": "object"
+                },
+                "state_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "status": {
                   "type": "string"
@@ -10980,8 +11556,8 @@
     "assignment.reject": {
       "identity": "assignment.reject",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:8d6648b69382beb1000bdbed3f20392e4296817b1d14351696c3dc3b8eac7b15",
-      "compatibility_fingerprint": "sha256:bb105ecdd10d8c2a56643c9f5d377a02fec0f60125a5d0a7e61ac00ceb450ca5",
+      "fingerprint": "sha256:f922cae645ed3a2cda7b3e92c9a89da60aab9ef9b8438585d2dff7b777234924",
+      "compatibility_fingerprint": "sha256:744eb5fe07a0762c3ed5a7a5f3bbbb664d82b575cddd672b6585239cb5dfcb31",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -11487,6 +12063,18 @@
                   },
                   "type": "array"
                 },
+                "assignment_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "assignment_revision": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "kind": {
                   "const": "agentic-workspace/assignment-lifecycle-result/v1"
                 },
@@ -11520,8 +12108,60 @@
                 "run_id": {
                   "type": "string"
                 },
+                "return_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "state": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "schema_version": {
+                      "const": "agentic-workspace/assignment-lifecycle-decision-state/v1"
+                    },
+                    "current_state": {
+                      "type": "string"
+                    },
+                    "assignment_id": {
+                      "type": "string"
+                    },
+                    "run_id": {
+                      "type": "string"
+                    },
+                    "last_return_id": {
+                      "type": "string"
+                    },
+                    "last_admission_status": {
+                      "type": "string"
+                    },
+                    "current_attempt": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "run_id": {
+                          "type": "string"
+                        },
+                        "target": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "schema_version",
+                    "current_state"
+                  ],
                   "type": "object"
+                },
+                "state_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "status": {
                   "type": "string"
@@ -11586,8 +12226,8 @@
     "assignment.repair": {
       "identity": "assignment.repair",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:b8acdd95a711029043ca50718eca4ac5ec278ae4b86eba00b357d6d070be2f1e",
-      "compatibility_fingerprint": "sha256:f478299683652a068508fa68b74bf810b1fbb79c49f2e8a168dad27eac4b1d46",
+      "fingerprint": "sha256:1309cf21e6a111d0452b89249cb5885cbb733a8be002a76ad01cc333e56f65ee",
+      "compatibility_fingerprint": "sha256:02c8e662d87d3685aa6e34a82c01376f2db4f4224ec239bda7a8261f11ae77d3",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -12093,6 +12733,18 @@
                   },
                   "type": "array"
                 },
+                "assignment_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "assignment_revision": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "kind": {
                   "const": "agentic-workspace/assignment-lifecycle-result/v1"
                 },
@@ -12126,8 +12778,60 @@
                 "run_id": {
                   "type": "string"
                 },
+                "return_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "state": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "schema_version": {
+                      "const": "agentic-workspace/assignment-lifecycle-decision-state/v1"
+                    },
+                    "current_state": {
+                      "type": "string"
+                    },
+                    "assignment_id": {
+                      "type": "string"
+                    },
+                    "run_id": {
+                      "type": "string"
+                    },
+                    "last_return_id": {
+                      "type": "string"
+                    },
+                    "last_admission_status": {
+                      "type": "string"
+                    },
+                    "current_attempt": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "run_id": {
+                          "type": "string"
+                        },
+                        "target": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "schema_version",
+                    "current_state"
+                  ],
                   "type": "object"
+                },
+                "state_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "status": {
                   "type": "string"
@@ -24582,6 +25286,20 @@
             },
             "type": "array"
           },
+          "assignment_id": {
+            "description": "Current assignment identifier when one is resolved.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "assignment_revision": {
+            "description": "Current assignment identity revision when one is resolved.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "kind": {
             "description": "Versioned result envelope discriminator for assignment lifecycle operations.",
             "const": "agentic-workspace/assignment-lifecycle-result/v1"
@@ -24622,9 +25340,73 @@
             "description": "Assignment run identifier associated with the transition.",
             "type": "string"
           },
+          "return_id": {
+            "description": "Most recent delegated return identifier when relevant.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "state": {
-            "description": "Current local lifecycle state after applying or evaluating the transition.",
+            "description": "Bounded decision-state projection after applying or evaluating the transition. Full disposable state remains available through state_ref.",
+            "additionalProperties": false,
+            "properties": {
+              "schema_version": {
+                "const": "agentic-workspace/assignment-lifecycle-decision-state/v1",
+                "description": "Versioned compact lifecycle decision-state discriminator."
+              },
+              "current_state": {
+                "type": "string",
+                "description": "Current lifecycle state needed to choose the next action."
+              },
+              "assignment_id": {
+                "type": "string",
+                "description": "Current assignment identifier when known."
+              },
+              "run_id": {
+                "type": "string",
+                "description": "Current assignment run identifier."
+              },
+              "last_return_id": {
+                "type": "string",
+                "description": "Most recently imported return identifier when relevant."
+              },
+              "last_admission_status": {
+                "type": "string",
+                "description": "Most recent return-admission disposition when relevant."
+              },
+              "current_attempt": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "Bounded current Planning attempt identity when available.",
+                "properties": {
+                  "run_id": {
+                    "type": "string",
+                    "description": "Current attempt run identifier."
+                  },
+                  "target": {
+                    "type": "string",
+                    "description": "Current attempt target identity."
+                  },
+                  "status": {
+                    "type": "string",
+                    "description": "Current attempt status."
+                  }
+                }
+              }
+            },
+            "required": [
+              "schema_version",
+              "current_state"
+            ],
             "type": "object"
+          },
+          "state_ref": {
+            "description": "Repo-relative reference to the complete disposable lifecycle state when it exists.",
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "status": {
             "description": "Specific lifecycle status, such as handoff-prepared, awaiting-admission, admitted, integrated, or blocked.",

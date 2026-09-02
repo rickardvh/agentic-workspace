@@ -64,7 +64,7 @@ def test_all_declared_ordinary_profiles_obey_authoritative_output_budgets(tmp_pa
     for surface, argv in commands.items():
         samples[surface] = _run_json(capsys, argv)
 
-    assert set(samples) == set(budgets) - {"evaluation status"}
+    assert set(samples) == set(budgets) - {"evaluation status", "assignment lifecycle"}
     for surface, payload in samples.items():
         _assert_budget(payload, budgets[surface])
         assert budgets[surface]["proof"] == "test_all_declared_ordinary_profiles_obey_authoritative_output_budgets"

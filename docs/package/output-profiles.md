@@ -54,7 +54,10 @@ Named ordinary profiles declare four limits in the versioned
 - non-empty human-render lines
 
 The package tests exercise cold and warm `init` plus ordinary `start`, `report`,
-`doctor`, and Evaluation status fixtures. A budget increase is a reviewed contract change, not a
+`doctor`, Assignment lifecycle, and Evaluation status fixtures. Assignment lifecycle uses the
+`assignment-lifecycle-decision/v1` profile: its required `state` member is a compact decision
+projection, while `state_ref` points to complete disposable run state for exact inspection. A
+budget increase is a reviewed contract change, not a
 side effect of adding another default field. Ordinary `init` JSON uses a
 `decision-envelope/v1`; `init --verbose --format json` is the exact expansion
 route for module reports, config, effects, provenance, and the full lifecycle

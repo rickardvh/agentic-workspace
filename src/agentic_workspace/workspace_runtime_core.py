@@ -20035,6 +20035,17 @@ def _ordinary_output_shape_inventory() -> dict[str, Any]:
                 "expansion_trigger": "--select or --verbose",
                 "proof": "test_all_declared_ordinary_profiles_obey_authoritative_output_budgets",
             },
+            {
+                "surface": "assignment lifecycle",
+                "profile": "assignment-lifecycle-decision/v1",
+                "status": "budget-proven",
+                "max_json_bytes": 4000,
+                "max_field_count": 90,
+                "max_estimated_tokens": 1000,
+                "max_human_lines": 60,
+                "expansion_trigger": "state_ref or assignment query --run-id <id>",
+                "proof": "test_assignment_lifecycle_generated_wrappers_persist_local_artifacts",
+            },
         ],
         "selector_relocations": [
             {
@@ -61668,6 +61679,7 @@ def _runtime_resolution_payload(*, config: WorkspaceConfig, capability_posture: 
                 "context_capacity": profile.context_capacity,
                 "reasoning_profile": profile.reasoning_profile,
                 "cost_class": profile.cost_class,
+                "current_economic_evidence": profile.current_economic_evidence,
                 "latency_class": profile.latency_class,
                 "safe_task_classes": list(profile.safe_task_classes),
                 "forbidden_task_classes": list(profile.forbidden_task_classes),

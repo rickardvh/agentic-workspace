@@ -626,6 +626,25 @@ def _resolve_template(template: Any, *, values: dict[str, Any]) -> Any:
     return {str(key): _resolve_template(value, values=values) for key, value in template.items()}
 
 
+def _assignment_lifecycle_decision_state(state: Mapping[str, Any]) -> dict[str, Any]:
+    current_attempt = _assignment_mapping(state.get("current_attempt"))
+    projection: dict[str, Any] = {
+        "schema_version": "agentic-workspace/assignment-lifecycle-decision-state/v1",
+        "current_state": _optional_text(state.get("current_state")) or "unknown",
+    }
+    for field in ("assignment_id", "run_id", "last_return_id", "last_admission_status"):
+        value = _optional_text(state.get(field))
+        if value:
+            projection[field] = value
+    if current_attempt:
+        projection["current_attempt"] = {
+            field: current_attempt[field]
+            for field in ("run_id", "target", "status")
+            if _optional_text(current_attempt.get(field))
+        }
+    return projection
+
+
 def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> dict[str, Any]:
     del arguments
     operation_id = str(values.get("operation_id") or "")
@@ -711,20 +730,27 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
 
     if transition == "admit" and (values.get("review_result_json") or values.get("review_result") or values.get("review_result_ref")):
         admission = _independent_review_admission_apply(values=values, arguments={}, context=context)
+        admitted = bool(admission.get("admitted"))
+        admission_failures = admission.get("failures") or []
         return {
             "kind": "agentic-workspace/assignment-lifecycle-result/v1",
             "operation_id": "assignment.admit",
             "transition": "admit",
             "status": str(admission.get("status") or ""),
-            "outcome": "applied" if admission.get("admitted") else "blocked",
-            "mutation_applied": bool(admission.get("admitted")),
+            "outcome": "applied" if admitted else "blocked",
+            "mutation_applied": admitted,
             "run_id": run_id,
             "artifact_refs": [str(admission.get("store") or "")] if admission.get("store") else [],
-            "state": {"independent_review_receipt": admission.get("receipt")},
-            "independent_review_admission": admission,
+            "state": {
+                "schema_version": "agentic-workspace/assignment-lifecycle-decision-state/v1",
+                "current_state": str(admission.get("status") or "blocked"),
+                "run_id": run_id,
+            },
+            "state_ref": str(admission.get("store") or "") or None,
+            "failures": admission_failures,
             "reason_code": ""
-            if admission.get("admitted")
-            else str((admission.get("failures") or [{"reason": "independent-review-admission-rejected"}])[0].get("reason")),
+            if admitted
+            else str((admission_failures or [{"reason": "independent-review-admission-rejected"}])[0].get("reason")),
             "recovery_command": "assignment admit --review-result-json <json> --changed <path> --format json"
             if not admission.get("admitted")
             else None,
@@ -1431,6 +1457,10 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
         artifact_paths.append(state_path)
 
     artifact_refs = [_assignment_relative(path, root=target_root) for path in artifact_paths]
+    state_ref = _assignment_relative(state_path, root=target_root) if state_path.is_file() or outcome == "applied" else None
+    effective_assignment_revision = assignment_revision or _optional_text(
+        _assignment_mapping(_assignment_mapping(state.get("assignment")).get("assignment_identity")).get("revision")
+    )
     return {
         "kind": "agentic-workspace/assignment-lifecycle-result/v1",
         "operation_id": operation_id,
@@ -1440,8 +1470,12 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
         "mutation_applied": outcome == "applied",
         "target_root": target_root.as_posix(),
         "run_id": run_id,
+        "assignment_id": assignment_id or _optional_text(state.get("assignment_id")) or None,
+        "assignment_revision": effective_assignment_revision or None,
+        "return_id": _optional_text(state.get("last_return_id")) or None,
         "artifact_refs": artifact_refs,
-        "state": state,
+        "state_ref": state_ref,
+        "state": _assignment_lifecycle_decision_state(state),
         "failures": failures,
         "reason_code": failures[0]["reason"] if failures else None,
         "recovery_command": failures[0]["recovery"] if failures else None,

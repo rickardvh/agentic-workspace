@@ -2629,7 +2629,13 @@ function assignmentLifecycleApply(values, operationId) {
     assignmentWrite(statePath, state);
     refs.push(relative(targetRoot, statePath).replaceAll('\\\\', '/'));
   }
-  return { kind: 'agentic-workspace/assignment-lifecycle-result/v1', operation_id: operationId, transition, status: failures.length ? 'blocked' : state.current_state, outcome: failures.length ? 'blocked' : Boolean(values.dry_run) ? 'noop' : 'applied', mutation_applied: !failures.length && !Boolean(values.dry_run), target_root: targetRoot, run_id: runId, artifact_refs: refs, state, failures, reason_code: failures[0]?.reason ?? null, recovery_command: failures[0]?.recovery ?? null, message: `assignment ${transition}: ${failures.length ? 'blocked' : state.current_state}`, actions: refs.map((path) => ({ kind: 'write', path })) };
+  const decisionState = { schema_version: 'agentic-workspace/assignment-lifecycle-decision-state/v1', current_state: assignmentText(state.current_state) || 'unknown' };
+  for (const field of ['assignment_id', 'run_id', 'last_return_id', 'last_admission_status']) if (assignmentText(state[field])) decisionState[field] = state[field];
+  if (isObject(state.current_attempt)) decisionState.current_attempt = Object.fromEntries(['run_id', 'target', 'status'].filter((field) => assignmentText(state.current_attempt[field])).map((field) => [field, state.current_attempt[field]]));
+  const outcome = failures.length ? 'blocked' : Boolean(values.dry_run) ? 'noop' : 'applied';
+  const stateRef = existsSync(statePath) || outcome === 'applied' ? relative(targetRoot, statePath).replaceAll('\\\\', '/') : null;
+  const effectiveRevision = assignmentRevision || assignmentText(state.assignment?.assignment_identity?.revision);
+  return { kind: 'agentic-workspace/assignment-lifecycle-result/v1', operation_id: operationId, transition, status: failures.length ? 'blocked' : state.current_state, outcome, mutation_applied: outcome === 'applied', target_root: targetRoot, run_id: runId, assignment_id: assignmentId || assignmentText(state.assignment_id) || null, assignment_revision: effectiveRevision || null, return_id: assignmentText(state.last_return_id) || null, artifact_refs: refs, state_ref: stateRef, state: decisionState, failures, reason_code: failures[0]?.reason ?? null, recovery_command: failures[0]?.recovery ?? null, message: `assignment ${transition}: ${failures.length ? 'blocked' : state.current_state}`, actions: refs.map((path) => ({ kind: 'write', path })) };
 }
 
 function correctionIdentityInit(values, targetRoot, operationId) {

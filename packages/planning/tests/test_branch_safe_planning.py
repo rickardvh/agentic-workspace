@@ -825,7 +825,10 @@ def test_feature_completion_mode_atomically_records_proof_and_proposes_integrati
     assert owner["finished_run_review"]["review status"] == "complete"
     assert owner["finished_run_review"]["scope respected"] == "Reviewed feature-head scope: Planning integration proposal lifecycle."
     assert owner["execution_summary"]["outcome delivered"] == "Implemented issue #2862 on the feature head."
-    assert owner["intent_satisfaction"]["was original intent fully satisfied?"] == "yes"
+    assert owner["intent_satisfaction"]["was original intent fully satisfied?"] == "feature-head complete; target integration pending"
+    assert owner["closure_check"]["slice status"] == "feature-complete-integration-pending"
+    assert owner["closure_check"]["larger-intent status"] == "open-pending-target-integration"
+    assert owner["closure_check"]["closure decision"] == "await-target-integration"
     assert owner["relationships"]["integration"]["status"] == "feature-complete-integration-pending"
     lane = json.loads(lane_path.read_text(encoding="utf-8"))
     assert [item["status"] for item in lane["slice_sequence"]] == ["integration-pending", "planned"]
@@ -1085,7 +1088,8 @@ def test_targeted_write_completion_correction_refreshes_current_proposal_and_rej
     refreshed = _proposal_record(tmp_path, proposal["id"])
     assert applied["status"] == "applied"
     assert owner["phase"] == "closeout"
-    assert owner["intent_satisfaction"]["was original intent fully satisfied?"] == "yes"
+    assert owner["intent_satisfaction"]["was original intent fully satisfied?"] == "feature-head complete; target integration pending"
+    assert owner["closure_check"]["closure decision"] == "await-target-integration"
     assert refreshed["status"] == "pending"
     assert refreshed["proposal_revision"] != proposal["proposal_revision"]
     assert refreshed["expected_subject_revision"] == installer._integration_subject_revision(

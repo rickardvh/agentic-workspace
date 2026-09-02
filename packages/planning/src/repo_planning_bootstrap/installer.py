@@ -14981,9 +14981,9 @@ def _prepare_feature_completion_record(
     existing_intent_satisfaction: dict[str, Any] = existing_intent_value if isinstance(existing_intent_value, dict) else {}
     updated["intent_satisfaction"] = {
         "original intent": str(existing_intent_satisfaction.get("original intent") or outcome).strip(),
-        "was original intent fully satisfied?": "yes",
+        "was original intent fully satisfied?": "feature-head complete; target integration pending",
         "evidence of intent satisfaction": proof_text,
-        "unsolved intent passed to": "none",
+        "unsolved intent passed to": proposal_ref,
     }
     updated["execution_summary"] = {
         "outcome delivered": completion_evidence["outcome_summary"],
@@ -14994,9 +14994,9 @@ def _prepare_feature_completion_record(
     }
     updated["closure_check"] = {
         "closeout scope": "slice",
-        "slice status": "completed",
-        "larger-intent status": "closed",
-        "closure decision": "archive-and-close" if requested_transition == "archive-owner" else "close-owner",
+        "slice status": "feature-complete-integration-pending",
+        "larger-intent status": "open-pending-target-integration",
+        "closure decision": "await-target-integration",
         "why this decision is honest": "Feature-head proof is accepted; terminal lifecycle truth awaits target integration.",
         "evidence carried forward": proof_text,
         "reopen trigger": "New contradictory evidence or rejected target integration.",

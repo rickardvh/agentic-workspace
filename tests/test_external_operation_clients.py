@@ -1903,6 +1903,12 @@ def _run_typescript_assignment(target: Path, transition: str, values: dict[str, 
     return json.loads(completed.stdout)
 
 
+def _assignment_full_state(target: Path, result: dict[str, object]) -> dict[str, object]:
+    state_ref = result.get("state_ref")
+    assert isinstance(state_ref, str) and state_ref
+    return json.loads((target / state_ref).read_text(encoding="utf-8"))
+
+
 @pytest.mark.parametrize("runtime", ["python", "typescript"])
 def test_host_native_export_projects_bound_return_identity_and_selected_delivery(tmp_path: Path, runtime: str) -> None:
     run_id = f"run-export-{runtime}"
@@ -2175,9 +2181,11 @@ def test_assignment_import_return_file_matches_inline_validation_in_python_and_t
         {"run_id": "run-python-file", "return_file": "python-return.json"}, target=tmp_path, invocation=invocation
     )
     assert inline["status"] == file_backed["status"] == "awaiting-admission"
-    assert inline["state"]["last_return_id"] == file_backed["state"]["last_return_id"]
-    return_id = inline["state"]["last_return_id"]
-    assert inline["state"]["returns"][return_id] == file_backed["state"]["returns"][return_id]
+    inline_state = _assignment_full_state(tmp_path, inline)
+    file_state = _assignment_full_state(tmp_path, file_backed)
+    assert inline_state["last_return_id"] == file_state["last_return_id"]
+    return_id = inline_state["last_return_id"]
+    assert inline_state["returns"][return_id] == file_state["returns"][return_id]
 
     typescript_target = tmp_path / "typescript"
     typescript_target.mkdir()
@@ -2263,8 +2271,9 @@ def test_assignment_import_large_return_file_through_session_logged_cli(tmp_path
     assert completed.returncode == 0, completed.stderr
     imported = json.loads(completed.stdout)
     assert imported["status"] == "awaiting-admission"
-    return_id = imported["state"]["last_return_id"]
-    artifact = tmp_path / imported["state"]["returns"][return_id]["artifact_ref"]
+    imported_state = _assignment_full_state(tmp_path, imported)
+    return_id = imported_state["last_return_id"]
+    artifact = tmp_path / imported_state["returns"][return_id]["artifact_ref"]
     assert json.loads(artifact.read_text(encoding="utf-8"))["patch"] == patch
     assert (tmp_path / ".agentic-workspace/local/logs").exists()
 
@@ -2505,7 +2514,10 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
         check=False,
     )
     assert typescript_wrong_close.returncode == 0, typescript_wrong_close.stderr
-    assert json.loads(typescript_wrong_close.stdout)["status"] == "blocked"
+    typescript_wrong_payload = json.loads(typescript_wrong_close.stdout)
+    assert typescript_wrong_payload["status"] == "blocked"
+    assert typescript_wrong_payload["state"]["schema_version"] == "agentic-workspace/assignment-lifecycle-decision-state/v1"
+    assert len(json.dumps(typescript_wrong_payload, separators=(",", ":")).encode()) <= 4_000
     wrong_proof_close = assignment_close(
         {"run_id": "run-1", "task_proof_receipt_ref": wrong_task_proof_ref},
         target=tmp_path,
@@ -2558,7 +2570,10 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
         check=False,
     )
     assert typescript_closed.returncode == 0, typescript_closed.stderr
-    assert json.loads(typescript_closed.stdout)["status"] == "closed"
+    typescript_closed_payload = json.loads(typescript_closed.stdout)
+    assert typescript_closed_payload["status"] == "closed"
+    assert typescript_closed_payload["state"]["schema_version"] == "agentic-workspace/assignment-lifecycle-decision-state/v1"
+    assert len(json.dumps(typescript_closed_payload, separators=(",", ":")).encode()) <= 4_000
     override = assignment_override(
         {"assignment_id": "assign-1", "reason": "maintainer approved", "scope": "src/feature.py", "expires_at": "2026-07-23T00:00:00Z"},
         target=tmp_path,
@@ -2598,7 +2613,21 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
     assert '"kind": "agentic-workspace/assignment-worker-context/v1"' in prompt
     assert "dispatch_adapter" not in prompt
     assert "authority_refs" not in prompt
+    assert export["state"]["schema_version"] == "agentic-workspace/assignment-lifecycle-decision-state/v1"
+    assert set(export["state"]) <= {
+        "schema_version",
+        "current_state",
+        "assignment_id",
+        "run_id",
+        "last_return_id",
+        "last_admission_status",
+        "current_attempt",
+    }
     assert "current_authorities" not in export["state"]
+    for result in (export, malformed, missing_patch, imported, premature_close, blocked, admitted, integrated, closed, override):
+        encoded = json.dumps(result, separators=(",", ":")).encode()
+        assert len(encoded) <= 4_000
+        assert (len(encoded) + 3) // 4 <= 1_000
     assert "Copy every value in `return_contract.required_identity` exactly" not in prompt
     assert "Return every field named by `return_contract.required_fields`" in prompt
 

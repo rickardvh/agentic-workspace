@@ -4,8 +4,8 @@
   "title": "Complete active dogfooding owners #2947, #2561, #2727, and #2963",
   "owner_level": "slice",
   "lifecycle": "live",
-  "phase": "implementation",
-  "revision": 5,
+  "phase": "closeout",
+  "revision": 8,
   "intent": {
     "outcome": "Complete the active dogfooding implementation owners #2947, #2561, #2727, and #2963 on the existing stacked PR.",
     "non_goals": [
@@ -19,12 +19,13 @@
   },
   "scope": {
     "owned": [
-      "Host-native assignment lifecycle and stale plan binding (#2947/#2699).",
-      "Selected-proof result classification and resume (#2561/#2727).",
-      "Repository PR-review semantic-route adoption (#2963)."
+      "Consolidated host-native assignment, selected-proof, generated-runtime, and PR-review dogfooding fixes already present on PR #2949.",
+      "Refined #2964 bounded decision-first assignment lifecycle output.",
+      "Reopened #2210 current provider-neutral marginal-cost evidence ranking.",
+      "PR #2949 Planning truth blocker, including canonical non-terminal feature-completion semantics."
     ],
     "effects": [
-      "Repository source, generated mirrors, focused tests, release note, and Planning/proof records only."
+      "Repository source, generated mirrors, focused tests, release changesets, and guarded Planning/proof records only."
     ]
   },
   "relationships": {
@@ -33,12 +34,35 @@
       "owner": "dogfooding-2947-2963"
     },
     "proof_posture": {
-      "state": "pending",
-      "refs": []
+      "state": "accepted",
+      "refs": [
+        "command://pytest-lifecycle-output-budget",
+        "command://pytest-current-economics",
+        "command://pytest-completion-correction",
+        "command://planning-typecheck",
+        "command://generated-package-proof",
+        "command://contract-tooling"
+      ]
     },
     "external_posture": {
       "state": "unobserved",
       "refs": []
+    },
+    "integration": {
+      "status": "feature-complete-integration-pending",
+      "proposal_id": "dogfooding-2947-2963-cost-optimisation",
+      "proposal_ref": ".agentic-workspace/planning/integration-proposals/dogfooding-2947-2963-cost-optimisation.integration-proposal.json",
+      "requested_transition": "archive-owner",
+      "proof_refs": [
+        "command://pytest-lifecycle-output-budget",
+        "command://pytest-current-economics",
+        "command://pytest-completion-correction",
+        "command://planning-typecheck",
+        "command://generated-package-proof",
+        "review://github/pr/2949#issuecomment-5507674188",
+        "command://contract-tooling"
+      ],
+      "authority": "feature-head declaration; target integration remains terminal authority"
     }
   },
   "references": [
@@ -50,16 +74,26 @@
       "locator": ""
     }
   ],
-  "next_action": "Implement only #2561/#2727 selected-proof completed-result and resume semantics, then run their focused fixtures.",
+  "next_action": "Apply integration proposal 'dogfooding-2947-2963-cost-optimisation' from admitted target authority.",
   "blockers": [],
   "proof": {
     "claims": [
-      "Complete active dogfooding owners #2947, #2561, #2727, and #2963 is implemented, validated, and closed out honestly."
+      "Lifecycle defaults are bounded and exact state remains reference-addressable.",
+      "Current marginal-cost evidence influences only eligible targets and stale or unavailable evidence contributes no discount.",
+      "Feature-head completion remains explicitly non-terminal until target integration."
     ],
     "requirements": [
-      "Fill in the narrowest command that proves the promoted work."
+      "Focused lifecycle budget, economic ranking, Planning completion-correction, generated parity, typecheck, Ruff, and diff checks pass."
     ],
-    "refs": []
+    "refs": [
+      "command://pytest-lifecycle-output-budget",
+      "command://pytest-current-economics",
+      "command://pytest-completion-correction",
+      "command://planning-typecheck",
+      "command://generated-package-proof",
+      "review://github/pr/2949#issuecomment-5507674188",
+      "command://contract-tooling"
+    ]
   },
   "continuation": {
     "owner": "none",
@@ -67,59 +101,101 @@
   },
   "specialist_contracts": [],
   "goal": [
-    "Complete the active dogfooding implementation owners #2947, #2561, #2727, and #2963 on the existing stacked PR."
+    "Implement refined #2964 decision-first assignment lifecycle output and reopened #2210 current economic evidence ranking on PR #2949 before unrelated dogfooding work."
   ],
   "non_goals": [
-    "Do not merge PRs, self-review, post review-decision markers, add portable reviewer authority, or run broad tests unless selected proof requires them."
+    "Do not merge, approve, post review-decision markers, add provider/model-specific billing policy, expose account balances, weaken target eligibility/proof/trust, or create a second assignment state owner."
   ],
   "intent_continuity": {
-    "larger intended outcome": "Resolve all current dogfooding regressions on the compact top-of-stack PR.",
+    "larger intended outcome": "Reduce total successful-completion cost while preserving safe explainable orchestration.",
     "this slice completes the larger intended outcome": "yes",
     "continuation surface": "none"
   },
   "execution_bounds": {
-    "allowed paths": "source/runtime contracts, focused tests, generated mirrors, repo-owned PR-review skill/instruction/Memory declarations, release note, and Planning/proof evidence",
-    "max changed files": "bounded to existing consolidated stack surfaces plus the smallest #2963 declarations/fixtures",
-    "required validation commands": "focused assignment, selected-proof, semantic-route, generated closure, lint/type checks, then repository-selected proof",
-    "ask-before-refactor threshold": "stop before portable review-policy design or a second proof state machine",
-    "stop before touching": "PR merge, review-decision markers, unrelated backlog, or target-branch integration truth"
+    "allowed paths": "assignment lifecycle result/output profiles, target economic evidence and ranking, generated contract mirrors, focused tests/docs/release notes, Planning/proof evidence",
+    "max changed files": "bounded to canonical contracts plus mechanically generated mirrors",
+    "required validation commands": "focused lifecycle output-budget/schema tests, focused target ranking tests, generated contract parity, Ruff and diff check",
+    "ask-before-refactor threshold": "stop before a new state owner, billing service, provider-specific enum, or broad output framework",
+    "stop before touching": "PR merge, review authority, unrelated backlog, raw provider credentials or balances"
   },
   "touched_paths": [
     "src/agentic_workspace/contracts/python_primitive_support.py",
     "src/agentic_workspace/contracts/typescript_primitive_support.mjs",
+    "src/agentic_workspace/contracts/schemas/assignment_lifecycle_result.schema.json",
+    "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
+    "src/agentic_workspace/config.py",
+    "src/agentic_workspace/target_evidence.py",
     "src/agentic_workspace/workspace_runtime_core.py",
-    "src/agentic_workspace/workspace_runtime_implement.py",
     "tests/test_external_operation_clients.py",
-    "tests/test_workspace_proof_cli.py",
+    "tests/test_output_profile_budgets.py",
+    "tests/test_workspace_config_cli.py",
     "tests/test_workspace_implement_cli.py",
+    "tests/test_workspace_cli.py",
+    "docs/package/output-profiles.md",
+    "docs/reference/assignment-lifecycle-result.md",
     "generated/**",
-    ".agentic-workspace/planning/**",
-    ".agentic-workspace/proof/receipts/**",
     ".release/changes/**",
-    "tools/skills/REGISTRY.json",
-    "tools/skills/pr-review-recheck/SKILL.md",
-    ".agentic-workspace/instructions/**",
-    ".agentic-workspace/memory/repo/manifest.toml",
-    "tests/test_scoped_instructions.py",
-    "tests/test_workspace_skills_cli.py",
-    "tests/test_operating_decision.py",
-    "packages/memory/**",
-    "scripts/check/check_generated_command_packages.py",
-    "tests/test_command_generation_release_promotion.py",
-    "packages/planning/tests/test_branch_safe_planning.py",
-    "src/agentic_workspace/proof_execution_projection.py"
+    ".agentic-workspace/planning/**",
+    ".agentic-workspace/proof/receipts/**"
   ],
   "validation_commands": [
-    "uv run --frozen --active --no-sync pytest -q tests/test_workspace_implement_cli.py::test_plan_binding_drift_supersedes_assignment_before_rematerialization",
-    "uv run --frozen --active --no-sync pytest -q tests/test_workspace_proof_cli.py -k \"execute_selected or timeout\"",
-    "uv run --frozen --active --no-sync pytest -q tests/test_scoped_instructions.py tests/test_workspace_skills_cli.py tests/test_operating_decision.py -k \"semantic_route or route\"",
-    "uv run --frozen --active --no-sync pytest -q tests/test_external_operation_clients.py tests/test_command_generation_release_promotion.py -k \"assignment or docker or generated\""
+    "uv run --frozen --active --no-sync pytest -q tests/test_output_profile_budgets.py tests/test_external_operation_clients.py -k \"assignment and (lifecycle or output or result)\"",
+    "uv run --frozen --active --no-sync pytest -q tests/test_workspace_config_cli.py tests/test_workspace_implement_cli.py -k \"assignment_decision or economic or cost\"",
+    "uv run --frozen --active --no-sync python scripts/check/check_generated_command_packages.py --conformance-shard --require-node",
+    "uv run --frozen --active --no-sync ruff check src/agentic_workspace tests"
   ],
   "completion_criteria": [
-    "Stale plan-bound assignments are superseded before current authority is rematerialized.",
-    "Completed selected-proof failures retain their real exit code/evidence while genuine timeouts remain distinct.",
-    "Resume retains completed failing constituents and runs only unfinished or explicitly retriable proof work.",
-    "The explicit github/pr/review route surfaces the existing procedure and Memory anti-trap without lexical inference or authority grants.",
-    "Python/TypeScript generated packages and Docker closure remain consistent under focused checks."
-  ]
+    "Assignment lifecycle mutations emit bounded decision-first results by default while canonical full state remains exactly inspectable.",
+    "Representative lifecycle fixtures enforce byte/field/token bounds without hiding action-changing failure or recovery facts.",
+    "The canonical assignment decision admits bounded current economic evidence with provenance/currentness and uses it only after hard eligibility.",
+    "Current marginal-cost evidence can break an otherwise-safe nominal-cost tie; stale/unavailable/exhausted evidence falls back conservatively and repair/review burden can override it.",
+    "Python/TypeScript/generated contracts remain equivalent under focused proof."
+  ],
+  "proof_report": {
+    "validation proof": "command://pytest-lifecycle-output-budget, command://pytest-current-economics, command://pytest-completion-correction, command://planning-typecheck, command://generated-package-proof, command://contract-tooling",
+    "proof achieved now": "yes; integration-propose recorded accepted feature-head proof.",
+    "evidence for \"proof achieved\" state": "command://pytest-lifecycle-output-budget, command://pytest-current-economics, command://pytest-completion-correction, command://planning-typecheck, command://generated-package-proof, command://contract-tooling"
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "current planning owner",
+    "handoff source": "dogfooding-2947-2963",
+    "what happened": "Implemented refined #2964 bounded assignment lifecycle output, reopened #2210 current economic evidence ranking, and the PR Planning-truth blocker.",
+    "scope touched": "Assignment lifecycle result contracts and primitives, target profile/ranking configuration, Planning feature-completion truth, generated mirrors, focused tests, docs, release metadata, and durable owner records.",
+    "changed surfaces": "Workspace Python/TypeScript lifecycle primitives, target evidence/config runtime, Planning completion producer, generated contracts, tests, docs, release changeset, and Planning owners/proposals.",
+    "validations run": "command://pytest-lifecycle-output-budget, command://pytest-current-economics, command://pytest-completion-correction, command://planning-typecheck, command://generated-package-proof, command://contract-tooling",
+    "result for continuation": "feature-head complete; terminal lifecycle remains target-authoritative",
+    "next step": "Apply integration proposal 'dogfooding-2947-2963-cost-optimisation' from admitted target authority."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Audited the PR owner set and removed scaffold, pending worker-proof, and premature terminal closure residue without granting merge or review authority.",
+    "proof status": "passed",
+    "intent served": "yes; target integration remains the terminal lifecycle authority.",
+    "config compliance": "used planning integration-propose command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": ".agentic-workspace/planning/integration-proposals/dogfooding-2947-2963-cost-optimisation.integration-proposal.json"
+  },
+  "intent_satisfaction": {
+    "original intent": "Implemented refined #2964 bounded assignment lifecycle output, reopened #2210 current economic evidence ranking, and the PR Planning-truth blocker.",
+    "was original intent fully satisfied?": "feature-head complete; target integration pending",
+    "evidence of intent satisfaction": "command://pytest-lifecycle-output-budget, command://pytest-current-economics, command://pytest-completion-correction, command://planning-typecheck, command://generated-package-proof, command://contract-tooling",
+    "unsolved intent passed to": ".agentic-workspace/planning/integration-proposals/dogfooding-2947-2963-cost-optimisation.integration-proposal.json"
+  },
+  "execution_summary": {
+    "outcome delivered": "Safe assignment routing now accounts for current marginal cost, lifecycle control output is bounded, and feature-head Planning truth remains explicitly non-terminal until target integration.",
+    "validation confirmed": "command://pytest-lifecycle-output-budget, command://pytest-current-economics, command://pytest-completion-correction, command://planning-typecheck, command://generated-package-proof, command://contract-tooling",
+    "follow-on routed to": ".agentic-workspace/planning/integration-proposals/dogfooding-2947-2963-cost-optimisation.integration-proposal.json",
+    "post-work posterity capture": "target-authoritative integration proposal",
+    "resume from": "Apply integration proposal 'dogfooding-2947-2963-cost-optimisation' from admitted target authority."
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "feature-complete-integration-pending",
+    "larger-intent status": "open-pending-target-integration",
+    "closure decision": "await-target-integration",
+    "why this decision is honest": "Feature-head proof is accepted; terminal lifecycle truth awaits target integration.",
+    "evidence carried forward": "command://pytest-lifecycle-output-budget, command://pytest-current-economics, command://pytest-completion-correction, command://planning-typecheck, command://generated-package-proof, command://contract-tooling",
+    "reopen trigger": "New contradictory evidence or rejected target integration."
+  }
 }

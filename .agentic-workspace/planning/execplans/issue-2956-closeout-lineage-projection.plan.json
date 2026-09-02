@@ -5,7 +5,7 @@
   "owner_level": "slice",
   "lifecycle": "live",
   "phase": "closeout",
-  "revision": 6,
+  "revision": 7,
   "intent": {
     "outcome": "#2956 refined 2026-09-01",
     "non_goals": [
@@ -36,14 +36,29 @@
       "owner": "issue-2956-closeout-lineage-projection"
     },
     "proof_posture": {
-      "state": "worker-validation-recorded-awaiting-aw-admission",
+      "state": "accepted",
       "refs": [
-        "Focused selector, lineage, and publication-identity tests are recorded in the delegated worker return."
+        "proof://receipts/874cd7193ebccb2a",
+        "command://pytest-closeout-lineage",
+        "command://ruff"
       ]
     },
     "external_posture": {
       "state": "unobserved",
       "refs": []
+    },
+    "integration": {
+      "status": "feature-complete-integration-pending",
+      "proposal_id": "issue-2956-closeout-lineage-projection",
+      "proposal_ref": ".agentic-workspace/planning/integration-proposals/issue-2956-closeout-lineage-projection.integration-proposal.json",
+      "requested_transition": "archive-owner",
+      "proof_refs": [
+        "proof://receipts/874cd7193ebccb2a",
+        "run-2efe7729db03f6b618fea84566e751520f3b556227c2616afdaf445278e6a5f8-1",
+        "command://pytest-closeout-lineage",
+        "command://ruff"
+      ],
+      "authority": "feature-head declaration; target integration remains terminal authority"
     }
   },
   "references": [
@@ -55,7 +70,7 @@
       "locator": ""
     }
   ],
-  "next_action": "Commit and push the refined #2956 slice on the existing open stacked PR; do not merge.",
+  "next_action": "Apply integration proposal 'issue-2956-closeout-lineage-projection' from admitted target authority.",
   "blockers": [
     "None."
   ],
@@ -71,7 +86,9 @@
     ],
     "refs": [
       "proof://receipts/874cd7193ebccb2a",
-      "run-2efe7729db03f6b618fea84566e751520f3b556227c2616afdaf445278e6a5f8-1"
+      "run-2efe7729db03f6b618fea84566e751520f3b556227c2616afdaf445278e6a5f8-1",
+      "command://pytest-closeout-lineage",
+      "command://ruff"
     ]
   },
   "continuation": {
@@ -116,5 +133,52 @@
     "The final proof does not carry assignment_proof_obligation/binding as if it were a second task-behavior proof.",
     "Missing/mismatched close receipt, task proof, run/assignment identity, stale scope, superseded/rejected/cancelled, ambiguous, and semantic post-proof changes fail closed.",
     "The real #2947-shaped lifecycle produces final exact-head lineage without reopening the assignment or manual raw-state stitching."
-  ]
+  ],
+  "proof_report": {
+    "validation proof": "proof://receipts/874cd7193ebccb2a, command://pytest-closeout-lineage, command://ruff",
+    "proof achieved now": "yes; integration-propose recorded accepted feature-head proof.",
+    "evidence for \"proof achieved\" state": "proof://receipts/874cd7193ebccb2a, command://pytest-closeout-lineage, command://ruff"
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "current planning owner",
+    "handoff source": "issue-2956-closeout-lineage-projection",
+    "what happened": "Projected exact closed-assignment lineage into final proof without treating it as task-behavior proof.",
+    "scope touched": "Workspace proof selection and focused assignment closeout-lineage tests.",
+    "changed surfaces": "src/agentic_workspace/workspace_runtime_core.py, focused Workspace proof tests, release metadata, and durable owner truth.",
+    "validations run": "proof://receipts/874cd7193ebccb2a, command://pytest-closeout-lineage, command://ruff",
+    "result for continuation": "feature-head complete; terminal lifecycle remains target-authoritative",
+    "next step": "Apply integration proposal 'issue-2956-closeout-lineage-projection' from admitted target authority."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Reviewed fail-closed identity, scope, close-receipt, currentness, and proof-role boundaries.",
+    "proof status": "passed",
+    "intent served": "yes; target integration remains the terminal lifecycle authority.",
+    "config compliance": "used planning integration-propose command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": ".agentic-workspace/planning/integration-proposals/issue-2956-closeout-lineage-projection.integration-proposal.json"
+  },
+  "intent_satisfaction": {
+    "original intent": "Projected exact closed-assignment lineage into final proof without treating it as task-behavior proof.",
+    "was original intent fully satisfied?": "feature-head complete; target integration pending",
+    "evidence of intent satisfaction": "proof://receipts/874cd7193ebccb2a, command://pytest-closeout-lineage, command://ruff",
+    "unsolved intent passed to": ".agentic-workspace/planning/integration-proposals/issue-2956-closeout-lineage-projection.integration-proposal.json"
+  },
+  "execution_summary": {
+    "outcome delivered": "Final proof carries distinct canonical assignment closeout lineage while ordinary task-proof selection remains current-integrated only.",
+    "validation confirmed": "proof://receipts/874cd7193ebccb2a, command://pytest-closeout-lineage, command://ruff",
+    "follow-on routed to": ".agentic-workspace/planning/integration-proposals/issue-2956-closeout-lineage-projection.integration-proposal.json",
+    "post-work posterity capture": "target-authoritative integration proposal",
+    "resume from": "Apply integration proposal 'issue-2956-closeout-lineage-projection' from admitted target authority."
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "feature-complete-integration-pending",
+    "larger-intent status": "open-pending-target-integration",
+    "closure decision": "await-target-integration",
+    "why this decision is honest": "Feature-head proof is accepted; terminal lifecycle truth awaits target integration.",
+    "evidence carried forward": "proof://receipts/874cd7193ebccb2a, command://pytest-closeout-lineage, command://ruff",
+    "reopen trigger": "New contradictory evidence or rejected target integration."
+  }
 }
