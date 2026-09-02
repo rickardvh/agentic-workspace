@@ -28286,6 +28286,82 @@ def _github_native_sub_issue_relationships(
     }
 
 
+def _github_pull_request_to_external_intent_item(
+    *, pull_request: dict[str, Any], repo: str, observed_at: str | None = None
+) -> dict[str, Any] | None:
+    number = pull_request.get("number")
+    if number is None:
+        return None
+    try:
+        pull_request_number = int(number)
+    except (TypeError, ValueError):
+        return None
+    merged_at = str(pull_request.get("mergedAt", "") or "").strip()
+    closed_at = str(pull_request.get("closedAt", "") or "").strip()
+    updated_at = str(pull_request.get("updatedAt", "") or "").strip()
+    state = str(pull_request.get("state", "") or "").strip().lower()
+    if merged_at:
+        state = "merged"
+    elif state not in {"open", "closed", "merged"}:
+        state = "closed" if closed_at else "open"
+    locator = str(pull_request.get("url", "") or "").strip()
+    observation_revision = updated_at or merged_at or closed_at or f"github-pull-request-{pull_request_number}"
+    observation_time = observed_at or datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    observed_time = _parse_external_intent_timestamp(observation_time)
+    expires_at = (observed_time + timedelta(hours=24)).replace(microsecond=0).isoformat() if observed_time else ""
+    merge_commit = _as_dict(pull_request.get("mergeCommit"))
+    merge_commit_oid = str(merge_commit.get("oid") or "").strip()
+    labels = _github_label_names(pull_request.get("labels"))
+    return {
+        "system": "github",
+        "id": f"PR #{pull_request_number}",
+        "title": str(pull_request.get("title", "") or "").strip(),
+        "status": state,
+        "kind": "pull-request",
+        "parent_id": "",
+        "reopens": [],
+        "planning_residue_expected": "optional",
+        "url": locator,
+        "source_repository": repo,
+        "labels": labels,
+        "created_at": str(pull_request.get("createdAt", "") or "").strip(),
+        "updated_at": updated_at,
+        "closed_at": closed_at,
+        "observation_id": f"github:pull-request:{pull_request_number}:{observation_revision}",
+        "owner": {
+            "id": f"PR #{pull_request_number}",
+            "kind": "pull-request",
+            "locator": locator or f"github:{repo}:pull-request:{pull_request_number}",
+        },
+        "status_class": "completed" if state in {"closed", "merged"} else "current",
+        "external_revision": observation_revision,
+        "observed_at": observation_time,
+        "freshness": {
+            "status": "current" if observed_time else "unknown",
+            "observed_at": observation_time,
+            "expires_at": expires_at,
+            "max_age_seconds": 86400,
+        },
+        "blockers": [],
+        "evidence_refs": [locator] if locator else [],
+        "provenance": {
+            "provider_class": "github",
+            "resolver_id": "github-gh-cli",
+            "source_ref": locator or f"github:{repo}:pull-request:{pull_request_number}",
+            "refresh_id": observation_revision,
+        },
+        "refresh_route": f"gh pr view {pull_request_number} --repo {repo}",
+        "availability": "available",
+        "contradictions": [],
+        "provider_detail": {
+            "repository": repo,
+            "merged_at": merged_at,
+            "closed_at": closed_at,
+            "merge_commit_oid": merge_commit_oid,
+        },
+    }
+
+
 def _normalize_external_intent_issue_refs(raw_issue_refs: list[str] | None) -> list[str]:
     normalized: list[str] = []
     for raw_ref in raw_issue_refs or []:
@@ -28307,6 +28383,34 @@ def _fetch_github_external_intent_issue_items(
     items: list[dict[str, Any]] = []
     for issue_ref in issue_refs:
         issue_number = issue_ref.lstrip("#")
+        raw_pull_request: Any = None
+        try:
+            raw_pull_request = _run_gh_json(
+                [
+                    "pr",
+                    "view",
+                    issue_number,
+                    "--repo",
+                    repo,
+                    "--json",
+                    "number,title,state,url,labels,createdAt,updatedAt,closedAt,mergedAt,mergeCommit",
+                ],
+                cwd=target_root,
+            )
+        except WorkspaceUsageError:
+            # GitHub issues and pull requests share one number namespace. A
+            # failed PR lookup is the expected discriminator for an issue;
+            # the issue lookup below remains the authoritative error surface.
+            raw_pull_request = None
+        if isinstance(raw_pull_request, dict) and raw_pull_request.get("number") is not None:
+            item = _github_pull_request_to_external_intent_item(
+                pull_request=raw_pull_request,
+                repo=repo,
+                observed_at=observed_at,
+            )
+            if item is not None:
+                items.append(item)
+            continue
         raw_issue = _run_gh_json(
             [
                 "issue",
@@ -45950,6 +46054,13 @@ def _task_assignment_disposition_payload(
     elif action_status == "direct-current-target":
         outcome = "execute-here"
         evaluated_state = "evaluated-local"
+    elif not binding_orchestrator and orchestration_assignment.get("policy") == "local-preferred":
+        # The absence of a configured assignment target is the ordinary quiet
+        # local case, not an unavailable child transport. Mandatory child
+        # resolution applies only after binding orchestration has identified a
+        # bounded candidate.
+        outcome = "execute-here"
+        evaluated_state = "default-local"
     elif action_status in {"ready", "reconciliation-required"}:
         outcome = "delegate-bounded-slice"
         evaluated_state = "delegated"
@@ -45984,7 +46095,11 @@ def _task_assignment_disposition_payload(
             operation = {}
     elif outcome == "execute-here":
         child_status = "selected-current"
-        child_action = assignment_action.get("action") or assignment_gate.get("required_next_action")
+        child_action = (
+            "continue-local-work"
+            if evaluated_state == "default-local"
+            else assignment_action.get("action") or assignment_gate.get("required_next_action")
+        )
         child_implementation_allowed = True
         child_target = selected_target or None
     elif outcome == "delegate-bounded-slice":

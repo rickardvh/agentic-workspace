@@ -686,7 +686,6 @@ resolution_policy = "frozen"
 target_release = "source-current"
 minimum_capabilities = ["installed-state-sync-v2"]
 policy = "required-before-work"
-dogfood_latest = true
 
 [system_intent]
 sources = ["SYSTEM_INTENT.md", "README.md"]

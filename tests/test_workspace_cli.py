@@ -15771,6 +15771,54 @@ def test_github_pr_evidence_fetches_exact_declared_lane_refs_without_bulk_histor
     assert all("list" not in call for call in calls)
 
 
+def test_external_intent_issue_ref_preserves_merged_pull_request_semantics(tmp_path: Path, monkeypatch) -> None:
+    from agentic_workspace import workspace_runtime_core as runtime_module
+
+    calls: list[list[str]] = []
+
+    def fake_gh_json(arguments, *, cwd):
+        calls.append(arguments)
+        assert cwd == tmp_path
+        if arguments[:3] == ["pr", "view", "2939"]:
+            return {
+                "number": 2939,
+                "title": "Repair fresh-worktree runtime recovery",
+                "state": "MERGED",
+                "url": "https://github.com/acme/project/pull/2939",
+                "labels": [],
+                "createdAt": "2026-09-01T17:00:00Z",
+                "updatedAt": "2026-09-01T21:17:00Z",
+                "closedAt": "2026-09-01T21:17:00Z",
+                "mergedAt": "2026-09-01T21:17:00Z",
+                "mergeCommit": {"oid": "420d039813cc3aad7faddf395b3485f512290a54"},
+            }
+        raise AssertionError(f"merged PR must not fall through to issue lookup: {arguments}")
+
+    monkeypatch.setattr(runtime_module, "_run_gh_json", fake_gh_json)
+
+    items = runtime_module._fetch_github_external_intent_issue_items(
+        target_root=tmp_path,
+        repo="acme/project",
+        issue_refs=["#2939"],
+        observed_at="2026-09-02T12:00:00+00:00",
+    )
+
+    assert len(items) == 1
+    item = items[0]
+    assert item["id"] == "PR #2939"
+    assert item["owner"]["kind"] == "pull-request"
+    assert item["status"] == "merged"
+    assert item["status_class"] == "completed"
+    assert item["external_revision"] == "2026-09-01T21:17:00Z"
+    assert item["provider_detail"] == {
+        "repository": "acme/project",
+        "merged_at": "2026-09-01T21:17:00Z",
+        "closed_at": "2026-09-01T21:17:00Z",
+        "merge_commit_oid": "420d039813cc3aad7faddf395b3485f512290a54",
+    }
+    assert calls[0][:3] == ["pr", "view", "2939"]
+
+
 def test_start_open_issue_intake_routes_refresh_and_grouping(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -18889,6 +18937,21 @@ def test_selected_start_decision_route_is_narrow_and_preserves_claim_and_assignm
 
 
 def test_task_assignment_disposition_distinguishes_deliberate_local_and_external_action() -> None:
+    default_local = workspace_runtime_core._task_assignment_disposition_payload(
+        assignment_decision={},
+        assignment_gate={"implementation_allowed": False, "required_next_action": "resolve-assignment-route"},
+        assignment_action={"status": "not-applicable"},
+        effective_orchestration={
+            "assignment": {"execution_role": "ordinary-executor", "policy": "local-preferred", "authority": "local"},
+            "transport": {"effective_mode": "manual"},
+        },
+    )
+    assert default_local["outcome"] == "execute-here"
+    assert default_local["evaluation_state"] == "default-local"
+    assert default_local["bounded_child_assignment"]["status"] == "selected-current"
+    assert default_local["bounded_child_assignment"]["implementation_allowed"] is True
+    assert default_local["next_action"]["action"] == "continue-local-work"
+
     local = workspace_runtime_core._task_assignment_disposition_payload(
         assignment_decision={
             "selected_target": "current",
