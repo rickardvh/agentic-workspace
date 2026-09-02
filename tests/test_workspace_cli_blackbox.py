@@ -119,6 +119,22 @@ def test_blackbox_selector_conflict_guides_to_correct_usage() -> None:
     assert any("--section agent_aids --format json" in command and "--verbose" not in command for command in payload["alternatives"])
 
 
+@pytest.mark.parametrize("surface", ["config", "summary"])
+def test_blackbox_typed_selector_errors_and_process_status_agree(surface: str) -> None:
+    result = _run_cli(surface, "--target", ".", "--select", "definitely.invalid", "--format", "json", cwd=Path.cwd())
+
+    assert result.returncode == 2
+    payload = json.loads(result.stdout)
+    assert payload["kind"] == "agentic-workspace/selector-validation-error/v1"
+    assert payload["status"] == "invalid-selector"
+    assert payload["exit_status"] == result.returncode
+    assert payload["exit_class"] == "usage-or-validation-error"
+    assert payload["safe_to_retry"] is True
+    assert payload["mutation_occurred"] is False
+    assert payload["source_command"] == surface
+    assert "selector_inventory" in payload["corrected_action"]
+
+
 def test_blackbox_module_cli_retryable_error_kind_uses_module_namespace() -> None:
     result = subprocess.run(
         ["uv", "run", "agentic-memory", "rout", "--format", "json"],

@@ -56743,16 +56743,33 @@ def _emit_workspace_config_compat_output(values: dict[str, Any], output_format: 
     return True
 
 
-def _emit_workspace_defaults_compat_output(values: dict[str, Any], output_format: str) -> None:
+def _emit_workspace_defaults_compat_output(values: dict[str, Any], output_format: str) -> bool:
+    if "defaults" not in values:
+        return False
     _emit_defaults(
         format_name=output_format,
         section=None,
         profile=_workspace_operation_profile(values),
         select=str(values["select"]) if values.get("select") is not None else None,
     )
+    return True
 
 
-def _emit_workspace_operation_output(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> None:
+def _emit_workspace_generic_operation_output(values: dict[str, Any], arguments: dict[str, Any]) -> None:
+    """Render non-start operation results through the shared primitive renderer.
+
+    Runtime-backed operations such as assignment lifecycle transitions do not
+    carry the startup/defaults state used by the legacy compatibility
+    renderers.  Keeping the generic result boundary explicit prevents a valid
+    operation from falling through to a startup-only renderer.
+    """
+
+    from agentic_workspace.contracts.python_primitive_support import _emit_output
+
+    print(_emit_output(values=values, arguments=arguments), end="")
+
+
+def _emit_workspace_operation_output(values: dict[str, Any], arguments: dict[str, Any], _context: Any) -> None:
     payload = values["result"]
     output_format = str(values.get("format") or "text")
     if _emit_workspace_prompt_output(payload, output_format):
@@ -56770,7 +56787,9 @@ def _emit_workspace_operation_output(values: dict[str, Any], _arguments: dict[st
         return
     if _emit_workspace_config_compat_output(values, output_format):
         return
-    _emit_workspace_defaults_compat_output(values, output_format)
+    if _emit_workspace_defaults_compat_output(values, output_format):
+        return
+    _emit_workspace_generic_operation_output(values, arguments)
 
 
 def _emit_workspace_operation_system_intent_payload_text(payload: dict[str, Any]) -> None:
