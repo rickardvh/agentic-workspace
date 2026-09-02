@@ -18,7 +18,10 @@
     "preview projects the exact delta while apply reruns a sealed internal preflight bound to target/worktree mutation baseline, Planning, owner, lane, request revisions, and expiry",
     "apply rejects caller-built timestamp/lookalike bearer tokens and writes owner/projection updates and the admitted preflight evidence atomically",
     "replay is idempotent only while the recorded owner/state/lane postcondition remains live",
-    "scaffold tightening supports goal, non-goals, intent continuity, execution bounds, touched paths, validation commands, completion criteria, and adaptive assurance while preserving canonical projections"
+    "scaffold tightening supports goal, non-goals, intent continuity, execution bounds, touched paths, validation commands, completion criteria, and adaptive assurance while preserving canonical projections",
+    "completion correction remains a typed semantic mode: ordinary patches cannot directly set execution_run, finished_run_review, intent_satisfaction, execution_summary, or closure_check",
+    "completion correction requires stable correction identity, admitted review refs, a material supported source patch, and exact proposal plus target-authority guards when integration-pending truth participates",
+    "reopen atomically demotes every completion projection, restores lane work, and rejects the superseded proposal; remain-feature-complete atomically rebuilds completion truth and refreshes proposal currentness"
   ],
   "id": "planning.targeted-write.lifecycle",
   "inputs": [
@@ -30,6 +33,12 @@
     {
       "name": "patch",
       "required": true,
+      "source": "cli-option"
+    },
+    {
+      "description": "Typed semantic correction containing stable identity, admitted review evidence, completion disposition, and linked proposal/target revision guards.",
+      "name": "completion_correction",
+      "required": false,
       "source": "cli-option"
     },
     {
@@ -63,7 +72,7 @@
       "source": "cli-option"
     }
   ],
-  "intent": "Support targeted owner mutation and implementation-scaffold tightening without delete/recreate behavior, broad plan rewrites, or raw JSON as the ordinary bridge.",
+  "intent": "Support targeted owner mutation, implementation-scaffold tightening, and atomic correction of review-invalidated completed-run truth without delete/recreate behavior, broad plan rewrites, or arbitrary completion-field patching.",
   "ir_plan": {
     "status": "complete",
     "steps": [
@@ -105,6 +114,7 @@
     "apply without a preview-issued preflight receipt refuses before mutation",
     "forged, cross-target, stale-baseline, owner/lane mutation, and invalidated-replay fixtures",
     "Planning package mutation rollback tests",
+    "completion-correction fixtures cover reopen, corrected-complete, stale proposal rejection, idempotent replay, unrelated-state preservation, and rollback after a late proposal write",
     "title-based owner selection",
     "delete and recreate an execplan",
     "hand-edit lifecycle or lane state without projection effects"
@@ -128,7 +138,7 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Preview or apply a guarded patch to exactly one canonical execplan.",
+  "summary": "Preview or apply a guarded owner patch, including typed completed-run truth correction, to exactly one canonical execplan.",
   "writes": [
     {
       "required": false,

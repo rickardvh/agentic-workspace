@@ -1,8 +1,8 @@
 {
   "kind": "planning-integration-proposal/v1",
   "id": "issue-2926-2928-planning-repairs-archive-owner",
-  "status": "pending",
-  "phase": "integration-pending",
+  "status": "integrated",
+  "phase": "integrated-lifecycle-truth",
   "requested_transition": "archive-owner",
   "owner": {
     "id": "issue-2926-2928-planning-repairs",
@@ -20,9 +20,9 @@
     "integration apply is target-branch authoritative"
   ],
   "expected_subject_revision": "d3c5bce44224fac7",
-  "expected_planning_revision": "52dca0bd75d2dc3f",
+  "expected_planning_revision": "fa16773f61512bc8",
   "created_at": "2026-09-01T17:25:55.061687Z",
-  "updated_at": "2026-09-01T17:25:55.061687Z",
+  "updated_at": "2026-09-01T21:24:52.510657Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -38,5 +38,7 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "92232dc6ba8026bd"
+  "proposal_revision": "0822bcb298423d9c",
+  "integrated_at": "2026-09-01T21:24:52.510657Z",
+  "integration_receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2926-2928-planning-repairs-archive-owner.integration-receipt.json"
 }

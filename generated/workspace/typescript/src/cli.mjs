@@ -263,7 +263,7 @@ const commandDefinitions = [
           ]
         },
         {
-          "help": "Preview or apply a guarded patch to exactly one canonical execplan.",
+          "help": "Preview or apply a guarded owner patch or typed completion-truth correction to one canonical execplan.",
           "name": "targeted-write",
           "options": [
             {
@@ -281,6 +281,14 @@ const commandDefinitions = [
               "help": "JSON object containing only supported owner-scoped fields.",
               "name": "patch",
               "required": true
+            },
+            {
+              "default": "",
+              "flags": [
+                "--completion-correction"
+              ],
+              "help": "Typed JSON completion-truth correction with admitted review evidence and linked proposal guards.",
+              "name": "completion_correction"
             },
             {
               "flags": [
@@ -9103,8 +9111,14 @@ const commandDefinitions = [
                 "--return-json"
               ],
               "help": "Returned worker-result JSON.",
-              "name": "return_json",
-              "required": true
+              "name": "return_json"
+            },
+            {
+              "flags": [
+                "--return-file"
+              ],
+              "help": "Repo-contained UTF-8 file holding returned worker-result JSON; mutually exclusive with --return-json.",
+              "name": "return_file"
             },
             {
               "flags": [

@@ -6242,6 +6242,72 @@ def test_proof_record_receipt_successful_retry_is_byte_idempotent(tmp_path: Path
     assert len(history) == 1
 
 
+def test_proof_publication_distinguishes_assignment_proof_bindings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import agentic_workspace.workspace_runtime_core as runtime_core
+
+    _write_repo_local_proof_target(tmp_path)
+    changed_path = "src/agentic_workspace/workspace_runtime_proof.py"
+    _write(tmp_path / changed_path, "subject\n")
+    kwargs = {
+        "target_root": tmp_path,
+        "command": "make test-workspace",
+        "result": "passed",
+        "changed_paths": [changed_path],
+    }
+    unbound = runtime_core._record_proof_receipt_payload(**kwargs)
+
+    def obligation(suffix: str) -> dict[str, object]:
+        return {
+            "kind": "agentic-workspace/assignment-task-proof-obligation/v1",
+            "id": f"proof:{suffix}",
+            "revision": f"revision:{suffix}",
+            "subject": {"assignment_id": f"assignment:{suffix}", "run_id": f"run:{suffix}"},
+        }
+
+    first_obligation = obligation("one")
+    monkeypatch.setattr(runtime_core, "_integrated_assignment_proof_obligation", lambda **_: first_obligation)
+    first_bound = runtime_core._record_proof_receipt_payload(**kwargs)
+    repeated_first_bound = runtime_core._record_proof_receipt_payload(**kwargs)
+
+    second_obligation = obligation("two")
+    monkeypatch.setattr(runtime_core, "_integrated_assignment_proof_obligation", lambda **_: second_obligation)
+    second_bound = runtime_core._record_proof_receipt_payload(**kwargs)
+
+    closeout_lineage = {
+        "kind": "agentic-workspace/assignment-closeout-proof-lineage/v1",
+        "assignment": {"id": "assignment:closed", "revision": "assignment-revision:closed"},
+        "run_id": "run:closed",
+        "task_proof": {
+            "obligation": obligation("closed"),
+            "binding": "sha256:task-proof-binding",
+            "receipt_ref": "proof://receipts/task-proof",
+        },
+        "close_transition": {
+            "receipt_ref": ".agentic-workspace/local/assignment-runs/run:closed/closeout/close.json",
+            "result": {"kind": "agentic-workspace/assignment-closeout-receipt/v1", "status": "closed", "run_id": "run:closed"},
+        },
+        "rule": "Closeout lineage projects a consumed task proof and close transition; it is not a second task-behavior proof.",
+    }
+    monkeypatch.setattr(runtime_core, "_integrated_assignment_proof_obligation", lambda **_: {})
+    monkeypatch.setattr(runtime_core, "_closed_assignment_closeout_lineage", lambda **_: closeout_lineage)
+    post_close = runtime_core._record_proof_receipt_payload(**kwargs)
+
+    refs = {
+        unbound["trusted_producer_receipt_ref"],
+        first_bound["trusted_producer_receipt_ref"],
+        second_bound["trusted_producer_receipt_ref"],
+        post_close["trusted_producer_receipt_ref"],
+    }
+    assert len(refs) == 4
+    assert repeated_first_bound["trusted_producer_receipt_ref"] == first_bound["trusted_producer_receipt_ref"]
+    assert "assignment_proof_obligation" not in unbound["receipt"]
+    assert first_bound["receipt"]["assignment_proof_obligation"] == first_obligation
+    assert second_bound["receipt"]["assignment_proof_obligation"] == second_obligation
+    assert "assignment_proof_obligation" not in post_close["receipt"]
+    assert post_close["receipt"]["assignment_closeout_lineage"]["assignment"]["id"] == "assignment:closed"
+    assert post_close["receipt"]["assignment_closeout_lineage"]["final_proof"]["relationship"] == "current-post-close-proof"
+
+
 def test_proof_record_receipt_rejects_unresolved_template_before_persistence(tmp_path: Path) -> None:
     from agentic_workspace.config import WorkspaceUsageError
     from agentic_workspace.workspace_runtime_primitives import _record_proof_receipt_payload
@@ -11835,7 +11901,7 @@ def test_selected_proof_rejects_known_unrecordable_broad_command_before_launch(t
     assert result["persistence"]["local_run_receipt_written"] is False
 
 
-def test_selected_proof_execution_resumes_failure_and_blocks_stale_subject(tmp_path: Path, monkeypatch) -> None:
+def test_selected_proof_execution_preserves_completed_failure_and_requires_new_run_revalidation(tmp_path: Path, monkeypatch) -> None:
     _init_git_repo(tmp_path)
     _write(tmp_path / ".agentic-workspace/config.toml", "schema_version = 1\n")
     local_path = tmp_path / ".agentic-workspace/config.local.toml"
@@ -11843,6 +11909,7 @@ def test_selected_proof_execution_resumes_failure_and_blocks_stale_subject(tmp_p
     commands = ["check-one", "check-two"]
     calls: list[str] = []
     fail_second = True
+    monotonic = workspace_runtime_core.time.monotonic
     monkeypatch.setattr(
         workspace_runtime_core,
         "_proof_selection_for_changed_paths",
@@ -11856,10 +11923,12 @@ def test_selected_proof_execution_resumes_failure_and_blocks_stale_subject(tmp_p
 
     def run(command: str, **_: object) -> subprocess.CompletedProcess[str]:
         calls.append(command)
-        returncode = 1 if command == "check-two" and fail_second else 0
+        returncode = 17 if command == "check-two" and fail_second else 0
         return subprocess.CompletedProcess(command, returncode, stdout="", stderr="failed" if returncode else "")
 
     monkeypatch.setattr(workspace_runtime_core, "run_trusted_shell", run)
+    elapsed = iter([0.0, 90.0, 90.0, 180.0])
+    monkeypatch.setattr(workspace_runtime_core.time, "monotonic", lambda: next(elapsed, 180.0))
     first = workspace_runtime_core._execute_selected_proof_payload(
         target_root=tmp_path,
         changed_paths=[".agentic-workspace/config.local.toml"],
@@ -11869,15 +11938,20 @@ def test_selected_proof_execution_resumes_failure_and_blocks_stale_subject(tmp_p
         cancel_file="",
         dry_run=False,
     )
-    assert first["status"] == "partial"
+    assert first["status"] == "completed-failure"
     assert first["outcome"] == "failed"
     assert first["exit_status"] == 1
     assert first["exit_class"] == "proof-incomplete-or-failed"
-    assert first["safe_to_retry"] is True
+    assert first["safe_to_retry"] is False
     assert first["mutation_occurred"] is True
+    assert first["failures"] == [{"command_id": first["failures"][0]["command_id"], "status": "failed", "exit_code": 17}]
+    assert first["failures"][0]["command_id"]
+    assert first["next_action"]["action"] == "diagnose-failed-proof"
+    assert first["next_action"]["revalidation_command"].endswith("--proof-run-id <new-run-id> --format json")
+    monkeypatch.setattr(workspace_runtime_core.time, "monotonic", monotonic)
 
     fail_second = False
-    resumed = workspace_runtime_core._execute_selected_proof_payload(
+    same_run = workspace_runtime_core._execute_selected_proof_payload(
         target_root=tmp_path,
         changed_paths=[".agentic-workspace/config.local.toml"],
         task_text=None,
@@ -11886,9 +11960,22 @@ def test_selected_proof_execution_resumes_failure_and_blocks_stale_subject(tmp_p
         cancel_file="",
         dry_run=False,
     )
-    assert resumed["status"] == "completed"
-    assert resumed["exit_status"] == 0
-    assert calls == ["check-one", "check-two", "check-two"]
+    assert same_run["status"] == "completed-failure"
+    assert same_run["next_action"]["action"] == "diagnose-failed-proof"
+    assert calls == ["check-one", "check-two"]
+
+    revalidated = workspace_runtime_core._execute_selected_proof_payload(
+        target_root=tmp_path,
+        changed_paths=[".agentic-workspace/config.local.toml"],
+        task_text=None,
+        run_id="proof-run-revalidated",
+        timeout_seconds="30",
+        cancel_file="",
+        dry_run=False,
+    )
+    assert revalidated["status"] == "completed"
+    assert revalidated["exit_status"] == 0
+    assert calls == ["check-one", "check-two", "check-one", "check-two"]
 
     _write(local_path, "schema_version = 1\n# changed subject\n")
     stale = workspace_runtime_core._execute_selected_proof_payload(
@@ -11932,7 +12019,10 @@ def test_selected_proof_execution_records_cancel_and_timeout_outcomes(tmp_path: 
     )
     assert cancelled["outcome"] == "cancelled"
 
-    def timeout(*_: object, **__: object) -> subprocess.CompletedProcess[str]:
+    timeout_calls: list[str] = []
+
+    def timeout(command: str, **_: object) -> subprocess.CompletedProcess[str]:
+        timeout_calls.append(command)
         raise subprocess.TimeoutExpired("slow-check", 1)
 
     monkeypatch.setattr(workspace_runtime_core, "run_trusted_shell", timeout)
@@ -11947,6 +12037,23 @@ def test_selected_proof_execution_records_cancel_and_timeout_outcomes(tmp_path: 
     )
     assert timed_out["outcome"] == "timeout"
     assert timed_out["next_action"]["action"] == "resume-selected-proof"
+
+    monkeypatch.setattr(
+        workspace_runtime_core,
+        "run_trusted_shell",
+        lambda command, **_: (timeout_calls.append(command), subprocess.CompletedProcess(command, 0, stdout="passed", stderr=""))[1],
+    )
+    resumed = workspace_runtime_core._execute_selected_proof_payload(
+        target_root=tmp_path,
+        changed_paths=[".agentic-workspace/config.local.toml"],
+        task_text=None,
+        run_id="timeout-run",
+        timeout_seconds="1",
+        cancel_file="",
+        dry_run=False,
+    )
+    assert resumed["status"] == "completed"
+    assert timeout_calls == ["slow-check", "slow-check"]
 
 
 def test_selected_proof_execution_keeps_route_refinement_claim_blocked(tmp_path: Path, monkeypatch) -> None:

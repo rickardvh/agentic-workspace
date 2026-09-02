@@ -12,6 +12,8 @@ Result emitted by public assignment lifecycle operations, including transition s
 | --- | --- | --- | --- | --- | --- | --- |
 | (root) | object | yes |  | Result emitted by public assignment lifecycle operations, including transition status, mutation effect, local artifacts, and recovery guidance. |  | x-agentic-workspace-doc-role: "contract-reference" |
 | `artifact_refs` | array of string | yes |  | Local artifact references written or inspected during the lifecycle transition. |  |  |
+| `assignment_id` | string \| null | no |  | Current assignment identifier when one is resolved. |  |  |
+| `assignment_revision` | string \| null | no |  | Current assignment identity revision when one is resolved. |  |  |
 | `kind` | const `"agentic-workspace/assignment-lifecycle-result/v1"` | yes |  | Versioned result envelope discriminator for assignment lifecycle operations. |  |  |
 | `mutation_applied` | boolean | yes |  | Whether the operation applied a local lifecycle state mutation. |  |  |
 | `operation_id` | string | yes |  | Public operation id that produced this lifecycle result. |  |  |
@@ -19,6 +21,18 @@ Result emitted by public assignment lifecycle operations, including transition s
 | `reason_code` | string \| null | no |  | Machine-readable reason for blocked, failed, or no-op outcomes when available. |  |  |
 | `recovery_command` | string \| null | no |  | Suggested command or action to recover from a blocked lifecycle transition. |  |  |
 | `run_id` | string | yes |  | Assignment run identifier associated with the transition. |  |  |
-| `state` | object | yes |  | Current local lifecycle state after applying or evaluating the transition. |  |  |
+| `return_id` | string \| null | no |  | Most recent delegated return identifier when relevant. |  |  |
+| `state` | object | yes |  | Bounded decision-state projection after applying or evaluating the transition. Full disposable state remains available through state_ref. |  |  |
+| `state.schema_version` | const `"agentic-workspace/assignment-lifecycle-decision-state/v1"` | yes |  | Versioned compact lifecycle decision-state discriminator. |  |  |
+| `state.current_state` | string | yes |  | Current lifecycle state needed to choose the next action. |  |  |
+| `state.assignment_id` | string | no |  | Current assignment identifier when known. |  |  |
+| `state.run_id` | string | no |  | Current assignment run identifier. |  |  |
+| `state.last_return_id` | string | no |  | Most recently imported return identifier when relevant. |  |  |
+| `state.last_admission_status` | string | no |  | Most recent return-admission disposition when relevant. |  |  |
+| `state.current_attempt` | object | no |  | Bounded current Planning attempt identity when available. |  |  |
+| `state.current_attempt.run_id` | string | no |  | Current attempt run identifier. |  |  |
+| `state.current_attempt.target` | string | no |  | Current attempt target identity. |  |  |
+| `state.current_attempt.status` | string | no |  | Current attempt status. |  |  |
+| `state_ref` | string \| null | no |  | Repo-relative reference to the complete disposable lifecycle state when it exists. |  |  |
 | `status` | string | yes |  | Specific lifecycle status, such as handoff-prepared, awaiting-admission, admitted, integrated, or blocked. |  |  |
 | `transition` | string | yes |  | Lifecycle transition name executed by the operation. |  |  |

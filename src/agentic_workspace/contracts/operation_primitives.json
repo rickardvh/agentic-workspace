@@ -970,13 +970,13 @@
     },
     {
       "id": "planning.targeted-write.apply",
-      "summary": "Preview or apply a guarded patch to exactly one canonical execplan.",
+      "summary": "Preview or apply a guarded owner patch, including typed completed-run truth correction, to exactly one canonical execplan.",
       "kind": "planning-runtime",
       "portability": "domain-runtime",
       "taxonomy_tier": "tier-2-package-domain",
       "tier_owner": "planning package runtime boundary",
-      "tier_reason": "Targeted execplan owner selection, revision guards, state/lane projection, and rollback-safe writes remain Planning-owned behavior.",
-      "conformance_ref": "planning.targeted-write.lifecycle.preview.process plus targeted writer package tests",
+      "tier_reason": "Targeted execplan owner selection, revision guards, completed-run correction, proposal currentness, state/lane projection, and rollback-safe writes remain Planning-owned behavior.",
+      "conformance_ref": "planning.targeted-write.lifecycle.preview.process plus targeted writer and completion-correction package tests",
       "migration_path": "Extract deterministic schema-delta rendering only after Planning's owner/projection authority boundary is separately portable.",
       "generic_behavior_audit": "Not counted as portable codegen completion; generated adapters expose the command while Planning owns the exact mutation semantics."
     },

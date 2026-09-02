@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Preserve completed nonzero selected-proof results and require a fresh run identity for explicit revalidation while keeping interrupted timeouts resumable."
+issues = [2561, 2727]

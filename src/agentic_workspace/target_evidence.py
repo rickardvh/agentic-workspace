@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Iterable
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -31,6 +31,53 @@ ASSIGNMENT_OUTCOME_MATRIX = [
 
 def _as_dict(value: Any) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
+
+
+def _current_economic_ranking(raw: Any) -> tuple[int, dict[str, Any], str]:
+    evidence = _as_dict(raw)
+    if not evidence:
+        return 0, {"status": "unknown", "currentness": "unavailable", "usable": False}, "current-economic-evidence:unavailable"
+    status = str(evidence.get("status") or "unknown")
+    marginal_cost = str(evidence.get("marginal_cost") or "unknown")
+    observed_at = str(evidence.get("observed_at") or "")
+    expires_at = str(evidence.get("expires_at") or "")
+    currentness = "current"
+    try:
+        observed = datetime.fromisoformat(observed_at.replace("Z", "+00:00"))
+        expires = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
+        now = datetime.now(timezone.utc)
+        if observed.tzinfo is None or expires.tzinfo is None or observed > now or expires <= now:
+            currentness = "stale"
+    except ValueError:
+        currentness = "invalid"
+    usable = (
+        status == "available"
+        and currentness == "current"
+        and marginal_cost
+        in {
+            "near-zero",
+            "lower",
+            "equivalent",
+            "higher",
+        }
+    )
+    score = {"near-zero": 8, "lower": 4, "equivalent": 0, "higher": -4}.get(marginal_cost, 0) if usable else 0
+    projection = {
+        "status": status,
+        "marginal_cost": marginal_cost,
+        "resource_domain": evidence.get("resource_domain"),
+        "source": evidence.get("source"),
+        "observed_at": observed_at or None,
+        "expires_at": expires_at or None,
+        "currentness": currentness,
+        "usable": usable,
+    }
+    reason = (
+        f"current-economic-evidence:{marginal_cost}"
+        if usable
+        else f"current-economic-evidence:{currentness if currentness != 'current' else status}"
+    )
+    return score, projection, reason
 
 
 def _profile_identity_keys(profile: DelegationTargetProfile) -> set[str]:
@@ -682,6 +729,9 @@ def assignment_decision_from_policy(
         cost_class = str(profile.get("cost_class") or "unknown")
         latency_class = str(profile.get("latency_class") or "unknown")
         target_cost_component = target_cost_score.get(cost_class, 0)
+        current_economic_component, current_economic_evidence, current_economic_reason = _current_economic_ranking(
+            profile.get("current_economic_evidence")
+        )
         target_latency_component = target_latency_score.get(latency_class, 0)
         contextual_evidence_component = 0
         matching_evidence = evidence_by_target.get(target_identity_ref, []) or evidence_by_target.get(target, [])
@@ -730,7 +780,7 @@ def assignment_decision_from_policy(
         )
         selected_transport = str(selected_transport_option.get("transport") or "")
         transport_burden_component = int(selected_transport_option.get("expected_burden") or 0)
-        burden_component = transport_burden_component + target_cost_component + target_latency_component
+        burden_component = transport_burden_component + target_cost_component + current_economic_component + target_latency_component
         for evidence in matching_evidence:
             if evidence.get("route_effect") == "strong-review-required":
                 burden_component -= 10
@@ -788,6 +838,7 @@ def assignment_decision_from_policy(
                     "contextual_evidence": contextual_evidence_component,
                     "current_target_retention": current_target_component,
                     "target_cost_class": target_cost_component,
+                    "current_economics": current_economic_component,
                     "target_latency_class": target_latency_component,
                     "transport_context_cost": transport_burden_component,
                     "expected_burden": burden_component,
@@ -797,6 +848,8 @@ def assignment_decision_from_policy(
                 },
                 "runtime_recommendation": profile.get("recommendation"),
                 "cost_class": cost_class,
+                "current_economic_evidence": current_economic_evidence,
+                "ranking_reasons": [current_economic_reason],
                 "latency_class": latency_class,
                 "selected_transport": selected_transport or None,
                 "transport_options": transport_options,
@@ -1056,6 +1109,7 @@ def assignment_decision_from_policy(
                 "hard_eligibility",
                 "declared_fit",
                 "contextual_evidence",
+                "current_economics",
                 "expected_burden",
                 "uncertainty",
                 "probe_value",

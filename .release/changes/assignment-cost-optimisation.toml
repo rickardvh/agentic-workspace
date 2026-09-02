@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Bound assignment lifecycle defaults to decision-first output with exact state references, and rank safe targets with current provider-neutral marginal-cost evidence while treating stale or unavailable economics conservatively."
+issues = [2210, 2964]

@@ -5415,6 +5415,7 @@ def test_assignment_decision_derives_best_fit_from_candidates_and_contextual_evi
         "hard_eligibility",
         "declared_fit",
         "contextual_evidence",
+        "current_economics",
         "expected_burden",
         "uncertainty",
         "probe_value",
@@ -5626,6 +5627,156 @@ def test_assignment_combines_observed_context_with_declared_price_and_latency_cl
         "transport_context_cost": -40,
         "expected_burden": -25,
     }
+
+
+def test_assignment_uses_only_current_available_marginal_cost_evidence() -> None:
+    from agentic_workspace.target_evidence import assignment_decision_from_policy
+
+    def decide(
+        *,
+        status: str = "available",
+        expires_at: str = "2099-01-01T00:00:00Z",
+        mismatch: bool = False,
+        repair_penalty: bool = False,
+    ) -> dict[str, object]:
+        profiles = []
+        for name, marginal_cost in (("paid", "equivalent"), ("spark", "near-zero")):
+            profiles.append(
+                {
+                    "name": name,
+                    "recommendation": "recommended",
+                    "score": 10,
+                    "cost_class": "cheap",
+                    "latency_class": "fast",
+                    "capability_mismatch": mismatch and name == "spark",
+                    "required_action": "escalate-before-execution" if mismatch and name == "spark" else "none",
+                    "execution_methods": ["internal"],
+                    "human_control_modes": ["auto"],
+                    "current_economic_evidence": {
+                        "status": status if name == "spark" else "available",
+                        "marginal_cost": marginal_cost,
+                        "resource_domain": f"pool:{name}",
+                        "source": "runtime-adapter",
+                        "observed_at": "2026-01-01T00:00:00Z",
+                        "expires_at": expires_at if name == "spark" else "2099-01-01T00:00:00Z",
+                    },
+                }
+            )
+        return assignment_decision_from_policy(
+            assignment_policy={
+                "assignment_policy": {"value": "required-best-fit"},
+                "current_target": {"value": "paid"},
+                "binding": {"enforceable": True},
+            },
+            runtime_resolution={
+                "recommendation": "stay-local",
+                "capability_context": {"task_class": "implementation", "scope_class": "bounded"},
+                "profile_recommendations": profiles,
+            },
+            target_evidence={
+                "status": "present" if repair_penalty else "absent",
+                "record_count": 1 if repair_penalty else 0,
+                "suitability": [
+                    {
+                        "target": "spark",
+                        "context_key": "implementation::bounded",
+                        "route_effect": "strong-review-required",
+                    }
+                ]
+                if repair_penalty
+                else [],
+            },
+        )
+
+    current = decide()
+    assert current["selected_target"] == "spark"
+    spark = next(item for item in current["candidate_scores"] if item["target"] == "spark")
+    assert spark["ranking_components"]["current_economics"] == 8
+    assert spark["current_economic_evidence"]["usable"] is True
+    assert spark["ranking_reasons"] == ["current-economic-evidence:near-zero"]
+
+    for decision in (
+        decide(status="exhausted"),
+        decide(status="unknown"),
+        decide(expires_at="2026-02-01T00:00:00Z"),
+    ):
+        assert decision["selected_target"] == "paid"
+        spark = next(item for item in decision["candidate_scores"] if item["target"] == "spark")
+        assert spark["ranking_components"]["current_economics"] == 0
+        assert spark["current_economic_evidence"]["usable"] is False
+
+    rejected = decide(mismatch=True)
+    assert rejected["selected_target"] == "paid"
+    spark = next(item for item in rejected["candidate_scores"] if item["target"] == "spark")
+    assert spark["eligible"] is False
+
+    repair_heavy = decide(repair_penalty=True)
+    assert repair_heavy["selected_target"] == "paid"
+
+
+def test_assignment_equivalent_current_economics_preserves_an_explicit_tie() -> None:
+    from agentic_workspace.target_evidence import assignment_decision_from_policy
+
+    evidence = {
+        "status": "available",
+        "marginal_cost": "equivalent",
+        "resource_domain": "shared-pool",
+        "source": "runtime-adapter",
+        "observed_at": "2026-01-01T00:00:00Z",
+        "expires_at": "2099-01-01T00:00:00Z",
+    }
+    decision = assignment_decision_from_policy(
+        assignment_policy={"assignment_policy": {"value": "required-best-fit"}, "binding": {"enforceable": True}},
+        runtime_resolution={
+            "recommendation": "stay-local",
+            "capability_context": {"task_class": "implementation", "scope_class": "bounded"},
+            "profile_recommendations": [
+                {
+                    "name": name,
+                    "recommendation": "recommended",
+                    "score": 10,
+                    "cost_class": "cheap",
+                    "latency_class": "fast",
+                    "capability_mismatch": False,
+                    "execution_methods": ["internal"],
+                    "human_control_modes": ["auto"],
+                    "current_economic_evidence": evidence,
+                }
+                for name in ("one", "two")
+            ],
+        },
+        target_evidence={"status": "absent", "record_count": 0, "suitability": []},
+    )
+
+    assert decision["decision"] == "tie"
+    assert decision["selected_target"] is None
+
+
+def test_delegation_target_current_economics_is_validated_and_projected() -> None:
+    from agentic_workspace.config import WorkspaceUsageError, load_delegation_target_profiles
+
+    profile = {
+        "strength": "weak",
+        "location": "local",
+        "transports": [{"kind": "internal"}],
+        "capability_classes": ["mechanical-follow-through"],
+        "cost_class": "cheap",
+        "current_economic_evidence": {
+            "status": "available",
+            "marginal_cost": "near-zero",
+            "resource_domain": "separate-credit-pool",
+            "source": "runtime-adapter",
+            "observed_at": "2026-09-02T00:00:00Z",
+            "expires_at": "2026-09-09T00:00:00Z",
+        },
+    }
+    loaded, warnings = load_delegation_target_profiles(raw_targets={"spark": profile}, config_path=Path("config.local.toml"))
+    assert warnings == []
+    assert loaded[0].current_economic_evidence == profile["current_economic_evidence"]
+
+    invalid = {**profile, "current_economic_evidence": {"status": "available", "marginal_cost": "near-zero"}}
+    with pytest.raises(WorkspaceUsageError, match="requires source, observed_at, and expires_at"):
+        load_delegation_target_profiles(raw_targets={"spark": invalid}, config_path=Path("config.local.toml"))
 
 
 def test_assignment_retains_equal_fit_current_target_when_delegation_inflates_observed_context() -> None:

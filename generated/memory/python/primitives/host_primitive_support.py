@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import shlex
 import subprocess
@@ -625,6 +626,23 @@ def _resolve_template(template: Any, *, values: dict[str, Any]) -> Any:
     return {str(key): _resolve_template(value, values=values) for key, value in template.items()}
 
 
+def _assignment_lifecycle_decision_state(state: Mapping[str, Any]) -> dict[str, Any]:
+    current_attempt = _assignment_mapping(state.get("current_attempt"))
+    projection: dict[str, Any] = {
+        "schema_version": "agentic-workspace/assignment-lifecycle-decision-state/v1",
+        "current_state": _optional_text(state.get("current_state")) or "unknown",
+    }
+    for field in ("assignment_id", "run_id", "last_return_id", "last_admission_status"):
+        value = _optional_text(state.get(field))
+        if value:
+            projection[field] = value
+    if current_attempt:
+        projection["current_attempt"] = {
+            field: current_attempt[field] for field in ("run_id", "target", "status") if _optional_text(current_attempt.get(field))
+        }
+    return projection
+
+
 def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> dict[str, Any]:
     del arguments
     operation_id = str(values.get("operation_id") or "")
@@ -710,20 +728,27 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
 
     if transition == "admit" and (values.get("review_result_json") or values.get("review_result") or values.get("review_result_ref")):
         admission = _independent_review_admission_apply(values=values, arguments={}, context=context)
+        admitted = bool(admission.get("admitted"))
+        admission_failures = admission.get("failures") or []
         return {
             "kind": "agentic-workspace/assignment-lifecycle-result/v1",
             "operation_id": "assignment.admit",
             "transition": "admit",
             "status": str(admission.get("status") or ""),
-            "outcome": "applied" if admission.get("admitted") else "blocked",
-            "mutation_applied": bool(admission.get("admitted")),
+            "outcome": "applied" if admitted else "blocked",
+            "mutation_applied": admitted,
             "run_id": run_id,
             "artifact_refs": [str(admission.get("store") or "")] if admission.get("store") else [],
-            "state": {"independent_review_receipt": admission.get("receipt")},
-            "independent_review_admission": admission,
+            "state": {
+                "schema_version": "agentic-workspace/assignment-lifecycle-decision-state/v1",
+                "current_state": str(admission.get("status") or "blocked"),
+                "run_id": run_id,
+            },
+            "state_ref": str(admission.get("store") or "") or None,
+            "failures": admission_failures,
             "reason_code": ""
-            if admission.get("admitted")
-            else str((admission.get("failures") or [{"reason": "independent-review-admission-rejected"}])[0].get("reason")),
+            if admitted
+            else str((admission_failures or [{"reason": "independent-review-admission-rejected"}])[0].get("reason")),
             "recovery_command": "assignment admit --review-result-json <json> --changed <path> --format json"
             if not admission.get("admitted")
             else None,
@@ -785,12 +810,22 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
                 ]
                 + (["patch"] if identity.get("role") == "implementer" else []),
                 "admission_operation": "assignment.import then assignment.admit",
+                "result_delivery": {
+                    "field": "result_delivery",
+                    "modes": ["unapplied-patch", "already-materialized"],
+                    "default": "unapplied-patch",
+                    "already_materialized_requires": ["mutation_baseline"],
+                },
                 "worker_proof_authority": False,
                 "worker_completion_authority": False,
                 "rule": "Import records evidence in received/awaiting-admission; AW-owned admission, integration, proof, and closeout remain pending.",
             },
         }
         packet["worker_context"] = _assignment_worker_context(packet)
+        transport = _optional_text(values.get("transport")) or "manual"
+        dispatch_configuration = _assignment_dispatch_configuration(identity=identity, transport=transport)
+        if transition == "dispatch" and dispatch_configuration["kind"] == "host-native" and not dispatch_configuration["command"]:
+            packet = _assignment_seal_host_native_packet(packet)
         packet_path = artifact("export/packet.json")
         prompt_path = artifact("export/prompt.md")
         manifest_path = artifact("export/manifest.json")
@@ -802,11 +837,10 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             "run_id": run_id,
             "packet_ref": _assignment_relative(packet_path, root=target_root),
             "prompt_ref": _assignment_relative(prompt_path, root=target_root),
-            "integrity": _assignment_digest(packet),
+            "integrity": _optional_text(packet.get("packet_integrity")) or _assignment_digest(packet),
             "worker_context_integrity": _assignment_digest(packet["worker_context"]),
         }
         artifact_paths.extend([packet_path, prompt_path, manifest_path])
-        transport = _optional_text(values.get("transport")) or "manual"
         if transition == "dispatch" and transport == "manual":
             failures.append(
                 {
@@ -837,7 +871,14 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             artifact_paths.append(dispatch_path)
             writes[dispatch_path] = dispatch
             returned = dispatch.get("returned_work") if isinstance(dispatch.get("returned_work"), dict) else {}
-            if dispatch.get("status") != "returned" or not returned:
+            if dispatch.get("status") == "host-execution-required":
+                state.update(
+                    {
+                        "current_state": "awaiting-host-execution",
+                        "host_execution": dispatch.get("execution_contract"),
+                    }
+                )
+            elif dispatch.get("status") != "returned" or not returned:
                 failures.append(
                     {
                         "reason": str(dispatch.get("reason") or "automatic-dispatch-failed"),
@@ -939,7 +980,7 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
                 )
     elif transition == "import":
         require("run_id")
-        returned = _assignment_json_value(require("return_json"), field="return_json")
+        returned = _assignment_import_return_value(values=values, target_root=target_root, failures=failures)
         if not isinstance(returned, dict):
             failures.append(
                 {
@@ -959,6 +1000,8 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             "summary",
             "stop_conditions_hit",
         ) + (("patch",) if assignment_identity.get("role") == "implementer" else ())
+        if _assignment_mapping(state.get("host_execution")).get("result_delivery_required"):
+            required_return_fields += ("assignment_id", "packet_integrity", "result_delivery")
         missing_return_fields = [field for field in required_return_fields if field not in returned]
         if missing_return_fields:
             failures.append(
@@ -1114,22 +1157,55 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
                     }
                 )
         patch_text = str(returned.get("patch") or "")
-        if admitted and patch_text and not dry_run:
+        result_delivery = _assignment_mapping(returned.get("result_delivery"))
+        delivery_mode = _optional_text(result_delivery.get("mode")) or "unapplied-patch"
+        changed_paths = _assignment_list(returned.get("changed_paths"))
+        mutation_baseline = _optional_text(result_delivery.get("mutation_baseline")) or _optional_text(
+            _assignment_mapping(admission.get("current_authority")).get("mutation_baseline")
+        )
+        integration_receipt_path = artifact("integration/integration.json")
+        return_integrity = _assignment_digest(returned)
+        prior_integration: dict[str, Any] = {}
+        if integration_receipt_path.is_file():
+            try:
+                loaded_prior_integration = json.loads(integration_receipt_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                loaded_prior_integration = {}
+            prior_integration = _assignment_mapping(loaded_prior_integration)
+        replayed = bool(
+            prior_integration.get("status") == "integrated"
+            and prior_integration.get("run_id") == run_id
+            and prior_integration.get("return_id") == return_id
+            and prior_integration.get("return_integrity") == return_integrity
+        )
+        if prior_integration.get("status") == "integrated" and not replayed:
+            failures.append(
+                {
+                    "reason": "assignment-integration-replay-mismatch",
+                    "field": "integration.receipt",
+                    "recovery": "Reconcile or supersede the prior integrated return before integrating different work.",
+                }
+            )
+        materialized_verified = False
+        if admitted and patch_text and not dry_run and not failures:
             integration_patch_path = artifact("integration/returned.patch")
             integration_patch_path.parent.mkdir(parents=True, exist_ok=True)
-            integration_patch_path.write_bytes(patch_text.encode("utf-8"))
+            integration_patch_path.write_bytes(_normalize_assignment_patch_transport(patch_text).encode("utf-8"))
             artifact_paths.append(integration_patch_path)
-            try:
-                apply_patch = subprocess.run(
-                    ["git", "apply", "--recount", str(integration_patch_path)],
-                    cwd=target_root,
-                    capture_output=True,
-                    check=False,
-                    timeout=60,
-                )
-            except (OSError, subprocess.SubprocessError):
-                apply_patch = None
-            if apply_patch is None or apply_patch.returncode != 0:
+            already_materialized = delivery_mode == "already-materialized"
+            apply_patch: subprocess.CompletedProcess[bytes] | None = None
+            if not already_materialized and not replayed:
+                try:
+                    apply_patch = subprocess.run(
+                        ["git", "apply", "--recount", str(integration_patch_path)],
+                        cwd=target_root,
+                        capture_output=True,
+                        check=False,
+                        timeout=60,
+                    )
+                except (OSError, subprocess.SubprocessError):
+                    apply_patch = None
+            if not already_materialized and not replayed and (apply_patch is None or apply_patch.returncode != 0):
                 failures.append(
                     {
                         "reason": "assignment-patch-apply-failed",
@@ -1140,12 +1216,49 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
                         ],
                     }
                 )
-        receipt_path = artifact("integration/integration.json")
+            if not failures and (already_materialized or replayed):
+                materialized_verified, verification_detail = _verify_materialized_assignment_delta(
+                    target_root=target_root,
+                    mutation_baseline=mutation_baseline,
+                    patch_path=integration_patch_path,
+                    changed_paths=changed_paths,
+                )
+                if not materialized_verified:
+                    failures.append(
+                        {
+                            "reason": "assignment-materialized-delta-mismatch",
+                            "field": "returned_work.patch|changed_paths|result_delivery.mutation_baseline",
+                            "recovery": "Restore the exact bounded baseline-plus-patch bytes before integrating or replaying this return.",
+                            "detail": verification_detail,
+                        }
+                    )
+        receipt_path = integration_receipt_path
         receipt = {
             "kind": "agentic-workspace/assignment-integration-receipt/v1",
             "run_id": run_id,
+            "return_id": return_id,
             "status": "integrated" if admitted and not failures else "blocked",
             "admission": admission,
+            "integration_disposition": (
+                "blocked"
+                if failures
+                else (
+                    "already-integrated"
+                    if replayed
+                    else (
+                        "verified-already-materialized"
+                        if _optional_text(_assignment_mapping(returned.get("result_delivery")).get("mode")) == "already-materialized"
+                        else "applied-returned-patch"
+                    )
+                )
+            ),
+            "result_delivery_mode": _optional_text(_assignment_mapping(returned.get("result_delivery")).get("mode")) or "unapplied-patch",
+            "changed_paths": changed_paths,
+            "mutation_baseline": mutation_baseline,
+            "materialized_delta_verified": materialized_verified,
+            "return_integrity": return_integrity,
+            "patch_integrity": _assignment_digest({"patch": patch_text}),
+            "replayed": replayed,
         }
         artifact_paths.append(receipt_path)
         state.update({"current_state": receipt["status"]})
@@ -1267,12 +1380,30 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
                 )
             expected_paths = set(_assignment_list(_assignment_mapping(planning_assignment.get("assignment_gate")).get("allowed_paths")))
             proved_paths = set(_assignment_list(task_proof.get("changed_paths")))
-            if not expected_paths or not expected_paths.issubset(proved_paths):
+            proof_subject = _assignment_mapping(task_proof.get("proof_subject"))
+            try:
+                integration_receipt = _assignment_mapping(json.loads(artifact("integration/integration.json").read_text(encoding="utf-8")))
+            except (OSError, json.JSONDecodeError):
+                integration_receipt = {}
+            integrated_paths = set(_assignment_list(integration_receipt.get("changed_paths")))
+            integration_current = (
+                integration_receipt.get("kind") == "agentic-workspace/assignment-integration-receipt/v1"
+                and integration_receipt.get("status") == "integrated"
+                and _optional_text(integration_receipt.get("run_id")) == run_id
+            )
+            if (
+                not expected_paths
+                or not proved_paths
+                or not integration_current
+                or proof_subject.get("identity_complete") is not True
+                or any(not _assignment_path_allowed(path, expected_paths) for path in proved_paths)
+                or not integrated_paths.issubset(proved_paths)
+            ):
                 failures.append(
                     {
                         "reason": "assignment-proof-scope-mismatch",
                         "field": "task_proof_receipt_ref.changed_paths",
-                        "recovery": "Record proof covering every allowed path in the integrated assignment.",
+                        "recovery": "Record complete proof for every concrete integrated path within the assignment's allowed scope.",
                     }
                 )
             if planning_assignment and not failures:
@@ -1324,6 +1455,10 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
         artifact_paths.append(state_path)
 
     artifact_refs = [_assignment_relative(path, root=target_root) for path in artifact_paths]
+    state_ref = _assignment_relative(state_path, root=target_root) if state_path.is_file() or outcome == "applied" else None
+    effective_assignment_revision = assignment_revision or _optional_text(
+        _assignment_mapping(_assignment_mapping(state.get("assignment")).get("assignment_identity")).get("revision")
+    )
     return {
         "kind": "agentic-workspace/assignment-lifecycle-result/v1",
         "operation_id": operation_id,
@@ -1333,8 +1468,12 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
         "mutation_applied": outcome == "applied",
         "target_root": target_root.as_posix(),
         "run_id": run_id,
+        "assignment_id": assignment_id or _optional_text(state.get("assignment_id")) or None,
+        "assignment_revision": effective_assignment_revision or None,
+        "return_id": _optional_text(state.get("last_return_id")) or None,
         "artifact_refs": artifact_refs,
-        "state": state,
+        "state_ref": state_ref,
+        "state": _assignment_lifecycle_decision_state(state),
         "failures": failures,
         "reason_code": failures[0]["reason"] if failures else None,
         "recovery_command": failures[0]["recovery"] if failures else None,
@@ -1505,7 +1644,111 @@ def _assignment_current_run_state(*, run_id: str, state: Mapping[str, Any], plan
     if current_attempt and _optional_text(current_attempt.get("run_id")) not in {"", run_id}:
         return {"status": "superseded", "run_id": run_id, "current_run_id": current_attempt.get("run_id")}
     status = _optional_text(state.get("current_state")) or _optional_text(current_attempt.get("status")) or "awaiting-admission"
-    return {"status": status, "run_id": run_id, "owner": current_attempt.get("owner")}
+    host_execution = _assignment_mapping(state.get("host_execution"))
+    return {
+        "status": status,
+        "run_id": run_id,
+        "owner": current_attempt.get("owner"),
+        "result_delivery_required": bool(host_execution.get("result_delivery_required")),
+        "assignment_id": host_execution.get("assignment_id"),
+        "packet_integrity": host_execution.get("packet_integrity"),
+    }
+
+
+def _verify_materialized_assignment_delta(
+    *, target_root: Path, mutation_baseline: str, patch_path: Path, changed_paths: Sequence[str]
+) -> tuple[bool, str]:
+    """Verify that bounded worktree bytes equal applying patch_path to mutation_baseline."""
+
+    baseline_check = subprocess.run(
+        ["git", "rev-parse", "--verify", f"{mutation_baseline}^{{commit}}"],
+        cwd=target_root,
+        capture_output=True,
+        check=False,
+        timeout=30,
+    )
+    if baseline_check.returncode != 0:
+        return False, baseline_check.stderr.decode("utf-8", errors="replace")[-2000:]
+    try:
+        with tempfile.TemporaryDirectory(prefix="aw-assignment-baseline-") as temporary_directory:
+            expected_root = Path(temporary_directory)
+            for changed_path in changed_paths:
+                expected_path = _resolve_inside(expected_root, changed_path)
+                baseline_file = subprocess.run(
+                    ["git", "show", f"{mutation_baseline}:{changed_path}"],
+                    cwd=target_root,
+                    capture_output=True,
+                    check=False,
+                    timeout=30,
+                )
+                if baseline_file.returncode == 0:
+                    expected_path.parent.mkdir(parents=True, exist_ok=True)
+                    baseline_entry = subprocess.run(
+                        ["git", "ls-tree", mutation_baseline, "--", changed_path],
+                        cwd=target_root,
+                        capture_output=True,
+                        check=False,
+                        text=True,
+                        timeout=30,
+                    )
+                    baseline_mode = baseline_entry.stdout.split(" ", 1)[0]
+                    if baseline_mode == "120000":
+                        os.symlink(baseline_file.stdout.decode("utf-8", errors="surrogateescape"), expected_path)
+                    elif baseline_mode in {"100644", "100755"}:
+                        expected_path.write_bytes(baseline_file.stdout)
+                        if baseline_mode == "100755":
+                            expected_path.chmod(expected_path.stat().st_mode | 0o111)
+                    else:
+                        return False, f"unsupported baseline object mode for {changed_path}: {baseline_mode}"
+            apply_check = subprocess.run(
+                ["git", "apply", "--check", "--recount", str(patch_path)],
+                cwd=expected_root,
+                capture_output=True,
+                check=False,
+                timeout=60,
+            )
+            if apply_check.returncode != 0:
+                return False, apply_check.stderr.decode("utf-8", errors="replace")[-2000:]
+            apply_patch = subprocess.run(
+                ["git", "apply", "--recount", str(patch_path)],
+                cwd=expected_root,
+                capture_output=True,
+                check=False,
+                timeout=60,
+            )
+            if apply_patch.returncode != 0:
+                return False, apply_patch.stderr.decode("utf-8", errors="replace")[-2000:]
+            for changed_path in changed_paths:
+                expected_path = _resolve_inside(expected_root, changed_path)
+                observed_path = _resolve_inside(target_root, changed_path)
+                expected_type = "symlink" if expected_path.is_symlink() else "file" if expected_path.is_file() else "missing"
+                observed_type = "symlink" if observed_path.is_symlink() else "file" if observed_path.is_file() else "missing"
+                if expected_type != observed_type:
+                    return False, f"materialized path type differs from baseline-plus-patch: {changed_path}"
+                if expected_type == "symlink" and os.readlink(expected_path) != os.readlink(observed_path):
+                    return False, f"materialized symlink target differs from baseline-plus-patch: {changed_path}"
+                if expected_type == "file" and bool(expected_path.stat().st_mode & 0o111) != bool(observed_path.stat().st_mode & 0o111):
+                    return False, f"materialized path executable mode differs from baseline-plus-patch: {changed_path}"
+                if expected_path.is_file():
+                    expected_hash = subprocess.run(
+                        ["git", "hash-object", f"--path={changed_path}", str(expected_path)],
+                        cwd=target_root,
+                        capture_output=True,
+                        check=False,
+                        timeout=30,
+                    )
+                    observed_hash = subprocess.run(
+                        ["git", "hash-object", f"--path={changed_path}", str(observed_path)],
+                        cwd=target_root,
+                        capture_output=True,
+                        check=False,
+                        timeout=30,
+                    )
+                    if expected_hash.returncode != 0 or observed_hash.returncode != 0 or expected_hash.stdout != observed_hash.stdout:
+                        return False, f"materialized path content differs from baseline-plus-patch: {changed_path}"
+    except (OSError, subprocess.SubprocessError, PrimitiveExecutionError) as exc:
+        return False, str(exc)[-2000:]
+    return True, ""
 
 
 def _assignment_identity(current_authorities: Mapping[str, Any]) -> dict[str, Any]:
@@ -1676,6 +1919,23 @@ def _assignment_admit_with_current_authority(*, current_authorities: Mapping[str
                 "recovery": "Return work for the current assignment run only.",
             }
         )
+    if run_state.get("result_delivery_required"):
+        if _optional_text(returned_work.get("assignment_id")) != _optional_text(run_state.get("assignment_id")):
+            failures.append(
+                {
+                    "reason": "host-execution-contract-mismatch",
+                    "field": "assignment_id",
+                    "recovery": "Return the assignment id from the sealed host execution contract.",
+                }
+            )
+        if _optional_text(returned_work.get("packet_integrity")) != _optional_text(run_state.get("packet_integrity")):
+            failures.append(
+                {
+                    "reason": "host-execution-contract-mismatch",
+                    "field": "packet_integrity",
+                    "recovery": "Return the packet integrity from the sealed host execution contract.",
+                }
+            )
     stop_conditions_hit = _assignment_list(returned_work.get("stop_conditions_hit"))
     if stop_conditions_hit:
         failures.append(
@@ -1695,6 +1955,34 @@ def _assignment_admit_with_current_authority(*, current_authorities: Mapping[str
         )
     patch_text = str(returned_work.get("patch") or "")
     changed_paths = _assignment_list(returned_work.get("changed_paths"))
+    result_delivery = _assignment_mapping(returned_work.get("result_delivery"))
+    delivery_mode = _optional_text(result_delivery.get("mode")) or "unapplied-patch"
+    if run_state.get("result_delivery_required") and not result_delivery:
+        failures.append(
+            {
+                "reason": "missing-result-delivery",
+                "field": "result_delivery",
+                "recovery": "Declare whether the host result is an unapplied patch or already materialized in the shared worktree.",
+            }
+        )
+    if delivery_mode not in {"unapplied-patch", "already-materialized"}:
+        failures.append(
+            {
+                "reason": "unsupported-result-delivery",
+                "field": "result_delivery.mode",
+                "recovery": "Return either an unapplied patch or an explicitly baseline-bound already-materialized result.",
+            }
+        )
+    if delivery_mode == "already-materialized" and _optional_text(result_delivery.get("mutation_baseline")) != _optional_text(
+        identity.get("mutation_baseline")
+    ):
+        failures.append(
+            {
+                "reason": "result-delivery-baseline-mismatch",
+                "field": "result_delivery.mutation_baseline",
+                "recovery": "Return the exact pre-dispatch mutation baseline sealed by the current assignment.",
+            }
+        )
     if identity.get("role") == "implementer" and changed_paths and not patch_text.strip():
         failures.append(
             {
@@ -1704,8 +1992,16 @@ def _assignment_admit_with_current_authority(*, current_authorities: Mapping[str
             }
         )
     patch_paths = _assignment_patch_paths(patch_text) if patch_text else []
+    if delivery_mode == "already-materialized" and set(patch_paths) != set(changed_paths):
+        failures.append(
+            {
+                "reason": "result-delivery-scope-mismatch",
+                "field": "result_delivery|changed_paths|patch",
+                "recovery": "Return the exact bounded changed-path set represented by the already-materialized patch.",
+            }
+        )
     allowed_paths = set(_assignment_list(identity.get("allowed_paths")))
-    if patch_paths and any(path not in allowed_paths for path in patch_paths):
+    if patch_paths and any(not _assignment_path_allowed(path, allowed_paths) for path in patch_paths):
         failures.append(
             {
                 "reason": "returned-patch-outside-assignment-scope",
@@ -1723,7 +2019,7 @@ def _assignment_admit_with_current_authority(*, current_authorities: Mapping[str
             }
         )
     for changed_path in changed_paths:
-        if changed_path not in allowed_paths:
+        if not _assignment_path_allowed(changed_path, allowed_paths):
             failures.append(
                 {
                     "reason": "scope-escape",
@@ -1747,6 +2043,44 @@ def _assignment_admit_with_current_authority(*, current_authorities: Mapping[str
         },
         "rule": "Returned delegated work is executable only after AW re-resolves current assignment/run identity, transport authority, canonical scope, AW-owned proof, stop conditions, and baseline immediately before admission.",
     }
+
+
+def _assignment_path_allowed(path: str, allowed_paths: set[str]) -> bool:
+    normalized = _assignment_canonical_relative_path(path)
+    if not normalized:
+        return False
+    for raw_pattern in allowed_paths:
+        pattern = _assignment_canonical_relative_path(raw_pattern)
+        if not pattern:
+            continue
+        if normalized == pattern:
+            return True
+        expression: list[str] = []
+        offset = 0
+        while offset < len(pattern):
+            character = pattern[offset]
+            if character == "*" and offset + 1 < len(pattern) and pattern[offset + 1] == "*":
+                expression.append(".*")
+                offset += 2
+                continue
+            expression.append("[^/]*" if character == "*" else "[^/]" if character == "?" else re.escape(character))
+            offset += 1
+        if re.fullmatch("".join(expression), normalized):
+            return True
+    return False
+
+
+def _assignment_canonical_relative_path(value: object) -> str:
+    normalized = str(value or "").replace("\\", "/")
+    if (
+        not normalized
+        or normalized.startswith("/")
+        or re.match(r"^[A-Za-z]:", normalized)
+        or "\x00" in normalized
+        or any(part in {"", ".", ".."} for part in normalized.split("/"))
+    ):
+        return ""
+    return normalized
 
 
 def _assignment_mapping(value: Any) -> dict[str, Any]:
@@ -1836,6 +2170,29 @@ def _assignment_json_value(value: Any, *, field: str) -> Any:
         raise PrimitiveExecutionError(f"assignment lifecycle {field} must be valid JSON") from exc
 
 
+def _assignment_import_return_value(*, values: Mapping[str, Any], target_root: Path, failures: list[dict[str, Any]]) -> Any:
+    inline_return = _optional_text(values.get("return_json"))
+    return_file = _optional_text(values.get("return_file"))
+    if bool(inline_return) == bool(return_file):
+        failures.append(
+            {
+                "reason": "return-input-required",
+                "field": "return_json|return_file",
+                "recovery": "Provide exactly one inline return_json or repo-contained return_file.",
+            }
+        )
+        return {}
+    if inline_return:
+        return _assignment_json_value(inline_return, field="return_json")
+    try:
+        path = (target_root / return_file).resolve()
+        path.relative_to(target_root.resolve())
+        payload = path.read_text(encoding="utf-8")
+    except (OSError, ValueError) as exc:
+        raise PrimitiveExecutionError("assignment lifecycle return_file must be a readable repo-contained UTF-8 file") from exc
+    return _assignment_json_value(payload, field="return_file")
+
+
 def _assignment_digest(value: Any) -> str:
     payload = json.dumps(value, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
     return "sha256:" + hashlib.sha256(payload).hexdigest()
@@ -1872,13 +2229,31 @@ def _write_assignment_artifact(*, path: Path, payload: Any) -> None:
 def _assignment_export_prompt(packet: Any) -> str:
     packet_mapping = _assignment_mapping(packet)
     worker_context = _assignment_mapping(packet_mapping.get("worker_context")) or _assignment_worker_context(packet_mapping)
+    delivery_mode = (
+        _optional_text(
+            _assignment_mapping(_assignment_mapping(worker_context.get("return_contract")).get("result_delivery")).get("default")
+        )
+        or "unapplied-patch"
+    )
+    delivery_instruction = (
+        "The selected result delivery mode is `already-materialized`: edit only the assigned shared worktree paths, and return the exact baseline-relative unified diff plus its sealed mutation baseline."
+        if delivery_mode == "already-materialized"
+        else "The selected result delivery mode is `unapplied-patch`: do not edit the target checkout; return the proposed unified diff in a `patch` field."
+    )
+    required_identity = _assignment_mapping(_assignment_mapping(worker_context.get("return_contract")).get("required_identity"))
+    identity_instruction = (
+        "Copy every value in `return_contract.required_identity` exactly and include the selected `result_delivery` mode."
+        if required_identity
+        else "Return every field named by `return_contract.required_fields` and include the selected `result_delivery` mode."
+    )
     return "\n".join(
         [
             "You are receiving a bounded Agentic Workspace worker context.",
             "Use only the intent, scope, effects, inputs, proof burden, stop conditions, authority limits, and return contract below.",
             "Acquire deeper repository context only through the listed read-first references; omitted parent conversation and broad workspace state are not part of this assignment.",
             "Return a structured result for `agentic-workspace assignment import`; do not claim AW proof or integration.",
-            "Do not edit the host checkout. For repo-write assignments, return the proposed unified diff in a `patch` field.",
+            delivery_instruction,
+            identity_instruction,
             "The patch must be a complete git-compatible unified diff beginning with `diff --git`; generate or verify it with diff tooling so hunk counts are exact, and never use apply_patch markers, ellipses, placeholder `@@` markers, or omitted context.",
             "",
             "```json",
@@ -1934,6 +2309,67 @@ def _assignment_worker_context(packet: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _assignment_dispatch_configuration(*, identity: Mapping[str, Any], transport: str) -> dict[str, Any]:
+    adapter = _assignment_mapping(identity.get("dispatch_adapter"))
+    variants = [item for item in adapter.get("transports", []) if isinstance(item, Mapping)]
+    selected = next((item for item in variants if _optional_text(item.get("method")) == transport), None)
+    selected_mapping = _assignment_mapping(selected)
+    variant_kind = _optional_text(selected_mapping.get("kind"))
+    kind = (
+        "process"
+        if variant_kind in {"process", "api"}
+        else "host-native"
+        if variant_kind == "internal"
+        else _optional_text(adapter.get("kind"))
+    )
+    return {
+        "admitted": transport in set(_assignment_list(adapter.get("execution_methods"))),
+        "kind": kind,
+        "command": (
+            _assignment_list(selected_mapping.get("command")) if selected is not None else _assignment_list(adapter.get("command"))
+        ),
+        "output_mode": _optional_text(selected_mapping.get("output_mode")) or _optional_text(adapter.get("output_mode")) or "stdout",
+        "timeout_seconds": selected_mapping.get("timeout_seconds", adapter.get("timeout_seconds", 1800)),
+        "adapter": adapter,
+    }
+
+
+def _assignment_packet_integrity(packet: Mapping[str, Any]) -> str:
+    subject = json.loads(json.dumps(packet, default=str))
+    subject["packet_integrity"] = ""
+    for contract in (
+        _assignment_mapping(subject.get("return_contract")),
+        _assignment_mapping(_assignment_mapping(subject.get("worker_context")).get("return_contract")),
+    ):
+        if isinstance(contract.get("required_identity"), dict):
+            contract["required_identity"]["packet_integrity"] = ""
+    return _assignment_digest(subject)
+
+
+def _assignment_seal_host_native_packet(packet: Mapping[str, Any]) -> dict[str, Any]:
+    sealed = json.loads(json.dumps(packet, default=str))
+    return_contract = _assignment_mapping(sealed.get("return_contract"))
+    return_contract["required_fields"] = list(
+        dict.fromkeys([*_assignment_list(return_contract.get("required_fields")), "assignment_id", "packet_integrity", "result_delivery"])
+    )
+    return_contract["required_identity"] = {
+        "assignment_id": sealed.get("assignment_id"),
+        "assignment_revision": sealed.get("assignment_revision"),
+        "run_id": sealed.get("run_id"),
+        "target": sealed.get("target"),
+        "packet_integrity": "",
+    }
+    sealed["return_contract"] = return_contract
+    sealed["worker_context"] = _assignment_worker_context(sealed)
+    integrity = _assignment_packet_integrity(sealed)
+    sealed["packet_integrity"] = integrity
+    sealed["return_contract"]["required_identity"]["packet_integrity"] = integrity
+    sealed["worker_context"] = _assignment_worker_context(sealed)
+    if _assignment_packet_integrity(sealed) != integrity:
+        raise PrimitiveExecutionError("host-native assignment packet integrity did not stabilize")
+    return sealed
+
+
 def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, target_root: Path, transport: str) -> dict[str, Any]:
     """Execute a sealed packet through its configured adapter command.
 
@@ -1942,32 +2378,55 @@ def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, targe
     """
 
     identity = _assignment_mapping(packet.get("assignment_identity"))
-    adapter = _assignment_mapping(identity.get("dispatch_adapter"))
-    raw_variants = adapter.get("transports")
-    variants = (
-        [item for item in raw_variants if isinstance(item, Mapping)]
-        if isinstance(raw_variants, Sequence) and not isinstance(raw_variants, (str, bytes))
-        else []
-    )
-    selected_variant = next((item for item in variants if _optional_text(item.get("method")) == transport), None)
-    adapter_kind = _optional_text(adapter.get("kind"))
-    command_template = _assignment_list(adapter.get("command"))
-    output_mode = _optional_text(adapter.get("output_mode")) or "stdout"
-    timeout_seconds = adapter.get("timeout_seconds", 1800)
-    if selected_variant is not None:
-        variant_kind = _optional_text(selected_variant.get("kind"))
-        adapter_kind = "process" if variant_kind in {"process", "api"} else "host-native" if variant_kind == "internal" else ""
-        command_template = _assignment_list(selected_variant.get("command"))
-        output_mode = _optional_text(selected_variant.get("output_mode")) or "stdout"
-        timeout_seconds = selected_variant.get("timeout_seconds", 1800)
-    methods = set(_assignment_list(adapter.get("execution_methods")))
-    if transport not in methods:
+    configuration = _assignment_dispatch_configuration(identity=identity, transport=transport)
+    adapter = _assignment_mapping(configuration.get("adapter"))
+    adapter_kind = _optional_text(configuration.get("kind"))
+    command_template = _assignment_list(configuration.get("command"))
+    output_mode = _optional_text(configuration.get("output_mode"))
+    timeout_seconds = configuration.get("timeout_seconds", 1800)
+    if not configuration.get("admitted"):
         return {
             "kind": "agentic-workspace/assignment-dispatch-receipt/v1",
             "status": "blocked",
             "reason": "transport-not-admitted-by-target",
             "transport": transport,
             "adapter_kind": adapter_kind or None,
+        }
+    if adapter_kind == "host-native" and not command_template:
+        host_return_contract = dict(_assignment_mapping(packet.get("return_contract")))
+        packet_integrity = _optional_text(packet.get("packet_integrity"))
+        required_identity = _assignment_mapping(host_return_contract.get("required_identity"))
+        if (
+            not packet_integrity
+            or packet_integrity != _assignment_packet_integrity(packet)
+            or required_identity.get("packet_integrity") != packet_integrity
+        ):
+            return {
+                "kind": "agentic-workspace/assignment-dispatch-receipt/v1",
+                "status": "blocked",
+                "reason": "host-native-packet-unsealed",
+                "transport": transport,
+                "adapter_kind": adapter_kind,
+            }
+        return {
+            "kind": "agentic-workspace/assignment-dispatch-receipt/v1",
+            "status": "host-execution-required",
+            "reason": "execute-canonical-assignment-with-host-native-transport",
+            "transport": transport,
+            "adapter_kind": adapter_kind,
+            "execution_contract": {
+                "kind": "agentic-workspace/host-native-assignment-execution/v1",
+                "assignment_id": packet.get("assignment_id"),
+                "assignment_revision": packet.get("assignment_revision") or identity.get("revision"),
+                "run_id": packet.get("run_id"),
+                "target": packet.get("target") or identity.get("target"),
+                "packet_integrity": packet_integrity,
+                "worker_context": packet.get("worker_context") or _assignment_worker_context(packet),
+                "return_contract": host_return_contract,
+                "reentry_operation": "assignment.import",
+                "result_delivery_required": True,
+            },
+            "claim_boundary": "transport-only; host result still requires AW import, admission, integration, proof, and closeout",
         }
     if adapter_kind not in {"process", "host-native"} or not command_template:
         return {
@@ -2029,6 +2488,15 @@ def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, targe
                 "changed_paths": {"type": "array", "items": {"type": "string"}},
                 "summary": {"type": "string"},
                 "stop_conditions_hit": {"type": "array", "items": {"type": "string"}},
+                "result_delivery": {
+                    "type": "object",
+                    "properties": {
+                        "mode": {"enum": ["unapplied-patch", "already-materialized"]},
+                        "mutation_baseline": {"type": "string"},
+                    },
+                    "required": ["mode"],
+                    "additionalProperties": False,
+                },
             }
             if role == "implementer":
                 return_properties["patch"] = {"type": "string"}
@@ -2204,6 +2672,15 @@ def _assignment_patch_paths(patch_text: str) -> list[str]:
                 add_path(header[2])
                 add_path(header[3])
     return sorted(paths)
+
+
+def _normalize_assignment_patch_transport(patch_text: str) -> str:
+    """Normalize CRLF unified-diff transport only at the Git application boundary.
+
+    Return identity, scope admission, and receipt integrity continue to use the
+    original worker payload.  Git still validates every normalized hunk.
+    """
+    return patch_text.replace("\r\n", "\n")
 
 
 def _correction_event_apply(*, values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> dict[str, Any]:

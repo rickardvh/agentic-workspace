@@ -5698,6 +5698,12 @@ def _validate_static_surfaces() -> list[str]:
     conformance_dockerfile = REPO_ROOT / "generated" / "typescript.conformance.Dockerfile"
     if not conformance_dockerfile.is_file():
         errors.append("generated/typescript.conformance.Dockerfile is missing")
+    elif "COPY README.md ./README.md" not in conformance_dockerfile.read_text(encoding="utf-8"):
+        errors.append("generated/typescript.conformance.Dockerfile does not copy root package metadata inputs")
+    elif "/work/packages/verification/src" not in conformance_dockerfile.read_text(encoding="utf-8"):
+        errors.append("generated/typescript.conformance.Dockerfile does not expose the verification runtime source package")
+    elif "./packages/verification ." not in conformance_dockerfile.read_text(encoding="utf-8"):
+        errors.append("generated/typescript.conformance.Dockerfile does not install the generated command-package entrypoints")
     ir = load_workspace_command_package_ir(repo_root=REPO_ROOT)
     typescript_targets = [
         (package, target)

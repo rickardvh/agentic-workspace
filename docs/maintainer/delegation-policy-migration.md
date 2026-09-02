@@ -30,6 +30,15 @@ Every assignment-policy, transport-authority, and human-override value is a lega
 | target `execution_methods` plus `dispatch_adapter_*` | legacy capability/readiness declaration | finite compatibility decoder only; ignored when canonical `transports` is present and never independently reconciled afterward |
 | target `escalation_target` | duplicate routing preference | ignored compatibility alias; canonical best-fit ranking owns the winner and no target-local fallback can change it |
 
+## Current economic evidence
+
+`cost_class` remains a coarse target prior. A local target may additionally declare
+`current_economic_evidence` with provider-neutral `status`, `marginal_cost`, `source`,
+`observed_at`, `expires_at`, and optional `resource_domain` fields. Only current
+`available` evidence affects ranking. Stale, unavailable, exhausted, contradictory,
+or unknown evidence contributes no discount; capability, proof, trust, and observed
+handoff or repair burden continue to outrank economics.
+
 All compatibility-only delegation authoring fields above are scheduled for removal on or before Agentic Workspace `1.0.0`. Loading any legacy-only delegation or target field emits one machine-readable `delegation-legacy-authoring/v1` or `delegation-target-legacy-authoring/v1` warning naming the fields and removal version. Until removal, legacy-only input is decoded once into canonical semantics; canonical fields always win and the runtime does not reconcile the aliases afterward.
 
 Compatibility aliases remain readable for a finite migration window and cannot override a present canonical field. New configuration should write only canonical fields. The effective config/start projection reports canonical provenance and derived values, so an agent never needs to solve the legacy knob matrix.

@@ -1,0 +1,921 @@
+{
+  "accepted_result_refs": [],
+  "assignment_gate": {
+    "allowed_effects": [
+      "repo-write"
+    ],
+    "allowed_paths": [
+      "src/agentic_workspace/contracts/python_primitive_support.py",
+      "src/agentic_workspace/contracts/typescript_primitive_support.mjs",
+      "generated/*/.agentic-workspace-cli-fingerprint.json",
+      "generated/*/python/primitives/host_primitive_support.py",
+      "generated/*/typescript/src/hostPrimitiveSupport.mjs",
+      "tests/test_external_operation_clients.py",
+      ".release/changes/host-native-assignment-lifecycle.toml",
+      ".agentic-workspace/planning/execplans/issue-2947-host-native-assignment-lifecycle.plan.json"
+    ],
+    "assignment_decision": "assign-best-fit",
+    "assignment_decision_revision": "sha256:6432e1375658e4c9219ade12942039a62cb23baa6db7d6a43bed56e78bf46f47",
+    "assignment_policy": "required-best-fit",
+    "claim_boundary": "assignment policy resolved",
+    "context_key": "mixed::mixed",
+    "current_target_status": "known-profile",
+    "dispatch_adapter": {
+      "command": [],
+      "execution_methods": [
+        "internal"
+      ],
+      "kind": "",
+      "model": "gpt-5.6-terra",
+      "output_mode": "stdout",
+      "timeout_seconds": 1800,
+      "transports": [
+        {
+          "command": [],
+          "kind": "internal",
+          "method": "internal",
+          "output_mode": "stdout",
+          "readiness": "configured",
+          "source": "canonical-transports",
+          "timeout_seconds": 1800
+        }
+      ]
+    },
+    "enforceable": true,
+    "enforcement": "must-dispatch-before-implementation",
+    "executor_disposition": {
+      "adapter_configured": true,
+      "automatic_methods": [
+        "internal"
+      ],
+      "cost_selected_transport": "internal",
+      "decision_revision": "sha256:6432e1375658e4c9219ade12942039a62cb23baa6db7d6a43bed56e78bf46f47",
+      "kind": "agentic-workspace/assignment-executor-disposition/v1",
+      "rule": "One binding assignment resolves retained-local, executable dispatch, admitted manual handoff, or exact blocked recovery before implementation.",
+      "selected_target": "codex_terra",
+      "status": "executable-nonlocal-dispatch",
+      "transport": "internal"
+    },
+    "human_intent": "Execute or determine the exact safe command sequence for the required real supported-host #2817-shaped lifecycle trace using one canonical assignment/run identity through host-native execution, import, admission, integration, AW proof/reconciliation, and next ordinary decision; do not edit tracked files",
+    "implementation_allowed": false,
+    "kind": "agentic-workspace/assignment-implementation-gate/v1",
+    "mutation_baseline": "6c00d1ac5dd196291410dbe1b72e8b5cf8b6cf97",
+    "plan_ref": ".agentic-workspace/planning/execplans/issue-2947-host-native-assignment-lifecycle.plan.json",
+    "plan_revision": 5,
+    "proof_obligation": {
+      "id": "proof:ordinary-ca1c5aaaf91ab570c616d63ba0a677683e0ec7212bbf4f8ac5ed7cd0e9fb077a",
+      "kind": "agentic-workspace/assignment-task-proof-obligation/v1",
+      "revision": "sha256:6432e1375658e4c9219ade12942039a62cb23baa6db7d6a43bed56e78bf46f47",
+      "subject": {
+        "assignment_id": "ordinary-ca1c5aaaf91ab570c616d63ba0a677683e0ec7212bbf4f8ac5ed7cd0e9fb077a",
+        "human_intent_digest": "b3bd6d8b242c7e3eb0e62d392ddd8fd96372f071d7d98150c45f166026d14e8c",
+        "run_id": "run-ca1c5aaaf91ab570c616d63ba0a677683e0ec7212bbf4f8ac5ed7cd0e9fb077a-1"
+      }
+    },
+    "read_first": [],
+    "required_inputs": [
+      "src/agentic_workspace/contracts/python_primitive_support.py",
+      "src/agentic_workspace/contracts/typescript_primitive_support.mjs",
+      "generated/*/.agentic-workspace-cli-fingerprint.json",
+      "generated/*/python/primitives/host_primitive_support.py",
+      "generated/*/typescript/src/hostPrimitiveSupport.mjs",
+      "tests/test_external_operation_clients.py",
+      ".release/changes/host-native-assignment-lifecycle.toml",
+      ".agentic-workspace/planning/execplans/issue-2947-host-native-assignment-lifecycle.plan.json"
+    ],
+    "required_next_action": "dispatch-assigned-target",
+    "role": "implementer",
+    "rule": "required-best-fit is an implementation gate: unresolved or mismatched selected assignments block local implementation until routed or explicitly resolved.",
+    "runtime_selected_target": "codex_terra",
+    "scope_class": "mixed",
+    "selected_target": "codex_terra",
+    "slice_id": "slice-ca1c5aaaf91ab570c616d63ba0a677683e0ec7212bbf4f8ac5ed7cd0e9fb077a",
+    "slice_revision": "sha256:6432e1375658e4c9219ade12942039a62cb23baa6db7d6a43bed56e78bf46f47",
+    "status": "dispatch-required",
+    "stop_conditions": [
+      "scope-expands-beyond-allowed-paths",
+      "required-input-missing",
+      "prohibited-effect-required"
+    ],
+    "target_identity_ref": "codex_terra",
+    "target_revision": null,
+    "task_class": "mixed"
+  },
+  "assignment_id": "ordinary-ca1c5aaaf91ab570c616d63ba0a677683e0ec7212bbf4f8ac5ed7cd0e9fb077a",
+  "assignment_policy": {
+    "assignment_policy": {
+      "source": "local-override",
+      "value": "required-best-fit"
+    },
+    "authority_order": [
+      "explicit current-session human instruction",
+      "repo-owned prohibitions and proof requirements",
+      "repo-local local override",
+      "shared local config",
+      "target metadata and learned evidence",
+      "model self-assessment"
+    ],
+    "binding": {
+      "claim_boundary": "assignment policy resolved",
+      "enforceable": true,
+      "required_best_fit_requested": true
+    },
+    "current_target": {
+      "source": "local-override",
+      "value": "codex_sol"
+    },
+    "current_target_identity_ref": "user-local:codex-sol-0612e5bbc4",
+    "current_target_profile_name": "codex_sol",
+    "current_target_status": "known-profile",
+    "down_routing_behavior": {
+      "source": "derived:delegation.assignment_policy",
+      "value": "when-cheaper-safe-target-exists"
+    },
+    "execution_role": {
+      "source": "derived:delegation.assignment_policy",
+      "value": "orchestrator"
+    },
+    "human_override_policy": {
+      "source": "local-override",
+      "value": "explicit-only"
+    },
+    "kind": "agentic-workspace/orchestration-assignment-policy/v1",
+    "manual_transport_policy": {
+      "source": "derived:delegation.transport_authority",
+      "value": "required-when-no-automatic-method"
+    },
+    "migration": {
+      "canonical_fields": [
+        "delegation.assignment_policy",
+        "delegation.transport_authority",
+        "delegation.human_override_policy",
+        "delegation.current_target",
+        "delegation_targets.<target>.transports"
+      ],
+      "compatibility_aliases": [
+        "delegation.mode",
+        "delegation.execution_role",
+        "delegation.selection_objective",
+        "delegation.underfit_behavior",
+        "delegation.down_routing_behavior",
+        "delegation.manual_transport_policy",
+        "runtime.cheap_bounded_executor_available",
+        "handoff.prefer_internal_delegation_when_available",
+        "delegation_targets.<target>.human_control_modes",
+        "delegation_targets.<target>.execution_methods",
+        "delegation_targets.<target>.dispatch_adapter_kind",
+        "delegation_targets.<target>.dispatch_command",
+        "delegation_targets.<target>.dispatch_output_mode",
+        "delegation_targets.<target>.dispatch_timeout_seconds",
+        "delegation_targets.<target>.escalation_target"
+      ],
+      "lifecycle": {
+        "canonical_precedence": "canonical fields win without pairwise reconciliation",
+        "kind": "agentic-workspace/delegation-compatibility-lifecycle/v1",
+        "legacy_authoring_permitted_until_removal": true,
+        "policy": "remove-on-or-before-declared-major",
+        "removal_version": "1.0.0",
+        "status": "deprecated-removal-scheduled"
+      }
+    },
+    "selection_objective": {
+      "source": "derived:best-fit-ranking",
+      "value": "safe minimum expected total successful-completion cost with quality and proof before price"
+    },
+    "separation_rule": "assignment_policy chooses who should own work; transport_authority independently governs execution after selection.",
+    "status": "configured",
+    "supported": {
+      "assignment_policies": [
+        "local-preferred",
+        "best-fit-advisory",
+        "required-best-fit"
+      ],
+      "down_routing_behaviors": [
+        "never",
+        "bounded-mechanical-work",
+        "when-cheaper-safe-target-exists"
+      ],
+      "execution_roles": [
+        "ordinary-executor",
+        "orchestrator",
+        "bounded-worker"
+      ],
+      "human_override_policies": [
+        "explicit-only",
+        "allowed-with-recorded-reason",
+        "disallowed"
+      ],
+      "manual_transport_policies": [
+        "disabled",
+        "allowed",
+        "required-when-no-automatic-method"
+      ],
+      "transport_authorities": [
+        "manual",
+        "automatic"
+      ],
+      "underfit_behaviors": [
+        "stay-when-safe",
+        "prepare-manual-escalation",
+        "require-delegation"
+      ]
+    },
+    "underfit_behavior": {
+      "source": "derived:delegation.assignment_policy",
+      "value": "require-delegation"
+    }
+  },
+  "authority": "ordinary-implement-live-assignment-decision",
+  "created_at": "2026-09-01T21:19:59+00:00",
+  "current_attempt": {
+    "attempt": 1,
+    "owner": "codex_terra",
+    "run_id": "run-ca1c5aaaf91ab570c616d63ba0a677683e0ec7212bbf4f8ac5ed7cd0e9fb077a-1",
+    "status": "selected",
+    "updated_at": "2026-09-01T21:19:59+00:00"
+  },
+  "current_revision": "sha256:dc1ca2700d865e08b42341dfe87eac5e1c746cc23d47b1f897863e91ac9f8685",
+  "delegation_decision": {
+    "assignment_decision": {
+      "alternatives": [
+        {
+          "eligible": false,
+          "hard_rejection_reasons": [
+            "capability-mismatch",
+            "escalate-before-execution"
+          ],
+          "score": -43,
+          "target": "chatgpt"
+        },
+        {
+          "eligible": false,
+          "hard_rejection_reasons": [
+            "capability-mismatch"
+          ],
+          "score": -19,
+          "target": "codex_luna"
+        },
+        {
+          "eligible": true,
+          "hard_rejection_reasons": [],
+          "score": 43,
+          "target": "codex_sol"
+        }
+      ],
+      "assignment_decision_revision": "sha256:6432e1375658e4c9219ade12942039a62cb23baa6db7d6a43bed56e78bf46f47",
+      "assignment_policy": "required-best-fit",
+      "candidate_scores": [
+        {
+          "aliases": [],
+          "continuation": "manual-handoff",
+          "cost_class": "premium",
+          "eligibility": {
+            "capability": "rejected",
+            "execution_transport": "eligible",
+            "human_control": "eligible",
+            "manual_transport": "eligible",
+            "proof": "eligible",
+            "reason": [
+              "capability-mismatch",
+              "escalate-before-execution"
+            ]
+          },
+          "eligible": false,
+          "evidence_contexts": [],
+          "hard_rejection_reasons": [
+            "capability-mismatch",
+            "escalate-before-execution"
+          ],
+          "latency_class": "standard",
+          "permitted_continuation": "manual-handoff",
+          "ranking_components": {
+            "contextual_evidence": 0,
+            "current_target_retention": 0,
+            "declared_fit": -3,
+            "expected_burden": -10,
+            "probe_value": 0,
+            "runtime_recommendation": -30,
+            "target_cost_class": -10,
+            "target_latency_class": 0,
+            "total": -43,
+            "transport_context_cost": 0,
+            "uncertainty": 0
+          },
+          "required_action": "manual-handoff-required",
+          "revision_policy": "revalidate",
+          "runtime_recommendation": "poor-fit",
+          "score": -43,
+          "selected_transport": "manual",
+          "target": "chatgpt",
+          "target_identity_ref": "chatgpt",
+          "target_revision": null,
+          "transport_options": [
+            {
+              "configured_order": 0,
+              "evidence_state": "unknown",
+              "expected_burden": 0,
+              "record_count": 0,
+              "transport": "manual"
+            }
+          ],
+          "uncertainty_contexts": []
+        },
+        {
+          "aliases": [],
+          "continuation": "not-executable",
+          "cost_class": "cheap",
+          "eligibility": {
+            "capability": "rejected",
+            "execution_transport": "eligible",
+            "human_control": "eligible",
+            "manual_transport": "eligible",
+            "proof": "eligible",
+            "reason": [
+              "capability-mismatch"
+            ]
+          },
+          "eligible": false,
+          "evidence_contexts": [],
+          "hard_rejection_reasons": [
+            "capability-mismatch"
+          ],
+          "latency_class": "fast",
+          "permitted_continuation": "not-executable",
+          "ranking_components": {
+            "contextual_evidence": 0,
+            "current_target_retention": 0,
+            "declared_fit": -4,
+            "expected_burden": 15,
+            "probe_value": 0,
+            "runtime_recommendation": -30,
+            "target_cost_class": 10,
+            "target_latency_class": 5,
+            "total": -19,
+            "transport_context_cost": 0,
+            "uncertainty": 0
+          },
+          "required_action": "review-before-execution",
+          "revision_policy": "revalidate",
+          "runtime_recommendation": "poor-fit",
+          "score": -19,
+          "selected_transport": "internal",
+          "target": "codex_luna",
+          "target_identity_ref": "user-local:codex-luna-641be1fe23",
+          "target_revision": null,
+          "transport_options": [
+            {
+              "configured_order": 0,
+              "evidence_state": "unknown",
+              "expected_burden": 0,
+              "record_count": 0,
+              "transport": "internal"
+            }
+          ],
+          "uncertainty_contexts": []
+        },
+        {
+          "aliases": [],
+          "continuation": "delegated-implementation",
+          "cost_class": "premium",
+          "eligibility": {
+            "capability": "eligible",
+            "execution_transport": "eligible",
+            "human_control": "eligible",
+            "manual_transport": "eligible",
+            "proof": "eligible",
+            "reason": []
+          },
+          "eligible": true,
+          "evidence_contexts": [],
+          "hard_rejection_reasons": [],
+          "latency_class": "slow",
+          "permitted_continuation": "delegated-implementation",
+          "ranking_components": {
+            "contextual_evidence": 0,
+            "current_target_retention": 5,
+            "declared_fit": 8,
+            "expected_burden": -15,
+            "probe_value": 5,
+            "runtime_recommendation": 40,
+            "target_cost_class": -10,
+            "target_latency_class": -5,
+            "total": 43,
+            "transport_context_cost": 0,
+            "uncertainty": 0
+          },
+          "required_action": "execute-with-normal-proof",
+          "revision_policy": "revalidate",
+          "runtime_recommendation": "recommended",
+          "score": 43,
+          "selected_transport": "internal",
+          "target": "codex_sol",
+          "target_identity_ref": "user-local:codex-sol-0612e5bbc4",
+          "target_revision": null,
+          "transport_options": [
+            {
+              "configured_order": 0,
+              "evidence_state": "unknown",
+              "expected_burden": 0,
+              "record_count": 0,
+              "transport": "internal"
+            }
+          ],
+          "uncertainty_contexts": []
+        },
+        {
+          "aliases": [],
+          "continuation": "delegated-implementation",
+          "cost_class": "standard",
+          "eligibility": {
+            "capability": "eligible",
+            "execution_transport": "eligible",
+            "human_control": "eligible",
+            "manual_transport": "eligible",
+            "proof": "eligible",
+            "reason": []
+          },
+          "eligible": true,
+          "evidence_contexts": [],
+          "hard_rejection_reasons": [],
+          "latency_class": "standard",
+          "permitted_continuation": "delegated-implementation",
+          "ranking_components": {
+            "contextual_evidence": 0,
+            "current_target_retention": 0,
+            "declared_fit": 9,
+            "expected_burden": 0,
+            "probe_value": 5,
+            "runtime_recommendation": 40,
+            "target_cost_class": 0,
+            "target_latency_class": 0,
+            "total": 54,
+            "transport_context_cost": 0,
+            "uncertainty": 0
+          },
+          "required_action": "execute-with-normal-proof",
+          "revision_policy": "revalidate",
+          "runtime_recommendation": "recommended",
+          "score": 54,
+          "selected_transport": "internal",
+          "target": "codex_terra",
+          "target_identity_ref": "codex_terra",
+          "target_revision": null,
+          "transport_options": [
+            {
+              "configured_order": 0,
+              "evidence_state": "unknown",
+              "expected_burden": 0,
+              "record_count": 0,
+              "transport": "internal"
+            }
+          ],
+          "uncertainty_contexts": []
+        }
+      ],
+      "canonical_outcome": "delegated-implementation",
+      "claim_boundary": "assignment policy resolved",
+      "context_key": "mixed::mixed",
+      "current_target": "codex_sol",
+      "decision": "assign-best-fit",
+      "evidence_status": "no-local-evidence",
+      "kind": "agentic-workspace/assignment-decision/v1",
+      "next_action": "execute with codex_terra",
+      "outcome_matrix": [
+        "retain-local",
+        "read-only-exploration",
+        "delegated-implementation",
+        "delegated-validation",
+        "planning-review-escalation",
+        "manual-strong-agent-handoff",
+        "no-safe-route"
+      ],
+      "override_authority": "explicit-only",
+      "record_count": 0,
+      "rule": "Assignment decisions preserve policy, contextual target evidence, and runtime suitability as separate inputs; learned evidence cannot override hard policy or capability prohibitions.",
+      "runtime_recommendation": "stay-local",
+      "scope_class": "mixed",
+      "selected_target": "codex_terra",
+      "selected_target_identity_ref": "codex_terra",
+      "selected_target_revision": null,
+      "selected_transport": "internal",
+      "selection_basis": {
+        "component_order": [
+          "task_requirements",
+          "hard_eligibility",
+          "declared_fit",
+          "contextual_evidence",
+          "expected_burden",
+          "uncertainty",
+          "probe_value",
+          "policy"
+        ],
+        "context_authority": {
+          "fail_closed_without_context": true,
+          "rule": "Ordinary assignment may not aggregate target evidence across all task/scope contexts when the shaped task context is absent.",
+          "status": "present"
+        },
+        "context_inflation_guard": {
+          "cases": [],
+          "rule": "Retain an equally capable current target when supported-host evidence shows a material token increase and declared price/latency priors lack portable normalization.",
+          "status": "not-applied"
+        },
+        "current_target_eligible": true,
+        "downroute_applied": false,
+        "downroute_required": false,
+        "hard_eligibility_first": true,
+        "manual_transport_policy": "required-when-no-automatic-method",
+        "requested_context_key": "mixed::mixed",
+        "task_requirements": {
+          "context_key": "mixed::mixed",
+          "requires_validation": false,
+          "scope_class": "mixed",
+          "task_class": "mixed"
+        },
+        "tie_breaker": "ties are surfaced as a non-executable tie outcome; no lexical tie-break selects an executor",
+        "uses_contextual_evidence": true,
+        "uses_runtime_candidate_comparison": true
+      },
+      "task_class": "mixed",
+      "uncertainty": "ranked"
+    },
+    "assignment_gate": {
+      "assignment_decision": "assign-best-fit",
+      "assignment_decision_revision": "sha256:6432e1375658e4c9219ade12942039a62cb23baa6db7d6a43bed56e78bf46f47",
+      "assignment_policy": "required-best-fit",
+      "claim_boundary": "assignment policy resolved",
+      "context_key": "mixed::mixed",
+      "current_target_status": "known-profile",
+      "enforceable": true,
+      "enforcement": "must-dispatch-before-implementation",
+      "executor_disposition": {
+        "adapter_configured": true,
+        "automatic_methods": [
+          "internal"
+        ],
+        "cost_selected_transport": "internal",
+        "decision_revision": "sha256:6432e1375658e4c9219ade12942039a62cb23baa6db7d6a43bed56e78bf46f47",
+        "kind": "agentic-workspace/assignment-executor-disposition/v1",
+        "rule": "One binding assignment resolves retained-local, executable dispatch, admitted manual handoff, or exact blocked recovery before implementation.",
+        "selected_target": "codex_terra",
+        "status": "executable-nonlocal-dispatch",
+        "transport": "internal"
+      },
+      "implementation_allowed": false,
+      "kind": "agentic-workspace/assignment-implementation-gate/v1",
+      "required_next_action": "dispatch-assigned-target",
+      "rule": "required-best-fit is an implementation gate: unresolved or mismatched selected assignments block local implementation until routed or explicitly resolved.",
+      "runtime_selected_target": "codex_terra",
+      "scope_class": "mixed",
+      "selected_target": "codex_terra",
+      "status": "dispatch-required",
+      "target_identity_ref": "codex_terra",
+      "target_revision": null,
+      "task_class": "mixed"
+    },
+    "assignment_policy": {
+      "assignment_policy": {
+        "source": "local-override",
+        "value": "required-best-fit"
+      },
+      "authority_order": [
+        "explicit current-session human instruction",
+        "repo-owned prohibitions and proof requirements",
+        "repo-local local override",
+        "shared local config",
+        "target metadata and learned evidence",
+        "model self-assessment"
+      ],
+      "binding": {
+        "claim_boundary": "assignment policy resolved",
+        "enforceable": true,
+        "required_best_fit_requested": true
+      },
+      "current_target": {
+        "source": "local-override",
+        "value": "codex_sol"
+      },
+      "current_target_identity_ref": "user-local:codex-sol-0612e5bbc4",
+      "current_target_profile_name": "codex_sol",
+      "current_target_status": "known-profile",
+      "down_routing_behavior": {
+        "source": "derived:delegation.assignment_policy",
+        "value": "when-cheaper-safe-target-exists"
+      },
+      "execution_role": {
+        "source": "derived:delegation.assignment_policy",
+        "value": "orchestrator"
+      },
+      "human_override_policy": {
+        "source": "local-override",
+        "value": "explicit-only"
+      },
+      "kind": "agentic-workspace/orchestration-assignment-policy/v1",
+      "manual_transport_policy": {
+        "source": "derived:delegation.transport_authority",
+        "value": "required-when-no-automatic-method"
+      },
+      "migration": {
+        "canonical_fields": [
+          "delegation.assignment_policy",
+          "delegation.transport_authority",
+          "delegation.human_override_policy",
+          "delegation.current_target",
+          "delegation_targets.<target>.transports"
+        ],
+        "compatibility_aliases": [
+          "delegation.mode",
+          "delegation.execution_role",
+          "delegation.selection_objective",
+          "delegation.underfit_behavior",
+          "delegation.down_routing_behavior",
+          "delegation.manual_transport_policy",
+          "runtime.cheap_bounded_executor_available",
+          "handoff.prefer_internal_delegation_when_available",
+          "delegation_targets.<target>.human_control_modes",
+          "delegation_targets.<target>.execution_methods",
+          "delegation_targets.<target>.dispatch_adapter_kind",
+          "delegation_targets.<target>.dispatch_command",
+          "delegation_targets.<target>.dispatch_output_mode",
+          "delegation_targets.<target>.dispatch_timeout_seconds",
+          "delegation_targets.<target>.escalation_target"
+        ],
+        "lifecycle": {
+          "canonical_precedence": "canonical fields win without pairwise reconciliation",
+          "kind": "agentic-workspace/delegation-compatibility-lifecycle/v1",
+          "legacy_authoring_permitted_until_removal": true,
+          "policy": "remove-on-or-before-declared-major",
+          "removal_version": "1.0.0",
+          "status": "deprecated-removal-scheduled"
+        }
+      },
+      "selection_objective": {
+        "source": "derived:best-fit-ranking",
+        "value": "safe minimum expected total successful-completion cost with quality and proof before price"
+      },
+      "separation_rule": "assignment_policy chooses who should own work; transport_authority independently governs execution after selection.",
+      "status": "configured",
+      "supported": {
+        "assignment_policies": [
+          "local-preferred",
+          "best-fit-advisory",
+          "required-best-fit"
+        ],
+        "down_routing_behaviors": [
+          "never",
+          "bounded-mechanical-work",
+          "when-cheaper-safe-target-exists"
+        ],
+        "execution_roles": [
+          "ordinary-executor",
+          "orchestrator",
+          "bounded-worker"
+        ],
+        "human_override_policies": [
+          "explicit-only",
+          "allowed-with-recorded-reason",
+          "disallowed"
+        ],
+        "manual_transport_policies": [
+          "disabled",
+          "allowed",
+          "required-when-no-automatic-method"
+        ],
+        "transport_authorities": [
+          "manual",
+          "automatic"
+        ],
+        "underfit_behaviors": [
+          "stay-when-safe",
+          "prepare-manual-escalation",
+          "require-delegation"
+        ]
+      },
+      "underfit_behavior": {
+        "source": "derived:delegation.assignment_policy",
+        "value": "require-delegation"
+      }
+    },
+    "authority_boundary": {
+      "agent_owned_decisions": [
+        "whether delegation improves quality or cost without lowering proof",
+        "whether to stay local when advisory delegation is not followed",
+        "semantic fit of candidate route to the user's task"
+      ],
+      "authority_class": "hard-gate",
+      "candidate_routes": [],
+      "enforced_by_aw": [
+        "execute selected assignment dispatch before implementation"
+      ],
+      "human_owned_decisions": [],
+      "kind": "agentic-workspace/authority-boundary/v1",
+      "observed_by_aw": [
+        "delegation_mode=auto",
+        "clarification_mode=suggest",
+        "scope_signal=bounded",
+        "proof_pressure=non-obvious",
+        "assignment_gate=dispatch-required"
+      ],
+      "proof_hints": [
+        "non-obvious"
+      ],
+      "recommended_by_aw": [
+        "assignment-dispatch-required",
+        "dispatch-assigned-target"
+      ],
+      "reporting_rule": "Delegation output is local posture, observed evidence, and candidate routing support unless a human-control or auto-execution gate explicitly forbids an action; the agent owns semantic route fit.",
+      "surface": "delegation_decision"
+    },
+    "auto_delegation_audit": {
+      "configured_mode": "auto",
+      "effective_mode": "auto",
+      "execution_permitted": true,
+      "kind": "agentic-workspace/auto-delegation-audit/v1",
+      "must_report_if_not_run": false,
+      "reporting_rule": "When auto-capable configured targets are not used, report the skip reason so the orchestrator can distinguish human-control gating, proof risk, and ordinary stay-local execution.",
+      "skipped_targets": [],
+      "status": "not-applicable"
+    },
+    "clarification_mode": "suggest",
+    "config_effect": {
+      "assignment_decision": "assign-best-fit",
+      "assignment_gate": "dispatch-required",
+      "assignment_implementation_allowed": false,
+      "assignment_policy": "required-best-fit",
+      "authority": "local-config",
+      "clarification_mode": "suggest",
+      "configured_delegation_mode": "auto",
+      "delegation_mode": "auto",
+      "disabled_reason": null,
+      "execution_authority": "auto-execution-permitted",
+      "human_control": "auto execution requires local safety permission; otherwise surface suggest/handoff first.",
+      "manual_transport_admission": {
+        "automatic_method_available": true,
+        "automatic_methods": [
+          "internal"
+        ],
+        "export_allowed": true,
+        "kind": "agentic-workspace/manual-transport-admission/v1",
+        "policy": "required-when-no-automatic-method",
+        "required": false,
+        "required_when_no_automatic_method": true,
+        "rule": "Manual transport is admitted before any handoff command is rendered; disabled transport suppresses runnable handoff actions.",
+        "state": "available-automatic-method-preferred",
+        "status": "available"
+      },
+      "safe_to_auto_run_commands": true,
+      "source_path": ".agentic-workspace/config.local.toml"
+    },
+    "decision": "assignment-dispatch-required",
+    "decomposition_delegation": {
+      "candidates": [],
+      "inspected_records": [
+        ".agentic-workspace/planning/decompositions/generated-cli-single-source-boundary.decomposition.json",
+        ".agentic-workspace/planning/decompositions/issue-2044-runtime-ownership.decomposition.json",
+        ".agentic-workspace/planning/decompositions/open-issues-2026-08-20-stack.decomposition.json",
+        ".agentic-workspace/planning/decompositions/open-issues-2026-08-27.decomposition.json",
+        ".agentic-workspace/planning/decompositions/operation-test-ir-single-source.decomposition.json",
+        ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+      ],
+      "kind": "agentic-workspace/decomposition-delegation-candidates/v1",
+      "reason": "no open decomposition lanes are concrete enough to delegate",
+      "status": "none"
+    },
+    "delegation_candidates": [],
+    "delegation_next_step": {
+      "action": "dispatch-assigned-target",
+      "assignment_gate": {
+        "assignment_policy": "required-best-fit",
+        "claim_boundary": "assignment policy resolved",
+        "executor_disposition": {
+          "adapter_configured": true,
+          "automatic_methods": [
+            "internal"
+          ],
+          "cost_selected_transport": "internal",
+          "decision_revision": "sha256:6432e1375658e4c9219ade12942039a62cb23baa6db7d6a43bed56e78bf46f47",
+          "kind": "agentic-workspace/assignment-executor-disposition/v1",
+          "rule": "One binding assignment resolves retained-local, executable dispatch, admitted manual handoff, or exact blocked recovery before implementation.",
+          "selected_target": "codex_terra",
+          "status": "executable-nonlocal-dispatch",
+          "transport": "internal"
+        },
+        "implementation_allowed": false,
+        "required_next_action": "dispatch-assigned-target",
+        "selected_target": "codex_terra",
+        "status": "dispatch-required"
+      },
+      "command": null,
+      "execution_methods": [
+        "internal"
+      ],
+      "handoff_run_id": "run-ca1c5aaaf91ab570c616d63ba0a677683e0ec7212bbf4f8ac5ed7cd0e9fb077a-1",
+      "kind": "agentic-workspace/delegation-next-step/v1",
+      "manual_external_relay": {
+        "avoid_when": [
+          "pure code implementation, debugging, refactoring, tests, or changed-path review",
+          "late workflow stages after changed paths already define the local proof surface",
+          "questions a repository-aware coding agent or code-focused delegate should answer from the codebase",
+          "when interrupting the human is unlikely to improve quality or reduce total work"
+        ],
+        "interrupt_cost": "human-relay-required",
+        "reason": "selected target is not a manual external relay target",
+        "status": "not-applicable",
+        "target_kind": "not-manual-external",
+        "use_when": [
+          "early epic, lane, or domain shaping before implementation starts",
+          "product, policy, user, regulatory, or domain understanding beyond the codebase",
+          "a compact high-judgment question where a general-purpose model can improve framing before code work"
+        ]
+      },
+      "must_report_if_not_run": true,
+      "return_contract": [
+        "what changed",
+        "proof run and result",
+        "scope or stop-condition issues",
+        "residue to route into planning, memory, docs, or issues"
+      ],
+      "return_schema": "delegated-return/v1",
+      "role": "implementer",
+      "run_id": "run-ca1c5aaaf91ab570c616d63ba0a677683e0ec7212bbf4f8ac5ed7cd0e9fb077a-1",
+      "scope_rule": "Delegate only a bounded slice with unchanged proof expectations; otherwise stay local and state why.",
+      "status": "executable",
+      "target": "codex_terra"
+    },
+    "effort_guidance": {
+      "agent_decision_required": true,
+      "authority": "effort guidance from observed route evidence; agent owns task classification and final effort choice",
+      "cost_posture": "bounded-medium",
+      "escalation_trigger": "escalate only if inspection reveals broader uncertainty, high risk, or proof gaps",
+      "factor_summary": "scope_signal=bounded; proof_pressure=non-obvious; proof_review_pressure=medium",
+      "implementer": "medium",
+      "kind": "agentic-workspace/effort-guidance/v1",
+      "orchestrator": "medium",
+      "planner": "none",
+      "principle": "Start with cheap routing, then spend higher reasoning effort only where the agent judges it improves quality or safely saves tokens.",
+      "status": "evaluated",
+      "target": "codex_terra",
+      "validator": "medium"
+    },
+    "handoff_command": null,
+    "handoff_surface": null,
+    "human_control_summary": "Local posture may suggest delegation or clarification, but only auto mode may execute without a human handoff.",
+    "kind": "agentic-workspace/delegation-next-action/v1",
+    "legacy_aliases": {
+      "decision": "recommended_route",
+      "decomposition_delegation.candidates[].route_candidate": "decomposition_delegation.candidates[].candidate_route",
+      "delegation_candidates[].route_candidate": "delegation_candidates[].candidate_route"
+    },
+    "manual_external_relay": {
+      "avoid_when": [
+        "pure code implementation, debugging, refactoring, tests, or changed-path review",
+        "late workflow stages after changed paths already define the local proof surface",
+        "questions a repository-aware coding agent or code-focused delegate should answer from the codebase",
+        "when interrupting the human is unlikely to improve quality or reduce total work"
+      ],
+      "interrupt_cost": "human-relay-required",
+      "kind": "agentic-workspace/manual-external-relay/v1",
+      "reason": "selected target is not a manual external relay target",
+      "rule": "Manual external relay is a human-interrupting escalation path, not ordinary delegation.",
+      "status": "not-applicable",
+      "target": "codex_terra",
+      "target_kind": "not-manual-external",
+      "use_when": [
+        "early epic, lane, or domain shaping before implementation starts",
+        "product, policy, user, regulatory, or domain understanding beyond the codebase",
+        "a compact high-judgment question where a general-purpose model can improve framing before code work"
+      ]
+    },
+    "manual_prompt": null,
+    "mode": "auto",
+    "mode_effect": "delegation.mode is auto and safety permits execution within target-profile limits.",
+    "reason": "assignment policy resolved",
+    "recommended_route": "assignment-dispatch-required",
+    "required_next_action": "dispatch-assigned-target",
+    "route_evidence": {
+      "agent_judgment_required": true,
+      "proof_pressure": "non-obvious",
+      "proof_review_pressure": "medium",
+      "risk_flags": [],
+      "rule": "AW exposes structural evidence for delegation posture; the agent owns semantic task classification and whether the evidence justifies delegation.",
+      "scope_signal": "bounded"
+    },
+    "route_obligation": {
+      "must": "Execute the revision-bound assignment.dispatch operation through the configured automatic transport.",
+      "must_not": "Do not reinterpret the binding assignment as optional delegation or silently implement the slice locally.",
+      "report_if_skipped": "If you do not follow this route, report why local execution is safer or cheaper without reducing quality, proof, or control."
+    },
+    "status": "evaluated",
+    "target": "codex_terra",
+    "token_savings_guidance": {
+      "agent_judgment_required": true,
+      "authority": "configured-target and route fit only",
+      "signal": "none"
+    },
+    "transport_blocked_action": null
+  },
+  "kind": "agentic-workspace/planning-assignment/v1",
+  "status": "current",
+  "structural_proof_receipt_ref": ".agentic-workspace/proof/receipts/ordinary-ca1c5aaaf91ab570c616d63ba0a677683e0ec7212bbf4f8ac5ed7cd0e9fb077a.assignment-proof.json",
+  "target_name": "codex_terra",
+  "updated_at": "2026-09-01T21:19:59+00:00"
+}

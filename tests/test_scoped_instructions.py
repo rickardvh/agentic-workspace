@@ -182,6 +182,33 @@ def test_selected_route_with_unavailable_procedure_blocks_ordinary_decision(tmp_
     assert registry.is_file()
 
 
+def test_repo_pr_review_route_declares_existing_procedure_and_anti_trap(monkeypatch) -> None:
+    root = Path(__file__).resolve().parents[1]
+    route = "github/pr/review"
+    discovery = discover_semantic_routes(root, exact=route)
+    assert discovery["routes"][0]["capabilities"] == ["skill:pr-review-recheck"]
+
+    monkeypatch.setattr(
+        "agentic_workspace.scoped_instructions.current_semantic_task_route_fact",
+        lambda _root: {
+            "kind": "agentic-workspace/semantic-task-route-fact/v1",
+            "status": "current",
+            "posture": "selected",
+            "routes": [route],
+            "current_work_id": "pr-review-fixture",
+            "source_revision": discovery["source_revision"],
+            "authority_effect": "applicability-only",
+        },
+    )
+
+    inspection = inspect_instructions(root, task="implementation wording cannot infer this route")
+    instruction = next(item for item in inspection["instructions"] if item["id"] == "github-pr-review")
+    assert instruction["applies"] is True
+    assert instruction["use"] == ["skill:pr-review-recheck"]
+    assert instruction["read"] == [".agentic-workspace/memory/repo/mistakes/recurring-failures.md"]
+    assert "does not grant review" in instruction["guidance"]
+
+
 def test_global_and_path_scoped_markdown_are_progressively_disclosed(tmp_path: Path) -> None:
     _write(tmp_path, "repository", "# Repository\n\nKeep changes small.\n")
     _write(

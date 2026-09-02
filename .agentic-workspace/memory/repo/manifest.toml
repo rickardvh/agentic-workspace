@@ -86,6 +86,7 @@ canonicality = "agent_only"
 task_relevance = "optional"
 subsystems = ["workspace-runtime", "planning-system"]
 surfaces = ["routing", "planning", "recovery"]
+semantic_routes = ["github/pr/review"]
 routes_from = ["src/agentic_workspace/workspace_runtime_*.py", ".agentic-workspace/planning/**"]
 stale_when = ["src/agentic_workspace/workspace_runtime_planning.py", "src/agentic_workspace/workspace_runtime_startup.py"]
 

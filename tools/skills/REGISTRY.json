@@ -56,6 +56,14 @@
       "scope": "repo-owned",
       "stability": "repo-managed",
       "summary": "independent external assessment of a submitted change by an agent that did not implement or modify the patch",
+      "semantic_routes": [
+        {
+          "id": "github/pr/review",
+          "match": "exact",
+          "priority": 10,
+          "description": "Apply the repository's independent PR-review eligibility procedure."
+        }
+      ],
       "activation_hints": {
         "verbs": ["audit independently", "externally re-review"],
         "nouns": ["independent external reviewer", "external review authority", "independent merge-readiness audit"],

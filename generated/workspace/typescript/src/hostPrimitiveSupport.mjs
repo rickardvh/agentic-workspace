@@ -10,13 +10,18 @@
 
 import {
   copyFileSync,
+  chmodSync,
   existsSync,
+  lstatSync,
   mkdtempSync,
   mkdirSync,
+  readlinkSync,
   readFileSync,
+  realpathSync,
   readdirSync,
   rmSync,
   statSync,
+  symlinkSync,
   writeFileSync,
   writeSync,
 } from 'node:fs';
@@ -1922,6 +1927,23 @@ function assignmentParseJson(value, field) {
   }
 }
 
+function assignmentImportReturnValue(values, targetRoot, failures) {
+  const inlineReturn = assignmentText(values.return_json);
+  const returnFile = assignmentText(values.return_file);
+  if (Boolean(inlineReturn) === Boolean(returnFile)) {
+    failures.push({ reason: 'return-input-required', field: 'return_json|return_file', recovery: 'Provide exactly one inline return_json or repo-contained return_file.' });
+    return {};
+  }
+  if (inlineReturn) return assignmentParseJson(inlineReturn, 'return_json');
+  try {
+    const path = resolveInside(realpathSync(targetRoot), realpathSync(resolveInside(targetRoot, returnFile)));
+    return assignmentParseJson(readFileSync(path, 'utf8'), 'return_file');
+  } catch (error) {
+    if (error instanceof RuntimeError) throw error;
+    throw new RuntimeError('assignment lifecycle return_file must be a readable repo-contained UTF-8 file');
+  }
+}
+
 function assignmentWrite(path, payload) {
   mkdirSync(dirname(path), { recursive: true });
   const text = typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2);
@@ -1962,7 +1984,56 @@ function assignmentLiveMutationBaseline(targetRoot) {
 function assignmentCurrentRunState(runId, state, planningAssignment) {
   const attempt = isObject(planningAssignment.current_attempt) ? planningAssignment.current_attempt : {};
   if (assignmentText(attempt.run_id) && assignmentText(attempt.run_id) !== runId) return { status: 'superseded', run_id: runId, current_run_id: attempt.run_id };
-  return { status: assignmentText(state.current_state) || assignmentText(attempt.status) || 'awaiting-admission', run_id: runId, owner: attempt.owner };
+  const hostExecution = isObject(state.host_execution) ? state.host_execution : {};
+  return { status: assignmentText(state.current_state) || assignmentText(attempt.status) || 'awaiting-admission', run_id: runId, owner: attempt.owner, result_delivery_required: Boolean(hostExecution.result_delivery_required), assignment_id: hostExecution.assignment_id, packet_integrity: hostExecution.packet_integrity };
+}
+
+function verifyMaterializedAssignmentDelta(targetRoot, mutationBaseline, patchPath, changedPaths) {
+  const baselineCheck = spawnSync('git', ['rev-parse', '--verify', `${mutationBaseline}^{commit}`], { cwd: targetRoot, encoding: 'utf8' });
+  if (baselineCheck.status !== 0) return { verified: false, detail: assignmentText(baselineCheck.stderr).slice(-2000) };
+  const expectedRoot = mkdtempSync(join(tmpdir(), 'aw-assignment-baseline-'));
+  try {
+    for (const changedPath of changedPaths) {
+      const expectedPath = resolveInside(expectedRoot, changedPath);
+      const baselineFile = spawnSync('git', ['show', `${mutationBaseline}:${changedPath}`], { cwd: targetRoot });
+      if (baselineFile.status === 0) {
+        mkdirSync(dirname(expectedPath), { recursive: true });
+        const baselineEntry = spawnSync('git', ['ls-tree', mutationBaseline, '--', changedPath], { cwd: targetRoot, encoding: 'utf8' });
+        const baselineMode = assignmentText(baselineEntry.stdout).split(' ', 1)[0];
+        if (baselineMode === '120000') symlinkSync(baselineFile.stdout.toString('utf8'), expectedPath);
+        else if (['100644', '100755'].includes(baselineMode)) {
+          writeFileSync(expectedPath, baselineFile.stdout);
+          if (baselineMode === '100755') chmodSync(expectedPath, lstatSync(expectedPath).mode | 0o111);
+        } else return { verified: false, detail: `unsupported baseline object mode for ${changedPath}: ${baselineMode}` };
+      }
+    }
+    const applyCheck = spawnSync('git', ['apply', '--check', '--recount', patchPath], { cwd: expectedRoot, encoding: 'utf8' });
+    if (applyCheck.status !== 0) return { verified: false, detail: assignmentText(applyCheck.stderr).slice(-2000) };
+    const applyPatch = spawnSync('git', ['apply', '--recount', patchPath], { cwd: expectedRoot, encoding: 'utf8' });
+    if (applyPatch.status !== 0) return { verified: false, detail: assignmentText(applyPatch.stderr).slice(-2000) };
+    for (const changedPath of changedPaths) {
+      const expectedPath = resolveInside(expectedRoot, changedPath);
+      const observedPath = resolveInside(targetRoot, changedPath);
+      const expectedStats = existsSync(expectedPath) || (() => { try { return lstatSync(expectedPath).isSymbolicLink(); } catch (_error) { return false; } })() ? lstatSync(expectedPath) : null;
+      const observedStats = existsSync(observedPath) || (() => { try { return lstatSync(observedPath).isSymbolicLink(); } catch (_error) { return false; } })() ? lstatSync(observedPath) : null;
+      const expectedType = expectedStats?.isSymbolicLink() ? 'symlink' : expectedStats?.isFile() ? 'file' : 'missing';
+      const observedType = observedStats?.isSymbolicLink() ? 'symlink' : observedStats?.isFile() ? 'file' : 'missing';
+      if (expectedType !== observedType) return { verified: false, detail: `materialized path type differs from baseline-plus-patch: ${changedPath}` };
+      if (expectedType === 'symlink' && readlinkSync(expectedPath) !== readlinkSync(observedPath)) return { verified: false, detail: `materialized symlink target differs from baseline-plus-patch: ${changedPath}` };
+      const expectedFile = expectedType === 'file';
+      if (expectedFile && Boolean(expectedStats.mode & 0o111) !== Boolean(observedStats.mode & 0o111)) return { verified: false, detail: `materialized path executable mode differs from baseline-plus-patch: ${changedPath}` };
+      if (expectedFile) {
+        const expectedHash = spawnSync('git', ['hash-object', `--path=${changedPath}`, expectedPath], { cwd: targetRoot, encoding: 'utf8' });
+        const observedHash = spawnSync('git', ['hash-object', `--path=${changedPath}`, observedPath], { cwd: targetRoot, encoding: 'utf8' });
+        if (expectedHash.status !== 0 || observedHash.status !== 0 || assignmentText(expectedHash.stdout) !== assignmentText(observedHash.stdout)) return { verified: false, detail: `materialized path content differs from baseline-plus-patch: ${changedPath}` };
+      }
+    }
+    return { verified: true, detail: '' };
+  } catch (error) {
+    return { verified: false, detail: String(error).slice(-2000) };
+  } finally {
+    rmSync(expectedRoot, { recursive: true, force: true });
+  }
 }
 
 function assignmentCurrentAuthorities(targetRoot, values, state, runId, failures) {
@@ -2034,6 +2105,7 @@ function assignmentIdentity(authorities) {
     return_admission_owner: 'delegated-return.admit',
     human_intent: gate.human_intent ?? nextStep.human_intent ?? gate.task ?? gate.task_class ?? null,
     required_inputs: gate.required_inputs ?? nextStep.required_inputs ?? [],
+    read_first: gate.read_first ?? nextStep.read_first ?? [],
     prohibited_effects: gate.prohibited_effects ?? nextStep.prohibited_effects ?? ['scope-widening', 'merge', 'closeout', 'proof-authority', 'human-authority'],
     dispatch_adapter: isObject(gate.dispatch_adapter) ? gate.dispatch_adapter : {},
     claim_authority: { worker_result: 'evidence-only', proof: 'orchestrator-owned', integration: 'orchestrator-owned', completion: 'orchestrator-owned' },
@@ -2076,19 +2148,52 @@ function assignmentAdmitWithCurrentAuthority(authorities, returned) {
   if (assignmentText(returned.assignment_revision) !== assignmentText(identity.revision)) failures.push({ reason: 'stale-assignment-revision', field: 'assignment_revision', recovery: 'Refresh the handoff and resubmit against the current assignment revision.' });
   if (assignmentText(returned.target) !== assignmentText(identity.target)) failures.push({ reason: 'target-mismatch', field: 'target', recovery: 'Return work from the selected assignment target only.' });
   if (assignmentText(returned.run_id) !== assignmentText(runState.run_id)) failures.push({ reason: 'return-run-mismatch', field: 'run_id', recovery: 'Return work for the current assignment run only.' });
+  if (runState.result_delivery_required && assignmentText(returned.assignment_id) !== assignmentText(runState.assignment_id)) failures.push({ reason: 'host-execution-contract-mismatch', field: 'assignment_id', recovery: 'Return the assignment id from the sealed host execution contract.' });
+  if (runState.result_delivery_required && assignmentText(returned.packet_integrity) !== assignmentText(runState.packet_integrity)) failures.push({ reason: 'host-execution-contract-mismatch', field: 'packet_integrity', recovery: 'Return the packet integrity from the sealed host execution contract.' });
   if (Array.isArray(returned.stop_conditions_hit) && returned.stop_conditions_hit.length) failures.push({ reason: 'stop-condition-hit', field: 'stop_conditions_hit', recovery: 'Route the reported stop condition before integration.' });
   if (assignmentText(authorities.live_mutation_baseline) !== assignmentText(identity.mutation_baseline)) failures.push({ reason: 'mutation-baseline-mismatch', field: 'live_mutation_baseline', recovery: 'Rebase or regenerate the returned work against the current baseline.' });
-  if (identity.role === 'implementer' && !String(returned.patch ?? '').trim()) failures.push({ reason: 'missing-implementation-patch', field: 'patch', recovery: 'Return the proposed unified diff required by the implementer assignment contract.' });
+  if (identity.role === 'implementer' && Array.isArray(returned.changed_paths) && returned.changed_paths.length && !String(returned.patch ?? '').trim()) failures.push({ reason: 'missing-implementation-patch', field: 'patch', recovery: 'Return the proposed unified diff required by the implementer assignment contract.' });
   const allowed = new Set(Array.isArray(identity.allowed_paths) ? identity.allowed_paths : []);
   const changed = Array.isArray(returned.changed_paths) ? returned.changed_paths : [];
+  const resultDelivery = isObject(returned.result_delivery) ? returned.result_delivery : {};
+  const deliveryMode = assignmentText(resultDelivery.mode) || 'unapplied-patch';
+  if (runState.result_delivery_required && !Object.keys(resultDelivery).length) failures.push({ reason: 'missing-result-delivery', field: 'result_delivery', recovery: 'Declare whether the host result is an unapplied patch or already materialized in the shared worktree.' });
+  if (!['unapplied-patch', 'already-materialized'].includes(deliveryMode)) failures.push({ reason: 'unsupported-result-delivery', field: 'result_delivery.mode', recovery: 'Return either an unapplied patch or an explicitly baseline-bound already-materialized result.' });
+  if (deliveryMode === 'already-materialized' && assignmentText(resultDelivery.mutation_baseline) !== assignmentText(identity.mutation_baseline)) failures.push({ reason: 'result-delivery-baseline-mismatch', field: 'result_delivery.mutation_baseline', recovery: 'Return the exact pre-dispatch mutation baseline sealed by the current assignment.' });
+  const patchPaths = assignmentPatchPaths(assignmentText(returned.patch));
+  if (deliveryMode === 'already-materialized' && (patchPaths.length !== new Set(changed.map(String)).size || patchPaths.some((path) => !new Set(changed.map(String)).has(path)))) failures.push({ reason: 'result-delivery-scope-mismatch', field: 'result_delivery|changed_paths|patch', recovery: 'Return the exact bounded changed-path set represented by the already-materialized patch.' });
   if (!allowed.size) failures.push({ reason: 'missing-canonical-scope', field: 'assignment_identity.allowed_paths', recovery: 'Refresh the assignment so AW can compare returned paths.' });
   for (const path of changed) {
-    if (!allowed.has(path)) failures.push({ reason: 'scope-escape', field: 'changed_paths', recovery: 'Repair returned work to stay inside the assigned scope.' });
+    if (!assignmentPathAllowed(path, allowed)) failures.push({ reason: 'scope-escape', field: 'changed_paths', recovery: 'Repair returned work to stay inside the assigned scope.' });
   }
   for (const path of assignmentPatchPaths(assignmentText(returned.patch))) {
-    if (!allowed.has(path)) failures.push({ reason: 'returned-patch-outside-assignment-scope', field: 'patch', recovery: 'Return a unified diff touching only the assignment allowed paths.' });
+    if (!assignmentPathAllowed(path, allowed)) failures.push({ reason: 'returned-patch-outside-assignment-scope', field: 'patch', recovery: 'Return a unified diff touching only the assignment allowed paths.' });
   }
   return { admitted: failures.length === 0, status: failures.length ? 'rejected' : 'admitted', failures, assignment_revision: identity.revision, assignment_identity: identity, current_authority: { planning_assignment: authorities.planning_assignment_ref, structural_proof_receipt: proof, proof_source: authorities.proof_receipt_ref, mutation_baseline: authorities.live_mutation_baseline, baseline_source: 'host-resolved:git-or-aw-baseline' }, rule: 'Returned delegated work is executable only after AW re-resolves current assignment/run identity, transport authority, canonical scope, structural proof, stop conditions, and baseline immediately before admission.' };
+}
+
+function assignmentPathAllowed(path, allowedPaths) {
+  const normalized = assignmentCanonicalRelativePath(path);
+  if (!normalized) return false;
+  return [...allowedPaths].some((rawPattern) => {
+    const pattern = assignmentCanonicalRelativePath(rawPattern);
+    if (!pattern) return false;
+    if (normalized === pattern) return true;
+    const expression = pattern
+      .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+      .replaceAll('**', '\u0000')
+      .replaceAll('*', '[^/]*')
+      .replaceAll('?', '[^/]')
+      .replaceAll('\u0000', '.*');
+    return new RegExp(`^${expression}$`).test(normalized);
+  });
+}
+
+function assignmentCanonicalRelativePath(value) {
+  const normalized = String(value ?? '').replaceAll('\\', '/');
+  if (!normalized || normalized.startsWith('/') || /^[A-Za-z]:/.test(normalized) || normalized.includes('\0')) return '';
+  if (normalized.split('/').some((part) => !part || part === '.' || part === '..')) return '';
+  return normalized;
 }
 
 function diffGitPathTokens(line) {
@@ -2143,6 +2248,12 @@ export function assignmentPatchPaths(patchText) {
   return [...paths].sort();
 }
 
+function normalizeAssignmentPatchTransport(patchText) {
+  // Keep return identity and admission on the original payload; normalize
+  // only standard CRLF transport terminators before Git validates its hunks.
+  return String(patchText ?? '').replaceAll('\r\n', '\n');
+}
+
 function assignmentIndexedTaskProof(targetRoot, receiptRef, failures) {
   const storeRoot = resolveInside(targetRoot, '.agentic-workspace/proof/receipts');
   const ref = assignmentText(receiptRef);
@@ -2186,18 +2297,85 @@ function assignmentTaskProofBinding(receipt) {
   return assignmentDigest({ assignment_proof_obligation: receipt.assignment_proof_obligation, proof_subject_fingerprint: subject.fingerprint, command: receipt.command, result: receipt.result, changed_paths: Array.isArray(receipt.changed_paths) ? [...receipt.changed_paths].map(String).sort() : [], authority: receipt.authority, producer_class: receipt.producer_class });
 }
 
-function assignmentDispatch(packet, prompt, targetRoot, transport) {
-  const identity = isObject(packet.assignment_identity) ? packet.assignment_identity : {};
+function assignmentDispatchConfiguration(identity, transport) {
   const adapter = isObject(identity.dispatch_adapter) ? identity.dispatch_adapter : {};
   const methods = new Set(Array.isArray(adapter.execution_methods) ? adapter.execution_methods.map(String) : []);
-  if (!methods.has(transport)) return { status: 'blocked', reason: 'transport-not-admitted-by-target' };
   const variants = Array.isArray(adapter.transports) ? adapter.transports.filter(isObject) : [];
   const selectedVariant = variants.find((item) => assignmentText(item.method) === transport);
   const variantKind = assignmentText(selectedVariant?.kind);
-  const adapterKind = selectedVariant ? (['process', 'api'].includes(variantKind) ? 'process' : variantKind === 'internal' ? 'host-native' : '') : assignmentText(adapter.kind);
-  const commandTemplate = Array.isArray(selectedVariant?.command) ? selectedVariant.command.map(String) : Array.isArray(adapter.command) ? adapter.command.map(String) : [];
-  const outputMode = assignmentText(selectedVariant?.output_mode) || assignmentText(adapter.output_mode) || 'stdout';
-  const timeoutSeconds = Number(selectedVariant?.timeout_seconds ?? adapter.timeout_seconds ?? 1800);
+  return {
+    admitted: methods.has(transport),
+    kind: selectedVariant ? (['process', 'api'].includes(variantKind) ? 'process' : variantKind === 'internal' ? 'host-native' : '') : assignmentText(adapter.kind),
+    command: Array.isArray(selectedVariant?.command) ? selectedVariant.command.map(String) : Array.isArray(adapter.command) ? adapter.command.map(String) : [],
+    outputMode: assignmentText(selectedVariant?.output_mode) || assignmentText(adapter.output_mode) || 'stdout',
+    timeoutSeconds: Number(selectedVariant?.timeout_seconds ?? adapter.timeout_seconds ?? 1800),
+    adapter,
+  };
+}
+
+function assignmentWorkerContext(packet) {
+  const identity = isObject(packet.assignment_identity) ? packet.assignment_identity : {};
+  return {
+    kind: 'agentic-workspace/assignment-worker-context/v1',
+    assignment: { id: assignmentText(packet.assignment_id), revision: assignmentText(packet.assignment_revision) || assignmentText(identity.revision), run_id: assignmentText(packet.run_id), target: assignmentText(packet.target) || assignmentText(identity.target) },
+    intent: { outcome: assignmentText(identity.human_intent), task_class: assignmentText(identity.task_class), role: assignmentText(identity.role) },
+    scope: { class: assignmentText(identity.scope_class), allowed_paths: Array.isArray(identity.allowed_paths) ? identity.allowed_paths.map(String) : [] },
+    effects: { allowed: Array.isArray(identity.allowed_effects) ? identity.allowed_effects.map(String) : [], prohibited: Array.isArray(identity.prohibited_effects) ? identity.prohibited_effects.map(String) : [] },
+    inputs: { required: Array.isArray(identity.required_inputs) ? identity.required_inputs.map(String) : [], read_first: Array.isArray(identity.read_first) ? identity.read_first.map(String) : [], lazy_expansion_rule: 'Read only these exact references first; request or resolve deeper context only when the assignment requires it.' },
+    proof: { obligation_id: assignmentText(identity.proof_obligation_id), obligation_revision: assignmentText(identity.proof_obligation_revision), worker_authority: false },
+    stop_conditions: Array.isArray(identity.stop_conditions) ? identity.stop_conditions.map(String) : [],
+    authority: { semantic_source: 'canonical-assignment-identity', claim_authority: isObject(identity.claim_authority) ? identity.claim_authority : {}, scope_widening_allowed: false },
+    return_contract: isObject(packet.return_contract) ? packet.return_contract : {},
+  };
+}
+
+function assignmentPacketIntegrity(packet) {
+  const subject = JSON.parse(JSON.stringify(packet));
+  subject.packet_integrity = '';
+  for (const contract of [subject.return_contract, subject.worker_context?.return_contract]) {
+    if (isObject(contract?.required_identity)) contract.required_identity.packet_integrity = '';
+  }
+  return assignmentDigest(subject);
+}
+
+function assignmentSealHostNativePacket(packet) {
+  const sealed = JSON.parse(JSON.stringify(packet));
+  const contract = isObject(sealed.return_contract) ? sealed.return_contract : {};
+  contract.required_fields = [...new Set([...(Array.isArray(contract.required_fields) ? contract.required_fields.map(String) : []), 'assignment_id', 'packet_integrity', 'result_delivery'])];
+  contract.required_identity = { assignment_id: sealed.assignment_id, assignment_revision: sealed.assignment_revision, run_id: sealed.run_id, target: sealed.target, packet_integrity: '' };
+  sealed.return_contract = contract;
+  sealed.worker_context = assignmentWorkerContext(sealed);
+  const integrity = assignmentPacketIntegrity(sealed);
+  sealed.packet_integrity = integrity;
+  sealed.return_contract.required_identity.packet_integrity = integrity;
+  sealed.worker_context = assignmentWorkerContext(sealed);
+  if (assignmentPacketIntegrity(sealed) !== integrity) throw new Error('host-native assignment packet integrity did not stabilize');
+  return sealed;
+}
+
+function assignmentExportPrompt(packet) {
+  const context = isObject(packet.worker_context) ? packet.worker_context : assignmentWorkerContext(packet);
+  const mode = assignmentText(context.return_contract?.result_delivery?.default) || 'unapplied-patch';
+  const delivery = mode === 'already-materialized'
+    ? 'The selected result delivery mode is `already-materialized`: edit only the assigned shared worktree paths, and return the exact baseline-relative unified diff plus its sealed mutation baseline.'
+    : 'The selected result delivery mode is `unapplied-patch`: do not edit the target checkout; return the proposed unified diff in a `patch` field.';
+  const identityInstruction = isObject(context.return_contract?.required_identity)
+    ? 'Copy every value in return_contract.required_identity exactly and include the selected result_delivery mode.'
+    : 'Return every field named by return_contract.required_fields and include the selected result_delivery mode.';
+  return `You are receiving a bounded Agentic Workspace worker context.\nUse only the intent, scope, effects, inputs, proof burden, stop conditions, authority limits, and return contract below.\nAcquire deeper repository context only through the listed read-first references; omitted parent conversation and broad workspace state are not part of this assignment.\nReturn a structured result for agentic-workspace assignment import; do not claim AW proof or integration.\n${delivery}\n${identityInstruction}\nThe patch must be a complete git-compatible unified diff beginning with diff --git; generate or verify it with diff tooling so hunk counts are exact.\n\n\`\`\`json\n${JSON.stringify(context, null, 2)}\n\`\`\``;
+}
+
+function assignmentDispatch(packet, prompt, targetRoot, transport) {
+  const identity = isObject(packet.assignment_identity) ? packet.assignment_identity : {};
+  const configuration = assignmentDispatchConfiguration(identity, transport);
+  const { adapter, kind: adapterKind, command: commandTemplate, outputMode, timeoutSeconds } = configuration;
+  if (!configuration.admitted) return { status: 'blocked', reason: 'transport-not-admitted-by-target' };
+  if (adapterKind === 'host-native' && !commandTemplate.length) {
+    const hostReturnContract = isObject(packet.return_contract) ? packet.return_contract : {};
+    const packetIntegrity = assignmentText(packet.packet_integrity);
+    if (!packetIntegrity || packetIntegrity !== assignmentPacketIntegrity(packet) || assignmentText(hostReturnContract.required_identity?.packet_integrity) !== packetIntegrity) return { kind: 'agentic-workspace/assignment-dispatch-receipt/v1', status: 'blocked', reason: 'host-native-packet-unsealed', transport, adapter_kind: adapterKind };
+    return { kind: 'agentic-workspace/assignment-dispatch-receipt/v1', status: 'host-execution-required', reason: 'execute-canonical-assignment-with-host-native-transport', transport, adapter_kind: adapterKind, execution_contract: { kind: 'agentic-workspace/host-native-assignment-execution/v1', assignment_id: packet.assignment_id ?? null, assignment_revision: packet.assignment_revision ?? identity.revision ?? null, run_id: packet.run_id ?? null, target: packet.target ?? identity.target ?? null, packet_integrity: packetIntegrity, worker_context: packet.worker_context ?? {}, return_contract: hostReturnContract, reentry_operation: 'assignment.import', result_delivery_required: true }, claim_boundary: 'transport-only; host result still requires AW import, admission, integration, proof, and closeout' };
+  }
   if (!['process', 'host-native'].includes(adapterKind) || !commandTemplate.length) return { status: 'blocked', reason: 'configured-dispatch-adapter-unavailable' };
   if (!['stdout', 'json-file'].includes(outputMode)) return { status: 'blocked', reason: 'configured-dispatch-output-mode-unsupported' };
   if (!Number.isInteger(timeoutSeconds) || timeoutSeconds <= 0) return { status: 'blocked', reason: 'configured-dispatch-timeout-invalid' };
@@ -2205,7 +2383,7 @@ function assignmentDispatch(packet, prompt, targetRoot, transport) {
   const outputFile = join(temporaryDirectory, 'last-message.json');
   const outputSchema = join(temporaryDirectory, 'delegated-return.schema.json');
   const required = ['assignment_revision', 'run_id', 'target', 'changed_paths', 'summary', 'stop_conditions_hit', ...(identity.role === 'implementer' ? ['patch'] : [])];
-  writeFileSync(outputSchema, JSON.stringify({ type: 'object', properties: { assignment_revision: { type: 'string' }, run_id: { type: 'string' }, target: { type: 'string' }, changed_paths: { type: 'array', items: { type: 'string' } }, summary: { type: 'string' }, stop_conditions_hit: { type: 'array', items: { type: 'string' } }, patch: { type: 'string' } }, required, additionalProperties: false }), 'utf8');
+  writeFileSync(outputSchema, JSON.stringify({ type: 'object', properties: { assignment_revision: { type: 'string' }, run_id: { type: 'string' }, target: { type: 'string' }, changed_paths: { type: 'array', items: { type: 'string' } }, summary: { type: 'string' }, stop_conditions_hit: { type: 'array', items: { type: 'string' } }, patch: { type: 'string' }, result_delivery: { type: 'object', properties: { mode: { enum: ['unapplied-patch', 'already-materialized'] }, mutation_baseline: { type: 'string' } }, required: ['mode'], additionalProperties: false } }, required, additionalProperties: false }), 'utf8');
   const replacements = { '{target_root}': targetRoot, '{output_schema}': outputSchema, '{output_file}': outputFile, '{model}': assignmentText(adapter.model) };
   const command = commandTemplate.map((part) => Object.entries(replacements).reduce((value, [placeholder, replacement]) => value.replaceAll(placeholder, replacement), part)).filter(Boolean);
   const result = spawnSync(command[0], command.slice(1), { cwd: targetRoot, encoding: 'utf8', input: prompt, timeout: timeoutSeconds * 1000 });
@@ -2262,22 +2440,26 @@ function assignmentLifecycleApply(values, operationId) {
     if (!targetName) failures.push({ reason: 'missing-required-input', field: 'target_name', recovery: 'Retry assignment export with a current Planning assignment target.' });
     const transport = assignmentText(values.transport) || 'manual';
     if (transition === 'dispatch' && transport === 'manual') failures.push({ reason: 'automatic-transport-required', field: 'transport', recovery: 'Use assignment export for manual handoff or retry dispatch with an authorized automatic transport.' });
-    const effectivePacket = { kind: 'agentic-workspace/assignment-export-packet/v1', assignment_id: id, assignment_revision: identity.revision, run_id: runId, target: targetName, transport, scope: identity.allowed_paths ?? [], assignment_identity: identity, authority_refs: { planning_assignment: authorities.planning_assignment_ref, structural_proof_receipt: authorities.proof_receipt_ref, mutation_baseline: 'host-resolved:git-or-aw-baseline' }, return_contract: { required_fields: ['assignment_revision', 'run_id', 'target', 'changed_paths', 'summary', 'stop_conditions_hit', ...(identity.role === 'implementer' ? ['patch'] : [])], worker_proof_authority: false, worker_completion_authority: false } };
+    let effectivePacket = { kind: 'agentic-workspace/assignment-export-packet/v1', assignment_id: id, assignment_revision: identity.revision, run_id: runId, target: targetName, transport, scope: identity.allowed_paths ?? [], assignment_identity: identity, authority_refs: { planning_assignment: authorities.planning_assignment_ref, structural_proof_receipt: authorities.proof_receipt_ref, mutation_baseline: 'host-resolved:git-or-aw-baseline' }, dispatch_contract: { transport, adapter_authority: 'execution-only', semantic_authority: 'assignment_identity', dispatch_input: 'this exact packet', silent_local_fallback_allowed: false }, return_contract: { required_fields: ['assignment_revision', 'run_id', 'target', 'changed_paths', 'summary', 'stop_conditions_hit', ...(identity.role === 'implementer' ? ['patch'] : [])], result_delivery: { field: 'result_delivery', modes: ['unapplied-patch', 'already-materialized'], default: 'unapplied-patch', already_materialized_requires: ['mutation_baseline'] }, worker_proof_authority: false, worker_completion_authority: false } };
+    effectivePacket.worker_context = assignmentWorkerContext(effectivePacket);
+    const dispatchConfiguration = assignmentDispatchConfiguration(identity, transport);
+    if (transition === 'dispatch' && dispatchConfiguration.kind === 'host-native' && !dispatchConfiguration.command.length) effectivePacket = assignmentSealHostNativePacket(effectivePacket);
     const packetPath = artifact('export/packet.json');
     const promptPath = artifact('export/prompt.md');
     const manifestPath = artifact('export/manifest.json');
     artifactPaths.push(packetPath, promptPath, manifestPath);
     writes.set(packetPath, effectivePacket);
-    const prompt = `You are receiving an Agentic Workspace assignment packet. Do not edit the host checkout. For repo-write assignments, return the proposed unified diff in a patch field. The patch must be a complete git-compatible unified diff beginning with diff --git; generate or verify it with diff tooling so hunk counts are exact, and never use apply_patch markers, ellipses, placeholder @@ markers, or omitted context.\n\n\`\`\`json\n${JSON.stringify(effectivePacket, null, 2)}\n\`\`\``;
+    const prompt = assignmentExportPrompt(effectivePacket);
     writes.set(promptPath, prompt);
-    writes.set(manifestPath, { kind: 'agentic-workspace/assignment-export-manifest/v1', assignment_id: id, assignment_revision: rev, run_id: runId, integrity: assignmentDigest(effectivePacket) });
+    writes.set(manifestPath, { kind: 'agentic-workspace/assignment-export-manifest/v1', assignment_id: id, assignment_revision: rev, run_id: runId, integrity: assignmentText(effectivePacket.packet_integrity) || assignmentDigest(effectivePacket) });
     Object.assign(state, { assignment: effectivePacket, planning_assignment_ref: authorities.planning_assignment_ref, structural_proof_receipt_ref: authorities.proof_receipt_ref, current_state: 'handoff-prepared', run_id: runId, assignment_id: id });
     if (transport !== 'manual' && !failures.length) {
       const dispatch = assignmentDispatch(effectivePacket, prompt, targetRoot, transport);
       const dispatchPath = artifact('dispatch/receipt.json');
       artifactPaths.push(dispatchPath);
       writes.set(dispatchPath, dispatch);
-      if (dispatch.status !== 'returned' || !isObject(dispatch.returned_work) || !Object.keys(dispatch.returned_work).length) failures.push({ reason: dispatch.reason ?? 'automatic-dispatch-failed', field: 'transport', recovery: 'Repair the configured target adapter or use admitted manual transport.' });
+      if (dispatch.status === 'host-execution-required') Object.assign(state, { current_state: 'awaiting-host-execution', host_execution: dispatch.execution_contract });
+      else if (dispatch.status !== 'returned' || !isObject(dispatch.returned_work) || !Object.keys(dispatch.returned_work).length) failures.push({ reason: dispatch.reason ?? 'automatic-dispatch-failed', field: 'transport', recovery: 'Repair the configured target adapter or use admitted manual transport.' });
       else {
         const returned = dispatch.returned_work;
         const requiredReturnFields = ['assignment_revision', 'run_id', 'target', 'changed_paths', 'summary', 'stop_conditions_hit', ...(identity.role === 'implementer' ? ['patch'] : [])];
@@ -2303,11 +2485,12 @@ function assignmentLifecycleApply(values, operationId) {
     }
   } else if (transition === 'import') {
     requireField('run_id');
-    const returned = assignmentParseJson(requireField('return_json'), 'return_json');
+    const returned = assignmentImportReturnValue(values, targetRoot, failures);
     const returnId = assignmentText(values.return_id) || assignmentDigest(returned).replace('sha256:', '').slice(0, 16);
     const assignment = isObject(state.assignment) ? state.assignment : {};
     const identity = isObject(assignment.assignment_identity) ? assignment.assignment_identity : {};
     const requiredReturnFields = ['assignment_revision', 'run_id', 'target', 'changed_paths', 'summary', 'stop_conditions_hit', ...(identity.role === 'implementer' ? ['patch'] : [])];
+    if (isObject(state.host_execution) && state.host_execution.result_delivery_required) requiredReturnFields.push('assignment_id', 'packet_integrity', 'result_delivery');
     const missingReturnFields = requiredReturnFields.filter((field) => !(field in returned));
     if (missingReturnFields.length) failures.push({ reason: 'malformed-return', field: `return_json.${missingReturnFields.join(',')}`, recovery: 'Return every required field from the exported return contract.' });
     if (identity.role === 'implementer' && Array.isArray(returned.changed_paths) && returned.changed_paths.length && !String(returned.patch ?? '').trim()) failures.push({ reason: 'malformed-return', field: 'return_json.patch', recovery: 'Return a non-empty unified diff when an implementer reports changed paths.' });
@@ -2352,17 +2535,35 @@ function assignmentLifecycleApply(values, operationId) {
     if (!admission.admitted) failures.push(...admission.failures);
     if (state.last_admission_status !== 'admitted') failures.push({ reason: 'return-not-admitted', field: 'state.last_admission_status', recovery: 'Run assignment admit with current authority before integration.' });
     const patch = String(returned.patch ?? '');
+    const resultDelivery = isObject(returned.result_delivery) ? returned.result_delivery : {};
+    const deliveryMode = assignmentText(resultDelivery.mode) || 'unapplied-patch';
+    const changedPaths = Array.isArray(returned.changed_paths) ? returned.changed_paths.map(String) : [];
+    const mutationBaseline = assignmentText(resultDelivery.mutation_baseline) || assignmentText(admission.current_authority?.mutation_baseline);
+    const receiptPath = artifact('integration/integration.json');
+    const returnIntegrity = assignmentDigest(returned);
+    let priorIntegration = {};
+    try { if (existsSync(receiptPath)) priorIntegration = readJson(receiptPath); } catch (_error) { priorIntegration = {}; }
+    const replayed = priorIntegration.status === 'integrated' && priorIntegration.run_id === runId && priorIntegration.return_id === returnId && priorIntegration.return_integrity === returnIntegrity;
+    if (priorIntegration.status === 'integrated' && !replayed) failures.push({ reason: 'assignment-integration-replay-mismatch', field: 'integration.receipt', recovery: 'Reconcile or supersede the prior integrated return before integrating different work.' });
+    let materializedDeltaVerified = false;
     if (!failures.length && patch && !Boolean(values.dry_run)) {
       const integrationPatchPath = artifact('integration/returned.patch');
       mkdirSync(dirname(integrationPatchPath), { recursive: true });
-      writeFileSync(integrationPatchPath, patch, 'utf8');
+      writeFileSync(integrationPatchPath, normalizeAssignmentPatchTransport(patch), 'utf8');
       artifactPaths.push(integrationPatchPath);
-      const applied = spawnSync('git', ['apply', '--recount', integrationPatchPath], { cwd: targetRoot, encoding: 'utf8' });
-      if (applied.status !== 0) failures.push({ reason: 'assignment-patch-apply-failed', field: 'returned_work.patch', recovery: 'Repair the returned unified diff against the current mutation baseline and retry integration.' });
+      const alreadyMaterialized = deliveryMode === 'already-materialized';
+      if (!alreadyMaterialized && !replayed) {
+        const applied = spawnSync('git', ['apply', '--recount', integrationPatchPath], { cwd: targetRoot, encoding: 'utf8' });
+        if (applied.status !== 0) failures.push({ reason: 'assignment-patch-apply-failed', field: 'returned_work.patch', recovery: 'Repair the returned unified diff against the current mutation baseline and retry integration.', detail: assignmentText(applied.stderr).slice(-2000) });
+      }
+      if (!failures.length && (alreadyMaterialized || replayed)) {
+        const verification = verifyMaterializedAssignmentDelta(targetRoot, mutationBaseline, integrationPatchPath, changedPaths);
+        materializedDeltaVerified = verification.verified;
+        if (!verification.verified) failures.push({ reason: 'assignment-materialized-delta-mismatch', field: 'returned_work.patch|changed_paths|result_delivery.mutation_baseline', recovery: 'Restore the exact bounded baseline-plus-patch bytes before integrating or replaying this return.', detail: verification.detail });
+      }
     }
-    const receiptPath = artifact('integration/integration.json');
     artifactPaths.push(receiptPath);
-    writes.set(receiptPath, { kind: 'agentic-workspace/assignment-integration-receipt/v1', run_id: runId, status: failures.length ? 'blocked' : 'integrated', admission });
+    writes.set(receiptPath, { kind: 'agentic-workspace/assignment-integration-receipt/v1', run_id: runId, return_id: returnId, status: failures.length ? 'blocked' : 'integrated', admission, integration_disposition: failures.length ? 'blocked' : replayed ? 'already-integrated' : deliveryMode === 'already-materialized' ? 'verified-already-materialized' : 'applied-returned-patch', result_delivery_mode: deliveryMode, changed_paths: changedPaths, mutation_baseline: mutationBaseline, materialized_delta_verified: materializedDeltaVerified, return_integrity: returnIntegrity, patch_integrity: assignmentDigest({ patch }), replayed });
     Object.assign(state, { current_state: failures.length ? 'blocked' : 'integrated' });
   } else if (transition === 'close') {
     requireField('run_id');
@@ -2381,7 +2582,11 @@ function assignmentLifecycleApply(values, operationId) {
     if (!assignmentTaskProofSufficient(taskProof)) failures.push({ reason: 'assignment-task-proof-not-admitted', field: 'task_proof_receipt_ref', recovery: 'Run AW proof for the integrated assignment and supply its admitted passed receipt.' });
     const expectedPaths = new Set(Array.isArray(planning.assignment_gate?.allowed_paths) ? planning.assignment_gate.allowed_paths.map(String) : []);
     const provedPaths = new Set(Array.isArray(taskProof.changed_paths) ? taskProof.changed_paths.map(String) : []);
-    if (!expectedPaths.size || [...expectedPaths].some((path) => !provedPaths.has(path))) failures.push({ reason: 'assignment-proof-scope-mismatch', field: 'task_proof_receipt_ref.changed_paths', recovery: 'Record proof covering every allowed path in the integrated assignment.' });
+    let integrationReceipt = {};
+    try { integrationReceipt = readJson(artifact('integration/integration.json')); } catch (_error) { integrationReceipt = {}; }
+    const integratedPaths = new Set(Array.isArray(integrationReceipt.changed_paths) ? integrationReceipt.changed_paths.map(String) : []);
+    const integrationCurrent = integrationReceipt.kind === 'agentic-workspace/assignment-integration-receipt/v1' && integrationReceipt.status === 'integrated' && assignmentText(integrationReceipt.run_id) === runId;
+    if (!expectedPaths.size || !provedPaths.size || !integrationCurrent || taskProof.proof_subject?.identity_complete !== true || [...provedPaths].some((path) => !assignmentPathAllowed(path, expectedPaths)) || [...integratedPaths].some((path) => !provedPaths.has(path))) failures.push({ reason: 'assignment-proof-scope-mismatch', field: 'task_proof_receipt_ref.changed_paths', recovery: 'Record complete proof for every concrete integrated path within the assignment allowed scope.' });
     const receiptPath = artifact('closeout/close.json');
     artifactPaths.push(receiptPath);
     writes.set(receiptPath, { kind: 'agentic-workspace/assignment-closeout-receipt/v1', run_id: runId, status: failures.length ? 'blocked' : 'closed', task_proof_receipt_ref: taskProofRef });
@@ -2424,7 +2629,13 @@ function assignmentLifecycleApply(values, operationId) {
     assignmentWrite(statePath, state);
     refs.push(relative(targetRoot, statePath).replaceAll('\\\\', '/'));
   }
-  return { kind: 'agentic-workspace/assignment-lifecycle-result/v1', operation_id: operationId, transition, status: failures.length ? 'blocked' : state.current_state, outcome: failures.length ? 'blocked' : Boolean(values.dry_run) ? 'noop' : 'applied', mutation_applied: !failures.length && !Boolean(values.dry_run), target_root: targetRoot, run_id: runId, artifact_refs: refs, state, failures, reason_code: failures[0]?.reason ?? null, recovery_command: failures[0]?.recovery ?? null, message: `assignment ${transition}: ${failures.length ? 'blocked' : state.current_state}`, actions: refs.map((path) => ({ kind: 'write', path })) };
+  const decisionState = { schema_version: 'agentic-workspace/assignment-lifecycle-decision-state/v1', current_state: assignmentText(state.current_state) || 'unknown' };
+  for (const field of ['assignment_id', 'run_id', 'last_return_id', 'last_admission_status']) if (assignmentText(state[field])) decisionState[field] = state[field];
+  if (isObject(state.current_attempt)) decisionState.current_attempt = Object.fromEntries(['run_id', 'target', 'status'].filter((field) => assignmentText(state.current_attempt[field])).map((field) => [field, state.current_attempt[field]]));
+  const outcome = failures.length ? 'blocked' : Boolean(values.dry_run) ? 'noop' : 'applied';
+  const stateRef = existsSync(statePath) || outcome === 'applied' ? relative(targetRoot, statePath).replaceAll('\\\\', '/') : null;
+  const effectiveRevision = assignmentRevision || assignmentText(state.assignment?.assignment_identity?.revision);
+  return { kind: 'agentic-workspace/assignment-lifecycle-result/v1', operation_id: operationId, transition, status: failures.length ? 'blocked' : state.current_state, outcome, mutation_applied: outcome === 'applied', target_root: targetRoot, run_id: runId, assignment_id: assignmentId || assignmentText(state.assignment_id) || null, assignment_revision: effectiveRevision || null, return_id: assignmentText(state.last_return_id) || null, artifact_refs: refs, state_ref: stateRef, state: decisionState, failures, reason_code: failures[0]?.reason ?? null, recovery_command: failures[0]?.recovery ?? null, message: `assignment ${transition}: ${failures.length ? 'blocked' : state.current_state}`, actions: refs.map((path) => ({ kind: 'write', path })) };
 }
 
 function correctionIdentityInit(values, targetRoot, operationId) {

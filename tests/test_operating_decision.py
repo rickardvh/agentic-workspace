@@ -2353,6 +2353,29 @@ routes_from = []
     )
 
 
+def test_repo_pr_review_route_surfaces_existing_recurring_failures_memory() -> None:
+    root = Path(__file__).resolve().parents[1]
+    route_fact = {
+        "kind": "agentic-workspace/semantic-task-route-fact/v1",
+        "status": "current",
+        "posture": "selected",
+        "routes": ["github/pr/review"],
+        "current_work_id": "pr-review-fixture",
+        "source_revision": "sha256:" + "1" * 64,
+        "authority_effect": "applicability-only",
+    }
+    from repo_memory_bootstrap.context_authority_owner import _curate
+
+    selected = _curate(root, task="neutral task wording", paths=[], semantic_route_fact=route_fact)["selected_notes"]
+    anti_trap = next(item for item in selected if item["path"].endswith("mistakes/recurring-failures.md"))
+    assert anti_trap["matched_semantic_routes"] == ["github/pr/review"]
+    assert anti_trap["relevance_evidence"] == "semantic-task-route"
+    assert (
+        _curate(root, task="neutral task wording", paths=[], semantic_route_fact=route_fact)["semantic_task_routes"]["authority_effect"]
+        == "relevance-only"
+    )
+
+
 def test_context_authority_projection_rejects_stale_memory_note_matches(tmp_path: Path) -> None:
     _write_context_authority_sources(tmp_path)
     (tmp_path / ".agentic-workspace/memory/repo/domains").mkdir(parents=True, exist_ok=True)

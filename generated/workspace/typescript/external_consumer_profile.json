@@ -3,7 +3,7 @@
   "authority": "command_package_ir.json",
   "compatibility": {
     "protocol": "1.0.0",
-    "fingerprint": "sha256:2258e39f754279c3e54fc887ce3f6263d0ce45a279890e986fe15d68108602b3",
+    "fingerprint": "sha256:98df9d67b4a69ec4b0d8fa15320182c377fd33dabe419a532bc75664cfe491d2",
     "additive_fields": "allowed"
   },
   "support_rule": "Operations fail closed unless generated status, effects, conformance, and Python/TypeScript target accounting are present.",
@@ -1816,7 +1816,7 @@
       "operation_contract": "src/agentic_workspace/contracts/operations/assignment.import.json",
       "operation_compatibility": {
         "schema_version": "agentic-workspace/operation/v1",
-        "fingerprint": "sha256:20af56d2b995d5dd6bf426cc9a8b52fba6891bbd20e2517732e679d76b00e7d2"
+        "fingerprint": "sha256:9d6f807b14f1f6e13640836d16c7a79f374d5a22d1e56eebf6a595ae3e31d17e"
       },
       "operation_resources": {
         "python": {
@@ -11369,7 +11369,7 @@
       "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.targeted-write.lifecycle.json",
       "operation_compatibility": {
         "schema_version": "agentic-workspace/operation/v1",
-        "fingerprint": "sha256:5bffc9abdc647a7dd9a131b317f80f8a64e246951062362c4d92559eca56ff13"
+        "fingerprint": "sha256:4e8dab85d3c9e118a44c1069ec32369a17b9354c69ee1c6668c035491507feee"
       },
       "operation_resources": {
         "python": {
@@ -11418,6 +11418,16 @@
           {
             "owner": "planning-bootstrap",
             "scope": "targeted execplan patch validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "planning.targeted-write.lifecycle.preview.process",
+              "planning.targeted-write.lifecycle.apply-preflight-refusal.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "planning-bootstrap",
+            "scope": "completed-run truth correction and linked proposal currentness",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
               "planning.targeted-write.lifecycle.preview.process",

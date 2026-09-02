@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Project canonical closed-assignment lineage onto final proof without treating lifecycle proof as a second task-behavior proof."
+issues = [2956]

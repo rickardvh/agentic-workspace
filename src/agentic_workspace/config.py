@@ -178,6 +178,20 @@ SUPPORTED_DELEGATION_TARGET_COST_CLASSES = (
     "premium",
     "unknown",
 )
+SUPPORTED_CURRENT_ECONOMIC_EVIDENCE_STATUSES = (
+    "available",
+    "unavailable",
+    "exhausted",
+    "contradictory",
+    "unknown",
+)
+SUPPORTED_CURRENT_MARGINAL_COST_CLASSES = (
+    "near-zero",
+    "lower",
+    "equivalent",
+    "higher",
+    "unknown",
+)
 SUPPORTED_DELEGATION_TARGET_LATENCY_CLASSES = (
     "fast",
     "standard",
@@ -403,6 +417,7 @@ class DelegationTargetProfile:
     context_capacity: str
     reasoning_profile: str
     cost_class: str
+    current_economic_evidence: dict[str, Any] | None
     latency_class: str
     safe_task_classes: tuple[str, ...]
     forbidden_task_classes: tuple[str, ...]
@@ -1909,6 +1924,45 @@ def resolve_effective_agent_instructions_file(*, target_root: Path, configured: 
     return DEFAULT_AGENT_INSTRUCTIONS_FILE, "product-default", detected
 
 
+def normalize_current_economic_evidence(raw: Any, *, config_path: Path) -> dict[str, Any] | None:
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        raise WorkspaceUsageError(f"{config_path.as_posix()} must be a table.")
+    supported = {"status", "marginal_cost", "resource_domain", "source", "observed_at", "expires_at"}
+    unknown = sorted(set(raw) - supported)
+    if unknown:
+        raise WorkspaceUsageError(f"{config_path.as_posix()} contains unsupported field(s): {', '.join(unknown)}.")
+    status = require_optional_enum(
+        payload=raw,
+        key="status",
+        config_path=config_path,
+        allowed=SUPPORTED_CURRENT_ECONOMIC_EVIDENCE_STATUSES,
+        default="unknown",
+    )
+    marginal_cost = require_optional_enum(
+        payload=raw,
+        key="marginal_cost",
+        config_path=config_path,
+        allowed=SUPPORTED_CURRENT_MARGINAL_COST_CLASSES,
+        default="unknown",
+    )
+    source = require_optional_string(payload=raw, key="source", config_path=config_path)
+    observed_at = require_optional_string(payload=raw, key="observed_at", config_path=config_path)
+    expires_at = require_optional_string(payload=raw, key="expires_at", config_path=config_path)
+    resource_domain = require_optional_string(payload=raw, key="resource_domain", config_path=config_path)
+    if status == "available" and not all((source, observed_at, expires_at)):
+        raise WorkspaceUsageError(f"{config_path.as_posix()} available evidence requires source, observed_at, and expires_at.")
+    return {
+        "status": status,
+        "marginal_cost": marginal_cost,
+        "resource_domain": resource_domain,
+        "source": source,
+        "observed_at": observed_at,
+        "expires_at": expires_at,
+    }
+
+
 def load_delegation_target_profiles(
     *, raw_targets: dict[str, Any], config_path: Path
 ) -> tuple[tuple[DelegationTargetProfile, ...], list[str]]:
@@ -1941,6 +1995,7 @@ def load_delegation_target_profiles(
             "context_capacity",
             "reasoning_profile",
             "cost_class",
+            "current_economic_evidence",
             "latency_class",
             "safe_task_classes",
             "forbidden_task_classes",
@@ -2179,6 +2234,10 @@ def load_delegation_target_profiles(
                     config_path=target_path,
                     allowed=SUPPORTED_DELEGATION_TARGET_COST_CLASSES,
                     default="unknown",
+                ),
+                current_economic_evidence=normalize_current_economic_evidence(
+                    raw_profile.get("current_economic_evidence"),
+                    config_path=Path(f"{target_path.as_posix()} current_economic_evidence"),
                 ),
                 latency_class=require_optional_enum(
                     payload=raw_profile,

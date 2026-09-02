@@ -56,6 +56,7 @@ FRICTION_CANDIDATE_LIMIT = 10
 DEFAULT_ANALYSIS_PAGE_SIZE = 25
 MAX_ANALYSIS_PAGE_SIZE = 100
 DEFAULT_ANALYSIS_SERIALIZATION_BUDGET_BYTES = 64 * 1024
+MAX_SESSION_PARENT_COMMAND_BYTES = 8 * 1024
 ATOMIC_REPLACE_RETRY_SECONDS = 1.0
 SESSION_LOG_NON_AUTHORITATIVE_FOR = ("Planning", "Memory", "current owner", "proof", "closeout")
 SESSION_LOG_LOCAL_BOUNDARY = {
@@ -309,8 +310,9 @@ def run_with_session_logging(
 
 @contextlib.contextmanager
 def _session_parent_environment(argv: Sequence[str]) -> Iterator[None]:
+    parent_command = _session_parent_command(argv)
     updates = {
-        "AW_SESSION_LOG_PARENT_COMMAND": "agentic-workspace " + shlex.join(list(argv)),
+        "AW_SESSION_LOG_PARENT_COMMAND": parent_command,
         "AW_SESSION_LOG_PARENT_CONTEXT": os.environ.get("PYTEST_CURRENT_TEST", "") or "aw-command",
     }
     previous = {key: os.environ.get(key) for key in updates}
@@ -323,6 +325,16 @@ def _session_parent_environment(argv: Sequence[str]) -> Iterator[None]:
                 os.environ.pop(key, None)
             else:
                 os.environ[key] = value
+
+
+def _session_parent_command(argv: Sequence[str]) -> str:
+    rendered = "agentic-workspace " + shlex.join(list(argv))
+    encoded = rendered.encode("utf-8")
+    if len(encoded) <= MAX_SESSION_PARENT_COMMAND_BYTES:
+        return rendered
+    command_identity = [value for value in list(argv)[:2] if len(value) <= 64 and re.fullmatch(r"[A-Za-z0-9._-]+", value)]
+    identity = " ".join(("agentic-workspace", *command_identity))
+    return f"{identity} [oversized arguments omitted; utf8_bytes={len(encoded)}; sha256:{hashlib.sha256(encoded).hexdigest()}]"
 
 
 def _entry_parent_context(argv: Sequence[str]) -> dict[str, str]:
