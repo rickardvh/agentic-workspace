@@ -1909,6 +1909,25 @@ def _assignment_full_state(target: Path, result: dict[str, object]) -> dict[str,
     return json.loads((target / state_ref).read_text(encoding="utf-8"))
 
 
+def _recursive_field_count(value: object) -> int:
+    if isinstance(value, dict):
+        return len(value) + sum(_recursive_field_count(item) for item in value.values())
+    if isinstance(value, list):
+        return sum(_recursive_field_count(item) for item in value)
+    return 0
+
+
+def _assignment_output_measurements(value: object) -> dict[str, int]:
+    encoded = json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode()
+    rendered = json.dumps(value, ensure_ascii=False, indent=2)
+    return {
+        "json_bytes": len(encoded),
+        "recursive_fields": _recursive_field_count(value),
+        "estimated_tokens": (len(encoded) + 3) // 4,
+        "json_lines": len(rendered.splitlines()),
+    }
+
+
 @pytest.mark.parametrize("runtime", ["python", "typescript"])
 def test_host_native_export_projects_bound_return_identity_and_selected_delivery(tmp_path: Path, runtime: str) -> None:
     run_id = f"run-export-{runtime}"
@@ -2280,6 +2299,7 @@ def test_assignment_import_large_return_file_through_session_logged_cli(tmp_path
 
 def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_path: Path) -> None:
     from agentic_workspace import workspace_runtime_core
+    from agentic_workspace.contracts.python_primitive_support import _emit_output
 
     (tmp_path / ".agentic-workspace").mkdir()
     (tmp_path / ".agentic-workspace/config.toml").write_text(
@@ -2365,6 +2385,17 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
         encoding="utf-8",
     )
     export = assignment_export(
+        {
+            "assignment_id": "assign-1",
+            "assignment_revision": identity["revision"],
+            "target_name": "planner",
+            "run_id": "run-1",
+        },
+        target=tmp_path,
+        invocation=invocation,
+    )
+    exported_artifact_bytes = {ref: (tmp_path / ref).read_bytes() for ref in export["artifact_refs"] if not ref.endswith("state.json")}
+    export_replay = assignment_export(
         {
             "assignment_id": "assign-1",
             "assignment_revision": identity["revision"],
@@ -2517,7 +2548,6 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
     typescript_wrong_payload = json.loads(typescript_wrong_close.stdout)
     assert typescript_wrong_payload["status"] == "blocked"
     assert typescript_wrong_payload["state"]["schema_version"] == "agentic-workspace/assignment-lifecycle-decision-state/v1"
-    assert len(json.dumps(typescript_wrong_payload, separators=(",", ":")).encode()) <= 4_000
     wrong_proof_close = assignment_close(
         {"run_id": "run-1", "task_proof_receipt_ref": wrong_task_proof_ref},
         target=tmp_path,
@@ -2530,6 +2560,7 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
         invocation=invocation,
     )
     assert closed["status"] == "closed"
+    closed_full_state = _assignment_full_state(tmp_path, closed)
     reopened_assignment = json.loads((assignment_dir / "assign-1.assignment.json").read_text(encoding="utf-8"))
     reopened_assignment["status"] = "current"
     reopened_assignment["current_attempt"]["status"] = "integrated"
@@ -2573,7 +2604,6 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
     typescript_closed_payload = json.loads(typescript_closed.stdout)
     assert typescript_closed_payload["status"] == "closed"
     assert typescript_closed_payload["state"]["schema_version"] == "agentic-workspace/assignment-lifecycle-decision-state/v1"
-    assert len(json.dumps(typescript_closed_payload, separators=(",", ":")).encode()) <= 4_000
     override = assignment_override(
         {"assignment_id": "assign-1", "reason": "maintainer approved", "scope": "src/feature.py", "expires_at": "2026-07-23T00:00:00Z"},
         target=tmp_path,
@@ -2581,6 +2611,10 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
     )
 
     assert export["status"] == "handoff-prepared"
+    assert export_replay["status"] == "handoff-prepared"
+    assert {
+        ref: (tmp_path / ref).read_bytes() for ref in export_replay["artifact_refs"] if not ref.endswith("state.json")
+    } == exported_artifact_bytes
     assert malformed["status"] == "blocked"
     assert malformed["reason_code"] == "malformed-return"
     assert missing_patch["status"] == "blocked"
@@ -2624,10 +2658,38 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
         "current_attempt",
     }
     assert "current_authorities" not in export["state"]
-    for result in (export, malformed, missing_patch, imported, premature_close, blocked, admitted, integrated, closed, override):
-        encoded = json.dumps(result, separators=(",", ":")).encode()
-        assert len(encoded) <= 4_000
-        assert (len(encoded) + 3) // 4 <= 1_000
+    lifecycle_results = (
+        export,
+        export_replay,
+        malformed,
+        missing_patch,
+        imported,
+        premature_close,
+        blocked,
+        admitted,
+        integrated,
+        closed,
+        override,
+    )
+    for result in (*lifecycle_results, typescript_wrong_payload, typescript_closed_payload):
+        measurements = _assignment_output_measurements(result)
+        assert measurements["json_bytes"] <= 4_000
+        assert measurements["recursive_fields"] <= 90
+        assert measurements["estimated_tokens"] <= 1_000
+
+    full_state = closed_full_state
+    full_measurements = _assignment_output_measurements(full_state)
+    compact_measurements = _assignment_output_measurements(closed)
+    for dimension in ("json_bytes", "recursive_fields", "estimated_tokens", "json_lines"):
+        assert compact_measurements[dimension] < full_measurements[dimension]
+    assert full_state["assignment_id"] == closed["assignment_id"]
+    assert full_state["current_state"] == closed["state"]["current_state"]
+
+    human_export = _emit_output(
+        values={"result": export, "format": "text", "operation_id": "assignment.export"},
+        arguments={},
+    )
+    assert len([line for line in human_export.splitlines() if line.strip()]) <= 60
     assert "Copy every value in `return_contract.required_identity` exactly" not in prompt
     assert "Return every field named by `return_contract.required_fields`" in prompt
 

@@ -63,6 +63,16 @@ side effect of adding another default field. Ordinary `init` JSON uses a
 route for module reports, config, effects, provenance, and the full lifecycle
 plan.
 
+The maintained seeded close-transition fixture records this representative
+full-state/default-result comparison. The test recomputes every dimension and
+requires the compact result to remain smaller as well as within the declared
+profile budget.
+
+| Assignment close subject | JSON bytes | Recursive fields | Estimated tokens | Pretty JSON lines |
+| --- | ---: | ---: | ---: | ---: |
+| Full state via `state_ref` | 10,505 | 245 | 2,627 | 388 |
+| Ordinary compact result | 1,344 | 31 | 336 | 45 |
+
 ## Progress Without Log Noise
 
 Compact validation commands buffer successful child output, but emit a
