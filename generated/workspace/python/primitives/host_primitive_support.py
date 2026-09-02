@@ -1358,9 +1358,7 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             proved_paths = set(_assignment_list(task_proof.get("changed_paths")))
             proof_subject = _assignment_mapping(task_proof.get("proof_subject"))
             try:
-                integration_receipt = _assignment_mapping(
-                    json.loads(artifact("integration/integration.json").read_text(encoding="utf-8"))
-                )
+                integration_receipt = _assignment_mapping(json.loads(artifact("integration/integration.json").read_text(encoding="utf-8")))
             except (OSError, json.JSONDecodeError):
                 integration_receipt = {}
             integrated_paths = set(_assignment_list(integration_receipt.get("changed_paths")))
@@ -2199,9 +2197,12 @@ def _write_assignment_artifact(*, path: Path, payload: Any) -> None:
 def _assignment_export_prompt(packet: Any) -> str:
     packet_mapping = _assignment_mapping(packet)
     worker_context = _assignment_mapping(packet_mapping.get("worker_context")) or _assignment_worker_context(packet_mapping)
-    delivery_mode = _optional_text(
-        _assignment_mapping(_assignment_mapping(worker_context.get("return_contract")).get("result_delivery")).get("default")
-    ) or "unapplied-patch"
+    delivery_mode = (
+        _optional_text(
+            _assignment_mapping(_assignment_mapping(worker_context.get("return_contract")).get("result_delivery")).get("default")
+        )
+        or "unapplied-patch"
+    )
     delivery_instruction = (
         "The selected result delivery mode is `already-materialized`: edit only the assigned shared worktree paths, and return the exact baseline-relative unified diff plus its sealed mutation baseline."
         if delivery_mode == "already-materialized"
@@ -2363,7 +2364,11 @@ def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, targe
         host_return_contract = dict(_assignment_mapping(packet.get("return_contract")))
         packet_integrity = _optional_text(packet.get("packet_integrity"))
         required_identity = _assignment_mapping(host_return_contract.get("required_identity"))
-        if not packet_integrity or packet_integrity != _assignment_packet_integrity(packet) or required_identity.get("packet_integrity") != packet_integrity:
+        if (
+            not packet_integrity
+            or packet_integrity != _assignment_packet_integrity(packet)
+            or required_identity.get("packet_integrity") != packet_integrity
+        ):
             return {
                 "kind": "agentic-workspace/assignment-dispatch-receipt/v1",
                 "status": "blocked",
