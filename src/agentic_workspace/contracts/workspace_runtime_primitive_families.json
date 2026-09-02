@@ -669,6 +669,18 @@
         "exclusion_rule": "Do not add proof packet assembly, closeout report layout, or final completion decisions here; those belong in workspace_runtime_proof.py."
       },
       {
+        "id": "assignment-bound-entry-authority",
+        "title": "Assignment-bound worker entry authority",
+        "allowed_owner_modules": [
+          "src/agentic_workspace/workspace_runtime_startup.py"
+        ],
+        "source_symbols": [
+          "_delegated_worker_kernel_payload"
+        ],
+        "core_role": "Shared core exposes the canonical current assignment/run worker kernel so generic startup can validate launch identity and collapse to bounded worker authority.",
+        "exclusion_rule": "Do not select targets, widen assignment scope, or construct coordinator Planning context from this helper; startup may only project the current kernel or exact lifecycle recovery."
+      },
+      {
         "id": "runtime-data-normalization-and-dedupe",
         "title": "Runtime data normalization and small predicates",
         "allowed_owner_modules": [

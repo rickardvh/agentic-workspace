@@ -1437,6 +1437,13 @@ owner = "workspace-cli-runtime"
     assert apply_payload["apply_receipt"]["candidate_route_commands"] == delta["lane"]["commands"]
     assert apply_payload["apply_receipt"]["candidate_route_status"] == "passed"
     assert apply_payload["apply_receipt"]["candidate_route_commands_complete"] is True
+    assert apply_payload["next_current_continuation"] == {
+        "kind": "agentic-workspace/action-result-continuation/v1",
+        "status": "re-resolution-required",
+        "owner": "proof-route",
+        "action": "rerun-current-proof-route",
+        "reason": "repair changed or confirmed proof-route inputs; current proof authority must be resolved again",
+    }
     post_authority_revision = apply_payload["post_authority_revision"]
 
     assert (

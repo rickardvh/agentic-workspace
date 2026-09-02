@@ -16,6 +16,7 @@ Result emitted by public assignment lifecycle operations, including transition s
 | `assignment_revision` | string \| null | no |  | Current assignment identity revision when one is resolved. |  |  |
 | `kind` | const `"agentic-workspace/assignment-lifecycle-result/v1"` | yes |  | Versioned result envelope discriminator for assignment lifecycle operations. |  |  |
 | `mutation_applied` | boolean | yes |  | Whether the operation applied a local lifecycle state mutation. |  |  |
+| `next_current_continuation` | object | no |  | Derived next current action, bounded recovery, or re-resolution disposition. This is a projection of canonical owners, not durable workflow state. |  |  |
 | `operation_id` | string | yes |  | Public operation id that produced this lifecycle result. |  |  |
 | `outcome` | enum `"applied"`, `"noop"`, `"blocked"`, `"failed"` | yes |  | High-level result category for automation and closeout proof. |  |  |
 | `reason_code` | string \| null | no |  | Machine-readable reason for blocked, failed, or no-op outcomes when available. |  |  |

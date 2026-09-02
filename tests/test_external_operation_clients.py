@@ -2412,6 +2412,7 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
     json_result = json.loads(public_json.stdout)
     assert json_result["operation_id"] == "assignment.export"
     assert json_result["assignment_revision"] == identity["revision"]
+    assert json_result["next_current_continuation"]["operation_invocation"]["operation_id"] == "assignment.dispatch"
     assert json_result["message"] in public_text.stdout
     assert "KeyError" not in public_text.stderr
     assert len([line for line in public_text.stdout.splitlines() if line.strip()]) <= 60
@@ -2426,6 +2427,7 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
         target=tmp_path,
         invocation=invocation,
     )
+    assert export["next_current_continuation"]["operation_invocation"]["operation_id"] == "assignment.dispatch"
     exported_artifact_bytes = {ref: (tmp_path / ref).read_bytes() for ref in export["artifact_refs"] if not ref.endswith("state.json")}
     export_replay = assignment_export(
         {

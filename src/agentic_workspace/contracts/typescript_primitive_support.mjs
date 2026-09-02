@@ -2380,6 +2380,42 @@ function assignmentDispatch(packet, prompt, targetRoot, transport) {
   return { kind: 'agentic-workspace/assignment-dispatch-receipt/v1', status: Object.keys(returned).length ? 'returned' : 'blocked', reason: Object.keys(returned).length ? 'worker-returned-untrusted-evidence' : 'target-adapter-return-invalid', transport, adapter_kind: adapterKind, adapter_revision: assignmentDigest({ kind: adapterKind, command: commandTemplate, output_mode: outputMode, timeout_seconds: timeoutSeconds }), model: adapter.model ?? null, exit_code: result.status, returned_work: returned, claim_boundary: 'transport-only; return still requires AW admission, integration, proof, and closeout' };
 }
 
+function assignmentResultContinuation(result) {
+  if (['blocked', 'failed'].includes(String(result.outcome ?? ''))) {
+    return { kind: 'agentic-workspace/action-result-continuation/v1', status: 'blocked', owner: 'assignment-lifecycle', reason_code: result.reason_code ?? null, recovery: result.recovery_command ?? null };
+  }
+  const transitions = {
+    'handoff-prepared': ['assignment.dispatch', 'execute-current-assignment', 'awaiting-host-execution'],
+    'awaiting-host-execution': ['assignment.import', 'await-structured-return', 'awaiting-admission'],
+    'awaiting-admission': ['assignment.admit', 'admit-current-return', 'admitted'],
+    admitted: ['assignment.integrate', 'integrate-admitted-return', 'integrated'],
+    integrated: ['proof.report', 'run-current-proof-route', 'proof-recorded'],
+  };
+  const transition = transitions[String(result.status ?? '')];
+  if (transition) {
+    const [nextOperation, action, expectedTransition] = transition;
+    return {
+      kind: 'agentic-workspace/action-result-continuation/v1',
+      status: 'actionable',
+      owner: nextOperation.startsWith('proof.') ? 'proof-route' : 'assignment-lifecycle',
+      action,
+      operation_invocation: {
+        kind: 'agentic-workspace/operation-invocation/v1',
+        operation_id: nextOperation,
+        arguments: { assignment_id: result.assignment_id, assignment_revision: result.assignment_revision, run_id: result.run_id },
+        authority_class: 'canonical-assignment-and-planning-owner',
+        expected_transition: expectedTransition,
+        owner_context_revision: { assignment_revision: result.assignment_revision, run_id: result.run_id },
+        stale_action_rejection: { status: 'reject-on-input-revision-mismatch', repair: 'Refresh the operating decision before executing this typed action.' },
+      },
+    };
+  }
+  if (['closed', 'archived'].includes(String(result.status ?? ''))) {
+    return { kind: 'agentic-workspace/action-result-continuation/v1', status: 're-resolution-required', owner: 'operating-decision', action: 'derive-current-planning-frontier', reason: 'assignment lifecycle is terminal; the next slice must be re-derived from current Planning authority' };
+  }
+  return { kind: 'agentic-workspace/action-result-continuation/v1', status: 'terminal-or-unknown', owner: 'assignment-lifecycle', action: null };
+}
+
 function assignmentLifecycleApply(values, operationId) {
   const transition = assignmentText(values.assignment_command) || String(operationId).split('.').at(-1);
   const targetRoot = resolve(String(values.target_root ?? values.target ?? '.'));
@@ -2614,7 +2650,9 @@ function assignmentLifecycleApply(values, operationId) {
   const outcome = failures.length ? 'blocked' : Boolean(values.dry_run) ? 'noop' : 'applied';
   const stateRef = existsSync(statePath) || outcome === 'applied' ? relative(targetRoot, statePath).replaceAll('\\\\', '/') : null;
   const effectiveRevision = assignmentRevision || assignmentText(state.assignment?.assignment_identity?.revision);
-  return { kind: 'agentic-workspace/assignment-lifecycle-result/v1', operation_id: operationId, transition, status: failures.length ? 'blocked' : state.current_state, outcome, mutation_applied: outcome === 'applied', target_root: targetRoot, run_id: runId, assignment_id: assignmentId || assignmentText(state.assignment_id) || null, assignment_revision: effectiveRevision || null, return_id: assignmentText(state.last_return_id) || null, artifact_refs: refs, state_ref: stateRef, state: decisionState, failures, reason_code: failures[0]?.reason ?? null, recovery_command: failures[0]?.recovery ?? null, message: `assignment ${transition}: ${failures.length ? 'blocked' : state.current_state}`, actions: refs.map((path) => ({ kind: 'write', path })) };
+  const result = { kind: 'agentic-workspace/assignment-lifecycle-result/v1', operation_id: operationId, transition, status: failures.length ? 'blocked' : state.current_state, outcome, mutation_applied: outcome === 'applied', target_root: targetRoot, run_id: runId, assignment_id: assignmentId || assignmentText(state.assignment_id) || null, assignment_revision: effectiveRevision || null, return_id: assignmentText(state.last_return_id) || null, artifact_refs: refs, state_ref: stateRef, state: decisionState, failures, reason_code: failures[0]?.reason ?? null, recovery_command: failures[0]?.recovery ?? null, message: `assignment ${transition}: ${failures.length ? 'blocked' : state.current_state}`, actions: refs.map((path) => ({ kind: 'write', path })) };
+  result.next_current_continuation = assignmentResultContinuation(result);
+  return result;
 }
 
 function correctionIdentityInit(values, targetRoot, operationId) {

@@ -1459,7 +1459,7 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
     effective_assignment_revision = assignment_revision or _optional_text(
         _assignment_mapping(_assignment_mapping(state.get("assignment")).get("assignment_identity")).get("revision")
     )
-    return {
+    result = {
         "kind": "agentic-workspace/assignment-lifecycle-result/v1",
         "operation_id": operation_id,
         "transition": transition,
@@ -1480,6 +1480,10 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
         "message": f"assignment {transition}: {status}",
         "actions": [{"kind": "write", "path": ref} for ref in artifact_refs],
     }
+    from agentic_workspace.orchestration import reconcile_action_result
+
+    result["next_current_continuation"] = reconcile_action_result(result=result)
+    return result
 
 
 def _assignment_current_authorities_from_store(

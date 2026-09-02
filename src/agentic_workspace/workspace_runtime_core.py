@@ -54170,6 +54170,7 @@ def _emit_proof(
         _emit_payload(payload=payload, format_name=format_name)
         return exit_status
     if route_repair_mode:
+        from agentic_workspace.orchestration import reconcile_action_result
         from agentic_workspace.workspace_runtime_proof import _proof_route_repair_operation_payload
 
         payload = _proof_route_repair_operation_payload(
@@ -54185,6 +54186,7 @@ def _emit_proof(
             idempotency_key=route_repair_idempotency_key,
             dry_run=dry_run,
         )
+        payload["next_current_continuation"] = reconcile_action_result(result=payload)
         if select:
             payload = _select_payload_fields(payload, select=select, source_command="proof")
         if format_name == "json":
@@ -61551,14 +61553,40 @@ def _record_trusted_assignment_outcome_from_ordinary_boundary(
     handoff_sufficiency: str = "sufficient",
     review_burden: str = "normal",
     escalation_required: bool = False,
+    responsibility_evidence: dict[str, Any] | None = None,
     dry_run: bool = False,
 ) -> dict[str, Any]:
+    from agentic_workspace.orchestration import attribute_orchestration_outcome
+
     assignment_context = _trusted_producer_assignment_context(target_root=target_root)
     target_context = _as_dict(assignment_context.get("target_context"))
     if not target_context:
         return assignment_context
     if producer_class not in _TRUSTED_PRODUCER_RECEIPT_KIND_BY_CLASS:
         raise WorkspaceUsageError("trusted producer receipt producer is not authorized for ordinary assignment calibration.")
+    attribution_input = {
+        "admitted": True,
+        "target_executed": True,
+        "context_sufficient": True,
+        "transport_sufficient": True,
+        "worker_succeeded": outcome == "success",
+        "assignment_id": target_context.get("assignment_id"),
+        "assignment_revision": target_context.get("assignment_revision"),
+        "run_id": target_context.get("run_id"),
+        "target": target_context.get("delegation_target"),
+        "task_class": target_context.get("task_class"),
+        **dict(responsibility_evidence or {}),
+    }
+    attribution = attribute_orchestration_outcome(evidence=attribution_input)
+    if not _as_dict(attribution.get("routing_effect")).get("target_evidence_allowed"):
+        return {
+            "status": "routed-to-responsible-owner",
+            "producer_class": producer_class,
+            "target_context": target_context,
+            "attribution": attribution,
+            "recorded_target_evidence": False,
+            "rule": "Only admitted target-execution outcomes can update contextual target suitability.",
+        }
     stable_key = (
         idempotency_key.strip()
         or hashlib.sha256(
@@ -61607,6 +61635,7 @@ def _record_trusted_assignment_outcome_from_ordinary_boundary(
                 "rule": assignment_context["rule"],
             },
             "source_payload": source_payload,
+            "responsibility_attribution": attribution,
             "idempotency_key": stable_key,
         },
     )
@@ -61650,6 +61679,7 @@ def _record_trusted_assignment_outcome_from_ordinary_boundary(
         "source_ref": source_ref,
         "target_context": target_context,
         "record": record["recorded"],
+        "attribution": attribution,
         "rule": "Ordinary owner boundary wrote and resolved an indexed trusted producer receipt before admitting evidence.",
     }
 
