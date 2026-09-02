@@ -108,6 +108,14 @@ The all-open controller fetches and verifies the reviewed SHA before fresh execu
 
 For `merge-ready`, the controller records readiness and stops. It never invokes `gh pr merge` or changes ready/draft state; the human retains merge authority.
 
+When the maintainer chooses to merge that exact reviewed head, use the repository-owned guarded merge operation:
+
+```powershell
+uv run python tools/review_stack_ops.py --merge-pr 123 --reviewed-head <full-sha> --merge-method merge --receipt merge-receipt.json
+```
+
+The operation consumes the existing successful `Review approval` check and current CI; it does not create review authority. Standalone PRs keep the ordinary `gh pr merge --match-head-commit` transport. A GitHub stack, or an ordinary transport refusal requiring asynchronous merge, uses GitHub's `merge-async` endpoint with the same head and merge method. Accepted or pending responses are not completion: the operation polls the request and then observes the PR in terminal merged state before returning success. A changed head, failed check, rejection, failure, or timeout leaves descendant branches untouched and records one exact failure in the receipt.
+
 After a successful blocked-review continuation records a new handoff head, the same bounded watcher keeps running and polls that head. It exits only on merge-ready, recovery, explicit stop/cleanup, or the configured poll limit; no manual watcher restart is needed between review cycles.
 The watcher may also be started while an exact-session resume is already in progress. It waits for that resume's explicit handoff instead of treating the transient `resume-in-progress` state as terminal.
 Explicit `--existing-only` continuation handoffs preserve the loop's configured cycle and repeated-blocker limits. Change those limits only with a new maintainer opt-in handoff.
