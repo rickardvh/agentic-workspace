@@ -6,6 +6,7 @@ import copy
 import fnmatch
 import hashlib
 import json
+import shlex
 import subprocess
 from pathlib import Path
 from typing import Any, Callable
@@ -1614,6 +1615,118 @@ def maintenance_decision_action(decision: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def bounded_adaptation_action(
+    projection: dict[str, Any], *, target_root: str = "", improvement_latitude: str = "conservative"
+) -> dict[str, Any]:
+    """Compile one current low-risk proof-route refinement into a typed action."""
+
+    if improvement_latitude != "proactive":
+        return {}
+    candidate = next(
+        (
+            item
+            for item in (_as_dict(raw) for raw in _as_list(projection.get("candidates")))
+            if item.get("status") == "promotion-ready" and item.get("owner_class") == "proof-route"
+        ),
+        {},
+    )
+    authority = _as_dict(candidate.get("authority_requirement"))
+    operation_inputs = _as_dict(candidate.get("operation_inputs"))
+    proposed_delta = _as_dict(candidate.get("proposed_delta"))
+    required = {
+        "operation_id": str(authority.get("operation_id") or ""),
+        "expected_revision": str(authority.get("expected_owner_revision") or ""),
+        "finding_id": str(operation_inputs.get("finding_id") or ""),
+        "authority_path": str(operation_inputs.get("authority_path") or candidate.get("source_owner") or ""),
+        "field_selector": str(operation_inputs.get("field_selector") or ""),
+        "idempotency_key": str(operation_inputs.get("idempotency_key") or ""),
+    }
+    changed_paths = [str(path) for path in _as_list(operation_inputs.get("changed_paths")) if str(path)]
+    if (
+        not candidate
+        or required["operation_id"] != "proof.report"
+        or any(not value for value in required.values())
+        or not proposed_delta
+        or not changed_paths
+        or _as_dict(candidate.get("simulation_result")).get("status") != "passed"
+    ):
+        return {}
+
+    arguments = {
+        "target": target_root or ".",
+        "changed": changed_paths,
+        "route_repair_mode": "apply",
+        "route_repair_finding_id": required["finding_id"],
+        "route_repair_authority_path": required["authority_path"],
+        "route_repair_field_selector": required["field_selector"],
+        "route_repair_expected_revision": required["expected_revision"],
+        "route_repair_delta_json": json.dumps(proposed_delta, sort_keys=True),
+        "route_repair_disposition": str(operation_inputs.get("disposition") or "fixed"),
+        "route_repair_idempotency_key": required["idempotency_key"],
+        "format": "json",
+    }
+    command = shlex.join(
+        [
+            "agentic-workspace",
+            "proof",
+            "--target",
+            arguments["target"],
+            *[token for path in changed_paths for token in ("--changed", path)],
+            "--route-repair-mode",
+            "apply",
+            "--route-repair-finding-id",
+            required["finding_id"],
+            "--route-repair-authority-path",
+            required["authority_path"],
+            "--route-repair-field-selector",
+            required["field_selector"],
+            "--route-repair-expected-revision",
+            required["expected_revision"],
+            "--route-repair-delta-json",
+            arguments["route_repair_delta_json"],
+            "--route-repair-disposition",
+            arguments["route_repair_disposition"],
+            "--route-repair-idempotency-key",
+            required["idempotency_key"],
+            "--format",
+            "json",
+        ]
+    )
+    invocation = operation_invocation(
+        operation_id="proof.report",
+        arguments=arguments,
+        effect_class="bounded-repository-config-mutation",
+        authority_class="repo-proof-route-authority",
+        expected_transition="canonical proof route refined and independently validated",
+        claim_effect="proof claims remain blocked until the guarded repair validates",
+        command_rendering=command,
+        preconditions={
+            "candidate_id": str(candidate.get("id") or ""),
+            "simulation_status": "passed",
+            "expected_owner_revision": required["expected_revision"],
+        },
+        owner_context_revision={
+            "owner_id": required["authority_path"],
+            "owner_revision": required["expected_revision"],
+        },
+        mutation_boundary={
+            "writes_repo_state": True,
+            "allowed_surfaces": [required["authority_path"]],
+            "rollback_on_validation_failure": True,
+        },
+        proof_requirements=[str(item) for item in _as_list(candidate.get("validation_route")) if str(item)],
+    )
+    return {
+        "action": "apply-proof-route-refinement",
+        "summary": "Apply the current evidence-backed proof-route refinement through the guarded canonical owner operation.",
+        "candidate_id": str(candidate.get("id") or ""),
+        "operation_invocation": invocation,
+        "command": command,
+        "implementation_allowed": False,
+        "claim_boundary": invocation["claim_effect"],
+    }
+
+
 def _surface_gap_class(surface: dict[str, Any]) -> str:
     requirement_status = str(surface.get("requirement_status") or "").strip()
     population_status = str(surface.get("population_status") or "").strip()
@@ -2621,6 +2734,7 @@ def compile_projection_surface_operating_decision(
         for finding in _as_list(_as_dict(proof_route_maintenance.get("route_health")).get("findings"))
         if isinstance(finding, dict) and (signal := _as_dict(finding.get("bounded_adaptation_signal")))
     ]
+    operating_authorities = _as_dict(payload.get("operating_authorities")) or _as_dict(payload_context.get("operating_authorities"))
     repo_evidence_strategy = _as_dict(payload.get("repo_evidence_strategy")) or _as_dict(payload_context.get("repo_evidence_strategy"))
     improvement_candidate = next(
         (
@@ -2668,6 +2782,7 @@ def compile_projection_surface_operating_decision(
                 item for item in _as_list(improvement_intake.get("improvement_signal_candidates")) if isinstance(item, dict)
             ]
             + proof_route_adaptation_signals,
+            "authorities": operating_authorities,
             "repo_evidence_strategy": repo_evidence_strategy,
             "coverage_observations": [
                 item
@@ -3681,8 +3796,18 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
     authorities = _as_dict(inputs.get("authorities"))
     actionability = _as_dict(inputs.get("actionability"))
     owner_repair_action = context_authority_repair_action(context_authority_projection)
+    automatic_adaptation_action = bounded_adaptation_action(
+        bounded_adaptations,
+        target_root=str(inputs.get("target_root") or ""),
+        improvement_latitude=str(inputs.get("improvement_latitude") or "conservative"),
+    )
     human_maintenance_action = maintenance_decision_action(maintenance_decision)
-    action = owner_repair_action or human_maintenance_action or _as_dict(actionability.get("next_action") or inputs.get("primary_action"))
+    action = (
+        owner_repair_action
+        or automatic_adaptation_action
+        or human_maintenance_action
+        or _as_dict(actionability.get("next_action") or inputs.get("primary_action"))
+    )
     if owner_repair_action and authorities:
         action = {
             **owner_repair_action,
@@ -3692,6 +3817,14 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
             ),
         }
         owner_repair_action = action
+    elif automatic_adaptation_action and authorities:
+        action = {
+            **automatic_adaptation_action,
+            "operation_invocation": bind_operation_invocation_to_authorities(
+                invocation=_as_dict(automatic_adaptation_action.get("operation_invocation")),
+                authorities=authorities,
+            ),
+        }
     progress_check = _as_dict(actionability.get("progress_check"))
     invocation = _as_dict(action.get("operation_invocation"))
     invocation_expected_revision = str(invocation.get("expected_input_revision") or "").strip()

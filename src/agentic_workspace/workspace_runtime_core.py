@@ -47,7 +47,7 @@ from agentic_workspace.assignment_lifecycle import (
     materialize_canonical_assignment,
 )
 from agentic_workspace.assurance_authority import build_assurance_application, evaluate_assurance_disposition
-from agentic_workspace.authority_envelope import admit_live_mutation_boundary, revalidate_mutation_baseline
+from agentic_workspace.authority_envelope import admit_live_mutation_boundary, mutation_baseline_payload, revalidate_mutation_baseline
 from agentic_workspace.config import (
     DEFAULT_AGENT_INSTRUCTIONS_FILE,
     DEFAULT_ASSURANCE_LEVEL,
@@ -54271,6 +54271,21 @@ def _emit_proof(
                     include_durable_intent=False,
                     task_text=str(builder_inputs.get("task") or "") or None,
                 )
+                route_findings_value = _as_dict(_as_dict(candidate.get("proof_route_maintenance")).get("route_health")).get("findings")
+                route_findings = route_findings_value if isinstance(route_findings_value, list) else []
+                if any(_as_dict(finding).get("bounded_adaptation_signal") for finding in route_findings):
+                    baseline = mutation_baseline_payload(
+                        target_root=target_root,
+                        changed_paths=[str(path) for path in builder_inputs.get("changed", [])],
+                    )
+                    candidate.setdefault("context", {})["operating_authorities"] = {
+                        "mutation_baseline": {
+                            **baseline,
+                            "revalidation_status": "current"
+                            if _as_dict(baseline.get("observation")).get("ok") is True
+                            else baseline.get("status"),
+                        }
+                    }
                 return attach_projection_surface_decision_input_consumption(
                     payload=candidate, consumption=consumption, used_material_inputs=builder_inputs
                 )

@@ -604,6 +604,14 @@ def test_projection_operating_decision_consumes_proof_route_adaptation_signal() 
                 "expected_owner_revision": "rev-a",
                 "current_owner_revision": "rev-a",
             },
+            "operation_inputs": {
+                "finding_id": "finding-1",
+                "authority_path": ".agentic-workspace/config.toml",
+                "field_selector": "assurance.domain_proof_lanes",
+                "changed_paths": ["src/example.py"],
+                "idempotency_key": "proof-route-health:finding-1",
+                "disposition": "fixed",
+            },
             "risk_class": "low",
             "expected_effect": {"required_coverage": "preserved"},
             "validation_route": ["pytest tests/test_example.py -q"],
@@ -620,9 +628,17 @@ def test_projection_operating_decision_consumes_proof_route_adaptation_signal() 
             },
         },
     }
-    admitted = admit_projection_surface_decision_input(input_revisions={"current_work": "rev-a"}, consumer="proof")
+    admitted = admit_projection_surface_decision_input(
+        input_revisions={"current_work": "rev-a"},
+        consumer="proof",
+        material_inputs={"target_root": ".", "changed": ["src/example.py"]},
+    )
     decision = compile_projection_surface_operating_decision(
-        payload={"proof_route_maintenance": {"route_health": {"findings": [{"bounded_adaptation_signal": signal}]}}},
+        payload={
+            "task_posture_packet": {"operating_posture": {"initiative_posture": {"mode": "proactive"}}},
+            "proof_route_maintenance": {"route_health": {"findings": [{"bounded_adaptation_signal": signal}]}},
+            "context": {"operating_authorities": {"mutation_baseline": _live_mutation_baseline()}},
+        },
         admitted_input=admitted,
         consumer="proof",
     )
@@ -630,6 +646,26 @@ def test_projection_operating_decision_consumes_proof_route_adaptation_signal() 
     candidate = decision["bounded_adaptations"]["candidates"][0]
     assert candidate["status"] == "promotion-ready"
     assert candidate["promotion"]["operation_id"] == "proof.report"
+    assert decision["status"] == "actionable"
+    assert decision["primary_action"]["action"] == "apply-proof-route-refinement"
+    invocation = decision["primary_action"]["operation_invocation"]
+    assert invocation["operation_id"] == "proof.report"
+    assert invocation["arguments"] == {
+        "target": ".",
+        "changed": ["src/example.py"],
+        "route_repair_mode": "apply",
+        "route_repair_finding_id": "finding-1",
+        "route_repair_authority_path": ".agentic-workspace/config.toml",
+        "route_repair_field_selector": "assurance.domain_proof_lanes",
+        "route_repair_expected_revision": "rev-a",
+        "route_repair_delta_json": '{"action": "upsert_domain_lane", "lane_id": "example"}',
+        "route_repair_disposition": "fixed",
+        "route_repair_idempotency_key": "proof-route-health:finding-1",
+        "format": "json",
+    }
+    assert invocation["requested_mutation_boundary"]["allowed_surfaces"] == [".agentic-workspace/config.toml"]
+    assert "--route-repair-mode apply" in invocation["renderings"]["cli"]
+    assert decision["maintenance_decision"]["status"] == "not-required"
 
 
 def test_repo_evidence_strategy_composes_hard_and_advisory_named_requirements() -> None:
