@@ -1,7 +1,7 @@
 {
   "algorithm": "sha256",
   "context_rule": "This receipt contains shared generator inputs plus only this generated owner's operation contracts. Git checkout witnesses are derived locally and never carried across branches.",
-  "file_count": 96,
+  "file_count": 97,
   "file_paths": [
     ".github/release-ownership.json",
     "LICENSE",
@@ -32,6 +32,7 @@
     "src/agentic_workspace/contracts/operations/assignment.reassign.json",
     "src/agentic_workspace/contracts/operations/assignment.reject.json",
     "src/agentic_workspace/contracts/operations/assignment.repair.json",
+    "src/agentic_workspace/contracts/operations/assignment.status.json",
     "src/agentic_workspace/contracts/operations/autopilot.run.json",
     "src/agentic_workspace/contracts/operations/checkpoint.write.json",
     "src/agentic_workspace/contracts/operations/config.policy-apply.json",
@@ -100,7 +101,7 @@
     "src/agentic_workspace/contracts/typescript_primitive_support.mjs",
     "uv.lock"
   ],
-  "fingerprint": "0a925f84e96363736bee92ae55daf878cd52ea759f5572580f4a50e11aae6875",
+  "fingerprint": "3094b6479e1d443254037dbc743d973babcdd28e6e6f943da790e0ae3b823330",
   "generation_command": "uv run python scripts/generate/generate_command_packages.py",
   "identity_role": "owner-scoped-semantic-content",
   "kind": "generated-cli-owner-source-manifest/v1",

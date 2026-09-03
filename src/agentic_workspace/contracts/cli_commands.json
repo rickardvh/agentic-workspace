@@ -327,21 +327,23 @@
               "required": true
             },
             {
+              "default": "",
               "flags": ["--expect-planning-revision"],
-              "help": "Planning revision guard emitted by summary or targeted-write preview.",
+              "help": "Optional low-level Planning revision guard; ordinary semantic mutation resolves current owner authority internally.",
               "name": "expect_planning_revision",
-              "required": true
+              "required": false
             },
             {
+              "default": "",
               "flags": ["--expect-owner-revision"],
-              "help": "Integer revision of the selected execplan owner.",
+              "help": "Optional low-level execplan owner revision guard; omit with the other guards for ordinary semantic mutation.",
               "name": "expect_owner_revision",
-              "required": true
+              "required": false
             },
             {
               "default": "",
               "flags": ["--expect-lane-revision"],
-              "help": "Lane revision guard when the execplan is an active lane slice.",
+              "help": "Optional low-level lane revision guard; ordinary semantic mutation resolves the current bound lane internally.",
               "name": "expect_lane_revision"
             },
             {
@@ -6251,6 +6253,18 @@
             }
           ],
           "role": "core_context_router",
+          "uses_option_groups": [
+            "format"
+          ]
+        },
+        {
+          "audience": "advanced_host_repo",
+          "classification_note": "read-only exact assignment/run inspection",
+          "help": "Run assignment.status.",
+          "mutates_state": false,
+          "name": "status",
+          "options": [],
+          "role": "reusable_host_repo_diagnostics",
           "uses_option_groups": [
             "format"
           ]

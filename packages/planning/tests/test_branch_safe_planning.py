@@ -802,6 +802,7 @@ def test_feature_completion_mode_atomically_records_proof_and_proposes_integrati
         owner_ref=owner_ref,
         requested_transition="archive-owner",
         proof="proof://feature-head/2862,ci://feature-head/2862",
+        **_feature_completion_evidence("#2862"),
         record_feature_completion=True,
         expected_subject_revision=before_subject,
         expected_planning_revision=before_planning,
@@ -821,10 +822,18 @@ def test_feature_completion_mode_atomically_records_proof_and_proposes_integrati
     assert owner["execution_run"]["run status"] == "completed"
     assert owner["execution_run"]["what happened"] == "Implemented issue #2862 on the feature head."
     assert owner["execution_run"]["scope touched"] == "Planning integration proposal lifecycle."
-    assert owner["execution_run"]["changed surfaces"] == "Planning integration proposal lifecycle."
+    assert owner["execution_run"]["changed surfaces"] == "installer.py and focused branch-safe Planning tests."
     assert owner["finished_run_review"]["review status"] == "complete"
-    assert owner["finished_run_review"]["scope respected"] == "Reviewed feature-head scope: Planning integration proposal lifecycle."
-    assert owner["execution_summary"]["outcome delivered"] == "Implemented issue #2862 on the feature head."
+    assert owner["finished_run_review"]["scope respected"] == "Reviewed the bounded feature-head scope and proof."
+    assert owner["execution_summary"]["outcome delivered"] == "Issue #2862 is feature-complete pending target integration."
+    retained_completion_values = (
+        owner["execution_run"]["what happened"],
+        owner["execution_run"]["scope touched"],
+        owner["execution_run"]["changed surfaces"],
+        owner["finished_run_review"]["scope respected"],
+        owner["execution_summary"]["outcome delivered"],
+    )
+    assert all(value.strip() and "<" not in value and "placeholder" not in value.lower() for value in retained_completion_values)
     assert owner["intent_satisfaction"]["was original intent fully satisfied?"] == "feature-head complete; target integration pending"
     assert owner["closure_check"]["slice status"] == "feature-complete-integration-pending"
     assert owner["closure_check"]["larger-intent status"] == "open-pending-target-integration"
@@ -1122,6 +1131,16 @@ def test_targeted_write_completion_correction_rolls_back_owner_lane_and_proposal
 def test_feature_completion_rejects_stale_or_unproven_owner(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     owner_ref = _write_owner(tmp_path, "issue-2851-negative")
+    owner_path = tmp_path / owner_ref
+    owner = json.loads(owner_path.read_text(encoding="utf-8"))
+    owner["intent"] = {"outcome": "Implement the planned feature-completion behavior."}
+    owner["scope"] = {"owned": ["Planning integration proposal lifecycle."]}
+    owner["execution_run"] = {
+        "what happened": "not completed yet",
+        "scope touched": "bounded owner scope",
+        "changed surfaces": ".agentic-workspace/planning/",
+    }
+    owner_path.write_text(json.dumps(owner, indent=2) + "\n", encoding="utf-8")
     _init_git(tmp_path)
     _commit_all(tmp_path, "baseline unproven owner")
     _git(tmp_path, "checkout", "-b", "feature/2851-negative")
@@ -1152,7 +1171,10 @@ def test_feature_completion_rejects_stale_or_unproven_owner(tmp_path: Path) -> N
         target=tmp_path,
     )
     assert missing_evidence.reason_code == "feature-completion-evidence-required"
-    assert all(option in missing_evidence.recovery_command for option in ("--what-happened", "--scope-touched", "--changed-surfaces"))
+    assert all(
+        option in missing_evidence.recovery_command
+        for option in ("--what-happened", "--scope-touched", "--changed-surfaces", "--review-summary", "--outcome-summary")
+    )
     assert _planning_persistent_snapshot(tmp_path) == before
 
     missing_target_guard = propose_integration_transition(

@@ -962,6 +962,10 @@ def _load_cli_compatibility_expectation(*, raw_cli_compatibility: Any, config_pa
     unknown = sorted(set(raw_cli_compatibility) - supported_fields)
     if unknown:
         warnings.append(f"{config_path.as_posix()} [cli_compatibility] contains unsupported field(s): {', '.join(unknown)}.")
+    if "minimum_version" in raw_cli_compatibility and "exact_version" in raw_cli_compatibility:
+        raise WorkspaceUsageError(
+            f"{config_path.as_posix()} [cli_compatibility] must choose one version constraint: minimum_version or exact_version, not both."
+        )
     enforcement = validate_cli_compatibility_enforcement(str(raw_cli_compatibility.get("enforcement", "off")))
     source_classes = require_optional_string_list(
         payload=raw_cli_compatibility,
@@ -1052,6 +1056,11 @@ def _load_payload_target_config(*, raw_payload: Any, config_path: Path) -> tuple
         warnings.append(f"{config_path.as_posix()} [payload] contains unsupported field(s): {', '.join(unknown)}.")
     dogfood_latest = _require_bool(payload=raw_payload, key="dogfood_latest", default=False, config_path=config_path)
     target_release = _validate_payload_target_release(value=raw_payload.get("target_release"), config_path=config_path)
+    if "dogfood_latest" in raw_payload and target_release is not None:
+        raise WorkspaceUsageError(
+            f"{config_path.as_posix()} [payload] must use target_release as the canonical release constraint or "
+            "dogfood_latest as its compatibility shorthand, not both."
+        )
     if dogfood_latest and target_release is None:
         target_release = "source-current"
     return (

@@ -2,7 +2,7 @@
   "$id": "agentic-workspace/assignment_worker_context.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "Bounded worker-facing projection mechanically derived from canonical assignment authority. It intentionally omits transport configuration, parent conversation, and broad workspace state.",
+  "description": "Bounded worker-facing projection mechanically derived from canonical assignment authority. It intentionally omits transport configuration, parent conversation, and broad workspace state. Generic startup under the same current launch identity projects this bounded authority or exact assignment recovery instead of coordinator context.",
   "properties": {
     "kind": {
       "const": "agentic-workspace/assignment-worker-context/v1",

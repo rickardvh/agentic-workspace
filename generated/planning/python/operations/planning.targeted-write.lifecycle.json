@@ -14,10 +14,12 @@
   },
   "guards": [
     "one exact canonical owner selected by id/path",
-    "preview returns owner/state/lane revisions and changed fields without writes",
+    "ordinary semantic mode resolves current owner/state/lane dependencies internally; explicit revision arguments remain a low-level compatibility surface",
+    "preview returns an executable revision-bound semantic action and changed fields without writes",
     "preview projects the exact delta while apply reruns a sealed internal preflight bound to target/worktree mutation baseline, Planning, owner, lane, request revisions, and expiry",
     "apply rejects caller-built timestamp/lookalike bearer tokens and writes owner/projection updates and the admitted preflight evidence atomically",
     "replay is idempotent only while the recorded owner/state/lane postcondition remains live",
+    "ordinary semantic mode rejects caller-authored lifecycle, phase, proof, relationship, and parent consequences that source transitions own",
     "scaffold tightening supports goal, non-goals, intent continuity, execution bounds, touched paths, validation commands, completion criteria, and adaptive assurance while preserving canonical projections",
     "completion correction remains a typed semantic mode: ordinary patches cannot directly set execution_run, finished_run_review, intent_satisfaction, execution_summary, or closure_check",
     "completion correction requires stable correction identity, admitted review refs, a material supported source patch, and exact proposal plus target-authority guards when integration-pending truth participates",
@@ -42,13 +44,15 @@
       "source": "cli-option"
     },
     {
+      "description": "Low-level explicit CAS guard. Ordinary semantic mutation resolves this owner dependency internally.",
       "name": "expect_planning_revision",
-      "required": true,
+      "required": false,
       "source": "cli-option"
     },
     {
+      "description": "Low-level explicit CAS guard. Ordinary semantic mutation resolves this owner dependency internally.",
       "name": "expect_owner_revision",
-      "required": true,
+      "required": false,
       "source": "cli-option"
     },
     {
@@ -138,7 +142,7 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Preview or apply a guarded owner patch, including typed completed-run truth correction, to exactly one canonical execplan.",
+  "summary": "Preview or apply one owner-scoped semantic mutation with internally resolved currentness, while retaining explicit guards for low-level clients.",
   "writes": [
     {
       "required": false,

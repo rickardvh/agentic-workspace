@@ -6,12 +6,14 @@ import json
 import re
 import subprocess
 import tempfile
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Sequence
 
 RECEIPT_KIND = "agentic-workspace/review-stack-restack-receipt/v1"
 DECLARATION_KIND = "agentic-workspace/review-stack-restack/v1"
+MERGE_RECEIPT_KIND = "agentic-workspace/review-stack-merge-receipt/v1"
 FULL_SHA = re.compile(r"[0-9a-f]{40}")
 BRANCH = re.compile(r"(?!-)(?!.*\.\.)(?!.*[~^:?*\\\[])\S+")
 
@@ -143,6 +145,161 @@ def _update_pr_body(root: Path, runner: CommandRunner, *, pr: int, head: str) ->
         return {"status": "unchanged", "pr_number": pr, "head": head}
     _run(runner, ["gh", "pr", "edit", str(pr), "--body", updated], cwd=root, code="pr-update-failed")
     return {"status": "updated", "pr_number": pr, "head": head}
+
+
+def _json_result(completed: subprocess.CompletedProcess[str], *, code: str) -> dict[str, Any]:
+    try:
+        payload = json.loads(completed.stdout or "{}")
+    except json.JSONDecodeError as exc:
+        raise StackError(code, "GitHub returned an invalid JSON response") from exc
+    if not isinstance(payload, dict):
+        raise StackError(code, "GitHub returned a non-object JSON response")
+    return payload
+
+
+def _pr_merge_state(root: Path, runner: CommandRunner, *, pr: int) -> dict[str, Any]:
+    completed = runner.run(
+        ["gh", "pr", "view", str(pr), "--json", "headRefOid,state,isDraft,mergeable,statusCheckRollup,mergedAt,mergeCommit"],
+        cwd=root,
+    )
+    if completed.returncode:
+        detail = completed.stderr.strip() or completed.stdout.strip()
+        raise StackError("pr-read-failed", f"could not inspect PR #{pr}: {detail}")
+    return _json_result(completed, code="pr-read-failed")
+
+
+def _require_merge_ready(state: dict[str, Any], *, pr: int, reviewed_head: str) -> None:
+    if state.get("headRefOid") != reviewed_head:
+        raise StackError("pr-head-mismatch", f"PR #{pr} head changed after review")
+    if state.get("state") != "OPEN" or state.get("isDraft") is True:
+        raise StackError("pr-not-open", f"PR #{pr} is not an open non-draft pull request")
+    if state.get("mergeable") == "CONFLICTING":
+        raise StackError("pr-not-mergeable", f"PR #{pr} has merge conflicts")
+    checks = [item for item in state.get("statusCheckRollup", []) if isinstance(item, dict)]
+    review_checks = [item for item in checks if item.get("name") == "Review approval"]
+    if not review_checks or any(item.get("conclusion") != "SUCCESS" for item in review_checks):
+        raise StackError("review-not-current", f"PR #{pr} lacks the successful Review approval check for {reviewed_head}")
+    unsuccessful = [
+        str(item.get("name") or item.get("context") or "unnamed-check")
+        for item in checks
+        if str(item.get("status") or "COMPLETED") != "COMPLETED"
+        or str(item.get("conclusion") or item.get("state") or "SUCCESS") not in {"SUCCESS", "NEUTRAL", "SKIPPED"}
+    ]
+    if unsuccessful:
+        raise StackError("checks-not-ready", f"PR #{pr} has non-successful checks: {', '.join(unsuccessful)}")
+
+
+def _observe_terminal_merge(root: Path, runner: CommandRunner, *, pr: int, reviewed_head: str) -> dict[str, Any]:
+    state = _pr_merge_state(root, runner, pr=pr)
+    if state.get("headRefOid") != reviewed_head:
+        raise StackError("pr-head-mismatch", f"PR #{pr} head changed while merge completion was being observed")
+    if state.get("state") != "MERGED" or not state.get("mergedAt"):
+        raise StackError("merge-not-observed", f"PR #{pr} was not observed in terminal merged state")
+    return state
+
+
+def merge_ready_pr(
+    root: Path,
+    *,
+    pr: int,
+    reviewed_head: str,
+    merge_method: str,
+    receipt_path: Path,
+    runner: CommandRunner,
+    max_polls: int = 30,
+    poll_interval_seconds: float = 2.0,
+) -> dict[str, Any]:
+    """Merge one independently approved exact head through the supported GitHub transport."""
+
+    _require_sha(reviewed_head, "reviewed_head")
+    if merge_method not in {"merge", "squash", "rebase"}:
+        raise StackError("invalid-merge-method", "merge_method must be merge, squash, or rebase")
+    receipt: dict[str, Any] = {
+        "kind": MERGE_RECEIPT_KIND,
+        "status": "preflight",
+        "pr_number": pr,
+        "reviewed_head": reviewed_head,
+        "merge_method": merge_method,
+        "transport": "",
+        "async_request": {},
+        "terminal_observation": {},
+    }
+    _write_receipt(receipt_path, receipt)
+    try:
+        state = _pr_merge_state(root, runner, pr=pr)
+        _require_merge_ready(state, pr=pr, reviewed_head=reviewed_head)
+        repo = _run(runner, ["gh", "repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner"], cwd=root, code="repo-read-failed")
+        stack_payload = runner.run(["gh", "api", f"repos/{repo}/pulls/{pr}", "--jq", ".stack // empty"], cwd=root)
+        stacked = stack_payload.returncode == 0 and bool(stack_payload.stdout.strip())
+
+        if not stacked:
+            receipt["transport"] = "gh-pr-merge"
+            _write_receipt(receipt_path, receipt)
+            ordinary = runner.run(["gh", "pr", "merge", str(pr), f"--{merge_method}", "--match-head-commit", reviewed_head], cwd=root)
+            if ordinary.returncode == 0:
+                receipt["terminal_observation"] = _observe_terminal_merge(root, runner, pr=pr, reviewed_head=reviewed_head)
+                receipt["status"] = "merged"
+                _write_receipt(receipt_path, receipt)
+                return receipt
+            diagnostic = (ordinary.stderr or ordinary.stdout).strip()
+            if "asynchronous" not in diagnostic.lower() or "merge" not in diagnostic.lower():
+                raise StackError("ordinary-merge-failed", diagnostic or "ordinary GitHub merge transport failed")
+            receipt["ordinary_transport_refusal"] = diagnostic[-2000:]
+
+        receipt["transport"] = "github-merge-async"
+        request_body = {"sha": reviewed_head, "merge_method": merge_method, "merge_action": "default"}
+        requested = runner.run(
+            ["gh", "api", "--method", "PUT", f"repos/{repo}/pulls/{pr}/merge-async", "--input", "-"],
+            cwd=root,
+            input_text=json.dumps(request_body),
+        )
+        request_payload = _json_result(requested, code="async-merge-request-failed")
+        request_status = str(request_payload.get("status") or "")
+        details = request_payload.get("details") if isinstance(request_payload.get("details"), dict) else {}
+        if requested.returncode and requested.returncode != 1:
+            raise StackError("async-merge-request-failed", requested.stderr.strip() or "asynchronous merge request failed")
+        receipt["async_request"] = request_payload
+        _write_receipt(receipt_path, receipt)
+        if request_status == "merged":
+            receipt["terminal_observation"] = _observe_terminal_merge(root, runner, pr=pr, reviewed_head=reviewed_head)
+            receipt["status"] = "merged"
+            _write_receipt(receipt_path, receipt)
+            return receipt
+        request_id = str(request_payload.get("uuid") or details.get("uuid") or "")
+        if not request_id:
+            raise StackError("async-merge-request-failed", "asynchronous merge response did not include a request UUID")
+
+        for poll_index in range(max_polls):
+            if poll_index and poll_interval_seconds:
+                time.sleep(poll_interval_seconds)
+            result = _run(
+                runner,
+                ["gh", "api", f"repos/{repo}/pulls/{pr}/merge-async/{request_id}"],
+                cwd=root,
+                code="async-merge-poll-failed",
+            )
+            result_payload = json.loads(result)
+            receipt["async_result"] = result_payload
+            _write_receipt(receipt_path, receipt)
+            status = str(result_payload.get("status") or "")
+            if status == "pending":
+                continue
+            if status != "merged":
+                raise StackError("async-merge-failed", str(_as_message(result_payload) or f"asynchronous merge ended as {status}"))
+            receipt["terminal_observation"] = _observe_terminal_merge(root, runner, pr=pr, reviewed_head=reviewed_head)
+            receipt["status"] = "merged"
+            _write_receipt(receipt_path, receipt)
+            return receipt
+        raise StackError("async-merge-timeout", f"PR #{pr} merge remained pending after {max_polls} observations")
+    except StackError as exc:
+        receipt.update(status="failed", error={"code": exc.code, "message": str(exc)})
+        _write_receipt(receipt_path, receipt)
+        return receipt
+
+
+def _as_message(payload: dict[str, Any]) -> str:
+    details = payload.get("details") if isinstance(payload.get("details"), dict) else {}
+    return str(details.get("message") or payload.get("message") or "")
 
 
 def restack(
@@ -307,34 +464,56 @@ def restack(
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Restack explicitly declared PR descendants with auditable CAS publication.")
     parser.add_argument("--target", type=Path, default=Path.cwd())
-    parser.add_argument("--declaration", type=Path, required=True)
+    parser.add_argument("--declaration", type=Path)
     parser.add_argument("--receipt", type=Path)
     parser.add_argument("--publish", action="store_true")
     parser.add_argument("--update-pr-bodies", action="store_true")
+    parser.add_argument("--merge-pr", type=int)
+    parser.add_argument("--reviewed-head")
+    parser.add_argument("--merge-method", choices=("merge", "squash", "rebase"), default="merge")
+    parser.add_argument("--max-polls", type=int, default=30)
+    parser.add_argument("--poll-interval-seconds", type=float, default=2.0)
     return parser
 
 
 def main(argv: Sequence[str] | None = None, *, runner: CommandRunner | None = None) -> int:
     args = _parser().parse_args(argv)
     root = args.target.resolve()
-    declaration_path = args.declaration if args.declaration.is_absolute() else root / args.declaration
-    default_name = f"restack-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}.json"
+    if bool(args.merge_pr) == bool(args.declaration):
+        _parser().error("select exactly one operation with --declaration or --merge-pr")
+    operation = "merge" if args.merge_pr else "restack"
+    default_name = f"{operation}-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}.json"
     receipt_path = args.receipt or Path(".agentic-workspace/local/review-stack-receipts") / default_name
     receipt_path = receipt_path if receipt_path.is_absolute() else root / receipt_path
     try:
-        receipt = restack(
-            root,
-            declaration_path=declaration_path,
-            receipt_path=receipt_path,
-            runner=runner or CommandRunner(),
-            publish=args.publish,
-            update_pr_bodies=args.update_pr_bodies,
-        )
+        if args.merge_pr:
+            receipt = merge_ready_pr(
+                root,
+                pr=args.merge_pr,
+                reviewed_head=str(args.reviewed_head or ""),
+                merge_method=args.merge_method,
+                receipt_path=receipt_path,
+                runner=runner or CommandRunner(),
+                max_polls=args.max_polls,
+                poll_interval_seconds=args.poll_interval_seconds,
+            )
+        else:
+            assert args.declaration is not None
+            declaration_path = args.declaration if args.declaration.is_absolute() else root / args.declaration
+            receipt = restack(
+                root,
+                declaration_path=declaration_path,
+                receipt_path=receipt_path,
+                runner=runner or CommandRunner(),
+                publish=args.publish,
+                update_pr_bodies=args.update_pr_bodies,
+            )
     except StackError as exc:
-        print(json.dumps({"kind": RECEIPT_KIND, "status": "error", "code": exc.code, "message": str(exc)}, indent=2))
+        kind = MERGE_RECEIPT_KIND if args.merge_pr else RECEIPT_KIND
+        print(json.dumps({"kind": kind, "status": "error", "code": exc.code, "message": str(exc)}, indent=2))
         return 2
     print(json.dumps(receipt, indent=2, sort_keys=True))
-    return 0 if receipt.get("status") in {"planned", "published"} else 2
+    return 0 if receipt.get("status") in {"planned", "published", "merged"} else 2
 
 
 if __name__ == "__main__":

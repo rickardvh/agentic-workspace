@@ -32,6 +32,7 @@ from . import assignment_override as _command_assignment_override
 from . import assignment_reassign as _command_assignment_reassign
 from . import assignment_reject as _command_assignment_reject
 from . import assignment_repair as _command_assignment_repair
+from . import assignment_status as _command_assignment_status
 from . import autopilot_run as _command_autopilot_run
 from . import checkpoint_write as _command_checkpoint_write
 from . import config_policy_apply as _command_config_policy_apply
@@ -122,6 +123,7 @@ GENERATED_COMMAND_HANDLERS = {
     'assignment.reassign': _command_assignment_reassign.run,
     'assignment.reject': _command_assignment_reject.run,
     'assignment.repair': _command_assignment_repair.run,
+    'assignment.status': _command_assignment_status.run,
     'autopilot.run': _command_autopilot_run.run,
     'checkpoint.write': _command_checkpoint_write.run,
     'config.policy-apply': _command_config_policy_apply.run,

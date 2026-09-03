@@ -56,6 +56,66 @@ class IntegrationRunner(stack.CommandRunner):
         return super().run(command, cwd=cwd, input_text=input_text)
 
 
+class MergeRunner(stack.CommandRunner):
+    def __init__(
+        self,
+        *,
+        head: str,
+        stacked: bool,
+        ordinary_refusal: bool = False,
+        async_results: list[dict] | None = None,
+        review_success: bool = True,
+    ) -> None:
+        self.head = head
+        self.stacked = stacked
+        self.ordinary_refusal = ordinary_refusal
+        self.async_results = list(async_results or [{"status": "merged", "details": {"sha": "a" * 40}}])
+        self.review_success = review_success
+        self.merged = False
+        self.commands: list[list[str]] = []
+        self.inputs: list[str | None] = []
+
+    def run(self, command, *, cwd, input_text=None):
+        command = list(command)
+        self.commands.append(command)
+        self.inputs.append(input_text)
+        if command[:3] == ["gh", "repo", "view"]:
+            return subprocess.CompletedProcess(command, 0, "owner/repo\n", "")
+        if command[:3] == ["gh", "pr", "view"]:
+            payload = {
+                "headRefOid": self.head,
+                "state": "MERGED" if self.merged else "OPEN",
+                "isDraft": False,
+                "mergeable": "MERGEABLE",
+                "statusCheckRollup": [
+                    {
+                        "name": "Review approval",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS" if self.review_success else "FAILURE",
+                    },
+                    {"name": "tests", "status": "COMPLETED", "conclusion": "SUCCESS"},
+                ],
+                "mergedAt": "2026-09-02T12:00:00Z" if self.merged else None,
+                "mergeCommit": {"oid": "a" * 40} if self.merged else None,
+            }
+            return subprocess.CompletedProcess(command, 0, json.dumps(payload), "")
+        if command[:2] == ["gh", "api"] and command[-2:] == ["--jq", ".stack // empty"]:
+            return subprocess.CompletedProcess(command, 0, '{"number": 7}\n' if self.stacked else "", "")
+        if command[:3] == ["gh", "pr", "merge"]:
+            if self.ordinary_refusal:
+                return subprocess.CompletedProcess(command, 1, "", "stack requires asynchronous merge API")
+            self.merged = True
+            return subprocess.CompletedProcess(command, 0, "", "")
+        if command[:4] == ["gh", "api", "--method", "PUT"]:
+            return subprocess.CompletedProcess(command, 0, json.dumps({"status": "pending", "uuid": "request-1"}), "")
+        if command[:2] == ["gh", "api"] and "merge-async/request-1" in command[-1]:
+            payload = self.async_results.pop(0)
+            if payload.get("status") == "merged":
+                self.merged = True
+            return subprocess.CompletedProcess(command, 0, json.dumps(payload), "")
+        raise AssertionError(f"unexpected command: {command}")
+
+
 def commit(repo: Path, name: str, text: str, message: str) -> str:
     (repo / name).write_text(text, encoding="utf-8")
     git(repo, "add", name)
@@ -197,4 +257,101 @@ def test_preflight_rejects_changed_remote_before_any_publication(tmp_path: Path)
     assert receipt["status"] == "preflight-failed"
     assert receipt["error"]["code"] == "lease-preflight-failed"
     assert receipt["remote_updates"] == []
+    assert not any(command[:2] == ["git", "push"] for command in runner.commands)
+
+
+def test_stacked_merge_uses_exact_head_async_transport_and_observes_terminal_state(tmp_path: Path) -> None:
+    head = "b" * 40
+    runner = MergeRunner(head=head, stacked=True, async_results=[{"status": "pending"}, {"status": "merged"}])
+
+    receipt = stack.merge_ready_pr(
+        tmp_path,
+        pr=93,
+        reviewed_head=head,
+        merge_method="merge",
+        receipt_path=tmp_path / "merge.json",
+        runner=runner,
+        max_polls=3,
+        poll_interval_seconds=0,
+    )
+
+    assert receipt["status"] == "merged"
+    assert receipt["transport"] == "github-merge-async"
+    assert receipt["terminal_observation"]["headRefOid"] == head
+    assert not any(command[:3] == ["gh", "pr", "merge"] for command in runner.commands)
+    request_index = next(index for index, command in enumerate(runner.commands) if command[:4] == ["gh", "api", "--method", "PUT"])
+    assert json.loads(runner.inputs[request_index] or "{}") == {
+        "sha": head,
+        "merge_method": "merge",
+        "merge_action": "default",
+    }
+
+
+def test_nonstacked_merge_keeps_simple_transport(tmp_path: Path) -> None:
+    head = "c" * 40
+    runner = MergeRunner(head=head, stacked=False)
+
+    receipt = stack.merge_ready_pr(
+        tmp_path,
+        pr=94,
+        reviewed_head=head,
+        merge_method="squash",
+        receipt_path=tmp_path / "merge.json",
+        runner=runner,
+        poll_interval_seconds=0,
+    )
+
+    assert receipt["status"] == "merged"
+    assert receipt["transport"] == "gh-pr-merge"
+    assert ["gh", "pr", "merge", "94", "--squash", "--match-head-commit", head] in runner.commands
+    assert not any("merge-async" in " ".join(command) for command in runner.commands)
+
+
+def test_async_transport_refusal_is_constructible_but_review_and_head_stay_fail_closed(tmp_path: Path) -> None:
+    head = "d" * 40
+    fallback = MergeRunner(head=head, stacked=False, ordinary_refusal=True)
+    receipt = stack.merge_ready_pr(
+        tmp_path,
+        pr=95,
+        reviewed_head=head,
+        merge_method="rebase",
+        receipt_path=tmp_path / "fallback.json",
+        runner=fallback,
+        poll_interval_seconds=0,
+    )
+    assert receipt["status"] == "merged"
+    assert receipt["transport"] == "github-merge-async"
+    assert "asynchronous merge" in receipt["ordinary_transport_refusal"]
+
+    stale = MergeRunner(head="e" * 40, stacked=True)
+    rejected = stack.merge_ready_pr(
+        tmp_path,
+        pr=96,
+        reviewed_head=head,
+        merge_method="merge",
+        receipt_path=tmp_path / "stale.json",
+        runner=stale,
+        poll_interval_seconds=0,
+    )
+    assert rejected["status"] == "failed"
+    assert rejected["error"]["code"] == "pr-head-mismatch"
+    assert not any(command[:4] == ["gh", "api", "--method", "PUT"] for command in stale.commands)
+
+
+def test_pending_async_merge_times_out_without_descendant_mutation(tmp_path: Path) -> None:
+    head = "f" * 40
+    runner = MergeRunner(head=head, stacked=True, async_results=[{"status": "pending"}, {"status": "pending"}])
+    receipt = stack.merge_ready_pr(
+        tmp_path,
+        pr=97,
+        reviewed_head=head,
+        merge_method="merge",
+        receipt_path=tmp_path / "timeout.json",
+        runner=runner,
+        max_polls=2,
+        poll_interval_seconds=0,
+    )
+
+    assert receipt["status"] == "failed"
+    assert receipt["error"]["code"] == "async-merge-timeout"
     assert not any(command[:2] == ["git", "push"] for command in runner.commands)

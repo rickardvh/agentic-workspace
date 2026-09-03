@@ -49,6 +49,7 @@ from agentic_workspace.generated_operations import (
     assignment_import,
     assignment_integrate,
     assignment_override,
+    assignment_status,
     config_report,
     correction_event_prune_compact,
     correction_event_query,
@@ -66,6 +67,112 @@ from agentic_workspace.workspace_runtime_proof import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_assignment_status_is_exact_read_only_and_reports_current_stale_missing_and_cleaned_up_runs(tmp_path: Path) -> None:
+    workspace = tmp_path / ".agentic-workspace"
+    assignment_dir = workspace / "planning" / "assignments"
+    run_root = workspace / "local" / "assignment-runs"
+    assignment_dir.mkdir(parents=True)
+    run_root.mkdir(parents=True)
+    (workspace / "config.toml").write_text('[workspace]\ncli_invoke = "agentic-workspace"\n', encoding="utf-8")
+    assignment_path = assignment_dir / "assign-status.assignment.json"
+    assignment = {
+        "kind": "agentic-workspace/planning-assignment/v1",
+        "assignment_id": "assign-status",
+        "current_revision": "assignment-rev-1",
+        "current_attempt": {"run_id": "run-current", "target": "codex", "status": "selected"},
+    }
+    assignment_path.write_text(json.dumps(assignment), encoding="utf-8")
+    state_path = run_root / "run-current" / "state.json"
+    state_path.parent.mkdir()
+    state_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "agentic-workspace/assignment-run-state/v1",
+                "assignment_id": "assign-status",
+                "run_id": "run-current",
+                "current_state": "integrated",
+                "last_admission_status": "admitted",
+                "locality": "local-disposable",
+            }
+        ),
+        encoding="utf-8",
+    )
+    before = {path.relative_to(tmp_path).as_posix(): path.read_bytes() for path in tmp_path.rglob("*") if path.is_file()}
+
+    current = assignment_status(
+        {"assignment_id": "assign-status", "run_id": "run-current"},
+        target=tmp_path,
+        invocation=[sys.executable, str(ROOT / "scripts/run_agentic_workspace.py")],
+    )
+    assert current["outcome"] == "noop"
+    assert current["mutation_applied"] is False
+    assert current["inspection"] == {
+        "currentness": "current",
+        "retention": "retained",
+        "admission": "admitted",
+        "integration": "integrated",
+        "proof": "required",
+        "completion_permission": False,
+    }
+    assert current["next_current_continuation"]["operation_invocation"]["operation_id"] == "proof.report"
+
+    typescript = subprocess.run(
+        [
+            "node",
+            str(ROOT / "generated/workspace/typescript/src/cli.mjs"),
+            "assignment",
+            "status",
+            "--target",
+            str(tmp_path),
+            "--assignment-id",
+            "assign-status",
+            "--run-id",
+            "run-current",
+            "--format",
+            "json",
+        ],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+    assert typescript.returncode == 0, typescript.stdout + typescript.stderr
+    typescript_payload = json.loads(typescript.stdout)
+    assert typescript_payload["operation_id"] == current["operation_id"] == "assignment.status"
+    assert typescript_payload["inspection"] == current["inspection"]
+    assert typescript_payload["next_current_continuation"]["operation_invocation"]["operation_id"] == "proof.report"
+
+    assignment["current_attempt"] = {"run_id": "run-next", "target": "codex", "status": "selected"}
+    assignment_path.write_text(json.dumps(assignment), encoding="utf-8")
+    stale = assignment_status(
+        {"assignment_id": "assign-status", "run_id": "run-current"},
+        target=tmp_path,
+        invocation=[sys.executable, str(ROOT / "scripts/run_agentic_workspace.py")],
+    )
+    assert stale["inspection"]["currentness"] == "stale"
+    assert stale["next_current_continuation"]["status"] == "re-resolution-required"
+
+    cleaned = assignment_status(
+        {"assignment_id": "assign-status", "run_id": "run-next"},
+        target=tmp_path,
+        invocation=[sys.executable, str(ROOT / "scripts/run_agentic_workspace.py")],
+    )
+    assert cleaned["outcome"] == "noop"
+    assert cleaned["inspection"]["retention"] == "historical-detail-not-retained"
+    assert cleaned["state_ref"] is None
+
+    unknown = assignment_status(
+        {"assignment_id": "missing", "run_id": "run-missing"},
+        target=tmp_path,
+        invocation=[sys.executable, str(ROOT / "scripts/run_agentic_workspace.py")],
+    )
+    assert unknown["outcome"] == "blocked"
+    assert unknown["reason_code"] == "assignment-run-not-found"
+    assert "raw" not in unknown["recovery_command"].lower()
+    after = {path.relative_to(tmp_path).as_posix(): path.read_bytes() for path in tmp_path.rglob("*") if path.is_file()}
+    assert after == {**before, assignment_path.relative_to(tmp_path).as_posix(): assignment_path.read_bytes()}
 
 
 def test_assignment_cli_transport_invokes_allow_listed_adapter_and_returns_untrusted_evidence(
@@ -2412,6 +2519,7 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
     json_result = json.loads(public_json.stdout)
     assert json_result["operation_id"] == "assignment.export"
     assert json_result["assignment_revision"] == identity["revision"]
+    assert json_result["next_current_continuation"]["operation_invocation"]["operation_id"] == "assignment.dispatch"
     assert json_result["message"] in public_text.stdout
     assert "KeyError" not in public_text.stderr
     assert len([line for line in public_text.stdout.splitlines() if line.strip()]) <= 60
@@ -2426,6 +2534,7 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
         target=tmp_path,
         invocation=invocation,
     )
+    assert export["next_current_continuation"]["operation_invocation"]["operation_id"] == "assignment.dispatch"
     exported_artifact_bytes = {ref: (tmp_path / ref).read_bytes() for ref in export["artifact_refs"] if not ref.endswith("state.json")}
     export_replay = assignment_export(
         {

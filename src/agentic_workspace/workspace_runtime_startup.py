@@ -27,6 +27,7 @@ from agentic_workspace.operating_decision import (
     projection_surface_builder_inputs,
     resolve_context_authority_projection,
 )
+from agentic_workspace.orchestration import assignment_bound_entry
 from agentic_workspace.projection_reuse import (
     ProjectionProgress,
     enforce_projection_serialization_budget,
@@ -80,6 +81,7 @@ from agentic_workspace.workspace_runtime_core import (
     _context_router_family_payload,
     _continuation_reorientation_payload,
     _deferred_start_local_footprint_advisory,
+    _delegated_worker_kernel_payload,
     _dogfooding_signal_status_payload,
     _emit_payload,
     _execution_posture_payload,
@@ -3559,6 +3561,18 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
     config = _load_workspace_config(target_root=target_root)
     if disabled_payload := _workspace_disabled_payload(target_root=target_root, command_name="start", config=config):
         _emit_payload(payload=disabled_payload, format_name=args.format)
+        return 0
+    launched_worker = os.environ.get("AGENTIC_WORKSPACE_DELEGATED_WORKER_KERNEL", "").strip()
+    if launched_worker:
+        try:
+            launched_worker_payload = json.loads(launched_worker)
+        except json.JSONDecodeError:
+            launched_worker_payload = {"assignment": {}, "status": "invalid-launch-identity"}
+        bounded_entry = assignment_bound_entry(
+            launched=_as_dict(launched_worker_payload),
+            current=_delegated_worker_kernel_payload(target_root=target_root),
+        )
+        _emit_payload(payload=bounded_entry, format_name=args.format)
         return 0
     start_profile = "full" if getattr(args, "verbose", False) else getattr(args, "profile", None)
     task_text = getattr(args, "task", None)

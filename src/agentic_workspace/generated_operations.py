@@ -217,6 +217,16 @@ def assignment_repair(values: Mapping[str, Any], *, target: str | Path, invocati
     )
 
 
+def assignment_status(values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None) -> dict[str, Any]:
+    return invoke_operation(
+        "assignment.status",
+        values,
+        target=target,
+        invocation=invocation,
+        allow_runtime_backed=True,
+    )
+
+
 def config_report(values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None) -> dict[str, Any]:
     return invoke_operation(
         "config.report",

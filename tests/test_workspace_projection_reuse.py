@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 import threading
 import time
 from pathlib import Path
@@ -98,6 +99,22 @@ def test_report_reuses_equivalent_router_projection_and_verbose_forces_full_deta
     assert cli.main(["report", "--target", str(target), "--verbose", "--format", "json"]) == 0
     verbose = json.loads(capsys.readouterr().out)
     assert verbose["kind"] != "agentic-workspace/unchanged-projection/v1"
+
+
+def test_report_reuses_source_owned_projection_in_a_fresh_process(tmp_path: Path, capsys) -> None:
+    target = _target(tmp_path)
+    capsys.readouterr()
+    runner = Path(__file__).resolve().parents[1] / "scripts" / "run_agentic_workspace.py"
+    command = [sys.executable, str(runner), "report", "--target", str(target), "--format", "json"]
+
+    cold = subprocess.run(command, check=True, capture_output=True, text=True)
+    warm = subprocess.run(command, check=True, capture_output=True, text=True)
+    cold_payload = json.loads(cold.stdout)
+    warm_payload = json.loads(warm.stdout)
+
+    assert cold_payload["projection_reuse"]["decision_id"] == warm_payload["projection_reuse"]["decision_id"]
+    assert warm_payload["projection_reuse"]["status"] == "decision+enrichment-reused"
+    assert warm_payload["projection_reuse"]["freshness"] == "current"
 
 
 def test_start_implement_and_proof_reuse_each_surface_admitted_decision(tmp_path: Path, capsys) -> None:

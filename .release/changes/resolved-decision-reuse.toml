@@ -1,0 +1,5 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Reuse current Verification semantic conclusions until their Planning or proof-policy dependencies change."
+issues = [2981]
+

@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Advance Planning completion-truth recording contracts and integration-proposal output requirements."
+issues = [2804, 2851, 2973]

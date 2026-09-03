@@ -28286,6 +28286,82 @@ def _github_native_sub_issue_relationships(
     }
 
 
+def _github_pull_request_to_external_intent_item(
+    *, pull_request: dict[str, Any], repo: str, observed_at: str | None = None
+) -> dict[str, Any] | None:
+    number = pull_request.get("number")
+    if number is None:
+        return None
+    try:
+        pull_request_number = int(number)
+    except (TypeError, ValueError):
+        return None
+    merged_at = str(pull_request.get("mergedAt", "") or "").strip()
+    closed_at = str(pull_request.get("closedAt", "") or "").strip()
+    updated_at = str(pull_request.get("updatedAt", "") or "").strip()
+    state = str(pull_request.get("state", "") or "").strip().lower()
+    if merged_at:
+        state = "merged"
+    elif state not in {"open", "closed", "merged"}:
+        state = "closed" if closed_at else "open"
+    locator = str(pull_request.get("url", "") or "").strip()
+    observation_revision = updated_at or merged_at or closed_at or f"github-pull-request-{pull_request_number}"
+    observation_time = observed_at or datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    observed_time = _parse_external_intent_timestamp(observation_time)
+    expires_at = (observed_time + timedelta(hours=24)).replace(microsecond=0).isoformat() if observed_time else ""
+    merge_commit = _as_dict(pull_request.get("mergeCommit"))
+    merge_commit_oid = str(merge_commit.get("oid") or "").strip()
+    labels = _github_label_names(pull_request.get("labels"))
+    return {
+        "system": "github",
+        "id": f"PR #{pull_request_number}",
+        "title": str(pull_request.get("title", "") or "").strip(),
+        "status": state,
+        "kind": "pull-request",
+        "parent_id": "",
+        "reopens": [],
+        "planning_residue_expected": "optional",
+        "url": locator,
+        "source_repository": repo,
+        "labels": labels,
+        "created_at": str(pull_request.get("createdAt", "") or "").strip(),
+        "updated_at": updated_at,
+        "closed_at": closed_at,
+        "observation_id": f"github:pull-request:{pull_request_number}:{observation_revision}",
+        "owner": {
+            "id": f"PR #{pull_request_number}",
+            "kind": "pull-request",
+            "locator": locator or f"github:{repo}:pull-request:{pull_request_number}",
+        },
+        "status_class": "completed" if state in {"closed", "merged"} else "current",
+        "external_revision": observation_revision,
+        "observed_at": observation_time,
+        "freshness": {
+            "status": "current" if observed_time else "unknown",
+            "observed_at": observation_time,
+            "expires_at": expires_at,
+            "max_age_seconds": 86400,
+        },
+        "blockers": [],
+        "evidence_refs": [locator] if locator else [],
+        "provenance": {
+            "provider_class": "github",
+            "resolver_id": "github-gh-cli",
+            "source_ref": locator or f"github:{repo}:pull-request:{pull_request_number}",
+            "refresh_id": observation_revision,
+        },
+        "refresh_route": f"gh pr view {pull_request_number} --repo {repo}",
+        "availability": "available",
+        "contradictions": [],
+        "provider_detail": {
+            "repository": repo,
+            "merged_at": merged_at,
+            "closed_at": closed_at,
+            "merge_commit_oid": merge_commit_oid,
+        },
+    }
+
+
 def _normalize_external_intent_issue_refs(raw_issue_refs: list[str] | None) -> list[str]:
     normalized: list[str] = []
     for raw_ref in raw_issue_refs or []:
@@ -28307,6 +28383,34 @@ def _fetch_github_external_intent_issue_items(
     items: list[dict[str, Any]] = []
     for issue_ref in issue_refs:
         issue_number = issue_ref.lstrip("#")
+        raw_pull_request: Any = None
+        try:
+            raw_pull_request = _run_gh_json(
+                [
+                    "pr",
+                    "view",
+                    issue_number,
+                    "--repo",
+                    repo,
+                    "--json",
+                    "number,title,state,url,labels,createdAt,updatedAt,closedAt,mergedAt,mergeCommit",
+                ],
+                cwd=target_root,
+            )
+        except WorkspaceUsageError:
+            # GitHub issues and pull requests share one number namespace. A
+            # failed PR lookup is the expected discriminator for an issue;
+            # the issue lookup below remains the authoritative error surface.
+            raw_pull_request = None
+        if isinstance(raw_pull_request, dict) and raw_pull_request.get("number") is not None:
+            item = _github_pull_request_to_external_intent_item(
+                pull_request=raw_pull_request,
+                repo=repo,
+                observed_at=observed_at,
+            )
+            if item is not None:
+                items.append(item)
+            continue
         raw_issue = _run_gh_json(
             [
                 "issue",
@@ -45950,6 +46054,13 @@ def _task_assignment_disposition_payload(
     elif action_status == "direct-current-target":
         outcome = "execute-here"
         evaluated_state = "evaluated-local"
+    elif not binding_orchestrator and orchestration_assignment.get("policy") == "local-preferred":
+        # The absence of a configured assignment target is the ordinary quiet
+        # local case, not an unavailable child transport. Mandatory child
+        # resolution applies only after binding orchestration has identified a
+        # bounded candidate.
+        outcome = "execute-here"
+        evaluated_state = "default-local"
     elif action_status in {"ready", "reconciliation-required"}:
         outcome = "delegate-bounded-slice"
         evaluated_state = "delegated"
@@ -45984,7 +46095,11 @@ def _task_assignment_disposition_payload(
             operation = {}
     elif outcome == "execute-here":
         child_status = "selected-current"
-        child_action = assignment_action.get("action") or assignment_gate.get("required_next_action")
+        child_action = (
+            "continue-local-work"
+            if evaluated_state == "default-local"
+            else assignment_action.get("action") or assignment_gate.get("required_next_action")
+        )
         child_implementation_allowed = True
         child_target = selected_target or None
     elif outcome == "delegate-bounded-slice":
@@ -54170,6 +54285,7 @@ def _emit_proof(
         _emit_payload(payload=payload, format_name=format_name)
         return exit_status
     if route_repair_mode:
+        from agentic_workspace.orchestration import reconcile_action_result
         from agentic_workspace.workspace_runtime_proof import _proof_route_repair_operation_payload
 
         payload = _proof_route_repair_operation_payload(
@@ -54185,6 +54301,7 @@ def _emit_proof(
             idempotency_key=route_repair_idempotency_key,
             dry_run=dry_run,
         )
+        payload["next_current_continuation"] = reconcile_action_result(result=payload)
         if select:
             payload = _select_payload_fields(payload, select=select, source_command="proof")
         if format_name == "json":
@@ -61551,14 +61668,40 @@ def _record_trusted_assignment_outcome_from_ordinary_boundary(
     handoff_sufficiency: str = "sufficient",
     review_burden: str = "normal",
     escalation_required: bool = False,
+    responsibility_evidence: dict[str, Any] | None = None,
     dry_run: bool = False,
 ) -> dict[str, Any]:
+    from agentic_workspace.orchestration import attribute_orchestration_outcome
+
     assignment_context = _trusted_producer_assignment_context(target_root=target_root)
     target_context = _as_dict(assignment_context.get("target_context"))
     if not target_context:
         return assignment_context
     if producer_class not in _TRUSTED_PRODUCER_RECEIPT_KIND_BY_CLASS:
         raise WorkspaceUsageError("trusted producer receipt producer is not authorized for ordinary assignment calibration.")
+    attribution_input = {
+        "admitted": True,
+        "target_executed": True,
+        "context_sufficient": True,
+        "transport_sufficient": True,
+        "worker_succeeded": outcome == "success",
+        "assignment_id": target_context.get("assignment_id"),
+        "assignment_revision": target_context.get("assignment_revision"),
+        "run_id": target_context.get("run_id"),
+        "target": target_context.get("delegation_target"),
+        "task_class": target_context.get("task_class"),
+        **dict(responsibility_evidence or {}),
+    }
+    attribution = attribute_orchestration_outcome(evidence=attribution_input)
+    if not _as_dict(attribution.get("routing_effect")).get("target_evidence_allowed"):
+        return {
+            "status": "routed-to-responsible-owner",
+            "producer_class": producer_class,
+            "target_context": target_context,
+            "attribution": attribution,
+            "recorded_target_evidence": False,
+            "rule": "Only admitted target-execution outcomes can update contextual target suitability.",
+        }
     stable_key = (
         idempotency_key.strip()
         or hashlib.sha256(
@@ -61607,6 +61750,7 @@ def _record_trusted_assignment_outcome_from_ordinary_boundary(
                 "rule": assignment_context["rule"],
             },
             "source_payload": source_payload,
+            "responsibility_attribution": attribution,
             "idempotency_key": stable_key,
         },
     )
@@ -61650,6 +61794,7 @@ def _record_trusted_assignment_outcome_from_ordinary_boundary(
         "source_ref": source_ref,
         "target_context": target_context,
         "record": record["recorded"],
+        "attribution": attribution,
         "rule": "Ordinary owner boundary wrote and resolved an indexed trusted producer receipt before admitting evidence.",
     }
 

@@ -27,6 +27,10 @@
       "description": "Whether the operation applied a local lifecycle state mutation.",
       "type": "boolean"
     },
+    "next_current_continuation": {
+      "description": "Derived next current action, bounded recovery, or re-resolution disposition. This is a projection of canonical owners, not durable workflow state.",
+      "type": "object"
+    },
     "operation_id": {
       "description": "Public operation id that produced this lifecycle result.",
       "type": "string"

@@ -248,7 +248,7 @@
           ]
         },
         {
-          "help": "Preview or apply a guarded owner patch or typed completion-truth correction to one canonical execplan.",
+          "help": "Preview or apply one owner-scoped semantic mutation; ordinary use resolves currentness internally.",
           "name": "targeted-write",
           "options": [
             {
@@ -276,20 +276,22 @@
               "name": "completion_correction"
             },
             {
+              "default": "",
               "flags": [
                 "--expect-planning-revision"
               ],
-              "help": "Planning revision guard emitted by summary or targeted-write preview.",
+              "help": "Optional low-level Planning revision guard; ordinary semantic mutation resolves currentness internally.",
               "name": "expect_planning_revision",
-              "required": true
+              "required": false
             },
             {
+              "default": "",
               "flags": [
                 "--expect-owner-revision"
               ],
-              "help": "Integer revision of the selected execplan owner.",
+              "help": "Optional low-level owner revision guard; omit all revision guards for ordinary semantic mutation.",
               "name": "expect_owner_revision",
-              "required": true
+              "required": false
             },
             {
               "default": "",
@@ -10142,6 +10144,56 @@
               ],
               "help": "Serialized current assignment run state authority.",
               "name": "run_state_json"
+            }
+          ]
+        },
+        {
+          "help": "Inspect one exact assignment run and its current continuation without mutation.",
+          "name": "status",
+          "operation_ref": {
+            "id": "assignment.status",
+            "path": "operations/assignment.status.json"
+          },
+          "options": [
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to the current directory.",
+              "name": "target"
+            },
+            {
+              "flags": [
+                "--assignment-id"
+              ],
+              "help": "Stable Planning assignment id.",
+              "name": "assignment_id"
+            },
+            {
+              "flags": [
+                "--assignment-revision"
+              ],
+              "help": "Current assignment identity revision.",
+              "name": "assignment_revision"
+            },
+            {
+              "flags": [
+                "--run-id"
+              ],
+              "help": "Stable assignment run id.",
+              "name": "run_id"
             }
           ]
         },

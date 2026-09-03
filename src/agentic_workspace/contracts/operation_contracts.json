@@ -828,6 +828,12 @@
     },
     {
       "command": "assignment",
+      "id": "assignment.status",
+      "migration_status": "runtime-consumed",
+      "path": "operations/assignment.status.json"
+    },
+    {
+      "command": "assignment",
       "id": "assignment.close",
       "migration_status": "runtime-consumed",
       "path": "operations/assignment.close.json"

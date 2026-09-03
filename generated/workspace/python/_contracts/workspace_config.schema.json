@@ -1074,6 +1074,9 @@
       "default": {},
       "x-agentic-workspace-doc-role": "maintainer",
       "x-agentic-workspace-unknown-properties": "warn",
+      "not": {
+        "required": ["target_release", "dogfood_latest"]
+      },
       "properties": {
         "target_release": {
           "description": "Desired checked-in Agentic Workspace payload release. Use source-current for source-checkout dogfooding.",
@@ -1123,6 +1126,9 @@
       "default": {},
       "x-agentic-workspace-doc-role": "maintainer",
       "x-agentic-workspace-unknown-properties": "warn",
+      "not": {
+        "required": ["minimum_version", "exact_version"]
+      },
       "properties": {
         "enforcement": {
           "description": "How strictly CLI compatibility expectations should be enforced.",

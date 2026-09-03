@@ -125,13 +125,18 @@ capability_classes = ["boundary-shaping", "reasoning-heavy", "mixed", "mechanica
     )
 
 
-def test_repo_local_delegation_policy_uses_only_canonical_independent_controls() -> None:
+def test_repo_without_machine_local_delegation_policy_stays_quiet_and_canonical() -> None:
     repo_root = Path(__file__).resolve().parents[1]
     config = cli._load_workspace_config(target_root=repo_root)
     mixed = workspace_runtime_core._mixed_agent_payload(config=config)
 
-    assert mixed["effective_orchestration"]["status"] == "binding-active"
-    assert mixed["effective_orchestration"]["current_target"]["automatic_methods"] == ["internal"]
+    assert mixed["effective_orchestration"]["status"] == "direct-local"
+    assert mixed["effective_orchestration"]["current_target"] == {
+        "identity": None,
+        "status": "not-configured",
+        "automatic_methods": [],
+    }
+    assert mixed["assignment_policy"]["status"] == "default-quiet"
     assert mixed["assignment_policy"]["migration"]["canonical_fields"] == [
         "delegation.assignment_policy",
         "delegation.transport_authority",
@@ -560,6 +565,34 @@ waiver = { reason = "waive", owner = "maintainer", applicability = {} }
     config = cli._load_workspace_config(target_root=target)
     assert config.assurance.requirements[0].waiver is not None
     assert config.assurance.requirements[0].dismissal is None
+
+
+def test_config_orthogonality_requires_one_cli_version_constraint(tmp_path: Path) -> None:
+    from agentic_workspace.config import WorkspaceUsageError
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    _write(
+        target / ".agentic-workspace/config.toml",
+        'schema_version = 1\n\n[cli_compatibility]\nminimum_version = "0.40.0"\nexact_version = "0.41.0"\n',
+    )
+
+    with pytest.raises(WorkspaceUsageError, match="must choose one version constraint"):
+        cli._load_workspace_config(target_root=target)
+
+
+def test_config_orthogonality_requires_one_payload_release_constraint(tmp_path: Path) -> None:
+    from agentic_workspace.config import WorkspaceUsageError
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    _write(
+        target / ".agentic-workspace/config.toml",
+        'schema_version = 1\n\n[payload]\ntarget_release = "source-current"\ndogfood_latest = false\n',
+    )
+
+    with pytest.raises(WorkspaceUsageError, match="canonical release constraint.*compatibility shorthand"):
+        cli._load_workspace_config(target_root=target)
 
 
 @pytest.mark.parametrize("shared_policy", ["local-preferred", "best-fit-advisory", "required-best-fit"])

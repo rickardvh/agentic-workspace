@@ -2357,6 +2357,28 @@
     },
     {
       "command": "assignment",
+      "conformance_ref": "assignment.status.process",
+      "domain_runtime_primitive_refs": [
+        "workspace.target-root.resolve",
+        "assignment.lifecycle.apply"
+      ],
+      "generated_transport": "generated/workspace/python/cli.py",
+      "generic_behavior_audit": "The generated transport owns command shape and emission; the domain primitive resolves bounded assignment/run lifecycle authority without mutation.",
+      "hand_owned_runtime_code": [
+        "workspace.target-root.resolve",
+        "assignment lifecycle exact read-only inspection"
+      ],
+      "operation_contract": "operations/assignment.status.json",
+      "operation_id": "assignment.status",
+      "primitive_executor": "command_generation/primitive_executor.py",
+      "program": "agentic-workspace",
+      "runtime_boundary_class": "live-workspace-inspection",
+      "runtime_boundary_reason": "Currentness and lifecycle continuation depend on AW-owned Planning and disposable run semantics while remaining read-only.",
+      "status": "domain-runtime-primitive-via-ir",
+      "what_would_make_portable_later": "Represent lifecycle currentness projection as a portable primitive after retained-run semantics stabilize."
+    },
+    {
+      "command": "assignment",
       "conformance_ref": "assignment.close.process",
       "domain_runtime_primitive_refs": [
         "workspace.target-root.resolve",
