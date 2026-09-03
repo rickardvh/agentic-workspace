@@ -8,10 +8,20 @@ or reinterpreted by consumers.
 
 from __future__ import annotations
 
-import hashlib
-import json
 from collections.abc import Mapping
 from typing import Any
+
+from agentic_workspace.projection_reuse import (
+    ProjectionConstituentSpec,
+    build_projection_constituent_identity,
+    compare_projection_constituent_identity,
+)
+
+_VERIFICATION_SEMANTIC_SPEC = ProjectionConstituentSpec(
+    "verification-semantic",
+    ("planning_slice", "proof_policy"),
+)
+_PROOF_POLICY_SPEC = ProjectionConstituentSpec("verification-proof-policy", ("proof_policy",))
 
 
 def _mapping(value: Any) -> dict[str, Any]:
@@ -22,22 +32,19 @@ def _text(value: Any) -> str:
     return str(value or "").strip()
 
 
-def _revision(subject: Mapping[str, Any]) -> str:
-    encoded = json.dumps(dict(subject), sort_keys=True, separators=(",", ":"), default=str).encode()
-    return "sha256:" + hashlib.sha256(encoded).hexdigest()
-
-
 def _proof_policy_identity(proof_policy: Mapping[str, Any]) -> dict[str, Any]:
     policy = dict(proof_policy)
     revision = _text(policy.get("revision"))
     if revision:
         return {"id": policy.get("id"), "revision": revision}
-    return {"id": policy.get("id"), "digest": _revision(policy)}
+    identity = build_projection_constituent_identity(
+        spec=_PROOF_POLICY_SPEC,
+        input_revisions={"proof_policy": policy},
+    )
+    return {"id": policy.get("id"), "digest": identity["input_revision"]}
 
 
-def verification_semantic_dependencies(
-    *, semantic_slice: Mapping[str, Any], proof_policy: Mapping[str, Any]
-) -> dict[str, Any]:
+def verification_semantic_dependencies(*, semantic_slice: Mapping[str, Any], proof_policy: Mapping[str, Any]) -> dict[str, Any]:
     """Return only the source identities that can stale semantic Verification work."""
 
     return {
@@ -78,15 +85,26 @@ def reuse_verification_semantic_contribution(
         proof_policy=proof_policy,
     )
     previous_dependencies = _previous_verification_semantic_dependencies(previous)
-    current_revision = _revision(current_dependencies)
-    previous_revision = _revision(previous_dependencies)
+    current_identity = build_projection_constituent_identity(
+        spec=_VERIFICATION_SEMANTIC_SPEC,
+        input_revisions=current_dependencies,
+    )
+    previous_identity = build_projection_constituent_identity(
+        spec=_VERIFICATION_SEMANTIC_SPEC,
+        input_revisions=previous_dependencies,
+    )
+    currentness = compare_projection_constituent_identity(
+        previous=previous_identity,
+        current=current_identity,
+    )
+    current_revision = str(current_identity["input_revision"])
     previous_semantic = _mapping(previous.get("semantic"))
     decision_revision = _text(previous.get("semantic_contribution_revision"))
     reusable = (
         previous.get("kind") == "agentic-workspace/verification-contribution-partition/v1"
         and bool(previous_semantic)
         and bool(decision_revision)
-        and previous_revision == current_revision
+        and currentness["status"] == "reused"
     )
     if reusable:
         return {
@@ -101,13 +119,11 @@ def reuse_verification_semantic_contribution(
             "re_resolution": None,
             "attempt_identity_used": False,
             "target_selection_authority": False,
+            "currentness": currentness,
+            "currentness_authority": "agentic_workspace.projection_reuse.ProjectionConstituentSpec",
         }
 
-    changed_dependencies = [
-        name
-        for name in ("planning_slice", "proof_policy")
-        if previous_dependencies.get(name) != current_dependencies.get(name)
-    ]
+    changed_dependencies = list(currentness.get("changed_dependency_fields", []))
     return {
         "kind": "agentic-workspace/verification-semantic-conclusion-reuse/v1",
         "status": "resolution-required",
@@ -124,4 +140,6 @@ def reuse_verification_semantic_contribution(
         },
         "attempt_identity_used": False,
         "target_selection_authority": False,
+        "currentness": currentness,
+        "currentness_authority": "agentic_workspace.projection_reuse.ProjectionConstituentSpec",
     }

@@ -41,6 +41,8 @@ def test_verification_semantic_conclusion_reuses_across_attempt_changes() -> Non
     assert reused["invalidated_dependencies"] == []
     assert reused["attempt_identity_used"] is False
     assert reused["target_selection_authority"] is False
+    assert reused["currentness"]["status"] == "reused"
+    assert reused["currentness_authority"].endswith("ProjectionConstituentSpec")
 
 
 def test_verification_semantic_conclusion_invalidates_only_proof_policy_change() -> None:
@@ -55,6 +57,7 @@ def test_verification_semantic_conclusion_invalidates_only_proof_policy_change()
     assert stale["status"] == "resolution-required"
     assert stale["semantic"] is None
     assert stale["invalidated_dependencies"] == ["proof_policy"]
+    assert stale["currentness"]["changed_dependency_fields"] == ["proof_policy"]
     assert stale["re_resolution"] == {
         "owner": "verification",
         "action": "resolve-semantic-verification-contribution",
@@ -73,6 +76,7 @@ def test_verification_semantic_conclusion_invalidates_only_planning_semantic_cha
 
     assert stale["status"] == "resolution-required"
     assert stale["invalidated_dependencies"] == ["planning_slice"]
+    assert stale["currentness"]["required_action"] == "build-constituent"
 
 
 def test_unversioned_proof_policy_uses_content_digest_for_currentness() -> None:
