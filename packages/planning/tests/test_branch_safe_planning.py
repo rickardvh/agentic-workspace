@@ -825,6 +825,14 @@ def test_feature_completion_mode_atomically_records_proof_and_proposes_integrati
     assert owner["finished_run_review"]["review status"] == "complete"
     assert owner["finished_run_review"]["scope respected"] == "Reviewed feature-head scope: Planning integration proposal lifecycle."
     assert owner["execution_summary"]["outcome delivered"] == "Implemented issue #2862 on the feature head."
+    retained_completion_values = (
+        owner["execution_run"]["what happened"],
+        owner["execution_run"]["scope touched"],
+        owner["execution_run"]["changed surfaces"],
+        owner["finished_run_review"]["scope respected"],
+        owner["execution_summary"]["outcome delivered"],
+    )
+    assert all(value.strip() and "<" not in value and "placeholder" not in value.lower() for value in retained_completion_values)
     assert owner["intent_satisfaction"]["was original intent fully satisfied?"] == "feature-head complete; target integration pending"
     assert owner["closure_check"]["slice status"] == "feature-complete-integration-pending"
     assert owner["closure_check"]["larger-intent status"] == "open-pending-target-integration"
