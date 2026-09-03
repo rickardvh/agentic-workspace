@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Surface the repository's existing PR-review eligibility procedure and anti-trap through an explicit semantic task route."
-issues = [2963]

@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "major"
-summary = "Reduce delegation policy to independent assignment, transport authority, human override, and target facts with finite compatibility aliases."
-issues = [2916]

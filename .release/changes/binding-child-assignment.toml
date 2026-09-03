@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Separate orchestrator parent custody from binding bounded-child assignment so unresolved child work cannot inherit blanket local execution authority."
-issues = [2817]

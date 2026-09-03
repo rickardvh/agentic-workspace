@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Let guarded Planning targeted writes atomically reconcile review-invalidated completed-run truth with lane and integration-proposal currentness."
-issues = [2951]

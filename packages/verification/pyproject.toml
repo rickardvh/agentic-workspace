@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentic-workspace-verification"
-version = "0.51.0"
+version = "1.0.0"
 description = "Repo-native verification protocols and bounded evidence records for Agentic Workspace."
 readme = "README.md"
 requires-python = ">=3.11"
