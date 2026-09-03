@@ -3,9 +3,9 @@
 
 Exact current command values generated from `cli_commands.json` and `cli_option_groups.json`. The schema-shape references remain at `cli-commands.md` and `cli-option-groups.md`.
 
-- Contract digest: `sha256:1e0b7199a711b37176bf6f2aed3dbdf201338ff7c1094ed3873555aeefa6196c`
+- Contract digest: `sha256:c0a20b8327ac1e3f0668a5d9b6acd0a4aee14fc82e11cc98d28abfc7831b0188`
 - Program: `agentic-workspace`
-- Command/subcommand count: 129
+- Command/subcommand count: 130
 
 Shared-state mutability and ignored local diagnostics are separate. A `no` below means the command contract does not mutate shared workspace state. When local session logging is enabled, any command may still write ignored machine-local diagnostics:
 
@@ -130,6 +130,7 @@ Shared-state mutability and ignored local diagnostics are separate. A `no` below
 | `agentic-workspace assignment` | `core_context_router` | `advanced_host_repo` | no | 2 | Execute public assignment/run lifecycle operations. |
 | `agentic-workspace assignment admit` | `core_context_router` | `advanced_host_repo` | no | 11 | Run assignment.admit. |
 | `agentic-workspace assignment cleanup` | `core_context_router` | `advanced_host_repo` | no | 6 | Run assignment.cleanup. |
+| `agentic-workspace assignment status` | `reusable_host_repo_diagnostics` | `advanced_host_repo` | no | 1 | Run assignment.status. |
 | `agentic-workspace assignment close` | `core_context_router` | `advanced_host_repo` | no | 6 | Run assignment.close. |
 | `agentic-workspace assignment dispatch` | `core_context_router` | `advanced_host_repo` | no | 1 | Run assignment.dispatch. |
 | `agentic-workspace assignment export` | `core_context_router` | `advanced_host_repo` | no | 6 | Run assignment.export. |
@@ -1744,6 +1745,14 @@ assignment lifecycle subcommand
 | `--delegation-decision-json` | no | `—` | — | `value` | Serialized current delegation decision authority. |
 | `--aw-proof-receipt-json` | no | `—` | — | `value` | Serialized AW proof receipt authority. |
 | `--run-state-json` | no | `—` | — | `value` | Serialized current assignment run state authority. |
+
+## `agentic-workspace assignment status`
+
+read-only exact assignment/run inspection
+
+| Flags | Required | Default | Choices | Action / nargs | Description |
+| --- | --- | --- | --- | --- | --- |
+| `--format` | no | `text` | text, json | `value` | Output format. |
 
 ## `agentic-workspace assignment close`
 

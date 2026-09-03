@@ -2372,7 +2372,7 @@
       "operation_id": "assignment.status",
       "primitive_executor": "command_generation/primitive_executor.py",
       "program": "agentic-workspace",
-      "runtime_boundary_class": "domain-read",
+      "runtime_boundary_class": "live-workspace-inspection",
       "runtime_boundary_reason": "Currentness and lifecycle continuation depend on AW-owned Planning and disposable run semantics while remaining read-only.",
       "status": "domain-runtime-primitive-via-ir",
       "what_would_make_portable_later": "Represent lifecycle currentness projection as a portable primitive after retained-run semantics stabilize."
