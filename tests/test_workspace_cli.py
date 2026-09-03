@@ -8180,8 +8180,7 @@ def test_payload_target_required_before_work_blocks_start_until_target_sync(tmp_
         "[payload]\n"
         'target_release = "source-current"\n'
         'minimum_capabilities = ["installed-state-sync-v2"]\n'
-        'policy = "required-before-work"\n'
-        "dogfood_latest = true\n",
+        'policy = "required-before-work"\n',
         encoding="utf-8",
     )
     provenance_path = workspace / "payload-provenance.json"
@@ -8281,8 +8280,7 @@ def test_payload_target_drift_keeps_unrelated_read_only_start_actionable(tmp_pat
         "[payload]\n"
         'target_release = "source-current"\n'
         'minimum_capabilities = ["installed-state-sync-v2"]\n'
-        'policy = "required-before-work"\n'
-        "dogfood_latest = true\n",
+        'policy = "required-before-work"\n',
         encoding="utf-8",
     )
     provenance_path = workspace / "payload-provenance.json"
@@ -8660,8 +8658,7 @@ def test_payload_target_read_only_gate_consumes_compiled_drift_triage(tmp_path: 
         "[payload]\n"
         'target_release = "source-current"\n'
         'minimum_capabilities = ["installed-state-sync-v2"]\n'
-        'policy = "required-before-work"\n'
-        "dogfood_latest = true\n",
+        'policy = "required-before-work"\n',
         encoding="utf-8",
     )
     provenance_path = workspace / "payload-provenance.json"
@@ -18932,6 +18929,7 @@ def test_selected_start_decision_route_is_narrow_and_preserves_claim_and_assignm
         "parent-retained-child-unresolved",
         "transport-blocked",
         "unevaluated",
+        "default-local",
     }
     assert disposition["assignment_decision_revision"]
 
