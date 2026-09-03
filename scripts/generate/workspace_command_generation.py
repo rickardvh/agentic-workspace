@@ -808,7 +808,8 @@ def _selector_conflict_alternatives(prog: str, argv: list[str]) -> list[str]:
             skip_next = True
             continue
         without_section.append(token)
-    return [f"{prog} {shlex.join(without_verbose)}", f"{prog} {shlex.join(without_section)}"]
+    root_prog = prog.split()[0]
+    return [f"{root_prog} {shlex.join(without_verbose)}", f"{root_prog} {shlex.join(without_section)}"]
 
 
 def _retryable_cli_error_payload(
@@ -818,7 +819,7 @@ def _retryable_cli_error_payload(
     return {
         'kind': _retryable_cli_error_kind(prog),
         'exit_status': 2,
-        'input_command': f"{prog} {shlex.join(argv)}",
+        'input_command': f"{prog.split()[0]} {shlex.join(argv)}",
         'failure_class': failure_class,
         'safe_to_retry': bool(suggested_command) or failure_class != 'invalid-command',
         'message': message,

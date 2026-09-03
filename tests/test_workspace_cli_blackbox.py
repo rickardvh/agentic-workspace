@@ -90,6 +90,31 @@ def test_blackbox_near_miss_command_guides_to_startup() -> None:
     assert "Startup tip: run 'agentic-workspace start --task \"<task>\" --format json'" in payload["message"]
 
 
+def test_blackbox_nested_invalid_command_echoes_logical_invocation_once() -> None:
+    result = _run_cli("assignment", "not-a-command", "--target", ".", "--format", "json", cwd=Path.cwd())
+
+    assert result.returncode == 2
+    payload = json.loads(result.stdout)
+    assert payload["kind"] == "agentic-workspace/retryable-cli-error/v1"
+    assert payload["input_command"] == "agentic-workspace assignment not-a-command --target . --format json"
+    assert "assignment assignment" not in payload["input_command"]
+    assert all("assignment assignment" not in command for command in payload["alternatives"])
+
+
+def test_blackbox_non_start_config_result_renders_in_json_and_text() -> None:
+    json_result = _run_cli("config", "--target", ".", "--format", "json", cwd=Path.cwd())
+    text_result = _run_cli("config", "--target", ".", cwd=Path.cwd())
+
+    assert json_result.returncode == text_result.returncode == 0
+    payload = json.loads(json_result.stdout)
+    assert payload["kind"] == "agentic-workspace/config-tiny/v1"
+    assert payload["target"] == "."
+    assert "Target: ." in text_result.stdout
+    assert "Config path: .agentic-workspace/config.toml" in text_result.stdout
+    assert len([line for line in text_result.stdout.splitlines() if line.strip()]) <= 20
+    assert "startup" not in text_result.stderr.lower()
+
+
 def test_unexpected_json_runtime_exception_has_structured_recovery(monkeypatch, capsys) -> None:
     def fail(_argv: list[str]) -> int:
         raise RuntimeError("representative package failure")

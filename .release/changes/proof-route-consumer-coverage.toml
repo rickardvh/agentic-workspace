@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Complete proof-route actionability evidence and update maintained owner replay coverage."
-issues = [2334, 2708, 2913]
