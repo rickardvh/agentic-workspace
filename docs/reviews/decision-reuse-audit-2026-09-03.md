@@ -2,26 +2,30 @@
 
 ## Decision
 
-The repository does not need a shared reasoning cache, decision registry, or
-new persistence layer. Existing projection reuse already covers canonical
-operating projections. The one demonstrated uncovered gap was reuse of the
-Verification semantic contribution across execution-attempt retries; this PR
-repairs that gap with source-dependency checks and integrates it into the
-existing orchestration partition.
+The repository already has substantial generic projection/currentness
+machinery and does not need a shared reasoning cache, decision registry, or
+new persistence layer. This PR repairs one demonstrated gap: reuse of the
+Verification semantic contribution across execution-attempt retries. Its
+currentness check is a thin domain wrapper over `ProjectionConstituentSpec`
+identity and comparison semantics.
+
+This audit is evidence for #2981, not a complete v1 owner-boundary
+disposition. The source-first semantic contraction in #2989 can still remap or
+remove composite alpha boundaries before v1.
 
 ## Owner and disposition inventory
 
 | Candidate conclusion | Current owner and identity | Disposition |
 | --- | --- | --- |
-| Route / operating decision | Workspace operating decision plus the `route` `ProjectionConstituentSpec`; task, selected owner, Planning, changed paths, and route inputs invalidate it | Existing projection reuse is sufficient |
-| Verification operating projection | Verification constituent; task, changed paths, and Verification inputs invalidate it | Existing projection reuse is sufficient for whole projections |
+| Route / operating decision | Workspace operating decision plus the current `route` `ProjectionConstituentSpec`; task, selected owner, Planning, changed paths, and route inputs invalidate it | Existing whole-projection reuse exists; v1 owner-boundary disposition remains under #2981/#2989 |
+| Verification operating projection | Verification constituent; task, changed paths, and Verification inputs invalidate it | Existing whole-projection reuse exists; v1 owner-boundary disposition remains under #2981/#2989 |
 | Verification semantic-slice contribution | Verification partition keyed by normalized Planning slice revision and proof-policy identity | Owner-specific repair in this PR; target, transport, assignment, and run retries reuse it |
-| Selected proof | `selected_proof` constituent keyed by task, changed paths, proof subject, and proof inputs | Existing projection reuse is sufficient |
-| Closeout trust | `closeout_trust` constituent keyed by task, owner, Planning, changed paths, proof subject, and closeout inputs | Existing projection reuse is sufficient |
+| Selected proof | Current `selected_proof` constituent keyed by task, changed paths, proof subject, and proof inputs | Existing whole-projection reuse exists; proof strategy/evidence lifetime remains under #2981/#2989 |
+| Closeout trust | Current `closeout_trust` constituent keyed by task, owner, Planning, changed paths, proof subject, and closeout inputs | Existing whole-projection reuse exists; v1 owner-boundary disposition remains under #2981/#2989 |
 | Planning normalized slice / frontier | Planning semantic revision and the derived frontier tracked by #2970 | Route to #2970; do not copy it into another reuse store |
 | Parent/sibling ready-work conclusions | Derived Planning frontier tracked by #2970 | Route to #2970; no peer queue or cache |
-| Context/read-first selection | Query-shaped operating projection; selected Memory enrichment adds only its declared index and manifest dependencies | Existing projection reuse is sufficient |
-| Assignment target ranking | #2210 assignment policy over current target evidence and runtime facts | Deliberately re-resolved because ranking and agent judgment are volatile; canonical assignment/run records remain reusable facts |
+| Context/read-first selection | Query-shaped operating projection; selected Memory enrichment adds only its declared index and manifest dependencies | Existing whole-projection reuse exists; ordinary partial re-resolution remains under #2981/#2989 |
+| Assignment target eligibility and ranking | #2210 assignment policy over current target evidence and runtime facts | Existing separation exists, but stable eligibility versus volatile ranking/economics still requires the #2981/#2989 disposition |
 | Reused-versus-reresolved attribution | #2967/#2969 evaluation and attribution owners | This PR exposes `reused` versus `resolution-required`; downstream interpretation remains with those issues |
 | Direct/simple decisions | Acting agent | Deliberately ephemeral; no mandatory lookup or retained artifact |
 
@@ -66,8 +70,16 @@ authority by reuse.
 
 ## Final architecture disposition
 
-Every reviewed candidate is covered by existing projection reuse, repaired at
-the Verification owner boundary, routed to an active owner issue, or explicitly
-ephemeral. No central cache, registry, event ledger, transcript archive, or
-universal dependency service is added. This closes the useful remaining scope
-of #2981 without expanding Agentic Workspace into a reasoning cache.
+This PR repairs the Verification semantic-versus-attempt gap without adding a
+central cache, registry, event ledger, transcript archive, or universal
+dependency service. It does not prove that current composite packet and
+constituent boundaries are the right v1 reuse boundaries. Names such as
+`route`, `selected_proof`, and `closeout_trust` remain alpha implementation
+shapes rather than permanent architecture commitments.
+
+#2981 therefore remains open to remap reuse after #2989, including proof
+strategy versus evidence, assignment eligibility versus ranking, exact
+Planning subject identity, owner revisions versus filesystem reconstruction,
+ordinary partial re-resolution, and convergence or removal of this PR's thin
+Verification wrapper where the contracted currentness machinery makes it
+unnecessary.
