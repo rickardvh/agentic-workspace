@@ -376,9 +376,19 @@ def reconcile_action_result(*, result: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def verification_contributions(
-    *, semantic_slice: Mapping[str, Any], assignment_attempt: Mapping[str, Any], proof_policy: Mapping[str, Any]
+    *,
+    semantic_slice: Mapping[str, Any],
+    assignment_attempt: Mapping[str, Any],
+    proof_policy: Mapping[str, Any],
+    previous_partition: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Partition semantic verification identity from execution-attempt evidence."""
+    """Partition semantic Verification identity from execution-attempt evidence.
+
+    A caller that already holds a source-owned partition may supply it here.
+    Only Planning semantic identity and proof-policy identity decide whether the
+    prior semantic contribution remains current; attempt changes still produce
+    a fresh attempt contribution.
+    """
 
     semantic = {
         "slice_id": semantic_slice.get("slice_id"),
@@ -386,6 +396,24 @@ def verification_contributions(
         "acceptance": semantic_slice.get("acceptance"),
         "proof_policy": dict(proof_policy),
     }
+    semantic_reuse: dict[str, Any] | None = None
+    if previous_partition is not None:
+        from agentic_workspace.resolved_decision_reuse import reuse_verification_semantic_contribution
+
+        reuse = reuse_verification_semantic_contribution(
+            previous_partition=previous_partition,
+            semantic_slice=semantic_slice,
+            proof_policy=proof_policy,
+        )
+        if reuse["status"] == "reused":
+            semantic = dict(reuse["semantic"])
+        semantic_reuse = {
+            "status": reuse["status"],
+            "decision_revision": reuse["decision_revision"],
+            "dependency_revision": reuse["dependency_revision"],
+            "invalidated_dependencies": list(reuse["invalidated_dependencies"]),
+            "re_resolution": reuse["re_resolution"],
+        }
     attempt = {
         "assignment_id": assignment_attempt.get("assignment_id"),
         "assignment_revision": assignment_attempt.get("assignment_revision"),
@@ -394,7 +422,7 @@ def verification_contributions(
         "transport": assignment_attempt.get("transport"),
         "return_id": assignment_attempt.get("return_id"),
     }
-    return {
+    result = {
         "kind": "agentic-workspace/verification-contribution-partition/v1",
         "semantic_contribution_revision": _revision(semantic),
         "attempt_contribution_revision": _revision(attempt),
@@ -402,3 +430,6 @@ def verification_contributions(
         "attempt": attempt,
         "target_selection_authority": False,
     }
+    if semantic_reuse is not None:
+        result["semantic_reuse"] = semantic_reuse
+    return result

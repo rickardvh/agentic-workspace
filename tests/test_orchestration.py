@@ -304,17 +304,24 @@ def test_verification_partition_reuses_semantic_contribution_across_attempt_retr
         proof_policy=policy,
     )
     retry = verification_contributions(
-        semantic_slice=semantic,
+        semantic_slice={**semantic, "acceptance": ["consumer-local text must not replace current owner truth"]},
         assignment_attempt={"assignment_id": "a", "assignment_revision": "r2", "run_id": "run-2", "target": "worker-b"},
         proof_policy=policy,
+        previous_partition=first,
     )
     changed = verification_contributions(
         semantic_slice={**semantic, "semantic_revision": "sem-2"},
         assignment_attempt={"assignment_id": "a", "assignment_revision": "r2", "run_id": "run-2", "target": "worker-b"},
         proof_policy=policy,
+        previous_partition=first,
     )
 
     assert first["semantic_contribution_revision"] == retry["semantic_contribution_revision"]
+    assert retry["semantic"] == first["semantic"]
+    assert retry["semantic_reuse"]["status"] == "reused"
+    assert retry["semantic_reuse"]["invalidated_dependencies"] == []
     assert first["attempt_contribution_revision"] != retry["attempt_contribution_revision"]
     assert retry["semantic_contribution_revision"] != changed["semantic_contribution_revision"]
+    assert changed["semantic_reuse"]["status"] == "resolution-required"
+    assert changed["semantic_reuse"]["invalidated_dependencies"] == ["planning_slice"]
     assert first["target_selection_authority"] is False
