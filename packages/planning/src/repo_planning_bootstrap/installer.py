@@ -14900,13 +14900,6 @@ def _resolve_feature_completion_evidence(
     execution_run = _record_section_dict(owner_record, "execution_run") or {}
     finished_run_review = _record_section_dict(owner_record, "finished_run_review") or {}
     execution_summary = _canonical_execution_summary(_record_section_dict(owner_record, "execution_summary") or {})
-    intent = _record_mapping(owner_record, "intent")
-    scope = _record_mapping(owner_record, "scope")
-    owned_scope_items = [str(item).strip() for item in scope.get("owned", []) if str(item).strip() and not _is_finish_run_placeholder(item)]
-    owned_scope = "; ".join(owned_scope_items)
-    intent_outcome = str(intent.get("outcome") or "").strip()
-    if _is_finish_run_placeholder(intent_outcome):
-        intent_outcome = ""
 
     def first_concrete(*values: Any) -> str:
         return next(
@@ -14915,11 +14908,11 @@ def _resolve_feature_completion_evidence(
         )
 
     evidence = {
-        "what_happened": first_concrete(what_happened, execution_run.get("what happened"), intent_outcome),
-        "scope_touched": first_concrete(scope_touched, execution_run.get("scope touched"), owned_scope),
-        "changed_surfaces": first_concrete(changed_surfaces, execution_run.get("changed surfaces"), owned_scope),
+        "what_happened": first_concrete(what_happened, execution_run.get("what happened")),
+        "scope_touched": first_concrete(scope_touched, execution_run.get("scope touched")),
+        "changed_surfaces": first_concrete(changed_surfaces, execution_run.get("changed surfaces")),
         "review_summary": first_concrete(review_summary, finished_run_review.get("scope respected")),
-        "outcome_summary": first_concrete(outcome_summary, execution_summary.get("outcome delivered"), intent_outcome),
+        "outcome_summary": first_concrete(outcome_summary, execution_summary.get("outcome delivered")),
     }
     if not evidence["review_summary"] and evidence["scope_touched"]:
         evidence["review_summary"] = f"Reviewed feature-head scope: {evidence['scope_touched']}"
