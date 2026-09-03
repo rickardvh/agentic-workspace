@@ -47,7 +47,7 @@ from agentic_workspace.assignment_lifecycle import (
     materialize_canonical_assignment,
 )
 from agentic_workspace.assurance_authority import build_assurance_application, evaluate_assurance_disposition
-from agentic_workspace.authority_envelope import admit_live_mutation_boundary, revalidate_mutation_baseline
+from agentic_workspace.authority_envelope import admit_live_mutation_boundary, mutation_baseline_payload, revalidate_mutation_baseline
 from agentic_workspace.config import (
     DEFAULT_AGENT_INSTRUCTIONS_FILE,
     DEFAULT_ASSURANCE_LEVEL,
@@ -54271,6 +54271,21 @@ def _emit_proof(
                     include_durable_intent=False,
                     task_text=str(builder_inputs.get("task") or "") or None,
                 )
+                route_findings_value = _as_dict(_as_dict(candidate.get("proof_route_maintenance")).get("route_health")).get("findings")
+                route_findings = route_findings_value if isinstance(route_findings_value, list) else []
+                if any(_as_dict(finding).get("bounded_adaptation_signal") for finding in route_findings):
+                    baseline = mutation_baseline_payload(
+                        target_root=target_root,
+                        changed_paths=[str(path) for path in builder_inputs.get("changed", [])],
+                    )
+                    candidate.setdefault("context", {})["operating_authorities"] = {
+                        "mutation_baseline": {
+                            **baseline,
+                            "revalidation_status": "current"
+                            if _as_dict(baseline.get("observation")).get("ok") is True
+                            else baseline.get("status"),
+                        }
+                    }
                 return attach_projection_surface_decision_input_consumption(
                     payload=candidate, consumption=consumption, used_material_inputs=builder_inputs
                 )
@@ -56743,16 +56758,33 @@ def _emit_workspace_config_compat_output(values: dict[str, Any], output_format: 
     return True
 
 
-def _emit_workspace_defaults_compat_output(values: dict[str, Any], output_format: str) -> None:
+def _emit_workspace_defaults_compat_output(values: dict[str, Any], output_format: str) -> bool:
+    if "defaults" not in values:
+        return False
     _emit_defaults(
         format_name=output_format,
         section=None,
         profile=_workspace_operation_profile(values),
         select=str(values["select"]) if values.get("select") is not None else None,
     )
+    return True
 
 
-def _emit_workspace_operation_output(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> None:
+def _emit_workspace_generic_operation_output(values: dict[str, Any], arguments: dict[str, Any]) -> None:
+    """Render non-start operation results through the shared primitive renderer.
+
+    Runtime-backed operations such as assignment lifecycle transitions do not
+    carry the startup/defaults state used by the legacy compatibility
+    renderers.  Keeping the generic result boundary explicit prevents a valid
+    operation from falling through to a startup-only renderer.
+    """
+
+    from agentic_workspace.contracts.python_primitive_support import _emit_output
+
+    print(_emit_output(values=values, arguments=arguments), end="")
+
+
+def _emit_workspace_operation_output(values: dict[str, Any], arguments: dict[str, Any], _context: Any) -> None:
     payload = values["result"]
     output_format = str(values.get("format") or "text")
     if _emit_workspace_prompt_output(payload, output_format):
@@ -56770,7 +56802,9 @@ def _emit_workspace_operation_output(values: dict[str, Any], _arguments: dict[st
         return
     if _emit_workspace_config_compat_output(values, output_format):
         return
-    _emit_workspace_defaults_compat_output(values, output_format)
+    if _emit_workspace_defaults_compat_output(values, output_format):
+        return
+    _emit_workspace_generic_operation_output(values, arguments)
 
 
 def _emit_workspace_operation_system_intent_payload_text(payload: dict[str, Any]) -> None:

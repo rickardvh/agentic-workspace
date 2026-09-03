@@ -9596,6 +9596,9 @@ def _proof_selection_for_changed_paths(
             lane_is_broad_profile = (bool(lane.get("proof_profile")) and not lane.get("repo_evidence_strategy_effect")) or str(
                 lane.get("id", "")
             ) in generic_broad_lane_ids
+            lane_has_focused_test_owner = str(_as_dict(lane.get("changed_test_owner_route")).get("status", "")) == "focused-owner-selected"
+            if lane_has_focused_test_owner:
+                lane_is_broad_profile = False
             lane_is_subsystem_broad = str(lane.get("id", "")).startswith("subsystem:") and any(
                 _proof_route_command_is_broad(command, proof_kind=str(lane.get("proof_kind", ""))) for command in broad_commands
             )

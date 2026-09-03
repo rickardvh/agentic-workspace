@@ -5424,6 +5424,45 @@ route_role = "behavior"
     assert "make check-memory-nosync" not in covered["required_commands"]
 
 
+def test_proof_selection_keeps_current_package_owner_and_feature_routes_composed() -> None:
+    selection = workspace_runtime_proof._proof_selection_for_changed_paths(
+        changed_paths=["packages/planning/src/repo_planning_bootstrap/cli.py"],
+        target_root=ROOT,
+        include_durable_intent=False,
+        include_assurance_requirements=False,
+        include_routine_work_context=False,
+        include_runtime_diagnostics=False,
+        include_test_strategy_check=False,
+    )
+
+    covered = set(selection["proof_decision"]["owner_coverage"]["covered_owners"])
+    assert {"planning_package", "subsystem:planning", "domain:planning_reconciliation_runtime"}.issubset(covered)
+    assert selection["proof_decision"]["owner_coverage"]["uncovered_owners"] == []
+    assert "make test-planning" in selection["required_commands"]
+    assert "make check-planning-nosync" in selection["required_commands"]
+    assert "make check-memory-nosync" not in selection["required_commands"]
+
+
+def test_proof_selection_keeps_external_consumer_test_owner_beside_feature_route() -> None:
+    changed_path = "tests/test_external_operation_clients.py"
+    selection = workspace_runtime_proof._proof_selection_for_changed_paths(
+        changed_paths=[changed_path],
+        target_root=ROOT,
+        include_durable_intent=False,
+        include_assurance_requirements=False,
+        include_routine_work_context=False,
+        include_runtime_diagnostics=False,
+        include_test_strategy_check=False,
+    )
+
+    workspace_lane = next(lane for lane in selection["selected_lanes"] if lane["id"] == "workspace_cli")
+    assert workspace_lane["changed_test_owner_route"]["status"] == "focused-owner-selected"
+    assert any(command.endswith(f"pytest {changed_path} -q") for command in selection["required_commands"])
+    assert "workspace_cli" in selection["proof_decision"]["owner_coverage"]["covered_owners"]
+    assert selection["proof_decision"]["owner_coverage"]["uncovered_owners"] == []
+    assert selection["proof_decision"]["sufficiency"]["owner_coverage_complete"] is True
+
+
 def test_proof_changed_keeps_existing_path_specific_proof_required(tmp_path: Path, capsys) -> None:
     _write(tmp_path / "tests" / "test_model_cli_harness.py", "def test_harness_fixture():\n    assert True\n")
     _write(

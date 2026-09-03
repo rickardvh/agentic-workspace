@@ -2384,6 +2384,38 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
         ),
         encoding="utf-8",
     )
+    public_args = [
+        sys.executable,
+        str(ROOT / "scripts/run_agentic_workspace.py"),
+        "assignment",
+        "export",
+        "--target",
+        str(tmp_path),
+        "--assignment-id",
+        "assign-1",
+        "--assignment-revision",
+        identity["revision"],
+        "--target-name",
+        "planner",
+        "--run-id",
+        "run-1",
+    ]
+    public_json = subprocess.run(
+        [*public_args, "--format", "json"],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    public_text = subprocess.run(public_args, cwd=ROOT, text=True, capture_output=True, check=False)
+    assert public_json.returncode == public_text.returncode == 0
+    json_result = json.loads(public_json.stdout)
+    assert json_result["operation_id"] == "assignment.export"
+    assert json_result["assignment_revision"] == identity["revision"]
+    assert json_result["message"] in public_text.stdout
+    assert "KeyError" not in public_text.stderr
+    assert len([line for line in public_text.stdout.splitlines() if line.strip()]) <= 60
+
     export = assignment_export(
         {
             "assignment_id": "assign-1",

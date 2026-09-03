@@ -1,0 +1,121 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "outside-2821-issue-stack",
+  "title": "Implement open issues outside the #2821 research lane",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "implementation",
+  "revision": 3,
+  "intent": {
+    "outcome": "user-request:2026-09-02; excludes #2821 and children #2822-#2827",
+    "non_goals": [
+      "Leave adjacent backlog or follow-on work out of this plan."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "user-request:2026-09-02; excludes #2821 and children #2822-#2827",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "Fill in the concrete files before implementation starts."
+    ],
+    "effects": []
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected-local",
+      "owner": "outside-2821-issue-stack"
+    },
+    "proof_posture": {
+      "state": "pending",
+      "refs": []
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    },
+    "delegation": {
+      "state": "recorded",
+      "route": "keep-local",
+      "reason": "Current collaboration policy forbids sub-agent delegation unless the user explicitly asks for it; execute the owned stack locally.",
+      "scope": "active-plan-work-unit",
+      "parent_task_custody": "retained-current",
+      "bounded_child_authority": "separate-binding-decision"
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "user-request:2026-09-02; excludes #2821 and children #2822-#2827",
+      "label": "user-request:2026-09-02; excludes #2821 and children #2822-#2827",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Implement open issues outside the #2821 research lane is implemented, validated, and closed out honestly."
+    ],
+    "requirements": [
+      "Fill in the narrowest command that proves the promoted work."
+    ],
+    "refs": []
+  },
+  "continuation": {
+    "owner": "none",
+    "residual_intent": "none"
+  },
+  "specialist_contracts": [
+    {
+      "kind": "planning-delegation/v1",
+      "target": "planning://delegation/keep-local",
+      "revision": 1
+    }
+  ],
+  "goal": [
+    "Implement and validate all currently open issues outside the #2821 research lane, grouped into a small dependency-ordered pull-request stack: #2131, #2214, #2263, #2276, #2334, #2564, #2613, #2699, #2708, #2804, #2817, #2851, #2913, #2950, #2967, #2968, #2969, #2970, #2971, #2972, #2973, and #2974."
+  ],
+  "non_goals": [
+    "Do not implement, close, or change scope for #2821 or its children #2822-#2827.",
+    "Do not include release automation or unrelated cleanup."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "Leave every in-scope open issue implemented with evidence and represented by a small logical PR stack.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "execution_bounds": {
+    "allowed paths": "Product source, package source, contracts, generated projections, focused tests, documentation, and canonical Planning state required by the in-scope issues.",
+    "max changed files": "220 across the complete stack; keep each PR lane substantially smaller.",
+    "required validation commands": "Use Agentic Workspace changed-path proof plus each lane focused tests, make lint-workspace, and make typecheck.",
+    "ask-before-refactor threshold": "Stop if an issue requires a new persistent workflow engine, scheduler, event ledger, or materially different product direction.",
+    "stop before touching": "#2821-#2827 implementation, release publication, credentials, production systems, and unrelated user changes."
+  },
+  "touched_paths": [
+    "src/agentic_workspace/**",
+    "packages/**",
+    "generated/**",
+    "tests/**",
+    "docs/**",
+    ".agentic-workspace/planning/**"
+  ],
+  "validation_commands": [
+    "uv run --frozen --active --no-sync python scripts/run_agentic_workspace.py proof --target . --changed <lane-paths> --format json",
+    "uv run --active pytest <lane-focused-tests> -q",
+    "make lint-workspace",
+    "make typecheck"
+  ],
+  "completion_criteria": [
+    "Every in-scope open issue has implementation and focused acceptance evidence or is proven already satisfied and reconciled without speculative changes.",
+    "The implementation is grouped into a small dependency-ordered stack of logical pull requests with accurate base branches and issue-closing descriptions.",
+    "#2821 and children #2822-#2827 remain untouched and excluded.",
+    "Each PR lane passes its focused proof route, and the stack head passes the combined required validation.",
+    "Planning closeout and issue/PR state are reconciled honestly without claiming parent completion from a feature head."
+  ]
+}

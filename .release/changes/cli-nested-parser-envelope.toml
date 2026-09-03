@@ -1,0 +1,5 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Stabilize CLI parser error reporting for shared/non-start commands and add nested command envelope guidance."
+issues = [2131, 2564, 2972]
+
