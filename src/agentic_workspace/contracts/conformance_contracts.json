@@ -776,6 +776,12 @@
     },
     {
       "adapter_kind": "process",
+      "id": "assignment.status.process",
+      "operation_id": "assignment.status",
+      "path": "conformance/assignment.status.process.json"
+    },
+    {
+      "adapter_kind": "process",
       "id": "assignment.close.process",
       "operation_id": "assignment.close",
       "path": "conformance/assignment.close.process.json"

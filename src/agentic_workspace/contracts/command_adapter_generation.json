@@ -7019,6 +7019,7 @@
         "subcommands": [
           "admit",
           "cleanup",
+          "status",
           "close",
           "dispatch",
           "export",
@@ -7033,6 +7034,7 @@
       "conformance_refs": [
         "assignment.admit.process",
         "assignment.cleanup.process",
+        "assignment.status.process",
         "assignment.close.process",
         "assignment.dispatch.process",
         "assignment.export.process",

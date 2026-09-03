@@ -6257,6 +6257,18 @@
         },
         {
           "audience": "advanced_host_repo",
+          "classification_note": "read-only exact assignment/run inspection",
+          "help": "Run assignment.status.",
+          "mutates_state": false,
+          "name": "status",
+          "options": [],
+          "role": "reusable_host_repo_diagnostics",
+          "uses_option_groups": [
+            "format"
+          ]
+        },
+        {
+          "audience": "advanced_host_repo",
           "classification_note": "assignment lifecycle subcommand",
           "help": "Run assignment.close.",
           "mutates_state": false,

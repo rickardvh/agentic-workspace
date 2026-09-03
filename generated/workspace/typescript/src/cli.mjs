@@ -9,7 +9,7 @@ import { writeSync } from 'node:fs';
 import { runGeneratedOperation } from './runtime.mjs';
 
 const supportedCommands = new Set(["agent-guidance", "assignment", "autopilot", "checkpoint", "config", "config-policy", "correction-event", "defaults", "doctor", "evaluation", "external-evidence-query", "external-evidence-submit", "external-intent", "final-response", "implement", "init", "install", "instructions", "memory", "modules", "note-delegation-outcome", "ownership", "planning", "preflight", "prompt", "proof", "reconcile", "report", "session-log", "setup", "skills", "start", "status", "summary", "system-intent", "uninstall", "upgrade", "work-thread"]);
-const nativeOperationIds = new Set(["agent-guidance.delete", "agent-guidance.edit", "agent-guidance.merge", "agent-guidance.promote", "agent-guidance.retire", "agent-guidance.revalidate", "agent-guidance.split", "agent-guidance.supersede", "agent-guidance.suppress", "agent-guidance.weaken", "assignment.admit", "assignment.cleanup", "assignment.close", "assignment.dispatch", "assignment.export", "assignment.import", "assignment.integrate", "assignment.override", "assignment.reassign", "assignment.reject", "assignment.repair", "autopilot.run", "checkpoint.write", "config.policy-apply", "config.report", "correction-event.correct-dispute", "correction-event.identity-init", "correction-event.prune-compact", "correction-event.query", "correction-event.submit", "correction-event.withdraw-supersede", "defaults.report", "delegation-outcome.append", "doctor.report", "evaluation.authority-refresh", "evaluation.delivery-status", "evaluation.external-adapter-receipt", "evaluation.external-delivery", "evaluation.external-host-result-import", "evaluation.external-request", "evaluation.local-delivery", "evaluation.observe", "evaluation.prune", "evaluation.register", "evaluation.report-preview", "evaluation.retry", "evaluation.status", "evaluation.transition", "external-evidence.query", "external-evidence.submit", "external-intent.refresh-github", "final-response.admit", "implement.context", "init.lifecycle", "install.lifecycle", "instructions.check", "instructions.create", "instructions.explain", "instructions.list", "instructions.migrate", "instructions.route-select", "instructions.routes", "memory.front-door", "modules.report", "ownership.report", "planning.front-door", "preflight.report", "prompt.init", "prompt.uninstall", "prompt.upgrade", "proof.report", "reconcile.report", "report.combined", "session-log.manage", "setup.guidance", "skills.report", "start.context", "status.report", "summary.report", "system-intent.sync", "uninstall.lifecycle", "upgrade.lifecycle", "work-thread.carry-inspect", "work-thread.carry-prune", "work-thread.carry-select", "work-thread.prune", "work-thread.select"]);
+const nativeOperationIds = new Set(["agent-guidance.delete", "agent-guidance.edit", "agent-guidance.merge", "agent-guidance.promote", "agent-guidance.retire", "agent-guidance.revalidate", "agent-guidance.split", "agent-guidance.supersede", "agent-guidance.suppress", "agent-guidance.weaken", "assignment.admit", "assignment.cleanup", "assignment.close", "assignment.dispatch", "assignment.export", "assignment.import", "assignment.integrate", "assignment.override", "assignment.reassign", "assignment.reject", "assignment.repair", "assignment.status", "autopilot.run", "checkpoint.write", "config.policy-apply", "config.report", "correction-event.correct-dispute", "correction-event.identity-init", "correction-event.prune-compact", "correction-event.query", "correction-event.submit", "correction-event.withdraw-supersede", "defaults.report", "delegation-outcome.append", "doctor.report", "evaluation.authority-refresh", "evaluation.delivery-status", "evaluation.external-adapter-receipt", "evaluation.external-delivery", "evaluation.external-host-result-import", "evaluation.external-request", "evaluation.local-delivery", "evaluation.observe", "evaluation.prune", "evaluation.register", "evaluation.report-preview", "evaluation.retry", "evaluation.status", "evaluation.transition", "external-evidence.query", "external-evidence.submit", "external-intent.refresh-github", "final-response.admit", "implement.context", "init.lifecycle", "install.lifecycle", "instructions.check", "instructions.create", "instructions.explain", "instructions.list", "instructions.migrate", "instructions.route-select", "instructions.routes", "memory.front-door", "modules.report", "ownership.report", "planning.front-door", "preflight.report", "prompt.init", "prompt.uninstall", "prompt.upgrade", "proof.report", "reconcile.report", "report.combined", "session-log.manage", "setup.guidance", "skills.report", "start.context", "status.report", "summary.report", "system-intent.sync", "uninstall.lifecycle", "upgrade.lifecycle", "work-thread.carry-inspect", "work-thread.carry-prune", "work-thread.carry-select", "work-thread.prune", "work-thread.select"]);
 const commandDefinitions = [
   {
     "interface": {
@@ -10225,6 +10225,56 @@ const commandDefinitions = [
               ],
               "help": "Serialized current assignment run state authority.",
               "name": "run_state_json"
+            }
+          ]
+        },
+        {
+          "help": "Inspect one exact assignment run and its current continuation without mutation.",
+          "name": "status",
+          "operation_ref": {
+            "id": "assignment.status",
+            "path": "operations/assignment.status.json"
+          },
+          "options": [
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to the current directory.",
+              "name": "target"
+            },
+            {
+              "flags": [
+                "--assignment-id"
+              ],
+              "help": "Stable Planning assignment id.",
+              "name": "assignment_id"
+            },
+            {
+              "flags": [
+                "--assignment-revision"
+              ],
+              "help": "Current assignment identity revision.",
+              "name": "assignment_revision"
+            },
+            {
+              "flags": [
+                "--run-id"
+              ],
+              "help": "Stable assignment run id.",
+              "name": "run_id"
             }
           ]
         },

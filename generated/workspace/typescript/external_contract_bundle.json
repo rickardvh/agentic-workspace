@@ -1,7 +1,7 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:98df9d67b4a69ec4b0d8fa15320182c377fd33dabe419a532bc75664cfe491d2",
+  "profile_fingerprint": "sha256:b28123faaa90ceabdd86ebcf04fff40dcba3338397d650aceca68229f7ac8301",
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",
@@ -12629,6 +12629,563 @@
             "Import places returned work in received/awaiting-admission only; it does not prove, admit, integrate, or close.",
             "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
             "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade."
+          ]
+        },
+        "schemas": {
+          "input": {
+            "assignment_lifecycle_input.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "additionalProperties": false,
+              "properties": {
+                "admission_status": {
+                  "enum": [
+                    "admitted",
+                    "rejected",
+                    "repair-requested"
+                  ],
+                  "type": "string"
+                },
+                "artifact_ref": {
+                  "type": "string"
+                },
+                "assignment_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "assignment_ref": {
+                  "type": "string"
+                },
+                "assignment_revision": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "dry_run": {
+                  "type": "boolean"
+                },
+                "expires_at": {
+                  "type": "string"
+                },
+                "format": {
+                  "enum": [
+                    "text",
+                    "json"
+                  ],
+                  "type": "string"
+                },
+                "planning_assignment_ref": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "return_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "return_json": {
+                  "type": "string"
+                },
+                "return_file": {
+                  "type": "string"
+                },
+                "review_result_json": {
+                  "type": "string"
+                },
+                "review_result_ref": {
+                  "type": "string"
+                },
+                "host_result_ref": {
+                  "type": "string"
+                },
+                "required_mode": {
+                  "enum": [
+                    "fresh-context",
+                    "separate-actor",
+                    "distinct-provider",
+                    "human"
+                  ],
+                  "type": "string"
+                },
+                "changed": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "changed_paths": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "run_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "scope": {
+                  "type": "string"
+                },
+                "target": {
+                  "type": "string"
+                },
+                "task": {
+                  "type": "string"
+                },
+                "target_name": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "task_proof_receipt_ref": {
+                  "type": "string"
+                },
+                "transport": {
+                  "enum": [
+                    "manual",
+                    "internal",
+                    "cli",
+                    "api"
+                  ],
+                  "type": "string"
+                }
+              },
+              "type": "object",
+              "x-agentic-workspace-doc-role": "contract-reference"
+            }
+          },
+          "output": {
+            "assignment_lifecycle_result.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "additionalProperties": true,
+              "properties": {
+                "artifact_refs": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "assignment_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "assignment_revision": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "kind": {
+                  "const": "agentic-workspace/assignment-lifecycle-result/v1"
+                },
+                "mutation_applied": {
+                  "type": "boolean"
+                },
+                "next_current_continuation": {
+                  "type": "object"
+                },
+                "operation_id": {
+                  "type": "string"
+                },
+                "outcome": {
+                  "enum": [
+                    "applied",
+                    "noop",
+                    "blocked",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                "reason_code": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "recovery_command": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "run_id": {
+                  "type": "string"
+                },
+                "return_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "state": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "schema_version": {
+                      "const": "agentic-workspace/assignment-lifecycle-decision-state/v1"
+                    },
+                    "current_state": {
+                      "type": "string"
+                    },
+                    "assignment_id": {
+                      "type": "string"
+                    },
+                    "run_id": {
+                      "type": "string"
+                    },
+                    "last_return_id": {
+                      "type": "string"
+                    },
+                    "last_admission_status": {
+                      "type": "string"
+                    },
+                    "current_attempt": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "run_id": {
+                          "type": "string"
+                        },
+                        "target": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "schema_version",
+                    "current_state"
+                  ],
+                  "type": "object"
+                },
+                "state_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "status": {
+                  "type": "string"
+                },
+                "transition": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "operation_id",
+                "transition",
+                "status",
+                "outcome",
+                "mutation_applied",
+                "run_id",
+                "artifact_refs",
+                "state"
+              ],
+              "type": "object",
+              "x-agentic-workspace-doc-role": "contract-reference"
+            }
+          },
+          "failure": {
+            "operation_failure.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "rejected",
+                    "failed",
+                    "retryable"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        }
+      }
+    },
+    "assignment.status": {
+      "identity": "assignment.status",
+      "version": "agentic-workspace/operation/v1",
+      "fingerprint": "sha256:ee1643ebf59491e8d77476f2aef21a67c13872bccd9292c17e129fd300331515",
+      "compatibility_fingerprint": "sha256:9eebac8cec7cfee93dcc713748547138fa006c4523b7cb69e94fcb8d0c6b2450",
+      "contract": {
+        "classification": "read-only-report",
+        "command_surface": {
+          "command": "assignment",
+          "format_option": "format",
+          "subcommand": "status"
+        },
+        "effects": {
+          "destructive": false,
+          "idempotent": true,
+          "read_only": true,
+          "requires_preflight_gate": false,
+          "writes_repo_state": false
+        },
+        "guards": [
+          "Resolve one exact assignment/run identity without materializing or mutating lifecycle state.",
+          "Return bounded currentness, retention, admission, integration, proof, completion, and exact continuation semantics.",
+          "Missing, stale, unknown, and cleaned-up runs remain structured bounded dispositions; raw local state inspection is never the recovery."
+        ],
+        "id": "assignment.status",
+        "inputs": [
+          {
+            "name": "target",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "format",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "assignment_id",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "assignment_revision",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "run_id",
+            "required": false,
+            "source": "cli-option"
+          }
+        ],
+        "intent": "Inspect one known delegated assignment/run and return its current lifecycle and exact continuation without mutation or startup takeover.",
+        "ir_plan": {
+          "status": "complete",
+          "steps": [
+            {
+              "description": "resolve_root",
+              "id": "resolve_root",
+              "outputs": [
+                "target_root"
+              ],
+              "uses": "workspace.target-root.resolve"
+            },
+            {
+              "description": "inspect_assignment_lifecycle",
+              "id": "inspect_assignment_lifecycle",
+              "outputs": [
+                "result"
+              ],
+              "uses": "assignment.lifecycle.apply"
+            },
+            {
+              "description": "emit_output",
+              "id": "emit_output",
+              "outputs": [
+                "emitted"
+              ],
+              "uses": "output.emit"
+            }
+          ]
+        },
+        "locality": {
+          "network": "forbidden",
+          "outside_repo_writes": "forbidden",
+          "requires_repo": true
+        },
+        "migration_status": "runtime-consumed",
+        "output": {
+          "kind": "text-or-json",
+          "schema_ref": "schemas/assignment_lifecycle_result.schema.json"
+        },
+        "proof": [
+          "assignment status tests cover current, stale, missing, unknown, and cleaned-up run identities without writes",
+          "generated Python, TypeScript, and external consumer clients expose the same operation identity and result"
+        ],
+        "reads": [
+          {
+            "description": "checked-in Planning assignment authority resolved by assignment id",
+            "required": false,
+            "surface": ".agentic-workspace/planning/assignments/<assignment-id>.assignment.json"
+          },
+          {
+            "description": "local disposable state for the exact run id",
+            "required": false,
+            "surface": ".agentic-workspace/local/assignment-runs/<run-id>/state.json"
+          }
+        ],
+        "schema_version": "agentic-workspace/operation/v1",
+        "steps": [
+          {
+            "description": "Resolve the target repository root.",
+            "id": "resolve_root",
+            "uses": "workspace.target-root.resolve"
+          },
+          {
+            "description": "Inspect the exact assignment/run state without writing.",
+            "id": "inspect_assignment_lifecycle",
+            "uses": "assignment.lifecycle.apply"
+          },
+          {
+            "description": "Emit the bounded status result.",
+            "id": "emit_output",
+            "uses": "output.emit"
+          }
+        ],
+        "summary": "Inspect one exact assignment run and return its current lifecycle and recovery action.",
+        "writes": []
+      },
+      "schemas": [
+        "assignment_lifecycle_input.schema.json",
+        "assignment_lifecycle_result.schema.json",
+        "operation_failure.schema.json"
+      ],
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.status.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local assignment artifact writes",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.status.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "current authority validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.status.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.status.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      },
+      "schema_roles": {
+        "input": [
+          "assignment_lifecycle_input.schema.json"
+        ],
+        "output": [
+          "assignment_lifecycle_result.schema.json"
+        ],
+        "failure": [
+          "operation_failure.schema.json"
+        ]
+      },
+      "compatibility_surface": {
+        "contract": {
+          "schema_version": "agentic-workspace/operation/v1",
+          "id": "assignment.status",
+          "classification": "read-only-report",
+          "inputs": [
+            {
+              "name": "target",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "format",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "assignment_id",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "assignment_revision",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "run_id",
+              "required": false,
+              "source": "cli-option"
+            }
+          ],
+          "output": {
+            "kind": "text-or-json",
+            "schema_ref": "schemas/assignment_lifecycle_result.schema.json"
+          },
+          "effects": {
+            "destructive": false,
+            "idempotent": true,
+            "read_only": true,
+            "requires_preflight_gate": false,
+            "writes_repo_state": false
+          },
+          "guards": [
+            "Resolve one exact assignment/run identity without materializing or mutating lifecycle state.",
+            "Return bounded currentness, retention, admission, integration, proof, completion, and exact continuation semantics.",
+            "Missing, stale, unknown, and cleaned-up runs remain structured bounded dispositions; raw local state inspection is never the recovery."
           ]
         },
         "schemas": {

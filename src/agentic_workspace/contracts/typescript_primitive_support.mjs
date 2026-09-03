@@ -2384,6 +2384,9 @@ function assignmentResultContinuation(result) {
   if (['blocked', 'failed'].includes(String(result.outcome ?? ''))) {
     return { kind: 'agentic-workspace/action-result-continuation/v1', status: 'blocked', owner: 'assignment-lifecycle', reason_code: result.reason_code ?? null, recovery: result.recovery_command ?? null };
   }
+  if (result.stale === true) {
+    return { kind: 'agentic-workspace/action-result-continuation/v1', status: 're-resolution-required', owner: result.currentness_owner ?? 'assignment-lifecycle', action: result.replacement_action ?? 'resolve-current-owner-action', reason: 'the prior action is non-current and must not be retried' };
+  }
   const transitions = {
     'handoff-prepared': ['assignment.dispatch', 'execute-current-assignment', 'awaiting-host-execution'],
     'awaiting-host-execution': ['assignment.import', 'await-structured-return', 'awaiting-admission'],
@@ -2444,6 +2447,39 @@ function assignmentLifecycleApply(values, operationId) {
     return value;
   };
   const artifact = (relativePath) => resolveInside(runDir, relativePath);
+  if (transition === 'status') {
+    const resolvedAssignmentId = assignmentId || assignmentText(state.assignment_id);
+    const planningRef = resolvedAssignmentId ? assignmentPlanningRef(values, resolvedAssignmentId) : '';
+    let planning = {};
+    try { if (planningRef) planning = readJson(resolveInside(targetRoot, planningRef)); } catch (_error) { planning = {}; }
+    const currentAttempt = isObject(planning.current_attempt) ? planning.current_attempt : {};
+    const currentRunId = assignmentText(currentAttempt.run_id);
+    const stateExists = existsSync(statePath);
+    if (!stateExists && !Object.keys(planning).length) failures.push({ reason: 'assignment-run-not-found', field: 'assignment_id|run_id', recovery: 'Re-resolve the current assignment decision, or retry with its exact assignment id and run id.' });
+    const currentness = currentRunId === runId ? 'current' : currentRunId ? 'stale' : Object.keys(planning).length && !stateExists ? 'historical-detail-not-retained' : 'unknown';
+    const lifecycleState = assignmentText(state.current_state) || assignmentText(currentAttempt.status) || 'unknown';
+    const integrationPath = artifact('integration/integration.json');
+    let integration = {};
+    try { if (existsSync(integrationPath)) integration = readJson(integrationPath); } catch (_error) { integration = {}; }
+    const admissionStatus = assignmentText(state.last_admission_status) || (['admitted', 'integrated', 'closed', 'archived'].includes(lifecycleState) ? 'admitted' : 'pending');
+    const integrationStatus = assignmentText(integration.status) || (['integrated', 'closed', 'archived'].includes(lifecycleState) ? 'integrated' : 'pending');
+    const decisionState = { schema_version: 'agentic-workspace/assignment-lifecycle-decision-state/v1', current_state: lifecycleState, run_id: runId };
+    if (resolvedAssignmentId) decisionState.assignment_id = resolvedAssignmentId;
+    if (assignmentText(state.last_return_id)) decisionState.last_return_id = state.last_return_id;
+    if (assignmentText(state.last_admission_status)) decisionState.last_admission_status = state.last_admission_status;
+    if (Object.keys(currentAttempt).length) decisionState.current_attempt = Object.fromEntries(['run_id', 'target', 'status'].filter((field) => assignmentText(currentAttempt[field])).map((field) => [field, currentAttempt[field]]));
+    const refs = [stateExists ? relative(targetRoot, statePath).replaceAll('\\', '/') : '', Object.keys(planning).length ? planningRef : '', Object.keys(integration).length ? relative(targetRoot, integrationPath).replaceAll('\\', '/') : ''].filter(Boolean);
+    const result = {
+      kind: 'agentic-workspace/assignment-lifecycle-result/v1', operation_id: operationId, transition, status: failures.length ? 'blocked' : lifecycleState, outcome: failures.length ? 'blocked' : 'noop', mutation_applied: false,
+      target_root: targetRoot, run_id: runId, assignment_id: resolvedAssignmentId || null, assignment_revision: assignmentRevision || assignmentText(planning.current_revision) || assignmentText(state.assignment?.assignment_identity?.revision) || null,
+      return_id: assignmentText(state.last_return_id) || null, artifact_refs: refs, state_ref: stateExists ? relative(targetRoot, statePath).replaceAll('\\', '/') : null, state: decisionState,
+      inspection: { currentness, retention: stateExists ? 'retained' : 'historical-detail-not-retained', admission: admissionStatus, integration: integrationStatus, proof: integrationStatus === 'integrated' && !['closed', 'archived'].includes(lifecycleState) ? 'required' : 'not-pending', completion_permission: ['closed', 'archived'].includes(lifecycleState) },
+      stale: currentness === 'stale', currentness_owner: planningRef || 'assignment-lifecycle', replacement_action: currentness === 'stale' ? 'query-current-assignment-run' : null,
+      failures, reason_code: failures[0]?.reason ?? null, recovery_command: failures[0]?.recovery ?? null, message: `assignment status: ${failures.length ? 'blocked' : lifecycleState}`, actions: [],
+    };
+    result.next_current_continuation = assignmentResultContinuation(result);
+    return result;
+  }
   if (transition === 'export' || transition === 'dispatch') {
     const id = requireField('assignment_id');
     if (!id && assignmentText(values.task)) failures.push({ reason: 'native-assignment-materialization-unavailable', field: 'assignment_id', recovery: 'Materialize the live assignment through the Python AW host, then retry the TypeScript export with its assignment id and revision.' });

@@ -656,6 +656,7 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
         "repair",
         "reassign",
         "integrate",
+        "status",
         "close",
         "cleanup",
         "override",
@@ -710,6 +711,109 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
     artifact_paths: list[Path] = []
     failures: list[dict[str, str]] = []
     writes: dict[Path, Any] = {}
+
+    if transition == "status":
+        resolved_assignment_id = assignment_id or _optional_text(state.get("assignment_id"))
+        planning_assignment: dict[str, Any] = {}
+        planning_ref = ""
+        if resolved_assignment_id:
+            planning_ref = _assignment_planning_ref(values=values, assignment_id=resolved_assignment_id)
+            try:
+                loaded_assignment = json.loads(_resolve_inside(target_root, planning_ref).read_text(encoding="utf-8-sig"))
+            except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+                loaded_assignment = {}
+            planning_assignment = _assignment_mapping(loaded_assignment)
+        current_attempt = _assignment_mapping(planning_assignment.get("current_attempt"))
+        current_run_id = _optional_text(current_attempt.get("run_id"))
+        state_exists = state_path.is_file()
+        if not state_exists and not planning_assignment:
+            failures.append(
+                {
+                    "reason": "assignment-run-not-found",
+                    "field": "assignment_id|run_id",
+                    "recovery": "Re-resolve the current assignment decision, or retry with its exact assignment id and run id.",
+                }
+            )
+        currentness = (
+            "current"
+            if current_run_id == run_id
+            else "stale"
+            if current_run_id
+            else "historical-detail-not-retained"
+            if planning_assignment and not state_exists
+            else "unknown"
+        )
+        lifecycle_state = _optional_text(state.get("current_state")) or _optional_text(current_attempt.get("status")) or "unknown"
+        integration_path = _resolve_inside(run_dir, "integration/integration.json")
+        try:
+            integration_receipt = _assignment_mapping(json.loads(integration_path.read_text(encoding="utf-8")))
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+            integration_receipt = {}
+        admission_status = _optional_text(state.get("last_admission_status")) or (
+            "admitted" if lifecycle_state in {"admitted", "integrated", "closed", "archived"} else "pending"
+        )
+        integration_status = _optional_text(integration_receipt.get("status")) or (
+            "integrated" if lifecycle_state in {"integrated", "closed", "archived"} else "pending"
+        )
+        effective_revision = (
+            assignment_revision
+            or _optional_text(planning_assignment.get("current_revision"))
+            or _optional_text(_assignment_mapping(_assignment_mapping(state.get("assignment")).get("assignment_identity")).get("revision"))
+        )
+        result = {
+            "kind": "agentic-workspace/assignment-lifecycle-result/v1",
+            "operation_id": operation_id,
+            "transition": transition,
+            "status": "blocked" if failures else lifecycle_state,
+            "outcome": "blocked" if failures else "noop",
+            "mutation_applied": False,
+            "target_root": target_root.as_posix(),
+            "run_id": run_id,
+            "assignment_id": resolved_assignment_id or None,
+            "assignment_revision": effective_revision or None,
+            "return_id": _optional_text(state.get("last_return_id")) or None,
+            "artifact_refs": [
+                ref
+                for ref in (
+                    _assignment_relative(state_path, root=target_root) if state_exists else "",
+                    planning_ref if planning_assignment else "",
+                    _assignment_relative(integration_path, root=target_root) if integration_receipt else "",
+                )
+                if ref
+            ],
+            "state_ref": _assignment_relative(state_path, root=target_root) if state_exists else None,
+            "state": _assignment_lifecycle_decision_state(
+                {
+                    **state,
+                    "current_state": lifecycle_state,
+                    "assignment_id": resolved_assignment_id,
+                    "run_id": run_id,
+                    "current_attempt": current_attempt,
+                }
+            ),
+            "inspection": {
+                "currentness": currentness,
+                "retention": "retained" if state_exists else "historical-detail-not-retained",
+                "admission": admission_status,
+                "integration": integration_status,
+                "proof": "required"
+                if integration_status == "integrated" and lifecycle_state not in {"closed", "archived"}
+                else "not-pending",
+                "completion_permission": lifecycle_state in {"closed", "archived"},
+            },
+            "stale": currentness == "stale",
+            "currentness_owner": planning_ref or "assignment-lifecycle",
+            "replacement_action": "query-current-assignment-run" if currentness == "stale" else None,
+            "failures": failures,
+            "reason_code": failures[0]["reason"] if failures else None,
+            "recovery_command": failures[0]["recovery"] if failures else None,
+            "message": f"assignment status: {'blocked' if failures else lifecycle_state}",
+            "actions": [],
+        }
+        from agentic_workspace.orchestration import reconcile_action_result
+
+        result["next_current_continuation"] = reconcile_action_result(result=result)
+        return result
 
     def require(field: str) -> str:
         value = _optional_text(values.get(field))

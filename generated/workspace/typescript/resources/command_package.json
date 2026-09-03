@@ -10624,6 +10624,7 @@
       "conformance_refs": [
         "assignment.admit.process",
         "assignment.cleanup.process",
+        "assignment.status.process",
         "assignment.close.process",
         "assignment.dispatch.process",
         "assignment.export.process",
@@ -12140,6 +12141,56 @@
                 ],
                 "help": "Serialized current assignment run state authority.",
                 "name": "run_state_json"
+              }
+            ]
+          },
+          {
+            "help": "Inspect one exact assignment run and its current continuation without mutation.",
+            "name": "status",
+            "operation_ref": {
+              "id": "assignment.status",
+              "path": "operations/assignment.status.json"
+            },
+            "options": [
+              {
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "flags": [
+                  "--format"
+                ],
+                "help": "Output format.",
+                "name": "format"
+              },
+              {
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory.",
+                "name": "target"
+              },
+              {
+                "flags": [
+                  "--assignment-id"
+                ],
+                "help": "Stable Planning assignment id.",
+                "name": "assignment_id"
+              },
+              {
+                "flags": [
+                  "--assignment-revision"
+                ],
+                "help": "Current assignment identity revision.",
+                "name": "assignment_revision"
+              },
+              {
+                "flags": [
+                  "--run-id"
+                ],
+                "help": "Stable assignment run id.",
+                "name": "run_id"
               }
             ]
           },
