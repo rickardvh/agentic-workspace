@@ -24,6 +24,7 @@ class Module:
     resources: tuple[Mapping[str, Any], ...] = ()
     procedures: tuple[Mapping[str, Any], ...] = ()
     currentness: Callable[[Mapping[str, Any]], str | None] | None = None
+    handoff_complete: Callable[[str, Mapping[str, Any], Mapping[str, Any]], None] | None = None
 
 
 def admit_modules(modules: Iterable[Module]) -> list[Module]:
@@ -124,7 +125,10 @@ def module_contributions(
                 target_owner = module.name
             if tuple(action.get("effects", [])) != operation.effects:
                 raise ValueError(f"module {module.name} action effects differ from its operation contract")
-            normalized_actions.append({**dict(action), "source_owner": target_owner})
+            normalized = {**dict(action), "source_owner": target_owner}
+            if target_owner != module.name:
+                normalized["handoff_source"] = module.name
+            normalized_actions.append(normalized)
         payload["actions"] = normalized_actions
         decisions = payload.get("decisions", [])
         if not isinstance(decisions, list) or any(not isinstance(item, Mapping) for item in decisions):

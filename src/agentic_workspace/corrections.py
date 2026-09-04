@@ -9,7 +9,6 @@ from .builtin_modules import MEMORY_STATE, PLANNING_STATE, _json, _state_revisio
 from .generated_semantics import operation_contract, semantic_digest
 from .modules import Module
 from .operations import Operation
-from .repository_controls import repository_rule_revision
 
 
 @dataclass(frozen=True)
@@ -104,6 +103,7 @@ class TrustedCorrectionIngress:
                 ),
             ),
             currentness=self._currentness,
+            handoff_complete=self._handoff_complete,
         )
 
     def _currentness(self, context: Mapping[str, Any]) -> str:
@@ -118,44 +118,17 @@ class TrustedCorrectionIngress:
         )
 
     @staticmethod
-    def _evidence_revision(root: Path, evidence: Mapping[str, Any]) -> str | None:
-        owner = str(evidence.get("owner") or "")
-        owner_ref = str(evidence.get("ref") or "")
-        if owner == "repository":
-            return repository_rule_revision(root, owner_ref)
-        if owner == "memory" and owner_ref == MEMORY_STATE:
-            return _state_revision(root, MEMORY_STATE)
-        if owner == "planning" and owner_ref == PLANNING_STATE:
-            return _state_revision(root, PLANNING_STATE)
-        return None
-
-    @classmethod
-    def _route(cls, root: Path, correction: TrustedCorrection) -> tuple[str, str, str, str]:
-        if correction.existing_owner:
-            expected = str(correction.existing_owner.get("revision") or "")
-            current = cls._evidence_revision(root, correction.existing_owner)
-            if not expected or current != expected:
-                return ("invalid-owner-evidence", "correction", "", "existing owner evidence is stale or unknown")
-            return (
-                "already-owned",
-                str(correction.existing_owner.get("owner") or "repository"),
-                expected,
-                "",
-            )
-        if correction.deterministic_owner_failure:
-            expected = str(correction.deterministic_owner_failure.get("revision") or "")
-            current = cls._evidence_revision(root, correction.deterministic_owner_failure)
-            if not expected or current != expected:
-                return ("invalid-owner-evidence", "correction", "", "failed owner evidence is stale or unknown")
-            return (
-                "owner-repair",
-                str(correction.deterministic_owner_failure.get("owner") or "adaptation"),
-                expected,
-                "",
-            )
-        if correction.future_usefulness == "do-not-retain":
-            return ("no-new-durable-record", "correction", "", "")
-        return ("memory", "memory", _state_revision(root, MEMORY_STATE), "")
+    def _payload(correction: TrustedCorrection) -> dict[str, Any]:
+        return {
+            "correction_id": correction.correction_id,
+            "statement": correction.statement,
+            "subject": dict(correction.subject),
+            "applicability": dict(correction.applicability),
+            "provenance": dict(correction.provenance),
+            "future_usefulness": correction.future_usefulness,
+            "existing_owner": dict(correction.existing_owner or {}),
+            "deterministic_owner_failure": dict(correction.deterministic_owner_failure or {}),
+        }
 
     @staticmethod
     def _memory_key(correction: TrustedCorrection) -> str:
@@ -168,11 +141,20 @@ class TrustedCorrectionIngress:
                 isinstance(item, Mapping)
                 and item.get("key") == self._memory_key(correction)
                 and item.get("value") == correction.statement
+                and item.get("correction_revision") == correction.revision
+                and item.get("provenance") == "trusted-human-correction:" + correction.revision
                 for item in records
             )
         if disposition == "owner-repair":
             subjects = _json(root / PLANNING_STATE).get("subjects", {})
-            return isinstance(subjects, Mapping) and f"correction-repair:{correction.correction_id}" in subjects
+            subject = (
+                subjects.get(f"correction-repair:{correction.correction_id}")
+                if isinstance(subjects, Mapping)
+                else None
+            )
+            return isinstance(subject, Mapping) and f"correction_revision={correction.revision}" in subject.get(
+                "constraints", []
+            )
         return False
 
     def _contribute(self, context: Mapping[str, Any]) -> dict[str, Any] | None:
@@ -181,56 +163,49 @@ class TrustedCorrectionIngress:
         correction_id = sorted(self._pending)[0]
         correction = self._pending[correction_id]
         root = Path(str(context["target"])).resolve()
-        disposition, owner, owner_revision, route_error = self._route(root, correction)
-        if route_error:
-            return {
-                "revision": semantic_digest({"correction": correction.revision, "route_error": route_error}),
-                "facts": {"id": correction.correction_id, "subject": dict(correction.subject)},
-                "blockers": [
-                    {
-                        "code": "invalid-correction-owner-evidence",
-                        "message": route_error,
-                        "recovery": "resolve current evidence from the named source owner before disposition",
-                    }
-                ],
-            }
+        if correction.existing_owner:
+            disposition, owner = "already-owned", "repository"
+        elif correction.deterministic_owner_failure:
+            disposition, owner = "owner-repair", "planning"
+        elif correction.future_usefulness == "do-not-retain":
+            disposition, owner = "no-new-durable-record", "correction"
+        else:
+            disposition, owner = "memory", "memory"
+        evidence = correction.existing_owner or correction.deterministic_owner_failure or {}
+        owner_revision = str(evidence.get("revision") or "")
         if self._effect_applied(root, correction, disposition):
             self._pending.pop(correction.correction_id, None)
             self._completed.add(correction.correction_id)
             return None
         if disposition == "memory":
-            operation_id = "memory.record"
+            operation_id = "memory.accept-correction"
             effects = ["memory-state"]
             arguments = {
                 "target": str(root),
-                "key": self._memory_key(correction),
-                "value": correction.statement,
-                "summary": correction.statement,
-                "provenance": "trusted-human-correction:" + correction.revision,
-                "task_terms": list(correction.applicability.get("task_terms", [])),
-                "paths": list(correction.applicability.get("paths", [])),
-                "dependency_revision": str(correction.applicability.get("dependency_revision") or ""),
-                "kind": "advisory",
-                "expected_state_revision": owner_revision,
+                "correction": self._payload(correction),
+                "correction_revision": correction.revision,
+                "expected_state_revision": _state_revision(root, MEMORY_STATE),
             }
         elif disposition == "owner-repair":
-            operation_id = "planning.set"
+            operation_id = "planning.accept-correction-failure"
             effects = ["planning-state"]
-            owner_ref = str((correction.deterministic_owner_failure or {}).get("ref") or "")
             arguments = {
                 "target": str(root),
-                "item": f"correction-repair:{correction.correction_id}",
-                "status": "in-progress",
-                "outcome": f"Repair deterministic {owner} owner failure: {correction.statement}",
-                "scope": [owner_ref],
-                "constraints": [
-                    f"correction_revision={correction.revision}",
-                    f"failed_owner_revision={owner_revision}",
-                ],
-                "dependencies": [],
-                "stops": ["do not create compensating Memory guidance"],
-                "proof_claims": ["complete"],
+                "correction": self._payload(correction),
+                "correction_revision": correction.revision,
+                "owner_ref": str(evidence.get("ref") or ""),
+                "owner_revision": owner_revision,
                 "expected_state_revision": _state_revision(root, PLANNING_STATE),
+            }
+        elif disposition == "already-owned":
+            operation_id = "repository.accept-correction"
+            effects = []
+            arguments = {
+                "target": str(root),
+                "correction": self._payload(correction),
+                "correction_revision": correction.revision,
+                "owner_ref": str(evidence.get("ref") or ""),
+                "owner_revision": owner_revision,
             }
         else:
             operation_id = "correction.disposition"
@@ -269,8 +244,8 @@ class TrustedCorrectionIngress:
         correction = self._pending.get(arguments["correction_id"])
         if correction is None or correction.revision != arguments["correction_revision"]:
             return {"status": "rejected", "effects": [], "value": {"reason": "stale-correction"}}
-        disposition, owner, owner_revision, route_error = self._route(Path(arguments["target"]).resolve(), correction)
-        if route_error or disposition not in {"already-owned", "no-new-durable-record"}:
+        disposition, owner, owner_revision = "no-new-durable-record", "correction", ""
+        if correction.future_usefulness != "do-not-retain":
             return {"status": "rejected", "effects": [], "value": {"reason": "owner-operation-required"}}
         if (arguments["disposition"], arguments["owner"], arguments["owner_revision"]) != (
             disposition,
@@ -290,13 +265,30 @@ class TrustedCorrectionIngress:
             "owner": owner,
             "owner_revision": owner_revision,
         }
-        if disposition == "already-owned":
-            value["justification"] = "the correction is already enforced by the named canonical owner"
-        elif disposition == "no-new-durable-record":
-            value["justification"] = "the human marked the correction as having no future decision value"
+        value["justification"] = "the human marked the correction as having no future decision value"
         self._pending.pop(correction.correction_id, None)
         self._completed.add(correction.correction_id)
         return {"status": "applied", "effects": ["correction-disposition"], "value": value}
+
+    def _handoff_complete(
+        self, operation_id: str, arguments: Mapping[str, Any], outcome: Mapping[str, Any]
+    ) -> None:
+        correction = arguments.get("correction")
+        if operation_id not in {
+            "memory.accept-correction",
+            "planning.accept-correction-failure",
+            "repository.accept-correction",
+        } or not isinstance(correction, Mapping):
+            return
+        correction_id = str(correction.get("correction_id") or "")
+        pending = self._pending.get(correction_id)
+        if pending is None or arguments.get("correction_revision") != pending.revision:
+            return
+        value = outcome.get("value")
+        if not isinstance(value, Mapping) or value.get("correction_revision") != pending.revision:
+            return
+        self._pending.pop(correction_id, None)
+        self._completed.add(correction_id)
 
 
 __all__ = ["TrustedCorrection", "TrustedCorrectionIngress"]

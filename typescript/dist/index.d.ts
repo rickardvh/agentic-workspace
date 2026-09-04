@@ -7,10 +7,12 @@ export declare const IR: Record<string, Json>;
 export declare function canonicalSerialize(value: Json): string;
 export declare function semanticDigest(value: Json): string;
 export interface TrustedCorrectionIngress { observe(value: Record<string, Json>): Record<string, Json>; complete(correctionId: string, revision: string): void; module(): Module; }
-export declare function createTrustedCorrectionIngress(options: { transport: string; principal: string; resolveDisposition: (correction: Record<string, Json>, context: Record<string, Json>) => Record<string, Json> }): TrustedCorrectionIngress;
+export declare function correctionRevision(correction: Record<string, Json>): string;
+export declare function validateCorrectionAdmission(kind: "memory" | "repository" | "planning", args: Record<string, Json>, current?: Record<string, Json>): boolean;
+export declare function createTrustedCorrectionIngress(options: { transport: string; principal: string }): TrustedCorrectionIngress;
 export declare function ownerConclusionIdentity(owner: string, revision: string, dependencies?: Record<string, Json>): string;
 export declare function operationContract(operationId: string): Record<string, Json>;
-export interface Module { name: string; api_version?: string; required_capabilities?: string[]; owns?: string[]; claims?: string[]; resources?: ResourceReference[]; procedures?: ResourceReference[]; operations?: Operation[]; contribute: (context: Record<string, Json>) => Contribution | null; }
+export interface Module { name: string; api_version?: string; required_capabilities?: string[]; owns?: string[]; claims?: string[]; resources?: ResourceReference[]; procedures?: ResourceReference[]; operations?: Operation[]; contribute: (context: Record<string, Json>) => Contribution | null; handoff_complete?: (operationId: string, arguments: Record<string, Json>, outcome: Record<string, Json>) => void; }
 export declare function admitModules(modules: Module[]): Module[];
 export declare function moduleContributions(modules: Module[], context: Record<string, Json>): Contribution[];
 export declare function normalizeContribution(value: Contribution): Record<string, Json>;

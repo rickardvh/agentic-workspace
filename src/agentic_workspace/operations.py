@@ -46,6 +46,7 @@ class OperationDispatcher:
         journal_loader: Callable[[str], dict[str, Any] | None] | None = None,
         journal_writer: Callable[[str, dict[str, Any]], None] | None = None,
         journal_clearer: Callable[[str], None] | None = None,
+        handoff_notifier: Callable[[str, str, Mapping[str, Any], Mapping[str, Any]], None] | None = None,
     ) -> None:
         self._operations: dict[str, Operation] = {}
         self._receipts: dict[str, tuple[dict[str, Any], dict[str, Any]]] = {}
@@ -54,6 +55,7 @@ class OperationDispatcher:
         self._journal_loader = journal_loader
         self._journal_writer = journal_writer
         self._journal_clearer = journal_clearer
+        self._handoff_notifier = handoff_notifier
 
     def register(self, operation: Operation) -> None:
         if not operation.operation_id:
@@ -112,6 +114,8 @@ class OperationDispatcher:
             if isinstance(invocation.get("decision_response"), Mapping)
             else None,
         }
+        if invocation.get("handoff_source") is not None:
+            request_identity["handoff_source"] = invocation.get("handoff_source")
         previous = self._receipts.get(key)
         if previous is None and self._receipt_loader is not None:
             previous = self._receipt_loader(key)
@@ -161,6 +165,9 @@ class OperationDispatcher:
             raise StaleInvocationError("operation is no longer the current source-owned action")
         if invocation.get("source_owner") != authoritative_owner:
             raise OperationContractError("invocation source_owner does not match the current source owner")
+        authoritative_handoff = current_action.get("handoff_source") if action_matches else None
+        if invocation.get("handoff_source") != authoritative_handoff:
+            raise OperationContractError("invocation handoff_source does not match the current handoff source")
         if decision_matches:
             response = invocation.get("decision_response")
             if not isinstance(response, Mapping):
@@ -224,6 +231,11 @@ class OperationDispatcher:
         if status not in set(IR["operation"]["result_statuses"]):
             raise OperationContractError("operation result status must be applied, unchanged, or rejected")
 
+        handoff_source = request_identity.get("handoff_source")
+        if status in {"applied", "unchanged"} and handoff_source and self._handoff_notifier is not None:
+            self._handoff_notifier(
+                str(handoff_source), operation.operation_id, request_identity["arguments"], raw_outcome
+            )
         next_decision = dict(resolve_decision())
         result = {
             "kind": KINDS["result"],

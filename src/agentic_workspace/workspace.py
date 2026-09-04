@@ -113,6 +113,7 @@ class Workspace:
             journal_loader=self._load_journal,
             journal_writer=self._write_journal,
             journal_clearer=self._clear_journal,
+            handoff_notifier=self._handoff_complete,
         )
         register_module_operations(dispatcher, self._modules)
         operation = dispatcher.operation(operation_id)
@@ -127,3 +128,11 @@ class Workspace:
                     intent=intent,
                 ),
             )
+
+    def _handoff_complete(
+        self, source: str, operation_id: str, arguments: Mapping[str, Any], outcome: Mapping[str, Any]
+    ) -> None:
+        module = next((item for item in self._modules if item.name == source), None)
+        if module is None or module.handoff_complete is None:
+            return
+        module.handoff_complete(operation_id, arguments, outcome)

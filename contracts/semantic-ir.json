@@ -214,6 +214,24 @@
       }
     },
     {
+      "id": "repository.accept-correction",
+      "owner": "repository",
+      "effects": [],
+      "binding": "repository.accept_correction",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "correction": {"type": "object"},
+          "correction_revision": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "owner_ref": {"type": "string", "minLength": 1},
+          "owner_revision": {"type": "string", "minLength": 1}
+        },
+        "required": ["target", "correction", "correction_revision", "owner_ref", "owner_revision"],
+        "additionalProperties": false
+      }
+    },
+    {
       "id": "workspace.transfer-ownership",
       "owner": "workspace",
       "effects": ["workspace-ownership"],
@@ -296,6 +314,25 @@
           "disposition": {"enum": ["integrated", "revise-scope", "residual"]}
         },
         "required": ["target", "item", "expected_subject_revision", "disposition"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "planning.accept-correction-failure",
+      "owner": "planning",
+      "effects": ["planning-state"],
+      "binding": "planning.accept_correction_failure",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "correction": {"type": "object"},
+          "correction_revision": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "owner_ref": {"type": "string", "minLength": 1},
+          "owner_revision": {"type": "string", "minLength": 1},
+          "expected_state_revision": {"type": "string", "minLength": 1}
+        },
+        "required": ["target", "correction", "correction_revision", "owner_ref", "owner_revision", "expected_state_revision"],
         "additionalProperties": false
       }
     },
@@ -386,6 +423,23 @@
           "stronger_owner": {"type": "string"}
         },
         "required": ["target", "key", "disposition"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "memory.accept-correction",
+      "owner": "memory",
+      "effects": ["memory-state"],
+      "binding": "memory.accept_correction",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "correction": {"type": "object"},
+          "correction_revision": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "expected_state_revision": {"type": "string", "minLength": 1}
+        },
+        "required": ["target", "correction", "correction_revision", "expected_state_revision"],
         "additionalProperties": false
       }
     },

@@ -229,6 +229,24 @@ IR: dict[str, Any] = {
             "owner": "repository",
         },
         {
+            "binding": "repository.accept_correction",
+            "effects": [],
+            "id": "repository.accept-correction",
+            "input": {
+                "additionalProperties": False,
+                "properties": {
+                    "correction": {"type": "object"},
+                    "correction_revision": {"pattern": "^sha256:[0-9a-f]{64}$", "type": "string"},
+                    "owner_ref": {"minLength": 1, "type": "string"},
+                    "owner_revision": {"minLength": 1, "type": "string"},
+                    "target": {"minLength": 1, "type": "string"},
+                },
+                "required": ["target", "correction", "correction_revision", "owner_ref", "owner_revision"],
+                "type": "object",
+            },
+            "owner": "repository",
+        },
+        {
             "binding": "workspace.transfer_ownership",
             "effects": ["workspace-ownership"],
             "id": "workspace.transfer-ownership",
@@ -323,6 +341,32 @@ IR: dict[str, Any] = {
             "owner": "planning",
         },
         {
+            "binding": "planning.accept_correction_failure",
+            "effects": ["planning-state"],
+            "id": "planning.accept-correction-failure",
+            "input": {
+                "additionalProperties": False,
+                "properties": {
+                    "correction": {"type": "object"},
+                    "correction_revision": {"pattern": "^sha256:[0-9a-f]{64}$", "type": "string"},
+                    "expected_state_revision": {"minLength": 1, "type": "string"},
+                    "owner_ref": {"minLength": 1, "type": "string"},
+                    "owner_revision": {"minLength": 1, "type": "string"},
+                    "target": {"minLength": 1, "type": "string"},
+                },
+                "required": [
+                    "target",
+                    "correction",
+                    "correction_revision",
+                    "owner_ref",
+                    "owner_revision",
+                    "expected_state_revision",
+                ],
+                "type": "object",
+            },
+            "owner": "planning",
+        },
+        {
             "binding": "planning.record_attempt",
             "effects": ["planning-state"],
             "id": "planning.record-attempt",
@@ -405,6 +449,23 @@ IR: dict[str, Any] = {
                     "target": {"minLength": 1, "type": "string"},
                 },
                 "required": ["target", "key", "disposition"],
+                "type": "object",
+            },
+            "owner": "memory",
+        },
+        {
+            "binding": "memory.accept_correction",
+            "effects": ["memory-state"],
+            "id": "memory.accept-correction",
+            "input": {
+                "additionalProperties": False,
+                "properties": {
+                    "correction": {"type": "object"},
+                    "correction_revision": {"pattern": "^sha256:[0-9a-f]{64}$", "type": "string"},
+                    "expected_state_revision": {"minLength": 1, "type": "string"},
+                    "target": {"minLength": 1, "type": "string"},
+                },
+                "required": ["target", "correction", "correction_revision", "expected_state_revision"],
                 "type": "object",
             },
             "owner": "memory",
@@ -573,6 +634,7 @@ def normalize_contribution(value: Mapping[str, Any]) -> dict[str, Any]:
                 "effects": _strings(item.get("effects"), field=f"{owner}.actions[{index}].effects"),
                 "authority": str(item.get("authority") or owner),
                 "source_owner": str(item.get("source_owner") or owner),
+                "handoff_source": str(item.get("handoff_source") or ""),
                 "priority": priority,
             }
         )
@@ -700,6 +762,7 @@ def compile_source_decision(
                 "effects": action["effects"],
                 "authority": action["authority"],
                 "source_owner": action["source_owner"],
+                **({"handoff_source": action["handoff_source"]} if action["handoff_source"] else {}),
                 "expected_input_revision": input_revision,
                 "idempotency_key": _digest(
                     {

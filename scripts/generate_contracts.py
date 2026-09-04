@@ -130,6 +130,7 @@ def normalize_contribution(value: Mapping[str, Any]) -> dict[str, Any]:
             "effects": _strings(item.get("effects"), field=f"{owner}.actions[{index}].effects"),
             "authority": str(item.get("authority") or owner),
             "source_owner": str(item.get("source_owner") or owner),
+            "handoff_source": str(item.get("handoff_source") or ""),
             "priority": priority,
         })
     normalized_blockers = []
@@ -246,6 +247,7 @@ def compile_source_decision(contributions: Iterable[Mapping[str, Any]], *, inten
                 "effects": action["effects"],
                 "authority": action["authority"],
                 "source_owner": action["source_owner"],
+                **({"handoff_source": action["handoff_source"]} if action["handoff_source"] else {}),
                 "expected_input_revision": input_revision,
                 "idempotency_key": _digest({"operation_id": action["operation_id"], "arguments": action["arguments"], "input_revision": input_revision}),
             }
@@ -354,7 +356,7 @@ export function moduleContributions(modules, context) {
         [sourceOwner, operation] = target;
       }
       if (JSON.stringify(action.effects || []) !== JSON.stringify(operation.effects)) throw new Error(`module ${module.name} action effects differ from its operation contract`);
-      return { ...action, source_owner: sourceOwner };
+      return { ...action, source_owner: sourceOwner, ...(sourceOwner !== module.name ? { handoff_source: module.name } : {}) };
     });
     for (const decision of payload.decisions || []) {
       const operation = operations.get(decision.response_operation_id);
@@ -384,8 +386,20 @@ export function semanticDigest(value) {
   return "sha256:" + createHash("sha256").update(canonicalSerialize(value), "utf8").digest("hex");
 }
 
-export function createTrustedCorrectionIngress({ transport, principal, resolveDisposition }) {
-  if (!transport || !principal || typeof resolveDisposition !== "function") throw new Error("trusted correction ingress requires transport, principal, and an owner disposition resolver");
+export function correctionRevision(correction) {
+  return semanticDigest({ correction_id: correction.correction_id, statement: correction.statement, subject: correction.subject || {}, applicability: correction.applicability || {}, provenance: correction.provenance || {}, future_usefulness: correction.future_usefulness, existing_owner: correction.existing_owner || {}, deterministic_owner_failure: correction.deterministic_owner_failure || {} });
+}
+
+export function validateCorrectionAdmission(kind, args, current = {}) {
+  const correction = args.correction || {};
+  if (correctionRevision(correction) !== args.correction_revision || correction.provenance?.authority !== "human") return false;
+  if (kind === "memory") return !correction.existing_owner && !correction.deterministic_owner_failure && correction.future_usefulness !== "do-not-retain" && (correction.future_usefulness === "retain" || !!correction.applicability?.task_terms?.length || !!correction.applicability?.paths?.length || !!correction.applicability?.dependency_revision) && current.state_revision === args.expected_state_revision;
+  const evidence = kind === "repository" ? correction.existing_owner : correction.deterministic_owner_failure;
+  return evidence?.owner === "repository" && evidence.ref === args.owner_ref && evidence.revision === args.owner_revision && current.owner_ref === args.owner_ref && current.owner_revision === args.owner_revision && correction.subject?.kind === "repository-rule" && correction.subject?.id === args.owner_ref && (kind !== "planning" || current.state_revision === args.expected_state_revision);
+}
+
+export function createTrustedCorrectionIngress({ transport, principal }) {
+  if (!transport || !principal) throw new Error("trusted correction ingress requires transport and principal");
   const pending = new Map();
   const completed = new Set();
   const observe = (value) => {
@@ -393,7 +407,7 @@ export function createTrustedCorrectionIngress({ transport, principal, resolveDi
     const futureUsefulness = value.future_usefulness || "unspecified";
     if (!["retain", "do-not-retain", "unspecified"].includes(futureUsefulness)) throw new Error("future_usefulness must be retain, do-not-retain, or unspecified");
     const correction = { correction_id: value.correction_id, statement: value.statement, subject: value.subject, applicability: value.applicability || {}, provenance: { authority: "human", transport, principal }, future_usefulness: futureUsefulness, existing_owner: value.existing_owner || null, deterministic_owner_failure: value.deterministic_owner_failure || null };
-    correction.revision = semanticDigest({ correction_id: correction.correction_id, statement: correction.statement, subject: correction.subject, applicability: correction.applicability, provenance: correction.provenance, future_usefulness: correction.future_usefulness, existing_owner: correction.existing_owner || {}, deterministic_owner_failure: correction.deterministic_owner_failure || {} });
+    correction.revision = correctionRevision(correction);
     const previous = pending.get(correction.correction_id);
     if (previous && canonicalSerialize(previous) !== canonicalSerialize(correction)) throw new Error("correction identity was already admitted with different content");
     if (!completed.has(correction.correction_id)) pending.set(correction.correction_id, correction);
@@ -405,18 +419,34 @@ export function createTrustedCorrectionIngress({ transport, principal, resolveDi
     pending.delete(correctionId);
     completed.add(correctionId);
   };
+  const disposition = (args) => {
+    const correction = pending.get(args.correction_id);
+    if (!correction || correction.revision !== args.correction_revision || correction.future_usefulness !== "do-not-retain") return { status: "rejected", effects: [], value: { reason: "owner-operation-required" } };
+    complete(correction.correction_id, correction.revision);
+    return { status: "applied", effects: ["correction-disposition"], value: { correction_revision: correction.revision, disposition: "no-new-durable-record" } };
+  };
+  const handoff_complete = (operationId, args, outcome) => {
+    if (!["memory.accept-correction", "planning.accept-correction-failure", "repository.accept-correction"].includes(operationId)) return;
+    const correction = pending.get(args.correction?.correction_id);
+    if (correction && correction.revision === args.correction_revision && outcome.value?.correction_revision === correction.revision) complete(correction.correction_id, correction.revision);
+  };
   const module = () => ({
     name: "correction",
     api_version: "1.0",
     required_capabilities: ["operation/owner-handoff"],
     owns: ["correction-custody"],
-    operations: [],
+    operations: [{ operation_id: "correction.disposition", input_schema: operationContract("correction.disposition").input, effects: ["correction-disposition"], handler: disposition }],
+    handoff_complete,
     contribute: (context) => {
       if (!pending.size) return null;
       const correction = [...pending.values()].sort((left, right) => left.correction_id.localeCompare(right.correction_id))[0];
-      const route = resolveDisposition(correction, context);
-      if (!route?.action || !route?.disposition || !route?.owner) throw new Error("owner disposition resolver must return a bounded owner action");
-      return { revision: semanticDigest({ correction: correction.revision, route }), facts: { id: correction.correction_id, subject: correction.subject, applicability: correction.applicability, provenance: correction.provenance, future_usefulness: correction.future_usefulness, disposition: route.disposition, owner: route.owner, owner_revision: route.owner_revision || "" }, actions: [route.action] };
+      let dispositionName, owner, operation_id, effects, actionArgs;
+      const payload = Object.fromEntries(Object.entries(correction).filter(([key]) => key !== "revision"));
+      if (correction.existing_owner) { dispositionName = "already-owned"; owner = "repository"; operation_id = "repository.accept-correction"; effects = []; actionArgs = { target: String(context.target || "."), correction: payload, correction_revision: correction.revision, owner_ref: String(correction.existing_owner.ref || ""), owner_revision: String(correction.existing_owner.revision || "") }; }
+      else if (correction.deterministic_owner_failure) { dispositionName = "owner-repair"; owner = "planning"; operation_id = "planning.accept-correction-failure"; effects = ["planning-state"]; actionArgs = { target: String(context.target || "."), correction: payload, correction_revision: correction.revision, owner_ref: String(correction.deterministic_owner_failure.ref || ""), owner_revision: String(correction.deterministic_owner_failure.revision || ""), expected_state_revision: String(context.owner_revisions?.planning || "absent") }; }
+      else if (correction.future_usefulness === "do-not-retain") { dispositionName = "no-new-durable-record"; owner = "correction"; operation_id = "correction.disposition"; effects = ["correction-disposition"]; actionArgs = { target: String(context.target || "."), correction_id: correction.correction_id, correction_revision: correction.revision, disposition: dispositionName, owner, owner_revision: "" }; }
+      else { dispositionName = "memory"; owner = "memory"; operation_id = "memory.accept-correction"; effects = ["memory-state"]; actionArgs = { target: String(context.target || "."), correction: payload, correction_revision: correction.revision, expected_state_revision: String(context.owner_revisions?.memory || "absent") }; }
+      return { revision: correction.revision, facts: { id: correction.correction_id, subject: correction.subject, applicability: correction.applicability, provenance: correction.provenance, future_usefulness: correction.future_usefulness, disposition: dispositionName, owner, owner_revision: actionArgs.owner_revision || actionArgs.expected_state_revision || "" }, actions: [{ operation_id, arguments: actionArgs, effects, priority: 100 }] };
     }
   });
   return { observe, complete, module };
@@ -459,7 +489,7 @@ export function normalizeContribution(value) {
     if (!operationId) throw new Error(`${owner}.actions[${index}].operation_id is required`);
     if (!item.arguments || typeof item.arguments !== "object" || Array.isArray(item.arguments)) throw new Error(`${owner}.actions[${index}].arguments must be an object`);
     if (!Number.isInteger(item.priority || 0)) throw new Error(`${owner}.actions[${index}].priority must be an integer`);
-    return { operation_id: operationId, arguments: item.arguments || {}, effects: strings(item.effects, `${owner}.actions[${index}].effects`), authority: String(item.authority || owner), source_owner: String(item.source_owner || owner), priority: item.priority || 0 };
+    return { operation_id: operationId, arguments: item.arguments || {}, effects: strings(item.effects, `${owner}.actions[${index}].effects`), authority: String(item.authority || owner), source_owner: String(item.source_owner || owner), handoff_source: String(item.handoff_source || ""), priority: item.priority || 0 };
   });
   const normalizedBlockers = blockers.map((item, index) => {
     if (!item.code || !item.message) throw new Error(`${owner}.blockers[${index}] requires code and message`);
@@ -508,7 +538,7 @@ export function compileSourceDecision(contributions, intent = {}) {
     if (tied.length > 1) blockers.push({ code: "ambiguous-action", message: "multiple source owners proposed equally authoritative actions", owner: "operating-decision", recovery: "reconcile the competing source owners" });
     else {
       const [owner, action] = actions[0];
-      primaryAction = { kind: kinds.invocation, operation_id: action.operation_id, arguments: action.arguments, intent, effects: action.effects, authority: action.authority, source_owner: action.source_owner, expected_input_revision: inputRevision, idempotency_key: hash({ operation_id: action.operation_id, arguments: action.arguments, input_revision: inputRevision }) };
+      primaryAction = { kind: kinds.invocation, operation_id: action.operation_id, arguments: action.arguments, intent, effects: action.effects, authority: action.authority, source_owner: action.source_owner, ...(action.handoff_source ? { handoff_source: action.handoff_source } : {}), expected_input_revision: inputRevision, idempotency_key: hash({ operation_id: action.operation_id, arguments: action.arguments, input_revision: inputRevision }) };
     }
   }
   const blocked = [...new Set(relevant.flatMap((item) => item.claims.blocked))].sort();
@@ -543,12 +573,13 @@ function validate(schema, value, field = "arguments") {
 }
 
 export class OperationDispatcher {
-  constructor({ receiptLoader = null, receiptWriter = null, commitCoordinator = null } = {}) {
+  constructor({ receiptLoader = null, receiptWriter = null, commitCoordinator = null, handoffNotifier = null } = {}) {
     this.operations = new Map();
     this.receipts = new Map();
     this.receiptLoader = receiptLoader;
     this.receiptWriter = receiptWriter;
     this.commitCoordinator = commitCoordinator;
+    this.handoffNotifier = handoffNotifier;
   }
   register(operation) {
     if (!operation.operation_id || this.operations.has(operation.operation_id)) throw new Error(`invalid or duplicate operation: ${operation.operation_id || ""}`);
@@ -561,7 +592,7 @@ export class OperationDispatcher {
     validate(operation.input_schema, invocation.arguments);
     if (JSON.stringify(invocation.effects || []) !== JSON.stringify(operation.effects)) throw new Error("invocation effects do not match the operation contract");
     if (!invocation.idempotency_key) throw new Error("idempotency_key is required");
-    const request = { operation_id: invocation.operation_id, arguments: invocation.arguments, revision: invocation.expected_input_revision, source_owner: invocation.source_owner, decision_response: invocation.decision_response || null };
+    const request = { operation_id: invocation.operation_id, arguments: invocation.arguments, revision: invocation.expected_input_revision, source_owner: invocation.source_owner, ...(invocation.handoff_source != null ? { handoff_source: invocation.handoff_source } : {}), decision_response: invocation.decision_response || null };
     const previous = this.receipts.get(invocation.idempotency_key) || (this.receiptLoader ? await this.receiptLoader(invocation.idempotency_key) : null);
     if (previous) {
       if (JSON.stringify(previous.request) !== JSON.stringify(request)) throw new Error("idempotency key was already used for another invocation");
@@ -572,6 +603,7 @@ export class OperationDispatcher {
     if (!invocation.expected_input_revision || invocation.expected_input_revision !== current.input_revision || currentOperationId !== invocation.operation_id) throw new Error("source state changed; resolve a fresh operating decision");
     const currentOwner = current.primary_action?.source_owner || current.decision_request?.owner;
     if (invocation.source_owner !== currentOwner) throw new Error("invocation source_owner does not match the current source owner");
+    if (invocation.handoff_source !== current.primary_action?.handoff_source) throw new Error("invocation handoff_source does not match the current handoff source");
     if (current.decision_request?.response_operation_id === invocation.operation_id) {
       const response = invocation.decision_response;
       const expected = current.decision_request;
@@ -590,6 +622,7 @@ export class OperationDispatcher {
       : await execute();
     if (!IR.operation.result_statuses.includes(raw.status)) throw new Error("operation result status is invalid");
     if (!Array.isArray(raw.effects) || raw.effects.some((effect) => !operation.effects.includes(effect))) throw new Error("operation result widened its declared effects");
+    if (["applied", "unchanged"].includes(raw.status) && invocation.handoff_source && this.handoffNotifier) await this.handoffNotifier(invocation.handoff_source, invocation.operation_id, invocation.arguments, raw);
     const result = { kind: kinds.result, operation_id: invocation.operation_id, status: raw.status, effects: raw.effects, value: raw.value ?? null, input_revision: invocation.expected_input_revision, next_decision: await resolveDecision() };
     const receipt = { request, result };
     this.receipts.set(invocation.idempotency_key, receipt);
@@ -609,10 +642,12 @@ export declare const IR: Record<string, Json>;
 export declare function canonicalSerialize(value: Json): string;
 export declare function semanticDigest(value: Json): string;
 export interface TrustedCorrectionIngress { observe(value: Record<string, Json>): Record<string, Json>; complete(correctionId: string, revision: string): void; module(): Module; }
-export declare function createTrustedCorrectionIngress(options: { transport: string; principal: string; resolveDisposition: (correction: Record<string, Json>, context: Record<string, Json>) => Record<string, Json> }): TrustedCorrectionIngress;
+export declare function correctionRevision(correction: Record<string, Json>): string;
+export declare function validateCorrectionAdmission(kind: "memory" | "repository" | "planning", args: Record<string, Json>, current?: Record<string, Json>): boolean;
+export declare function createTrustedCorrectionIngress(options: { transport: string; principal: string }): TrustedCorrectionIngress;
 export declare function ownerConclusionIdentity(owner: string, revision: string, dependencies?: Record<string, Json>): string;
 export declare function operationContract(operationId: string): Record<string, Json>;
-export interface Module { name: string; api_version?: string; required_capabilities?: string[]; owns?: string[]; claims?: string[]; resources?: ResourceReference[]; procedures?: ResourceReference[]; operations?: Operation[]; contribute: (context: Record<string, Json>) => Contribution | null; }
+export interface Module { name: string; api_version?: string; required_capabilities?: string[]; owns?: string[]; claims?: string[]; resources?: ResourceReference[]; procedures?: ResourceReference[]; operations?: Operation[]; contribute: (context: Record<string, Json>) => Contribution | null; handoff_complete?: (operationId: string, arguments: Record<string, Json>, outcome: Record<string, Json>) => void; }
 export declare function admitModules(modules: Module[]): Module[];
 export declare function moduleContributions(modules: Module[], context: Record<string, Json>): Contribution[];
 export declare function normalizeContribution(value: Contribution): Record<string, Json>;

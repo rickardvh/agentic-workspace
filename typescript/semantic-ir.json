@@ -420,6 +420,44 @@
       "owner": "repository"
     },
     {
+      "binding": "repository.accept_correction",
+      "effects": [],
+      "id": "repository.accept-correction",
+      "input": {
+        "additionalProperties": false,
+        "properties": {
+          "correction": {
+            "type": "object"
+          },
+          "correction_revision": {
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "owner_ref": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "owner_revision": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "target": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "target",
+          "correction",
+          "correction_revision",
+          "owner_ref",
+          "owner_revision"
+        ],
+        "type": "object"
+      },
+      "owner": "repository"
+    },
+    {
       "binding": "workspace.transfer_ownership",
       "effects": [
         "workspace-ownership"
@@ -629,6 +667,51 @@
       "owner": "planning"
     },
     {
+      "binding": "planning.accept_correction_failure",
+      "effects": [
+        "planning-state"
+      ],
+      "id": "planning.accept-correction-failure",
+      "input": {
+        "additionalProperties": false,
+        "properties": {
+          "correction": {
+            "type": "object"
+          },
+          "correction_revision": {
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "expected_state_revision": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "owner_ref": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "owner_revision": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "target": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "target",
+          "correction",
+          "correction_revision",
+          "owner_ref",
+          "owner_revision",
+          "expected_state_revision"
+        ],
+        "type": "object"
+      },
+      "owner": "planning"
+    },
+    {
       "binding": "planning.record_attempt",
       "effects": [
         "planning-state"
@@ -821,6 +904,41 @@
           "target",
           "key",
           "disposition"
+        ],
+        "type": "object"
+      },
+      "owner": "memory"
+    },
+    {
+      "binding": "memory.accept_correction",
+      "effects": [
+        "memory-state"
+      ],
+      "id": "memory.accept-correction",
+      "input": {
+        "additionalProperties": false,
+        "properties": {
+          "correction": {
+            "type": "object"
+          },
+          "correction_revision": {
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "expected_state_revision": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "target": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "target",
+          "correction",
+          "correction_revision",
+          "expected_state_revision"
         ],
         "type": "object"
       },
