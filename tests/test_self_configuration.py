@@ -265,6 +265,7 @@ def test_independent_module_configuration_and_capability_delta_use_generic_contr
         ("example-configuration",),
         configure,
     )
+
     def fresh_module() -> Module:
         return Module(
             name="example-capability",
@@ -370,7 +371,9 @@ let staleRejected = false;
 try {{ await dispatcher.invoke(stale, resolve); }} catch {{ staleRejected = true; }}
 console.log(JSON.stringify({{ inferred: inferred.primary_action.arguments.answer, finite: finite.decision_request.id, open: open.decision_request.allow_open, deferred: afterDefer.next_decision.status, resumed: resumed.decision_request.id, staleRejected }}));
 '''
-    completed = subprocess.run(["node", "--input-type=module", "-e", script], capture_output=True, text=True, check=True)
+    completed = subprocess.run(
+        ["node", "--input-type=module", "-e", script], capture_output=True, text=True, check=True
+    )
     result = json.loads(completed.stdout)
     assert result == {
         "inferred": "pytest",
