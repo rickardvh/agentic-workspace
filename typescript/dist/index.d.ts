@@ -10,6 +10,7 @@ export interface TrustedCorrectionIngress { observe(value: Record<string, Json>)
 export declare function correctionRevision(correction: Record<string, Json>): string;
 export declare function validateCorrectionAdmission(kind: "memory" | "repository" | "verification" | "assignment" | "planning", args: Record<string, Json>, current?: Record<string, Json>): boolean;
 export declare function createTrustedCorrectionIngress(options: { transport: string; principal: string }): TrustedCorrectionIngress;
+export declare function createRepositoryConfigurationOwner(options: { rules: Record<string, Json>[] | (() => Record<string, Json>[]); pathExists?: (path: string) => boolean; sharedAnswers?: Record<string, Json>; localAnswers?: Record<string, Json>; writeAnswer?: (scope: string, id: string, value: Record<string, Json>) => Promise<void> | void }): Module;
 export declare function ownerConclusionIdentity(owner: string, revision: string, dependencies?: Record<string, Json>): string;
 export declare function operationContract(operationId: string): Record<string, Json>;
 export interface Module { name: string; api_version?: string; required_capabilities?: string[]; owns?: string[]; claims?: string[]; resources?: ResourceReference[]; procedures?: ResourceReference[]; operations?: Operation[]; contribute: (context: Record<string, Json>) => Contribution | null; handoff_complete?: (operationId: string, arguments: Record<string, Json>, outcome: Record<string, Json>) => void; }

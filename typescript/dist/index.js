@@ -160,6 +160,69 @@ export function createTrustedCorrectionIngress({ transport, principal }) {
   return { observe, complete, module };
 }
 
+export function createRepositoryConfigurationOwner({ rules, pathExists = () => false, sharedAnswers = {}, localAnswers = {}, writeAnswer = null }) {
+  const currentRules = () => typeof rules === "function" ? rules() : rules;
+  const currentAnswers = () => ({ ...sharedAnswers, ...localAnswers });
+  const applicable = (rule, context) => {
+    const applies = rule.applies || {};
+    const task = String(context.task || "").toLowerCase();
+    const changed = context.changed_paths || [];
+    return (!applies.task_terms?.length && !applies.paths?.length) || (applies.task_terms || []).some((term) => task.includes(String(term).toLowerCase())) || (applies.paths || []).some((pattern) => changed.some((path) => String(path) === String(pattern)));
+  };
+  const inferred = (decision, facts) => {
+    const matches = (decision.infer || []).filter((candidate) => {
+      const when = candidate.when || {};
+      const choices = new Set((decision.choices || []).map((choice) => String(choice.id)));
+      if (!candidate.answer || !choices.has(String(candidate.answer))) throw new Error("invalid inferred configuration answer");
+      if (when.path_exists) {
+        const path = String(when.path_exists);
+        if (path.startsWith("/") || /^[A-Za-z]:/.test(path) || path.replaceAll("\\", "/").split("/").some((part) => !part || part === "." || part === "..")) throw new Error("configuration inference path must be canonical and relative");
+        return pathExists(path);
+      }
+      if (when.fact_equals) return facts[when.fact_equals.key] === when.fact_equals.value;
+      throw new Error("configuration inference requires one strong path_exists or fact_equals condition");
+    }).map((candidate) => String(candidate.answer));
+    if (new Set(matches).size > 1) throw new Error("conflicting current configuration inferences");
+    return matches[0] || null;
+  };
+  const contribute = (context) => {
+    const active = currentRules().filter((rule) => applicable(rule, context));
+    if (!active.length) return null;
+    const facts = {};
+    const conflicts = [];
+    for (const rule of active) for (const [key, value] of Object.entries(rule.facts || {})) { if (key in facts && canonicalSerialize(facts[key]) !== canonicalSerialize(value)) conflicts.push(key); facts[key] = value; }
+    const actions = [], decisions = [];
+    for (const rule of active) {
+      const decision = rule.decision;
+      if (!decision) continue;
+      const answer = currentAnswers()[rule.id];
+      if (answer?.rule_revision === rule.revision) {
+        if (answer.disposition === "deferred" && context.configuration?.resume === true) decisions.push({ id: rule.id, detail_revision: rule.revision, question: decision.question, authority: decision.authority || "maintainer", response_operation_id: "repository.answer", effects: ["repository-configuration"], choices: [...(decision.choices || []), { id: "defer", label: "Defer for now" }], allow_open: decision.allow_open === true });
+        else facts[`configuration:${rule.id}`] = answer.disposition === "deferred" ? { status: "deferred", rule_revision: rule.revision } : answer.answer;
+        continue;
+      }
+      const inferredAnswer = inferred(decision, facts);
+      if (inferredAnswer) actions.push({ operation_id: "repository.answer", arguments: { target: String(context.target || "."), rule_id: rule.id, rule_revision: rule.revision, answer: inferredAnswer, scope: decision.scope || "shared" }, effects: ["repository-configuration"], authority: "repository-inference", priority: 1000 - actions.length });
+      else decisions.push({ id: rule.id, detail_revision: rule.revision, question: decision.question, authority: decision.authority || "maintainer", response_operation_id: "repository.answer", effects: ["repository-configuration"], choices: [...(decision.choices || []), ...(decision.required === false ? [{ id: "defer", label: "Defer for now" }] : [])], allow_open: decision.allow_open === true });
+    }
+    const blockers = conflicts.length ? [{ code: "repository-control-conflict", message: "applicable repository controls disagree on hard facts", owner: "repository" }] : [];
+    return { revision: semanticDigest({ rules: active.map((rule) => [rule.id, rule.revision]), answers: currentAnswers(), configuration: context.configuration || null }), facts, actions: blockers.length ? [] : actions.slice(0, 1), decisions: blockers.length || actions.length ? [] : decisions.slice(0, 1), blockers, terminal: !blockers.length && !actions.length && !decisions.length };
+  };
+  const answer = async (args) => {
+    const rule = currentRules().find((item) => item.id === args.rule_id);
+    const decision = rule?.decision || {};
+    if (!rule || rule.revision !== args.rule_revision) return { status: "rejected", effects: [], value: { reason: "stale-repository-rule" } };
+    if ((decision.scope || "shared") !== args.scope || (args.answer === "defer" && decision.required !== false)) return { status: "rejected", effects: [], value: { reason: "configuration-answer-not-admitted" } };
+    const choices = new Set((decision.choices || []).map((choice) => choice.id));
+    if (args.answer !== "defer" && choices.size && !choices.has(args.answer) && decision.allow_open !== true) return { status: "rejected", effects: [], value: { reason: "configuration-answer-not-admitted" } };
+    const value = { rule_revision: rule.revision, answer: args.answer, scope: args.scope, disposition: args.answer === "defer" ? "deferred" : "configured" };
+    if (writeAnswer) await writeAnswer(args.scope, rule.id, value);
+    (args.scope === "local" ? localAnswers : sharedAnswers)[rule.id] = value;
+    return { status: "applied", effects: ["repository-configuration"], value };
+  };
+  return { name: "repository", owns: ["repository-configuration"], operations: [{ operation_id: "repository.answer", input_schema: operationContract("repository.answer").input, effects: ["repository-configuration"], handler: answer }], contribute };
+}
+
 const hash = semanticDigest;
 
 export function ownerConclusionIdentity(owner, revision, dependencies = {}) {

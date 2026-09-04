@@ -1,3 +1,5 @@
+# ruff: noqa: E501
+
 from __future__ import annotations
 
 import json
@@ -199,12 +201,19 @@ def test_only_changed_configuration_revision_is_revisited(tmp_path: Path) -> Non
 
 
 def test_independent_module_configuration_and_capability_delta_use_generic_contract(tmp_path: Path) -> None:
-    capabilities = {
-        "stable": {"revision": "stable-r1", "question": "Choose stable mode"},
-    }
-    settled: dict[str, dict[str, str]] = {}
+    capabilities_path = tmp_path / "capabilities.json"
+    settled_path = tmp_path / "settled.json"
+    capabilities_path.write_text(
+        json.dumps({"stable": {"revision": "stable-r1", "question": "Choose stable mode"}}), encoding="utf-8"
+    )
+    settled_path.write_text("{}", encoding="utf-8")
+
+    def load(path: Path) -> dict[str, Any]:
+        return json.loads(path.read_text(encoding="utf-8"))
 
     def contribute(_context: Mapping[str, Any]) -> dict[str, Any]:
+        capabilities = load(capabilities_path)
+        settled = load(settled_path)
         pending = [
             (capability_id, value)
             for capability_id, value in sorted(capabilities.items())
@@ -231,11 +240,14 @@ def test_independent_module_configuration_and_capability_delta_use_generic_contr
         }
 
     def configure(arguments: dict[str, Any]) -> dict[str, Any]:
+        capabilities = load(capabilities_path)
+        settled = load(settled_path)
         capability_id = arguments["capability_id"]
         current = capabilities.get(capability_id)
         if current is None or current["revision"] != arguments["capability_revision"]:
             return {"status": "rejected", "effects": [], "value": {"reason": "stale-capability"}}
         settled[capability_id] = {"revision": current["revision"], "answer": arguments["answer"]}
+        settled_path.write_text(json.dumps(settled), encoding="utf-8")
         return {"status": "applied", "effects": ["example-configuration"], "value": settled[capability_id]}
 
     operation = Operation(
@@ -253,13 +265,18 @@ def test_independent_module_configuration_and_capability_delta_use_generic_contr
         ("example-configuration",),
         configure,
     )
-    module = Module(
-        name="example-capability",
-        owns=("example-configuration",),
-        contribute=contribute,
-        operations=(operation,),
-        currentness=lambda _context: semantic_digest({"capabilities": capabilities, "settled": settled}),
-    )
+    def fresh_module() -> Module:
+        return Module(
+            name="example-capability",
+            owns=("example-configuration",),
+            contribute=contribute,
+            operations=(operation,),
+            currentness=lambda _context: semantic_digest(
+                {"capabilities": load(capabilities_path), "settled": load(settled_path)}
+            ),
+        )
+
+    module = fresh_module()
     workspace = Workspace(tmp_path, modules=[module])
 
     first = workspace.start()
@@ -286,8 +303,10 @@ def test_independent_module_configuration_and_capability_delta_use_generic_contr
     }
     assert workspace.invoke(first_invocation)["next_decision"]["status"] == "terminal"
 
+    capabilities = load(capabilities_path)
     capabilities["new-provider"] = {"revision": "provider-r1", "question": "Choose the new provider posture"}
-    changed = Workspace(tmp_path, modules=[module]).start()
+    capabilities_path.write_text(json.dumps(capabilities), encoding="utf-8")
+    changed = Workspace(tmp_path, modules=[fresh_module()]).start()
     assert changed["decision_request"]["id"] == "new-provider"
     assert changed["context"]["example-capability"]["settled"] == {
         "stable": {"revision": "stable-r1", "answer": "enabled"}
@@ -309,3 +328,55 @@ def test_generated_targets_expose_equal_configuration_semantics() -> None:
         ["node", "--input-type=module", "-e", script], capture_output=True, text=True, check=True
     )
     assert json.loads(completed.stdout) == IR["configuration"]
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for cross-target conformance")
+def test_generated_typescript_executes_inference_finite_open_defer_resume_and_stale_rejection() -> None:
+    module = (ROOT / "typescript" / "dist" / "index.js").as_uri()
+    script = f'''
+import {{ createRepositoryConfigurationOwner, moduleContributions, compileSourceDecision, OperationDispatcher, semanticDigest }} from "{module}";
+const shared = {{}}, local = {{}};
+const rules = [
+  {{ id: "runner", revision: "runner-r1", decision: {{ question: "Runner?", choices: [{{id:"pytest",label:"pytest"}}], infer: [{{answer:"pytest",when:{{path_exists:"pyproject.toml"}}}}] }} }},
+  {{ id: "finite", revision: "finite-r1", decision: {{ question: "Finite?", choices: [{{id:"a",label:"A"}}] }} }},
+  {{ id: "open", revision: "open-r1", decision: {{ question: "Open?", allow_open: true }} }},
+  {{ id: "optional", revision: "optional-r1", decision: {{ question: "Optional?", scope: "local", required: false, choices: [{{id:"x",label:"X"}}] }} }}
+];
+const owner = createRepositoryConfigurationOwner({{ rules: () => rules, pathExists: (path) => path === "pyproject.toml", sharedAnswers: shared, localAnswers: local }});
+const modules = [owner];
+let context = {{ target: "." }};
+const resolve = () => compileSourceDecision(moduleContributions(modules, context));
+const dispatcher = new OperationDispatcher({{ commitCoordinator: {{ run: async (ctx) => ctx.execute() }} }});
+dispatcher.register(owner.operations[0]);
+const decisionInvocation = (decision, answer) => {{
+  const request = decision.decision_request;
+  const response = {{ id: request.id, owner: request.owner, revision: request.revision, authority: request.authority, answer }};
+  const args = {{ target: ".", rule_id: request.id, rule_revision: request.detail_revision, answer, scope: request.id === "optional" ? "local" : "shared" }};
+  return {{ kind: "agentic-workspace/operation-invocation/v1", operation_id: request.response_operation_id, arguments: args, intent: {{}}, effects: request.effects, authority: request.authority, source_owner: request.owner, expected_input_revision: decision.input_revision, decision_response: response, idempotency_key: semanticDigest({{response,args,input:decision.input_revision}}) }};
+}};
+const inferred = resolve();
+const afterInference = await dispatcher.invoke(inferred.primary_action, resolve);
+const finite = afterInference.next_decision;
+const afterFinite = await dispatcher.invoke(decisionInvocation(finite, "a"), resolve);
+const open = afterFinite.next_decision;
+const afterOpen = await dispatcher.invoke(decisionInvocation(open, "custom"), resolve);
+const optional = afterOpen.next_decision;
+const afterDefer = await dispatcher.invoke(decisionInvocation(optional, "defer"), resolve);
+context = {{ target: ".", configuration: {{ resume: true }} }};
+const resumed = resolve();
+const stale = decisionInvocation(resumed, "x");
+rules[3] = {{ ...rules[3], revision: "optional-r2", decision: {{ ...rules[3].decision, question: "Current optional?" }} }};
+let staleRejected = false;
+try {{ await dispatcher.invoke(stale, resolve); }} catch {{ staleRejected = true; }}
+console.log(JSON.stringify({{ inferred: inferred.primary_action.arguments.answer, finite: finite.decision_request.id, open: open.decision_request.allow_open, deferred: afterDefer.next_decision.status, resumed: resumed.decision_request.id, staleRejected }}));
+'''
+    completed = subprocess.run(["node", "--input-type=module", "-e", script], capture_output=True, text=True, check=True)
+    result = json.loads(completed.stdout)
+    assert result == {
+        "inferred": "pytest",
+        "finite": "finite",
+        "open": True,
+        "deferred": "terminal",
+        "resumed": "optional",
+        "staleRejected": True,
+    }
