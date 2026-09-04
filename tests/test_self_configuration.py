@@ -38,6 +38,22 @@ def test_workspace_configuration_skill_is_a_shared_shipped_interface() -> None:
     assert json.loads(completed.stdout) == python
 
 
+def test_workspace_configuration_skill_routes_retired_delegation_through_ordinary_start(tmp_path: Path) -> None:
+    skill = bundled_skill("workspace-configuration")["content"]
+    assert "Call ordinary `start`" in skill
+    retired = tmp_path / ".agentic-workspace/config.local.toml"
+    retired.parent.mkdir(parents=True)
+    retired.write_text(
+        "[delegation]\nassignment_policy='required-best-fit'\ncurrent_target='local'\n\n"
+        "[delegation_targets.local]\nstrength='strong'\ncapability_classes=['mixed']\n"
+        "transports=[{kind='internal'}]\n",
+        encoding="utf-8",
+    )
+    decision = Workspace(tmp_path, modules=[assignment_module()]).start(task="configure delegation")
+    assert decision["primary_action"]["operation_id"] == "assignment.transfer-retired-policy"
+    assert decision["primary_action"]["source_owner"] == "assignment"
+
+
 def _write_rules(path: Path, rules: list[dict[str, Any]]) -> None:
     path.write_text(
         "# Repository controls\n\n"

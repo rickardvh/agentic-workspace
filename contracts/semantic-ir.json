@@ -84,6 +84,23 @@
   },
   "operations": [
     {
+      "id": "assignment.transfer-retired-policy",
+      "owner": "assignment",
+      "effects": ["assignment-state"],
+      "binding": "assignment.transfer_retired_policy",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "retired_revision": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "current_revision": {"type": "string", "minLength": 1},
+          "patch": {"type": "object"}
+        },
+        "required": ["target", "retired_revision", "current_revision", "patch"],
+        "additionalProperties": false
+      }
+    },
+    {
       "id": "assignment.choose",
       "owner": "assignment",
       "effects": ["assignment-state"],

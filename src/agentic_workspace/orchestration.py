@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import subprocess
+import tomllib
 from collections.abc import Mapping
 from fnmatch import fnmatch
 from pathlib import Path, PurePosixPath
@@ -15,6 +16,7 @@ from .modules import Module
 from .operations import Operation
 
 POLICY = ".agentic-workspace/local/delegation.json"
+RETIRED_POLICY = ".agentic-workspace/config.local.toml"
 EVIDENCE = ".agentic-workspace/local/target-evidence.json"
 ATTEMPTS = ".agentic-workspace/local/delegation-attempts.json"
 PLANNING = ".agentic-workspace/planning.json"
@@ -83,6 +85,245 @@ def _write_local(path: Path, value: dict[str, Any], *, kind: str) -> None:
         atomic_write_json(path, value)
     else:
         atomic_create_json(path, value)
+
+
+def _retired_transport(raw: Any, *, target_id: str) -> tuple[dict[str, Any] | None, str | None]:
+    if not isinstance(raw, list) or not raw:
+        return None, f"delegation target {target_id!r} has no canonical transport"
+    if len(raw) != 1 or not isinstance(raw[0], Mapping):
+        return None, f"delegation target {target_id!r} has ambiguous canonical transports"
+    item = dict(raw[0])
+    kind = item.get("kind")
+    if kind not in {"internal", "process", "api", "manual"}:
+        return None, f"delegation target {target_id!r} has an unsupported canonical transport"
+    command = item.get("command")
+    if kind in {"process", "api"} and (
+        not isinstance(command, list) or not command or any(not isinstance(part, str) or not part for part in command)
+    ):
+        return None, f"delegation target {target_id!r} has an incomplete canonical transport"
+    if kind in {"internal", "manual"} and command is not None:
+        return None, f"delegation target {target_id!r} has a contradictory canonical transport"
+    if kind == "internal":
+        return {"kind": "host-native", "ready": True}, None
+    if kind == "manual":
+        return {"kind": "external", "ready": True, "manual": True}, None
+    assert isinstance(command, list)
+    return {
+        "kind": "process" if kind == "process" else "external",
+        "ready": True,
+        "command": list(command),
+    }, None
+
+
+def _retired_policy_patch(root: Path) -> tuple[dict[str, Any], list[str]]:
+    path = root / RETIRED_POLICY
+    if not path.is_file():
+        return {}, []
+    try:
+        raw = tomllib.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, tomllib.TOMLDecodeError) as error:
+        return {}, [f"the recognized retired delegation source cannot be parsed: {error}"]
+    delegation = raw.get("delegation", {})
+    targets = raw.get("delegation_targets", {})
+    if not isinstance(delegation, Mapping):
+        return {}, ["the recognized retired delegation table is not an object"]
+    if not isinstance(targets, Mapping):
+        return {}, ["the recognized retired delegation_targets table is not an object"]
+
+    patch: dict[str, Any] = {}
+    errors: list[str] = []
+    policy_map = {
+        "local-preferred": "retain-local",
+        "best-fit-advisory": "advisory-best-fit",
+        "required-best-fit": "binding-best-fit",
+    }
+    if "assignment_policy" in delegation:
+        value = delegation.get("assignment_policy")
+        if value not in policy_map:
+            errors.append("delegation.assignment_policy is not a recognized canonical value")
+        else:
+            patch["assignment_policy"] = policy_map[str(value)]
+    if "transport_authority" in delegation:
+        value = delegation.get("transport_authority")
+        if value not in {"manual", "automatic"}:
+            errors.append("delegation.transport_authority is not a recognized canonical value")
+        else:
+            patch["transport_authority"] = value
+    if "human_override_policy" in delegation:
+        value = delegation.get("human_override_policy")
+        if value not in {"explicit-only", "allowed-with-recorded-reason", "disallowed"}:
+            errors.append("delegation.human_override_policy is not a recognized canonical value")
+        elif value == "allowed-with-recorded-reason":
+            errors.append(
+                "delegation.human_override_policy requires recorded-reason semantics unavailable in current state"
+            )
+        else:
+            patch["human_override_policy"] = value
+            patch["override_owner"] = "human" if value == "explicit-only" else "assignment"
+
+    translated_targets: list[dict[str, Any]] = []
+    target_names: dict[str, str] = {}
+    for name in sorted(str(key) for key in targets):
+        raw_target = targets.get(name)
+        if not isinstance(raw_target, Mapping):
+            errors.append(f"delegation target {name!r} is not an object")
+            continue
+        canonical_present = bool(set(raw_target) & {"target_id", "identity_status", "capability_classes", "transports"})
+        if not canonical_present:
+            continue
+        target_id = raw_target.get("target_id", name)
+        if not isinstance(target_id, str) or not target_id.strip():
+            errors.append(f"delegation target {name!r} has no usable identity")
+            continue
+        target_id = target_id.strip()
+        capabilities = raw_target.get("capability_classes", [])
+        if not isinstance(capabilities, list) or any(not isinstance(item, str) or not item for item in capabilities):
+            errors.append(f"delegation target {target_id!r} has invalid canonical capabilities")
+            continue
+        identity_status = raw_target.get("identity_status", "active")
+        if identity_status not in {"active", "retired", "superseded", "ambiguous", "unavailable"}:
+            errors.append(f"delegation target {target_id!r} has an invalid canonical identity status")
+            continue
+        transport, transport_error = _retired_transport(raw_target.get("transports"), target_id=target_id)
+        if transport_error:
+            errors.append(transport_error)
+            continue
+        if any(item["id"] == target_id for item in translated_targets):
+            errors.append(f"delegation target identity {target_id!r} is ambiguous")
+            continue
+        translated_targets.append(
+            {
+                "id": target_id,
+                "available": identity_status == "active",
+                "capabilities": list(capabilities),
+                "transport": transport,
+            }
+        )
+        target_names[name] = target_id
+    if translated_targets:
+        patch["targets"] = translated_targets
+
+    if "current_target" in delegation:
+        value = delegation.get("current_target")
+        if not isinstance(value, str) or not value.strip():
+            errors.append("delegation.current_target has no usable identity")
+        else:
+            current = target_names.get(value.strip(), value.strip())
+            patch["current_target"] = current
+            for target in translated_targets:
+                if target["id"] == current and target["transport"] == {"kind": "host-native", "ready": True}:
+                    target["transport"] = {"kind": "local"}
+    return patch, errors
+
+
+def _merge_retired_patch(current: dict[str, Any], patch: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+    merged = dict(current) if current else {"applies": {}, "required_capabilities": [], "targets": []}
+    conflicts: list[str] = []
+    for key, value in patch.items():
+        if key == "targets":
+            continue
+        if key in merged and merged[key] != value:
+            conflicts.append(key)
+        else:
+            merged[key] = value
+    raw_existing_targets = merged.get("targets", [])
+    if not isinstance(raw_existing_targets, list) or any(
+        not isinstance(item, Mapping) for item in raw_existing_targets
+    ):
+        return merged, ["targets"]
+    existing_targets = [dict(item) for item in raw_existing_targets]
+    by_id = {str(item.get("id")): item for item in existing_targets if item.get("id")}
+    for target in patch.get("targets", []):
+        existing = by_id.get(str(target["id"]))
+        if existing is None:
+            copied = dict(target)
+            existing_targets.append(copied)
+            by_id[str(target["id"])] = copied
+            continue
+        for key, value in target.items():
+            if key in existing and existing[key] != value:
+                conflicts.append(f"targets.{target['id']}.{key}")
+            else:
+                existing[key] = value
+    merged["targets"] = existing_targets
+    return merged, sorted(set(conflicts))
+
+
+def _retired_transition(root: Path) -> dict[str, Any] | None:
+    retired_path = root / RETIRED_POLICY
+    if not retired_path.is_file():
+        return None
+    patch, errors = _retired_policy_patch(root)
+    revision = semantic_digest(
+        {
+            "retired_revision": _revision(retired_path),
+            "current_revision": _revision(root / POLICY),
+            "patch": patch,
+            "errors": errors,
+        }
+    )
+    if errors:
+        return {
+            "revision": revision,
+            "blockers": [
+                {
+                    "code": "retired-delegation-ambiguous",
+                    "message": "; ".join(errors),
+                    "recovery": "resolve the canonical delegation intent in the current Assignment policy",
+                }
+            ],
+            "claims": {"blocked": ["complete"]},
+        }
+    if not patch:
+        return None
+    current = _json(root / POLICY)
+    if current and (current.get("kind") != "delegation-policy" or current.get("schema_version") != 1):
+        return {
+            "revision": revision,
+            "blockers": [
+                {
+                    "code": "retired-delegation-conflict",
+                    "message": "current Assignment state has an unknown contract and cannot be reconciled safely",
+                    "recovery": "the Assignment owner must resolve the revision-bound source conflict",
+                }
+            ],
+            "claims": {"blocked": ["complete"]},
+        }
+    merged, conflicts = _merge_retired_patch(current, patch)
+    if conflicts:
+        return {
+            "revision": revision,
+            "facts": {"retired_delegation": {"conflicts": conflicts}},
+            "blockers": [
+                {
+                    "code": "retired-delegation-conflict",
+                    "message": "current and retired canonical delegation semantics conflict: " + ", ".join(conflicts),
+                    "recovery": "the Assignment owner must resolve the revision-bound source conflict",
+                }
+            ],
+            "claims": {"blocked": ["complete"]},
+        }
+    if current == merged:
+        return None
+    return {
+        "revision": revision,
+        "facts": {"retired_delegation": {"disposition": "transfer-required"}},
+        "actions": [
+            {
+                "operation_id": "assignment.transfer-retired-policy",
+                "arguments": {
+                    "target": str(root),
+                    "retired_revision": _revision(retired_path),
+                    "current_revision": _revision(root / POLICY),
+                    "patch": patch,
+                },
+                "effects": ["assignment-state"],
+                "authority": "assignment-inference",
+                "priority": 1000,
+            }
+        ],
+        "claims": {"blocked": ["complete"]},
+    }
 
 
 def _subject(root: Path, context: Mapping[str, Any]) -> dict[str, Any]:
@@ -222,6 +463,9 @@ def _model(root: Path, context: Mapping[str, Any]) -> dict[str, Any] | None:
 
 def _contribute(context: Mapping[str, Any]) -> dict[str, Any] | None:
     root = Path(str(context["target"])).resolve()
+    transition = _retired_transition(root)
+    if transition is not None:
+        return transition
     model = _model(root, context)
     if model is None:
         return None
@@ -395,6 +639,38 @@ def _choose(arguments: dict[str, Any]) -> dict[str, Any]:
     policy["choice"] = arguments["target_id"]
     _write_local(path, policy, kind="delegation-policy")
     return {"status": "applied", "effects": ["assignment-state"], "value": {"target_id": arguments["target_id"]}}
+
+
+def _transfer_retired_policy(arguments: dict[str, Any]) -> dict[str, Any]:
+    root = Path(arguments["target"]).resolve()
+    retired_path = root / RETIRED_POLICY
+    current_path = root / POLICY
+    patch, errors = _retired_policy_patch(root)
+    if (
+        errors
+        or patch != arguments["patch"]
+        or _revision(retired_path) != arguments["retired_revision"]
+        or _revision(current_path) != arguments["current_revision"]
+    ):
+        return {"status": "rejected", "effects": [], "value": {"reason": "stale-retired-delegation-source"}}
+    current = _json(current_path)
+    if current and (current.get("kind") != "delegation-policy" or current.get("schema_version") != 1):
+        return {"status": "rejected", "effects": [], "value": {"reason": "unknown-current-assignment-state"}}
+    merged, conflicts = _merge_retired_patch(current, patch)
+    if conflicts:
+        return {"status": "rejected", "effects": [], "value": {"reason": "retired-delegation-conflict"}}
+    if merged == current:
+        return {
+            "status": "unchanged",
+            "effects": [],
+            "value": {"disposition": "already-represented", "retired_revision": arguments["retired_revision"]},
+        }
+    _write_local(current_path, merged, kind="delegation-policy")
+    return {
+        "status": "applied",
+        "effects": ["assignment-state"],
+        "value": {"disposition": "transferred", "retired_revision": arguments["retired_revision"]},
+    }
 
 
 def _record(arguments: dict[str, Any]) -> dict[str, Any]:
@@ -597,6 +873,22 @@ def _recover_choose(arguments: dict[str, Any]) -> dict[str, Any] | None:
     )
 
 
+def _recover_transfer_retired_policy(arguments: dict[str, Any]) -> dict[str, Any] | None:
+    root = Path(arguments["target"]).resolve()
+    if _revision(root / RETIRED_POLICY) != arguments["retired_revision"]:
+        return None
+    patch, errors = _retired_policy_patch(root)
+    current = _json(root / POLICY)
+    merged, conflicts = _merge_retired_patch(current, patch)
+    if errors or patch != arguments["patch"] or conflicts or merged != current:
+        return None
+    return {
+        "status": "applied",
+        "effects": ["assignment-state"],
+        "value": {"disposition": "transferred", "retired_revision": arguments["retired_revision"]},
+    }
+
+
 def _recover_record(arguments: dict[str, Any]) -> dict[str, Any] | None:
     records = _json(Path(arguments["target"]).resolve() / EVIDENCE).get("records", [])
     record = next(
@@ -720,6 +1012,11 @@ def assignment_module() -> Module:
         contribute=_contribute,
         operations=(
             _operation("assignment.choose", _choose, _recover_choose),
+            _operation(
+                "assignment.transfer-retired-policy",
+                _transfer_retired_policy,
+                _recover_transfer_retired_policy,
+            ),
             _operation("assignment.record-evidence", _record, _recover_record),
             _operation("delegation.dispatch", _dispatch, _recover_attempt),
             _operation("delegation.return", _return, _recover_attempt),
@@ -735,6 +1032,7 @@ def assignment_module() -> Module:
             semantic_digest(
                 {
                     "policy": _json(Path(str(context["target"])) / POLICY),
+                    "retired_policy_revision": _revision(Path(str(context["target"])) / RETIRED_POLICY),
                     "evidence": _json(Path(str(context["target"])) / EVIDENCE),
                     "attempts": _json(Path(str(context["target"])) / ATTEMPTS),
                     "planning": _json(Path(str(context["target"])) / PLANNING),
@@ -745,6 +1043,7 @@ def assignment_module() -> Module:
                 }
             )
             if (Path(str(context["target"])) / POLICY).is_file()
+            or (Path(str(context["target"])) / RETIRED_POLICY).is_file()
             else None
         ),
     )

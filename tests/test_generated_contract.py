@@ -97,6 +97,7 @@ def test_ir_inventories_semantics_and_exact_platform_primitives() -> None:
         "planning.accept-correction-failure",
         "memory.accept-correction",
         "assignment.choose",
+        "assignment.transfer-retired-policy",
         "assignment.record-evidence",
         "delegation.dispatch",
         "delegation.return",

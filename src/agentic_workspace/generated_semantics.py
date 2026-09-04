@@ -85,6 +85,23 @@ IR: dict[str, Any] = {
     },
     "operations": [
         {
+            "binding": "assignment.transfer_retired_policy",
+            "effects": ["assignment-state"],
+            "id": "assignment.transfer-retired-policy",
+            "input": {
+                "additionalProperties": False,
+                "properties": {
+                    "current_revision": {"minLength": 1, "type": "string"},
+                    "patch": {"type": "object"},
+                    "retired_revision": {"pattern": "^sha256:[0-9a-f]{64}$", "type": "string"},
+                    "target": {"minLength": 1, "type": "string"},
+                },
+                "required": ["target", "retired_revision", "current_revision", "patch"],
+                "type": "object",
+            },
+            "owner": "assignment",
+        },
+        {
             "binding": "assignment.choose",
             "effects": ["assignment-state"],
             "id": "assignment.choose",

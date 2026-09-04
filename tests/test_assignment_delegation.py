@@ -10,6 +10,7 @@ import pytest
 
 from agentic_workspace import orchestration
 from agentic_workspace.builtin_modules import planning_module
+from agentic_workspace.operations import StaleInvocationError
 from agentic_workspace.orchestration import assignment_module
 from agentic_workspace.workspace import Workspace
 
@@ -74,6 +75,145 @@ def _policy(root: Path, *, assignment_policy: str = "binding-best-fit", worker_c
             ],
         },
     )
+
+
+def _retired_policy(
+    root: Path, *, assignment_policy: str = "required-best-fit", transports: str = "[{kind='internal'}]"
+) -> bytes:
+    content = (
+        "# Preserve this retired source exactly.\r\n"
+        "[delegation]\r\n"
+        f"assignment_policy = '{assignment_policy}'\r\n"
+        "transport_authority = 'automatic'\r\n"
+        "current_target = 'local-profile'\r\n"
+        "human_override_policy = 'explicit-only'\r\n\r\n"
+        "[delegation_targets.local-profile]\r\n"
+        "strength = 'strong'\r\n"
+        "target_id = 'local'\r\n"
+        "identity_status = 'active'\r\n"
+        "capability_classes = ['reasoning-heavy']\r\n"
+        f"transports = {transports}\r\n"
+    ).encode()
+    path = root / ".agentic-workspace/config.local.toml"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(content)
+    return content
+
+
+def test_retired_canonical_delegation_transfers_through_assignment_and_preserves_source(tmp_path: Path) -> None:
+    retired = _retired_policy(tmp_path)
+    workspace = Workspace(tmp_path, modules=[assignment_module()])
+    decision = workspace.start(task="ordinary work")
+    action = decision["primary_action"]
+    assert action["operation_id"] == "assignment.transfer-retired-policy"
+    assert action["authority"] == "assignment-inference"
+
+    result = workspace.invoke(action)
+    assert result["status"] == "applied"
+    assert result["value"]["disposition"] == "transferred"
+    assert (tmp_path / ".agentic-workspace/config.local.toml").read_bytes() == retired
+    current_path = tmp_path / ".agentic-workspace/local/delegation.json"
+    current = json.loads(current_path.read_text(encoding="utf-8"))
+    assert current["assignment_policy"] == "binding-best-fit"
+    assert current["transport_authority"] == "automatic"
+    assert current["current_target"] == "local"
+    assert current["human_override_policy"] == "explicit-only"
+    assert current["override_owner"] == "human"
+    assert current["targets"] == [
+        {
+            "id": "local",
+            "available": True,
+            "capabilities": ["reasoning-heavy"],
+            "transport": {"kind": "local"},
+        }
+    ]
+
+    before = current_path.read_bytes()
+    represented = Workspace(tmp_path, modules=[assignment_module()]).start(task="ordinary work")
+    assert represented["status"] == "terminal"
+    assert represented["primary_action"] is None
+    assert current_path.read_bytes() == before
+
+    (tmp_path / ".agentic-workspace/config.local.toml").unlink()
+    fresh = Workspace(tmp_path, modules=[assignment_module()]).start(task="ordinary work")
+    assert fresh["status"] == "terminal"
+    assert fresh["context"]["assignment"]["assignment"]["selected_target"] == "local"
+
+
+def test_retired_delegation_conflict_and_ambiguous_transport_fail_closed(tmp_path: Path) -> None:
+    _retired_policy(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/local/delegation.json",
+        {
+            "kind": "delegation-policy",
+            "schema_version": 1,
+            "applies": {},
+            "assignment_policy": "advisory-best-fit",
+            "targets": [],
+        },
+    )
+    conflict = Workspace(tmp_path, modules=[assignment_module()]).start(task="ordinary work")
+    assert conflict["status"] == "blocked"
+    assert conflict["blockers"][0]["code"] == "retired-delegation-conflict"
+    assert "assignment_policy" in conflict["blockers"][0]["message"]
+
+    ambiguous_root = tmp_path / "ambiguous"
+    _retired_policy(ambiguous_root, transports="[{kind='internal'}, {kind='manual'}]")
+    ambiguous = Workspace(ambiguous_root, modules=[assignment_module()]).start(task="ordinary work")
+    assert ambiguous["status"] == "blocked"
+    assert ambiguous["blockers"][0]["code"] == "retired-delegation-ambiguous"
+    assert not (ambiguous_root / ".agentic-workspace/local/delegation.json").exists()
+
+
+def test_retired_delegation_completes_partial_current_state_and_rejects_stale_source(tmp_path: Path) -> None:
+    _retired_policy(tmp_path)
+    current_path = tmp_path / ".agentic-workspace/local/delegation.json"
+    _write(
+        current_path,
+        {
+            "kind": "delegation-policy",
+            "schema_version": 1,
+            "applies": {},
+            "current_target": "local",
+            "targets": [],
+        },
+    )
+    workspace = Workspace(tmp_path, modules=[assignment_module()])
+    action = workspace.start(task="ordinary work")["primary_action"]
+    assert action["operation_id"] == "assignment.transfer-retired-policy"
+    assert workspace.invoke(action)["status"] == "applied"
+    completed = json.loads(current_path.read_text(encoding="utf-8"))
+    assert completed["assignment_policy"] == "binding-best-fit"
+    assert completed["targets"][0]["id"] == "local"
+
+    stale_root = tmp_path / "stale"
+    _retired_policy(stale_root)
+    stale_workspace = Workspace(stale_root, modules=[assignment_module()])
+    stale_action = stale_workspace.start(task="ordinary work")["primary_action"]
+    retired_path = stale_root / ".agentic-workspace/config.local.toml"
+    retired_path.write_bytes(retired_path.read_bytes() + b"# changed\n")
+    with pytest.raises(StaleInvocationError):
+        stale_workspace.invoke(stale_action)
+    assert not (stale_root / ".agentic-workspace/local/delegation.json").exists()
+
+
+def test_deprecated_only_retired_delegation_and_absent_source_have_no_transition_tax(tmp_path: Path) -> None:
+    retired = tmp_path / ".agentic-workspace/config.local.toml"
+    retired.parent.mkdir(parents=True)
+    retired.write_text(
+        "[delegation]\nmode='auto'\nexecution_role='orchestrator'\nunderfit_behavior='require-delegation'\n"
+        "down_routing_behavior='when-cheaper-safe-target-exists'\n\n"
+        "[delegation_targets.legacy]\nstrength='strong'\nexecution_methods=['internal']\n",
+        encoding="utf-8",
+    )
+    deprecated = Workspace(tmp_path, modules=[assignment_module()]).start(task="ordinary work")
+    assert deprecated["status"] == "direct"
+    assert not (tmp_path / ".agentic-workspace/local/delegation.json").exists()
+
+    clean_root = tmp_path / "clean"
+    clean = Workspace(clean_root, modules=[assignment_module()]).start(task="ordinary work")
+    assert clean["status"] == "direct"
+    assert not (clean_root / ".agentic-workspace").exists()
 
 
 def test_no_keyword_binding_assignment_dispatches_and_shared_return_is_baseline_checked(tmp_path: Path) -> None:
