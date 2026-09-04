@@ -26,6 +26,7 @@ from agentic_workspace.context_authority_owner_operations import (
     registered_context_owner_result_status,
 )
 from agentic_workspace.control_inputs import compile_control_inputs
+from agentic_workspace.decision import compile_source_decision
 from agentic_workspace.future_learning import compile_future_learning
 from agentic_workspace.instruction_clause_ir import compile_instruction_program, instruction_program_from_existing_mechanisms
 from agentic_workspace.intent_feedback import compile_intent_feedback, intent_evidence_from_observed_behavior
@@ -3603,6 +3604,20 @@ def compile_repo_improvement_execution(
 
 def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
     """Return one primary typed action or one typed external blocker."""
+
+    if "source_contributions" in inputs:
+        contributions = inputs.get("source_contributions")
+        if not isinstance(contributions, list):
+            raise TypeError("source_contributions must be a list")
+        intent = inputs.get("intent")
+        if intent is None:
+            intent = {"task": str(inputs.get("task") or ""), "changed_paths": _as_list(inputs.get("changed_paths"))}
+        if not isinstance(intent, dict):
+            raise TypeError("intent must be an object")
+        return compile_source_decision(
+            [item for item in contributions if isinstance(item, dict)],
+            intent=intent,
+        )
 
     future_context_signals = [_as_dict(item) for item in _as_list(inputs.get("future_context_signals")) if isinstance(item, dict)]
     future_learning = compile_future_learning(

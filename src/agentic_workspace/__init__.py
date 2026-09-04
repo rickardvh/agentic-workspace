@@ -21,6 +21,9 @@ from .client import (
     require_operations,
     resolve_invocation,
 )
+from .decision import DecisionContractError, compile_source_decision, select_decision_detail
+from .modules import Module, discover_modules, module_contributions, register_module_operations
+from .operations import Operation, OperationContractError, OperationDispatcher, OperationError, StaleInvocationError
 
 __all__ = [
     "AWClientError",
@@ -35,4 +38,16 @@ __all__ = [
     "operation_compatibility_fingerprint",
     "require_operations",
     "resolve_invocation",
+    "DecisionContractError",
+    "compile_source_decision",
+    "select_decision_detail",
+    "Module",
+    "discover_modules",
+    "module_contributions",
+    "register_module_operations",
+    "Operation",
+    "OperationContractError",
+    "OperationDispatcher",
+    "OperationError",
+    "StaleInvocationError",
 ]
