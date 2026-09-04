@@ -915,7 +915,9 @@ def _verification_contribution(context: Mapping[str, Any]) -> dict[str, Any] | N
         return None
     policy_path = root / VERIFICATION_POLICY
     strategy_revision = _revision(policy_path)
-    subject_revision = str(active.get("semantic_revision") or _planning_semantic_revision(active))
+    subject_revision = str(
+        active.get("semantic_revision") or (_planning_semantic_revision(active) if active else "absent")
+    )
     if not needs_proof:
         passed = (
             state.get("status") == "passed"
