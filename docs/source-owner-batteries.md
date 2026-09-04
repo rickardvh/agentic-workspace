@@ -30,6 +30,13 @@ may be revisited with `{"configuration":{"resume":true}}`. A changed rule
 revision invalidates only that answer or deferral, while unrelated settled
 rules stay quiet.
 
+Repository maintainers may use `tools/skills/workspace-configuration` as an
+optional guided procedure. It repeatedly invokes only current, safe inferred
+actions, surfaces the next irreducible finite or open owner judgment, and then
+continues from `next_decision`. The skill owns no state or authority and never
+substitutes raw configuration-file writes for Repository, Verification, or
+Assignment operations.
+
 ## Memory
 
 Memory records include stable identity, summary/value, provenance, task/path
@@ -76,19 +83,20 @@ and contribution-call counters that demonstrate avoided reconstruction.
 A host that already has authenticated human custody may create a
 `TrustedCorrectionIngress` capability and admit one bounded correction. The
 capability, not caller-controlled JSON such as `source=human`, supplies
-provenance. Ordinary `start` then returns the selected owner's accepted typed
-operation. Memory retention therefore executes as `memory.record`, and a
-deterministic owner failure becomes a `planning.set` repair subject; correction
-custody never calls another owner's handler.
+provenance. Ordinary `start` then returns the selected owner's
+correction-specific typed operation. Memory, Repository, Verification,
+Assignment, and Planning each validate their own current linkage before
+accepting a handoff; correction custody never calls another owner's handler.
 
 Existing repository/proof/delegation policy wins over duplicate Memory only
 when its exact current owner reference and revision validate. A stale or
 unknown hint blocks disposition. A
-future-useful advisory may be recorded by Memory, deterministic owner failure
-is returned as adaptation evidence for that owner, and a correction with no
-future value receives an explicit justified `no-new-durable-record`
+future-useful advisory may be recorded by Memory, while deterministic owner
+failure becomes a Planning repair bound to the failed owner's current evidence.
+An unspecified correction with no applicability asks one revision-bound
+retain-or-discard question before the selected owner operation; a correction
+with no future value receives an explicit justified `no-new-durable-record`
 disposition. Operation receipts deduplicate host retries; there is no
 correction archive, transcript scan, vendor adapter registry, or no-signal
 startup work. The generated TypeScript package exposes the same constructible
-trusted-ingress capability with an injected current-owner disposition resolver;
-providers remain outside AW.
+trusted-ingress and owner-admission semantics; providers remain outside AW.

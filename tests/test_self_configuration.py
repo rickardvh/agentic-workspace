@@ -5,15 +5,18 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+import sys
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
 import pytest
 
+from agentic_workspace.builtin_modules import planning_module, verification_module
 from agentic_workspace.generated_semantics import IR, KINDS, semantic_digest
 from agentic_workspace.modules import Module
 from agentic_workspace.operations import Operation, StaleInvocationError
+from agentic_workspace.orchestration import assignment_module
 from agentic_workspace.repository_controls import repository_module
 from agentic_workspace.workspace import Workspace
 
@@ -63,6 +66,17 @@ def _decision_invocation(
     }
 
 
+def _advance_inferred_configuration(workspace: Workspace, intent: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+    current = workspace.start(intent=intent)
+    invoked: list[str] = []
+    while current["status"] == "actionable":
+        action = current["primary_action"]
+        assert action["authority"] == "repository-inference"
+        invoked.append(action["operation_id"])
+        current = workspace.invoke(action)["next_decision"]
+    return current, invoked
+
+
 def test_ordinary_start_applies_strong_inference_before_human_question(tmp_path: Path) -> None:
     (tmp_path / "pyproject.toml").write_text("[project]\nname='example'\n", encoding="utf-8")
     rules = [
@@ -99,6 +113,190 @@ def test_ordinary_start_applies_strong_inference_before_human_question(tmp_path:
     stored = json.loads((tmp_path / ".agentic-workspace" / "config.answers.json").read_text(encoding="utf-8"))
     assert stored["test-runner"]["answer"] == "pytest"
     assert stored["test-runner"]["disposition"] == "configured"
+
+
+def test_maintainer_procedure_completes_zero_question_setup_from_safe_inference(tmp_path: Path) -> None:
+    (tmp_path / "pyproject.toml").write_text("[project]\nname='example'\n", encoding="utf-8")
+    _write_rules(
+        tmp_path / "AGENTS.md",
+        [
+            {
+                "id": "runner",
+                "decision": {
+                    "question": "Which runner?",
+                    "choices": [{"id": "pytest", "label": "pytest"}],
+                    "infer": [{"answer": "pytest", "when": {"path_exists": "pyproject.toml"}}],
+                },
+            },
+            {
+                "id": "language",
+                "facts": {"runtime": "python"},
+                "decision": {
+                    "question": "Which language?",
+                    "choices": [{"id": "python", "label": "Python"}],
+                    "infer": [{"answer": "python", "when": {"fact_equals": {"key": "runtime", "value": "python"}}}],
+                },
+            },
+        ],
+    )
+    final, invoked = _advance_inferred_configuration(
+        Workspace(tmp_path, modules=[repository_module()]),
+        {"task": "configure this repository", "changed_paths": [], "claims": []},
+    )
+    assert final["status"] == "terminal"
+    assert invoked == ["repository.answer", "repository.answer"]
+    answers = json.loads((tmp_path / ".agentic-workspace" / "config.answers.json").read_text(encoding="utf-8"))
+    assert {key: value["answer"] for key, value in answers.items()} == {
+        "language": "python",
+        "runner": "pytest",
+    }
+
+
+def test_maintainer_procedure_guides_finite_then_open_judgment_across_fresh_state(tmp_path: Path) -> None:
+    _write_rules(
+        tmp_path / "AGENTS.md",
+        [
+            {
+                "id": "provider",
+                "decision": {
+                    "question": "Which provider?",
+                    "scope": "local",
+                    "choices": [{"id": "local", "label": "Local"}],
+                },
+            },
+            {
+                "id": "release-owner",
+                "decision": {"question": "Who approves releases?", "scope": "shared", "allow_open": True},
+            },
+        ],
+    )
+    intent = {"task": "configure this repository", "changed_paths": [], "claims": []}
+    workspace = Workspace(tmp_path, modules=[repository_module()])
+    finite = workspace.start(intent=intent)
+    after_finite = workspace.invoke(
+        _decision_invocation(finite, answer="local", scope="local", target=tmp_path, intent=intent)
+    )["next_decision"]
+    assert after_finite["decision_request"]["id"] == "release-owner"
+    assert after_finite["decision_request"]["response_operation_id"] == "repository.answer"
+
+    fresh = Workspace(tmp_path, modules=[repository_module()])
+    after_open = fresh.invoke(
+        _decision_invocation(
+            after_finite,
+            answer="release-team",
+            scope="shared",
+            target=tmp_path,
+            intent=intent,
+        )
+    )
+    assert after_open["next_decision"]["status"] == "terminal"
+
+
+def test_high_level_setup_intent_routes_to_repository_verification_and_assignment_owners(tmp_path: Path) -> None:
+    _write_rules(
+        tmp_path / "AGENTS.md",
+        [
+            {
+                "id": "local-provider",
+                "decision": {
+                    "question": "Which local provider?",
+                    "scope": "local",
+                    "choices": [{"id": "provider-a", "label": "Provider A"}],
+                },
+            }
+        ],
+    )
+    provider_intent = {"task": "choose a local provider", "changed_paths": [], "claims": []}
+    repository = Workspace(tmp_path, modules=[repository_module()])
+    provider = repository.start(intent=provider_intent)
+    assert provider["decision_request"]["response_operation_id"] == "repository.answer"
+    repository.invoke(
+        _decision_invocation(
+            provider,
+            answer="provider-a",
+            scope="local",
+            target=tmp_path,
+            intent=provider_intent,
+        )
+    )
+
+    planning = Workspace(tmp_path, modules=[planning_module()])
+    planning.invoke(
+        planning.start(
+            intent={
+                "planning": {
+                    "operation": "set",
+                    "item": "release",
+                    "status": "ready-to-complete",
+                    "outcome": "release",
+                    "proof_claims": ["complete"],
+                }
+            }
+        )["primary_action"]
+    )
+    verification_policy = tmp_path / ".agentic-workspace" / "verification.toml"
+    verification_policy.write_text(
+        "schema_version = 1\n\n[[routes]]\nid = 'strong-release'\nclaims = ['complete']\nbreadth = 1\n"
+        f"commands = [['{sys.executable}', '-c', 'raise SystemExit(0)']]\n",
+        encoding="utf-8",
+    )
+    proof = Workspace(tmp_path, modules=[planning_module(), verification_module()]).start(
+        task="require stronger release proof", claims=["complete"]
+    )
+    assert proof["primary_action"]["operation_id"] == "verification.run"
+    assert proof["primary_action"]["arguments"]["route_id"] == "strong-release"
+
+    delegation_policy = tmp_path / ".agentic-workspace" / "local" / "delegation.json"
+    delegation_policy.parent.mkdir(parents=True, exist_ok=True)
+    delegation_policy.write_text(
+        json.dumps(
+            {
+                "kind": "delegation-policy",
+                "schema_version": 1,
+                "applies": {"task_terms": ["delegation"]},
+                "current_target": "local",
+                "assignment_policy": "binding-best-fit",
+                "transport_authority": "automatic",
+                "override_owner": "maintainer",
+                "required_capabilities": ["review"],
+                "targets": [
+                    {
+                        "id": "local",
+                        "available": True,
+                        "capabilities": ["review"],
+                        "proof_claims": ["complete"],
+                        "allowed_scope": ["**"],
+                        "constraints": [],
+                        "honors_stops": True,
+                        "trust": "maintainer",
+                        "human_authority": True,
+                        "cost": 10,
+                        "transport": {"kind": "local"},
+                    },
+                    {
+                        "id": "worker",
+                        "available": True,
+                        "capabilities": ["review"],
+                        "proof_claims": ["complete"],
+                        "allowed_scope": ["**"],
+                        "constraints": [],
+                        "honors_stops": True,
+                        "trust": "maintainer",
+                        "human_authority": True,
+                        "cost": 1,
+                        "transport": {"kind": "host-native", "ready": True},
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    assignment = Workspace(tmp_path, modules=[assignment_module()]).start(task="use best-fit delegation")
+    assert assignment["primary_action"]["operation_id"] == "delegation.dispatch"
+    assert assignment["primary_action"]["arguments"]["target_id"] == "worker"
+
+    assert not (tmp_path / ".agentic-workspace" / "config.answers.json").exists()
+    assert (tmp_path / ".agentic-workspace" / "local" / "configuration.json").is_file()
 
 
 def test_fact_inference_is_order_independent_and_conflicts_fail_closed(tmp_path: Path) -> None:
