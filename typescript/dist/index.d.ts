@@ -4,6 +4,9 @@ export interface Contribution { owner: string; revision: string; relevant?: bool
 export interface ResourceReference { id: string; revision: string; locator: string; summary?: string; }
 export interface DecisionRequest { id: string; question: string; authority: string; response_operation_id: string; choices?: { id: string; label: string }[]; allow_open?: boolean; }
 export declare const IR: Record<string, Json>;
+export interface BundledSkill { name: string; description: string; content: string; }
+export declare const BUNDLED_SKILLS: Record<string, BundledSkill>;
+export declare function bundledSkill(name: string): BundledSkill;
 export declare function canonicalSerialize(value: Json): string;
 export declare function semanticDigest(value: Json): string;
 export interface TrustedCorrectionIngress { observe(value: Record<string, Json>): Record<string, Json>; complete(correctionId: string, revision: string): void; module(): Module; }

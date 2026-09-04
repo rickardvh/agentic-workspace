@@ -53,7 +53,6 @@ def test_required_maintainer_skills_are_current_and_outside_packages() -> None:
         "github-issue-shaping",
         "github-issue-creation",
         "self-improvement-dogfooding",
-        "workspace-configuration",
     }
     text = "\n".join(path.read_text(encoding="utf-8") for path in (ROOT / "tools/skills").glob("*/SKILL.md"))
     for removed in (

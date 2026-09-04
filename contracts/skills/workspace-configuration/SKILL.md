@@ -5,8 +5,8 @@ description: Resolve repository setup and configuration intent through Agentic W
 
 # Workspace configuration
 
-Use this optional repository-maintainer procedure when a maintainer wants help
-settling setup or configuration judgments. It is a judgment aid over ordinary
+Use this optional shipped procedure when a user wants help settling setup or
+configuration judgments. It is a judgment aid over ordinary
 `Workspace.start` and owner operations; it owns no state and grants no new
 authority.
 

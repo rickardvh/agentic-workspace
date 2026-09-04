@@ -50,6 +50,8 @@ Agentic Workspace keeps domain capabilities separate from the core operating loo
 
 Installing or enabling a capability should not make every task carry its terminology or state. Independent modules can contribute capabilities through the same module contract without requiring core workflow changes.
 
+Both public packages also ship the optional `workspace-configuration` agent skill. Installed Python hosts can discover it through the `agentic_workspace.skills` entry-point group or load it with `agentic_workspace.bundled_skill("workspace-configuration")`; TypeScript hosts use `bundledSkill("workspace-configuration")`. The skill guides automatic or question-by-question configuration through the same current owner decisions and operations used by ordinary `start`.
+
 See [source-owner batteries](docs/source-owner-batteries.md), [assignment and delegation](docs/assignment-and-delegation.md), and the [module API](docs/module-api.md).
 
 ## How it works

@@ -580,8 +580,81 @@ IR: dict[str, Any] = {
     },
     "schema_version": 1,
 }
+BUNDLED_SKILLS: dict[str, dict[str, str]] = {
+    "workspace-configuration": {
+        "content": "---\n"
+        "name: workspace-configuration\n"
+        "description: Resolve repository setup and configuration intent through "
+        "Agentic Workspace's current source owners without introducing a separate "
+        "questionnaire or configuration authority.\n"
+        "---\n"
+        "\n"
+        "# Workspace configuration\n"
+        "\n"
+        "Use this optional shipped procedure when a user wants help settling setup or\n"
+        "configuration judgments. It is a judgment aid over ordinary\n"
+        "`Workspace.start` and owner operations; it owns no state and grants no new\n"
+        "authority.\n"
+        "\n"
+        "Start with the complete high-level intent. Then:\n"
+        "\n"
+        "1. Call ordinary `start` with that intent.\n"
+        "2. If the result is actionable and the proposed consequence is safe, "
+        "inferred,\n"
+        "   and within the requested scope, invoke its `primary_action` unchanged.\n"
+        "3. Continue only from the returned `next_decision`, repeating step 2 while "
+        "the\n"
+        "   same conditions hold. Do not poll or reconstruct state between steps.\n"
+        "4. On a finite or open decision, ask the current question once. Submit the\n"
+        "   answer through that request's `response_operation_id`, preserving its "
+        "owner,\n"
+        "   revision, effects, scope, and current typed arguments. Continue from the\n"
+        "   returned `next_decision`.\n"
+        "5. Stop on a direct, terminal, or blocked result, or before any consequence\n"
+        "   outside the maintainer's authorization. A direct result is a successful\n"
+        "   zero-question setup outcome.\n"
+        "\n"
+        "Translate intent to an existing owner, not to a storage path:\n"
+        "\n"
+        "- repository preferences and provider defaults go to the applicable "
+        "Repository\n"
+        "  control and `repository.answer`;\n"
+        "- release-proof strength and claim coverage go to the current Verification\n"
+        "  route and its operation;\n"
+        "- best-fit worker or delegation intent goes to the current Assignment "
+        "decision\n"
+        "  or dispatch operation;\n"
+        "- retained advice and changed execution scope remain Memory and Planning\n"
+        "  judgments respectively.\n"
+        "\n"
+        "If no current owner exposes the needed decision or operation, stop and "
+        "report\n"
+        "that missing capability. Never compensate by directly editing arbitrary "
+        "TOML,\n"
+        "JSON, ignored local files, or another owner's state. Do not create a setup\n"
+        "ledger, questionnaire state, or second configuration model. Fresh state is\n"
+        "obtained by calling ordinary `start` again; previously settled current "
+        "answers\n"
+        "must stay quiet, and stale requests must be discarded rather than replayed.\n",
+        "description": "Resolve repository setup and configuration intent through Agentic "
+        "Workspace's current source owners without introducing a separate "
+        "questionnaire or configuration authority.",
+        "name": "workspace-configuration",
+    }
+}
 KINDS = IR["kinds"]
 OPERATION_CONTRACTS = {item["id"]: item for item in IR["operations"]}
+
+
+def bundled_skill(name: str) -> dict[str, str]:
+    try:
+        return dict(BUNDLED_SKILLS[name])
+    except KeyError as exc:
+        raise ValueError(f"unknown bundled skill: {name}") from exc
+
+
+def workspace_configuration_skill() -> dict[str, str]:
+    return bundled_skill("workspace-configuration")
 
 
 def operation_contract(operation_id: str) -> dict[str, Any]:

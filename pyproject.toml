@@ -37,6 +37,9 @@ verification = "agentic_workspace.builtin_modules:verification_module"
 repository = "agentic_workspace.repository_controls:repository_module"
 assignment = "agentic_workspace.orchestration:assignment_module"
 
+[project.entry-points."agentic_workspace.skills"]
+workspace-configuration = "agentic_workspace.generated_semantics:workspace_configuration_skill"
+
 [dependency-groups]
 dev = ["build", "pytest", "ruff", "ty"]
 

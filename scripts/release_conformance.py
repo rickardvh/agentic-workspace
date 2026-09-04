@@ -187,6 +187,7 @@ def _assert_artifacts(wheel: Path, sdist: Path) -> None:
     with zipfile.ZipFile(wheel) as archive:
         names = archive.namelist()
     assert "agentic_workspace/decision.py" in names
+    assert "agentic_workspace/skills/workspace-configuration/SKILL.md" in names
     assert not any(name.startswith(forbidden) for name in names)
     with tarfile.open(sdist) as archive:
         names = archive.getnames()
@@ -201,6 +202,7 @@ def _assert_typescript_artifact(package: Path) -> None:
         "package/semantic-ir.json",
         "package/dist/index.js",
         "package/dist/index.d.ts",
+        "package/skills/workspace-configuration/SKILL.md",
     } <= names
     assert not any("src/agentic_workspace" in name or ".agentic-workspace" in name for name in names)
 
@@ -251,6 +253,13 @@ def run(root: Path) -> dict[str, Any]:
         names = {str(item["name"]).lower() for item in installed if isinstance(item, dict)}
         assert "agentic-workspace" in names
         assert not {"agentic-workspace-core", "agentic-workspace-planning", "agentic-workspace-memory"} & names
+        skill_probe = (
+            "import json; from importlib.metadata import entry_points; "
+            "entry=next(item for item in entry_points(group='agentic_workspace.skills') "
+            "if item.name == 'workspace-configuration'); print(json.dumps(entry.load()(), sort_keys=True))"
+        )
+        python_skill = _json([str(python), "-c", skill_probe])
+        assert isinstance(python_skill, dict) and python_skill["name"] == "workspace-configuration"
 
         repository = temp / "repository"
         repository.mkdir()
@@ -326,6 +335,14 @@ def run(root: Path) -> dict[str, Any]:
             [npm, "install", "--ignore-scripts", "--no-audit", "--no-fund", str(typescript_package)],
             cwd=typescript_consumer,
         )
+        typescript_skill_probe = (
+            'import { bundledSkill } from "@rickardvh/agentic-workspace"; '
+            'console.log(JSON.stringify(bundledSkill("workspace-configuration")));'
+        )
+        typescript_skill = json.loads(
+            _run([node, "--input-type=module", "-e", typescript_skill_probe], cwd=typescript_consumer).stdout
+        )
+        assert typescript_skill == python_skill
         typescript_probe = (
             'import { compileSourceDecision } from "@rickardvh/agentic-workspace"; '
             "console.log(JSON.stringify(compileSourceDecision([], "

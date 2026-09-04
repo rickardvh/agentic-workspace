@@ -10,7 +10,9 @@ except PackageNotFoundError:
 from .corrections import TrustedCorrection, TrustedCorrectionIngress
 from .decision import DecisionContractError, compile_source_decision, select_decision_detail
 from .generated_semantics import (
+    BUNDLED_SKILLS,
     IR,
+    bundled_skill,
     canonical_serialize,
     operation_contract,
     owner_conclusion_identity,
@@ -22,6 +24,7 @@ from .workspace import Workspace
 
 __all__ = [
     "DecisionContractError",
+    "BUNDLED_SKILLS",
     "IR",
     "Module",
     "Operation",
@@ -34,6 +37,7 @@ __all__ = [
     "Workspace",
     "compile_source_decision",
     "canonical_serialize",
+    "bundled_skill",
     "discover_modules",
     "module_contributions",
     "operation_contract",

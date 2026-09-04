@@ -13,7 +13,7 @@ from typing import Any
 import pytest
 
 from agentic_workspace.builtin_modules import planning_module, verification_module
-from agentic_workspace.generated_semantics import IR, KINDS, semantic_digest
+from agentic_workspace.generated_semantics import IR, KINDS, bundled_skill, semantic_digest
 from agentic_workspace.modules import Module
 from agentic_workspace.operations import Operation, StaleInvocationError
 from agentic_workspace.orchestration import assignment_module
@@ -21,6 +21,21 @@ from agentic_workspace.repository_controls import repository_module
 from agentic_workspace.workspace import Workspace
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for cross-target conformance")
+def test_workspace_configuration_skill_is_a_shared_shipped_interface() -> None:
+    canonical = (ROOT / "contracts" / "skills" / "workspace-configuration" / "SKILL.md").read_text(encoding="utf-8")
+    python = bundled_skill("workspace-configuration")
+    assert python["content"] == canonical
+    assert python["name"] == "workspace-configuration"
+
+    module = (ROOT / "typescript" / "dist" / "index.js").as_uri()
+    script = f'import {{ bundledSkill }} from "{module}"; console.log(JSON.stringify(bundledSkill("workspace-configuration")));'
+    completed = subprocess.run(
+        ["node", "--input-type=module", "-e", script], capture_output=True, text=True, check=True
+    )
+    assert json.loads(completed.stdout) == python
 
 
 def _write_rules(path: Path, rules: list[dict[str, Any]]) -> None:

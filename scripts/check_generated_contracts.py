@@ -12,6 +12,8 @@ GENERATED_PATHS = (
     Path("typescript/dist/index.d.ts"),
     Path("typescript/package.json"),
     Path("typescript/semantic-ir.json"),
+    Path("src/agentic_workspace/skills/workspace-configuration/SKILL.md"),
+    Path("typescript/skills/workspace-configuration/SKILL.md"),
 )
 
 

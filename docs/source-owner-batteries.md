@@ -30,12 +30,14 @@ may be revisited with `{"configuration":{"resume":true}}`. A changed rule
 revision invalidates only that answer or deferral, while unrelated settled
 rules stay quiet.
 
-Repository maintainers may use `tools/skills/workspace-configuration` as an
-optional guided procedure. It repeatedly invokes only current, safe inferred
-actions, surfaces the next irreducible finite or open owner judgment, and then
-continues from `next_decision`. The skill owns no state or authority and never
-substitutes raw configuration-file writes for Repository, Verification, or
-Assignment operations.
+The Python and TypeScript packages ship a `workspace-configuration` skill as an
+optional guided procedure. Installed hosts can discover it through the Python
+`agentic_workspace.skills` entry-point group or the public `bundled_skill` /
+`bundledSkill` APIs. It repeatedly invokes only current, safe inferred actions,
+surfaces the next irreducible finite or open owner judgment, and then continues
+from `next_decision`. The skill owns no state or authority and never substitutes
+raw configuration-file writes for Repository, Verification, or Assignment
+operations.
 
 ## Memory
 
