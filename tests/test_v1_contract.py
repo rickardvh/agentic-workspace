@@ -51,11 +51,14 @@ def test_canonical_compiler_routes_source_contributions_without_consumer_semanti
 
 def test_result_reconciles_to_the_next_decision_without_polling() -> None:
     state = {"status": "open", "revision": "p1"}
+    calls = 0
 
     def resolve() -> dict[str, Any]:
         return compile_source_decision([_planning(state)], intent={"task": "ship"})
 
     def complete(values: dict[str, Any]) -> dict[str, Any]:
+        nonlocal calls
+        calls += 1
         assert values == {"item": "ship-v1"}
         state.update(status="complete", revision="p2")
         return {"status": "applied", "effects": ["planning-state"], "value": {"item": values["item"]}}
@@ -66,7 +69,7 @@ def test_result_reconciles_to_the_next_decision_without_polling() -> None:
             "planning.complete",
             {
                 "type": "object",
-                "properties": {"item": {"const": "ship-v1"}},
+                "properties": {"item": {"type": "string", "minLength": 1}},
                 "required": ["item"],
                 "additionalProperties": False,
             },
@@ -80,13 +83,19 @@ def test_result_reconciles_to_the_next_decision_without_polling() -> None:
     assert result["status"] == "applied"
     assert result["next_decision"]["status"] == "terminal"
     assert result["next_decision"]["claim_boundary"] == {"allowed": ["progress"], "blocked": []}
-    assert (
+    assert dispatcher.invoke(invocation, resolve_decision=resolve) == result
+    assert calls == 1
+
+    with pytest.raises(OperationContractError, match="idempotency key was already used"):
         dispatcher.invoke(
-            invocation,
-            resolve_decision=lambda: {**resolve(), "input_revision": invocation["expected_input_revision"], "primary_action": invocation},
+            {**invocation, "arguments": {"item": "different"}},
+            resolve_decision=resolve,
         )
-        == result
-    )
+    with pytest.raises(OperationContractError, match="idempotency key was already used"):
+        dispatcher.invoke(
+            {**invocation, "expected_input_revision": "sha256:different"},
+            resolve_decision=resolve,
+        )
 
 
 def test_stale_and_invalid_invocations_fail_closed() -> None:

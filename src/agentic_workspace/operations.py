@@ -58,14 +58,7 @@ class OperationDispatcher:
         if operation is None:
             raise OperationContractError(f"unknown operation: {operation_id}")
 
-        current = dict(resolve_decision())
         expected_revision = str(invocation.get("expected_input_revision") or "")
-        if not expected_revision or expected_revision != current.get("input_revision"):
-            raise StaleInvocationError("source state changed; resolve a fresh operating decision")
-        current_action = current.get("primary_action")
-        if not isinstance(current_action, Mapping) or current_action.get("operation_id") != operation_id:
-            raise StaleInvocationError("operation is no longer the current source-owned action")
-
         arguments = invocation.get("arguments", {})
         if not isinstance(arguments, Mapping):
             raise OperationContractError("arguments must be an object")
@@ -86,6 +79,13 @@ class OperationDispatcher:
             if previous_identity != request_identity:
                 raise OperationContractError("idempotency key was already used for another invocation")
             return dict(previous_result)
+
+        current = dict(resolve_decision())
+        if not expected_revision or expected_revision != current.get("input_revision"):
+            raise StaleInvocationError("source state changed; resolve a fresh operating decision")
+        current_action = current.get("primary_action")
+        if not isinstance(current_action, Mapping) or current_action.get("operation_id") != operation_id:
+            raise StaleInvocationError("operation is no longer the current source-owned action")
 
         raw_outcome = operation.handler(dict(arguments))
         if not isinstance(raw_outcome, Mapping):
