@@ -89,6 +89,7 @@ def test_ir_inventories_semantics_and_exact_platform_primitives() -> None:
         "planning.reconcile",
         "planning.record-attempt",
         "repository.answer",
+        "correction.disposition",
         "assignment.choose",
         "assignment.record-evidence",
         "delegation.dispatch",

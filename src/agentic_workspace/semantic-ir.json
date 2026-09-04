@@ -1,5 +1,17 @@
 {
   "api_version": "1.0",
+  "correction": {
+    "authority": "transport-bound-not-payload-asserted",
+    "deduplication": "stable-correction-id-plus-operation-receipt",
+    "dispositions": [
+      "already-owned",
+      "memory",
+      "owner-repair",
+      "no-new-durable-record"
+    ],
+    "external_adapters": "consumers-and-transports-only",
+    "ingress": "trusted-host-capability"
+  },
   "decision": {
     "action_order": [
       "priority:descending",
@@ -311,6 +323,56 @@
         "type": "object"
       },
       "owner": "assignment"
+    },
+    {
+      "binding": "correction.disposition",
+      "effects": [
+        "correction-disposition",
+        "memory-state"
+      ],
+      "id": "correction.disposition",
+      "input": {
+        "additionalProperties": false,
+        "properties": {
+          "correction_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "correction_revision": {
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "disposition": {
+            "enum": [
+              "already-owned",
+              "memory",
+              "owner-repair",
+              "no-new-durable-record"
+            ]
+          },
+          "owner": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "owner_revision": {
+            "type": "string"
+          },
+          "target": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "target",
+          "correction_id",
+          "correction_revision",
+          "disposition",
+          "owner",
+          "owner_revision"
+        ],
+        "type": "object"
+      },
+      "owner": "correction"
     },
     {
       "binding": "repository.answer",

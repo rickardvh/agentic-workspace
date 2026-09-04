@@ -60,3 +60,21 @@ dependency database. Direct and irrelevant modules create no reuse residue.
 Focused conformance exercises this path with the retained Memory and
 Verification owners, including fresh-process reuse, owner-local invalidation,
 and contribution-call counters that demonstrate avoided reconstruction.
+
+## Trusted human corrections
+
+A host that already has authenticated human custody may create a
+`TrustedCorrectionIngress` capability and admit one bounded correction. The
+capability, not caller-controlled JSON such as `source=human`, supplies
+provenance. Ordinary `start` then returns one generated
+`correction.disposition` operation. Its result names the subject,
+applicability, provenance, future-usefulness intent, selected canonical owner,
+and disposition.
+
+Existing repository/proof/delegation policy wins over duplicate Memory. A
+future-useful advisory may be recorded by Memory, deterministic owner failure
+is returned as adaptation evidence for that owner, and a correction with no
+future value receives an explicit justified `no-new-durable-record`
+disposition. Operation receipts deduplicate host retries; there is no
+correction archive, transcript scan, vendor adapter registry, or no-signal
+startup work.

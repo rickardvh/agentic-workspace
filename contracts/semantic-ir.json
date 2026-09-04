@@ -62,6 +62,13 @@
     "transcripts": false,
     "volatile-ranking": false
   },
+  "correction": {
+    "ingress": "trusted-host-capability",
+    "authority": "transport-bound-not-payload-asserted",
+    "dispositions": ["already-owned", "memory", "owner-repair", "no-new-durable-record"],
+    "deduplication": "stable-correction-id-plus-operation-receipt",
+    "external_adapters": "consumers-and-transports-only"
+  },
   "operations": [
     {
       "id": "assignment.choose",
@@ -163,6 +170,25 @@
           "assignment_revision": {"type": "string", "minLength": 1}
         },
         "required": ["target", "attempt_id", "assignment_revision"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "correction.disposition",
+      "owner": "correction",
+      "effects": ["correction-disposition", "memory-state"],
+      "binding": "correction.disposition",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "correction_id": {"type": "string", "minLength": 1},
+          "correction_revision": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "disposition": {"enum": ["already-owned", "memory", "owner-repair", "no-new-durable-record"]},
+          "owner": {"type": "string", "minLength": 1},
+          "owner_revision": {"type": "string"}
+        },
+        "required": ["target", "correction_id", "correction_revision", "disposition", "owner", "owner_revision"],
         "additionalProperties": false
       }
     },

@@ -7,6 +7,7 @@ try:
 except PackageNotFoundError:
     __version__ = "0.0.0"
 
+from .corrections import TrustedCorrection, TrustedCorrectionIngress
 from .decision import DecisionContractError, compile_source_decision, select_decision_detail
 from .generated_semantics import (
     IR,
@@ -28,6 +29,8 @@ __all__ = [
     "OperationDispatcher",
     "OperationError",
     "StaleInvocationError",
+    "TrustedCorrection",
+    "TrustedCorrectionIngress",
     "Workspace",
     "compile_source_decision",
     "canonical_serialize",
