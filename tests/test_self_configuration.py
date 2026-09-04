@@ -3,13 +3,15 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
 import pytest
 
 from agentic_workspace.generated_semantics import IR, KINDS, semantic_digest
-from agentic_workspace.operations import StaleInvocationError
+from agentic_workspace.modules import Module
+from agentic_workspace.operations import Operation, StaleInvocationError
 from agentic_workspace.repository_controls import repository_module
 from agentic_workspace.workspace import Workspace
 
@@ -97,6 +99,30 @@ def test_ordinary_start_applies_strong_inference_before_human_question(tmp_path:
     assert stored["test-runner"]["disposition"] == "configured"
 
 
+def test_fact_inference_is_order_independent_and_conflicts_fail_closed(tmp_path: Path) -> None:
+    rules = [
+        {
+            "id": "a-config",
+            "decision": {
+                "question": "Which runtime should execute checks?",
+                "choices": [{"id": "python", "label": "Python"}],
+                "infer": [{"answer": "python", "when": {"fact_equals": {"key": "runtime", "value": "python"}}}],
+            },
+        },
+        {"id": "z-facts", "facts": {"runtime": "python"}},
+    ]
+    path = tmp_path / "AGENTS.md"
+    _write_rules(path, rules)
+    inferred = Workspace(tmp_path, modules=[repository_module()]).start()
+    assert inferred["primary_action"]["arguments"]["answer"] == "python"
+
+    rules.append({"id": "zz-conflict", "facts": {"runtime": "node"}})
+    _write_rules(path, rules)
+    blocked = Workspace(tmp_path, modules=[repository_module()]).start()
+    assert blocked["status"] == "blocked"
+    assert blocked["blockers"][0]["code"] == "repository-control-conflict"
+
+
 def test_optional_decision_defers_resumes_and_fails_closed_when_stale(tmp_path: Path) -> None:
     rule = {
         "id": "local-provider",
@@ -170,6 +196,102 @@ def test_only_changed_configuration_revision_is_revisited(tmp_path: Path) -> Non
     release = Workspace(tmp_path, modules=[repository_module()]).start(task="prepare release")
     assert release["status"] == "decision"
     assert release["decision_request"]["id"] == "release-owner"
+
+
+def test_independent_module_configuration_and_capability_delta_use_generic_contract(tmp_path: Path) -> None:
+    capabilities = {
+        "stable": {"revision": "stable-r1", "question": "Choose stable mode"},
+    }
+    settled: dict[str, dict[str, str]] = {}
+
+    def contribute(_context: Mapping[str, Any]) -> dict[str, Any]:
+        pending = [
+            (capability_id, value)
+            for capability_id, value in sorted(capabilities.items())
+            if settled.get(capability_id, {}).get("revision") != value["revision"]
+        ]
+        decisions = []
+        if pending:
+            capability_id, value = pending[0]
+            decisions.append(
+                {
+                    "id": capability_id,
+                    "question": value["question"],
+                    "authority": "capability-owner",
+                    "response_operation_id": "example.configure",
+                    "effects": ["example-configuration"],
+                    "choices": [{"id": "enabled", "label": "Enabled"}],
+                }
+            )
+        return {
+            "revision": semantic_digest({"capabilities": capabilities, "settled": settled}),
+            "facts": {"settled": dict(settled)},
+            "decisions": decisions,
+            "terminal": not decisions,
+        }
+
+    def configure(arguments: dict[str, Any]) -> dict[str, Any]:
+        capability_id = arguments["capability_id"]
+        current = capabilities.get(capability_id)
+        if current is None or current["revision"] != arguments["capability_revision"]:
+            return {"status": "rejected", "effects": [], "value": {"reason": "stale-capability"}}
+        settled[capability_id] = {"revision": current["revision"], "answer": arguments["answer"]}
+        return {"status": "applied", "effects": ["example-configuration"], "value": settled[capability_id]}
+
+    operation = Operation(
+        "example.configure",
+        {
+            "type": "object",
+            "properties": {
+                "capability_id": {"type": "string"},
+                "capability_revision": {"type": "string"},
+                "answer": {"type": "string"},
+            },
+            "required": ["capability_id", "capability_revision", "answer"],
+            "additionalProperties": False,
+        },
+        ("example-configuration",),
+        configure,
+    )
+    module = Module(
+        name="example-capability",
+        owns=("example-configuration",),
+        contribute=contribute,
+        operations=(operation,),
+        currentness=lambda _context: semantic_digest({"capabilities": capabilities, "settled": settled}),
+    )
+    workspace = Workspace(tmp_path, modules=[module])
+
+    first = workspace.start()
+    assert first["decision_request"]["owner"] == "example-capability"
+    first_request = first["decision_request"]
+    first_response = {
+        "id": "stable",
+        "owner": "example-capability",
+        "revision": first_request["revision"],
+        "authority": "capability-owner",
+        "answer": "enabled",
+    }
+    first_invocation = {
+        "kind": KINDS["invocation"],
+        "operation_id": "example.configure",
+        "arguments": {"capability_id": "stable", "capability_revision": "stable-r1", "answer": "enabled"},
+        "intent": {"task": "", "changed_paths": [], "claims": []},
+        "effects": ["example-configuration"],
+        "authority": "capability-owner",
+        "source_owner": "example-capability",
+        "expected_input_revision": first["input_revision"],
+        "decision_response": first_response,
+        "idempotency_key": semantic_digest({"response": first_response, "input": first["input_revision"]}),
+    }
+    assert workspace.invoke(first_invocation)["next_decision"]["status"] == "terminal"
+
+    capabilities["new-provider"] = {"revision": "provider-r1", "question": "Choose the new provider posture"}
+    changed = Workspace(tmp_path, modules=[module]).start()
+    assert changed["decision_request"]["id"] == "new-provider"
+    assert changed["context"]["example-capability"]["settled"] == {
+        "stable": {"revision": "stable-r1", "answer": "enabled"}
+    }
 
 
 def test_direct_repository_has_no_configuration_ceremony_or_residue(tmp_path: Path) -> None:

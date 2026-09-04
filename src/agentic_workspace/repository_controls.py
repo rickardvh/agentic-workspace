@@ -120,6 +120,8 @@ def _contribute(context: Mapping[str, Any]) -> dict[str, Any] | None:
     inferred_actions: list[dict[str, Any]] = []
     blocked_claims: list[str] = []
     conflicts: list[str] = []
+    # Admission is deliberately two-phase: every inference sees the complete
+    # current fact set, independent of rule identifiers or file order.
     for rule in applicable:
         rule_id = str(rule["id"])
         for key, value in dict(rule.get("facts", {})).items():
@@ -135,6 +137,9 @@ def _contribute(context: Mapping[str, Any]) -> dict[str, Any] | None:
         claims = rule.get("claims", {})
         if isinstance(claims, Mapping):
             blocked_claims.extend(str(claim) for claim in claims.get("blocked", []))
+
+    for rule in applicable:
+        rule_id = str(rule["id"])
         decision = rule.get("decision")
         answer = answers.get(rule_id)
         if isinstance(decision, Mapping) and (
