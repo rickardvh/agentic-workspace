@@ -17,7 +17,7 @@ release branch.
 | Compatibility | Readers, aliases, migrations, warning projections, and source fallbacks | One bounded `workspace.remove-legacy` operation for recognized managed markers |
 | Local continuation | Checkpoints, work threads, carry, capsules, and polling views | Deleted; an operation result embeds the next source-derived decision |
 | Checked-in fallback | Operational no-runtime mini-implementation | Deleted; reinstall the current distribution |
-| Tracked repository | 4,134 files | 41 files |
+| Tracked repository | 4,134 files | 44 files |
 
 The combined stack removes 1,197,937 lines and adds about 1,500 lines before the
 release-admission proof. Direct work performs one decision compilation, returns
@@ -40,5 +40,7 @@ startup/report pass.
 
 Research, session adaptation, provider transports, IDE adapters, generated
 non-Python clients, and offline no-runtime operation are not v1 product
-surfaces. They may be proposed later through a source owner and the public module
-seam; none is silently retained for 1.x compatibility.
+surfaces. Explicitly enabled local maintainer session logging remains diagnostic
+instrumentation rather than a decision or operation surface. Other capabilities
+may be proposed later through a source owner and the public module seam; none is
+silently retained for 1.x compatibility.

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -12,8 +13,10 @@ from pathlib import Path
 from typing import Any
 
 
-def _run(argv: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
-    completed = subprocess.run(argv, cwd=cwd, capture_output=True, text=True, check=False)
+def _run(
+    argv: list[str], *, cwd: Path | None = None, env: dict[str, str] | None = None
+) -> subprocess.CompletedProcess[str]:
+    completed = subprocess.run(argv, cwd=cwd, env=env, capture_output=True, text=True, check=False)
     if completed.returncode != 0:
         command = " ".join(argv[:3])
         raise RuntimeError(
@@ -221,9 +224,61 @@ def run(root: Path) -> dict[str, Any]:
 
         repository = temp / "repository"
         repository.mkdir()
-        direct = _json([str(cli), "start", "--target", str(repository), "--task", "edit one file"])
+        default_env = dict(os.environ)
+        default_env.pop("AW_SESSION_LOG", None)
+        direct = json.loads(
+            _run([str(cli), "start", "--target", str(repository), "--task", "edit one file"], env=default_env).stdout
+        )
         assert isinstance(direct, dict) and direct["status"] == "direct"
         assert not (repository / ".agentic-workspace").exists()
+
+        logging_repository = temp / "logging-repository"
+        logging_repository.mkdir()
+        logging_env = {**default_env, "AW_SESSION_LOG": "release-conformance"}
+        logged = json.loads(
+            _run(
+                [str(cli), "start", "--target", str(logging_repository), "--task", "edit one file"], env=logging_env
+            ).stdout
+        )
+        assert logged == direct
+        session_log = (
+            logging_repository / ".agentic-workspace" / "local" / "logs" / "aw-session-release-conformance.jsonl"
+        )
+        event = json.loads(session_log.read_text(encoding="utf-8"))
+        assert event["payload"] == direct
+        analysis = _json(
+            [
+                str(python),
+                "-m",
+                "agentic_workspace.session_logging",
+                "analyze",
+                "--target",
+                str(logging_repository),
+                "--session",
+                "release-conformance",
+            ]
+        )
+        assert isinstance(analysis, dict) and analysis["command_count"] == 1
+        exported = _json(
+            [
+                str(python),
+                "-m",
+                "agentic_workspace.session_logging",
+                "export",
+                "--target",
+                str(logging_repository),
+                "--session",
+                "release-conformance",
+            ]
+        )
+        assert isinstance(exported, dict) and Path(str(exported["path"])).is_file()
+        invalid_logging_env = {**default_env, "AW_SESSION_LOG": "../invalid"}
+        isolated = _run(
+            [str(cli), "start", "--target", str(logging_repository), "--task", "edit one file"],
+            env=invalid_logging_env,
+        )
+        assert json.loads(isolated.stdout) == direct
+        assert "session logging failed" in isolated.stderr
 
         probe = (
             "import json,sys; from agentic_workspace.workspace import Workspace; "
@@ -501,6 +556,7 @@ def run(root: Path) -> dict[str, Any]:
             "artifact_boundary": "passed",
             "clean_install": "passed",
             "direct_work": "passed",
+            "maintainer_session_logging": "passed",
             "cli_python_parity": "passed",
             "legacy_removal": "passed",
             "proof_and_completion": "passed",

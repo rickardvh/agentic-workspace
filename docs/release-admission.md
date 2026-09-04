@@ -11,6 +11,8 @@ The gate proves:
   workspace, or checked-in `.agentic-workspace` payload;
 - the CLI and Python API compile the same decision from the same source input;
 - direct work is stateless;
+- local maintainer session logging is absent by default and captured only after
+  explicit opt-in;
 - pre-v1 removal is a bounded typed operation that preserves unknown content;
 - planning cannot become terminal until declared verification succeeds;
 - a separately packaged module can compile a bounded child operation for a
@@ -24,7 +26,7 @@ The gate proves:
 ## Contraction measurements
 
 The v1 branch changes the review surface from four Python distributions to one,
-from 129 public command routes to two, and from 4,134 tracked files to 41. It
+from 129 public command routes to two, and from 4,134 tracked files to 44. It
 removes the 809-file generated tree, the 1,903-file installed host payload, all
 258 sibling-package files, and more than 1.19 million tracked lines. The complete
 surface and ownership disposition is recorded in `docs/v1-disposition.md`.
