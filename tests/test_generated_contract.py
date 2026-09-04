@@ -93,6 +93,7 @@ def test_ir_inventories_semantics_and_exact_platform_primitives() -> None:
         "assignment.record-evidence",
         "delegation.dispatch",
         "delegation.return",
+        "delegation.integrate",
     }
     assert IR["primitive_inventory"]["python"]
     assert IR["primitive_inventory"]["typescript"]

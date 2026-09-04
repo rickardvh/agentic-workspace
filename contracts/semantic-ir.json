@@ -109,9 +109,10 @@
           "subject_revision": {"type": "string", "minLength": 1},
           "scope": {"type": "array", "items": {"type": "string"}},
           "stops": {"type": "array", "items": {"type": "string"}},
-          "transport": {"type": "object"}
+          "transport": {"type": "object"},
+          "transport_authority": {"enum": ["automatic", "manual"]}
         },
-        "required": ["target", "assignment_revision", "target_id", "attempt_id", "subject_revision", "scope", "stops", "transport"],
+        "required": ["target", "assignment_revision", "target_id", "attempt_id", "subject_revision", "scope", "stops", "transport", "transport_authority"],
         "additionalProperties": false
       }
     },
@@ -127,10 +128,41 @@
           "attempt_id": {"type": "string", "minLength": 1},
           "assignment_revision": {"type": "string", "minLength": 1},
           "delivery": {"enum": ["already-materialized", "unapplied-delta"]},
-          "changed_paths": {"type": "array", "items": {"type": "string"}},
-          "result": {"type": "object"}
+          "changed_paths": {"type": "array", "maxItems": 50, "items": {"type": "string", "minLength": 1}},
+          "result": {"type": "object"},
+          "artifacts": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "type": "object",
+              "properties": {
+                "path": {"type": "string", "minLength": 1},
+                "before_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                "after_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                "content": {"type": "string", "maxLength": 1000000}
+              },
+              "required": ["path", "before_sha256", "after_sha256", "content"],
+              "additionalProperties": false
+            }
+          }
         },
         "required": ["target", "attempt_id", "assignment_revision", "delivery", "changed_paths", "result"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "delegation.integrate",
+      "owner": "assignment",
+      "effects": ["delegation-attempt", "workspace-managed-files"],
+      "binding": "delegation.integrate",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "attempt_id": {"type": "string", "minLength": 1},
+          "assignment_revision": {"type": "string", "minLength": 1}
+        },
+        "required": ["target", "attempt_id", "assignment_revision"],
         "additionalProperties": false
       }
     },

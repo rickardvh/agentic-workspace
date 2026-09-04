@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import subprocess
 from collections.abc import Mapping
 from fnmatch import fnmatch
 from pathlib import Path, PurePosixPath
@@ -16,6 +18,7 @@ POLICY = ".agentic-workspace/local/delegation.json"
 EVIDENCE = ".agentic-workspace/local/target-evidence.json"
 ATTEMPTS = ".agentic-workspace/local/delegation-attempts.json"
 PLANNING = ".agentic-workspace/planning.json"
+_replace_artifact = os.replace
 
 
 def _json(path: Path) -> dict[str, Any]:
@@ -50,6 +53,7 @@ def _subject(root: Path, context: Mapping[str, Any]) -> dict[str, Any]:
             "stops": list(item.get("stops", [])),
             "proof_claims": list(item.get("proof_claims", [])),
             "semantic_revision": item.get("semantic_revision"),
+            "context_class": str(context.get("context_class") or "general"),
         }
     task = str(context.get("task") or "")
     return {
@@ -60,6 +64,7 @@ def _subject(root: Path, context: Mapping[str, Any]) -> dict[str, Any]:
         "stops": [],
         "proof_claims": list(context.get("claims", [])),
         "semantic_revision": semantic_digest({"task": task, "paths": context.get("changed_paths", [])}),
+        "context_class": str(context.get("context_class") or "general"),
     }
 
 
@@ -89,7 +94,15 @@ def _score(target: dict[str, Any], evidence: list[dict[str, Any]], subject: dict
         terms = [str(item).lower() for item in record.get("task_terms", [])]
         if terms and not any(term in task for term in terms):
             continue
-        if record.get("authority") == "worker-self-report":
+        if (
+            record.get("authority") not in {"maintainer", "repository", "verification"}
+            or record.get("currentness") != "current"
+            or record.get("disputed") is True
+            or not isinstance(record.get("confidence"), int)
+            or isinstance(record.get("confidence"), bool)
+            or int(record["confidence"]) < 50
+            or record.get("context_class") != subject.get("context_class")
+        ):
             continue
         burden = sum(
             int(record.get(field, 0)) for field in ("repair_cost", "review_cost", "context_cost", "retry_cost")
@@ -115,8 +128,30 @@ def _model(root: Path, context: Mapping[str, Any]) -> dict[str, Any] | None:
             continue
         capabilities = set(str(item) for item in raw.get("capabilities", []))
         transport = raw.get("transport", {})
-        eligible = raw.get("available") is True and required <= capabilities
-        reasons = [] if eligible else (["unavailable"] if raw.get("available") is not True else ["missing-capability"])
+        reasons: list[str] = []
+        if raw.get("available") is not True:
+            reasons.append("unavailable")
+        if not required <= capabilities:
+            reasons.append("missing-capability")
+        proof_claims = set(str(item) for item in subject.get("proof_claims", []))
+        if proof_claims and not proof_claims <= set(str(item) for item in raw.get("proof_claims", [])):
+            reasons.append("proof-incompatible")
+        constraints = set(str(item) for item in subject.get("constraints", []))
+        if constraints and not constraints <= set(str(item) for item in raw.get("constraints", [])):
+            reasons.append("constraint-incompatible")
+        scope = [str(item) for item in subject.get("scope", [])]
+        allowed_scope = [str(item) for item in raw.get("allowed_scope", [])]
+        if scope and (
+            not allowed_scope or any(not any(fnmatch(path, pattern) for pattern in allowed_scope) for path in scope)
+        ):
+            reasons.append("scope-incompatible")
+        if subject.get("stops") and raw.get("honors_stops") is not True:
+            reasons.append("stop-incompatible")
+        required_trust = policy.get("required_trust")
+        if required_trust and raw.get("trust") != required_trust:
+            reasons.append("trust-incompatible")
+        if policy.get("human_required") is True and raw.get("human_authority") is not True:
+            reasons.append("human-authority-required")
         score, ranking = _score(raw, [item for item in evidence if isinstance(item, dict)], subject)
         constructible = isinstance(transport, dict) and (
             raw.get("id") == policy.get("current_target")
@@ -124,8 +159,8 @@ def _model(root: Path, context: Mapping[str, Any]) -> dict[str, Any] | None:
             and transport.get("ready") is True
         )
         if raw.get("id") != policy.get("current_target") and not constructible:
-            eligible = False
             reasons.append("transport-not-constructible")
+        eligible = not reasons
         candidates.append(
             {
                 "id": str(raw["id"]),
@@ -168,7 +203,7 @@ def _contribute(context: Mapping[str, Any]) -> dict[str, Any] | None:
                 for item in _json(root / ATTEMPTS).get("attempts", [])
                 if isinstance(item, dict)
                 and item.get("id") == returns.get("attempt_id")
-                and item.get("status") == "returned"
+                and item.get("status") in {"returned", "integrated"}
             ),
             None,
         )
@@ -237,7 +272,25 @@ def _contribute(context: Mapping[str, Any]) -> dict[str, Any] | None:
     current = next(
         (item for item in attempts if isinstance(item, dict) and item.get("assignment_revision") == revision), None
     )
-    if current and current.get("status") == "returned":
+    if current and current.get("status") == "returned" and current.get("delivery") == "unapplied-delta":
+        return {
+            "revision": revision,
+            "facts": {"assignment": assignment, "returned": current},
+            "actions": [
+                {
+                    "operation_id": "delegation.integrate",
+                    "arguments": {
+                        "target": str(root),
+                        "attempt_id": current["id"],
+                        "assignment_revision": current["assignment_revision"],
+                    },
+                    "effects": ["delegation-attempt", "workspace-managed-files"],
+                    "priority": 90,
+                }
+            ],
+            "claims": {"blocked": ["complete"]},
+        }
+    if current and current.get("status") == "integrated":
         return {
             "revision": revision,
             "facts": {
@@ -249,13 +302,18 @@ def _contribute(context: Mapping[str, Any]) -> dict[str, Any] | None:
             "terminal": True,
         }
     if current:
+        failed = current.get("status") == "failed"
         return {
             "revision": revision,
             "facts": {"assignment": assignment, "handoff": current},
             "blockers": [
                 {
                     "code": "assigned-work-in-flight",
-                    "message": "binding non-local work awaits return through delegation.return",
+                    "message": (
+                        "binding transport failed; recover or retry the same assignment without local fallback"
+                        if failed
+                        else "binding non-local work awaits return through delegation.return"
+                    ),
                     "recovery": current["id"],
                 }
             ],
@@ -277,6 +335,7 @@ def _contribute(context: Mapping[str, Any]) -> dict[str, Any] | None:
                     "scope": list(subject["scope"]),
                     "stops": list(subject["stops"]),
                     "transport": dict(selected["transport"]),
+                    "transport_authority": str(policy.get("transport_authority") or "manual"),
                 },
                 "effects": ["delegation-attempt"],
                 "priority": 90,
@@ -298,13 +357,30 @@ def _record(arguments: dict[str, Any]) -> dict[str, Any]:
     path = Path(arguments["target"]).resolve() / EVIDENCE
     state = _json(path) or {"records": []}
     record = dict(arguments["record"])
-    if not record.get("id") or not record.get("target_id") or not record.get("source") or not record.get("authority"):
+    required = {"id", "target_id", "source", "authority", "outcome", "context_class", "currentness", "confidence"}
+    if (
+        not required <= set(record)
+        or record.get("authority") not in {"maintainer", "repository", "verification"}
+        or record.get("currentness") not in {"current", "stale", "unknown"}
+        or not isinstance(record.get("confidence"), int)
+        or isinstance(record.get("confidence"), bool)
+        or not 0 <= int(record["confidence"]) <= 100
+        or any(
+            not isinstance(record.get(field, 0), int)
+            for field in ("repair_cost", "review_cost", "context_cost", "retry_cost")
+        )
+    ):
         return {
             "status": "rejected",
             "effects": [],
-            "value": {"reason": "evidence requires id, target_id, source, and authority"},
+            "value": {"reason": "invalid-target-evidence-contract"},
         }
-    records = [item for item in state.get("records", []) if isinstance(item, dict) and item.get("id") != record["id"]]
+    supersedes = set(str(item) for item in record.get("supersedes", []))
+    records = [
+        item
+        for item in state.get("records", [])
+        if isinstance(item, dict) and item.get("id") != record["id"] and item.get("id") not in supersedes
+    ]
     records.append(record)
     _write_local(path, {"records": records[-50:]}, kind="target-evidence")
     return {"status": "applied", "effects": ["target-evidence"], "value": record}
@@ -336,8 +412,19 @@ def _dispatch(arguments: dict[str, Any]) -> dict[str, Any]:
         "stops": arguments["stops"],
         "transport": arguments["transport"],
         "baseline": _baseline(root, arguments["scope"]),
-        "status": "prepared",
+        "status": "prepared-manual",
     }
+    transport = attempt["transport"]
+    command = transport.get("command") if isinstance(transport, dict) else None
+    automatic = arguments.get("transport_authority") == "automatic"
+    if automatic and isinstance(command, list) and command and all(isinstance(part, str) for part in command):
+        completed = subprocess.run(command, cwd=root, capture_output=True, text=True, check=False)
+        attempt["transport_result"] = {
+            "returncode": completed.returncode,
+            "stdout_sha256": "sha256:" + hashlib.sha256(completed.stdout.encode()).hexdigest(),
+            "stderr_sha256": "sha256:" + hashlib.sha256(completed.stderr.encode()).hexdigest(),
+        }
+        attempt["status"] = "in-flight" if completed.returncode == 0 else "failed"
     state["attempts"] = [
         item for item in state.get("attempts", []) if isinstance(item, dict) and item.get("id") != attempt["id"]
     ] + [attempt]
@@ -376,9 +463,85 @@ def _return(arguments: dict[str, Any]) -> dict[str, Any]:
         )
         if actual != sorted(changed):
             return {"status": "rejected", "effects": [], "value": {"reason": "returned-delta-does-not-match-baseline"}}
-    attempt.update(status="returned", delivery=arguments["delivery"], changed_paths=changed, result=arguments["result"])
+    artifacts = arguments.get("artifacts", [])
+    if arguments["delivery"] == "unapplied-delta":
+        if (
+            not isinstance(artifacts, list)
+            or {str(item.get("path")) for item in artifacts if isinstance(item, dict)} != set(changed)
+            or any(
+                not isinstance(item, dict)
+                or not isinstance(item.get("content"), str)
+                or not isinstance(item.get("before_sha256"), str)
+                or not isinstance(item.get("after_sha256"), str)
+                for item in artifacts
+            )
+        ):
+            return {"status": "rejected", "effects": [], "value": {"reason": "invalid-unapplied-artifacts"}}
+    attempt.update(
+        status="integrated" if arguments["delivery"] == "already-materialized" else "returned",
+        delivery=arguments["delivery"],
+        changed_paths=changed,
+        artifacts=artifacts,
+        result=arguments["result"],
+    )
     _write_local(path, {"attempts": state["attempts"]}, kind="delegation-attempts")
     return {"status": "applied", "effects": ["delegation-attempt"], "value": attempt}
+
+
+def _scoped_artifact_path(root: Path, relative: str, scope: list[str]) -> Path:
+    path = PurePosixPath(relative)
+    if path.is_absolute() or ".." in path.parts or not any(fnmatch(relative, pattern) for pattern in scope):
+        raise ValueError("artifact path is outside delegated scope")
+    candidate = root.joinpath(*path.parts)
+    parent = candidate.parent.resolve()
+    if parent != root and root not in parent.parents:
+        raise ValueError("artifact path escapes target through indirection")
+    return candidate
+
+
+def _digest_path(path: Path) -> str:
+    return "sha256:" + hashlib.sha256(path.read_bytes() if path.is_file() else b"").hexdigest()
+
+
+def _mark_integrated(root: Path, state: dict[str, Any], attempt: dict[str, Any]) -> dict[str, Any]:
+    attempt["status"] = "integrated"
+    _write_local(root / ATTEMPTS, {"attempts": state["attempts"]}, kind="delegation-attempts")
+    return attempt
+
+
+def _integrate(arguments: dict[str, Any]) -> dict[str, Any]:
+    root = Path(arguments["target"]).resolve()
+    state = _json(root / ATTEMPTS)
+    attempt = next(
+        (
+            item
+            for item in state.get("attempts", [])
+            if isinstance(item, dict) and item.get("id") == arguments["attempt_id"]
+        ),
+        None,
+    )
+    if not attempt or attempt.get("assignment_revision") != arguments["assignment_revision"]:
+        return {"status": "rejected", "effects": [], "value": {"reason": "stale-or-unknown-attempt"}}
+    if attempt.get("status") == "integrated":
+        return {"status": "unchanged", "effects": [], "value": attempt}
+    if attempt.get("status") != "returned" or attempt.get("delivery") != "unapplied-delta":
+        return {"status": "rejected", "effects": [], "value": {"reason": "attempt-not-ready-for-integration"}}
+    prepared: list[tuple[Path, bytes]] = []
+    for artifact in attempt.get("artifacts", []):
+        path = _scoped_artifact_path(root, str(artifact["path"]), list(attempt["scope"]))
+        content = str(artifact["content"]).encode()
+        if _digest_path(path) != artifact["before_sha256"]:
+            return {"status": "rejected", "effects": [], "value": {"reason": "artifact-baseline-mismatch"}}
+        if "sha256:" + hashlib.sha256(content).hexdigest() != artifact["after_sha256"]:
+            return {"status": "rejected", "effects": [], "value": {"reason": "artifact-content-mismatch"}}
+        prepared.append((path, content))
+    for path, content in prepared:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = path.with_name(f".{path.name}.{os.getpid()}.delegation")
+        temporary.write_bytes(content)
+        _replace_artifact(temporary, path)
+    integrated = _mark_integrated(root, state, attempt)
+    return {"status": "applied", "effects": ["delegation-attempt", "workspace-managed-files"], "value": integrated}
 
 
 def _recover_choose(arguments: dict[str, Any]) -> dict[str, Any] | None:
@@ -409,9 +572,50 @@ def _recover_attempt(arguments: dict[str, Any]) -> dict[str, Any] | None:
     )
     if attempt is None:
         return None
-    expected = "returned" if "delivery" in arguments else "prepared"
+    expected = {"returned", "integrated"} if "delivery" in arguments else {"prepared-manual", "in-flight", "failed"}
     effects = ["delegation-attempt"]
-    return {"status": "applied", "effects": effects, "value": attempt} if attempt.get("status") == expected else None
+    return {"status": "applied", "effects": effects, "value": attempt} if attempt.get("status") in expected else None
+
+
+def _recover_integrate(arguments: dict[str, Any]) -> dict[str, Any] | None:
+    root = Path(arguments["target"]).resolve()
+    state = _json(root / ATTEMPTS)
+    attempt = next(
+        (
+            item
+            for item in state.get("attempts", [])
+            if isinstance(item, dict) and item.get("id") == arguments["attempt_id"]
+        ),
+        None,
+    )
+    if not attempt or attempt.get("assignment_revision") != arguments["assignment_revision"]:
+        return None
+    if attempt.get("status") == "integrated":
+        return {
+            "status": "applied",
+            "effects": ["delegation-attempt", "workspace-managed-files"],
+            "value": attempt,
+        }
+    if attempt.get("status") != "returned" or attempt.get("delivery") != "unapplied-delta":
+        return None
+    for artifact in attempt.get("artifacts", []):
+        path = _scoped_artifact_path(root, str(artifact["path"]), list(attempt["scope"]))
+        current = _digest_path(path)
+        if current == artifact["after_sha256"]:
+            continue
+        if current != artifact["before_sha256"]:
+            return None
+        content = str(artifact["content"]).encode()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = path.with_name(f".{path.name}.{os.getpid()}.delegation-recover")
+        temporary.write_bytes(content)
+        _replace_artifact(temporary, path)
+    integrated = _mark_integrated(root, state, attempt)
+    return {
+        "status": "applied",
+        "effects": ["delegation-attempt", "workspace-managed-files"],
+        "value": integrated,
+    }
 
 
 def _operation(operation_id: str, handler: Any, recover: Any) -> Operation:
@@ -431,6 +635,7 @@ def assignment_module() -> Module:
             _operation("assignment.record-evidence", _record, _recover_record),
             _operation("delegation.dispatch", _dispatch, _recover_attempt),
             _operation("delegation.return", _return, _recover_attempt),
+            _operation("delegation.integrate", _integrate, _recover_integrate),
         ),
         currentness=lambda context: (
             semantic_digest(
@@ -441,6 +646,7 @@ def assignment_module() -> Module:
                     "planning": _json(Path(str(context["target"])) / PLANNING),
                     "task": context.get("task"),
                     "changed_paths": context.get("changed_paths", []),
+                    "assignment": context.get("assignment"),
                     "return": context.get("delegation_return"),
                 }
             )

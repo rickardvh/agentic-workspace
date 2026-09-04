@@ -107,6 +107,7 @@ IR: dict[str, Any] = {
                     "target": {"minLength": 1, "type": "string"},
                     "target_id": {"minLength": 1, "type": "string"},
                     "transport": {"type": "object"},
+                    "transport_authority": {"enum": ["automatic", "manual"]},
                 },
                 "required": [
                     "target",
@@ -117,6 +118,7 @@ IR: dict[str, Any] = {
                     "scope",
                     "stops",
                     "transport",
+                    "transport_authority",
                 ],
                 "type": "object",
             },
@@ -129,14 +131,45 @@ IR: dict[str, Any] = {
             "input": {
                 "additionalProperties": False,
                 "properties": {
+                    "artifacts": {
+                        "items": {
+                            "additionalProperties": False,
+                            "properties": {
+                                "after_sha256": {"pattern": "^sha256:[0-9a-f]{64}$", "type": "string"},
+                                "before_sha256": {"pattern": "^sha256:[0-9a-f]{64}$", "type": "string"},
+                                "content": {"maxLength": 1000000, "type": "string"},
+                                "path": {"minLength": 1, "type": "string"},
+                            },
+                            "required": ["path", "before_sha256", "after_sha256", "content"],
+                            "type": "object",
+                        },
+                        "maxItems": 50,
+                        "type": "array",
+                    },
                     "assignment_revision": {"minLength": 1, "type": "string"},
                     "attempt_id": {"minLength": 1, "type": "string"},
-                    "changed_paths": {"items": {"type": "string"}, "type": "array"},
+                    "changed_paths": {"items": {"minLength": 1, "type": "string"}, "maxItems": 50, "type": "array"},
                     "delivery": {"enum": ["already-materialized", "unapplied-delta"]},
                     "result": {"type": "object"},
                     "target": {"minLength": 1, "type": "string"},
                 },
                 "required": ["target", "attempt_id", "assignment_revision", "delivery", "changed_paths", "result"],
+                "type": "object",
+            },
+            "owner": "assignment",
+        },
+        {
+            "binding": "delegation.integrate",
+            "effects": ["delegation-attempt", "workspace-managed-files"],
+            "id": "delegation.integrate",
+            "input": {
+                "additionalProperties": False,
+                "properties": {
+                    "assignment_revision": {"minLength": 1, "type": "string"},
+                    "attempt_id": {"minLength": 1, "type": "string"},
+                    "target": {"minLength": 1, "type": "string"},
+                },
+                "required": ["target", "attempt_id", "assignment_revision"],
                 "type": "object",
             },
             "owner": "assignment",

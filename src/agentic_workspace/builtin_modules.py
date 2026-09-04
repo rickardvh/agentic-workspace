@@ -485,6 +485,46 @@ def _planning_contribution(context: Mapping[str, Any]) -> dict[str, Any] | None:
                     }
                 ],
             }
+    existing_attempts = state.get("attempts", [])
+    recorded_ids = {
+        str(item.get("id")) for item in existing_attempts if isinstance(item, dict) and item.get("status") == "returned"
+    }
+    subjects = _planning_subjects(state)
+    delegated = _json(root / ".agentic-workspace/local/delegation-attempts.json").get("attempts", [])
+    integrated = next(
+        (
+            item
+            for item in reversed(delegated if isinstance(delegated, list) else [])
+            if isinstance(item, dict)
+            and item.get("status") == "integrated"
+            and item.get("id") not in recorded_ids
+            and any(subject.get("semantic_revision") == item.get("subject_revision") for subject in subjects.values())
+        ),
+        None,
+    )
+    if integrated is not None:
+        subject = next(
+            item for item in subjects.values() if item.get("semantic_revision") == integrated.get("subject_revision")
+        )
+        return {
+            "revision": _state_revision(root, PLANNING_STATE),
+            "actions": [
+                {
+                    "operation_id": "planning.record-attempt",
+                    "arguments": {
+                        "target": str(root),
+                        "item": str(subject["id"]),
+                        "expected_subject_revision": str(subject["semantic_revision"]),
+                        "attempt_id": str(integrated["id"]),
+                        "target_id": str(integrated.get("target_id") or ""),
+                        "status": "returned",
+                        "result_revision": semantic_digest(integrated.get("result", {})),
+                    },
+                    "effects": ["planning-state"],
+                    "priority": 70,
+                }
+            ],
+        }
     if isinstance(requested, Mapping) and requested.get("operation") == "set":
         item = str(requested.get("item") or "")
         status = str(requested.get("status") or "")
@@ -747,10 +787,14 @@ def planning_module() -> Module:
                 {
                     "state": _revision(Path(str(context["target"])).resolve() / PLANNING_STATE),
                     "ownership": _revision(Path(str(context["target"])).resolve() / MANIFEST_STATE),
+                    "delegation": _revision(
+                        Path(str(context["target"])).resolve() / ".agentic-workspace/local/delegation-attempts.json"
+                    ),
                     "request": context.get("planning"),
                 }
             )
             if (Path(str(context["target"])).resolve() / PLANNING_STATE).is_file()
+            or (Path(str(context["target"])).resolve() / ".agentic-workspace/local/delegation-attempts.json").is_file()
             or context.get("planning") is not None
             else None
         ),
