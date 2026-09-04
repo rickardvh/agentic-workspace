@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import sys
 from collections.abc import Mapping
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -199,6 +200,66 @@ def test_planning_preserves_semantic_subject_across_status_attempt_transitions(t
     assert result["next_decision"]["decision_request"]["response_operation_id"] == "planning.reconcile"
 
 
+def test_planning_derives_dependency_frontier_and_invalidates_dependent_attempts(tmp_path: Path) -> None:
+    workspace = Workspace(tmp_path, modules=[planning_module()])
+    workspace.invoke(
+        workspace.start(
+            intent={
+                "planning": {
+                    "operation": "set",
+                    "item": "ship",
+                    "status": "in-progress",
+                    "dependencies": ["review"],
+                    "scope": ["src"],
+                }
+            }
+        )["primary_action"]
+    )
+    workspace.invoke(
+        workspace.start(intent={"planning": {"operation": "set", "item": "review", "status": "in-progress"}})[
+            "primary_action"
+        ]
+    )
+    state_path = tmp_path / ".agentic-workspace" / "planning.json"
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    assert state["subject"]["id"] == "review"
+    assert state["subjects"]["ship"]["readiness"] == "blocked"
+    ship_revision = state["subjects"]["ship"]["semantic_revision"]
+    attempt_intent = {
+        "planning": {
+            "operation": "record-attempt",
+            "item": "ship",
+            "expected_subject_revision": ship_revision,
+            "attempt_id": "ship-attempt",
+            "target_id": "worker",
+            "status": "in-flight",
+        }
+    }
+    stale_attempt = workspace.start(intent=attempt_intent)["primary_action"]
+    workspace.invoke(stale_attempt)
+    unrun_stale_attempt = workspace.start(
+        intent={
+            "planning": {
+                **attempt_intent["planning"],
+                "attempt_id": "unrun-stale-attempt",
+            }
+        }
+    )["primary_action"]
+
+    complete_review = workspace.start(intent={"planning": {"operation": "set", "item": "review", "status": "complete"}})
+    result = workspace.invoke(complete_review["primary_action"])
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    assert state["subject"]["id"] == "ship"
+    assert state["subjects"]["ship"]["readiness"] == "ready"
+    assert state["subjects"]["ship"]["semantic_revision"] != ship_revision
+    assert state["attempts"] == []
+    assert result["next_decision"] == Workspace(tmp_path, modules=[planning_module()]).start(
+        intent=complete_review["primary_action"]["intent"]
+    )
+    with pytest.raises(StaleInvocationError):
+        workspace.invoke(unrun_stale_attempt)
+
+
 def test_verification_selects_smallest_sufficient_owned_strategy_and_blocks_missing(tmp_path: Path) -> None:
     workspace = Workspace(tmp_path, modules=[planning_module(), verification_module()])
     plan = workspace.start(
@@ -252,3 +313,54 @@ def test_owner_conclusion_reuse_survives_fresh_workspace_and_invalidates_narrowl
     revision["value"] = "two"
     Workspace(tmp_path, modules=[module]).start(task="material")
     assert calls == 2
+
+
+def test_two_real_owner_conclusions_reuse_and_invalidate_only_their_dependencies(tmp_path: Path) -> None:
+    memory = Workspace(tmp_path, modules=[memory_module()])
+    memory.invoke(
+        memory.start(
+            intent={
+                "memory": {
+                    "key": "parser",
+                    "value": "strict",
+                    "summary": "strict parser",
+                    "task_terms": ["parser"],
+                }
+            }
+        )["primary_action"]
+    )
+    planning = Workspace(tmp_path, modules=[planning_module()])
+    planning.invoke(
+        planning.start(intent={"planning": {"operation": "set", "item": "ship", "status": "ready-to-complete"}})[
+            "primary_action"
+        ]
+    )
+    policy = tmp_path / ".agentic-workspace" / "verification.toml"
+    policy.write_text(
+        "schema_version = 1\n\n[[routes]]\nid = 'focused'\nclaims = ['complete']\nbreadth = 1\ncommands = []\n",
+        encoding="utf-8",
+    )
+
+    calls = {"memory": 0, "verification": 0}
+    original_memory = memory_module()
+    original_verification = verification_module()
+
+    def count_memory(context: Mapping[str, Any]) -> Mapping[str, Any] | None:
+        calls["memory"] += 1
+        return original_memory.contribute(context)
+
+    def count_verification(context: Mapping[str, Any]) -> Mapping[str, Any] | None:
+        calls["verification"] += 1
+        return original_verification.contribute(context)
+
+    counted_memory = replace(original_memory, contribute=count_memory)
+    counted_verification = replace(original_verification, contribute=count_verification)
+    modules = [counted_memory, counted_verification]
+    first = Workspace(tmp_path, modules=modules).start(task="parser ship", claims=["complete"])
+    second = Workspace(tmp_path, modules=modules).start(task="parser ship", claims=["complete"])
+    assert first == second
+    assert calls == {"memory": 1, "verification": 1}
+
+    policy.write_text(policy.read_text(encoding="utf-8") + "# narrower proof revision\n", encoding="utf-8")
+    Workspace(tmp_path, modules=modules).start(task="parser ship", claims=["complete"])
+    assert calls == {"memory": 1, "verification": 2}

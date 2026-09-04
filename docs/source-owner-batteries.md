@@ -35,7 +35,11 @@ Planning preserves a compact semantic subject: outcome, scope, constraints,
 dependencies, stops, proof claims, and a semantic revision independent of its
 current execution status. Returned or integration-pending work yields one
 bounded reconciliation decision. Status changes and retries do not silently
-redefine semantic scope; semantic edits change the revision.
+redefine semantic scope; semantic edits change the revision. Planning retains
+multiple named subjects in the same state and derives the current ready
+frontier from their dependency relations. Missing or incomplete dependencies
+block a subject; completing or materially revising a dependency refreshes the
+dependent revision and invalidates only attempts bound to the old revision.
 
 ## Verification
 
@@ -53,3 +57,6 @@ material conclusion. Workspace stores only the normalized conclusion in an
 ignored per-owner path and reuses it across fresh processes while that identity
 is unchanged. There is no transcript, reasoning cache, usage ledger, or global
 dependency database. Direct and irrelevant modules create no reuse residue.
+Focused conformance exercises this path with the retained Memory and
+Verification owners, including fresh-process reuse, owner-local invalidation,
+and contribution-call counters that demonstrate avoided reconstruction.

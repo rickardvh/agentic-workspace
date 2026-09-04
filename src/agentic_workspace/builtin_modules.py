@@ -383,6 +383,75 @@ def workspace_module() -> Module:
     )
 
 
+def _planning_subjects(state: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
+    stored = state.get("subjects")
+    if isinstance(stored, dict):
+        return {str(key): dict(value) for key, value in stored.items() if isinstance(value, dict)}
+    legacy = state.get("subject") if isinstance(state.get("subject"), dict) else state.get("active")
+    if isinstance(legacy, dict) and legacy.get("id"):
+        return {str(legacy["id"]): dict(legacy)}
+    return {}
+
+
+def _refresh_planning_subjects(state: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    subjects = _planning_subjects(state)
+    memo: dict[str, str] = {}
+
+    def revision(item: str, stack: frozenset[str] = frozenset()) -> str:
+        if item in memo:
+            return memo[item]
+        subject = subjects[item]
+        dependencies: dict[str, str] = {}
+        for dependency in subject.get("dependencies", []):
+            dependency_id = str(dependency)
+            if dependency_id not in subjects:
+                dependencies[dependency_id] = "missing"
+            elif dependency_id in stack or dependency_id == item:
+                dependencies[dependency_id] = "cycle"
+            else:
+                dependency_subject = subjects[dependency_id]
+                dependencies[dependency_id] = semantic_digest(
+                    {
+                        "revision": revision(dependency_id, stack | {item}),
+                        "status": dependency_subject.get("status"),
+                        "outcome": dependency_subject.get("outcome", ""),
+                    }
+                )
+        subject["dependency_revisions"] = dependencies
+        subject["semantic_revision"] = _planning_semantic_revision(subject)
+        memo[item] = str(subject["semantic_revision"])
+        return memo[item]
+
+    for item in sorted(subjects):
+        revision(item)
+    state["subjects"] = subjects
+    return subjects
+
+
+def _planning_frontier(state: dict[str, Any]) -> tuple[dict[str, Any] | None, list[str], dict[str, list[str]]]:
+    subjects = _refresh_planning_subjects(state)
+    ready: list[str] = []
+    blocked: dict[str, list[str]] = {}
+    for item, subject in sorted(subjects.items()):
+        if subject.get("status") == "complete":
+            subject["readiness"] = "complete"
+            continue
+        unsatisfied = [
+            str(dependency)
+            for dependency in subject.get("dependencies", [])
+            if str(dependency) not in subjects or subjects[str(dependency)].get("status") != "complete"
+        ]
+        if unsatisfied:
+            subject["readiness"] = "blocked"
+            blocked[item] = unsatisfied
+        else:
+            subject["readiness"] = "ready"
+            ready.append(item)
+    preferred = [item for item in ready if subjects[item].get("status") in {"returned", "integration-pending"}]
+    current_id = (preferred or ready or sorted(blocked) or [None])[0]
+    return (subjects.get(current_id) if current_id is not None else None, ready, blocked)
+
+
 def _planning_contribution(context: Mapping[str, Any]) -> dict[str, Any] | None:
     root = Path(str(context["target"])).resolve()
     path = root / PLANNING_STATE
@@ -419,7 +488,7 @@ def _planning_contribution(context: Mapping[str, Any]) -> dict[str, Any] | None:
     if isinstance(requested, Mapping) and requested.get("operation") == "set":
         item = str(requested.get("item") or "")
         status = str(requested.get("status") or "")
-        current = state.get("subject") if isinstance(state.get("subject"), dict) else state.get("active")
+        current = _planning_subjects(state).get(item)
         requested_subject = {
             "id": item,
             "status": status,
@@ -454,7 +523,7 @@ def _planning_contribution(context: Mapping[str, Any]) -> dict[str, Any] | None:
             }
     if not state:
         return None
-    active = state.get("subject") if isinstance(state.get("subject"), dict) else state.get("active")
+    active, frontier, blocked_dependencies = _planning_frontier(state)
     if not isinstance(active, dict):
         return {"revision": _state_revision(root, PLANNING_STATE), "terminal": True}
     status = active.get("status")
@@ -486,7 +555,12 @@ def _planning_contribution(context: Mapping[str, Any]) -> dict[str, Any] | None:
         ]
     return {
         "revision": _state_revision(root, PLANNING_STATE),
-        "facts": {"active": active, "current_attempts": state.get("attempts", [])},
+        "facts": {
+            "active": active,
+            "frontier": frontier,
+            "blocked_dependencies": blocked_dependencies,
+            "current_attempts": state.get("attempts", []),
+        },
         "actions": actions,
         "decisions": decisions,
         "claims": {"allowed": ["progress"], "blocked": [] if status == "complete" else ["complete"]},
@@ -502,6 +576,7 @@ def _planning_semantic_revision(subject: Mapping[str, Any]) -> str:
             "scope": subject.get("scope", []),
             "constraints": subject.get("constraints", []),
             "dependencies": subject.get("dependencies", []),
+            "dependency_revisions": subject.get("dependency_revisions", {}),
             "stops": subject.get("stops", []),
             "proof_claims": subject.get("proof_claims", ["complete"]),
         }
@@ -512,8 +587,8 @@ def _planning_set(arguments: dict[str, Any]) -> dict[str, Any]:
     root = _root(arguments)
     path = root / PLANNING_STATE
     state = _json(path) or {"schema_version": 1, "revision": 0}
-    current = state.get("subject") if isinstance(state.get("subject"), dict) else state.get("active", {})
-    current = dict(current) if isinstance(current, dict) else {}
+    subjects = _planning_subjects(state)
+    current = subjects.get(arguments["item"], {})
     subject = {
         "id": arguments["item"],
         "status": arguments["status"],
@@ -524,10 +599,23 @@ def _planning_set(arguments: dict[str, Any]) -> dict[str, Any]:
         "stops": list(arguments.get("stops", current.get("stops", []))),
         "proof_claims": list(arguments.get("proof_claims", current.get("proof_claims", ["complete"]))),
     }
-    subject["semantic_revision"] = _planning_semantic_revision(subject)
+    subjects[subject["id"]] = subject
+    state["subjects"] = subjects
+    subjects = _refresh_planning_subjects(state)
+    subject = subjects[subject["id"]]
+    attempts = state.get("attempts", [])
+    if isinstance(attempts, list):
+        state["attempts"] = [
+            attempt
+            for attempt in attempts
+            if not isinstance(attempt, dict)
+            or attempt.get("item") not in subjects
+            or attempt.get("subject_revision") == subjects[str(attempt["item"])].get("semantic_revision")
+        ]
     state["revision"] = int(state.get("revision", 0)) + 1
-    state["subject"] = subject
-    state["active"] = {"id": subject["id"], "status": subject["status"]}
+    active, _, _ = _planning_frontier(state)
+    state["subject"] = active or subject
+    state["active"] = {"id": state["subject"]["id"], "status": state["subject"]["status"]}
     _write_owned_json(
         root,
         PLANNING_STATE,
@@ -583,7 +671,8 @@ def _recover_planning_reconcile(arguments: dict[str, Any]) -> dict[str, Any] | N
 def _planning_record_attempt(arguments: dict[str, Any]) -> dict[str, Any]:
     root = _root(arguments)
     state = _json(root / PLANNING_STATE)
-    subject = state.get("subject")
+    subjects = _refresh_planning_subjects(state)
+    subject = subjects.get(arguments["item"])
     if (
         not isinstance(subject, dict)
         or subject.get("id") != arguments["item"]
@@ -595,6 +684,7 @@ def _planning_record_attempt(arguments: dict[str, Any]) -> dict[str, Any]:
         return {"status": "rejected", "effects": [], "value": {"reason": "invalid-attempt-state"}}
     attempt = {
         "id": arguments["attempt_id"],
+        "item": arguments["item"],
         "subject_revision": arguments["expected_subject_revision"],
         "target_id": arguments["target_id"],
         "status": arguments["status"],
@@ -605,7 +695,11 @@ def _planning_record_attempt(arguments: dict[str, Any]) -> dict[str, Any]:
     state["attempts"] = attempts[-20:]
     if attempt["status"] == "returned":
         subject["status"] = "integration-pending"
-        state["active"] = {"id": subject["id"], "status": subject["status"]}
+        subjects[subject["id"]] = subject
+        state["subjects"] = subjects
+        active, _, _ = _planning_frontier(state)
+        state["subject"] = active or subject
+        state["active"] = {"id": state["subject"]["id"], "status": state["subject"]["status"]}
     state["revision"] = int(state.get("revision", 0)) + 1
     _write_owned_json(
         root,
