@@ -173,6 +173,8 @@ class OperationDispatcher:
             if any(response.get(field) != value for field, value in expected_response.items()):
                 raise StaleInvocationError("bounded decision response owner, revision, or authority is stale")
             answer = response.get("answer")
+            if "answer" in arguments and arguments.get("answer") != answer:
+                raise OperationContractError("typed decision answer differs from decision_response")
             choices = current_decision.get("choices", [])
             choice_ids = {choice.get("id") for choice in choices if isinstance(choice, Mapping)}
             if choices and answer not in choice_ids and current_decision.get("allow_open") is not True:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from importlib import metadata
@@ -22,13 +23,14 @@ class Module:
     claims: tuple[str, ...] = ()
     resources: tuple[Mapping[str, Any], ...] = ()
     procedures: tuple[Mapping[str, Any], ...] = ()
+    currentness: Callable[[Mapping[str, Any]], str | None] | None = None
 
 
 def admit_modules(modules: Iterable[Module]) -> list[Module]:
     admitted = sorted(modules, key=lambda module: module.name)
     names = [module.name for module in admitted]
-    if any(not name for name in names) or len(names) != len(set(names)):
-        raise ValueError("module names must be non-empty and unique")
+    if any(re.fullmatch(r"[A-Za-z0-9_.-]+", name) is None for name in names) or len(names) != len(set(names)):
+        raise ValueError("module names must be canonical, non-empty, and unique")
     incompatible = [module.name for module in admitted if module.api_version.split(".", 1)[0] != "1"]
     if incompatible:
         raise ValueError(

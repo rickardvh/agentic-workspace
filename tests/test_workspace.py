@@ -37,6 +37,12 @@ def test_planning_proof_and_completion_are_source_owned_transitions(tmp_path: Pa
         "validation": [[sys.executable, "-c", "raise SystemExit(0)"]],
     }
     _write(tmp_path / ".agentic-workspace" / "planning.json", planning)
+    (tmp_path / ".agentic-workspace" / "verification.toml").write_text(
+        "schema_version = 1\n\n[[routes]]\n"
+        "id = 'focused'\nclaims = ['complete']\nbreadth = 1\n"
+        f"commands = [['{sys.executable}', '-c', 'raise SystemExit(0)']]\n",
+        encoding="utf-8",
+    )
     workspace = Workspace(tmp_path, modules=[planning_module(), verification_module()])
 
     proof_decision = workspace.start(task="ship", claims=["complete"])
@@ -134,7 +140,7 @@ def test_unknown_state_collision_is_byte_preserved_until_explicit_transfer(tmp_p
     workspace.invoke(transfer["primary_action"])
     current = workspace.start(intent={"memory": {"key": "choice", "value": "small"}})
     workspace.invoke(current["primary_action"])
-    assert json.loads(state_path.read_text(encoding="utf-8"))["records"] == [{"key": "choice", "value": "small"}]
+    assert json.loads(state_path.read_text(encoding="utf-8"))["records"][0]["value"] == "small"
 
 
 def test_manipulated_manifest_cannot_authorize_removal(tmp_path: Path) -> None:
@@ -181,7 +187,7 @@ def test_two_processes_commit_one_idempotent_effect(tmp_path: Path) -> None:
     assert [returncode for _, _, returncode in completed] == [0, 0], completed
     state = json.loads((tmp_path / ".agentic-workspace" / "memory.json").read_text(encoding="utf-8"))
     assert state["revision"] == 1
-    assert state["records"] == [{"key": "race", "value": "once"}]
+    assert [(item["key"], item["value"]) for item in state["records"]] == [("race", "once")]
 
 
 @pytest.mark.parametrize(

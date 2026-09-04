@@ -5,11 +5,12 @@ import json
 import subprocess
 import tomllib
 from collections.abc import Callable, Mapping
+from fnmatch import fnmatch
 from pathlib import Path
 from typing import Any
 
 from .durability import atomic_create_json, atomic_write_json
-from .generated_semantics import operation_contract
+from .generated_semantics import operation_contract, semantic_digest
 from .modules import Module
 from .operations import Operation
 
@@ -17,6 +18,7 @@ STATE_ROOT = ".agentic-workspace"
 PLANNING_STATE = f"{STATE_ROOT}/planning.json"
 MEMORY_STATE = f"{STATE_ROOT}/memory.json"
 VERIFICATION_STATE = f"{STATE_ROOT}/verification.json"
+VERIFICATION_POLICY = f"{STATE_ROOT}/verification.toml"
 CONFIG_STATE = f"{STATE_ROOT}/config.toml"
 MANIFEST_STATE = f"{STATE_ROOT}/managed.json"
 CUSTODY_STATE = f"{STATE_ROOT}/local/ownership.json"
@@ -386,16 +388,65 @@ def _planning_contribution(context: Mapping[str, Any]) -> dict[str, Any] | None:
     path = root / PLANNING_STATE
     state = _json(path)
     requested = context.get("planning")
+    if isinstance(requested, Mapping) and requested.get("operation") == "record-attempt":
+        existing_attempts = state.get("attempts", [])
+        already_recorded = isinstance(existing_attempts, list) and any(
+            isinstance(item, dict)
+            and item.get("id") == requested.get("attempt_id")
+            and item.get("status") == requested.get("status")
+            for item in existing_attempts
+        )
+        if not already_recorded:
+            return {
+                "revision": _state_revision(root, PLANNING_STATE),
+                "actions": [
+                    {
+                        "operation_id": "planning.record-attempt",
+                        "arguments": {
+                            "target": str(root),
+                            "item": str(requested.get("item") or ""),
+                            "expected_subject_revision": str(requested.get("expected_subject_revision") or ""),
+                            "attempt_id": str(requested.get("attempt_id") or ""),
+                            "target_id": str(requested.get("target_id") or ""),
+                            "status": str(requested.get("status") or ""),
+                            "result_revision": str(requested.get("result_revision") or ""),
+                        },
+                        "effects": ["planning-state"],
+                        "priority": 60,
+                    }
+                ],
+            }
     if isinstance(requested, Mapping) and requested.get("operation") == "set":
         item = str(requested.get("item") or "")
         status = str(requested.get("status") or "")
-        if state.get("active") != {"id": item, "status": status}:
+        current = state.get("subject") if isinstance(state.get("subject"), dict) else state.get("active")
+        requested_subject = {
+            "id": item,
+            "status": status,
+            "outcome": str(requested.get("outcome") or ""),
+            "scope": list(requested.get("scope", [])),
+            "constraints": list(requested.get("constraints", [])),
+            "dependencies": list(requested.get("dependencies", [])),
+            "stops": list(requested.get("stops", [])),
+            "proof_claims": list(requested.get("proof_claims", ["complete"])),
+        }
+        if not isinstance(current, dict) or any(current.get(key) != value for key, value in requested_subject.items()):
             return {
                 "revision": _state_revision(root, PLANNING_STATE),
                 "actions": [
                     {
                         "operation_id": "planning.set",
-                        "arguments": {"target": str(root), "item": item, "status": status},
+                        "arguments": {
+                            "target": str(root),
+                            "item": item,
+                            "status": status,
+                            "outcome": requested_subject["outcome"],
+                            "scope": requested_subject["scope"],
+                            "constraints": requested_subject["constraints"],
+                            "dependencies": requested_subject["dependencies"],
+                            "stops": requested_subject["stops"],
+                            "proof_claims": requested_subject["proof_claims"],
+                        },
                         "effects": ["planning-state"],
                         "priority": 50,
                     }
@@ -403,11 +454,12 @@ def _planning_contribution(context: Mapping[str, Any]) -> dict[str, Any] | None:
             }
     if not state:
         return None
-    active = state.get("active")
+    active = state.get("subject") if isinstance(state.get("subject"), dict) else state.get("active")
     if not isinstance(active, dict):
         return {"revision": _state_revision(root, PLANNING_STATE), "terminal": True}
     status = active.get("status")
     actions = []
+    decisions = []
     if status == "ready-to-complete":
         actions = [
             {
@@ -417,21 +469,65 @@ def _planning_contribution(context: Mapping[str, Any]) -> dict[str, Any] | None:
                 "priority": 50,
             }
         ]
+    elif status in {"returned", "integration-pending"}:
+        decisions = [
+            {
+                "id": f"reconcile:{active.get('id')}",
+                "question": "How should the returned work change the current Planning subject?",
+                "authority": "planning-owner",
+                "response_operation_id": "planning.reconcile",
+                "effects": ["planning-state"],
+                "choices": [
+                    {"id": "integrated", "label": "Integrated"},
+                    {"id": "revise-scope", "label": "Revise scope"},
+                    {"id": "residual", "label": "Residual work"},
+                ],
+            }
+        ]
     return {
         "revision": _state_revision(root, PLANNING_STATE),
-        "facts": {"active": active},
+        "facts": {"active": active, "current_attempts": state.get("attempts", [])},
         "actions": actions,
+        "decisions": decisions,
         "claims": {"allowed": ["progress"], "blocked": [] if status == "complete" else ["complete"]},
         "terminal": status == "complete",
     }
+
+
+def _planning_semantic_revision(subject: Mapping[str, Any]) -> str:
+    return semantic_digest(
+        {
+            "id": subject.get("id"),
+            "outcome": subject.get("outcome", ""),
+            "scope": subject.get("scope", []),
+            "constraints": subject.get("constraints", []),
+            "dependencies": subject.get("dependencies", []),
+            "stops": subject.get("stops", []),
+            "proof_claims": subject.get("proof_claims", ["complete"]),
+        }
+    )
 
 
 def _planning_set(arguments: dict[str, Any]) -> dict[str, Any]:
     root = _root(arguments)
     path = root / PLANNING_STATE
     state = _json(path) or {"schema_version": 1, "revision": 0}
+    current = state.get("subject") if isinstance(state.get("subject"), dict) else state.get("active", {})
+    current = dict(current) if isinstance(current, dict) else {}
+    subject = {
+        "id": arguments["item"],
+        "status": arguments["status"],
+        "outcome": arguments.get("outcome", current.get("outcome", "")),
+        "scope": list(arguments.get("scope", current.get("scope", []))),
+        "constraints": list(arguments.get("constraints", current.get("constraints", []))),
+        "dependencies": list(arguments.get("dependencies", current.get("dependencies", []))),
+        "stops": list(arguments.get("stops", current.get("stops", []))),
+        "proof_claims": list(arguments.get("proof_claims", current.get("proof_claims", ["complete"]))),
+    }
+    subject["semantic_revision"] = _planning_semantic_revision(subject)
     state["revision"] = int(state.get("revision", 0)) + 1
-    state["active"] = {"id": arguments["item"], "status": arguments["status"]}
+    state["subject"] = subject
+    state["active"] = {"id": subject["id"], "status": subject["status"]}
     _write_owned_json(
         root,
         PLANNING_STATE,
@@ -440,7 +536,7 @@ def _planning_set(arguments: dict[str, Any]) -> dict[str, Any]:
         state,
         recognizes_existing=lambda item: item.get("schema_version") == 1 and isinstance(item.get("revision"), int),
     )
-    return {"status": "applied", "effects": ["planning-state"], "value": state["active"]}
+    return {"status": "applied", "effects": ["planning-state"], "value": subject}
 
 
 def _planning_complete(arguments: dict[str, Any]) -> dict[str, Any]:
@@ -449,16 +545,95 @@ def _planning_complete(arguments: dict[str, Any]) -> dict[str, Any]:
 
 def _recover_planning(arguments: dict[str, Any]) -> dict[str, Any] | None:
     state = _json(_root(arguments) / PLANNING_STATE)
+    subject = state.get("subject") if isinstance(state.get("subject"), dict) else state.get("active")
     expected = {"id": arguments["item"], "status": arguments["status"]}
-    if state.get("active") == expected:
+    if isinstance(subject, dict) and all(subject.get(key) == value for key, value in expected.items()):
         if not _repair_owned_record(_root(arguments), PLANNING_STATE, "planning", "durable-module-state"):
             return None
-        return {"status": "applied", "effects": ["planning-state"], "value": expected}
+        return {"status": "applied", "effects": ["planning-state"], "value": subject}
     return None
 
 
 def _recover_planning_complete(arguments: dict[str, Any]) -> dict[str, Any] | None:
     return _recover_planning({**arguments, "status": "complete"})
+
+
+def _planning_reconcile(arguments: dict[str, Any]) -> dict[str, Any]:
+    root = _root(arguments)
+    state = _json(root / PLANNING_STATE)
+    subject = state.get("subject")
+    if not isinstance(subject, dict) or subject.get("semantic_revision") != arguments["expected_subject_revision"]:
+        return {"status": "rejected", "effects": [], "value": {"reason": "stale-planning-subject"}}
+    disposition = arguments["disposition"]
+    next_status = {"integrated": "ready-to-complete", "revise-scope": "in-progress", "residual": "residual"}[
+        disposition
+    ]
+    return _planning_set({"target": str(root), "item": arguments["item"], "status": next_status})
+
+
+def _recover_planning_reconcile(arguments: dict[str, Any]) -> dict[str, Any] | None:
+    expected_status = {
+        "integrated": "ready-to-complete",
+        "revise-scope": "in-progress",
+        "residual": "residual",
+    }[arguments["disposition"]]
+    return _recover_planning({"target": arguments["target"], "item": arguments["item"], "status": expected_status})
+
+
+def _planning_record_attempt(arguments: dict[str, Any]) -> dict[str, Any]:
+    root = _root(arguments)
+    state = _json(root / PLANNING_STATE)
+    subject = state.get("subject")
+    if (
+        not isinstance(subject, dict)
+        or subject.get("id") != arguments["item"]
+        or subject.get("semantic_revision") != arguments["expected_subject_revision"]
+    ):
+        return {"status": "rejected", "effects": [], "value": {"reason": "stale-planning-subject"}}
+    attempts = state.get("attempts", [])
+    if not isinstance(attempts, list):
+        return {"status": "rejected", "effects": [], "value": {"reason": "invalid-attempt-state"}}
+    attempt = {
+        "id": arguments["attempt_id"],
+        "subject_revision": arguments["expected_subject_revision"],
+        "target_id": arguments["target_id"],
+        "status": arguments["status"],
+        "result_revision": arguments.get("result_revision") or "",
+    }
+    attempts = [item for item in attempts if not isinstance(item, dict) or item.get("id") != attempt["id"]]
+    attempts.append(attempt)
+    state["attempts"] = attempts[-20:]
+    if attempt["status"] == "returned":
+        subject["status"] = "integration-pending"
+        state["active"] = {"id": subject["id"], "status": subject["status"]}
+    state["revision"] = int(state.get("revision", 0)) + 1
+    _write_owned_json(
+        root,
+        PLANNING_STATE,
+        "planning",
+        "durable-module-state",
+        state,
+        recognizes_existing=lambda item: item.get("schema_version") == 1 and isinstance(item.get("revision"), int),
+    )
+    return {"status": "applied", "effects": ["planning-state"], "value": attempt}
+
+
+def _recover_planning_attempt(arguments: dict[str, Any]) -> dict[str, Any] | None:
+    root = _root(arguments)
+    state = _json(root / PLANNING_STATE)
+    attempt = next(
+        (
+            item
+            for item in state.get("attempts", [])
+            if isinstance(item, dict)
+            and item.get("id") == arguments["attempt_id"]
+            and item.get("status") == arguments["status"]
+        ),
+        None,
+    )
+    if attempt is None or not _repair_owned_record(root, PLANNING_STATE, "planning", "durable-module-state"):
+        return None
+    return {"status": "applied", "effects": ["planning-state"], "value": attempt}
 
 
 def planning_module() -> Module:
@@ -470,6 +645,20 @@ def planning_module() -> Module:
         operations=(
             _operation("planning.set", _planning_set, _recover_planning),
             _operation("planning.complete", _planning_complete, _recover_planning_complete),
+            _operation("planning.reconcile", _planning_reconcile, _recover_planning_reconcile),
+            _operation("planning.record-attempt", _planning_record_attempt, _recover_planning_attempt),
+        ),
+        currentness=lambda context: (
+            semantic_digest(
+                {
+                    "state": _revision(Path(str(context["target"])).resolve() / PLANNING_STATE),
+                    "ownership": _revision(Path(str(context["target"])).resolve() / MANIFEST_STATE),
+                    "request": context.get("planning"),
+                }
+            )
+            if (Path(str(context["target"])).resolve() / PLANNING_STATE).is_file()
+            or context.get("planning") is not None
+            else None
         ),
     )
 
@@ -494,7 +683,10 @@ def _memory_contribution(context: Mapping[str, Any]) -> dict[str, Any] | None:
     if isinstance(requested, Mapping) and "key" in requested and "value" in requested:
         record = {"key": str(requested["key"]), "value": requested["value"]}
         records = state.get("records", [])
-        if isinstance(records, list) and record in records:
+        if isinstance(records, list) and any(
+            isinstance(item, dict) and item.get("key") == record["key"] and item.get("value") == record["value"]
+            for item in records
+        ):
             return {"revision": _state_revision(root, MEMORY_STATE), "facts": {"record": record}, "terminal": True}
         return {
             "revision": _state_revision(root, MEMORY_STATE),
@@ -505,6 +697,29 @@ def _memory_contribution(context: Mapping[str, Any]) -> dict[str, Any] | None:
                         "target": str(root),
                         "key": str(requested["key"]),
                         "value": requested["value"],
+                        "summary": str(requested.get("summary") or requested["value"]),
+                        "provenance": str(requested.get("provenance") or "explicit-human-or-repo-source"),
+                        "task_terms": list(requested.get("task_terms", [])),
+                        "paths": list(requested.get("paths", [])),
+                        "dependency_revision": str(requested.get("dependency_revision") or ""),
+                        "kind": str(requested.get("kind") or "advisory"),
+                    },
+                    "effects": ["memory-state"],
+                    "priority": 50,
+                }
+            ],
+        }
+    if isinstance(requested, Mapping) and requested.get("operation") == "disposition":
+        return {
+            "revision": _state_revision(root, MEMORY_STATE),
+            "actions": [
+                {
+                    "operation_id": "memory.disposition",
+                    "arguments": {
+                        "target": str(root),
+                        "key": str(requested.get("key") or ""),
+                        "disposition": str(requested.get("disposition") or ""),
+                        "stronger_owner": str(requested.get("stronger_owner") or ""),
                     },
                     "effects": ["memory-state"],
                     "priority": 50,
@@ -513,9 +728,39 @@ def _memory_contribution(context: Mapping[str, Any]) -> dict[str, Any] | None:
         }
     if not state:
         return None
+    task = str(context.get("task") or "").lower()
+    changed_paths = [str(path) for path in context.get("changed_paths", [])]
+    source_revisions = context.get("source_revisions", {})
+    selected = []
+    records = state.get("records", [])
+    if isinstance(records, list):
+        for item in records:
+            if not isinstance(item, dict) or item.get("disposition", "active") != "active":
+                continue
+            terms = item.get("task_terms", [])
+            paths = item.get("paths", [])
+            dependency_revision = str(item.get("dependency_revision") or "")
+            current_dependency = (
+                source_revisions.get(item.get("key")) if isinstance(source_revisions, Mapping) else None
+            )
+            current = not dependency_revision or current_dependency == dependency_revision
+            applicable = (terms and any(str(term).lower() in task for term in terms)) or (
+                paths and any(fnmatch(path, str(pattern)) for path in changed_paths for pattern in paths)
+            )
+            if current and applicable:
+                selected.append(
+                    {
+                        "id": item.get("key"),
+                        "summary": item.get("summary"),
+                        "provenance": item.get("provenance"),
+                        "kind": item.get("kind", "advisory"),
+                    }
+                )
+    if not selected:
+        return None
     return {
         "revision": _state_revision(root, MEMORY_STATE),
-        "facts": {"records": state.get("records", [])},
+        "facts": {"memory_candidates_selected": selected, "use_status": "selected-not-yet-used"},
         "terminal": True,
     }
 
@@ -527,7 +772,17 @@ def _memory_record(arguments: dict[str, Any]) -> dict[str, Any]:
     records = state.get("records", [])
     if not isinstance(records, list):
         return {"status": "rejected", "effects": [], "value": {"reason": "invalid-memory-state"}}
-    record = {"key": arguments["key"], "value": arguments["value"]}
+    record = {
+        "key": arguments["key"],
+        "value": arguments["value"],
+        "summary": arguments.get("summary") or str(arguments["value"]),
+        "provenance": arguments.get("provenance") or "explicit-human-or-repo-source",
+        "task_terms": list(arguments.get("task_terms", [])),
+        "paths": list(arguments.get("paths", [])),
+        "dependency_revision": arguments.get("dependency_revision") or "",
+        "kind": arguments.get("kind") or "advisory",
+        "disposition": "active",
+    }
     records = [item for item in records if not isinstance(item, dict) or item.get("key") != arguments["key"]]
     records.append(record)
     state.setdefault("schema_version", 1)
@@ -558,11 +813,67 @@ def _memory_read(arguments: dict[str, Any]) -> dict[str, Any]:
 def _recover_memory_record(arguments: dict[str, Any]) -> dict[str, Any] | None:
     record = {"key": arguments["key"], "value": arguments["value"]}
     state = _json(_root(arguments) / MEMORY_STATE)
-    if record in state.get("records", []):
+    if any(
+        isinstance(item, dict) and item.get("key") == record["key"] and item.get("value") == record["value"]
+        for item in state.get("records", [])
+    ):
         if not _repair_owned_record(_root(arguments), MEMORY_STATE, "memory", "durable-module-state"):
             return None
         return {"status": "applied", "effects": ["memory-state"], "value": record}
     return None
+
+
+def _memory_disposition(arguments: dict[str, Any]) -> dict[str, Any]:
+    root = _root(arguments)
+    state = _json(root / MEMORY_STATE)
+    records = state.get("records", [])
+    if not isinstance(records, list):
+        return {"status": "rejected", "effects": [], "value": {"reason": "invalid-memory-state"}}
+    changed = False
+    for item in records:
+        if isinstance(item, dict) and item.get("key") == arguments["key"]:
+            item["disposition"] = arguments["disposition"]
+            if arguments.get("stronger_owner"):
+                item["stronger_owner"] = arguments["stronger_owner"]
+            changed = True
+    if not changed:
+        return {"status": "rejected", "effects": [], "value": {"reason": "unknown-memory"}}
+    state["revision"] = int(state.get("revision", 0)) + 1
+    _write_owned_json(
+        root,
+        MEMORY_STATE,
+        "memory",
+        "durable-module-state",
+        state,
+        recognizes_existing=lambda item: item.get("schema_version") == 1 and isinstance(item.get("records"), list),
+    )
+    return {
+        "status": "applied",
+        "effects": ["memory-state"],
+        "value": {"key": arguments["key"], "disposition": arguments["disposition"]},
+    }
+
+
+def _recover_memory_disposition(arguments: dict[str, Any]) -> dict[str, Any] | None:
+    root = _root(arguments)
+    records = _json(root / MEMORY_STATE).get("records", [])
+    current = next(
+        (
+            item
+            for item in records
+            if isinstance(item, dict)
+            and item.get("key") == arguments["key"]
+            and item.get("disposition") == arguments["disposition"]
+        ),
+        None,
+    )
+    if current is None or not _repair_owned_record(root, MEMORY_STATE, "memory", "durable-module-state"):
+        return None
+    return {
+        "status": "applied",
+        "effects": ["memory-state"],
+        "value": {"key": arguments["key"], "disposition": arguments["disposition"]},
+    }
 
 
 def memory_module() -> Module:
@@ -573,6 +884,21 @@ def memory_module() -> Module:
         operations=(
             _operation("memory.read", _memory_read),
             _operation("memory.record", _memory_record, _recover_memory_record),
+            _operation("memory.disposition", _memory_disposition, _recover_memory_disposition),
+        ),
+        currentness=lambda context: (
+            semantic_digest(
+                {
+                    "state": _revision(Path(str(context["target"])).resolve() / MEMORY_STATE),
+                    "ownership": _revision(Path(str(context["target"])).resolve() / MANIFEST_STATE),
+                    "request": context.get("memory"),
+                    "task": context.get("task"),
+                    "changed_paths": context.get("changed_paths", []),
+                    "source_revisions": context.get("source_revisions", {}),
+                }
+            )
+            if (Path(str(context["target"])).resolve() / MEMORY_STATE).is_file() or context.get("memory") is not None
+            else None
         ),
     )
 
@@ -580,40 +906,103 @@ def memory_module() -> Module:
 def _verification_contribution(context: Mapping[str, Any]) -> dict[str, Any] | None:
     root = Path(str(context["target"])).resolve()
     planning = _json(root / PLANNING_STATE)
-    raw_active = planning.get("active")
+    raw_active = planning.get("subject") if isinstance(planning.get("subject"), dict) else planning.get("active")
     active = raw_active if isinstance(raw_active, dict) else {}
     needs_proof = active.get("status") == "ready-to-complete"
     path = root / VERIFICATION_STATE
     state = _json(path)
     if not needs_proof and not state:
         return None
+    policy_path = root / VERIFICATION_POLICY
+    strategy_revision = _revision(policy_path)
+    subject_revision = str(active.get("semantic_revision") or _planning_semantic_revision(active))
     if not needs_proof:
-        passed = state.get("status") == "passed"
+        passed = (
+            state.get("status") == "passed"
+            and state.get("subject_revision") == subject_revision
+            and state.get("strategy_revision") == strategy_revision
+        )
         return {
             "revision": _state_revision(root, VERIFICATION_STATE),
             "facts": {"proof": state},
             "claims": {"allowed": ["complete"] if passed else [], "blocked": [] if passed else ["complete"]},
             "terminal": True,
         }
-    current_subject = _revision(root / PLANNING_STATE)
-    current = bool(state and state.get("subject_revision") == current_subject and state.get("status") == "passed")
+    current_subject = subject_revision
+    try:
+        policy = tomllib.loads(policy_path.read_text(encoding="utf-8")) if policy_path.is_file() else {}
+    except (OSError, tomllib.TOMLDecodeError):
+        policy = {}
+    strategy_revision = _revision(policy_path)
+    current = bool(
+        state
+        and state.get("subject_revision") == current_subject
+        and state.get("strategy_revision") == strategy_revision
+        and state.get("status") == "passed"
+    )
     actions = []
     if needs_proof and not current:
-        commands = planning.get("validation", [])
+        routes = policy.get("routes", [])
+        required_claims = set(active.get("proof_claims", ["complete"]))
+        if not isinstance(routes, list):
+            routes = []
+        candidates = []
+        task = str(context.get("task") or "").lower()
+        changed_paths = [str(path) for path in context.get("changed_paths", [])]
+        for route in routes:
+            if not isinstance(route, dict):
+                continue
+            route_claims = route.get("claims", [])
+            terms = route.get("task_terms", [])
+            patterns = route.get("paths", [])
+            applicable = (
+                (not terms and not patterns)
+                or any(str(term).lower() in task for term in terms)
+                or any(fnmatch(path, str(pattern)) for path in changed_paths for pattern in patterns)
+            )
+            if applicable and isinstance(route_claims, list) and required_claims.issubset(set(route_claims)):
+                candidates.append(route)
+        candidates.sort(key=lambda route: (int(route.get("breadth", 1000)), str(route.get("id") or "")))
+        if not candidates:
+            return {
+                "revision": _state_revision(root, VERIFICATION_STATE),
+                "blockers": [
+                    {
+                        "code": "missing-proof-strategy",
+                        "message": "Verification has no current applicable route sufficient for the required claims",
+                        "owner": "verification",
+                        "recovery": VERIFICATION_POLICY,
+                    }
+                ],
+                "claims": {"blocked": ["complete"]},
+            }
+        route = candidates[0]
+        commands = route.get("commands", [])
         if not isinstance(commands, list) or any(
             not isinstance(command, list) or any(not isinstance(part, str) for part in command) for command in commands
         ):
             return {
                 "revision": _state_revision(root, VERIFICATION_STATE),
                 "blockers": [
-                    {"code": "missing-proof-route", "message": "Planning did not declare typed validation argv"}
+                    {
+                        "code": "non-executable-proof-route",
+                        "message": "Verification's selected route has no executable typed producer binding",
+                        "owner": "verification",
+                        "recovery": f"{VERIFICATION_POLICY}#{route.get('id')}",
+                    }
                 ],
                 "claims": {"blocked": ["complete"]},
             }
         actions = [
             {
                 "operation_id": "verification.run",
-                "arguments": {"target": str(root), "subject_revision": current_subject, "commands": commands},
+                "arguments": {
+                    "target": str(root),
+                    "subject_revision": current_subject,
+                    "strategy_revision": strategy_revision,
+                    "route_id": str(route.get("id") or ""),
+                    "commands": commands,
+                },
                 "effects": ["verification-state", "process"],
                 "priority": 100,
             }
@@ -641,6 +1030,8 @@ def _verification_run(arguments: dict[str, Any]) -> dict[str, Any]:
     state = {
         "schema_version": 1,
         "subject_revision": arguments["subject_revision"],
+        "strategy_revision": arguments["strategy_revision"],
+        "route_id": arguments["route_id"],
         "status": "passed" if passed else "failed",
         "results": results,
     }
@@ -662,10 +1053,16 @@ def _verification_run(arguments: dict[str, Any]) -> dict[str, Any]:
 def _recover_verification(arguments: dict[str, Any]) -> dict[str, Any] | None:
     root = _root(arguments)
     state = _json(root / VERIFICATION_STATE)
-    if state.get("subject_revision") != arguments["subject_revision"] or state.get("status") not in {
-        "passed",
-        "failed",
-    }:
+    if (
+        state.get("subject_revision") != arguments["subject_revision"]
+        or state.get("strategy_revision") != arguments["strategy_revision"]
+        or state.get("route_id") != arguments["route_id"]
+        or state.get("status")
+        not in {
+            "passed",
+            "failed",
+        }
+    ):
         return None
     if not _repair_owned_record(root, VERIFICATION_STATE, "verification", "package-residue"):
         return None
@@ -684,4 +1081,22 @@ def verification_module() -> Module:
         claims=("complete",),
         contribute=_verification_contribution,
         operations=(_operation("verification.run", _verification_run, _recover_verification),),
+        currentness=lambda context: (
+            semantic_digest(
+                {
+                    "planning": _revision(Path(str(context["target"])).resolve() / PLANNING_STATE),
+                    "policy": _revision(Path(str(context["target"])).resolve() / VERIFICATION_POLICY),
+                    "evidence": _revision(Path(str(context["target"])).resolve() / VERIFICATION_STATE),
+                    "ownership": _revision(Path(str(context["target"])).resolve() / MANIFEST_STATE),
+                    "task": context.get("task"),
+                    "changed_paths": context.get("changed_paths", []),
+                    "claims": context.get("claims", []),
+                }
+            )
+            if any(
+                (Path(str(context["target"])).resolve() / relative).is_file()
+                for relative in (PLANNING_STATE, VERIFICATION_POLICY, VERIFICATION_STATE)
+            )
+            else None
+        ),
     )

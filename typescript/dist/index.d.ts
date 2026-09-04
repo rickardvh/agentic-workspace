@@ -6,6 +6,7 @@ export interface DecisionRequest { id: string; question: string; authority: stri
 export declare const IR: Record<string, Json>;
 export declare function canonicalSerialize(value: Json): string;
 export declare function semanticDigest(value: Json): string;
+export declare function ownerConclusionIdentity(owner: string, revision: string, dependencies?: Record<string, Json>): string;
 export declare function operationContract(operationId: string): Record<string, Json>;
 export interface Module { name: string; api_version?: string; required_capabilities?: string[]; owns?: string[]; claims?: string[]; resources?: ResourceReference[]; procedures?: ResourceReference[]; operations?: Operation[]; contribute: (context: Record<string, Json>) => Contribution | null; }
 export declare function admitModules(modules: Module[]): Module[];

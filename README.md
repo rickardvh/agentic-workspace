@@ -29,6 +29,10 @@ Python distribution. Third-party modules use the same
 `agentic_workspace.modules` entry-point contract. Irrelevant modules contribute
 nothing and do not appear in the decision.
 
+Repository-scoped controls, selective anti-rediscovery Memory, semantic Planning
+custody, Verification-owned proof strategy, and per-owner conclusion reuse are
+described in [source-owner batteries](docs/source-owner-batteries.md).
+
 See [the v1 contract](docs/v1-contract.md), [module API](docs/module-api.md), and
 [generated two-language contract](docs/generated-contract.md). Python,
 TypeScript, and the JSON CLI project one semantic authority; external adapters

@@ -56,7 +56,31 @@
     "additive_unknown_fields": "ignored-unless-required",
     "unknown_required_semantics": "fail-closed-with-upgrade-route"
   },
+  "reuse": {
+    "scope": "source-owner-conclusion",
+    "currentness": "owner-revision-plus-exact-dependencies",
+    "transcripts": false,
+    "volatile-ranking": false
+  },
   "operations": [
+    {
+      "id": "repository.answer",
+      "owner": "repository",
+      "effects": ["repository-configuration"],
+      "binding": "repository.answer",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "rule_id": {"type": "string", "minLength": 1},
+          "rule_revision": {"type": "string", "minLength": 1},
+          "answer": {"type": "string", "minLength": 1},
+          "scope": {"enum": ["shared", "local"]}
+        },
+        "required": ["target", "rule_id", "rule_revision", "answer", "scope"],
+        "additionalProperties": false
+      }
+    },
     {
       "id": "workspace.transfer-ownership",
       "owner": "workspace",
@@ -113,9 +137,52 @@
         "properties": {
           "target": {"type": "string", "minLength": 1},
           "item": {"type": "string", "minLength": 1},
-          "status": {"enum": ["in-progress", "ready-to-complete", "complete"]}
+          "status": {"enum": ["in-progress", "blocked", "in-flight", "returned", "integration-pending", "residual", "ready-to-complete", "complete"]},
+          "outcome": {"type": "string"},
+          "scope": {"type": "array", "items": {"type": "string"}},
+          "constraints": {"type": "array", "items": {"type": "string"}},
+          "dependencies": {"type": "array", "items": {"type": "string"}},
+          "stops": {"type": "array", "items": {"type": "string"}},
+          "proof_claims": {"type": "array", "items": {"type": "string"}}
         },
         "required": ["target", "item", "status"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "planning.reconcile",
+      "owner": "planning",
+      "effects": ["planning-state"],
+      "binding": "planning.reconcile",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "item": {"type": "string", "minLength": 1},
+          "expected_subject_revision": {"type": "string", "minLength": 1},
+          "disposition": {"enum": ["integrated", "revise-scope", "residual"]}
+        },
+        "required": ["target", "item", "expected_subject_revision", "disposition"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "planning.record-attempt",
+      "owner": "planning",
+      "effects": ["planning-state"],
+      "binding": "planning.record_attempt",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "item": {"type": "string", "minLength": 1},
+          "expected_subject_revision": {"type": "string", "minLength": 1},
+          "attempt_id": {"type": "string", "minLength": 1},
+          "target_id": {"type": "string", "minLength": 1},
+          "status": {"enum": ["dispatched", "in-flight", "returned", "failed"]},
+          "result_revision": {"type": "string"}
+        },
+        "required": ["target", "item", "expected_subject_revision", "attempt_id", "target_id", "status"],
         "additionalProperties": false
       }
     },
@@ -159,9 +226,32 @@
         "properties": {
           "target": {"type": "string", "minLength": 1},
           "key": {"type": "string", "minLength": 1},
-          "value": {}
+          "value": {},
+          "summary": {"type": "string"},
+          "provenance": {"type": "string"},
+          "task_terms": {"type": "array", "items": {"type": "string"}},
+          "paths": {"type": "array", "items": {"type": "string"}},
+          "dependency_revision": {"type": "string"},
+          "kind": {"enum": ["advisory", "workaround"]}
         },
         "required": ["target", "key", "value"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "memory.disposition",
+      "owner": "memory",
+      "effects": ["memory-state"],
+      "binding": "memory.disposition",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "key": {"type": "string", "minLength": 1},
+          "disposition": {"enum": ["active", "promoted", "retired"]},
+          "stronger_owner": {"type": "string"}
+        },
+        "required": ["target", "key", "disposition"],
         "additionalProperties": false
       }
     },
@@ -175,6 +265,8 @@
         "properties": {
           "target": {"type": "string", "minLength": 1},
           "subject_revision": {"type": "string", "minLength": 1},
+          "strategy_revision": {"type": "string", "minLength": 1},
+          "route_id": {"type": "string", "minLength": 1},
           "commands": {
             "type": "array",
             "items": {
@@ -184,7 +276,7 @@
             }
           }
         },
-        "required": ["target", "subject_revision", "commands"],
+        "required": ["target", "subject_revision", "strategy_revision", "route_id", "commands"],
         "additionalProperties": false
       }
     }

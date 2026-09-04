@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import shutil
@@ -37,6 +38,15 @@ def _python(venv: Path) -> Path:
 
 def _cli(venv: Path) -> Path:
     return venv / ("Scripts/agentic-workspace.exe" if sys.platform == "win32" else "bin/agentic-workspace")
+
+
+def _write_verification_policy(repository: Path, python: Path) -> None:
+    (repository / ".agentic-workspace" / "verification.toml").write_text(
+        "schema_version = 1\n\n[[routes]]\n"
+        "id = 'focused'\nclaims = ['complete']\nbreadth = 1\n"
+        f"commands = [['{python}', '-c', 'raise SystemExit(0)']]\n",
+        encoding="utf-8",
+    )
 
 
 def _write_external_module(root: Path) -> None:
@@ -472,8 +482,22 @@ def run(root: Path) -> dict[str, Any]:
         verification_only.mkdir()
         verification_path = verification_only / ".agentic-workspace" / "verification.json"
         verification_path.parent.mkdir()
+        _write_verification_policy(verification_only, python)
+        verification_strategy = (
+            "sha256:"
+            + hashlib.sha256((verification_only / ".agentic-workspace" / "verification.toml").read_bytes()).hexdigest()
+        )
         verification_path.write_text(
-            json.dumps({"schema_version": 1, "subject_revision": "standalone", "status": "passed", "results": []}),
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "subject_revision": "absent",
+                    "strategy_revision": verification_strategy,
+                    "route_id": "focused",
+                    "status": "passed",
+                    "results": [],
+                }
+            ),
             encoding="utf-8",
         )
         verification_decision = _json(
@@ -491,11 +515,42 @@ def run(root: Path) -> dict[str, Any]:
             encoding="utf-8",
         )
         (combined_state / "memory.json").write_text(
-            json.dumps({"schema_version": 1, "revision": 1, "records": [{"key": "combined", "value": True}]}),
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "revision": 1,
+                    "records": [
+                        {
+                            "key": "combined",
+                            "value": True,
+                            "summary": "combined module context",
+                            "provenance": "release fixture",
+                            "task_terms": ["resume"],
+                            "disposition": "active",
+                        }
+                    ],
+                }
+            ),
             encoding="utf-8",
         )
+        _write_verification_policy(combined, python)
+        combined_subject_revision = (
+            "sha256:" + hashlib.sha256((combined_state / "planning.json").read_bytes()).hexdigest()
+        )
+        combined_strategy_revision = (
+            "sha256:" + hashlib.sha256((combined_state / "verification.toml").read_bytes()).hexdigest()
+        )
         (combined_state / "verification.json").write_text(
-            json.dumps({"schema_version": 1, "subject_revision": "combined", "status": "passed", "results": []}),
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "subject_revision": combined_subject_revision,
+                    "strategy_revision": combined_strategy_revision,
+                    "route_id": "focused",
+                    "status": "passed",
+                    "results": [],
+                }
+            ),
             encoding="utf-8",
         )
         combined_decision = _json([str(cli), "start", "--target", str(combined), "--task", "resume"])
@@ -510,6 +565,7 @@ def run(root: Path) -> dict[str, Any]:
             "validation": [[str(python), "-c", "raise SystemExit(0)"]],
         }
         (legacy / "planning.json").write_text(json.dumps(planning), encoding="utf-8")
+        _write_verification_policy(repository, python)
         proof = _json([str(cli), "start", "--target", str(repository), "--task", "release"])
         assert isinstance(proof, dict) and proof["primary_action"]["operation_id"] == "verification.run"
         assert proof["relevant_owners"] == ["planning", "verification"]
@@ -542,6 +598,7 @@ def run(root: Path) -> dict[str, Any]:
             "validation": [[str(python), "-c", "raise SystemExit(0)"]],
         }
         delegated_planning_path.write_text(json.dumps(delegated_planning), encoding="utf-8")
+        _write_verification_policy(delegated_repo, python)
         delegate_intent = {"delegate": {"parent_id": "release-parent", "task": "review the release"}}
         delegated = _json(
             [

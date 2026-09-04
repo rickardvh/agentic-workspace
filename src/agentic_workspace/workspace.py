@@ -8,6 +8,7 @@ from typing import Any
 
 from .decision import compile_source_decision
 from .durability import atomic_write_json, owner_process_lock
+from .generated_semantics import semantic_digest
 from .modules import Module, admit_modules, discover_modules, module_contributions, register_module_operations
 from .operations import OperationDispatcher
 
@@ -30,7 +31,25 @@ class Workspace:
         request.setdefault("changed_paths", sorted(set(changed_paths)))
         request.setdefault("claims", sorted(set(claims)))
         context = {**request, "target": str(self.target)}
-        return compile_source_decision(module_contributions(self._modules, context=context), intent=request)
+        contributions: list[dict[str, Any]] = []
+        for module in self._modules:
+            identity = module.currentness(context) if module.currentness is not None else None
+            cache_path = None
+            if identity:
+                cache_key = semantic_digest({"module": module.name, "identity": identity}).removeprefix("sha256:")
+                cache_path = (
+                    self.target / ".agentic-workspace" / "local" / "conclusions" / module.name / f"{cache_key}.json"
+                )
+                if cache_path.is_file():
+                    cached = json.loads(cache_path.read_text(encoding="utf-8"))
+                    if isinstance(cached, dict):
+                        contributions.append(cached)
+                        continue
+            resolved = module_contributions([module], context=context)
+            contributions.extend(resolved)
+            if cache_path is not None and resolved:
+                atomic_write_json(cache_path, resolved[0])
+        return compile_source_decision(contributions, intent=request)
 
     def _receipt_path(self, key: str) -> Path:
         safe_key = self._safe_key(key)

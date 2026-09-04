@@ -60,6 +60,12 @@ def semantic_digest(value: object) -> str:
 _digest = semantic_digest
 
 
+def owner_conclusion_identity(owner: str, revision: str, dependencies: Mapping[str, Any] | None = None) -> str:
+    if not owner or not revision:
+        raise DecisionContractError("owner conclusion identity requires owner and revision")
+    return semantic_digest({"owner": owner, "revision": revision, "dependencies": dict(dependencies or {})})
+
+
 def _strings(value: object, *, field: str) -> list[str]:
     if value is None:
         return []
@@ -164,6 +170,7 @@ def normalize_contribution(value: Mapping[str, Any]) -> dict[str, Any]:
             "id": decision_id,
             "owner": owner,
             "revision": revision,
+            "detail_revision": str(item.get("detail_revision") or revision),
             "question": question,
             "authority": authority,
             "response_operation_id": response_operation_id,
@@ -264,6 +271,10 @@ def compile_source_decision(contributions: Iterable[Mapping[str, Any]], *, inten
         status = "terminal"
     else:
         status = "direct"
+    resources = [resource for item in relevant for resource in item["resources"]]
+    procedures = [procedure for item in relevant for procedure in item["procedures"]]
+    resources = list({canonical_serialize(item): item for item in resources}.values())
+    procedures = list({canonical_serialize(item): item for item in procedures}.values())
     answer = {
         "input_revision": input_revision,
         "status": status,
@@ -272,8 +283,8 @@ def compile_source_decision(contributions: Iterable[Mapping[str, Any]], *, inten
         "blockers": blockers,
         "claim_boundary": {"allowed": allowed, "blocked": blocked},
         "relevant_owners": owners,
-        "resources": [resource for item in relevant for resource in item["resources"]],
-        "procedures": [procedure for item in relevant for procedure in item["procedures"]],
+        "resources": resources,
+        "procedures": procedures,
     }
     return {"kind": KINDS["decision"], "decision_id": "operating-decision:" + _digest(answer).removeprefix("sha256:")[:16], **answer}
 
@@ -306,7 +317,7 @@ export function operationContract(operationId) {
 export function admitModules(modules) {
   const admitted = [...modules].sort((left, right) => left.name.localeCompare(right.name));
   const names = admitted.map((module) => module.name);
-  if (names.some((name) => !name) || new Set(names).size !== names.length) throw new Error("module names must be non-empty and unique");
+  if (names.some((name) => !/^[A-Za-z0-9_.-]+$/.test(name)) || new Set(names).size !== names.length) throw new Error("module names must be canonical, non-empty, and unique");
   const incompatible = admitted.filter((module) => String(module.api_version || "1.0").split(".", 1)[0] !== "1").map((module) => module.name);
   if (incompatible.length) throw new Error(`incompatible module API: ${incompatible.join(", ")}; upgrade agentic-workspace or use a compatible 1.x module`);
   const supported = new Set(IR.module.capabilities);
@@ -364,6 +375,11 @@ export function semanticDigest(value) {
 
 const hash = semanticDigest;
 
+export function ownerConclusionIdentity(owner, revision, dependencies = {}) {
+  if (!owner || !revision) throw new Error("owner conclusion identity requires owner and revision");
+  return semanticDigest({ owner, revision, dependencies });
+}
+
 function strings(value, field) {
   if (value == null) return [];
   if (!Array.isArray(value) || value.some((item) => typeof item !== "string" || !item)) throw new Error(`${field} must be a list of non-empty strings`);
@@ -418,7 +434,7 @@ export function normalizeContribution(value) {
       return { id: choiceId, label };
     });
     if (!normalizedChoices.length && !allowOpen) throw new Error(`${owner}.decisions[${index}] requires finite choices or allow_open`);
-    return { id, owner, revision, question, authority, response_operation_id: responseOperationId, effects: strings(item.effects, `${owner}.decisions[${index}].effects`), choices: normalizedChoices, allow_open: allowOpen };
+    return { id, owner, revision, detail_revision: String(item.detail_revision || revision), question, authority, response_operation_id: responseOperationId, effects: strings(item.effects, `${owner}.decisions[${index}].effects`), choices: normalizedChoices, allow_open: allowOpen };
   });
   const claims = value.claims || {};
   const facts = value.facts || {};
@@ -454,7 +470,9 @@ export function compileSourceDecision(contributions, intent = {}) {
   }
   const status = blockers.length ? "blocked" : decisionRequest ? "decision" : primaryAction ? "actionable" : relevant.length && relevant.every((item) => item.terminal) ? "terminal" : "direct";
   if (blockers.length) { primaryAction = null; decisionRequest = null; }
-  const answer = { input_revision: inputRevision, status, primary_action: primaryAction, decision_request: decisionRequest, blockers, claim_boundary: { allowed, blocked }, relevant_owners: owners, resources: relevant.flatMap((item) => item.resources), procedures: relevant.flatMap((item) => item.procedures) };
+  const resources = [...new Map(relevant.flatMap((item) => item.resources).map((item) => [canonicalSerialize(item), item])).values()];
+  const procedures = [...new Map(relevant.flatMap((item) => item.procedures).map((item) => [canonicalSerialize(item), item])).values()];
+  const answer = { input_revision: inputRevision, status, primary_action: primaryAction, decision_request: decisionRequest, blockers, claim_boundary: { allowed, blocked }, relevant_owners: owners, resources, procedures };
   return { kind: kinds.decision, decision_id: "operating-decision:" + hash(answer).slice(7, 23), ...answer };
 }
 
@@ -507,6 +525,7 @@ export class OperationDispatcher {
       const expected = current.decision_request;
       if (!response) throw new Error("bounded decision invocation requires decision_response");
       if (response.id !== expected.id || response.owner !== expected.owner || response.revision !== expected.revision || response.authority !== expected.authority) throw new Error("bounded decision response owner, revision, or authority is stale");
+      if ("answer" in invocation.arguments && invocation.arguments.answer !== response.answer) throw new Error("typed decision answer differs from decision_response");
       const choiceIds = new Set((expected.choices || []).map((choice) => choice.id));
       if (choiceIds.size && !choiceIds.has(response.answer) && expected.allow_open !== true) throw new Error("bounded decision answer is not one of the current choices");
       if (!choiceIds.size && (expected.allow_open !== true || typeof response.answer !== "string" || !response.answer)) throw new Error("bounded open judgment requires a non-empty answer");
@@ -537,6 +556,7 @@ export interface DecisionRequest { id: string; question: string; authority: stri
 export declare const IR: Record<string, Json>;
 export declare function canonicalSerialize(value: Json): string;
 export declare function semanticDigest(value: Json): string;
+export declare function ownerConclusionIdentity(owner: string, revision: string, dependencies?: Record<string, Json>): string;
 export declare function operationContract(operationId: string): Record<string, Json>;
 export interface Module { name: string; api_version?: string; required_capabilities?: string[]; owns?: string[]; claims?: string[]; resources?: ResourceReference[]; procedures?: ResourceReference[]; operations?: Operation[]; contribute: (context: Record<string, Json>) => Contribution | null; }
 export declare function admitModules(modules: Module[]): Module[];

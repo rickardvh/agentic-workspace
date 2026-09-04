@@ -65,6 +65,24 @@ IR: dict[str, Any] = {
     },
     "operations": [
         {
+            "binding": "repository.answer",
+            "effects": ["repository-configuration"],
+            "id": "repository.answer",
+            "input": {
+                "additionalProperties": False,
+                "properties": {
+                    "answer": {"minLength": 1, "type": "string"},
+                    "rule_id": {"minLength": 1, "type": "string"},
+                    "rule_revision": {"minLength": 1, "type": "string"},
+                    "scope": {"enum": ["shared", "local"]},
+                    "target": {"minLength": 1, "type": "string"},
+                },
+                "required": ["target", "rule_id", "rule_revision", "answer", "scope"],
+                "type": "object",
+            },
+            "owner": "repository",
+        },
+        {
             "binding": "workspace.transfer_ownership",
             "effects": ["workspace-ownership"],
             "id": "workspace.transfer-ownership",
@@ -114,11 +132,65 @@ IR: dict[str, Any] = {
             "input": {
                 "additionalProperties": False,
                 "properties": {
+                    "constraints": {"items": {"type": "string"}, "type": "array"},
+                    "dependencies": {"items": {"type": "string"}, "type": "array"},
                     "item": {"minLength": 1, "type": "string"},
-                    "status": {"enum": ["in-progress", "ready-to-complete", "complete"]},
+                    "outcome": {"type": "string"},
+                    "proof_claims": {"items": {"type": "string"}, "type": "array"},
+                    "scope": {"items": {"type": "string"}, "type": "array"},
+                    "status": {
+                        "enum": [
+                            "in-progress",
+                            "blocked",
+                            "in-flight",
+                            "returned",
+                            "integration-pending",
+                            "residual",
+                            "ready-to-complete",
+                            "complete",
+                        ]
+                    },
+                    "stops": {"items": {"type": "string"}, "type": "array"},
                     "target": {"minLength": 1, "type": "string"},
                 },
                 "required": ["target", "item", "status"],
+                "type": "object",
+            },
+            "owner": "planning",
+        },
+        {
+            "binding": "planning.reconcile",
+            "effects": ["planning-state"],
+            "id": "planning.reconcile",
+            "input": {
+                "additionalProperties": False,
+                "properties": {
+                    "disposition": {"enum": ["integrated", "revise-scope", "residual"]},
+                    "expected_subject_revision": {"minLength": 1, "type": "string"},
+                    "item": {"minLength": 1, "type": "string"},
+                    "target": {"minLength": 1, "type": "string"},
+                },
+                "required": ["target", "item", "expected_subject_revision", "disposition"],
+                "type": "object",
+            },
+            "owner": "planning",
+        },
+        {
+            "binding": "planning.record_attempt",
+            "effects": ["planning-state"],
+            "id": "planning.record-attempt",
+            "input": {
+                "additionalProperties": False,
+                "properties": {
+                    "attempt_id": {"minLength": 1, "type": "string"},
+                    "expected_subject_revision": {"minLength": 1, "type": "string"},
+                    "item": {"minLength": 1, "type": "string"},
+                    "result_revision": {"type": "string"},
+                    "status": {"enum": ["dispatched", "in-flight", "returned", "failed"]},
+                    "target": {"minLength": 1, "type": "string"},
+                    "target_id": {"minLength": 1, "type": "string"},
+                },
+                "required": ["target", "item", "expected_subject_revision", "attempt_id", "target_id", "status"],
                 "type": "object",
             },
             "owner": "planning",
@@ -157,11 +229,34 @@ IR: dict[str, Any] = {
             "input": {
                 "additionalProperties": False,
                 "properties": {
+                    "dependency_revision": {"type": "string"},
                     "key": {"minLength": 1, "type": "string"},
+                    "kind": {"enum": ["advisory", "workaround"]},
+                    "paths": {"items": {"type": "string"}, "type": "array"},
+                    "provenance": {"type": "string"},
+                    "summary": {"type": "string"},
                     "target": {"minLength": 1, "type": "string"},
+                    "task_terms": {"items": {"type": "string"}, "type": "array"},
                     "value": {},
                 },
                 "required": ["target", "key", "value"],
+                "type": "object",
+            },
+            "owner": "memory",
+        },
+        {
+            "binding": "memory.disposition",
+            "effects": ["memory-state"],
+            "id": "memory.disposition",
+            "input": {
+                "additionalProperties": False,
+                "properties": {
+                    "disposition": {"enum": ["active", "promoted", "retired"]},
+                    "key": {"minLength": 1, "type": "string"},
+                    "stronger_owner": {"type": "string"},
+                    "target": {"minLength": 1, "type": "string"},
+                },
+                "required": ["target", "key", "disposition"],
                 "type": "object",
             },
             "owner": "memory",
@@ -177,10 +272,12 @@ IR: dict[str, Any] = {
                         "items": {"items": {"minLength": 1, "type": "string"}, "minItems": 1, "type": "array"},
                         "type": "array",
                     },
+                    "route_id": {"minLength": 1, "type": "string"},
+                    "strategy_revision": {"minLength": 1, "type": "string"},
                     "subject_revision": {"minLength": 1, "type": "string"},
                     "target": {"minLength": 1, "type": "string"},
                 },
-                "required": ["target", "subject_revision", "commands"],
+                "required": ["target", "subject_revision", "strategy_revision", "route_id", "commands"],
                 "type": "object",
             },
             "owner": "verification",
@@ -202,6 +299,12 @@ IR: dict[str, Any] = {
             "host-supplied persistence and process bindings",
             "typed handler dispatch and schema validation",
         ],
+    },
+    "reuse": {
+        "currentness": "owner-revision-plus-exact-dependencies",
+        "scope": "source-owner-conclusion",
+        "transcripts": False,
+        "volatile-ranking": False,
     },
     "schema_version": 1,
 }
@@ -247,6 +350,12 @@ def semantic_digest(value: object) -> str:
 
 
 _digest = semantic_digest
+
+
+def owner_conclusion_identity(owner: str, revision: str, dependencies: Mapping[str, Any] | None = None) -> str:
+    if not owner or not revision:
+        raise DecisionContractError("owner conclusion identity requires owner and revision")
+    return semantic_digest({"owner": owner, "revision": revision, "dependencies": dict(dependencies or {})})
 
 
 def _strings(value: object, *, field: str) -> list[str]:
@@ -360,6 +469,7 @@ def normalize_contribution(value: Mapping[str, Any]) -> dict[str, Any]:
                 "id": decision_id,
                 "owner": owner,
                 "revision": revision,
+                "detail_revision": str(item.get("detail_revision") or revision),
                 "question": question,
                 "authority": authority,
                 "response_operation_id": response_operation_id,
@@ -475,6 +585,10 @@ def compile_source_decision(
         status = "terminal"
     else:
         status = "direct"
+    resources = [resource for item in relevant for resource in item["resources"]]
+    procedures = [procedure for item in relevant for procedure in item["procedures"]]
+    resources = list({canonical_serialize(item): item for item in resources}.values())
+    procedures = list({canonical_serialize(item): item for item in procedures}.values())
     answer = {
         "input_revision": input_revision,
         "status": status,
@@ -483,8 +597,8 @@ def compile_source_decision(
         "blockers": blockers,
         "claim_boundary": {"allowed": allowed, "blocked": blocked},
         "relevant_owners": owners,
-        "resources": [resource for item in relevant for resource in item["resources"]],
-        "procedures": [procedure for item in relevant for procedure in item["procedures"]],
+        "resources": resources,
+        "procedures": procedures,
     }
     return {
         "kind": KINDS["decision"],
