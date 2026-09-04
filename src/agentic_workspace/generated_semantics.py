@@ -9,6 +9,16 @@ from typing import Any
 
 IR: dict[str, Any] = {
     "api_version": "1.0",
+    "configuration": {
+        "capability_change": "invalidate-only-changed-semantic-revisions",
+        "deferral": "compact-unresolved-owner-identity",
+        "entry": "ordinary-start",
+        "human_decision": "bounded-owner-and-revision-bound",
+        "inference": "explicit-strong-current-facts-before-human-question",
+        "mutation": "typed-owner-operation",
+        "readiness": "current-source-owner-derived",
+        "setup_workflow": False,
+    },
     "correction": {
         "authority": "transport-bound-not-payload-asserted",
         "deduplication": "stable-correction-id-plus-operation-receipt",

@@ -72,6 +72,16 @@
     "owner_consequence": "accepted-typed-owner-handoff",
     "external_adapters": "consumers-and-transports-only"
   },
+  "configuration": {
+    "entry": "ordinary-start",
+    "readiness": "current-source-owner-derived",
+    "inference": "explicit-strong-current-facts-before-human-question",
+    "human_decision": "bounded-owner-and-revision-bound",
+    "mutation": "typed-owner-operation",
+    "deferral": "compact-unresolved-owner-identity",
+    "capability_change": "invalidate-only-changed-semantic-revisions",
+    "setup_workflow": false
+  },
   "operations": [
     {
       "id": "assignment.choose",

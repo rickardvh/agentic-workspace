@@ -68,16 +68,56 @@ def _answers(root: Path) -> dict[str, Any]:
     return {**_json(root / SHARED_ANSWERS), **_json(root / LOCAL_ANSWERS)}
 
 
+def _path_exists(root: Path, relative: str) -> bool:
+    candidate = Path(relative)
+    if candidate.is_absolute() or not candidate.parts or any(part in {"", ".", ".."} for part in candidate.parts):
+        raise ValueError(f"configuration inference path must be canonical and relative: {relative}")
+    path = root.joinpath(*candidate.parts)
+    return path.is_file() or path.is_dir()
+
+
+def _inferred_answer(root: Path, rule_id: str, decision: Mapping[str, Any], facts: Mapping[str, Any]) -> str | None:
+    candidates = decision.get("infer", [])
+    if not isinstance(candidates, list) or any(not isinstance(item, Mapping) for item in candidates):
+        raise ValueError(f"rule {rule_id} decision.infer must be a list of objects")
+    choice_ids = {
+        str(choice.get("id"))
+        for choice in decision.get("choices", [])
+        if isinstance(choice, Mapping) and choice.get("id")
+    }
+    matched: list[str] = []
+    for candidate in candidates:
+        answer = str(candidate.get("answer") or "")
+        condition = candidate.get("when", {})
+        if not answer or answer not in choice_ids or not isinstance(condition, Mapping):
+            raise ValueError(f"rule {rule_id} has an invalid inferred answer")
+        matches = False
+        if set(condition) == {"path_exists"}:
+            matches = _path_exists(root, str(condition["path_exists"]))
+        elif set(condition) == {"fact_equals"} and isinstance(condition.get("fact_equals"), Mapping):
+            comparison = condition["fact_equals"]
+            matches = facts.get(comparison.get("key")) == comparison.get("value")
+        else:
+            raise ValueError(f"rule {rule_id} inference requires one strong path_exists or fact_equals condition")
+        if matches:
+            matched.append(answer)
+    unique = sorted(set(matched))
+    if len(unique) > 1:
+        raise ValueError(f"rule {rule_id} has conflicting current configuration inferences")
+    return unique[0] if unique else None
+
+
 def _contribute(context: Mapping[str, Any]) -> dict[str, Any] | None:
     root = Path(str(context["target"])).resolve()
-    applicable = [rule for rule in _rules(root) if _applicable(rule, context)]
+    applicable = sorted((rule for rule in _rules(root) if _applicable(rule, context)), key=lambda item: str(item["id"]))
     if not applicable:
         return None
     answers = _answers(root)
     facts: dict[str, Any] = {}
     resources: list[dict[str, Any]] = []
     procedures: list[dict[str, Any]] = []
-    decisions: list[dict[str, Any]] = []
+    pending_decisions: list[dict[str, Any]] = []
+    inferred_actions: list[dict[str, Any]] = []
     blocked_claims: list[str] = []
     conflicts: list[str] = []
     for rule in applicable:
@@ -100,7 +140,29 @@ def _contribute(context: Mapping[str, Any]) -> dict[str, Any] | None:
         if isinstance(decision, Mapping) and (
             not isinstance(answer, Mapping) or answer.get("rule_revision") != rule["revision"]
         ):
-            decisions.append(
+            inferred = _inferred_answer(root, rule_id, decision, facts)
+            scope = str(decision.get("scope") or "shared")
+            if inferred:
+                inferred_actions.append(
+                    {
+                        "operation_id": "repository.answer",
+                        "arguments": {
+                            "target": str(root),
+                            "rule_id": rule_id,
+                            "rule_revision": rule["revision"],
+                            "answer": inferred,
+                            "scope": scope,
+                        },
+                        "effects": ["repository-configuration"],
+                        "authority": "repository-inference",
+                        "priority": 1000 - len(inferred_actions),
+                    }
+                )
+                continue
+            choices = list(decision.get("choices", []))
+            if decision.get("required", True) is False:
+                choices = [*choices, {"id": "defer", "label": "Defer for now"}]
+            pending_decisions.append(
                 {
                     "id": rule_id,
                     "detail_revision": rule["revision"],
@@ -108,12 +170,39 @@ def _contribute(context: Mapping[str, Any]) -> dict[str, Any] | None:
                     "authority": str(decision.get("authority") or "maintainer"),
                     "response_operation_id": "repository.answer",
                     "effects": ["repository-configuration"],
-                    "choices": list(decision.get("choices", [])),
+                    "choices": choices,
                     "allow_open": decision.get("allow_open") is True,
                 }
             )
         elif isinstance(answer, Mapping):
-            facts[f"configuration:{rule_id}"] = answer.get("answer")
+            if answer.get("disposition") == "deferred":
+                resume = context.get("configuration")
+                if (
+                    isinstance(decision, Mapping)
+                    and isinstance(resume, Mapping)
+                    and resume.get("resume") in {True, rule_id}
+                ):
+                    choices = list(decision.get("choices", []))
+                    choices.append({"id": "defer", "label": "Defer for now"})
+                    pending_decisions.append(
+                        {
+                            "id": rule_id,
+                            "detail_revision": rule["revision"],
+                            "question": str(decision.get("question") or ""),
+                            "authority": str(decision.get("authority") or "maintainer"),
+                            "response_operation_id": "repository.answer",
+                            "effects": ["repository-configuration"],
+                            "choices": choices,
+                            "allow_open": decision.get("allow_open") is True,
+                        }
+                    )
+                else:
+                    facts[f"configuration:{rule_id}"] = {
+                        "status": "deferred",
+                        "decision_revision": rule["revision"],
+                    }
+            else:
+                facts[f"configuration:{rule_id}"] = answer.get("answer")
     blockers = []
     if conflicts:
         blockers.append(
@@ -124,6 +213,8 @@ def _contribute(context: Mapping[str, Any]) -> dict[str, Any] | None:
                 "recovery": "AGENTS.md keys: " + ", ".join(sorted(set(conflicts))),
             }
         )
+    decisions = [] if inferred_actions else pending_decisions[:1]
+    actions = inferred_actions[:1]
     return {
         "revision": semantic_digest(
             {"rules": [(rule["id"], rule["revision"]) for rule in applicable], "answers": answers}
@@ -132,9 +223,10 @@ def _contribute(context: Mapping[str, Any]) -> dict[str, Any] | None:
         "resources": resources,
         "procedures": procedures,
         "decisions": decisions,
+        "actions": actions,
         "blockers": blockers,
         "claims": {"blocked": sorted(set(blocked_claims))},
-        "terminal": not decisions and not blockers,
+        "terminal": not decisions and not actions and not blockers,
     }
 
 
@@ -147,6 +239,10 @@ def _answer(arguments: dict[str, Any]) -> dict[str, Any]:
     expected_scope = decision.get("scope", "shared") if isinstance(decision, Mapping) else "shared"
     if arguments["scope"] != expected_scope:
         return {"status": "rejected", "effects": [], "value": {"reason": "configuration-scope-mismatch"}}
+    if arguments["answer"] == "defer" and (
+        not isinstance(decision, Mapping) or decision.get("required", True) is not False
+    ):
+        return {"status": "rejected", "effects": [], "value": {"reason": "required-configuration-cannot-defer"}}
     relative = LOCAL_ANSWERS if arguments["scope"] == "local" else SHARED_ANSWERS
     path = root / relative
     answers = _json(path)
@@ -154,6 +250,7 @@ def _answer(arguments: dict[str, Any]) -> dict[str, Any]:
         "rule_revision": arguments["rule_revision"],
         "answer": arguments["answer"],
         "scope": arguments["scope"],
+        "disposition": "deferred" if arguments["answer"] == "defer" else "configured",
     }
     atomic_write_json(path, answers)
     return {
@@ -254,6 +351,7 @@ def repository_module() -> Module:
                     "local_answers": _json(Path(str(context["target"])) / LOCAL_ANSWERS),
                     "task": context.get("task"),
                     "changed_paths": context.get("changed_paths", []),
+                    "configuration": context.get("configuration"),
                 }
             )
             if (Path(str(context["target"])) / "AGENTS.md").is_file()

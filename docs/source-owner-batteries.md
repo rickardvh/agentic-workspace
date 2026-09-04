@@ -20,6 +20,16 @@ or manufacture operation authority. Shared answers are explicit repo-owned
 configuration; local answers remain under ignored `.agentic-workspace/local/`.
 Procedure selection is reference-only and creates no usage record.
 
+Configuration is resolved through ordinary `start`; there is no setup command
+or questionnaire. A decision may declare narrowly typed `path_exists` or
+`fact_equals` inference candidates whose answers are already admitted choices.
+Those strong current facts are applied first through `repository.answer`.
+Only the next irreducible owner question is surfaced. Optional questions add a
+bounded `defer` choice; deferral stores only the rule identity and revision and
+may be revisited with `{"configuration":{"resume":true}}`. A changed rule
+revision invalidates only that answer or deferral, while unrelated settled
+rules stay quiet.
+
 ## Memory
 
 Memory records include stable identity, summary/value, provenance, task/path
