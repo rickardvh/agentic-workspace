@@ -1,0 +1,197 @@
+from __future__ import annotations
+
+import hashlib
+import json
+import re
+from collections.abc import Mapping
+from pathlib import Path
+from typing import Any
+
+from .durability import atomic_write_json
+from .generated_semantics import operation_contract, semantic_digest
+from .modules import Module
+from .operations import Operation
+
+RULE_PATTERN = re.compile(r"<!--\s*agentic-workspace:rule\s*(\{.*?\})\s*-->", re.DOTALL)
+SHARED_ANSWERS = ".agentic-workspace/config.answers.json"
+LOCAL_ANSWERS = ".agentic-workspace/local/configuration.json"
+
+
+def _rules(root: Path) -> list[dict[str, Any]]:
+    path = root / "AGENTS.md"
+    if not path.is_file():
+        return []
+    text = path.read_text(encoding="utf-8")
+    rules: list[dict[str, Any]] = []
+    for match in RULE_PATTERN.finditer(text):
+        value = json.loads(match.group(1))
+        if not isinstance(value, dict) or not value.get("id"):
+            raise ValueError("each scoped AGENTS.md rule requires an id")
+        rule = dict(value)
+        rule["revision"] = semantic_digest({"source": "AGENTS.md", "rule": value})
+        rules.append(rule)
+    return rules
+
+
+def _json(path: Path) -> dict[str, Any]:
+    if not path.is_file():
+        return {}
+    value = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise ValueError(f"{path} must contain an object")
+    return value
+
+
+def _applicable(rule: Mapping[str, Any], context: Mapping[str, Any]) -> bool:
+    applies = rule.get("applies", {})
+    if not isinstance(applies, Mapping):
+        raise ValueError(f"rule {rule.get('id')} applies must be an object")
+    terms = applies.get("task_terms", [])
+    patterns = applies.get("paths", [])
+    task = str(context.get("task") or "").lower()
+    changed = [str(path) for path in context.get("changed_paths", [])]
+    return (
+        (not terms and not patterns)
+        or any(str(term).lower() in task for term in terms)
+        or any(Path(path).match(str(pattern)) for path in changed for pattern in patterns)
+    )
+
+
+def _answers(root: Path) -> dict[str, Any]:
+    return {**_json(root / SHARED_ANSWERS), **_json(root / LOCAL_ANSWERS)}
+
+
+def _contribute(context: Mapping[str, Any]) -> dict[str, Any] | None:
+    root = Path(str(context["target"])).resolve()
+    applicable = [rule for rule in _rules(root) if _applicable(rule, context)]
+    if not applicable:
+        return None
+    answers = _answers(root)
+    facts: dict[str, Any] = {}
+    resources: list[dict[str, Any]] = []
+    procedures: list[dict[str, Any]] = []
+    decisions: list[dict[str, Any]] = []
+    blocked_claims: list[str] = []
+    conflicts: list[str] = []
+    for rule in applicable:
+        rule_id = str(rule["id"])
+        for key, value in dict(rule.get("facts", {})).items():
+            if key in facts and facts[key] != value:
+                conflicts.append(key)
+            facts[key] = value
+        for field, destination in (("resources", resources), ("procedures", procedures)):
+            for raw in rule.get(field, []):
+                item = dict(raw)
+                item.setdefault("revision", rule["revision"])
+                item.setdefault("locator", f"AGENTS.md#{rule_id}")
+                destination.append(item)
+        claims = rule.get("claims", {})
+        if isinstance(claims, Mapping):
+            blocked_claims.extend(str(claim) for claim in claims.get("blocked", []))
+        decision = rule.get("decision")
+        answer = answers.get(rule_id)
+        if isinstance(decision, Mapping) and (
+            not isinstance(answer, Mapping) or answer.get("rule_revision") != rule["revision"]
+        ):
+            decisions.append(
+                {
+                    "id": rule_id,
+                    "detail_revision": rule["revision"],
+                    "question": str(decision.get("question") or ""),
+                    "authority": str(decision.get("authority") or "maintainer"),
+                    "response_operation_id": "repository.answer",
+                    "effects": ["repository-configuration"],
+                    "choices": list(decision.get("choices", [])),
+                    "allow_open": decision.get("allow_open") is True,
+                }
+            )
+        elif isinstance(answer, Mapping):
+            facts[f"configuration:{rule_id}"] = answer.get("answer")
+    blockers = []
+    if conflicts:
+        blockers.append(
+            {
+                "code": "repository-control-conflict",
+                "message": "applicable repository controls disagree on hard facts",
+                "owner": "repository",
+                "recovery": "AGENTS.md keys: " + ", ".join(sorted(set(conflicts))),
+            }
+        )
+    return {
+        "revision": semantic_digest(
+            {"rules": [(rule["id"], rule["revision"]) for rule in applicable], "answers": answers}
+        ),
+        "facts": facts,
+        "resources": resources,
+        "procedures": procedures,
+        "decisions": decisions,
+        "blockers": blockers,
+        "claims": {"blocked": sorted(set(blocked_claims))},
+        "terminal": not decisions and not blockers,
+    }
+
+
+def _answer(arguments: dict[str, Any]) -> dict[str, Any]:
+    root = Path(arguments["target"]).resolve()
+    current = next((rule for rule in _rules(root) if rule["id"] == arguments["rule_id"]), None)
+    if current is None or current["revision"] != arguments["rule_revision"]:
+        return {"status": "rejected", "effects": [], "value": {"reason": "stale-repository-rule"}}
+    decision = current.get("decision", {})
+    expected_scope = decision.get("scope", "shared") if isinstance(decision, Mapping) else "shared"
+    if arguments["scope"] != expected_scope:
+        return {"status": "rejected", "effects": [], "value": {"reason": "configuration-scope-mismatch"}}
+    relative = LOCAL_ANSWERS if arguments["scope"] == "local" else SHARED_ANSWERS
+    path = root / relative
+    answers = _json(path)
+    answers[arguments["rule_id"]] = {
+        "rule_revision": arguments["rule_revision"],
+        "answer": arguments["answer"],
+        "scope": arguments["scope"],
+    }
+    atomic_write_json(path, answers)
+    return {
+        "status": "applied",
+        "effects": ["repository-configuration"],
+        "value": answers[arguments["rule_id"]],
+    }
+
+
+def _recover_answer(arguments: dict[str, Any]) -> dict[str, Any] | None:
+    root = Path(arguments["target"]).resolve()
+    answer = _answers(root).get(arguments["rule_id"])
+    if isinstance(answer, Mapping) and answer.get("rule_revision") == arguments["rule_revision"]:
+        return {"status": "applied", "effects": ["repository-configuration"], "value": dict(answer)}
+    return None
+
+
+def repository_module() -> Module:
+    contract = operation_contract("repository.answer")
+    return Module(
+        name="repository",
+        owns=("repository-configuration",),
+        required_capabilities=("contribution/procedures", "contribution/decisions", "operation/durable-commit"),
+        contribute=_contribute,
+        operations=(
+            Operation(
+                "repository.answer",
+                contract["input"],
+                tuple(contract["effects"]),
+                _answer,
+                _recover_answer,
+            ),
+        ),
+        currentness=lambda context: (
+            semantic_digest(
+                {
+                    "instructions": "sha256:"
+                    + hashlib.sha256((Path(str(context["target"])) / "AGENTS.md").read_bytes()).hexdigest(),
+                    "shared_answers": _json(Path(str(context["target"])) / SHARED_ANSWERS),
+                    "local_answers": _json(Path(str(context["target"])) / LOCAL_ANSWERS),
+                    "task": context.get("task"),
+                    "changed_paths": context.get("changed_paths", []),
+                }
+            )
+            if (Path(str(context["target"])) / "AGENTS.md").is_file()
+            else None
+        ),
+    )

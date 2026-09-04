@@ -1,13 +1,27 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
 import pytest
 
 from agentic_workspace.decision import compile_source_decision, select_decision_detail
-from agentic_workspace.modules import Module, discover_modules, module_contributions, register_module_operations
-from agentic_workspace.operations import Operation, OperationContractError, OperationDispatcher, StaleInvocationError
+from agentic_workspace.generated_semantics import KINDS, semantic_digest
+from agentic_workspace.modules import (
+    Module,
+    admit_modules,
+    discover_modules,
+    module_contributions,
+    register_module_operations,
+)
+from agentic_workspace.operations import (
+    InterruptedOperationError,
+    Operation,
+    OperationContractError,
+    OperationDispatcher,
+    StaleInvocationError,
+)
 
 
 def _planning(state: dict[str, Any]) -> dict[str, Any]:
@@ -160,3 +174,199 @@ def test_irrelevant_modules_are_absent_from_the_decision() -> None:
     )
     contributions = module_contributions([module], context={"task": "direct"})
     assert compile_source_decision(contributions, intent={"task": "direct"})["relevant_owners"] == []
+
+
+def test_capability_first_module_admission_resources_and_removal() -> None:
+    resource = {"id": "guide", "revision": "g1", "locator": "docs/guide.md", "summary": "bounded context"}
+    procedure = {"id": "review", "revision": "p1", "locator": "tools/review.md", "summary": "review procedure"}
+    module = Module(
+        name="example.read",
+        api_version="1.0",
+        owns=("example-domain",),
+        resources=(resource,),
+        procedures=(procedure,),
+        contribute=lambda context: (
+            {"revision": "one", "facts": {"selected": True}, "terminal": True} if context["task"] == "example" else None
+        ),
+    )
+
+    decision = compile_source_decision(module_contributions([module], context={"task": "example"}))
+    assert decision["resources"][0]["owner"] == "example.read"
+    assert decision["procedures"][0]["authority"] == "reference-only"
+    assert decision["status"] == "terminal"
+    assert compile_source_decision(module_contributions([module], context={"task": "other"}))["status"] == "direct"
+    assert compile_source_decision(module_contributions([], context={"task": "example"}))["status"] == "direct"
+
+
+def test_module_compatibility_and_owned_domain_conflicts_fail_closed() -> None:
+    def contribution(_: Mapping[str, Any]) -> dict[str, str]:
+        return {"revision": "one"}
+
+    with pytest.raises(ValueError, match="incompatible module API"):
+        admit_modules([Module("future", contribution, api_version="2.0")])
+    with pytest.raises(ValueError, match="owned domain conflict"):
+        admit_modules(
+            [
+                Module("one", contribution, owns=("shared",)),
+                Module("two", contribution, owns=("shared",)),
+            ]
+        )
+    assert admit_modules([Module("additive", contribution, required_capabilities=("contribution/facts",))])
+    with pytest.raises(ValueError, match="unsupported required module semantics.*upgrade agentic-workspace"):
+        admit_modules([Module("future", contribution, required_capabilities=("future/required",))])
+
+
+def test_interrupted_effect_is_recovered_without_blind_reexecution() -> None:
+    state: dict[str, Any] = {"pending": True, "revision": "one", "calls": 0}
+    journal: dict[str, Any] = {}
+
+    def resolve() -> dict[str, Any]:
+        return compile_source_decision(
+            [
+                {
+                    "owner": "example",
+                    "revision": state["revision"],
+                    "actions": [{"operation_id": "example.apply", "arguments": {}, "effects": ["example-state"]}]
+                    if state["pending"]
+                    else [],
+                    "terminal": not state["pending"],
+                }
+            ]
+        )
+
+    def apply(_: dict[str, Any]) -> dict[str, Any]:
+        state.update(pending=False, revision="two", calls=state["calls"] + 1)
+        return {"status": "applied", "effects": ["example-state"], "value": {"done": True}}
+
+    writes = 0
+
+    def interrupted_writer(_: str, value: dict[str, Any]) -> None:
+        nonlocal writes
+        writes += 1
+        if writes == 2:
+            raise OSError("fault after effect")
+        journal.clear()
+        journal.update(value)
+
+    operation = Operation(
+        "example.apply",
+        {"type": "object", "additionalProperties": False},
+        ("example-state",),
+        apply,
+        lambda _: (
+            {"status": "applied", "effects": ["example-state"], "value": {"done": True}}
+            if not state["pending"]
+            else None
+        ),
+    )
+    first = OperationDispatcher(journal_writer=interrupted_writer)
+    first.register(operation)
+    invocation = resolve()["primary_action"]
+    with pytest.raises(OSError, match="fault after effect"):
+        first.invoke(invocation, resolve_decision=resolve)
+
+    replay = OperationDispatcher(journal_loader=lambda _: journal or None, journal_clearer=lambda _: journal.clear())
+    replay.register(operation)
+    result = replay.invoke(invocation, resolve_decision=resolve)
+    assert result["next_decision"]["status"] == "terminal"
+    assert state["calls"] == 1
+    assert journal == {}
+
+
+def test_interrupted_unrecoverable_effect_blocks_with_exact_owner_route() -> None:
+    decision = compile_source_decision(
+        [
+            {
+                "owner": "external",
+                "revision": "one",
+                "actions": [{"operation_id": "external.run", "arguments": {}, "effects": ["external"]}],
+            }
+        ]
+    )
+    invocation = decision["primary_action"]
+    dispatcher = OperationDispatcher(
+        journal_loader=lambda _: {
+            "phase": "prepared",
+            "request": {
+                "operation_id": "external.run",
+                "arguments": {},
+                "revision": invocation["expected_input_revision"],
+                "source_owner": "external",
+                "decision_response": None,
+            },
+        }
+    )
+    dispatcher.register(Operation("external.run", {"type": "object"}, ("external",), lambda _: {}))
+    with pytest.raises(InterruptedOperationError, match="recover through owner external"):
+        dispatcher.invoke(invocation, resolve_decision=lambda: decision)
+
+
+def test_bounded_decision_answer_is_current_and_admitted_by_its_owner() -> None:
+    state = {"revision": "one", "answer": None}
+
+    def resolve() -> dict[str, Any]:
+        return compile_source_decision(
+            [
+                {
+                    "owner": "configuration",
+                    "revision": state["revision"],
+                    "decisions": [
+                        {
+                            "id": "runner",
+                            "question": "Which runner?",
+                            "authority": "maintainer",
+                            "response_operation_id": "configuration.answer",
+                            "effects": ["configuration-state"],
+                            "choices": [{"id": "local", "label": "Local"}],
+                        }
+                    ]
+                    if state["answer"] is None
+                    else [],
+                    "facts": {"answer": state["answer"]},
+                    "terminal": state["answer"] is not None,
+                }
+            ]
+        )
+
+    request = resolve()["decision_request"]
+    response = {
+        "id": request["id"],
+        "owner": request["owner"],
+        "revision": request["revision"],
+        "authority": request["authority"],
+        "answer": "local",
+    }
+    invocation = {
+        "kind": KINDS["invocation"],
+        "operation_id": "configuration.answer",
+        "arguments": {"answer": "local"},
+        "effects": ["configuration-state"],
+        "expected_input_revision": resolve()["input_revision"],
+        "source_owner": "configuration",
+        "decision_response": response,
+        "idempotency_key": semantic_digest({"response": response, "input_revision": resolve()["input_revision"]}),
+    }
+    operation = Operation(
+        "configuration.answer",
+        {
+            "type": "object",
+            "properties": {"answer": {"type": "string"}},
+            "required": ["answer"],
+            "additionalProperties": False,
+        },
+        ("configuration-state",),
+        lambda values: (
+            state.update(revision="two", answer=values["answer"])
+            or {"status": "applied", "effects": ["configuration-state"], "value": values}
+        ),
+    )
+    dispatcher = OperationDispatcher()
+    dispatcher.register(operation)
+    result = dispatcher.invoke(invocation, resolve_decision=resolve)
+    assert result["next_decision"]["status"] == "terminal"
+
+    state.update(revision="three", answer=None)
+    stale_dispatcher = OperationDispatcher()
+    stale_dispatcher.register(operation)
+    with pytest.raises(StaleInvocationError, match="source state changed"):
+        stale_dispatcher.invoke(invocation, resolve_decision=resolve)

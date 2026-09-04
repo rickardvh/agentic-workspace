@@ -34,6 +34,8 @@ workspace = "agentic_workspace.builtin_modules:workspace_module"
 planning = "agentic_workspace.builtin_modules:planning_module"
 memory = "agentic_workspace.builtin_modules:memory_module"
 verification = "agentic_workspace.builtin_modules:verification_module"
+repository = "agentic_workspace.repository_controls:repository_module"
+assignment = "agentic_workspace.orchestration:assignment_module"
 
 [dependency-groups]
 dev = ["build", "pytest", "ruff", "ty"]

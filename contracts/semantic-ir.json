@@ -1,0 +1,403 @@
+{
+  "schema_version": 1,
+  "api_version": "1.0",
+  "package_version": "1.0.0",
+  "kinds": {
+    "contribution": "agentic-workspace/module-contribution/v1",
+    "decision": "agentic-workspace/operating-decision/v1",
+    "decision_view": "agentic-workspace/decision-view/v1",
+    "invocation": "agentic-workspace/operation-invocation/v1",
+    "result": "agentic-workspace/operation-result/v1"
+  },
+  "decision": {
+    "statuses": ["direct", "actionable", "decision", "blocked", "terminal"],
+    "action_order": ["priority:descending", "owner:ascending", "operation_id:ascending"],
+    "contribution_dimensions": [
+      "facts",
+      "resources",
+      "procedures",
+      "decisions",
+      "blockers",
+      "actions",
+      "claims",
+      "terminal"
+    ],
+    "conflict_policy": "equal-top-priority-actions-block",
+    "claim_policy": "blocked-overrides-allowed"
+  },
+  "module": {
+    "compatibility": "1.x",
+    "capabilities": [
+      "contribution/facts",
+      "contribution/resources",
+      "contribution/procedures",
+      "contribution/decisions",
+      "operation/typed-result",
+      "operation/durable-commit",
+      "state/owned-paths"
+    ],
+    "optional_dimensions": ["facts", "resources", "procedures", "decisions", "operations"],
+    "procedure_authority": "reference-only",
+    "ownership_policy": "exclusive-owned-domain"
+  },
+  "operation": {
+    "result_statuses": ["applied", "unchanged", "rejected"],
+    "currentness": "exact-input-revision",
+    "effect_policy": "result-may-only-narrow-declared-effects",
+    "replay": "same-idempotency-key-and-request",
+    "commit": "owner-serialized-durable-journal",
+    "ownership": "atomic-acquire-or-explicit-transfer"
+  },
+  "identity": {
+    "encoding": "canonical-json-utf8-nfc-ascii-escaped",
+    "numbers": "safe-integers-only",
+    "object_keys": "unicode-code-point-order",
+    "digest": "sha256",
+    "additive_unknown_fields": "ignored-unless-required",
+    "unknown_required_semantics": "fail-closed-with-upgrade-route"
+  },
+  "reuse": {
+    "scope": "source-owner-conclusion",
+    "currentness": "owner-revision-plus-exact-dependencies",
+    "transcripts": false,
+    "volatile-ranking": false
+  },
+  "operations": [
+    {
+      "id": "assignment.choose",
+      "owner": "assignment",
+      "effects": ["assignment-state"],
+      "binding": "assignment.choose",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "assignment_revision": {"type": "string", "minLength": 1},
+          "target_id": {"type": "string", "minLength": 1}
+        },
+        "required": ["target", "assignment_revision", "target_id"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "assignment.record-evidence",
+      "owner": "assignment",
+      "effects": ["target-evidence"],
+      "binding": "assignment.record_evidence",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "record": {"type": "object"}
+        },
+        "required": ["target", "record"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "delegation.dispatch",
+      "owner": "assignment",
+      "effects": ["delegation-attempt"],
+      "binding": "delegation.dispatch",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "assignment_revision": {"type": "string", "minLength": 1},
+          "target_id": {"type": "string", "minLength": 1},
+          "attempt_id": {"type": "string", "minLength": 1},
+          "subject_revision": {"type": "string", "minLength": 1},
+          "scope": {"type": "array", "items": {"type": "string"}},
+          "stops": {"type": "array", "items": {"type": "string"}},
+          "transport": {"type": "object"},
+          "transport_authority": {"enum": ["automatic", "manual"]}
+        },
+        "required": ["target", "assignment_revision", "target_id", "attempt_id", "subject_revision", "scope", "stops", "transport", "transport_authority"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "delegation.return",
+      "owner": "assignment",
+      "effects": ["delegation-attempt"],
+      "binding": "delegation.return",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "attempt_id": {"type": "string", "minLength": 1},
+          "assignment_revision": {"type": "string", "minLength": 1},
+          "delivery": {"enum": ["already-materialized", "unapplied-delta"]},
+          "changed_paths": {"type": "array", "maxItems": 50, "items": {"type": "string", "minLength": 1}},
+          "result": {"type": "object"},
+          "artifacts": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "type": "object",
+              "properties": {
+                "path": {"type": "string", "minLength": 1},
+                "before_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                "after_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                "content": {"type": "string", "maxLength": 1000000}
+              },
+              "required": ["path", "before_sha256", "after_sha256", "content"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["target", "attempt_id", "assignment_revision", "delivery", "changed_paths", "result"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "delegation.integrate",
+      "owner": "assignment",
+      "effects": ["delegation-attempt", "workspace-managed-files"],
+      "binding": "delegation.integrate",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "attempt_id": {"type": "string", "minLength": 1},
+          "assignment_revision": {"type": "string", "minLength": 1}
+        },
+        "required": ["target", "attempt_id", "assignment_revision"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "repository.answer",
+      "owner": "repository",
+      "effects": ["repository-configuration"],
+      "binding": "repository.answer",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "rule_id": {"type": "string", "minLength": 1},
+          "rule_revision": {"type": "string", "minLength": 1},
+          "answer": {"type": "string", "minLength": 1},
+          "scope": {"enum": ["shared", "local"]}
+        },
+        "required": ["target", "rule_id", "rule_revision", "answer", "scope"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "workspace.transfer-ownership",
+      "owner": "workspace",
+      "effects": ["workspace-ownership"],
+      "binding": "workspace.transfer_ownership",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "path": {"type": "string", "minLength": 1},
+          "from_owner": {"type": "string", "minLength": 1},
+          "to_owner": {"type": "string", "minLength": 1},
+          "expected_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "classification": {"enum": ["package-residue", "durable-module-state", "local-diagnostic"]}
+        },
+        "required": ["target", "path", "from_owner", "to_owner", "expected_sha256", "classification"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "workspace.remove",
+      "owner": "workspace",
+      "effects": ["workspace-managed-files"],
+      "binding": "workspace.remove",
+      "input": {
+        "type": "object",
+        "properties": {"target": {"type": "string", "minLength": 1}},
+        "required": ["target"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "workspace.remove-legacy",
+      "owner": "workspace",
+      "effects": ["workspace-managed-files"],
+      "binding": "workspace.remove_legacy",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "confirm": {"const": "remove-managed-v0"}
+        },
+        "required": ["target", "confirm"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "planning.set",
+      "owner": "planning",
+      "effects": ["planning-state"],
+      "binding": "planning.set",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "item": {"type": "string", "minLength": 1},
+          "status": {"enum": ["in-progress", "blocked", "in-flight", "returned", "integration-pending", "residual", "ready-to-complete", "complete"]},
+          "outcome": {"type": "string"},
+          "scope": {"type": "array", "items": {"type": "string"}},
+          "constraints": {"type": "array", "items": {"type": "string"}},
+          "dependencies": {"type": "array", "items": {"type": "string"}},
+          "stops": {"type": "array", "items": {"type": "string"}},
+          "proof_claims": {"type": "array", "items": {"type": "string"}}
+        },
+        "required": ["target", "item", "status"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "planning.reconcile",
+      "owner": "planning",
+      "effects": ["planning-state"],
+      "binding": "planning.reconcile",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "item": {"type": "string", "minLength": 1},
+          "expected_subject_revision": {"type": "string", "minLength": 1},
+          "disposition": {"enum": ["integrated", "revise-scope", "residual"]}
+        },
+        "required": ["target", "item", "expected_subject_revision", "disposition"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "planning.record-attempt",
+      "owner": "planning",
+      "effects": ["planning-state"],
+      "binding": "planning.record_attempt",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "item": {"type": "string", "minLength": 1},
+          "expected_subject_revision": {"type": "string", "minLength": 1},
+          "attempt_id": {"type": "string", "minLength": 1},
+          "target_id": {"type": "string", "minLength": 1},
+          "status": {"enum": ["dispatched", "in-flight", "returned", "failed"]},
+          "result_revision": {"type": "string"}
+        },
+        "required": ["target", "item", "expected_subject_revision", "attempt_id", "target_id", "status"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "planning.complete",
+      "owner": "planning",
+      "effects": ["planning-state"],
+      "binding": "planning.complete",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "item": {"type": "string", "minLength": 1}
+        },
+        "required": ["target", "item"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "memory.read",
+      "owner": "memory",
+      "effects": [],
+      "binding": "memory.read",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "key": {"type": "string", "minLength": 1}
+        },
+        "required": ["target", "key"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "memory.record",
+      "owner": "memory",
+      "effects": ["memory-state"],
+      "binding": "memory.record",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "key": {"type": "string", "minLength": 1},
+          "value": {},
+          "summary": {"type": "string"},
+          "provenance": {"type": "string"},
+          "task_terms": {"type": "array", "items": {"type": "string"}},
+          "paths": {"type": "array", "items": {"type": "string"}},
+          "dependency_revision": {"type": "string"},
+          "kind": {"enum": ["advisory", "workaround"]}
+        },
+        "required": ["target", "key", "value"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "memory.disposition",
+      "owner": "memory",
+      "effects": ["memory-state"],
+      "binding": "memory.disposition",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "key": {"type": "string", "minLength": 1},
+          "disposition": {"enum": ["active", "promoted", "retired"]},
+          "stronger_owner": {"type": "string"}
+        },
+        "required": ["target", "key", "disposition"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "verification.run",
+      "owner": "verification",
+      "effects": ["verification-state", "process"],
+      "binding": "verification.run",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "subject_revision": {"type": "string", "minLength": 1},
+          "strategy_revision": {"type": "string", "minLength": 1},
+          "route_id": {"type": "string", "minLength": 1},
+          "commands": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {"type": "string", "minLength": 1},
+              "minItems": 1
+            }
+          }
+        },
+        "required": ["target", "subject_revision", "strategy_revision", "route_id", "commands"],
+        "additionalProperties": false
+      }
+    }
+  ],
+  "primitive_inventory": {
+    "python": [
+      "argparse CLI bootstrap",
+      "filesystem persistence",
+      "Python entry-point discovery",
+      "process execution",
+      "JSON Schema validation",
+      "typed handler dispatch and persistence callbacks"
+    ],
+    "typescript": [
+      "ES module bootstrap",
+      "host-supplied module registration",
+      "host-supplied persistence and process bindings",
+      "typed handler dispatch and schema validation"
+    ]
+  }
+}

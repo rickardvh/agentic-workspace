@@ -7,9 +7,10 @@ source checkout.
 
 The gate proves:
 
-- the artifacts contain one runtime and no generated host state, package
+- the artifacts contain exactly one Python and one TypeScript package and no generated host state, package
   workspace, or checked-in `.agentic-workspace` payload;
-- the CLI and Python API compile the same decision from the same source input;
+- the Python, TypeScript, and JSON CLI projections compile the same decision from
+  the same semantic input in isolated consumer environments;
 - direct work is stateless;
 - local maintainer session logging is absent by default and captured only after
   explicit opt-in;
@@ -21,6 +22,11 @@ The gate proves:
   the parent's ordinary proof/completion path through the same entry-point seam
   as first-party modules;
 - operation results carry the next decision, including the terminal answer; and
+- bounded finite/open judgments are revision-bound and admitted by their owner;
+- same-idempotency two-process races, interrupted effect/receipt boundaries, and
+  partial ownership multi-writes recover without duplicate execution;
+- unknown-path collisions, explicit transfer, forged manifests, traversal,
+  absolute paths, and link escapes preserve content or fail closed; and
 - uninstall removes the executable without deleting repository-owned content.
 
 ## Contraction measurements

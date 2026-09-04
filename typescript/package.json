@@ -1,0 +1,23 @@
+{
+  "description": "Generated TypeScript/JavaScript projection of the Agentic Workspace semantic contract.",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "semantic-ir.json"
+  ],
+  "license": "MIT",
+  "main": "dist/index.js",
+  "name": "@rickardvh/agentic-workspace",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rickardvh/agentic-workspace.git"
+  },
+  "type": "module",
+  "types": "dist/index.d.ts",
+  "version": "1.0.0"
+}

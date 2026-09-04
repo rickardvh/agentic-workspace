@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "scenarios": [
+    {"id": "direct", "intent": {"task": "inspect an unrelated file"}, "expected_status": "direct", "live": true},
+    {"id": "typed-operation", "intent": {"memory": {"key": "choice", "value": "small"}}, "expected_status": "actionable", "live": true},
+    {"id": "partial-client", "intent": {"planning": {"operation": "set", "item": "bounded", "status": "in-progress"}}, "expected_status": "actionable"},
+    {"id": "module-extension", "intent": {"task": "external fixture"}, "expected_status": "direct"}
+  ]
+}
