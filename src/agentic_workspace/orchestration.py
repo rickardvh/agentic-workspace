@@ -17,7 +17,7 @@ from .operations import Operation
 
 POLICY = ".agentic-workspace/local/delegation.json"
 RETIRED_POLICY = ".agentic-workspace/config.local.toml"
-RETIRED_RECONCILIATION = "retired_source_reconciliation"
+RETIRED_RECONCILIATION = ".agentic-workspace/local/delegation-reconciliation.json"
 EVIDENCE = ".agentic-workspace/local/target-evidence.json"
 ATTEMPTS = ".agentic-workspace/local/delegation-attempts.json"
 PLANNING = ".agentic-workspace/planning.json"
@@ -37,6 +37,26 @@ def _revision(path: Path) -> str:
     if not path.is_file():
         return "absent"
     return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _stable_snapshot(path: Path) -> tuple[bytes | None, str, dict[str, int] | None]:
+    if not path.is_file():
+        return None, "absent", None
+    before = _source_observation(path)
+    content = path.read_bytes()
+    after = _source_observation(path)
+    if before != after or len(content) != after["size"]:
+        raise OSError(f"source changed while it was being read: {path}")
+    return content, "sha256:" + hashlib.sha256(content).hexdigest(), after
+
+
+def _json_content(path: Path, content: bytes | None) -> dict[str, Any]:
+    if content is None:
+        return {}
+    value = json.loads(content.decode("utf-8"))
+    if not isinstance(value, dict):
+        raise ValueError(f"{path} must contain an object")
+    return value
 
 
 def assignment_evidence_current(root: Path, owner_ref: str, owner_revision: str, subject: Mapping[str, Any]) -> bool:
@@ -88,37 +108,47 @@ def _write_local(path: Path, value: dict[str, Any], *, kind: str) -> None:
         atomic_create_json(path, value)
 
 
-def _policy_without_reconciliation(policy: Mapping[str, Any]) -> dict[str, Any]:
-    value = dict(policy)
-    value.pop(RETIRED_RECONCILIATION, None)
-    return value
-
-
 def _represented_policy_revision(policy: Mapping[str, Any]) -> str:
-    value = _policy_without_reconciliation(policy)
+    value = dict(policy)
     value["kind"] = "delegation-policy"
     value["schema_version"] = 1
     value.pop("choice", None)
     return semantic_digest(value)
 
 
-def _reconciliation_receipt(policy: Mapping[str, Any], *, retired_revision: str, disposition: str) -> dict[str, Any]:
+def _source_observation(path: Path) -> dict[str, int]:
+    stat = path.stat()
+    return {"size": stat.st_size, "mtime_ns": stat.st_mtime_ns, "ctime_ns": stat.st_ctime_ns}
+
+
+def _reconciliation_receipt(
+    policy: Mapping[str, Any],
+    *,
+    retired_revision: str,
+    disposition: str,
+    source_observation: Mapping[str, int],
+) -> dict[str, Any]:
     return {
         "source": RETIRED_POLICY,
         "retired_revision": retired_revision,
         "represented_policy_revision": _represented_policy_revision(policy),
         "disposition": disposition,
+        "source_observation": dict(source_observation),
     }
 
 
-def _retired_revision_reconciled(current: Mapping[str, Any], *, retired_revision: str) -> bool:
-    receipt = current.get(RETIRED_RECONCILIATION)
+def _retired_revision_reconciled(root: Path, *, retired_revision: str | None = None) -> bool:
+    retired_path = root / RETIRED_POLICY
+    if not retired_path.is_file():
+        return False
+    receipt = _json(root / RETIRED_RECONCILIATION)
     return (
-        isinstance(receipt, Mapping)
+        receipt.get("kind") == "delegation-reconciliation"
+        and receipt.get("schema_version") == 1
         and receipt.get("source") == RETIRED_POLICY
-        and receipt.get("retired_revision") == retired_revision
-        and receipt.get("represented_policy_revision") == _represented_policy_revision(current)
+        and (retired_revision is None or receipt.get("retired_revision") == retired_revision)
         and receipt.get("disposition") in {"transferred", "already-represented"}
+        and receipt.get("source_observation") == _source_observation(retired_path)
     )
 
 
@@ -126,8 +156,10 @@ def _unresolved_retired_revision(root: Path) -> str | None:
     retired_path = root / RETIRED_POLICY
     if not retired_path.is_file():
         return None
+    if _retired_revision_reconciled(root):
+        return None
     revision = _revision(retired_path)
-    return None if _retired_revision_reconciled(_json(root / POLICY), retired_revision=revision) else revision
+    return revision
 
 
 def _retired_transport(raw: Any, *, target_id: str) -> tuple[dict[str, Any] | None, str | None]:
@@ -158,12 +190,13 @@ def _retired_transport(raw: Any, *, target_id: str) -> tuple[dict[str, Any] | No
     }, None
 
 
-def _retired_policy_patch(root: Path) -> tuple[dict[str, Any], list[str]]:
+def _retired_policy_patch(root: Path, *, content: bytes | None = None) -> tuple[dict[str, Any], list[str]]:
     path = root / RETIRED_POLICY
     if not path.is_file():
         return {}, []
     try:
-        raw = tomllib.loads(path.read_text(encoding="utf-8"))
+        source = path.read_bytes() if content is None else content
+        raw = tomllib.loads(source.decode("utf-8"))
     except (OSError, UnicodeError, tomllib.TOMLDecodeError) as error:
         return {}, [f"the recognized retired delegation source cannot be parsed: {error}"]
     delegation = raw.get("delegation", {})
@@ -296,11 +329,24 @@ def _retired_transition(root: Path) -> dict[str, Any] | None:
     retired_path = root / RETIRED_POLICY
     if not retired_path.is_file():
         return None
-    retired_revision = _revision(retired_path)
     current = _json(root / POLICY)
-    if _retired_revision_reconciled(current, retired_revision=retired_revision):
+    if _retired_revision_reconciled(root):
         return None
-    patch, errors = _retired_policy_patch(root)
+    try:
+        retired_content, retired_revision, _observation = _stable_snapshot(retired_path)
+    except OSError as error:
+        return {
+            "revision": semantic_digest({"retired_source": "unstable", "message": str(error)}),
+            "blockers": [
+                {
+                    "code": "retired-delegation-source-changing",
+                    "message": str(error),
+                    "recovery": "retry after the retired delegation source is stable",
+                }
+            ],
+            "claims": {"blocked": ["complete"]},
+        }
+    patch, errors = _retired_policy_patch(root, content=retired_content)
     revision = semantic_digest(
         {
             "retired_revision": retired_revision,
@@ -335,8 +381,7 @@ def _retired_transition(root: Path) -> dict[str, Any] | None:
             ],
             "claims": {"blocked": ["complete"]},
         }
-    represented_current = _policy_without_reconciliation(current)
-    merged, conflicts = _merge_retired_patch(represented_current, patch)
+    merged, conflicts = _merge_retired_patch(current, patch)
     if conflicts:
         return {
             "revision": revision,
@@ -350,7 +395,7 @@ def _retired_transition(root: Path) -> dict[str, Any] | None:
             ],
             "claims": {"blocked": ["complete"]},
         }
-    disposition = "already-represented" if represented_current == merged else "transferred"
+    disposition = "already-represented" if current == merged else "transferred"
     return {
         "revision": revision,
         "facts": {"retired_delegation": {"disposition": f"{disposition}-reconciliation-required"}},
@@ -362,6 +407,7 @@ def _retired_transition(root: Path) -> dict[str, Any] | None:
                     "retired_revision": retired_revision,
                     "current_revision": _revision(root / POLICY),
                     "patch": patch,
+                    "disposition": disposition,
                 },
                 "effects": ["assignment-state"],
                 "authority": "assignment-inference",
@@ -691,28 +737,40 @@ def _transfer_retired_policy(arguments: dict[str, Any]) -> dict[str, Any]:
     root = Path(arguments["target"]).resolve()
     retired_path = root / RETIRED_POLICY
     current_path = root / POLICY
-    patch, errors = _retired_policy_patch(root)
+    try:
+        retired_content, retired_revision, retired_observation = _stable_snapshot(retired_path)
+        current_content, current_revision, current_observation = _stable_snapshot(current_path)
+    except OSError:
+        return {"status": "rejected", "effects": [], "value": {"reason": "unstable-delegation-source"}}
+    patch, errors = _retired_policy_patch(root, content=retired_content)
     if (
         errors
         or patch != arguments["patch"]
-        or _revision(retired_path) != arguments["retired_revision"]
-        or _revision(current_path) != arguments["current_revision"]
+        or retired_revision != arguments["retired_revision"]
+        or current_revision != arguments["current_revision"]
     ):
         return {"status": "rejected", "effects": [], "value": {"reason": "stale-retired-delegation-source"}}
-    current = _json(current_path)
+    current = _json_content(current_path, current_content)
     if current and (current.get("kind") != "delegation-policy" or current.get("schema_version") != 1):
         return {"status": "rejected", "effects": [], "value": {"reason": "unknown-current-assignment-state"}}
-    represented_current = _policy_without_reconciliation(current)
-    merged, conflicts = _merge_retired_patch(represented_current, patch)
+    merged, conflicts = _merge_retired_patch(current, patch)
     if conflicts:
         return {"status": "rejected", "effects": [], "value": {"reason": "retired-delegation-conflict"}}
-    disposition = "already-represented" if merged == represented_current else "transferred"
-    merged[RETIRED_RECONCILIATION] = _reconciliation_receipt(
+    disposition = "already-represented" if merged == current else "transferred"
+    if arguments["disposition"] != disposition:
+        return {"status": "rejected", "effects": [], "value": {"reason": "retired-disposition-mismatch"}}
+    if merged != current:
+        if current_observation != (_source_observation(current_path) if current_path.is_file() else None):
+            return {"status": "rejected", "effects": [], "value": {"reason": "stale-current-assignment-state"}}
+        _write_local(current_path, merged, kind="delegation-policy")
+    assert retired_observation is not None
+    receipt = _reconciliation_receipt(
         merged,
         retired_revision=arguments["retired_revision"],
         disposition=disposition,
+        source_observation=retired_observation,
     )
-    _write_local(current_path, merged, kind="delegation-policy")
+    _write_local(root / RETIRED_RECONCILIATION, receipt, kind="delegation-reconciliation")
     return {
         "status": "applied",
         "effects": ["assignment-state"],
@@ -922,20 +980,39 @@ def _recover_choose(arguments: dict[str, Any]) -> dict[str, Any] | None:
 
 def _recover_transfer_retired_policy(arguments: dict[str, Any]) -> dict[str, Any] | None:
     root = Path(arguments["target"]).resolve()
-    if _revision(root / RETIRED_POLICY) != arguments["retired_revision"]:
+    retired_path = root / RETIRED_POLICY
+    try:
+        retired_content, retired_revision, retired_observation = _stable_snapshot(retired_path)
+        current_content, _current_revision, _current_observation = _stable_snapshot(root / POLICY)
+    except OSError:
         return None
-    patch, errors = _retired_policy_patch(root)
+    if retired_revision != arguments["retired_revision"]:
+        return None
+    patch, errors = _retired_policy_patch(root, content=retired_content)
     if errors or patch != arguments["patch"]:
         return None
-    current = _json(root / POLICY)
-    if not _retired_revision_reconciled(current, retired_revision=arguments["retired_revision"]):
+    current = _json_content(root / POLICY, current_content)
+    merged, conflicts = _merge_retired_patch(current, patch)
+    if conflicts or merged != current:
         return None
-    receipt = current[RETIRED_RECONCILIATION]
+    receipt = _json(root / RETIRED_RECONCILIATION)
+    if (
+        not _retired_revision_reconciled(root, retired_revision=arguments["retired_revision"])
+        or receipt.get("disposition") != arguments["disposition"]
+    ):
+        assert retired_observation is not None
+        receipt = _reconciliation_receipt(
+            current,
+            retired_revision=arguments["retired_revision"],
+            disposition=arguments["disposition"],
+            source_observation=retired_observation,
+        )
+        _write_local(root / RETIRED_RECONCILIATION, receipt, kind="delegation-reconciliation")
     return {
         "status": "applied",
         "effects": ["assignment-state"],
         "value": {
-            "disposition": receipt["disposition"],
+            "disposition": arguments["disposition"],
             "retired_revision": arguments["retired_revision"],
         },
     }
@@ -1084,6 +1161,7 @@ def assignment_module() -> Module:
             semantic_digest(
                 {
                     "policy": _json(Path(str(context["target"])) / POLICY),
+                    "retired_reconciliation": _json(Path(str(context["target"])) / RETIRED_RECONCILIATION),
                     "unresolved_retired_policy_revision": _unresolved_retired_revision(Path(str(context["target"]))),
                     "evidence": _json(Path(str(context["target"])) / EVIDENCE),
                     "attempts": _json(Path(str(context["target"])) / ATTEMPTS),

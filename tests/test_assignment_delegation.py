@@ -121,7 +121,8 @@ def test_retired_canonical_delegation_transfers_through_assignment_and_preserves
     assert current["current_target"] == "local"
     assert current["human_override_policy"] == "explicit-only"
     assert current["override_owner"] == "human"
-    receipt = current["retired_source_reconciliation"]
+    receipt_path = tmp_path / ".agentic-workspace/local/delegation-reconciliation.json"
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
     assert receipt["retired_revision"] == action["arguments"]["retired_revision"]
     assert receipt["disposition"] == "transferred"
     assert current["targets"] == [
@@ -134,18 +135,29 @@ def test_retired_canonical_delegation_transfers_through_assignment_and_preserves
     ]
 
     current["choice"] = "local"
+    current["assignment_policy"] = "advisory-best-fit"
     _write(current_path, current)
     before = current_path.read_bytes()
+    retired_path = tmp_path / ".agentic-workspace/config.local.toml"
+    original_read_bytes = Path.read_bytes
+
+    def reject_retired_read(path: Path) -> bytes:
+        if path.resolve() == retired_path.resolve():
+            pytest.fail("reconciled retired TOML bytes were reread")
+        return original_read_bytes(path)
+
     monkeypatch.setattr(
         orchestration.tomllib,
         "loads",
         lambda *_args, **_kwargs: pytest.fail("reconciled retired TOML was reparsed"),
     )
+    monkeypatch.setattr(Path, "read_bytes", reject_retired_read)
     represented = Workspace(tmp_path, modules=[assignment_module()]).start(task="ordinary work")
     assert represented["status"] == "terminal"
     assert represented["primary_action"] is None
+    assert represented["context"]["assignment"]["assignment"]["authority"] == "advisory-best-fit"
     assert current_path.read_bytes() == before
-    assert (tmp_path / ".agentic-workspace/config.local.toml").read_bytes() == retired
+    assert original_read_bytes(retired_path) == retired
 
 
 def test_changed_retired_revision_is_reconciled_once_without_duplicate_policy(tmp_path: Path) -> None:
@@ -154,7 +166,9 @@ def test_changed_retired_revision_is_reconciled_once_without_duplicate_policy(tm
     first = workspace.start(task="ordinary work")["primary_action"]
     workspace.invoke(first)
     current_path = tmp_path / ".agentic-workspace/local/delegation.json"
-    before = json.loads(current_path.read_text(encoding="utf-8"))
+    receipt_path = tmp_path / ".agentic-workspace/local/delegation-reconciliation.json"
+    before = json.loads(receipt_path.read_text(encoding="utf-8"))
+    targets_before = json.loads(current_path.read_text(encoding="utf-8"))["targets"]
 
     retired_path = tmp_path / ".agentic-workspace/config.local.toml"
     retired_path.write_bytes(original + b"# same canonical intent, new retired revision\r\n")
@@ -164,15 +178,86 @@ def test_changed_retired_revision_is_reconciled_once_without_duplicate_policy(tm
     assert reconciled["status"] == "applied"
     assert reconciled["value"]["disposition"] == "already-represented"
 
-    after = json.loads(current_path.read_text(encoding="utf-8"))
-    assert after["targets"] == before["targets"]
-    assert (
-        after["retired_source_reconciliation"]["retired_revision"]
-        != before["retired_source_reconciliation"]["retired_revision"]
-    )
+    after = json.loads(receipt_path.read_text(encoding="utf-8"))
+    assert json.loads(current_path.read_text(encoding="utf-8"))["targets"] == targets_before
+    assert after["retired_revision"] != before["retired_revision"]
     settled = Workspace(tmp_path, modules=[assignment_module()]).start(task="ordinary work")
     assert settled["status"] == "terminal"
     assert settled["primary_action"] is None
+
+
+def test_reconciled_retired_policy_does_not_reassert_in_fresh_process(tmp_path: Path) -> None:
+    _retired_policy(tmp_path)
+    workspace = Workspace(tmp_path, modules=[assignment_module()])
+    workspace.invoke(workspace.start(task="ordinary work")["primary_action"])
+    current_path = tmp_path / ".agentic-workspace/local/delegation.json"
+    current = json.loads(current_path.read_text(encoding="utf-8"))
+    current["assignment_policy"] = "advisory-best-fit"
+    _write(current_path, current)
+
+    script = (
+        "import json,sys; from pathlib import Path; "
+        "from agentic_workspace.orchestration import assignment_module; "
+        "from agentic_workspace.workspace import Workspace; "
+        "decision=Workspace(Path(sys.argv[1]),modules=[assignment_module()]).start(task='ordinary work'); "
+        "print(json.dumps(decision))"
+    )
+    completed = subprocess.run(
+        [sys.executable, "-c", script, str(tmp_path)],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    decision = json.loads(completed.stdout)
+    assert decision["status"] == "terminal"
+    assert decision["context"]["assignment"]["assignment"]["authority"] == "advisory-best-fit"
+
+
+@pytest.mark.parametrize("already_represented", [False, True])
+@pytest.mark.parametrize("after_receipt", [False, True])
+def test_retired_reconciliation_recovers_interruption_before_receipt(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    already_represented: bool,
+    after_receipt: bool,
+) -> None:
+    _retired_policy(tmp_path)
+    workspace = Workspace(tmp_path, modules=[assignment_module()])
+    if already_represented:
+        workspace.invoke(workspace.start(task="ordinary work")["primary_action"])
+        (tmp_path / ".agentic-workspace/local/delegation-reconciliation.json").unlink()
+    action = Workspace(tmp_path, modules=[assignment_module()]).start(task="ordinary work")["primary_action"]
+    expected = "already-represented" if already_represented else "transferred"
+    assert action["arguments"]["disposition"] == expected
+
+    original_write = orchestration._write_local
+
+    def interrupt_receipt(path: Path, value: dict[str, object], *, kind: str) -> None:
+        if kind == "delegation-reconciliation":
+            if after_receipt:
+                original_write(path, value, kind=kind)
+            raise OSError("interrupted before reconciliation receipt")
+        original_write(path, value, kind=kind)
+
+    monkeypatch.setattr(orchestration, "_write_local", interrupt_receipt)
+    with pytest.raises(OSError, match="interrupted before reconciliation receipt"):
+        Workspace(tmp_path, modules=[assignment_module()]).invoke(action)
+    monkeypatch.setattr(orchestration, "_write_local", original_write)
+
+    if not already_represented and not after_receipt:
+        replacement = Workspace(tmp_path, modules=[assignment_module()])
+        replacement_action = replacement.start(task="ordinary work")["primary_action"]
+        assert replacement_action["arguments"]["disposition"] == "already-represented"
+        replacement.invoke(replacement_action)
+
+    recovered = Workspace(tmp_path, modules=[assignment_module()]).invoke(action)
+    assert recovered["status"] == "applied"
+    assert recovered["value"]["disposition"] == expected
+    receipt = json.loads(
+        (tmp_path / ".agentic-workspace/local/delegation-reconciliation.json").read_text(encoding="utf-8")
+    )
+    assert receipt["disposition"] == expected
+    assert recovered["next_decision"]["status"] == "terminal"
 
 
 def test_retired_delegation_conflict_and_ambiguous_transport_fail_closed(tmp_path: Path) -> None:

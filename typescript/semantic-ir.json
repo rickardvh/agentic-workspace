@@ -113,6 +113,12 @@
             "minLength": 1,
             "type": "string"
           },
+          "disposition": {
+            "enum": [
+              "transferred",
+              "already-represented"
+            ]
+          },
           "patch": {
             "type": "object"
           },
@@ -129,7 +135,8 @@
           "target",
           "retired_revision",
           "current_revision",
-          "patch"
+          "patch",
+          "disposition"
         ],
         "type": "object"
       },

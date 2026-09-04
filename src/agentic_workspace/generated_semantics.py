@@ -92,11 +92,12 @@ IR: dict[str, Any] = {
                 "additionalProperties": False,
                 "properties": {
                     "current_revision": {"minLength": 1, "type": "string"},
+                    "disposition": {"enum": ["transferred", "already-represented"]},
                     "patch": {"type": "object"},
                     "retired_revision": {"pattern": "^sha256:[0-9a-f]{64}$", "type": "string"},
                     "target": {"minLength": 1, "type": "string"},
                 },
-                "required": ["target", "retired_revision", "current_revision", "patch"],
+                "required": ["target", "retired_revision", "current_revision", "patch", "disposition"],
                 "type": "object",
             },
             "owner": "assignment",
