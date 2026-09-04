@@ -55,6 +55,7 @@ is the explicit pre-v1-to-current disposition; silence is not a disposition.
 | Quiet repo-native operating context, not an agent brain | Retain | `SYSTEM_INTENT.md`; decision kernel |
 | Human/domain `why` outranks implementation convenience | Retain | `SYSTEM_INTENT.md`; review |
 | Resolve/act/reconcile conceptual loop | Compress into one decision, typed operation/result, and next decision | decision and operation contracts |
+| Exactly one current consequence, including irreducible judgment | Retain as typed operation, bounded owner/revision-bound decision request, exact blocker, or terminal/direct outcome | generated decision contract and source owner |
 | Views/transports cannot change semantic authority | Retain | decision identity and conformance |
 | Direct/no-signal proportionality | Retain | module relevance and release controls |
 | Progressive/query-shaped disclosure | Retain | bounded facts/resources/procedure references |
@@ -65,6 +66,7 @@ is the explicit pre-v1-to-current disposition; silence is not a disposition.
 | Repo-scoped instructions/configuration | Retain through bounded effects; delete posture matrix | repository and domain owners |
 | Reusable model-judgment procedures | Compress to source-owned references; reject authority-by-selection | contributing owner |
 | Capability-first peer modules | Retain; delete registry and lifecycle choreography | module contract and Workspace loop |
+| Canonical cross-target identity and 1.x evolution | Retain; accept additive compatible fields and fail closed on unknown required semantics | implementation-independent semantic IR and generated targets |
 | Partial-compliance and strong-agent non-interference | Retain | typed effect/claim boundaries and host ingress |
 | Safe unchanged-conclusion reuse | Retain; delete transcript/projection cache framework | each source owner |
 | Configure-once best-fit delegation | Retain; delete orchestration modes and target-selection duplicates | policy, assignment, transport, Planning, Verification |
@@ -74,6 +76,8 @@ is the explicit pre-v1-to-current disposition; silence is not a disposition.
 | Repeated friction/outcome convergence | Retain through bounded owner disposition; delete universal learning/optimizer stores | canonical source owner |
 | Explicit-latitude repo improvement | Retain; reject background backlog or broad autonomous authority | repository/human owner |
 | Sharp state/output ownership and clean removal | Retain; delete lifecycle framework | Workspace and each state owner |
+| Process-safe effect commit and durable replay | Retain as owner-serialized admission/effect/result semantics; reject in-memory-only idempotency and generic transaction framework | operation contract and effect owner |
+| Ownership acquisition and destructive confinement | Retain atomic acquire/explicit transfer/current-owner proof and canonical containment; reject inferred ownership and central database | each state owner and bounded Workspace removal |
 | Exactly one Python and one TypeScript target | Retain as durable intent | shared semantic IR and release graph |
 | Local opt-in diagnostics and maintainer procedures | Retain outside ordinary product contact | maintainer tooling |
 | Support/trust claims grounded in evidence | Retain; reject telemetry/adoption authority | release conformance and public support docs |

@@ -15,7 +15,8 @@ The ordinary semantic loop is:
 
 ```text
 relevant source owners -> one operating decision -> one exact typed operation
--> typed result -> source-owner reconciliation -> next operating decision
+or bounded judgment/blocker/direct outcome -> typed result or owner-admitted answer
+-> source-owner reconciliation -> next operating decision
 ```
 
 The human or domain expert owns why, the shaping layer determines what best
@@ -28,6 +29,11 @@ convenience must not silently narrow a still-intended outcome.
    blockers, and claims retain their source owners. Views, transports, generated
    clients, and host integrations project the answer but cannot independently
    change it.
+   A current answer has exactly one consequence: one typed operation, one
+   bounded human/domain decision request, one exact blocker with recovery, or a
+   terminal/direct outcome. Judgment requests name their owner, source revision,
+   answer authority, and bounded response route; stale answers cannot mutate
+   current state.
 2. **Direct work stays direct.** No applicable signal means no mandatory plan,
    Memory, proof, delegation, configuration, diagnostics, learning ceremony, or
    durable residue. Detail is progressively and query-shapedly disclosed only
@@ -40,6 +46,10 @@ convenience must not silently narrow a still-intended outcome.
    effects, proof, and claim changes use exact typed owner operations or an
    explicit human/domain judgment. Guidance and procedure selection never
    manufacture authority.
+   Effect admission, currentness validation, execution, and durable result form
+   one owner-serialized commit boundary. Concurrent or restarted invocation
+   cannot blindly repeat a non-idempotent effect, and interrupted multi-write
+   state is reconstructible or blocks with exact owner recovery.
 5. **Memory prevents expensive rediscovery.** It preserves bounded durable
    advisory knowledge with provenance, applicability, and currentness, surfaces
    only relevant knowledge, and yields to a stronger deterministic owner when
@@ -61,6 +71,9 @@ convenience must not silently narrow a still-intended outcome.
    result semantics. Workspace owns the loop. First-party batteries have no
    architectural privilege, and adding an independent module requires no
    module-name branch or phase choreography in core.
+   Compatible additive semantics remain usable across 1.x; an unknown required
+   capability or incompatible semantic variant fails closed with an exact
+   upgrade route.
 10. **Mixed agents share one authority.** Strong agents may exercise judgment
     without weaker-agent scaffolding becoming mandatory. Partial compliance and
     ignored guidance fail closed at effect/claim boundaries; trusted human
@@ -88,10 +101,14 @@ convenience must not silently narrow a still-intended outcome.
     telemetry, warning, or improvement store. Repo-directed action requires
     explicit latitude and remains constrained by human intent, safety, public
     contracts, and proof.
-15. **Ownership makes removal safe.** Repo-owned and unknown content is never
-    deleted by convenience. Package-owned state, module state, ignored local
-    diagnostics, and promoted repo output remain distinguishable. AW stays
-    cleanly removable without a lifecycle framework.
+15. **Ownership is acquired, never inferred.** A state path becomes managed only
+    through atomic creation, confirmation by its current owner, or explicit
+    transfer. Repo-authored config/instructions and unknown content cannot be
+    overwritten and then claimed. Package state, durable module state, ignored
+    local diagnostics, and promoted repo output remain distinguishable. Removal
+    proves current ownership and canonical root confinement before deleting
+    legitimate package residue; malformed records, traversal, absolute paths,
+    and link escapes fail closed without a central ownership database.
 16. **Support claims are evidence-bound.** Supported environments, trust and
     side effects, artifact provenance, deterministic conformance, host dogfood,
     and provider limitations are stated honestly. Package support is proven by
@@ -105,6 +122,9 @@ generated TypeScript package. Both, plus the JSON `start`/`invoke` transport,
 project one implementation-independent semantic authority to the practical
 limit. Handwritten target code is restricted to explicit bootstrap, discovery,
 and platform primitives; ordinary operation and domain semantics are generated.
+Canonical serialization, revision/decision/idempotency identity, required
+capability handling, and compatible 1.x evolution are defined by that shared
+authority rather than by either runtime.
 
 Configuration enters through ordinary resolution: infer safe implementation
 facts, ask only irreducible human/domain questions, nominate exact owner
