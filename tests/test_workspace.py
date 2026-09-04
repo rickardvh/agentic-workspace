@@ -228,6 +228,10 @@ def test_mutation_lock_comes_from_registered_operation_not_transport(
     assert not (tmp_path / ".agentic-workspace" / "memory.json").exists()
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="nested lock-worker processes can terminate the Codex desktop task; Linux CI retains process coverage",
+)
 def test_two_different_effect_owners_share_one_process_lock_domain(tmp_path: Path) -> None:
     worker = Path(__file__).with_name("_effect_owner_worker.py")
     commands = [[sys.executable, str(worker), str(tmp_path), owner] for owner in ("memory-like", "planning-like")]
