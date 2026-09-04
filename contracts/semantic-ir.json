@@ -196,6 +196,23 @@
       }
     },
     {
+      "id": "correction.choose-retention",
+      "owner": "correction",
+      "effects": ["correction-disposition"],
+      "binding": "correction.choose_retention",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "correction_id": {"type": "string", "minLength": 1},
+          "correction_revision": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "answer": {"enum": ["retain", "no-new-durable-record"]}
+        },
+        "required": ["target", "correction_id", "correction_revision", "answer"],
+        "additionalProperties": false
+      }
+    },
+    {
       "id": "repository.answer",
       "owner": "repository",
       "effects": ["repository-configuration"],
@@ -465,6 +482,42 @@
           }
         },
         "required": ["target", "subject_revision", "strategy_revision", "route_id", "commands"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "verification.accept-correction",
+      "owner": "verification",
+      "effects": [],
+      "binding": "verification.accept_correction",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "correction": {"type": "object"},
+          "correction_revision": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "owner_ref": {"type": "string", "minLength": 1},
+          "owner_revision": {"type": "string", "minLength": 1}
+        },
+        "required": ["target", "correction", "correction_revision", "owner_ref", "owner_revision"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "assignment.accept-correction",
+      "owner": "assignment",
+      "effects": [],
+      "binding": "assignment.accept_correction",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "correction": {"type": "object"},
+          "correction_revision": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "owner_ref": {"type": "string", "minLength": 1},
+          "owner_revision": {"type": "string", "minLength": 1}
+        },
+        "required": ["target", "correction", "correction_revision", "owner_ref", "owner_revision"],
         "additionalProperties": false
       }
     }

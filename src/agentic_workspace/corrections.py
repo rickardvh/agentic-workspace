@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -89,6 +89,7 @@ class TrustedCorrectionIngress:
 
     def module(self) -> Module:
         contract = operation_contract("correction.disposition")
+        retention_contract = operation_contract("correction.choose-retention")
         return Module(
             name="correction",
             owns=("correction-custody",),
@@ -100,6 +101,12 @@ class TrustedCorrectionIngress:
                     contract["input"],
                     tuple(contract["effects"]),
                     self._disposition,
+                ),
+                Operation(
+                    "correction.choose-retention",
+                    retention_contract["input"],
+                    tuple(retention_contract["effects"]),
+                    self._choose_retention,
                 ),
             ),
             currentness=self._currentness,
@@ -161,8 +168,41 @@ class TrustedCorrectionIngress:
         correction_id = sorted(self._pending)[0]
         correction = self._pending[correction_id]
         root = Path(str(context["target"])).resolve()
+        applicability = correction.applicability
+        if (
+            correction.future_usefulness == "unspecified"
+            and not correction.existing_owner
+            and not correction.deterministic_owner_failure
+            and not applicability.get("task_terms")
+            and not applicability.get("paths")
+            and not applicability.get("dependency_revision")
+        ):
+            return {
+                "revision": correction.revision,
+                "facts": {
+                    "id": correction.correction_id,
+                    "subject": dict(correction.subject),
+                    "provenance": dict(correction.provenance),
+                    "future_usefulness": "unresolved",
+                },
+                "decisions": [
+                    {
+                        "id": f"correction-retention:{correction.correction_id}",
+                        "detail_revision": correction.revision,
+                        "question": "Should this correction be retained for future decisions?",
+                        "authority": "human",
+                        "response_operation_id": "correction.choose-retention",
+                        "effects": ["correction-disposition"],
+                        "choices": [
+                            {"id": "retain", "label": "Retain"},
+                            {"id": "no-new-durable-record", "label": "Do not retain"},
+                        ],
+                    }
+                ],
+            }
         if correction.existing_owner:
-            disposition, owner = "already-owned", "repository"
+            disposition = "already-owned"
+            owner = str(correction.existing_owner.get("owner") or "")
         elif correction.deterministic_owner_failure:
             disposition, owner = "owner-repair", "planning"
         elif correction.future_usefulness == "do-not-retain":
@@ -196,7 +236,23 @@ class TrustedCorrectionIngress:
                 "expected_state_revision": _state_revision(root, PLANNING_STATE),
             }
         elif disposition == "already-owned":
-            operation_id = "repository.accept-correction"
+            operation_id = {
+                "repository": "repository.accept-correction",
+                "verification": "verification.accept-correction",
+                "assignment": "assignment.accept-correction",
+            }.get(owner, "")
+            if not operation_id:
+                return {
+                    "revision": correction.revision,
+                    "facts": {"id": correction.correction_id, "owner": owner},
+                    "blockers": [
+                        {
+                            "code": "unsupported-correction-owner",
+                            "message": f"the named correction owner has no admitted correction operation: {owner}",
+                            "owner": owner or "correction",
+                        }
+                    ],
+                }
             effects = []
             arguments = {
                 "target": str(root),
@@ -274,6 +330,8 @@ class TrustedCorrectionIngress:
             "memory.accept-correction",
             "planning.accept-correction-failure",
             "repository.accept-correction",
+            "verification.accept-correction",
+            "assignment.accept-correction",
         } or not isinstance(correction, Mapping):
             return
         correction_id = str(correction.get("correction_id") or "")
@@ -285,6 +343,24 @@ class TrustedCorrectionIngress:
             return
         self._pending.pop(correction_id, None)
         self._completed.add(correction_id)
+
+    def _choose_retention(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        correction = self._pending.get(arguments["correction_id"])
+        if correction is None or correction.revision != arguments["correction_revision"]:
+            return {"status": "rejected", "effects": [], "value": {"reason": "stale-correction"}}
+        future_usefulness = "retain" if arguments["answer"] == "retain" else "do-not-retain"
+        resolved = replace(correction, future_usefulness=future_usefulness)
+        self._pending[correction.correction_id] = resolved
+        return {
+            "status": "applied",
+            "effects": ["correction-disposition"],
+            "value": {
+                "correction_id": correction.correction_id,
+                "previous_revision": correction.revision,
+                "correction_revision": resolved.revision,
+                "future_usefulness": future_usefulness,
+            },
+        }
 
 
 __all__ = ["TrustedCorrection", "TrustedCorrectionIngress"]

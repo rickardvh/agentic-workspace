@@ -394,8 +394,10 @@ export function validateCorrectionAdmission(kind, args, current = {}) {
   const correction = args.correction || {};
   if (correctionRevision(correction) !== args.correction_revision || correction.provenance?.authority !== "human") return false;
   if (kind === "memory") return !correction.existing_owner && !correction.deterministic_owner_failure && correction.future_usefulness !== "do-not-retain" && (correction.future_usefulness === "retain" || !!correction.applicability?.task_terms?.length || !!correction.applicability?.paths?.length || !!correction.applicability?.dependency_revision) && current.state_revision === args.expected_state_revision;
-  const evidence = kind === "repository" ? correction.existing_owner : correction.deterministic_owner_failure;
-  return evidence?.owner === "repository" && evidence.ref === args.owner_ref && evidence.revision === args.owner_revision && current.owner_ref === args.owner_ref && current.owner_revision === args.owner_revision && correction.subject?.kind === "repository-rule" && correction.subject?.id === args.owner_ref && (kind !== "planning" || current.state_revision === args.expected_state_revision);
+  const evidence = kind === "planning" ? correction.deterministic_owner_failure : correction.existing_owner;
+  const owner = kind === "planning" ? String(current.owner || "") : kind;
+  const subjectKind = owner === "repository" ? "repository-rule" : owner === "verification" ? "verification-route" : owner === "assignment" ? (args.owner_ref === "policy" ? "delegation-policy" : "delegation-evidence") : "";
+  return !!subjectKind && evidence?.owner === owner && evidence.ref === args.owner_ref && evidence.revision === args.owner_revision && current.owner_ref === args.owner_ref && current.owner_revision === args.owner_revision && correction.subject?.kind === subjectKind && correction.subject?.id === args.owner_ref && (kind !== "planning" || current.state_revision === args.expected_state_revision);
 }
 
 export function createTrustedCorrectionIngress({ transport, principal }) {
@@ -425,8 +427,17 @@ export function createTrustedCorrectionIngress({ transport, principal }) {
     complete(correction.correction_id, correction.revision);
     return { status: "applied", effects: ["correction-disposition"], value: { correction_revision: correction.revision, disposition: "no-new-durable-record" } };
   };
+  const chooseRetention = (args) => {
+    const correction = pending.get(args.correction_id);
+    if (!correction || correction.revision !== args.correction_revision) return { status: "rejected", effects: [], value: { reason: "stale-correction" } };
+    const futureUsefulness = args.answer === "retain" ? "retain" : "do-not-retain";
+    const resolved = { ...correction, future_usefulness: futureUsefulness };
+    resolved.revision = correctionRevision(resolved);
+    pending.set(correction.correction_id, resolved);
+    return { status: "applied", effects: ["correction-disposition"], value: { correction_id: correction.correction_id, previous_revision: correction.revision, correction_revision: resolved.revision, future_usefulness: futureUsefulness } };
+  };
   const handoff_complete = (operationId, args, outcome) => {
-    if (!["memory.accept-correction", "planning.accept-correction-failure", "repository.accept-correction"].includes(operationId)) return;
+    if (!["memory.accept-correction", "planning.accept-correction-failure", "repository.accept-correction", "verification.accept-correction", "assignment.accept-correction"].includes(operationId)) return;
     const correction = pending.get(args.correction?.correction_id);
     if (correction && correction.revision === args.correction_revision && outcome.value?.correction_revision === correction.revision) complete(correction.correction_id, correction.revision);
   };
@@ -435,14 +446,19 @@ export function createTrustedCorrectionIngress({ transport, principal }) {
     api_version: "1.0",
     required_capabilities: ["operation/owner-handoff"],
     owns: ["correction-custody"],
-    operations: [{ operation_id: "correction.disposition", input_schema: operationContract("correction.disposition").input, effects: ["correction-disposition"], handler: disposition }],
+    operations: [
+      { operation_id: "correction.disposition", input_schema: operationContract("correction.disposition").input, effects: ["correction-disposition"], handler: disposition },
+      { operation_id: "correction.choose-retention", input_schema: operationContract("correction.choose-retention").input, effects: ["correction-disposition"], handler: chooseRetention }
+    ],
     handoff_complete,
     contribute: (context) => {
       if (!pending.size) return null;
       const correction = [...pending.values()].sort((left, right) => left.correction_id.localeCompare(right.correction_id))[0];
       let dispositionName, owner, operation_id, effects, actionArgs;
       const payload = Object.fromEntries(Object.entries(correction).filter(([key]) => key !== "revision"));
-      if (correction.existing_owner) { dispositionName = "already-owned"; owner = "repository"; operation_id = "repository.accept-correction"; effects = []; actionArgs = { target: String(context.target || "."), correction: payload, correction_revision: correction.revision, owner_ref: String(correction.existing_owner.ref || ""), owner_revision: String(correction.existing_owner.revision || "") }; }
+      const applicability = correction.applicability || {};
+      if (correction.future_usefulness === "unspecified" && !correction.existing_owner && !correction.deterministic_owner_failure && !applicability.task_terms?.length && !applicability.paths?.length && !applicability.dependency_revision) return { revision: correction.revision, facts: { id: correction.correction_id, subject: correction.subject, provenance: correction.provenance, future_usefulness: "unresolved" }, decisions: [{ id: `correction-retention:${correction.correction_id}`, detail_revision: correction.revision, question: "Should this correction be retained for future decisions?", authority: "human", response_operation_id: "correction.choose-retention", effects: ["correction-disposition"], choices: [{ id: "retain", label: "Retain" }, { id: "no-new-durable-record", label: "Do not retain" }] }] };
+      if (correction.existing_owner) { dispositionName = "already-owned"; owner = String(correction.existing_owner.owner || ""); operation_id = ({ repository: "repository.accept-correction", verification: "verification.accept-correction", assignment: "assignment.accept-correction" })[owner]; if (!operation_id) return { revision: correction.revision, facts: { id: correction.correction_id, owner }, blockers: [{ code: "unsupported-correction-owner", message: `the named correction owner has no admitted correction operation: ${owner}`, owner: owner || "correction" }] }; effects = []; actionArgs = { target: String(context.target || "."), correction: payload, correction_revision: correction.revision, owner_ref: String(correction.existing_owner.ref || ""), owner_revision: String(correction.existing_owner.revision || "") }; }
       else if (correction.deterministic_owner_failure) { dispositionName = "owner-repair"; owner = "planning"; operation_id = "planning.accept-correction-failure"; effects = ["planning-state"]; actionArgs = { target: String(context.target || "."), correction: payload, correction_revision: correction.revision, owner_ref: String(correction.deterministic_owner_failure.ref || ""), owner_revision: String(correction.deterministic_owner_failure.revision || ""), expected_state_revision: String(context.owner_revisions?.planning || "absent") }; }
       else if (correction.future_usefulness === "do-not-retain") { dispositionName = "no-new-durable-record"; owner = "correction"; operation_id = "correction.disposition"; effects = ["correction-disposition"]; actionArgs = { target: String(context.target || "."), correction_id: correction.correction_id, correction_revision: correction.revision, disposition: dispositionName, owner, owner_revision: "" }; }
       else { dispositionName = "memory"; owner = "memory"; operation_id = "memory.accept-correction"; effects = ["memory-state"]; actionArgs = { target: String(context.target || "."), correction: payload, correction_revision: correction.revision, expected_state_revision: String(context.owner_revisions?.memory || "absent") }; }
@@ -643,7 +659,7 @@ export declare function canonicalSerialize(value: Json): string;
 export declare function semanticDigest(value: Json): string;
 export interface TrustedCorrectionIngress { observe(value: Record<string, Json>): Record<string, Json>; complete(correctionId: string, revision: string): void; module(): Module; }
 export declare function correctionRevision(correction: Record<string, Json>): string;
-export declare function validateCorrectionAdmission(kind: "memory" | "repository" | "planning", args: Record<string, Json>, current?: Record<string, Json>): boolean;
+export declare function validateCorrectionAdmission(kind: "memory" | "repository" | "verification" | "assignment" | "planning", args: Record<string, Json>, current?: Record<string, Json>): boolean;
 export declare function createTrustedCorrectionIngress(options: { transport: string; principal: string }): TrustedCorrectionIngress;
 export declare function ownerConclusionIdentity(owner: string, revision: string, dependencies?: Record<string, Json>): string;
 export declare function operationContract(operationId: string): Record<string, Json>;

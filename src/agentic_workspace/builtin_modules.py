@@ -716,17 +716,41 @@ def _planning_accept_correction_failure(arguments: dict[str, Any]) -> dict[str, 
     correction = arguments["correction"]
     failure = correction.get("deterministic_owner_failure", {}) if isinstance(correction, Mapping) else {}
     subject = correction.get("subject", {}) if isinstance(correction, Mapping) else {}
+    failed_owner = str(failure.get("owner") or "") if isinstance(failure, Mapping) else ""
+    owner_ref = arguments["owner_ref"]
+    owner_revision = arguments["owner_revision"]
+    owner_current = False
+    if failed_owner == "repository":
+        owner_current = (
+            subject.get("kind") == "repository-rule"
+            and subject.get("id") == owner_ref
+            and repository_rule_revision(root, owner_ref) == owner_revision
+        )
+    elif failed_owner == "verification":
+        policy_path = root / VERIFICATION_POLICY
+        try:
+            policy = tomllib.loads(policy_path.read_text(encoding="utf-8")) if policy_path.is_file() else {}
+        except (OSError, tomllib.TOMLDecodeError):
+            policy = {}
+        routes = policy.get("routes", []) if isinstance(policy, Mapping) else []
+        owner_current = (
+            subject.get("kind") == "verification-route"
+            and subject.get("id") == owner_ref
+            and _revision(policy_path) == owner_revision
+            and any(isinstance(route, Mapping) and route.get("id") == owner_ref for route in routes)
+        )
+    elif failed_owner == "assignment":
+        from .orchestration import assignment_evidence_current
+
+        owner_current = assignment_evidence_current(root, owner_ref, owner_revision, subject)
     valid = (
         isinstance(failure, Mapping)
         and isinstance(subject, Mapping)
         and _correction_revision(correction) == arguments["correction_revision"]
         and correction.get("provenance", {}).get("authority") == "human"
-        and failure.get("owner") == "repository"
         and failure.get("ref") == arguments["owner_ref"]
         and failure.get("revision") == arguments["owner_revision"]
-        and repository_rule_revision(root, arguments["owner_ref"]) == arguments["owner_revision"]
-        and subject.get("kind") == "repository-rule"
-        and subject.get("id") == arguments["owner_ref"]
+        and owner_current
         and _state_revision(root, PLANNING_STATE) == arguments["expected_state_revision"]
     )
     if not valid:
@@ -736,7 +760,7 @@ def _planning_accept_correction_failure(arguments: dict[str, Any]) -> dict[str, 
             "target": str(root),
             "item": f"correction-repair:{correction['correction_id']}",
             "status": "in-progress",
-            "outcome": f"Repair deterministic repository owner failure: {correction['statement']}",
+            "outcome": f"Repair deterministic {failed_owner} owner failure: {correction['statement']}",
             "scope": [arguments["owner_ref"]],
             "constraints": [
                 f"correction_revision={arguments['correction_revision']}",
@@ -1381,13 +1405,61 @@ def _recover_verification(arguments: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
+def _verification_accept_correction(arguments: dict[str, Any]) -> dict[str, Any]:
+    root = _root(arguments)
+    correction = arguments["correction"]
+    evidence = correction.get("existing_owner", {}) if isinstance(correction, Mapping) else {}
+    subject = correction.get("subject", {}) if isinstance(correction, Mapping) else {}
+    policy_path = root / VERIFICATION_POLICY
+    try:
+        policy = tomllib.loads(policy_path.read_text(encoding="utf-8")) if policy_path.is_file() else {}
+    except (OSError, tomllib.TOMLDecodeError):
+        policy = {}
+    routes = policy.get("routes", []) if isinstance(policy, Mapping) else []
+    valid = (
+        isinstance(evidence, Mapping)
+        and isinstance(subject, Mapping)
+        and _correction_revision(correction) == arguments["correction_revision"]
+        and correction.get("provenance", {}).get("authority") == "human"
+        and evidence.get("owner") == "verification"
+        and evidence.get("ref") == arguments["owner_ref"]
+        and evidence.get("revision") == arguments["owner_revision"]
+        and _revision(policy_path) == arguments["owner_revision"]
+        and subject.get("kind") == "verification-route"
+        and subject.get("id") == arguments["owner_ref"]
+        and any(isinstance(route, Mapping) and route.get("id") == arguments["owner_ref"] for route in routes)
+    )
+    if not valid:
+        return {"status": "rejected", "effects": [], "value": {"reason": "correction-not-enforced-by-owner"}}
+    return {
+        "status": "unchanged",
+        "effects": [],
+        "value": {
+            "correction_revision": arguments["correction_revision"],
+            "owner": "verification",
+            "owner_ref": arguments["owner_ref"],
+            "owner_revision": arguments["owner_revision"],
+            "disposition": "already-owned",
+            "justification": "the exact Verification route already enforces this correction",
+        },
+    }
+
+
 def verification_module() -> Module:
     return Module(
         name="verification",
         owns=("verification-state", "completion-claim"),
         claims=("complete",),
         contribute=_verification_contribution,
-        operations=(_operation("verification.run", _verification_run, _recover_verification),),
+        operations=(
+            _operation("verification.run", _verification_run, _recover_verification),
+            _operation(
+                "verification.accept-correction",
+                _verification_accept_correction,
+                _verification_accept_correction,
+                accepted_handoffs=("correction",),
+            ),
+        ),
         currentness=lambda context: (
             semantic_digest(
                 {

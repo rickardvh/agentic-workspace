@@ -30,6 +30,50 @@ def _json(path: Path) -> dict[str, Any]:
     return value
 
 
+def _revision(path: Path) -> str:
+    if not path.is_file():
+        return "absent"
+    return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def assignment_evidence_current(root: Path, owner_ref: str, owner_revision: str, subject: Mapping[str, Any]) -> bool:
+    if owner_ref == "policy":
+        return (
+            subject.get("kind") == "delegation-policy"
+            and subject.get("id") == "policy"
+            and _revision(root / POLICY) == owner_revision
+        )
+    record = next(
+        (
+            item
+            for item in _json(root / EVIDENCE).get("records", [])
+            if isinstance(item, Mapping) and item.get("id") == owner_ref
+        ),
+        None,
+    )
+    return (
+        isinstance(record, Mapping)
+        and subject.get("kind") == "delegation-evidence"
+        and subject.get("id") == owner_ref
+        and semantic_digest(dict(record)) == owner_revision
+    )
+
+
+def _correction_revision(correction: Mapping[str, Any]) -> str:
+    return semantic_digest(
+        {
+            "correction_id": correction.get("correction_id"),
+            "statement": correction.get("statement"),
+            "subject": dict(correction.get("subject", {})),
+            "applicability": dict(correction.get("applicability", {})),
+            "provenance": dict(correction.get("provenance", {})),
+            "future_usefulness": correction.get("future_usefulness"),
+            "existing_owner": dict(correction.get("existing_owner", {})),
+            "deterministic_owner_failure": dict(correction.get("deterministic_owner_failure", {})),
+        }
+    )
+
+
 def _write_local(path: Path, value: dict[str, Any], *, kind: str) -> None:
     value = {"kind": kind, "schema_version": 1, **value}
     if path.exists():
@@ -618,9 +662,53 @@ def _recover_integrate(arguments: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
-def _operation(operation_id: str, handler: Any, recover: Any) -> Operation:
+def _assignment_accept_correction(arguments: dict[str, Any]) -> dict[str, Any]:
+    root = Path(arguments["target"]).resolve()
+    correction = arguments["correction"]
+    evidence = correction.get("existing_owner", {}) if isinstance(correction, Mapping) else {}
+    subject = correction.get("subject", {}) if isinstance(correction, Mapping) else {}
+    valid = (
+        isinstance(evidence, Mapping)
+        and isinstance(subject, Mapping)
+        and _correction_revision(correction) == arguments["correction_revision"]
+        and correction.get("provenance", {}).get("authority") == "human"
+        and evidence.get("owner") == "assignment"
+        and evidence.get("ref") == arguments["owner_ref"]
+        and evidence.get("revision") == arguments["owner_revision"]
+        and assignment_evidence_current(root, arguments["owner_ref"], arguments["owner_revision"], subject)
+    )
+    if not valid:
+        return {"status": "rejected", "effects": [], "value": {"reason": "correction-not-enforced-by-owner"}}
+    return {
+        "status": "unchanged",
+        "effects": [],
+        "value": {
+            "correction_revision": arguments["correction_revision"],
+            "owner": "assignment",
+            "owner_ref": arguments["owner_ref"],
+            "owner_revision": arguments["owner_revision"],
+            "disposition": "already-owned",
+            "justification": "the exact Assignment policy or evidence already enforces this correction",
+        },
+    }
+
+
+def _operation(
+    operation_id: str,
+    handler: Any,
+    recover: Any,
+    *,
+    accepted_handoffs: tuple[str, ...] = (),
+) -> Operation:
     contract = operation_contract(operation_id)
-    return Operation(operation_id, contract["input"], tuple(contract["effects"]), handler, recover)
+    return Operation(
+        operation_id,
+        contract["input"],
+        tuple(contract["effects"]),
+        handler,
+        recover,
+        accepted_handoffs,
+    )
 
 
 def assignment_module() -> Module:
@@ -636,6 +724,12 @@ def assignment_module() -> Module:
             _operation("delegation.dispatch", _dispatch, _recover_attempt),
             _operation("delegation.return", _return, _recover_attempt),
             _operation("delegation.integrate", _integrate, _recover_integrate),
+            _operation(
+                "assignment.accept-correction",
+                _assignment_accept_correction,
+                _assignment_accept_correction,
+                accepted_handoffs=("correction",),
+            ),
         ),
         currentness=lambda context: (
             semantic_digest(

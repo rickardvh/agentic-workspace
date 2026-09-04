@@ -8,7 +8,7 @@ export declare function canonicalSerialize(value: Json): string;
 export declare function semanticDigest(value: Json): string;
 export interface TrustedCorrectionIngress { observe(value: Record<string, Json>): Record<string, Json>; complete(correctionId: string, revision: string): void; module(): Module; }
 export declare function correctionRevision(correction: Record<string, Json>): string;
-export declare function validateCorrectionAdmission(kind: "memory" | "repository" | "planning", args: Record<string, Json>, current?: Record<string, Json>): boolean;
+export declare function validateCorrectionAdmission(kind: "memory" | "repository" | "verification" | "assignment" | "planning", args: Record<string, Json>, current?: Record<string, Json>): boolean;
 export declare function createTrustedCorrectionIngress(options: { transport: string; principal: string }): TrustedCorrectionIngress;
 export declare function ownerConclusionIdentity(owner: string, revision: string, dependencies?: Record<string, Json>): string;
 export declare function operationContract(operationId: string): Record<string, Json>;
