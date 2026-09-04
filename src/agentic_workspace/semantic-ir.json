@@ -1,0 +1,343 @@
+{
+  "api_version": "1.0",
+  "decision": {
+    "action_order": [
+      "priority:descending",
+      "owner:ascending",
+      "operation_id:ascending"
+    ],
+    "claim_policy": "blocked-overrides-allowed",
+    "conflict_policy": "equal-top-priority-actions-block",
+    "contribution_dimensions": [
+      "facts",
+      "resources",
+      "procedures",
+      "decisions",
+      "blockers",
+      "actions",
+      "claims",
+      "terminal"
+    ],
+    "statuses": [
+      "direct",
+      "actionable",
+      "decision",
+      "blocked",
+      "terminal"
+    ]
+  },
+  "identity": {
+    "additive_unknown_fields": "ignored-unless-required",
+    "digest": "sha256",
+    "encoding": "canonical-json-utf8-nfc-ascii-escaped",
+    "numbers": "safe-integers-only",
+    "object_keys": "unicode-code-point-order",
+    "unknown_required_semantics": "fail-closed-with-upgrade-route"
+  },
+  "kinds": {
+    "contribution": "agentic-workspace/module-contribution/v1",
+    "decision": "agentic-workspace/operating-decision/v1",
+    "decision_view": "agentic-workspace/decision-view/v1",
+    "invocation": "agentic-workspace/operation-invocation/v1",
+    "result": "agentic-workspace/operation-result/v1"
+  },
+  "module": {
+    "capabilities": [
+      "contribution/facts",
+      "contribution/resources",
+      "contribution/procedures",
+      "contribution/decisions",
+      "operation/typed-result",
+      "operation/durable-commit",
+      "state/owned-paths"
+    ],
+    "compatibility": "1.x",
+    "optional_dimensions": [
+      "facts",
+      "resources",
+      "procedures",
+      "decisions",
+      "operations"
+    ],
+    "ownership_policy": "exclusive-owned-domain",
+    "procedure_authority": "reference-only"
+  },
+  "operation": {
+    "commit": "owner-serialized-durable-journal",
+    "currentness": "exact-input-revision",
+    "effect_policy": "result-may-only-narrow-declared-effects",
+    "ownership": "atomic-acquire-or-explicit-transfer",
+    "replay": "same-idempotency-key-and-request",
+    "result_statuses": [
+      "applied",
+      "unchanged",
+      "rejected"
+    ]
+  },
+  "operations": [
+    {
+      "binding": "workspace.transfer_ownership",
+      "effects": [
+        "workspace-ownership"
+      ],
+      "id": "workspace.transfer-ownership",
+      "input": {
+        "additionalProperties": false,
+        "properties": {
+          "classification": {
+            "enum": [
+              "package-residue",
+              "durable-module-state",
+              "local-diagnostic"
+            ]
+          },
+          "expected_sha256": {
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "from_owner": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "path": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "target": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "to_owner": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "target",
+          "path",
+          "from_owner",
+          "to_owner",
+          "expected_sha256",
+          "classification"
+        ],
+        "type": "object"
+      },
+      "owner": "workspace"
+    },
+    {
+      "binding": "workspace.remove",
+      "effects": [
+        "workspace-managed-files"
+      ],
+      "id": "workspace.remove",
+      "input": {
+        "additionalProperties": false,
+        "properties": {
+          "target": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "target"
+        ],
+        "type": "object"
+      },
+      "owner": "workspace"
+    },
+    {
+      "binding": "workspace.remove_legacy",
+      "effects": [
+        "workspace-managed-files"
+      ],
+      "id": "workspace.remove-legacy",
+      "input": {
+        "additionalProperties": false,
+        "properties": {
+          "confirm": {
+            "const": "remove-managed-v0"
+          },
+          "target": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "target",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "owner": "workspace"
+    },
+    {
+      "binding": "planning.set",
+      "effects": [
+        "planning-state"
+      ],
+      "id": "planning.set",
+      "input": {
+        "additionalProperties": false,
+        "properties": {
+          "item": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "in-progress",
+              "ready-to-complete",
+              "complete"
+            ]
+          },
+          "target": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "target",
+          "item",
+          "status"
+        ],
+        "type": "object"
+      },
+      "owner": "planning"
+    },
+    {
+      "binding": "planning.complete",
+      "effects": [
+        "planning-state"
+      ],
+      "id": "planning.complete",
+      "input": {
+        "additionalProperties": false,
+        "properties": {
+          "item": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "target": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "target",
+          "item"
+        ],
+        "type": "object"
+      },
+      "owner": "planning"
+    },
+    {
+      "binding": "memory.read",
+      "effects": [],
+      "id": "memory.read",
+      "input": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "target": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "target",
+          "key"
+        ],
+        "type": "object"
+      },
+      "owner": "memory"
+    },
+    {
+      "binding": "memory.record",
+      "effects": [
+        "memory-state"
+      ],
+      "id": "memory.record",
+      "input": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "target": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "value": {}
+        },
+        "required": [
+          "target",
+          "key",
+          "value"
+        ],
+        "type": "object"
+      },
+      "owner": "memory"
+    },
+    {
+      "binding": "verification.run",
+      "effects": [
+        "verification-state",
+        "process"
+      ],
+      "id": "verification.run",
+      "input": {
+        "additionalProperties": false,
+        "properties": {
+          "commands": {
+            "items": {
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "minItems": 1,
+              "type": "array"
+            },
+            "type": "array"
+          },
+          "subject_revision": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "target": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "target",
+          "subject_revision",
+          "commands"
+        ],
+        "type": "object"
+      },
+      "owner": "verification"
+    }
+  ],
+  "package_version": "1.0.0",
+  "primitive_inventory": {
+    "python": [
+      "argparse CLI bootstrap",
+      "filesystem persistence",
+      "Python entry-point discovery",
+      "process execution",
+      "JSON Schema validation",
+      "typed handler dispatch and persistence callbacks"
+    ],
+    "typescript": [
+      "ES module bootstrap",
+      "host-supplied module registration",
+      "host-supplied persistence and process bindings",
+      "typed handler dispatch and schema validation"
+    ]
+  },
+  "schema_version": 1
+}

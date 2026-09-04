@@ -15,6 +15,7 @@ def test_release_artifacts_have_one_runtime_and_no_host_state(tmp_path: Path) ->
     with zipfile.ZipFile(wheel) as archive:
         wheel_names = archive.namelist()
     assert any(name == "agentic_workspace/decision.py" for name in wheel_names)
+    assert any(name == "agentic_workspace/semantic-ir.json" for name in wheel_names)
     assert not any(name.startswith(("repo_", "generated/", "packages/", ".agentic-workspace/")) for name in wheel_names)
 
     with tarfile.open(sdist) as archive:

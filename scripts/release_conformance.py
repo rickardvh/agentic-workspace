@@ -148,6 +148,7 @@ def _run(arguments):
 def module():
     return Module(
         name="delegate",
+        claims=("delegated-result",),
         contribute=_contribute,
         operations=(Operation(
             "delegate.run",
@@ -182,6 +183,18 @@ def _assert_artifacts(wheel: Path, sdist: Path) -> None:
     assert not any(any(f"/{part}" in name for part in forbidden) for name in names)
 
 
+def _assert_typescript_artifact(package: Path) -> None:
+    with tarfile.open(package) as archive:
+        names = set(archive.getnames())
+    assert {
+        "package/package.json",
+        "package/semantic-ir.json",
+        "package/dist/index.js",
+        "package/dist/index.d.ts",
+    } <= names
+    assert not any("src/agentic_workspace" in name or ".agentic-workspace" in name for name in names)
+
+
 def _follow_exact(cli: Path, repository: Path, decision: dict[str, Any]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Model a partial-compliance client that knows only start, invoke, and next_decision."""
 
@@ -202,6 +215,10 @@ def run(root: Path) -> dict[str, Any]:
     uv = shutil.which("uv")
     if uv is None:
         raise RuntimeError("uv is required for release conformance")
+    npm = shutil.which("npm")
+    node = shutil.which("node")
+    if npm is None or node is None:
+        raise RuntimeError("Node.js and npm are required for two-language release conformance")
     with tempfile.TemporaryDirectory(prefix="agentic-workspace-v1-") as raw_temp:
         temp = Path(raw_temp)
         dist = temp / "dist"
@@ -209,6 +226,9 @@ def run(root: Path) -> dict[str, Any]:
         wheel = next(dist.glob("*.whl"))
         sdist = next(dist.glob("*.tar.gz"))
         _assert_artifacts(wheel, sdist)
+        _run([npm, "pack", str(root / "typescript"), "--pack-destination", str(dist)])
+        typescript_package = next(dist.glob("*.tgz"))
+        _assert_typescript_artifact(typescript_package)
 
         venv = temp / "venv"
         _run([uv, "venv", "--seed", str(venv)])
@@ -286,6 +306,65 @@ def run(root: Path) -> dict[str, Any]:
         )
         python_decision = _json([str(python), "-c", probe, str(repository)])
         assert python_decision == direct
+
+        typescript_consumer = temp / "typescript-consumer"
+        typescript_consumer.mkdir()
+        (typescript_consumer / "package.json").write_text(
+            json.dumps({"name": "aw-black-box-consumer", "private": True, "type": "module"}), encoding="utf-8"
+        )
+        _run(
+            [npm, "install", "--ignore-scripts", "--no-audit", "--no-fund", str(typescript_package)],
+            cwd=typescript_consumer,
+        )
+        typescript_probe = (
+            'import { compileSourceDecision } from "@rickardvh/agentic-workspace"; '
+            "console.log(JSON.stringify(compileSourceDecision([], "
+            "{task: 'edit one file', changed_paths: [], claims: []})));"
+        )
+        typescript_decision = json.loads(
+            _run([node, "--input-type=module", "-e", typescript_probe], cwd=typescript_consumer).stdout
+        )
+        assert typescript_decision == direct
+        external_vector = {
+            "intent": {"task": "review external change"},
+            "contributions": [
+                {
+                    "owner": "external.review",
+                    "revision": "external-1",
+                    "facts": {"subject": "change"},
+                    "resources": [{"id": "contract", "revision": "one", "locator": "external://contract"}],
+                    "procedures": [{"id": "review", "revision": "one", "locator": "external://review"}],
+                    "actions": [
+                        {
+                            "operation_id": "external.review",
+                            "arguments": {"subject": "change"},
+                            "effects": ["review-evidence"],
+                        }
+                    ],
+                }
+            ],
+        }
+        python_external_probe = (
+            "import json,sys; from agentic_workspace import compile_source_decision; "
+            "value=json.loads(sys.argv[1]); "
+            "print(json.dumps(compile_source_decision(value['contributions'], intent=value['intent'])))"
+        )
+        python_external = json.loads(
+            _run([str(python), "-c", python_external_probe, json.dumps(external_vector)]).stdout
+        )
+        typescript_external_probe = (
+            'import { compileSourceDecision } from "@rickardvh/agentic-workspace"; '
+            "const value=JSON.parse(process.argv[1]); "
+            "console.log(JSON.stringify(compileSourceDecision(value.contributions, value.intent)));"
+        )
+        typescript_external = json.loads(
+            _run(
+                [node, "--input-type=module", "-e", typescript_external_probe, json.dumps(external_vector)],
+                cwd=typescript_consumer,
+            ).stdout
+        )
+        assert typescript_external == python_external
+        assert typescript_external["procedures"][0]["authority"] == "reference-only"
 
         help_text = _run([str(cli), "--help"]).stdout.lower()
         for removed in ("checkpoint", "work-thread", "carry", "final-response", "autopilot", "research", "provider"):
@@ -555,6 +634,8 @@ def run(root: Path) -> dict[str, Any]:
         return {
             "artifact_boundary": "passed",
             "clean_install": "passed",
+            "typescript_clean_install": "passed",
+            "generated_two_language_parity": "passed",
             "direct_work": "passed",
             "maintainer_session_logging": "passed",
             "cli_python_parity": "passed",

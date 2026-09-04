@@ -1,0 +1,208 @@
+{
+  "schema_version": 1,
+  "api_version": "1.0",
+  "package_version": "1.0.0",
+  "kinds": {
+    "contribution": "agentic-workspace/module-contribution/v1",
+    "decision": "agentic-workspace/operating-decision/v1",
+    "decision_view": "agentic-workspace/decision-view/v1",
+    "invocation": "agentic-workspace/operation-invocation/v1",
+    "result": "agentic-workspace/operation-result/v1"
+  },
+  "decision": {
+    "statuses": ["direct", "actionable", "decision", "blocked", "terminal"],
+    "action_order": ["priority:descending", "owner:ascending", "operation_id:ascending"],
+    "contribution_dimensions": [
+      "facts",
+      "resources",
+      "procedures",
+      "decisions",
+      "blockers",
+      "actions",
+      "claims",
+      "terminal"
+    ],
+    "conflict_policy": "equal-top-priority-actions-block",
+    "claim_policy": "blocked-overrides-allowed"
+  },
+  "module": {
+    "compatibility": "1.x",
+    "capabilities": [
+      "contribution/facts",
+      "contribution/resources",
+      "contribution/procedures",
+      "contribution/decisions",
+      "operation/typed-result",
+      "operation/durable-commit",
+      "state/owned-paths"
+    ],
+    "optional_dimensions": ["facts", "resources", "procedures", "decisions", "operations"],
+    "procedure_authority": "reference-only",
+    "ownership_policy": "exclusive-owned-domain"
+  },
+  "operation": {
+    "result_statuses": ["applied", "unchanged", "rejected"],
+    "currentness": "exact-input-revision",
+    "effect_policy": "result-may-only-narrow-declared-effects",
+    "replay": "same-idempotency-key-and-request",
+    "commit": "owner-serialized-durable-journal",
+    "ownership": "atomic-acquire-or-explicit-transfer"
+  },
+  "identity": {
+    "encoding": "canonical-json-utf8-nfc-ascii-escaped",
+    "numbers": "safe-integers-only",
+    "object_keys": "unicode-code-point-order",
+    "digest": "sha256",
+    "additive_unknown_fields": "ignored-unless-required",
+    "unknown_required_semantics": "fail-closed-with-upgrade-route"
+  },
+  "operations": [
+    {
+      "id": "workspace.transfer-ownership",
+      "owner": "workspace",
+      "effects": ["workspace-ownership"],
+      "binding": "workspace.transfer_ownership",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "path": {"type": "string", "minLength": 1},
+          "from_owner": {"type": "string", "minLength": 1},
+          "to_owner": {"type": "string", "minLength": 1},
+          "expected_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "classification": {"enum": ["package-residue", "durable-module-state", "local-diagnostic"]}
+        },
+        "required": ["target", "path", "from_owner", "to_owner", "expected_sha256", "classification"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "workspace.remove",
+      "owner": "workspace",
+      "effects": ["workspace-managed-files"],
+      "binding": "workspace.remove",
+      "input": {
+        "type": "object",
+        "properties": {"target": {"type": "string", "minLength": 1}},
+        "required": ["target"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "workspace.remove-legacy",
+      "owner": "workspace",
+      "effects": ["workspace-managed-files"],
+      "binding": "workspace.remove_legacy",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "confirm": {"const": "remove-managed-v0"}
+        },
+        "required": ["target", "confirm"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "planning.set",
+      "owner": "planning",
+      "effects": ["planning-state"],
+      "binding": "planning.set",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "item": {"type": "string", "minLength": 1},
+          "status": {"enum": ["in-progress", "ready-to-complete", "complete"]}
+        },
+        "required": ["target", "item", "status"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "planning.complete",
+      "owner": "planning",
+      "effects": ["planning-state"],
+      "binding": "planning.complete",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "item": {"type": "string", "minLength": 1}
+        },
+        "required": ["target", "item"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "memory.read",
+      "owner": "memory",
+      "effects": [],
+      "binding": "memory.read",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "key": {"type": "string", "minLength": 1}
+        },
+        "required": ["target", "key"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "memory.record",
+      "owner": "memory",
+      "effects": ["memory-state"],
+      "binding": "memory.record",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "key": {"type": "string", "minLength": 1},
+          "value": {}
+        },
+        "required": ["target", "key", "value"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "verification.run",
+      "owner": "verification",
+      "effects": ["verification-state", "process"],
+      "binding": "verification.run",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "subject_revision": {"type": "string", "minLength": 1},
+          "commands": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {"type": "string", "minLength": 1},
+              "minItems": 1
+            }
+          }
+        },
+        "required": ["target", "subject_revision", "commands"],
+        "additionalProperties": false
+      }
+    }
+  ],
+  "primitive_inventory": {
+    "python": [
+      "argparse CLI bootstrap",
+      "filesystem persistence",
+      "Python entry-point discovery",
+      "process execution",
+      "JSON Schema validation",
+      "typed handler dispatch and persistence callbacks"
+    ],
+    "typescript": [
+      "ES module bootstrap",
+      "host-supplied module registration",
+      "host-supplied persistence and process bindings",
+      "typed handler dispatch and schema validation"
+    ]
+  }
+}
