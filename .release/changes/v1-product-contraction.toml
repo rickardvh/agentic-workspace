@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "major"
-summary = "Replace the alpha command, packet, package, generated, and installed-host surfaces with the source-first v1 decision and typed-operation contract."
-issues = [2983, 2984, 2985, 2986, 2987, 2988, 2989, 2990]

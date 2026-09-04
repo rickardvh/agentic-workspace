@@ -1,15 +1,8 @@
 repos:
   - repo: local
     hooks:
-      - id: validation
-        name: format, lint, and typecheck
-        entry: uv run python scripts/git_hooks/pre_commit.py
+      - id: check
+        name: v1 checks
+        entry: make check
         language: system
         pass_filenames: false
-        always_run: true
-      - id: no-absolute-paths
-        name: no absolute paths
-        entry: uv run python scripts/check/check_no_absolute_paths.py
-        language: system
-        pass_filenames: false
-        always_run: true

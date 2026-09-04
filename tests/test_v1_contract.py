@@ -7,7 +7,6 @@ import pytest
 
 from agentic_workspace.decision import compile_source_decision, select_decision_detail
 from agentic_workspace.modules import Module, discover_modules, module_contributions, register_module_operations
-from agentic_workspace.operating_decision import compile_operating_decision
 from agentic_workspace.operations import Operation, OperationContractError, OperationDispatcher, StaleInvocationError
 
 
@@ -40,13 +39,6 @@ def test_same_source_state_has_one_answer_across_views() -> None:
     assert cli["decision_id"] == python["decision_id"] == decision["decision_id"]
     assert cli["input_revision"] == python["input_revision"] == decision["input_revision"]
     assert cli["values"]["status"] == python["values"]["status"] == "actionable"
-
-
-def test_canonical_compiler_routes_source_contributions_without_consumer_semantics() -> None:
-    contribution = _planning({"status": "open", "revision": "p1"})
-    cli = compile_operating_decision(inputs={"consumer": "cli", "task": "ship", "source_contributions": [contribution]})
-    python = compile_operating_decision(inputs={"consumer": "python", "task": "ship", "source_contributions": [contribution]})
-    assert cli == python
 
 
 def test_result_reconciles_to_the_next_decision_without_polling() -> None:
@@ -102,7 +94,9 @@ def test_stale_and_invalid_invocations_fail_closed() -> None:
     state = {"status": "open", "revision": "p1"}
     dispatcher = OperationDispatcher()
     dispatcher.register(
-        Operation("planning.complete", {"type": "object"}, ("planning-state",), lambda _: {"status": "applied", "effects": []})
+        Operation(
+            "planning.complete", {"type": "object"}, ("planning-state",), lambda _: {"status": "applied", "effects": []}
+        )
     )
     decision = compile_source_decision([_planning(state)])
     stale = {**decision["primary_action"], "expected_input_revision": "sha256:stale"}
@@ -129,7 +123,9 @@ def test_out_of_tree_module_uses_the_generic_contribution_and_operation_seam() -
         contribute=lambda context: {
             "revision": state["revision"],
             "relevant": context["task"] == "external",
-            "actions": [{"operation_id": "example.finish", "arguments": {}, "effects": ["external-state"]}] if state["pending"] else [],
+            "actions": [{"operation_id": "example.finish", "arguments": {}, "effects": ["external-state"]}]
+            if state["pending"]
+            else [],
             "terminal": not state["pending"],
         },
         operations=(
@@ -137,7 +133,9 @@ def test_out_of_tree_module_uses_the_generic_contribution_and_operation_seam() -
                 "example.finish",
                 {"type": "object", "additionalProperties": False},
                 ("external-state",),
-                lambda _: state.update(revision="ext2", pending=False) or {"status": "applied", "effects": ["external-state"]},
+                lambda _: (
+                    state.update(revision="ext2", pending=False) or {"status": "applied", "effects": ["external-state"]}
+                ),
             ),
         ),
     )

@@ -154,6 +154,7 @@ def compile_source_decision(
                 "kind": "agentic-workspace/operation-invocation/v1",
                 "operation_id": action["operation_id"],
                 "arguments": action["arguments"],
+                "intent": dict(intent or {}),
                 "effects": action["effects"],
                 "authority": action["authority"],
                 "source_owner": owner,

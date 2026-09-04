@@ -1,3 +1,0 @@
-description: Finish bootstrap removal conservatively after CLI uninstall.
-prompt:
-  default_prompt: "Use $bootstrap-uninstall to finish bootstrap removal conservatively after the CLI uninstall step."

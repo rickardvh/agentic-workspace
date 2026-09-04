@@ -30,9 +30,16 @@ class Operation:
 class OperationDispatcher:
     """Dispatch one operation ID with only that operation's typed values."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        receipt_loader: Callable[[str], tuple[dict[str, Any], dict[str, Any]] | None] | None = None,
+        receipt_writer: Callable[[str, dict[str, Any], dict[str, Any]], None] | None = None,
+    ) -> None:
         self._operations: dict[str, Operation] = {}
         self._receipts: dict[str, tuple[dict[str, Any], dict[str, Any]]] = {}
+        self._receipt_loader = receipt_loader
+        self._receipt_writer = receipt_writer
 
     def register(self, operation: Operation) -> None:
         if not operation.operation_id:
@@ -62,7 +69,10 @@ class OperationDispatcher:
         arguments = invocation.get("arguments", {})
         if not isinstance(arguments, Mapping):
             raise OperationContractError("arguments must be an object")
-        errors = sorted(Draft202012Validator(operation.input_schema).iter_errors(dict(arguments)), key=lambda error: list(error.path))
+        errors = sorted(
+            Draft202012Validator(operation.input_schema).iter_errors(dict(arguments)),
+            key=lambda error: list(error.path),
+        )
         if errors:
             raise OperationContractError(errors[0].message)
 
@@ -74,6 +84,8 @@ class OperationDispatcher:
             raise OperationContractError("idempotency_key is required")
         request_identity = {"operation_id": operation_id, "arguments": dict(arguments), "revision": expected_revision}
         previous = self._receipts.get(key)
+        if previous is None and self._receipt_loader is not None:
+            previous = self._receipt_loader(key)
         if previous is not None:
             previous_identity, previous_result = previous
             if previous_identity != request_identity:
@@ -91,7 +103,9 @@ class OperationDispatcher:
         if not isinstance(raw_outcome, Mapping):
             raise OperationContractError("operation handler must return an object")
         reported_effects = raw_outcome.get("effects", [])
-        if not isinstance(reported_effects, list) or any(effect not in operation.effects for effect in reported_effects):
+        if not isinstance(reported_effects, list) or any(
+            effect not in operation.effects for effect in reported_effects
+        ):
             raise OperationContractError("operation result widened its declared effects")
         status = str(raw_outcome.get("status") or "")
         if status not in {"applied", "unchanged", "rejected"}:
@@ -108,4 +122,6 @@ class OperationDispatcher:
             "next_decision": next_decision,
         }
         self._receipts[key] = (request_identity, result)
+        if self._receipt_writer is not None:
+            self._receipt_writer(key, request_identity, result)
         return dict(result)
