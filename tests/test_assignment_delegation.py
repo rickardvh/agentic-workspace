@@ -100,7 +100,9 @@ def _retired_policy(
     return content
 
 
-def test_retired_canonical_delegation_transfers_through_assignment_and_preserves_source(tmp_path: Path) -> None:
+def test_retired_canonical_delegation_transfers_through_assignment_and_preserves_source(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     retired = _retired_policy(tmp_path)
     workspace = Workspace(tmp_path, modules=[assignment_module()])
     decision = workspace.start(task="ordinary work")
@@ -119,6 +121,9 @@ def test_retired_canonical_delegation_transfers_through_assignment_and_preserves
     assert current["current_target"] == "local"
     assert current["human_override_policy"] == "explicit-only"
     assert current["override_owner"] == "human"
+    receipt = current["retired_source_reconciliation"]
+    assert receipt["retired_revision"] == action["arguments"]["retired_revision"]
+    assert receipt["disposition"] == "transferred"
     assert current["targets"] == [
         {
             "id": "local",
@@ -128,16 +133,46 @@ def test_retired_canonical_delegation_transfers_through_assignment_and_preserves
         }
     ]
 
+    current["choice"] = "local"
+    _write(current_path, current)
     before = current_path.read_bytes()
+    monkeypatch.setattr(
+        orchestration.tomllib,
+        "loads",
+        lambda *_args, **_kwargs: pytest.fail("reconciled retired TOML was reparsed"),
+    )
     represented = Workspace(tmp_path, modules=[assignment_module()]).start(task="ordinary work")
     assert represented["status"] == "terminal"
     assert represented["primary_action"] is None
     assert current_path.read_bytes() == before
+    assert (tmp_path / ".agentic-workspace/config.local.toml").read_bytes() == retired
 
-    (tmp_path / ".agentic-workspace/config.local.toml").unlink()
-    fresh = Workspace(tmp_path, modules=[assignment_module()]).start(task="ordinary work")
-    assert fresh["status"] == "terminal"
-    assert fresh["context"]["assignment"]["assignment"]["selected_target"] == "local"
+
+def test_changed_retired_revision_is_reconciled_once_without_duplicate_policy(tmp_path: Path) -> None:
+    original = _retired_policy(tmp_path)
+    workspace = Workspace(tmp_path, modules=[assignment_module()])
+    first = workspace.start(task="ordinary work")["primary_action"]
+    workspace.invoke(first)
+    current_path = tmp_path / ".agentic-workspace/local/delegation.json"
+    before = json.loads(current_path.read_text(encoding="utf-8"))
+
+    retired_path = tmp_path / ".agentic-workspace/config.local.toml"
+    retired_path.write_bytes(original + b"# same canonical intent, new retired revision\r\n")
+    changed = Workspace(tmp_path, modules=[assignment_module()]).start(task="ordinary work")
+    assert changed["primary_action"]["operation_id"] == "assignment.transfer-retired-policy"
+    reconciled = Workspace(tmp_path, modules=[assignment_module()]).invoke(changed["primary_action"])
+    assert reconciled["status"] == "applied"
+    assert reconciled["value"]["disposition"] == "already-represented"
+
+    after = json.loads(current_path.read_text(encoding="utf-8"))
+    assert after["targets"] == before["targets"]
+    assert (
+        after["retired_source_reconciliation"]["retired_revision"]
+        != before["retired_source_reconciliation"]["retired_revision"]
+    )
+    settled = Workspace(tmp_path, modules=[assignment_module()]).start(task="ordinary work")
+    assert settled["status"] == "terminal"
+    assert settled["primary_action"] is None
 
 
 def test_retired_delegation_conflict_and_ambiguous_transport_fail_closed(tmp_path: Path) -> None:
