@@ -33,6 +33,13 @@ def _rules(root: Path) -> list[dict[str, Any]]:
     return rules
 
 
+def repository_rule_revision(root: Path, rule_id: str) -> str | None:
+    """Return the current exact revision of one repository-owned rule."""
+
+    rule = next((item for item in _rules(root.resolve()) if item["id"] == rule_id), None)
+    return str(rule["revision"]) if rule is not None else None
+
+
 def _json(path: Path) -> dict[str, Any]:
     if not path.is_file():
         return {}

@@ -32,6 +32,7 @@ class Operation:
     effects: tuple[str, ...]
     handler: Callable[[dict[str, Any]], Mapping[str, Any]]
     recover: Callable[[dict[str, Any]], Mapping[str, Any] | None] | None = None
+    accepted_handoffs: tuple[str, ...] = ()
 
 
 class OperationDispatcher:

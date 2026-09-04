@@ -191,9 +191,18 @@ def _operation(
     operation_id: str,
     handler: Callable[[dict[str, Any]], dict[str, Any]],
     recover: Callable[[dict[str, Any]], dict[str, Any] | None] | None = None,
+    *,
+    accepted_handoffs: tuple[str, ...] = (),
 ) -> Operation:
     contract = operation_contract(operation_id)
-    return Operation(operation_id, contract["input"], tuple(contract["effects"]), handler, recover)
+    return Operation(
+        operation_id,
+        contract["input"],
+        tuple(contract["effects"]),
+        handler,
+        recover,
+        accepted_handoffs,
+    )
 
 
 def _workspace_contribution(context: Mapping[str, Any]) -> dict[str, Any] | None:
@@ -626,6 +635,9 @@ def _planning_semantic_revision(subject: Mapping[str, Any]) -> str:
 def _planning_set(arguments: dict[str, Any]) -> dict[str, Any]:
     root = _root(arguments)
     path = root / PLANNING_STATE
+    expected_revision = str(arguments.get("expected_state_revision") or "")
+    if expected_revision and _state_revision(root, PLANNING_STATE) != expected_revision:
+        return {"status": "rejected", "effects": [], "value": {"reason": "stale-planning-state"}}
     state = _json(path) or {"schema_version": 1, "revision": 0}
     subjects = _planning_subjects(state)
     current = subjects.get(arguments["item"], {})
@@ -777,7 +789,7 @@ def planning_module() -> Module:
         claims=("progress",),
         contribute=_planning_contribution,
         operations=(
-            _operation("planning.set", _planning_set, _recover_planning),
+            _operation("planning.set", _planning_set, _recover_planning, accepted_handoffs=("correction",)),
             _operation("planning.complete", _planning_complete, _recover_planning_complete),
             _operation("planning.reconcile", _planning_reconcile, _recover_planning_reconcile),
             _operation("planning.record-attempt", _planning_record_attempt, _recover_planning_attempt),
@@ -906,6 +918,9 @@ def _memory_contribution(context: Mapping[str, Any]) -> dict[str, Any] | None:
 def _memory_record(arguments: dict[str, Any]) -> dict[str, Any]:
     root = _root(arguments)
     path = root / MEMORY_STATE
+    expected_revision = str(arguments.get("expected_state_revision") or "")
+    if expected_revision and _state_revision(root, MEMORY_STATE) != expected_revision:
+        return {"status": "rejected", "effects": [], "value": {"reason": "stale-memory-state"}}
     state = _json(path) or {"schema_version": 1, "revision": 0, "records": []}
     records = state.get("records", [])
     if not isinstance(records, list):
@@ -1021,7 +1036,7 @@ def memory_module() -> Module:
         contribute=_memory_contribution,
         operations=(
             _operation("memory.read", _memory_read),
-            _operation("memory.record", _memory_record, _recover_memory_record),
+            _operation("memory.record", _memory_record, _recover_memory_record, accepted_handoffs=("correction",)),
             _operation("memory.disposition", _memory_disposition, _recover_memory_disposition),
         ),
         currentness=lambda context: (

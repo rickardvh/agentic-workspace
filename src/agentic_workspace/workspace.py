@@ -45,7 +45,7 @@ class Workspace:
                     if isinstance(cached, dict):
                         contributions.append(cached)
                         continue
-            resolved = module_contributions([module], context=context)
+            resolved = module_contributions([module], context=context, operation_modules=self._modules)
             contributions.extend(resolved)
             if cache_path is not None and resolved:
                 atomic_write_json(cache_path, resolved[0])

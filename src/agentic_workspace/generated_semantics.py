@@ -15,6 +15,8 @@ IR: dict[str, Any] = {
         "dispositions": ["already-owned", "memory", "owner-repair", "no-new-durable-record"],
         "external_adapters": "consumers-and-transports-only",
         "ingress": "trusted-host-capability",
+        "owner_consequence": "accepted-typed-owner-handoff",
+        "owner_evidence": "exact-current-source-ref-and-revision",
     },
     "decision": {
         "action_order": ["priority:descending", "owner:ascending", "operation_id:ascending"],
@@ -55,6 +57,7 @@ IR: dict[str, Any] = {
             "contribution/decisions",
             "operation/typed-result",
             "operation/durable-commit",
+            "operation/owner-handoff",
             "state/owned-paths",
         ],
         "compatibility": "1.x",
@@ -183,7 +186,7 @@ IR: dict[str, Any] = {
         },
         {
             "binding": "correction.disposition",
-            "effects": ["correction-disposition", "memory-state"],
+            "effects": ["correction-disposition"],
             "id": "correction.disposition",
             "input": {
                 "additionalProperties": False,
@@ -277,6 +280,7 @@ IR: dict[str, Any] = {
                 "properties": {
                     "constraints": {"items": {"type": "string"}, "type": "array"},
                     "dependencies": {"items": {"type": "string"}, "type": "array"},
+                    "expected_state_revision": {"type": "string"},
                     "item": {"minLength": 1, "type": "string"},
                     "outcome": {"type": "string"},
                     "proof_claims": {"items": {"type": "string"}, "type": "array"},
@@ -373,6 +377,7 @@ IR: dict[str, Any] = {
                 "additionalProperties": False,
                 "properties": {
                     "dependency_revision": {"type": "string"},
+                    "expected_state_revision": {"type": "string"},
                     "key": {"minLength": 1, "type": "string"},
                     "kind": {"enum": ["advisory", "workaround"]},
                     "paths": {"items": {"type": "string"}, "type": "array"},
@@ -567,6 +572,7 @@ def normalize_contribution(value: Mapping[str, Any]) -> dict[str, Any]:
                 "arguments": dict(arguments),
                 "effects": _strings(item.get("effects"), field=f"{owner}.actions[{index}].effects"),
                 "authority": str(item.get("authority") or owner),
+                "source_owner": str(item.get("source_owner") or owner),
                 "priority": priority,
             }
         )
@@ -693,7 +699,7 @@ def compile_source_decision(
                 "intent": dict(intent or {}),
                 "effects": action["effects"],
                 "authority": action["authority"],
-                "source_owner": owner,
+                "source_owner": action["source_owner"],
                 "expected_input_revision": input_revision,
                 "idempotency_key": _digest(
                     {

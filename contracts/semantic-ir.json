@@ -34,6 +34,7 @@
       "contribution/decisions",
       "operation/typed-result",
       "operation/durable-commit",
+      "operation/owner-handoff",
       "state/owned-paths"
     ],
     "optional_dimensions": ["facts", "resources", "procedures", "decisions", "operations"],
@@ -67,6 +68,8 @@
     "authority": "transport-bound-not-payload-asserted",
     "dispositions": ["already-owned", "memory", "owner-repair", "no-new-durable-record"],
     "deduplication": "stable-correction-id-plus-operation-receipt",
+    "owner_evidence": "exact-current-source-ref-and-revision",
+    "owner_consequence": "accepted-typed-owner-handoff",
     "external_adapters": "consumers-and-transports-only"
   },
   "operations": [
@@ -176,7 +179,7 @@
     {
       "id": "correction.disposition",
       "owner": "correction",
-      "effects": ["correction-disposition", "memory-state"],
+      "effects": ["correction-disposition"],
       "binding": "correction.disposition",
       "input": {
         "type": "object",
@@ -273,6 +276,7 @@
           "dependencies": {"type": "array", "items": {"type": "string"}},
           "stops": {"type": "array", "items": {"type": "string"}},
           "proof_claims": {"type": "array", "items": {"type": "string"}}
+          ,"expected_state_revision": {"type": "string"}
         },
         "required": ["target", "item", "status"],
         "additionalProperties": false
@@ -362,6 +366,7 @@
           "paths": {"type": "array", "items": {"type": "string"}},
           "dependency_revision": {"type": "string"},
           "kind": {"enum": ["advisory", "workaround"]}
+          ,"expected_state_revision": {"type": "string"}
         },
         "required": ["target", "key", "value"],
         "additionalProperties": false

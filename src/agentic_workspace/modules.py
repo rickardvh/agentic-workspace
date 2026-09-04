@@ -80,9 +80,20 @@ def discover_modules(*, entry_points: Iterable[Any] | None = None) -> list[Modul
     return admit_modules(modules)
 
 
-def module_contributions(modules: Iterable[Module], *, context: Mapping[str, Any]) -> list[dict[str, Any]]:
+def module_contributions(
+    modules: Iterable[Module],
+    *,
+    context: Mapping[str, Any],
+    operation_modules: Iterable[Module] | None = None,
+) -> list[dict[str, Any]]:
+    admitted = list(modules)
+    operation_owners = {
+        operation.operation_id: (module.name, operation)
+        for module in (operation_modules if operation_modules is not None else admitted)
+        for operation in module.operations
+    }
     contributions: list[dict[str, Any]] = []
-    for module in modules:
+    for module in admitted:
         contribution = module.contribute(context)
         if contribution is None:
             continue
@@ -100,13 +111,21 @@ def module_contributions(modules: Iterable[Module], *, context: Mapping[str, Any
         actions = payload.get("actions", [])
         if not isinstance(actions, list) or any(not isinstance(action, Mapping) for action in actions):
             raise ValueError(f"module {module.name} actions must be a list of objects")
+        normalized_actions = []
         for action in actions:
             operation_id = str(action.get("operation_id") or "")
             operation = contracts.get(operation_id)
             if operation is None:
-                raise ValueError(f"module {module.name} proposed an operation it does not own: {operation_id}")
+                target = operation_owners.get(operation_id)
+                if target is None or module.name not in target[1].accepted_handoffs:
+                    raise ValueError(f"module {module.name} proposed an operation it does not own: {operation_id}")
+                target_owner, operation = target
+            else:
+                target_owner = module.name
             if tuple(action.get("effects", [])) != operation.effects:
                 raise ValueError(f"module {module.name} action effects differ from its operation contract")
+            normalized_actions.append({**dict(action), "source_owner": target_owner})
+        payload["actions"] = normalized_actions
         decisions = payload.get("decisions", [])
         if not isinstance(decisions, list) or any(not isinstance(item, Mapping) for item in decisions):
             raise ValueError(f"module {module.name} decisions must be a list of objects")

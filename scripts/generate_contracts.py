@@ -129,6 +129,7 @@ def normalize_contribution(value: Mapping[str, Any]) -> dict[str, Any]:
             "arguments": dict(arguments),
             "effects": _strings(item.get("effects"), field=f"{owner}.actions[{index}].effects"),
             "authority": str(item.get("authority") or owner),
+            "source_owner": str(item.get("source_owner") or owner),
             "priority": priority,
         })
     normalized_blockers = []
@@ -244,7 +245,7 @@ def compile_source_decision(contributions: Iterable[Mapping[str, Any]], *, inten
                 "intent": dict(intent or {}),
                 "effects": action["effects"],
                 "authority": action["authority"],
-                "source_owner": owner,
+                "source_owner": action["source_owner"],
                 "expected_input_revision": input_revision,
                 "idempotency_key": _digest({"operation_id": action["operation_id"], "arguments": action["arguments"], "input_revision": input_revision}),
             }
@@ -335,18 +336,26 @@ export function admitModules(modules) {
 }
 
 export function moduleContributions(modules, context) {
-  return admitModules(modules).flatMap((module) => {
+  const admitted = admitModules(modules);
+  const operationOwners = new Map(admitted.flatMap((owner) => (owner.operations || []).map((operation) => [operation.operation_id, [owner.name, operation]])));
+  return admitted.flatMap((module) => {
     const contributed = module.contribute(context);
     if (contributed == null) return [];
     if (contributed && typeof contributed.then === "function") throw new Error("module contribution must be synchronous");
     if (contributed.owner != null && contributed.owner !== module.name) throw new Error(`module ${module.name} attempted to contribute for another owner`);
     const payload = { ...contributed, owner: module.name, resources: [...(module.resources || []), ...(contributed.resources || [])], procedures: [...(module.procedures || []), ...(contributed.procedures || [])] };
     const operations = new Map((module.operations || []).map((operation) => [operation.operation_id, operation]));
-    for (const action of payload.actions || []) {
-      const operation = operations.get(action.operation_id);
-      if (!operation) throw new Error(`module ${module.name} proposed an operation it does not own: ${action.operation_id || ""}`);
+    payload.actions = (payload.actions || []).map((action) => {
+      let operation = operations.get(action.operation_id);
+      let sourceOwner = module.name;
+      if (!operation) {
+        const target = operationOwners.get(action.operation_id);
+        if (!target || !(target[1].accepted_handoffs || []).includes(module.name)) throw new Error(`module ${module.name} proposed an operation it does not own: ${action.operation_id || ""}`);
+        [sourceOwner, operation] = target;
+      }
       if (JSON.stringify(action.effects || []) !== JSON.stringify(operation.effects)) throw new Error(`module ${module.name} action effects differ from its operation contract`);
-    }
+      return { ...action, source_owner: sourceOwner };
+    });
     for (const decision of payload.decisions || []) {
       const operation = operations.get(decision.response_operation_id);
       if (!operation) throw new Error(`module ${module.name} decision response is not admitted by an owned operation: ${decision.response_operation_id || ""}`);
@@ -373,6 +382,44 @@ export function canonicalSerialize(value) {
 
 export function semanticDigest(value) {
   return "sha256:" + createHash("sha256").update(canonicalSerialize(value), "utf8").digest("hex");
+}
+
+export function createTrustedCorrectionIngress({ transport, principal, resolveDisposition }) {
+  if (!transport || !principal || typeof resolveDisposition !== "function") throw new Error("trusted correction ingress requires transport, principal, and an owner disposition resolver");
+  const pending = new Map();
+  const completed = new Set();
+  const observe = (value) => {
+    if (!value?.correction_id || !value?.statement || !value?.subject || typeof value.subject !== "object") throw new Error("a correction requires stable identity, statement, and subject");
+    const futureUsefulness = value.future_usefulness || "unspecified";
+    if (!["retain", "do-not-retain", "unspecified"].includes(futureUsefulness)) throw new Error("future_usefulness must be retain, do-not-retain, or unspecified");
+    const correction = { correction_id: value.correction_id, statement: value.statement, subject: value.subject, applicability: value.applicability || {}, provenance: { authority: "human", transport, principal }, future_usefulness: futureUsefulness, existing_owner: value.existing_owner || null, deterministic_owner_failure: value.deterministic_owner_failure || null };
+    correction.revision = semanticDigest({ correction_id: correction.correction_id, statement: correction.statement, subject: correction.subject, applicability: correction.applicability, provenance: correction.provenance, future_usefulness: correction.future_usefulness, existing_owner: correction.existing_owner || {}, deterministic_owner_failure: correction.deterministic_owner_failure || {} });
+    const previous = pending.get(correction.correction_id);
+    if (previous && canonicalSerialize(previous) !== canonicalSerialize(correction)) throw new Error("correction identity was already admitted with different content");
+    if (!completed.has(correction.correction_id)) pending.set(correction.correction_id, correction);
+    return correction;
+  };
+  const complete = (correctionId, revision) => {
+    const correction = pending.get(correctionId);
+    if (!correction || correction.revision !== revision) throw new Error("cannot complete a stale correction");
+    pending.delete(correctionId);
+    completed.add(correctionId);
+  };
+  const module = () => ({
+    name: "correction",
+    api_version: "1.0",
+    required_capabilities: ["operation/owner-handoff"],
+    owns: ["correction-custody"],
+    operations: [],
+    contribute: (context) => {
+      if (!pending.size) return null;
+      const correction = [...pending.values()].sort((left, right) => left.correction_id.localeCompare(right.correction_id))[0];
+      const route = resolveDisposition(correction, context);
+      if (!route?.action || !route?.disposition || !route?.owner) throw new Error("owner disposition resolver must return a bounded owner action");
+      return { revision: semanticDigest({ correction: correction.revision, route }), facts: { id: correction.correction_id, subject: correction.subject, applicability: correction.applicability, provenance: correction.provenance, future_usefulness: correction.future_usefulness, disposition: route.disposition, owner: route.owner, owner_revision: route.owner_revision || "" }, actions: [route.action] };
+    }
+  });
+  return { observe, complete, module };
 }
 
 const hash = semanticDigest;
@@ -412,7 +459,7 @@ export function normalizeContribution(value) {
     if (!operationId) throw new Error(`${owner}.actions[${index}].operation_id is required`);
     if (!item.arguments || typeof item.arguments !== "object" || Array.isArray(item.arguments)) throw new Error(`${owner}.actions[${index}].arguments must be an object`);
     if (!Number.isInteger(item.priority || 0)) throw new Error(`${owner}.actions[${index}].priority must be an integer`);
-    return { operation_id: operationId, arguments: item.arguments || {}, effects: strings(item.effects, `${owner}.actions[${index}].effects`), authority: String(item.authority || owner), priority: item.priority || 0 };
+    return { operation_id: operationId, arguments: item.arguments || {}, effects: strings(item.effects, `${owner}.actions[${index}].effects`), authority: String(item.authority || owner), source_owner: String(item.source_owner || owner), priority: item.priority || 0 };
   });
   const normalizedBlockers = blockers.map((item, index) => {
     if (!item.code || !item.message) throw new Error(`${owner}.blockers[${index}] requires code and message`);
@@ -461,7 +508,7 @@ export function compileSourceDecision(contributions, intent = {}) {
     if (tied.length > 1) blockers.push({ code: "ambiguous-action", message: "multiple source owners proposed equally authoritative actions", owner: "operating-decision", recovery: "reconcile the competing source owners" });
     else {
       const [owner, action] = actions[0];
-      primaryAction = { kind: kinds.invocation, operation_id: action.operation_id, arguments: action.arguments, intent, effects: action.effects, authority: action.authority, source_owner: owner, expected_input_revision: inputRevision, idempotency_key: hash({ operation_id: action.operation_id, arguments: action.arguments, input_revision: inputRevision }) };
+      primaryAction = { kind: kinds.invocation, operation_id: action.operation_id, arguments: action.arguments, intent, effects: action.effects, authority: action.authority, source_owner: action.source_owner, expected_input_revision: inputRevision, idempotency_key: hash({ operation_id: action.operation_id, arguments: action.arguments, input_revision: inputRevision }) };
     }
   }
   const blocked = [...new Set(relevant.flatMap((item) => item.claims.blocked))].sort();
@@ -514,7 +561,7 @@ export class OperationDispatcher {
     validate(operation.input_schema, invocation.arguments);
     if (JSON.stringify(invocation.effects || []) !== JSON.stringify(operation.effects)) throw new Error("invocation effects do not match the operation contract");
     if (!invocation.idempotency_key) throw new Error("idempotency_key is required");
-    const request = { operation_id: invocation.operation_id, arguments: invocation.arguments, revision: invocation.expected_input_revision, decision_response: invocation.decision_response || null };
+    const request = { operation_id: invocation.operation_id, arguments: invocation.arguments, revision: invocation.expected_input_revision, source_owner: invocation.source_owner, decision_response: invocation.decision_response || null };
     const previous = this.receipts.get(invocation.idempotency_key) || (this.receiptLoader ? await this.receiptLoader(invocation.idempotency_key) : null);
     if (previous) {
       if (JSON.stringify(previous.request) !== JSON.stringify(request)) throw new Error("idempotency key was already used for another invocation");
@@ -523,6 +570,8 @@ export class OperationDispatcher {
     const current = await resolveDecision();
     const currentOperationId = current.primary_action?.operation_id || current.decision_request?.response_operation_id;
     if (!invocation.expected_input_revision || invocation.expected_input_revision !== current.input_revision || currentOperationId !== invocation.operation_id) throw new Error("source state changed; resolve a fresh operating decision");
+    const currentOwner = current.primary_action?.source_owner || current.decision_request?.owner;
+    if (invocation.source_owner !== currentOwner) throw new Error("invocation source_owner does not match the current source owner");
     if (current.decision_request?.response_operation_id === invocation.operation_id) {
       const response = invocation.decision_response;
       const expected = current.decision_request;
@@ -559,6 +608,8 @@ export interface DecisionRequest { id: string; question: string; authority: stri
 export declare const IR: Record<string, Json>;
 export declare function canonicalSerialize(value: Json): string;
 export declare function semanticDigest(value: Json): string;
+export interface TrustedCorrectionIngress { observe(value: Record<string, Json>): Record<string, Json>; complete(correctionId: string, revision: string): void; module(): Module; }
+export declare function createTrustedCorrectionIngress(options: { transport: string; principal: string; resolveDisposition: (correction: Record<string, Json>, context: Record<string, Json>) => Record<string, Json> }): TrustedCorrectionIngress;
 export declare function ownerConclusionIdentity(owner: string, revision: string, dependencies?: Record<string, Json>): string;
 export declare function operationContract(operationId: string): Record<string, Json>;
 export interface Module { name: string; api_version?: string; required_capabilities?: string[]; owns?: string[]; claims?: string[]; resources?: ResourceReference[]; procedures?: ResourceReference[]; operations?: Operation[]; contribute: (context: Record<string, Json>) => Contribution | null; }
@@ -566,7 +617,7 @@ export declare function admitModules(modules: Module[]): Module[];
 export declare function moduleContributions(modules: Module[], context: Record<string, Json>): Contribution[];
 export declare function normalizeContribution(value: Contribution): Record<string, Json>;
 export declare function compileSourceDecision(contributions: Contribution[], intent?: Record<string, Json>): Record<string, Json>;
-export interface Operation { operation_id: string; input_schema: Record<string, Json>; effects: string[]; handler: (arguments: Record<string, Json>) => Promise<Record<string, Json>> | Record<string, Json>; recover?: (arguments: Record<string, Json>) => Promise<Record<string, Json> | null> | Record<string, Json> | null; }
+export interface Operation { operation_id: string; input_schema: Record<string, Json>; effects: string[]; accepted_handoffs?: string[]; handler: (arguments: Record<string, Json>) => Promise<Record<string, Json>> | Record<string, Json>; recover?: (arguments: Record<string, Json>) => Promise<Record<string, Json> | null> | Record<string, Json> | null; }
 export interface CommitCoordinator { run(context: { key: string; request: Record<string, Json>; execute: () => Promise<Record<string, Json>> | Record<string, Json>; recover: (() => Promise<Record<string, Json> | null> | Record<string, Json> | null) | null }): Promise<Record<string, Json>> | Record<string, Json>; }
 export declare class OperationDispatcher { constructor(options?: Record<string, unknown>); register(operation: Operation): void; invoke(invocation: Record<string, Json>, resolveDecision: () => Promise<Record<string, Json>> | Record<string, Json>): Promise<Record<string, Json>>; }
 """

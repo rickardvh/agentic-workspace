@@ -10,7 +10,9 @@
       "no-new-durable-record"
     ],
     "external_adapters": "consumers-and-transports-only",
-    "ingress": "trusted-host-capability"
+    "ingress": "trusted-host-capability",
+    "owner_consequence": "accepted-typed-owner-handoff",
+    "owner_evidence": "exact-current-source-ref-and-revision"
   },
   "decision": {
     "action_order": [
@@ -61,6 +63,7 @@
       "contribution/decisions",
       "operation/typed-result",
       "operation/durable-commit",
+      "operation/owner-handoff",
       "state/owned-paths"
     ],
     "compatibility": "1.x",
@@ -327,8 +330,7 @@
     {
       "binding": "correction.disposition",
       "effects": [
-        "correction-disposition",
-        "memory-state"
+        "correction-disposition"
       ],
       "id": "correction.disposition",
       "input": {
@@ -533,6 +535,9 @@
             },
             "type": "array"
           },
+          "expected_state_revision": {
+            "type": "string"
+          },
           "item": {
             "minLength": 1,
             "type": "string"
@@ -736,6 +741,9 @@
         "additionalProperties": false,
         "properties": {
           "dependency_revision": {
+            "type": "string"
+          },
+          "expected_state_revision": {
             "type": "string"
           },
           "key": {
