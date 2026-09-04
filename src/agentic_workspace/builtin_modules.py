@@ -66,7 +66,7 @@ def _managed_path(root: Path, relative: str) -> Path:
     if candidate.as_posix() != relative or candidate.parts[0] != STATE_ROOT:
         raise ValueError(f"managed path is outside {STATE_ROOT}: {relative}")
     path = root.joinpath(*candidate.parts)
-    root_resolved = root.resolve()
+    root_resolved = (root / STATE_ROOT).resolve()
     parent_resolved = path.parent.resolve()
     if root_resolved != parent_resolved and root_resolved not in parent_resolved.parents:
         raise ValueError(f"managed path escapes target through indirection: {relative}")
