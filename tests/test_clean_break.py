@@ -45,3 +45,10 @@ def test_github_actions_are_immutable_node24_generation_pins() -> None:
     assert all(re.fullmatch(r"[^@]+@[0-9a-f]{40}", value) for value in external_uses if not value.startswith("./"))
     assert "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1" in workflows
     assert "astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d" in workflows
+
+
+def test_ci_reports_the_repository_required_promotion_context() -> None:
+    workflow = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
+    assert "name: Support-bearing promotion" in workflow
+    assert "needs: [check, release-admission]" in workflow
+    assert "if: ${{ always() }}" in workflow

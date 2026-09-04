@@ -31,3 +31,21 @@ jobs:
           cache-suffix: ${{ github.job }}
       - run: uv sync --frozen --all-groups
       - run: make release-check
+
+  support-bearing-promotion:
+    name: Support-bearing promotion
+    if: ${{ always() }}
+    needs: [check, release-admission]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every retained v1 check
+        env:
+          CHECK_RESULT: ${{ needs.check.result }}
+          RELEASE_ADMISSION_RESULT: ${{ needs.release-admission.result }}
+        run: |
+          if [ "$CHECK_RESULT" != "success" ] || [ "$RELEASE_ADMISSION_RESULT" != "success" ]; then
+            echo "Support-bearing checks failed: check=$CHECK_RESULT release-admission=$RELEASE_ADMISSION_RESULT"
+            exit 1
+          fi
+          echo "Support-bearing promotion checks passed"
