@@ -82,7 +82,7 @@ See the [operating contract](docs/v1-contract.md), [generated two-language contr
 
 After installation, try `start` against a real repository task. Direct work should remain direct; when repository guidance, Memory, Planning, Verification, or delegation matters, Workspace will surface the relevant context or action without requiring you to know the internal module topology first.
 
-Repository-specific guidance can be scoped through `AGENTS.md`, while shared and local configuration remain separate according to authority and portability. The detailed configuration and module references describe the exact current formats; practical configuration examples are being consolidated separately from the README so first contact stays focused on the product rather than a settings catalogue.
+Repository-specific guidance can be scoped through `AGENTS.md`, while shared and local configuration remain separate according to authority and portability. Exact configuration and module formats belong in their reference documentation rather than being duplicated in the README.
 
 ## Scope and trust
 
