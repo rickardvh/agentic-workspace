@@ -18,6 +18,23 @@ Deleted pre-v1 tooling is dispositioned as follows:
   structured-executor prototype, old foundation/path/ownership skills, and stack
   management wrappers: **obsolete/delete**.
 
-The evaluation runner records deterministic observed status separately from
-provider availability. It neither calls a provider nor treats missing access as
-product failure; live provider execution remains an explicit maintainer action.
+The evaluation runner always records deterministic observed status separately
+from provider availability. Missing provider configuration is `unknown`, while
+an explicitly configured adapter probe distinguishes `available`, `unavailable`,
+and `unknown` with provenance. No environment bit is accepted as proof of access.
+
+Live evaluation is an explicit maintainer action: pass both `--provider` and an
+`--adapter-command`. The command receives one JSON object on stdin and returns
+one JSON object on stdout. It first receives a `probe`; only an `available`
+response permits live calls. Each live scenario then runs matched `direct` and
+`assisted` conditions. The assisted request contains evidence produced through
+the public `Workspace.start` and, when actionable, `Workspace.invoke` boundary,
+including the returned next decision.
+
+Reports retain bounded evidence for the effective provider input, tool calls,
+retry and repair counts, elapsed time, correctness and authority outcomes, and
+explicit unknowns. The adapter owns credentials and provider-specific request
+semantics; neither enters the product package. The runner, scenarios, and
+maintainer skills remain under `tools/`, and a wheel-build test proves they are
+not installed. Running without a provider or adapter is deterministic and makes
+no provider calls.
