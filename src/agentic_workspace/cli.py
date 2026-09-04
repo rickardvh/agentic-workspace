@@ -2,14 +2,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
-import time
 from collections.abc import Sequence
-from datetime import UTC, datetime
 
 from . import __version__
 from .operations import OperationError
-from .session_logging import append_session_event
 from .workspace import Workspace
 
 
@@ -34,8 +32,13 @@ def _parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     effective_argv = list(argv) if argv is not None else sys.argv[1:]
     args = _parser().parse_args(effective_argv)
-    started_at = datetime.now(UTC).isoformat()
-    started = time.perf_counter()
+    session_logging_enabled = bool(os.environ.get("AW_SESSION_LOG"))
+    if session_logging_enabled:
+        import time
+        from datetime import UTC, datetime
+
+        started_at = datetime.now(UTC).isoformat()
+        started = time.perf_counter()
     try:
         workspace = Workspace(args.target)
         if args.command == "start":
@@ -54,18 +57,21 @@ def main(argv: Sequence[str] | None = None) -> int:
     else:
         exit_code = 0 if payload.get("status") != "rejected" else 2
     print(json.dumps(payload, indent=2, sort_keys=True))
-    try:
-        append_session_event(
-            target=args.target,
-            argv=effective_argv,
-            command=args.command,
-            payload=payload,
-            exit_code=exit_code,
-            started_at=started_at,
-            duration_seconds=time.perf_counter() - started,
-        )
-    except (OSError, ValueError) as exc:
-        print(f"agentic-workspace: session logging failed: {exc}", file=sys.stderr)
+    if session_logging_enabled:
+        try:
+            from .session_logging import append_session_event
+
+            append_session_event(
+                target=args.target,
+                argv=effective_argv,
+                command=args.command,
+                payload=payload,
+                exit_code=exit_code,
+                started_at=started_at,
+                duration_seconds=time.perf_counter() - started,
+            )
+        except (OSError, ValueError) as exc:
+            print(f"agentic-workspace: session logging failed: {exc}", file=sys.stderr)
     return exit_code
 
 

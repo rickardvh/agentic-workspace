@@ -2,6 +2,10 @@ from __future__ import annotations
 
 import gzip
 import json
+import os
+import subprocess
+import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -21,6 +25,45 @@ def test_session_logging_is_off_by_default(tmp_path: Path, monkeypatch: pytest.M
     assert main(["start", "--target", str(tmp_path), "--task", "direct work"]) == 0
 
     assert not (tmp_path / ".agentic-workspace" / "local" / "logs").exists()
+
+
+def test_disabled_path_does_not_load_or_initialize_logging(tmp_path: Path) -> None:
+    env = os.environ.copy()
+    env.pop("AW_SESSION_LOG", None)
+    probe = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import json,sys; from agentic_workspace.cli import main; "
+                "before='agentic_workspace.session_logging' in sys.modules; "
+                f"status=main(['start','--target',{str(tmp_path)!r},'--task','probe']); "
+                "after='agentic_workspace.session_logging' in sys.modules; "
+                "print(json.dumps({'before':before,'after':after,'status':status}))"
+            ),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    result = json.loads(probe.stdout.splitlines()[-1])
+    assert result == {"before": False, "after": False, "status": 0}
+
+
+def test_disabled_logging_gate_has_negligible_cost(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("AW_SESSION_LOG", raising=False)
+    samples = 200_000
+
+    started = time.perf_counter()
+    for _ in range(samples):
+        bool(os.environ.get("AW_SESSION_LOG"))
+    elapsed = time.perf_counter() - started
+
+    # The only logging-specific work on the disabled command path is one
+    # environment lookup and branch. Keep that tax below 2 microseconds/call;
+    # imports, clocks, filesystem work, and serialization are opt-in only.
+    assert elapsed / samples < 0.000002
 
 
 def test_maintainer_opt_in_captures_stable_bounded_correlated_events(
