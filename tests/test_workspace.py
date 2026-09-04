@@ -70,6 +70,13 @@ def test_first_party_operations_are_selected_from_structured_intent(tmp_path: Pa
     assert memory["primary_action"]["operation_id"] == "memory.record"
     memory_result = workspace.invoke(memory["primary_action"])
     assert workspace.invoke(memory["primary_action"]) == memory_result
+    assert memory_result["next_decision"]["status"] == "direct"
+    assert memory_result["next_decision"]["primary_action"] is None
+    assert memory_result["next_decision"]["relevant_owners"] == ["memory", "planning"]
+
+    read = workspace.start(intent={"memory": {"operation": "read", "key": "choice"}})
+    assert read["primary_action"]["operation_id"] == "memory.read"
+    assert workspace.invoke(read["primary_action"])["value"] == {"key": "choice", "value": "small"}
 
     assert (tmp_path / ".agentic-workspace" / "planning.json").is_file()
     assert (tmp_path / ".agentic-workspace" / "memory.json").is_file()

@@ -205,17 +205,18 @@ def _planning_contribution(context: Mapping[str, Any]) -> dict[str, Any] | None:
     if isinstance(requested, Mapping) and requested.get("operation") == "set":
         item = str(requested.get("item") or "")
         status = str(requested.get("status") or "")
-        return {
-            "revision": _revision(path),
-            "actions": [
-                {
-                    "operation_id": "planning.set",
-                    "arguments": {"target": str(root), "item": item, "status": status},
-                    "effects": ["planning-state"],
-                    "priority": 50,
-                }
-            ],
-        }
+        if state.get("active") != {"id": item, "status": status}:
+            return {
+                "revision": _revision(path),
+                "actions": [
+                    {
+                        "operation_id": "planning.set",
+                        "arguments": {"target": str(root), "item": item, "status": status},
+                        "effects": ["planning-state"],
+                        "priority": 50,
+                    }
+                ],
+            }
     if not state:
         return None
     active = state.get("active")
@@ -291,7 +292,23 @@ def _memory_contribution(context: Mapping[str, Any]) -> dict[str, Any] | None:
     path = root / MEMORY_STATE
     state = _json(path)
     requested = context.get("memory")
+    if isinstance(requested, Mapping) and requested.get("operation") == "read":
+        return {
+            "revision": _revision(path),
+            "actions": [
+                {
+                    "operation_id": "memory.read",
+                    "arguments": {"target": str(root), "key": str(requested.get("key") or "")},
+                    "effects": [],
+                    "priority": 50,
+                }
+            ],
+        }
     if isinstance(requested, Mapping) and "key" in requested and "value" in requested:
+        record = {"key": str(requested["key"]), "value": requested["value"]}
+        records = state.get("records", [])
+        if isinstance(records, list) and record in records:
+            return {"revision": _revision(path), "facts": {"record": record}, "terminal": True}
         return {
             "revision": _revision(path),
             "actions": [
@@ -328,11 +345,35 @@ def _memory_record(arguments: dict[str, Any]) -> dict[str, Any]:
     return {"status": "applied", "effects": ["memory-state"], "value": record}
 
 
+def _memory_read(arguments: dict[str, Any]) -> dict[str, Any]:
+    state = _json(_root(arguments) / MEMORY_STATE)
+    records = state.get("records", [])
+    if not isinstance(records, list):
+        return {"status": "rejected", "effects": [], "value": {"reason": "invalid-memory-state"}}
+    value = next(
+        (item.get("value") for item in records if isinstance(item, dict) and item.get("key") == arguments["key"]),
+        None,
+    )
+    return {"status": "unchanged", "effects": [], "value": {"key": arguments["key"], "value": value}}
+
+
 def memory_module() -> Module:
     return Module(
         name="memory",
         contribute=_memory_contribution,
         operations=(
+            Operation(
+                "memory.read",
+                _operation_schema(
+                    {
+                        "target": {"type": "string", "minLength": 1},
+                        "key": {"type": "string", "minLength": 1},
+                    },
+                    ["target", "key"],
+                ),
+                (),
+                _memory_read,
+            ),
             Operation(
                 "memory.record",
                 _operation_schema(

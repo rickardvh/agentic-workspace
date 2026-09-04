@@ -1,4 +1,4 @@
-.PHONY: test lint typecheck format-check surface-check check build
+.PHONY: test lint typecheck format-check surface-check check build release-check
 
 test:
 	uv run --frozen pytest -q
@@ -19,3 +19,6 @@ check: lint typecheck format-check surface-check test
 
 build:
 	uv build --wheel --sdist
+
+release-check: check
+	uv run --frozen python scripts/release_conformance.py

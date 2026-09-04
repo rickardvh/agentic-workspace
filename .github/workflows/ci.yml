@@ -19,3 +19,11 @@ jobs:
       - run: uv sync --frozen --all-groups
       - run: make check
       - run: make build
+
+  release-admission:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --frozen --all-groups
+      - run: make release-check
