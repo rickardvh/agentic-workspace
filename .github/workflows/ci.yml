@@ -2,195 +2,50 @@ name: CI
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [master]
-  workflow_dispatch:
-    inputs:
-      expected_head_sha:
-        description: Exact generated release head that must receive validation.
-        required: true
-        type: string
 
 permissions:
   contents: read
 
 jobs:
-  workspace-checks:
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+  check:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
     steps:
-      - name: Verify dispatched release head
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        env:
-          EXPECTED_HEAD_SHA: ${{ inputs.expected_head_sha }}
-        run: |
-          if [ "${GITHUB_SHA}" != "${EXPECTED_HEAD_SHA}" ]; then
-            echo "Dispatched CI resolved ${GITHUB_SHA}, expected ${EXPECTED_HEAD_SHA}" >&2
-            exit 1
-          fi
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
-          fetch-depth: 0
-      - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: "3.13"
-      - name: Install uv
-        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
-      - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: "24"
-      - name: Verify lock without rewriting it
-        run: uv lock --check
-      - name: Sync the workspace once
-        run: make sync-all
-      - name: Run root generated CLI smoke tests
-        run: uv run pytest tests/test_generated_tool_conformance.py::test_generated_tool_process_conformance_contracts[modules.report.process] tests/test_generated_tool_conformance.py::test_generated_tool_process_conformance_contracts[defaults.root-cli-authority.process] -q
-      - name: Run routed workspace CLI and proof contracts
-        run: uv run pytest tests/test_workspace_cli.py tests/test_workspace_proof_generated_packages_cli.py -q
-      - name: Run workspace lint
-        run: make lint-workspace
-      - name: Run workspace typecheck without another sync
-        run: make typecheck-nosync
-      - name: Run workspace release proof
-        run: make verify-workspace
-      - name: Verify generated command packages
-        run: uv run python scripts/check/check_generated_command_packages.py --conformance-shard --require-node
+          enable-cache: true
+          cache-suffix: ${{ github.job }}
+      - run: uv sync --frozen --all-groups
+      - run: make check
+      - run: make build
 
-  workspace-package-artifacts:
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+  release-admission:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
     steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
-          python-version: "3.13"
-      - name: Install uv
-        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
-      - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: "24"
-      - name: Verify lock
-        run: uv lock --check
-      - name: Sync the workspace once
-        run: make sync-all
-      - name: Build coordinated artifacts
-        run: |
-          uv build --wheel --sdist --out-dir dist
-          uv build --wheel --sdist --out-dir dist packages/memory
-          uv build --wheel --sdist --out-dir dist packages/planning
-          uv build --wheel --sdist --out-dir dist packages/verification
-      - name: Run built package and external-consumer proof
-        run: |
-          uv run pytest tests/test_workspace_packaging.py::test_installed_workspace_wheel_imports_cli_module tests/test_workspace_packaging.py::test_installed_workspace_stack_runs_fresh_repo_cli_sequence tests/test_workspace_packaging.py::test_release_root_wheel_installs_workspace_stack_from_same_release_assets -q
-          uv run python scripts/check/run_external_consumer_readiness.py --dist-dir dist --require-node
-      - name: Prove exact npm artifacts
-        run: make packed-artifact-conformance PACKED_ARTIFACT_DIR=dist PACKED_ARTIFACT_RECEIPT=dist/generated-command-conformance-ci.json PACKED_ARTIFACT_CONTEXT=hosted-ci
-      - name: Upload coordinated package artifacts
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: agentic-workspace-package-artifacts
-          path: dist/*
-          if-no-files-found: error
-
-  package-checks:
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - package: memory
-            distribution: agentic-workspace-memory
-          - package: planning
-            distribution: agentic-workspace-planning
-          - package: verification
-            distribution: agentic-workspace-verification
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: "3.13"
-      - name: Install uv
-        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
-      - name: Verify lock
-        run: uv lock --check
-      - name: Sync the package once
-        run: make sync-${{ matrix.package }}
-      - name: Run package checks
-        run: make check-${{ matrix.package }}-nosync
-
-  declared-runtime-matrix:
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
-    name: Runtime ${{ matrix.os }} / Python ${{ matrix.python }} / Node ${{ matrix.node }}
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            python: "3.11"
-            node: "20"
-          - os: ubuntu-latest
-            python: "3.13"
-            node: "24"
-          - os: windows-latest
-            python: "3.14"
-            node: "24"
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: ${{ matrix.python }}
-      - name: Install uv
-        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
-      - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: ${{ matrix.node }}
-      - name: Verify frozen dependency graph
-        run: |
-          uv lock --check
-          uv sync --locked --all-groups
-      - name: Prove path, subprocess, install, and semantic behavior
-        run: |
-          uv run pytest tests/test_external_integration_boundary.py tests/test_package_identity.py::test_install_survives_into_fresh_second_process -q
-          uv run pytest tests/test_workspace_session_logging.py::test_session_log_concurrent_analyzers_complete_without_index_warning -q
-          uv run python scripts/check/check_generated_command_packages.py --conformance-shard --require-node
+          enable-cache: true
+          cache-suffix: ${{ github.job }}
+      - run: uv sync --frozen --all-groups
+      - run: make release-check
 
   support-bearing-promotion:
     name: Support-bearing promotion
-    if: ${{ always() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
-    needs: [workspace-checks, workspace-package-artifacts, package-checks, declared-runtime-matrix]
+    if: ${{ always() }}
+    needs: [check, release-admission]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Require every support-bearing PR check
+      - name: Require every retained v1 check
         env:
-          WORKSPACE_CHECKS: ${{ needs.workspace-checks.result }}
-          PACKAGE_ARTIFACTS: ${{ needs.workspace-package-artifacts.result }}
-          PACKAGE_CHECKS: ${{ needs.package-checks.result }}
-          RUNTIME_MATRIX: ${{ needs.declared-runtime-matrix.result }}
+          CHECK_RESULT: ${{ needs.check.result }}
+          RELEASE_ADMISSION_RESULT: ${{ needs.release-admission.result }}
         run: |
-          python - <<'PY'
-          import os
-          results = {name: os.environ[name] for name in ("WORKSPACE_CHECKS", "PACKAGE_ARTIFACTS", "PACKAGE_CHECKS", "RUNTIME_MATRIX")}
-          failed = {name: result for name, result in results.items() if result != "success"}
-          if failed:
-              raise SystemExit(f"support-bearing promotion checks failed: {failed}")
-          print("support-bearing promotion checks passed")
-          PY
+          if [ "$CHECK_RESULT" != "success" ] || [ "$RELEASE_ADMISSION_RESULT" != "success" ]; then
+            echo "Support-bearing checks failed: check=$CHECK_RESULT release-admission=$RELEASE_ADMISSION_RESULT"
+            exit 1
+          fi
+          echo "Support-bearing promotion checks passed"

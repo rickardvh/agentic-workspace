@@ -1,74 +1,56 @@
 from __future__ import annotations
 
-import importlib
+import argparse
 import json
-import sys
-from pathlib import Path
+from collections.abc import Sequence
 
-from agentic_workspace.runtime_compatibility import admit_runtime_compatibility, target_root_from_argv
-from agentic_workspace.session_logging import run_with_session_logging
+from . import __version__
+from .operations import OperationError
+from .workspace import Workspace
 
 
-def _load_main():
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="agentic-workspace")
+    parser.add_argument("--version", action="version", version=__version__)
+    commands = parser.add_subparsers(dest="command", required=True)
+
+    start = commands.add_parser("start", help="Resolve the one current operating decision.")
+    start.add_argument("--target", default=".")
+    start.add_argument("--task", default="")
+    start.add_argument("--intent", help="Structured JSON intent interpreted by relevant source owners.")
+    start.add_argument("--changed", action="append", default=[])
+    start.add_argument("--claim", action="append", default=[])
+
+    invoke = commands.add_parser("invoke", help="Execute an exact typed operation invocation.")
+    invoke.add_argument("--target", default=".")
+    invoke.add_argument("--invocation", required=True, help="JSON operation invocation returned by start.")
+    return parser
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = _parser().parse_args(list(argv) if argv is not None else None)
     try:
-        return importlib.import_module("agentic_workspace._generated_cli_package_impl.cli").main
-    except ModuleNotFoundError as exc:
-        if exc.name != "agentic_workspace._generated_cli_package_impl":
-            raise
-        repo_root = Path(__file__).resolve().parents[2]
-        sys.path.insert(0, str(repo_root))
-        return importlib.import_module("generated.workspace.python.cli").main
-
-
-def _run_cli(argv: list[str] | None = None) -> int:
-    args = list(sys.argv[1:] if argv is None else argv)
-    compatibility = admit_runtime_compatibility(target_root_from_argv(args))
-    if compatibility["status"] != "admitted":
-        json_mode = any(token == "--format=json" for token in args) or any(
-            token == "--format" and index + 1 < len(args) and args[index + 1] == "json" for index, token in enumerate(args)
-        )
-        if json_mode:
-            print(json.dumps(compatibility, indent=2))
+        workspace = Workspace(args.target)
+        if args.command == "start":
+            intent = json.loads(args.intent) if args.intent else None
+            if intent is not None and not isinstance(intent, dict):
+                raise ValueError("--intent must contain a JSON object")
+            payload = workspace.start(intent=intent, task=args.task, changed_paths=args.changed, claims=args.claim)
         else:
-            print(
-                "agentic-workspace cannot interpret this repository with the active runtime.\n"
-                f"Recovery: {compatibility['recovery_command']}",
-                file=sys.stderr,
+            invocation = json.loads(args.invocation)
+            if not isinstance(invocation, dict):
+                raise ValueError("--invocation must contain a JSON object")
+            payload = workspace.invoke(invocation)
+    except (TypeError, ValueError, OperationError, json.JSONDecodeError) as exc:
+        print(
+            json.dumps(
+                {"kind": "agentic-workspace/error/v1", "status": "rejected", "message": str(exc)}, sort_keys=True
             )
+        )
         return 2
-    generated_main = _load_main()
-    try:
-        return run_with_session_logging(args, generated_main)
-    except SystemExit:
-        raise
-    except Exception as exc:  # noqa: BLE001 - the root CLI owns the last-resort recovery envelope
-        command = " ".join(args)
-        json_mode = any(token == "--format=json" for token in args) or any(
-            token == "--format" and index + 1 < len(args) and args[index + 1] == "json" for index, token in enumerate(args)
-        )
-        if json_mode:
-            payload = {
-                "kind": "agentic-workspace/runtime-error/v1",
-                "status": "failed",
-                "message": str(exc),
-                "command": command,
-                "exit_status": 1,
-                "exception_class": type(exc).__name__,
-                "failure_class": "unexpected-runtime-exception",
-                "safe_to_retry": False,
-                "safe_recovery": "Report the exception class and command; rerun only after correcting the package failure or with an explicit debug route.",
-                "completion_boundary": "command-did-not-complete",
-            }
-            print(json.dumps(payload, indent=2))
-        else:
-            print(
-                f"agentic-workspace failed ({type(exc).__name__}): {exc}\n"
-                "The command did not complete. Fix or report the package failure before retrying.",
-                file=sys.stderr,
-            )
-        return 1
+    print(json.dumps(payload, indent=2, sort_keys=True))
+    return 0 if payload.get("status") != "rejected" else 2
 
 
-main = _run_cli
-
-__all__ = ["main"]
+if __name__ == "__main__":
+    raise SystemExit(main())

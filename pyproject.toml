@@ -4,107 +4,52 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentic-workspace"
-version = "0.51.0"
-description = "Repo-native continuity and execution layer for agents, combining workspace routing, active planning, and durable memory."
+version = "1.0.0"
+description = "A source-first operating decision and typed operation runtime for repository agents."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
 license-files = ["LICENSE"]
-keywords = ["agents", "developer-tools", "memory", "planning", "repository", "workflow"]
+authors = [{ name = "Rickard von Haugwitz" }]
 classifiers = [
-  "Development Status :: 3 - Alpha",
+  "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Developers",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
-  "Topic :: Software Development :: Build Tools",
 ]
-authors = [
-  { name = "Rickard von Haugwitz" },
-]
-maintainers = [
-  { name = "Rickard von Haugwitz" },
-]
-dependencies = [
-  "agentic-workspace-memory",
-  "agentic-workspace-planning",
-  "agentic-workspace-verification",
-  "jsonschema>=4.23",
-]
+dependencies = ["jsonschema>=4.23"]
 
 [project.urls]
-Homepage = "https://github.com/rickardvh/agentic-workspace"
 Repository = "https://github.com/rickardvh/agentic-workspace"
 Issues = "https://github.com/rickardvh/agentic-workspace/issues"
-Support = "https://github.com/rickardvh/agentic-workspace/issues"
-Documentation = "https://github.com/rickardvh/agentic-workspace/blob/master/docs/agentic-workspace-install.md"
 
 [project.scripts]
 agentic-workspace = "agentic_workspace.cli:main"
 
+[project.entry-points."agentic_workspace.modules"]
+workspace = "agentic_workspace.builtin_modules:workspace_module"
+planning = "agentic_workspace.builtin_modules:planning_module"
+memory = "agentic_workspace.builtin_modules:memory_module"
+verification = "agentic_workspace.builtin_modules:verification_module"
+
 [dependency-groups]
-dev = [
-  "command-generation @ git+https://github.com/rickardvh/command-generation.git@ac1b9c00bf41352010929de196e7d45e20014615",
-  "jsonschema",
-  "pre-commit",
-  "pytest",
-  "pytest-cov",
-  "pytest-xdist",
-  "ruff",
-  "ty",
-  "pymarkdownlnt",
-]
+dev = ["build", "pytest", "ruff", "ty"]
 
 [tool.uv]
 package = true
 
-[tool.uv.sources]
-agentic-workspace-memory = { workspace = true }
-agentic-workspace-planning = { workspace = true }
-agentic-workspace-verification = { workspace = true }
-
-[tool.uv.workspace]
-members = [
-  "packages/memory",
-  "packages/planning",
-  "packages/verification",
-]
-
 [tool.hatch.build.targets.wheel]
 packages = ["src/agentic_workspace"]
 
-[tool.hatch.build.targets.wheel.force-include]
-"generated/workspace/python/__init__.py" = "src/agentic_workspace/_generated_cli_package_impl/__init__.py"
-"generated/workspace/python/cli.py" = "src/agentic_workspace/_generated_cli_package_impl/cli.py"
-"generated/workspace/python/command_package.json" = "src/agentic_workspace/_generated_cli_package_impl/command_package.json"
-"generated/workspace/python/adapter_commands.json" = "src/agentic_workspace/_generated_cli_package_impl/adapter_commands.json"
-"generated/workspace/python/external_consumer_profile.json" = "src/agentic_workspace/_generated_cli_package_impl/external_consumer_profile.json"
-"generated/workspace/python/external_contract_bundle.json" = "src/agentic_workspace/_generated_cli_package_impl/external_contract_bundle.json"
-"generated/workspace/python/external_operation_conformance_receipts.json" = "src/agentic_workspace/_generated_cli_package_impl/external_operation_conformance_receipts.json"
-"generated/workspace/python/client.py" = "src/agentic_workspace/_generated_cli_package_impl/client.py"
-"generated/workspace/python/operations" = "src/agentic_workspace/_generated_cli_package_impl/operations"
-"generated/workspace/python/commands" = "src/agentic_workspace/_generated_cli_package_impl/commands"
-"generated/workspace/python/primitives" = "src/agentic_workspace/_generated_cli_package_impl/primitives"
-"generated/workspace/python/_contracts" = "src/agentic_workspace/_generated_cli_package_impl/_contracts"
-
 [tool.hatch.build.targets.sdist]
 include = [
+  "/LICENSE",
   "/README.md",
-  "/generated/memory/python/generated_command_adapters.json",
-  "/generated/planning/python/generated_command_adapters.json",
-  "/generated/workspace/python/generated_command_adapters.json",
-  "/generated/workspace/python/__init__.py",
-  "/generated/workspace/python/cli.py",
-  "/generated/workspace/python/command_package.json",
-  "/generated/workspace/python/adapter_commands.json",
-  "/generated/workspace/python/operations",
-  "/generated/workspace/python/commands",
-  "/generated/workspace/python/primitives",
-  "/generated/workspace/python/_contracts",
+  "/pyproject.toml",
   "/src/agentic_workspace",
-  "/tests",
 ]
 
 [tool.pytest.ini_options]
@@ -112,17 +57,9 @@ addopts = ["--import-mode=importlib"]
 testpaths = ["tests"]
 
 [tool.ruff]
-line-length = 140
+line-length = 120
 target-version = "py311"
 src = ["src", "tests"]
 
 [tool.ruff.lint]
-ignore = ["E501"]
 select = ["E", "F", "I"]
-
-[tool.coverage.run]
-source = ["agentic_workspace"]
-
-[tool.coverage.report]
-show_missing = true
-skip_covered = true

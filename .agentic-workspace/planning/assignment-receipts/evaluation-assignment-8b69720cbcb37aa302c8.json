@@ -1,9 +1,0 @@
-{
-  "context_key": "mechanical-follow-through::mechanical-follow-through",
-  "kind": "agentic-workspace/assignment-authority-receipt/v1",
-  "producer": "assignment.lifecycle",
-  "receipt_id": "evaluation-assignment:8b69720cbcb37aa302c8",
-  "revision": "sha256:e3280c94d013e5414d9caa916203c98f9ffa96f57721e7ff15cb1b98aa6e0d27",
-  "status": "current",
-  "target_identity_ref": "user-local:codex-luna-641be1fe23"
-}

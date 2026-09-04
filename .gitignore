@@ -1,27 +1,14 @@
-# Local Python environment
 .venv/
 .env.local
-.agentic-workspace/config.local.toml
-agentic-workspace.local.toml
-.agentic-workspace/delegation-outcomes.json
-agentic-workspace.delegation-outcomes.json
-.agentic-workspace/planning/external-intent-evidence.json
-.agentic-workspace/planning/finished-work-evidence.json
-.agentic-workspace/local/
-
-# Python caches
 **/__pycache__/
 **/*.py[cod]
-
-# Common test and tooling caches
 **/.pytest_cache/
 **/.ruff_cache/
-.uv-cache-root/
-**/.uv-cache-root/
-
-# Coverage reports
-**/.coverage
-**/.coverage.*
-
-# Agent scratch files
+.uv-cache*/
+.coverage*
+dist/
 scratch/
+.agentic-workspace/receipts/
+.agentic-workspace/local/
+.agentic-workspace/config.local.toml
+dist-v1*/

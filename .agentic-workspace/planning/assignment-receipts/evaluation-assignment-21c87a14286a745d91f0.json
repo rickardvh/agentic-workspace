@@ -1,9 +1,0 @@
-{
-  "context_key": "planning-owner::operating-context-self-optimisation",
-  "kind": "agentic-workspace/assignment-authority-receipt/v1",
-  "producer": "planning.owner-selection",
-  "receipt_id": "evaluation-assignment:21c87a14286a745d91f0",
-  "revision": "sha256:ec16fbc0929d4f9b6084858b",
-  "status": "current",
-  "target_identity_ref": "planning:operating-context-self-optimisation"
-}

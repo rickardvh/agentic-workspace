@@ -4,26 +4,7 @@ updates:
     directory: /
     schedule:
       interval: weekly
-    groups:
-      immutable-actions:
-        patterns: ["*"]
   - package-ecosystem: pip
     directory: /
-    schedule:
-      interval: weekly
-  - package-ecosystem: npm
-    directory: /generated/workspace/typescript
-    schedule:
-      interval: weekly
-  - package-ecosystem: npm
-    directory: /generated/memory/typescript
-    schedule:
-      interval: weekly
-  - package-ecosystem: npm
-    directory: /generated/planning/typescript
-    schedule:
-      interval: weekly
-  - package-ecosystem: npm
-    directory: /generated/verification/typescript
     schedule:
       interval: weekly
