@@ -1113,9 +1113,7 @@ def _recover_memory_correction(arguments: dict[str, Any]) -> dict[str, Any] | No
         ),
         None,
     )
-    if record is None or not _repair_owned_record(
-        _root(arguments), MEMORY_STATE, "memory", "durable-module-state"
-    ):
+    if record is None or not _repair_owned_record(_root(arguments), MEMORY_STATE, "memory", "durable-module-state"):
         return None
     return {
         "status": "applied",

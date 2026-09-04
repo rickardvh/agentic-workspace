@@ -148,9 +148,7 @@ class TrustedCorrectionIngress:
         if disposition == "owner-repair":
             subjects = _json(root / PLANNING_STATE).get("subjects", {})
             subject = (
-                subjects.get(f"correction-repair:{correction.correction_id}")
-                if isinstance(subjects, Mapping)
-                else None
+                subjects.get(f"correction-repair:{correction.correction_id}") if isinstance(subjects, Mapping) else None
             )
             return isinstance(subject, Mapping) and f"correction_revision={correction.revision}" in subject.get(
                 "constraints", []
@@ -270,9 +268,7 @@ class TrustedCorrectionIngress:
         self._completed.add(correction.correction_id)
         return {"status": "applied", "effects": ["correction-disposition"], "value": value}
 
-    def _handoff_complete(
-        self, operation_id: str, arguments: Mapping[str, Any], outcome: Mapping[str, Any]
-    ) -> None:
+    def _handoff_complete(self, operation_id: str, arguments: Mapping[str, Any], outcome: Mapping[str, Any]) -> None:
         correction = arguments.get("correction")
         if operation_id not in {
             "memory.accept-correction",
