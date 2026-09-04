@@ -4,12 +4,15 @@ import hashlib
 import json
 import subprocess
 import sys
+from contextlib import contextmanager
 from pathlib import Path
+from typing import Iterator
 
 import pytest
 
 from agentic_workspace import builtin_modules
 from agentic_workspace.builtin_modules import memory_module, planning_module, verification_module, workspace_module
+from agentic_workspace.operations import OperationContractError
 from agentic_workspace.workspace import Workspace
 
 
@@ -179,6 +182,59 @@ def test_two_processes_commit_one_idempotent_effect(tmp_path: Path) -> None:
     state = json.loads((tmp_path / ".agentic-workspace" / "memory.json").read_text(encoding="utf-8"))
     assert state["revision"] == 1
     assert state["records"] == [{"key": "race", "value": "once"}]
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "remove", "message"),
+    [
+        ("effects", None, True, "effects do not match"),
+        ("effects", [], False, "effects do not match"),
+        ("source_owner", None, True, "source_owner does not match"),
+        ("source_owner", "spoofed-owner", False, "source_owner does not match"),
+    ],
+)
+def test_mutation_lock_comes_from_registered_operation_not_transport(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    field: str,
+    value: object,
+    remove: bool,
+    message: str,
+) -> None:
+    workspace = Workspace(tmp_path, modules=[memory_module()])
+    invocation = workspace.start(intent={"memory": {"key": "safe", "value": "once"}})["primary_action"]
+    if remove:
+        invocation.pop(field)
+    else:
+        invocation[field] = value
+    acquired: list[str] = []
+
+    @contextmanager
+    def record_lock(root: Path, owner: str, *, timeout: float = 30.0) -> Iterator[None]:
+        del root, timeout
+        acquired.append(owner)
+        yield
+
+    monkeypatch.setattr("agentic_workspace.workspace.owner_process_lock", record_lock)
+    with pytest.raises(OperationContractError, match=message):
+        workspace.invoke(invocation)
+    assert acquired == ["mutation"]
+    assert not (tmp_path / ".agentic-workspace" / "memory.json").exists()
+
+
+def test_two_different_effect_owners_share_one_process_lock_domain(tmp_path: Path) -> None:
+    worker = Path(__file__).with_name("_effect_owner_worker.py")
+    commands = [[sys.executable, str(worker), str(tmp_path), owner] for owner in ("memory-like", "planning-like")]
+    processes = [
+        subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) for command in commands
+    ]
+    completed: list[tuple[str, str, int]] = []
+    for process in processes:
+        stdout, stderr = process.communicate(timeout=20)
+        completed.append((stdout, stderr, process.returncode))
+    assert [returncode for _, _, returncode in completed] == [0, 0], completed
+    shared = json.loads((tmp_path / "shared-effect.json").read_text(encoding="utf-8"))
+    assert sorted(shared) == ["memory-like", "planning-like"]
 
 
 def test_fresh_process_reconstructs_interrupted_multi_write(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

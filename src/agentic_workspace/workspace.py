@@ -88,17 +88,20 @@ class Workspace:
             raise ValueError("invocation intent must be an object")
         operation_id = str(invocation.get("operation_id") or "")
         persist_receipt = operation_id not in {"workspace.remove", "workspace.remove-legacy"}
-        owner = str(invocation.get("source_owner") or operation_id)
-        lock_owner = "mutation" if invocation.get("effects") else owner
+        dispatcher = OperationDispatcher(
+            receipt_loader=self._load_receipt if persist_receipt else None,
+            receipt_writer=self._write_receipt if persist_receipt else None,
+            journal_loader=self._load_journal,
+            journal_writer=self._write_journal,
+            journal_clearer=self._clear_journal,
+        )
+        register_module_operations(dispatcher, self._modules)
+        operation = dispatcher.operation(operation_id)
+        # Invocation transport fields are untrusted. Every registered mutation
+        # shares the authoritative process lock; effect-free work is isolated by
+        # its registered operation identity.
+        lock_owner = "mutation" if operation.effects else operation.operation_id
         with owner_process_lock(self.target, lock_owner):
-            dispatcher = OperationDispatcher(
-                receipt_loader=self._load_receipt if persist_receipt else None,
-                receipt_writer=self._write_receipt if persist_receipt else None,
-                journal_loader=self._load_journal,
-                journal_writer=self._write_journal,
-                journal_clearer=self._clear_journal,
-            )
-            register_module_operations(dispatcher, self._modules)
             return dispatcher.invoke(
                 invocation,
                 resolve_decision=lambda: self.start(

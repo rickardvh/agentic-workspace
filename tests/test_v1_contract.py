@@ -291,6 +291,7 @@ def test_interrupted_unrecoverable_effect_blocks_with_exact_owner_route() -> Non
                 "operation_id": "external.run",
                 "arguments": {},
                 "revision": invocation["expected_input_revision"],
+                "source_owner": "external",
                 "decision_response": None,
             },
         }

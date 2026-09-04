@@ -65,6 +65,13 @@ class OperationDispatcher:
     def operation_ids(self) -> tuple[str, ...]:
         return tuple(sorted(self._operations))
 
+    def operation(self, operation_id: str) -> Operation:
+        """Return the registered contract used for admission and synchronization."""
+        operation = self._operations.get(operation_id)
+        if operation is None:
+            raise OperationContractError(f"unknown operation: {operation_id}")
+        return operation
+
     def invoke(
         self,
         invocation: Mapping[str, Any],
@@ -99,6 +106,7 @@ class OperationDispatcher:
             "operation_id": operation_id,
             "arguments": dict(arguments),
             "revision": expected_revision,
+            "source_owner": invocation.get("source_owner"),
             "decision_response": dict(invocation["decision_response"])
             if isinstance(invocation.get("decision_response"), Mapping)
             else None,
@@ -144,6 +152,14 @@ class OperationDispatcher:
         )
         if not action_matches and not decision_matches:
             raise StaleInvocationError("operation is no longer the current source-owned action")
+        if action_matches and isinstance(current_action, Mapping):
+            authoritative_owner = current_action.get("source_owner")
+        elif isinstance(current_decision, Mapping):
+            authoritative_owner = current_decision.get("owner")
+        else:  # pragma: no cover - guarded by action_matches/decision_matches above
+            raise StaleInvocationError("operation is no longer the current source-owned action")
+        if invocation.get("source_owner") != authoritative_owner:
+            raise OperationContractError("invocation source_owner does not match the current source owner")
         if decision_matches:
             response = invocation.get("decision_response")
             if not isinstance(response, Mapping):
