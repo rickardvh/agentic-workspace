@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import re
 import subprocess
 from pathlib import Path
 
@@ -35,3 +36,12 @@ def test_pre_v1_runtime_and_generated_surfaces_are_absent() -> None:
     assert not Path("src/agentic_workspace/operating_decision.py").exists()
     assert not Path("src/agentic_workspace/contracts/context_authority_registry.json").exists()
     assert not Path(".agentic-workspace/fallback/no_cli_startup.py").exists()
+
+
+def test_github_actions_are_immutable_node24_generation_pins() -> None:
+    workflows = "\n".join(path.read_text(encoding="utf-8") for path in sorted(Path(".github/workflows").glob("*.yml")))
+    external_uses = re.findall(r"uses:\s+([^\s#]+)", workflows)
+    assert external_uses
+    assert all(re.fullmatch(r"[^@]+@[0-9a-f]{40}", value) for value in external_uses if not value.startswith("./"))
+    assert "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1" in workflows
+    assert "astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d" in workflows
