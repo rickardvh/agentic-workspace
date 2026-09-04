@@ -13,7 +13,15 @@ from typing import Any
 
 
 def _run(argv: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(argv, cwd=cwd, capture_output=True, text=True, check=True)
+    completed = subprocess.run(argv, cwd=cwd, capture_output=True, text=True, check=False)
+    if completed.returncode != 0:
+        command = " ".join(argv[:3])
+        raise RuntimeError(
+            f"command failed ({completed.returncode}): {command}\n"
+            f"stdout:\n{completed.stdout}\n"
+            f"stderr:\n{completed.stderr}"
+        )
+    return completed
 
 
 def _json(argv: list[str], *, cwd: Path | None = None) -> dict[str, Any] | list[Any]:
@@ -52,6 +60,7 @@ packages = [\"src/external_delegate\"]
     (package / "__init__.py").write_text(
         """from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -59,23 +68,48 @@ from agentic_workspace.modules import Module
 from agentic_workspace.operations import Operation
 
 
-def _path(context):
-    return Path(str(context["target"])) / ".delegate-result.json"
+def _digest(path):
+    return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _paths(root):
+    state = root / ".agentic-workspace"
+    return state / "planning.json", state / "delegation-evidence.json"
 
 
 def _contribute(context):
     request = context.get("delegate")
     if not isinstance(request, dict):
         return None
-    path = _path(context)
-    if path.is_file():
-        return {"revision": path.read_text(encoding="utf-8"), "terminal": True}
+    root = Path(str(context["target"])).resolve()
+    planning_path, evidence_path = _paths(root)
+    planning = json.loads(planning_path.read_text(encoding="utf-8"))
+    parent = planning.get("active", {})
+    if evidence_path.is_file():
+        evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+        return {
+            "revision": _digest(evidence_path),
+            "facts": {"worker_result": evidence},
+            "claims": {"allowed": ["delegated-result"]},
+            "terminal": True,
+        }
+    if parent.get("id") != request.get("parent_id"):
+        return {
+            "revision": _digest(planning_path),
+            "blockers": [{"code": "parent-mismatch", "message": "delegation does not belong to active parent"}],
+            "claims": {"blocked": ["complete"]},
+        }
     return {
-        "revision": "absent",
+        "revision": _digest(planning_path),
         "actions": [{
             "operation_id": "delegate.run",
-            "arguments": {"target": str(Path(str(context["target"])).resolve()), "task": str(request["task"])},
-            "effects": ["delegation-state"],
+            "arguments": {
+                "target": str(root),
+                "parent_id": str(request["parent_id"]),
+                "task": str(request["task"]),
+                "expected_parent_revision": _digest(planning_path),
+            },
+            "effects": ["delegation-evidence", "planning-state"],
             "priority": 75,
         }],
         "claims": {"blocked": ["complete"]},
@@ -83,10 +117,29 @@ def _contribute(context):
 
 
 def _run(arguments):
-    path = Path(arguments["target"]) / ".delegate-result.json"
-    value = {"agent": "external", "task": arguments["task"], "status": "complete"}
-    path.write_text(json.dumps(value, sort_keys=True), encoding="utf-8")
-    return {"status": "applied", "effects": ["delegation-state"], "value": value}
+    root = Path(arguments["target"])
+    planning_path, evidence_path = _paths(root)
+    if _digest(planning_path) != arguments["expected_parent_revision"]:
+        return {"status": "rejected", "effects": [], "value": {"reason": "stale-parent"}}
+    planning = json.loads(planning_path.read_text(encoding="utf-8"))
+    output = root / "delegated-review.txt"
+    output.write_text("bounded external review complete\\n", encoding="utf-8")
+    evidence = {
+        "parent_id": arguments["parent_id"],
+        "worker": "external",
+        "outcome": "complete",
+        "evidence": [{"path": output.name, "sha256": _digest(output)}],
+        "execution_count": 1,
+    }
+    evidence_path.write_text(json.dumps(evidence, sort_keys=True), encoding="utf-8")
+    planning["revision"] = int(planning.get("revision", 0)) + 1
+    planning["active"] = {"id": arguments["parent_id"], "status": "ready-to-complete"}
+    planning_path.write_text(json.dumps(planning, sort_keys=True), encoding="utf-8")
+    return {
+        "status": "applied",
+        "effects": ["delegation-evidence", "planning-state"],
+        "value": evidence,
+    }
 
 
 def module():
@@ -97,11 +150,16 @@ def module():
             "delegate.run",
             {
                 "type": "object",
-                "properties": {"target": {"type": "string"}, "task": {"type": "string", "minLength": 1}},
-                "required": ["target", "task"],
+                "properties": {
+                    "target": {"type": "string", "minLength": 1},
+                    "parent_id": {"type": "string", "minLength": 1},
+                    "task": {"type": "string", "minLength": 1},
+                    "expected_parent_revision": {"type": "string", "minLength": 1},
+                },
+                "required": ["target", "parent_id", "task", "expected_parent_revision"],
                 "additionalProperties": False,
             },
-            ("delegation-state",),
+            ("delegation-evidence", "planning-state"),
             _run,
         ),),
     )
@@ -339,40 +397,97 @@ def run(root: Path) -> dict[str, Any]:
         external = temp / "external"
         _write_external_module(external)
         _run([uv, "pip", "install", "--python", str(python), str(external)])
+        delegated_repo = temp / "delegated-parent"
+        delegated_state = delegated_repo / ".agentic-workspace"
+        delegated_state.mkdir(parents=True)
+        delegated_planning_path = delegated_state / "planning.json"
+        delegated_planning = {
+            "schema_version": 1,
+            "revision": 1,
+            "active": {"id": "release-parent", "status": "in-progress"},
+            "validation": [[str(python), "-c", "raise SystemExit(0)"]],
+        }
+        delegated_planning_path.write_text(json.dumps(delegated_planning), encoding="utf-8")
+        delegate_intent = {"delegate": {"parent_id": "release-parent", "task": "review the release"}}
         delegated = _json(
             [
                 str(cli),
                 "start",
                 "--target",
-                str(repository),
+                str(delegated_repo),
                 "--intent",
-                json.dumps({"delegate": {"task": "external review"}}),
+                json.dumps(delegate_intent),
             ]
         )
         assert isinstance(delegated, dict) and delegated["primary_action"]["operation_id"] == "delegate.run"
+
+        delegated_planning["revision"] = 2
+        delegated_planning_path.write_text(json.dumps(delegated_planning), encoding="utf-8")
+        stale_child = subprocess.run(
+            [
+                str(cli),
+                "invoke",
+                "--target",
+                str(delegated_repo),
+                "--invocation",
+                json.dumps(delegated["primary_action"]),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert stale_child.returncode == 2 and "source state changed" in stale_child.stdout
+        fresh_child = _json(
+            [
+                str(cli),
+                "start",
+                "--target",
+                str(delegated_repo),
+                "--intent",
+                json.dumps(delegate_intent),
+            ]
+        )
+        assert isinstance(fresh_child, dict)
+        assert fresh_child["input_revision"] != delegated["input_revision"]
         delegation_result = _json(
             [
                 str(cli),
                 "invoke",
                 "--target",
-                str(repository),
+                str(delegated_repo),
                 "--invocation",
-                json.dumps(delegated["primary_action"]),
+                json.dumps(fresh_child["primary_action"]),
             ]
         )
-        assert isinstance(delegation_result, dict) and delegation_result["next_decision"]["status"] == "terminal"
-        assert delegation_result["value"]["agent"] == "external"
+        assert isinstance(delegation_result, dict)
+        assert delegation_result["value"]["worker"] == "external"
+        assert delegation_result["value"]["parent_id"] == "release-parent"
+        assert delegation_result["value"]["evidence"][0]["path"] == "delegated-review.txt"
+        assert delegation_result["next_decision"]["primary_action"]["operation_id"] == "verification.run"
         delegation_retry = _json(
             [
                 str(cli),
                 "invoke",
                 "--target",
-                str(repository),
+                str(delegated_repo),
                 "--invocation",
-                json.dumps(delegated["primary_action"]),
+                json.dumps(fresh_child["primary_action"]),
             ]
         )
         assert delegation_retry == delegation_result
+        evidence_path = delegated_state / "delegation-evidence.json"
+        assert json.loads(evidence_path.read_text(encoding="utf-8"))["execution_count"] == 1
+
+        parent_flow, parent_terminal = _follow_exact(cli, delegated_repo, delegation_result["next_decision"])
+        assert [result["operation_id"] for result in parent_flow] == ["verification.run", "planning.complete"]
+        assert parent_terminal["status"] == "terminal"
+        assert "complete" in parent_terminal["claim_boundary"]["allowed"]
+        state_paths = [path.relative_to(delegated_repo).as_posix().lower() for path in delegated_repo.rglob("*")]
+        assert not any(
+            removed in path
+            for path in state_paths
+            for removed in ("coordinator", "packet", "checkpoint", "carry", "continuation")
+        )
 
         _run([uv, "pip", "uninstall", "--python", str(python), "agentic-workspace"])
         assert unknown.read_text(encoding="utf-8") == "preserve"
@@ -394,6 +509,7 @@ def run(root: Path) -> dict[str, Any]:
             "operation_client_parity": "passed",
             "typed_read_mutation_currentness": "passed",
             "external_module_and_delegation": "passed",
+            "delegated_parent_continuation": "passed",
             "terminal_view_boundary": "passed",
             "runtime_recovery": "passed",
             "uninstall_preservation": "passed",

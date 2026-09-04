@@ -32,6 +32,9 @@ startup/report pass.
 - Planning owns durable work status and completion transitions.
 - Memory owns explicit durable records and reads.
 - Verification owns process proof and the `complete` claim boundary.
+- External modules may own bounded worker execution and structured evidence;
+  declared effects reconcile directly into the parent source owner before the
+  next decision is compiled.
 - The reducer owns only normalization, conflict resolution, decision identity,
   action selection, and claim intersection.
 

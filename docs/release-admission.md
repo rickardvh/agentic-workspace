@@ -13,8 +13,11 @@ The gate proves:
 - direct work is stateless;
 - pre-v1 removal is a bounded typed operation that preserves unknown content;
 - planning cannot become terminal until declared verification succeeds;
-- a separately packaged module can contribute and execute a delegated operation
-  through the same entry-point seam as first-party modules;
+- a separately packaged module can compile a bounded child operation for a
+  Planning-owned parent, reconcile structured worker evidence, reject stale
+  child work, replay completed work without re-execution, and return control to
+  the parent's ordinary proof/completion path through the same entry-point seam
+  as first-party modules;
 - operation results carry the next decision, including the terminal answer; and
 - uninstall removes the executable without deleting repository-owned content.
 
