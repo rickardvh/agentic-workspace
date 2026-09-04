@@ -1,8 +1,8 @@
 {
   "kind": "planning-integration-proposal/v1",
   "id": "repo-evidence-measurements-archive-owner",
-  "status": "pending",
-  "phase": "integration-pending",
+  "status": "integrated",
+  "phase": "integrated-lifecycle-truth",
   "requested_transition": "archive-owner",
   "owner": {
     "id": "repo-evidence-measurements",
@@ -22,7 +22,7 @@
   "expected_subject_revision": "901a891375432f1a",
   "expected_planning_revision": "94224ae874087cd2",
   "created_at": "2026-08-31T12:06:32.070090Z",
-  "updated_at": "2026-08-31T12:06:32.070090Z",
+  "updated_at": "2026-09-04T06:35:32.074754Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -38,5 +38,7 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "8bd868ebafb40c1e"
+  "proposal_revision": "65c6e81e93ce7917",
+  "integrated_at": "2026-09-04T06:35:32.074754Z",
+  "integration_receipt_ref": ".agentic-workspace/planning/integration-receipts/repo-evidence-measurements-archive-owner.integration-receipt.json"
 }

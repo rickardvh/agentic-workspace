@@ -1,8 +1,8 @@
 {
   "kind": "planning-integration-proposal/v1",
   "id": "issue-2951-completion-truth-correction",
-  "status": "pending",
-  "phase": "integration-pending",
+  "status": "integrated",
+  "phase": "integrated-lifecycle-truth",
   "requested_transition": "archive-owner",
   "owner": {
     "id": "issue-2951-completion-truth-correction",
@@ -24,7 +24,7 @@
   "expected_subject_revision": "fea8afe5ffcc40b6",
   "expected_planning_revision": "2811b650daaddc24",
   "created_at": "2026-09-02T00:33:31.011556Z",
-  "updated_at": "2026-09-02T10:33:52.604819Z",
+  "updated_at": "2026-09-04T06:35:32.074754Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -40,5 +40,7 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "feb60c319d859e33"
+  "proposal_revision": "0c731cfbe0bb9cf5",
+  "integrated_at": "2026-09-04T06:35:32.074754Z",
+  "integration_receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2951-completion-truth-correction.integration-receipt.json"
 }

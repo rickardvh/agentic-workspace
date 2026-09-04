@@ -3,9 +3,9 @@
   "id": "repo-evidence-measurements",
   "title": "Add measurable repo evidence",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "closeout",
-  "revision": 3,
+  "lifecycle": "archived",
+  "phase": "complete",
+  "revision": 4,
   "intent": {
     "outcome": "Create a bounded plan for Add measurable repo evidence.",
     "non_goals": [
@@ -39,14 +39,17 @@
       "refs": []
     },
     "integration": {
-      "status": "feature-complete-integration-pending",
+      "status": "integrated",
       "proposal_id": "repo-evidence-measurements-archive-owner",
       "proposal_ref": ".agentic-workspace/planning/integration-proposals/repo-evidence-measurements-archive-owner.integration-proposal.json",
       "requested_transition": "archive-owner",
       "proof_refs": [
         ".agentic-workspace/local/proof-receipts/last.json"
       ],
-      "authority": "feature-head declaration; target integration remains terminal authority"
+      "authority": "feature-head declaration; target integration remains terminal authority",
+      "transition": "archive-owner",
+      "applied_at": "2026-09-04T06:35:32.074754Z",
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/repo-evidence-measurements-archive-owner.integration-receipt.json"
     }
   },
   "references": [],
@@ -118,7 +121,9 @@
   "proof_report": {
     "validation proof": ".agentic-workspace/local/proof-receipts/last.json",
     "proof achieved now": "yes; integration-propose recorded accepted feature-head proof.",
-    "evidence for \"proof achieved\" state": ".agentic-workspace/local/proof-receipts/last.json"
+    "evidence for \"proof achieved\" state": ".agentic-workspace/local/proof-receipts/last.json",
+    "integration proof": ".agentic-workspace/local/proof-receipts/last.json",
+    "integration applied at": "2026-09-04T06:35:32.074754Z"
   },
   "execution_run": {
     "run status": "completed",
@@ -154,5 +159,10 @@
     "why this decision is honest": "Feature-head proof is accepted; terminal lifecycle truth awaits target integration.",
     "evidence carried forward": ".agentic-workspace/local/proof-receipts/last.json",
     "reopen trigger": "New contradictory evidence or rejected target integration."
+  },
+  "active_milestone": {
+    "status": "archived",
+    "ready": "ready",
+    "blocked": "none"
   }
 }

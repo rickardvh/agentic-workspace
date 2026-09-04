@@ -1,8 +1,8 @@
 {
   "kind": "planning-integration-proposal/v1",
   "id": "issue-2959-tightened-handoff-projection",
-  "status": "pending",
-  "phase": "integration-pending",
+  "status": "integrated",
+  "phase": "integrated-lifecycle-truth",
   "requested_transition": "archive-owner",
   "owner": {
     "id": "issue-2959-tightened-handoff-projection",
@@ -24,7 +24,7 @@
   "expected_subject_revision": "40353e7ad64195d7",
   "expected_planning_revision": "12e58f2bd9656d92",
   "created_at": "2026-09-02T01:01:39.191184Z",
-  "updated_at": "2026-09-02T10:34:26.658992Z",
+  "updated_at": "2026-09-04T06:35:32.074754Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -40,5 +40,7 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "86c1b285a4ac2d2d"
+  "proposal_revision": "29445c01081a0fd5",
+  "integrated_at": "2026-09-04T06:35:32.074754Z",
+  "integration_receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2959-tightened-handoff-projection.integration-receipt.json"
 }

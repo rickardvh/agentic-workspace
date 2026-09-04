@@ -1,8 +1,8 @@
 {
   "kind": "planning-integration-proposal/v1",
   "id": "repo-evidence-dogfood-archive-owner",
-  "status": "pending",
-  "phase": "integration-pending",
+  "status": "integrated",
+  "phase": "integrated-lifecycle-truth",
   "requested_transition": "archive-owner",
   "owner": {
     "id": "repo-evidence-dogfood",
@@ -23,7 +23,7 @@
   "expected_subject_revision": "3bf8f08a54a2b0ba",
   "expected_planning_revision": "5bd7eb7ae4b63710",
   "created_at": "2026-08-31T18:33:32.730325Z",
-  "updated_at": "2026-08-31T18:33:32.730325Z",
+  "updated_at": "2026-09-04T06:35:32.074754Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -39,5 +39,7 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "0845d29f96e5f50e"
+  "proposal_revision": "41b80831d0569ca4",
+  "integrated_at": "2026-09-04T06:35:32.074754Z",
+  "integration_receipt_ref": ".agentic-workspace/planning/integration-receipts/repo-evidence-dogfood-archive-owner.integration-receipt.json"
 }

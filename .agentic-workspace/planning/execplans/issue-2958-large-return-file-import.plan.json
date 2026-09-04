@@ -3,9 +3,9 @@
   "id": "issue-2958-large-return-file-import",
   "title": "Large delegated-return file import",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "closeout",
-  "revision": 10,
+  "lifecycle": "archived",
+  "phase": "complete",
+  "revision": 11,
   "intent": {
     "outcome": "#2958",
     "non_goals": [
@@ -54,19 +54,19 @@
       "refs": []
     },
     "integration": {
-      "status": "feature-complete-integration-pending",
+      "status": "integrated",
       "proposal_id": "issue-2958-large-return-file-import",
       "proposal_ref": ".agentic-workspace/planning/integration-proposals/issue-2958-large-return-file-import.integration-proposal.json",
       "requested_transition": "archive-owner",
       "proof_refs": [
-        "tests/test_external_operation_clients.py",
-        "tests/test_workspace_session_logging.py",
-        "src/agentic_workspace/contracts/external_operation_conformance_receipts.json",
         "command://pytest-assignment-import-file",
         "command://pytest-session-parent-bounds",
         "command://generated-package-conformance"
       ],
-      "authority": "feature-head declaration; target integration remains terminal authority"
+      "authority": "feature-head declaration; target integration remains terminal authority",
+      "transition": "archive-owner",
+      "applied_at": "2026-09-04T06:35:32.074754Z",
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2958-large-return-file-import.integration-receipt.json"
     }
   },
   "references": [
@@ -185,7 +185,9 @@
   "proof_report": {
     "validation proof": "command://pytest-assignment-import-file, command://pytest-session-parent-bounds, command://generated-package-conformance",
     "proof achieved now": "yes; integration-propose recorded accepted feature-head proof.",
-    "evidence for \"proof achieved\" state": "command://pytest-assignment-import-file, command://pytest-session-parent-bounds, command://generated-package-conformance"
+    "evidence for \"proof achieved\" state": "command://pytest-assignment-import-file, command://pytest-session-parent-bounds, command://generated-package-conformance",
+    "integration proof": "command://pytest-assignment-import-file, command://pytest-session-parent-bounds, command://generated-package-conformance",
+    "integration applied at": "2026-09-04T06:35:32.074754Z"
   },
   "execution_run": {
     "run status": "completed",
@@ -228,5 +230,10 @@
     "why this decision is honest": "Feature-head proof is accepted; terminal lifecycle truth awaits target integration.",
     "evidence carried forward": "command://pytest-assignment-import-file, command://pytest-session-parent-bounds, command://generated-package-conformance",
     "reopen trigger": "New contradictory evidence or rejected target integration."
+  },
+  "active_milestone": {
+    "status": "archived",
+    "ready": "ready",
+    "blocked": "none"
   }
 }

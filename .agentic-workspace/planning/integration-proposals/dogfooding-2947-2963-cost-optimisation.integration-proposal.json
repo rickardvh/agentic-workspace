@@ -1,8 +1,8 @@
 {
   "kind": "planning-integration-proposal/v1",
   "id": "dogfooding-2947-2963-cost-optimisation",
-  "status": "pending",
-  "phase": "integration-pending",
+  "status": "integrated",
+  "phase": "integrated-lifecycle-truth",
   "requested_transition": "archive-owner",
   "owner": {
     "id": "dogfooding-2947-2963",
@@ -27,7 +27,7 @@
   "expected_subject_revision": "0ee95f9d77be948e",
   "expected_planning_revision": "55564d348f194ee8",
   "created_at": "2026-09-02T10:40:44.700119Z",
-  "updated_at": "2026-09-02T10:40:44.700119Z",
+  "updated_at": "2026-09-04T06:35:32.074754Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -43,5 +43,7 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "b98bbdd11b6f8f7e"
+  "proposal_revision": "8d48d1243374c6c4",
+  "integrated_at": "2026-09-04T06:35:32.074754Z",
+  "integration_receipt_ref": ".agentic-workspace/planning/integration-receipts/dogfooding-2947-2963-cost-optimisation.integration-receipt.json"
 }

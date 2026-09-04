@@ -1,8 +1,8 @@
 {
   "kind": "planning-integration-proposal/v1",
   "id": "issue-2958-large-return-file-import",
-  "status": "pending",
-  "phase": "integration-pending",
+  "status": "integrated",
+  "phase": "integrated-lifecycle-truth",
   "requested_transition": "archive-owner",
   "owner": {
     "id": "issue-2958-large-return-file-import",
@@ -23,7 +23,7 @@
   "expected_subject_revision": "f81311cd3a52abfa",
   "expected_planning_revision": "e0cc52f2ef8570ce",
   "created_at": "2026-09-02T10:36:07.196789Z",
-  "updated_at": "2026-09-02T10:36:07.196789Z",
+  "updated_at": "2026-09-04T06:35:32.074754Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -39,5 +39,7 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "b44c5409be7ad860"
+  "proposal_revision": "084af7556ed85897",
+  "integrated_at": "2026-09-04T06:35:32.074754Z",
+  "integration_receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2958-large-return-file-import.integration-receipt.json"
 }

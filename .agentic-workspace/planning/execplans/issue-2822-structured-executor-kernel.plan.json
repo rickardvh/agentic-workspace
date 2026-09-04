@@ -3,9 +3,9 @@
   "id": "issue-2822-structured-executor-kernel",
   "title": "Issue 2822 deterministic Structured Executor kernel",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "closeout",
-  "revision": 9,
+  "lifecycle": "archived",
+  "phase": "complete",
+  "revision": 10,
   "intent": {
     "outcome": "Build the maintainer-only deterministic Structured Executor kernel for #2822 with versioned contracts, a pure reducer, atomic local persistence, deterministic replay, revision binding, and bounded cycle/no-progress recovery.",
     "non_goals": [
@@ -53,19 +53,17 @@
       "reason": "The user did not request subagents; PR1 contracts and reducer are one tightly coupled domain-neutral slice and proof burden remains local."
     },
     "integration": {
-      "status": "feature-complete-integration-pending",
+      "status": "integrated",
       "proposal_id": "issue-2822-structured-executor-kernel-archive-owner",
       "proposal_ref": ".agentic-workspace/planning/integration-proposals/issue-2822-structured-executor-kernel-archive-owner.integration-proposal.json",
       "requested_transition": "archive-owner",
       "proof_refs": [
-        "tests/test_structured_executor_contracts.py",
-        "tests/test_structured_executor_replay.py",
-        "tests/test_structured_executor_safety.py",
-        "make check-planning-nosync",
-        "574 cross-surface tests passed",
         "Merged target replay: 15 structured-executor tests passed; ruff passed; structured inventory passed; make check-planning-nosync passed."
       ],
-      "authority": "feature-head declaration; target integration remains terminal authority"
+      "authority": "feature-head declaration; target integration remains terminal authority",
+      "transition": "archive-owner",
+      "applied_at": "2026-09-04T06:35:32.074754Z",
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2822-structured-executor-kernel-archive-owner.integration-receipt.json"
     }
   },
   "references": [],
@@ -146,7 +144,9 @@
   "proof_report": {
     "validation proof": "Merged target replay: 15 structured-executor tests passed; ruff passed; structured inventory passed; make check-planning-nosync passed.",
     "proof achieved now": "yes; integration-propose recorded accepted feature-head proof.",
-    "evidence for \"proof achieved\" state": "Merged target replay: 15 structured-executor tests passed; ruff passed; structured inventory passed; make check-planning-nosync passed."
+    "evidence for \"proof achieved\" state": "Merged target replay: 15 structured-executor tests passed; ruff passed; structured inventory passed; make check-planning-nosync passed.",
+    "integration proof": "Merged target replay: 15 structured-executor tests passed; ruff passed; structured inventory passed; make check-planning-nosync passed.",
+    "integration applied at": "2026-09-04T06:35:32.074754Z"
   },
   "execution_run": {
     "run status": "completed",
@@ -182,5 +182,10 @@
     "why this decision is honest": "Feature-head proof is accepted; terminal lifecycle truth awaits target integration.",
     "evidence carried forward": "Merged target replay: 15 structured-executor tests passed; ruff passed; structured inventory passed; make check-planning-nosync passed.",
     "reopen trigger": "New contradictory evidence or rejected target integration."
+  },
+  "active_milestone": {
+    "status": "archived",
+    "ready": "ready",
+    "blocked": "none"
   }
 }

@@ -3,9 +3,9 @@
   "id": "repo-evidence-dogfood",
   "title": "Dogfood repo evidence requirements",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "closeout",
-  "revision": 6,
+  "lifecycle": "archived",
+  "phase": "complete",
+  "revision": 7,
   "intent": {
     "outcome": "Dogfood repo evidence requirements through a reviewed repo-local catalogue and close the lifecycle typed-exit regression without entering the research epic or authorization-gated dispatch work.",
     "non_goals": [
@@ -41,7 +41,7 @@
       "refs": []
     },
     "integration": {
-      "status": "feature-complete-integration-pending",
+      "status": "integrated",
       "proposal_id": "repo-evidence-dogfood-archive-owner",
       "proposal_ref": ".agentic-workspace/planning/integration-proposals/repo-evidence-dogfood-archive-owner.integration-proposal.json",
       "requested_transition": "archive-owner",
@@ -49,7 +49,10 @@
         ".agentic-workspace/verification/assurance-evidence-records.json",
         ".agentic-workspace/verification/manifest.toml"
       ],
-      "authority": "feature-head declaration; target integration remains terminal authority"
+      "authority": "feature-head declaration; target integration remains terminal authority",
+      "transition": "archive-owner",
+      "applied_at": "2026-09-04T06:35:32.074754Z",
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/repo-evidence-dogfood-archive-owner.integration-receipt.json"
     }
   },
   "references": [
@@ -128,7 +131,9 @@
   "proof_report": {
     "validation proof": ".agentic-workspace/verification/assurance-evidence-records.json, .agentic-workspace/verification/manifest.toml",
     "proof achieved now": "yes; integration-propose recorded accepted feature-head proof.",
-    "evidence for \"proof achieved\" state": ".agentic-workspace/verification/assurance-evidence-records.json, .agentic-workspace/verification/manifest.toml"
+    "evidence for \"proof achieved\" state": ".agentic-workspace/verification/assurance-evidence-records.json, .agentic-workspace/verification/manifest.toml",
+    "integration proof": ".agentic-workspace/verification/assurance-evidence-records.json, .agentic-workspace/verification/manifest.toml",
+    "integration applied at": "2026-09-04T06:35:32.074754Z"
   },
   "execution_run": {
     "run status": "completed",
@@ -164,5 +169,10 @@
     "why this decision is honest": "Feature-head proof is accepted; terminal lifecycle truth awaits target integration.",
     "evidence carried forward": ".agentic-workspace/verification/assurance-evidence-records.json, .agentic-workspace/verification/manifest.toml",
     "reopen trigger": "New contradictory evidence or rejected target integration."
+  },
+  "active_milestone": {
+    "status": "archived",
+    "ready": "ready",
+    "blocked": "none"
   }
 }

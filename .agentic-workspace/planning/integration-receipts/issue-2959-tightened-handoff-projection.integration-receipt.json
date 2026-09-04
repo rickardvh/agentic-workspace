@@ -1,0 +1,59 @@
+{
+  "kind": "planning-integration-receipt/v1",
+  "id": "issue-2959-tightened-handoff-projection",
+  "proposal_ref": ".agentic-workspace/planning/integration-proposals/issue-2959-tightened-handoff-projection.integration-proposal.json",
+  "outcome": "integrated",
+  "requested_transition": "archive-owner",
+  "owner": {
+    "id": "issue-2959-tightened-handoff-projection",
+    "ref": ".agentic-workspace/planning/execplans/issue-2959-tightened-handoff-projection.plan.json"
+  },
+  "external_ref": "https://github.com/rickardvh/agentic-workspace/pull/2949",
+  "proof_refs": [
+    "proof://receipts/ee768ae27b361abe",
+    "command://planning-typecheck",
+    "command://ruff",
+    "review://terra-no-blockers"
+  ],
+  "parent_boundary": "Issues #2947 and #2960 remain separate assignment-lifecycle stack layers; no PR merge is requested or performed.",
+  "preserved_invariants": [
+    "unrelated owner fields preserved",
+    "exact replay remains byte-stable",
+    "root and package handoff parity"
+  ],
+  "changed_fields": [
+    "integration_proposal.status",
+    "integration_proposal.phase",
+    "owner.relationships.integration",
+    "owner.lifecycle",
+    "owner.phase",
+    "owner.revision",
+    "owner.active_milestone.status",
+    "owner.proof_report",
+    "integration_receipt"
+  ],
+  "revisions": {
+    "expected_subject": "40353e7ad64195d7",
+    "subject_before": "40353e7ad64195d7",
+    "subject_after": "307053fd1d52b68e",
+    "proposal_before": "86c1b285a4ac2d2d",
+    "proposal_after": "29445c01081a0fd5",
+    "expected_planning_revision": "12e58f2bd9656d92",
+    "target_authority_before": "a0b9b7c83341635b",
+    "target_authority_after": "ee191080f66c3e95"
+  },
+  "authority_boundary": {
+    "integrated_truth": "this receipt",
+    "proposal_status": "proposal marked integrated by the same batch transaction",
+    "owner_body": "updated by this transaction",
+    "aggregate_indexes": "derived-regenerated-not-mutated",
+    "branch_admission": {
+      "status": "inside-git",
+      "branch": "master",
+      "phase": "target"
+    },
+    "entrypoint": "planning reconcile --apply-pending-integrations"
+  },
+  "created_at": "2026-09-04T06:35:32.074754Z",
+  "receipt_revision": "2268eeadc5bae5b4"
+}

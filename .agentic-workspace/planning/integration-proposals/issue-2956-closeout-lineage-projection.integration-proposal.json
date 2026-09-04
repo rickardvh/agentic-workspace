@@ -1,8 +1,8 @@
 {
   "kind": "planning-integration-proposal/v1",
   "id": "issue-2956-closeout-lineage-projection",
-  "status": "pending",
-  "phase": "integration-pending",
+  "status": "integrated",
+  "phase": "integrated-lifecycle-truth",
   "requested_transition": "archive-owner",
   "owner": {
     "id": "issue-2956-closeout-lineage-projection",
@@ -23,7 +23,7 @@
   "expected_subject_revision": "990d1acd22960f4d",
   "expected_planning_revision": "53b73c9deae33cc9",
   "created_at": "2026-09-02T10:35:41.928362Z",
-  "updated_at": "2026-09-02T10:35:41.928362Z",
+  "updated_at": "2026-09-04T06:35:32.074754Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -39,5 +39,7 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "870e712d7eb5f01b"
+  "proposal_revision": "61bf8cce8e0171ec",
+  "integrated_at": "2026-09-04T06:35:32.074754Z",
+  "integration_receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2956-closeout-lineage-projection.integration-receipt.json"
 }

@@ -1,0 +1,59 @@
+{
+  "kind": "planning-integration-receipt/v1",
+  "id": "issue-2951-completion-truth-correction",
+  "proposal_ref": ".agentic-workspace/planning/integration-proposals/issue-2951-completion-truth-correction.integration-proposal.json",
+  "outcome": "integrated",
+  "requested_transition": "archive-owner",
+  "owner": {
+    "id": "issue-2951-completion-truth-correction",
+    "ref": ".agentic-workspace/planning/execplans/issue-2951-completion-truth-correction.plan.json"
+  },
+  "external_ref": "https://github.com/rickardvh/agentic-workspace/pull/2949",
+  "proof_refs": [
+    "command://pytest-completion-correction",
+    "command://planning-typecheck",
+    "command://generated-package-static",
+    "review://terra-no-blockers"
+  ],
+  "parent_boundary": "Issue #2959 remains a separate next stack layer; target integration remains outside this feature-head owner.",
+  "preserved_invariants": [
+    "no arbitrary completion field patching",
+    "atomic owner lane proposal receipt update",
+    "unrelated planning state preserved"
+  ],
+  "changed_fields": [
+    "integration_proposal.status",
+    "integration_proposal.phase",
+    "owner.relationships.integration",
+    "owner.lifecycle",
+    "owner.phase",
+    "owner.revision",
+    "owner.active_milestone.status",
+    "owner.proof_report",
+    "integration_receipt"
+  ],
+  "revisions": {
+    "expected_subject": "fea8afe5ffcc40b6",
+    "subject_before": "fea8afe5ffcc40b6",
+    "subject_after": "5e0590b496165ed3",
+    "proposal_before": "feb60c319d859e33",
+    "proposal_after": "0c731cfbe0bb9cf5",
+    "expected_planning_revision": "2811b650daaddc24",
+    "target_authority_before": "a0b9b7c83341635b",
+    "target_authority_after": "ee191080f66c3e95"
+  },
+  "authority_boundary": {
+    "integrated_truth": "this receipt",
+    "proposal_status": "proposal marked integrated by the same batch transaction",
+    "owner_body": "updated by this transaction",
+    "aggregate_indexes": "derived-regenerated-not-mutated",
+    "branch_admission": {
+      "status": "inside-git",
+      "branch": "master",
+      "phase": "target"
+    },
+    "entrypoint": "planning reconcile --apply-pending-integrations"
+  },
+  "created_at": "2026-09-04T06:35:32.074754Z",
+  "receipt_revision": "15dcd520da865f9a"
+}

@@ -3,9 +3,9 @@
   "id": "issue-2959-tightened-handoff-projection",
   "title": "Make tightened execplan contract drive handoff",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "closeout",
-  "revision": 5,
+  "lifecycle": "archived",
+  "phase": "complete",
+  "revision": 6,
   "intent": {
     "outcome": "Create a bounded plan for Make tightened execplan contract drive handoff.",
     "non_goals": [
@@ -46,16 +46,20 @@
       "refs": []
     },
     "integration": {
-      "status": "feature-complete-integration-pending",
+      "status": "integrated",
       "proposal_id": "issue-2959-tightened-handoff-projection",
       "proposal_ref": ".agentic-workspace/planning/integration-proposals/issue-2959-tightened-handoff-projection.integration-proposal.json",
       "requested_transition": "archive-owner",
       "proof_refs": [
         "proof://receipts/ee768ae27b361abe",
         "command://planning-typecheck",
-        "command://ruff"
+        "command://ruff",
+        "review://terra-no-blockers"
       ],
-      "authority": "feature-head declaration; target integration remains terminal authority"
+      "authority": "feature-head declaration; target integration remains terminal authority",
+      "transition": "archive-owner",
+      "applied_at": "2026-09-04T06:35:32.074754Z",
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2959-tightened-handoff-projection.integration-receipt.json"
     }
   },
   "references": [],
@@ -119,7 +123,9 @@
   "proof_report": {
     "validation proof": "proof://receipts/ee768ae27b361abe, command://planning-typecheck, command://ruff",
     "proof achieved now": "yes; integration-propose recorded accepted feature-head proof.",
-    "evidence for \"proof achieved\" state": "proof://receipts/ee768ae27b361abe, command://planning-typecheck, command://ruff"
+    "evidence for \"proof achieved\" state": "proof://receipts/ee768ae27b361abe, command://planning-typecheck, command://ruff",
+    "integration proof": "proof://receipts/ee768ae27b361abe, command://planning-typecheck, command://ruff, review://terra-no-blockers",
+    "integration applied at": "2026-09-04T06:35:32.074754Z"
   },
   "execution_run": {
     "run status": "completed",
@@ -162,5 +168,10 @@
     "why this decision is honest": "Feature-head proof is accepted; terminal lifecycle truth awaits target integration.",
     "evidence carried forward": "proof://receipts/ee768ae27b361abe, command://planning-typecheck, command://ruff",
     "reopen trigger": "New contradictory evidence or rejected target integration."
+  },
+  "active_milestone": {
+    "status": "archived",
+    "ready": "ready",
+    "blocked": "none"
   }
 }

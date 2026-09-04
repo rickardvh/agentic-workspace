@@ -3,9 +3,9 @@
   "id": "repo-evidence-requirements-slice",
   "title": "Compile named repo requirements",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "closeout",
-  "revision": 5,
+  "lifecycle": "archived",
+  "phase": "complete",
+  "revision": 6,
   "intent": {
     "outcome": "GitHub issues #2906 and #2908",
     "non_goals": [
@@ -44,14 +44,17 @@
       "reason": "Current assignment policy is local-preferred; the slice is one cohesive shared-contract change, and non-local delegation is not explicitly authorized."
     },
     "integration": {
-      "status": "feature-complete-integration-pending",
+      "status": "integrated",
       "proposal_id": "repo-evidence-requirements-slice-archive-owner",
       "proposal_ref": ".agentic-workspace/planning/integration-proposals/repo-evidence-requirements-slice-archive-owner.integration-proposal.json",
       "requested_transition": "archive-owner",
       "proof_refs": [
         ".agentic-workspace/local/proof-receipts/last.json"
       ],
-      "authority": "feature-head declaration; target integration remains terminal authority"
+      "authority": "feature-head declaration; target integration remains terminal authority",
+      "transition": "archive-owner",
+      "applied_at": "2026-09-04T06:35:32.074754Z",
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/repo-evidence-requirements-slice-archive-owner.integration-receipt.json"
     }
   },
   "references": [
@@ -140,7 +143,9 @@
   "proof_report": {
     "validation proof": ".agentic-workspace/local/proof-receipts/last.json",
     "proof achieved now": "yes; integration-propose recorded accepted feature-head proof.",
-    "evidence for \"proof achieved\" state": ".agentic-workspace/local/proof-receipts/last.json"
+    "evidence for \"proof achieved\" state": ".agentic-workspace/local/proof-receipts/last.json",
+    "integration proof": ".agentic-workspace/local/proof-receipts/last.json",
+    "integration applied at": "2026-09-04T06:35:32.074754Z"
   },
   "execution_run": {
     "run status": "completed",
@@ -176,5 +181,10 @@
     "why this decision is honest": "Feature-head proof is accepted; terminal lifecycle truth awaits target integration.",
     "evidence carried forward": ".agentic-workspace/local/proof-receipts/last.json",
     "reopen trigger": "New contradictory evidence or rejected target integration."
+  },
+  "active_milestone": {
+    "status": "archived",
+    "ready": "ready",
+    "blocked": "none"
   }
 }

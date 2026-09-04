@@ -3,9 +3,9 @@
   "id": "issue-2951-completion-truth-correction",
   "title": "Implement canonical completed-run truth correction",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "closeout",
-  "revision": 5,
+  "lifecycle": "archived",
+  "phase": "complete",
+  "revision": 6,
   "intent": {
     "outcome": "https://github.com/rickardvh/agentic-workspace/issues/2951",
     "non_goals": [
@@ -55,16 +55,20 @@
       "bounded_child_authority": "separate-binding-decision"
     },
     "integration": {
-      "status": "feature-complete-integration-pending",
+      "status": "integrated",
       "proposal_id": "issue-2951-completion-truth-correction",
       "proposal_ref": ".agentic-workspace/planning/integration-proposals/issue-2951-completion-truth-correction.integration-proposal.json",
       "requested_transition": "archive-owner",
       "proof_refs": [
         "command://pytest-completion-correction",
         "command://planning-typecheck",
-        "command://generated-package-static"
+        "command://generated-package-static",
+        "review://terra-no-blockers"
       ],
-      "authority": "feature-head declaration; target integration remains terminal authority"
+      "authority": "feature-head declaration; target integration remains terminal authority",
+      "transition": "archive-owner",
+      "applied_at": "2026-09-04T06:35:32.074754Z",
+      "receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2951-completion-truth-correction.integration-receipt.json"
     }
   },
   "references": [
@@ -147,7 +151,9 @@
   "proof_report": {
     "validation proof": "command://pytest-completion-correction, command://planning-typecheck, command://generated-package-static",
     "proof achieved now": "yes; integration-propose recorded accepted feature-head proof.",
-    "evidence for \"proof achieved\" state": "command://pytest-completion-correction, command://planning-typecheck, command://generated-package-static"
+    "evidence for \"proof achieved\" state": "command://pytest-completion-correction, command://planning-typecheck, command://generated-package-static",
+    "integration proof": "command://pytest-completion-correction, command://planning-typecheck, command://generated-package-static, review://terra-no-blockers",
+    "integration applied at": "2026-09-04T06:35:32.074754Z"
   },
   "execution_run": {
     "run status": "completed",
@@ -190,5 +196,10 @@
     "why this decision is honest": "Feature-head proof is accepted; terminal lifecycle truth awaits target integration.",
     "evidence carried forward": "command://pytest-completion-correction, command://planning-typecheck, command://generated-package-static",
     "reopen trigger": "New contradictory evidence or rejected target integration."
+  },
+  "active_milestone": {
+    "status": "archived",
+    "ready": "ready",
+    "blocked": "none"
   }
 }
