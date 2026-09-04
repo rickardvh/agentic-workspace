@@ -414,6 +414,18 @@ const ownerRevision = "sha256:" + "a".repeat(64);
 ingress.observe({{ correction_id: "ts-verification", statement: "Use focused proof.", subject: {{ kind: "verification-route", id: "focused" }}, future_usefulness: "retain", existing_owner: {{ owner: "verification", ref: "focused", revision: ownerRevision }} }});
 const ownerDecision = compileSourceDecision(moduleContributions([ingress.module(), {{ name: "verification", owns: [], claims: [], operations: [{{ operation_id: "verification.accept-correction", input_schema: {{ type: "object" }}, effects: [], accepted_handoffs: ["correction"], handler: () => ({{ status: "unchanged", effects: [], value: {{}} }}) }}], contribute: () => null }}], {{ target: "." }}));
 const ownerValid = validateCorrectionAdmission("verification", ownerDecision.primary_action.arguments, {{ owner_ref: "focused", owner_revision: ownerRevision }});
+const ownerStale = validateCorrectionAdmission("verification", ownerDecision.primary_action.arguments, {{ owner_ref: "focused", owner_revision: "sha256:" + "0".repeat(64) }});
+
+const assignmentIngress = createTrustedCorrectionIngress({{ transport: "ts-host", principal: "human" }});
+assignmentIngress.observe({{ correction_id: "ts-assignment", statement: "Keep best-fit assignment.", subject: {{ kind: "delegation-policy", id: "policy" }}, future_usefulness: "retain", existing_owner: {{ owner: "assignment", ref: "policy", revision: ownerRevision }} }});
+const assignmentDecision = compileSourceDecision(moduleContributions([assignmentIngress.module(), {{ name: "assignment", owns: [], claims: [], operations: [{{ operation_id: "assignment.accept-correction", input_schema: {{ type: "object" }}, effects: [], accepted_handoffs: ["correction"], handler: () => ({{ status: "unchanged", effects: [], value: {{}} }}) }}], contribute: () => null }}], {{ target: "." }}));
+const assignmentValid = validateCorrectionAdmission("assignment", assignmentDecision.primary_action.arguments, {{ owner_ref: "policy", owner_revision: ownerRevision }});
+
+const failureIngress = createTrustedCorrectionIngress({{ transport: "ts-host", principal: "human" }});
+failureIngress.observe({{ correction_id: "ts-failure", statement: "Focused proof was skipped.", subject: {{ kind: "verification-route", id: "focused" }}, future_usefulness: "retain", deterministic_owner_failure: {{ owner: "verification", ref: "focused", revision: ownerRevision }} }});
+const failureDecision = compileSourceDecision(moduleContributions([failureIngress.module(), {{ name: "planning", owns: [], claims: [], operations: [{{ operation_id: "planning.accept-correction-failure", input_schema: {{ type: "object" }}, effects: ["planning-state"], accepted_handoffs: ["correction"], handler: () => ({{ status: "applied", effects: ["planning-state"], value: {{}} }}) }}], contribute: () => null }}], {{ target: ".", owner_revisions: {{ planning: "absent" }} }}));
+const failureValid = validateCorrectionAdmission("planning", failureDecision.primary_action.arguments, {{ owner: "verification", owner_ref: "focused", owner_revision: ownerRevision, state_revision: "absent" }});
+const failureWrongOwner = validateCorrectionAdmission("planning", failureDecision.primary_action.arguments, {{ owner: "repository", owner_ref: "focused", owner_revision: ownerRevision, state_revision: "absent" }});
 
 async function resolveRetention(answer) {{
   const bounded = createTrustedCorrectionIngress({{ transport: "ts-host", principal: "human" }});
@@ -430,7 +442,7 @@ async function resolveRetention(answer) {{
   for (const operation of bounded.module().operations) dispatcher.register(operation);
   return (await dispatcher.invoke(invocation, resolve)).next_decision.primary_action.operation_id;
 }}
-console.log(JSON.stringify({{ ownerOperation: ownerDecision.primary_action.operation_id, ownerValid, retain: await resolveRetention("retain"), discard: await resolveRetention("no-new-durable-record") }}));
+console.log(JSON.stringify({{ ownerOperation: ownerDecision.primary_action.operation_id, ownerValid, ownerStale, assignmentOperation: assignmentDecision.primary_action.operation_id, assignmentValid, failureOperation: failureDecision.primary_action.operation_id, failureValid, failureWrongOwner, retain: await resolveRetention("retain"), discard: await resolveRetention("no-new-durable-record") }}));
 '''
     completed = subprocess.run(["node", "--input-type=module", "-e", script], capture_output=True, text=True)
     assert completed.returncode == 0, completed.stderr
@@ -438,6 +450,12 @@ console.log(JSON.stringify({{ ownerOperation: ownerDecision.primary_action.opera
     assert result == {
         "ownerOperation": "verification.accept-correction",
         "ownerValid": True,
+        "ownerStale": False,
+        "assignmentOperation": "assignment.accept-correction",
+        "assignmentValid": True,
+        "failureOperation": "planning.accept-correction-failure",
+        "failureValid": True,
+        "failureWrongOwner": False,
         "retain": "memory.accept-correction",
         "discard": "correction.disposition",
     }
