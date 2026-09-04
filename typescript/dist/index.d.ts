@@ -6,13 +6,17 @@ export interface DecisionRequest { id: string; question: string; authority: stri
 export declare const IR: Record<string, Json>;
 export declare function canonicalSerialize(value: Json): string;
 export declare function semanticDigest(value: Json): string;
+export interface TrustedCorrectionIngress { observe(value: Record<string, Json>): Record<string, Json>; complete(correctionId: string, revision: string): void; module(): Module; }
+export declare function correctionRevision(correction: Record<string, Json>): string;
+export declare function validateCorrectionAdmission(kind: "memory" | "repository" | "verification" | "assignment" | "planning", args: Record<string, Json>, current?: Record<string, Json>): boolean;
+export declare function createTrustedCorrectionIngress(options: { transport: string; principal: string }): TrustedCorrectionIngress;
 export declare function ownerConclusionIdentity(owner: string, revision: string, dependencies?: Record<string, Json>): string;
 export declare function operationContract(operationId: string): Record<string, Json>;
-export interface Module { name: string; api_version?: string; required_capabilities?: string[]; owns?: string[]; claims?: string[]; resources?: ResourceReference[]; procedures?: ResourceReference[]; operations?: Operation[]; contribute: (context: Record<string, Json>) => Contribution | null; }
+export interface Module { name: string; api_version?: string; required_capabilities?: string[]; owns?: string[]; claims?: string[]; resources?: ResourceReference[]; procedures?: ResourceReference[]; operations?: Operation[]; contribute: (context: Record<string, Json>) => Contribution | null; handoff_complete?: (operationId: string, arguments: Record<string, Json>, outcome: Record<string, Json>) => void; }
 export declare function admitModules(modules: Module[]): Module[];
 export declare function moduleContributions(modules: Module[], context: Record<string, Json>): Contribution[];
 export declare function normalizeContribution(value: Contribution): Record<string, Json>;
 export declare function compileSourceDecision(contributions: Contribution[], intent?: Record<string, Json>): Record<string, Json>;
-export interface Operation { operation_id: string; input_schema: Record<string, Json>; effects: string[]; handler: (arguments: Record<string, Json>) => Promise<Record<string, Json>> | Record<string, Json>; recover?: (arguments: Record<string, Json>) => Promise<Record<string, Json> | null> | Record<string, Json> | null; }
+export interface Operation { operation_id: string; input_schema: Record<string, Json>; effects: string[]; accepted_handoffs?: string[]; handler: (arguments: Record<string, Json>) => Promise<Record<string, Json>> | Record<string, Json>; recover?: (arguments: Record<string, Json>) => Promise<Record<string, Json> | null> | Record<string, Json> | null; }
 export interface CommitCoordinator { run(context: { key: string; request: Record<string, Json>; execute: () => Promise<Record<string, Json>> | Record<string, Json>; recover: (() => Promise<Record<string, Json> | null> | Record<string, Json> | null) | null }): Promise<Record<string, Json>> | Record<string, Json>; }
 export declare class OperationDispatcher { constructor(options?: Record<string, unknown>); register(operation: Operation): void; invoke(invocation: Record<string, Json>, resolveDecision: () => Promise<Record<string, Json>> | Record<string, Json>): Promise<Record<string, Json>>; }

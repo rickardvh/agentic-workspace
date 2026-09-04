@@ -34,6 +34,7 @@
       "contribution/decisions",
       "operation/typed-result",
       "operation/durable-commit",
+      "operation/owner-handoff",
       "state/owned-paths"
     ],
     "optional_dimensions": ["facts", "resources", "procedures", "decisions", "operations"],
@@ -61,6 +62,15 @@
     "currentness": "owner-revision-plus-exact-dependencies",
     "transcripts": false,
     "volatile-ranking": false
+  },
+  "correction": {
+    "ingress": "trusted-host-capability",
+    "authority": "transport-bound-not-payload-asserted",
+    "dispositions": ["already-owned", "memory", "owner-repair", "no-new-durable-record"],
+    "deduplication": "stable-correction-id-plus-operation-receipt",
+    "owner_evidence": "exact-current-source-ref-and-revision",
+    "owner_consequence": "accepted-typed-owner-handoff",
+    "external_adapters": "consumers-and-transports-only"
   },
   "operations": [
     {
@@ -167,6 +177,42 @@
       }
     },
     {
+      "id": "correction.disposition",
+      "owner": "correction",
+      "effects": ["correction-disposition"],
+      "binding": "correction.disposition",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "correction_id": {"type": "string", "minLength": 1},
+          "correction_revision": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "disposition": {"enum": ["already-owned", "memory", "owner-repair", "no-new-durable-record"]},
+          "owner": {"type": "string", "minLength": 1},
+          "owner_revision": {"type": "string"}
+        },
+        "required": ["target", "correction_id", "correction_revision", "disposition", "owner", "owner_revision"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "correction.choose-retention",
+      "owner": "correction",
+      "effects": ["correction-disposition"],
+      "binding": "correction.choose_retention",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "correction_id": {"type": "string", "minLength": 1},
+          "correction_revision": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "answer": {"enum": ["retain", "no-new-durable-record"]}
+        },
+        "required": ["target", "correction_id", "correction_revision", "answer"],
+        "additionalProperties": false
+      }
+    },
+    {
       "id": "repository.answer",
       "owner": "repository",
       "effects": ["repository-configuration"],
@@ -181,6 +227,24 @@
           "scope": {"enum": ["shared", "local"]}
         },
         "required": ["target", "rule_id", "rule_revision", "answer", "scope"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "repository.accept-correction",
+      "owner": "repository",
+      "effects": [],
+      "binding": "repository.accept_correction",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "correction": {"type": "object"},
+          "correction_revision": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "owner_ref": {"type": "string", "minLength": 1},
+          "owner_revision": {"type": "string", "minLength": 1}
+        },
+        "required": ["target", "correction", "correction_revision", "owner_ref", "owner_revision"],
         "additionalProperties": false
       }
     },
@@ -247,6 +311,7 @@
           "dependencies": {"type": "array", "items": {"type": "string"}},
           "stops": {"type": "array", "items": {"type": "string"}},
           "proof_claims": {"type": "array", "items": {"type": "string"}}
+          ,"expected_state_revision": {"type": "string"}
         },
         "required": ["target", "item", "status"],
         "additionalProperties": false
@@ -266,6 +331,25 @@
           "disposition": {"enum": ["integrated", "revise-scope", "residual"]}
         },
         "required": ["target", "item", "expected_subject_revision", "disposition"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "planning.accept-correction-failure",
+      "owner": "planning",
+      "effects": ["planning-state"],
+      "binding": "planning.accept_correction_failure",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "correction": {"type": "object"},
+          "correction_revision": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "owner_ref": {"type": "string", "minLength": 1},
+          "owner_revision": {"type": "string", "minLength": 1},
+          "expected_state_revision": {"type": "string", "minLength": 1}
+        },
+        "required": ["target", "correction", "correction_revision", "owner_ref", "owner_revision", "expected_state_revision"],
         "additionalProperties": false
       }
     },
@@ -336,6 +420,7 @@
           "paths": {"type": "array", "items": {"type": "string"}},
           "dependency_revision": {"type": "string"},
           "kind": {"enum": ["advisory", "workaround"]}
+          ,"expected_state_revision": {"type": "string"}
         },
         "required": ["target", "key", "value"],
         "additionalProperties": false
@@ -355,6 +440,23 @@
           "stronger_owner": {"type": "string"}
         },
         "required": ["target", "key", "disposition"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "memory.accept-correction",
+      "owner": "memory",
+      "effects": ["memory-state"],
+      "binding": "memory.accept_correction",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "correction": {"type": "object"},
+          "correction_revision": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "expected_state_revision": {"type": "string", "minLength": 1}
+        },
+        "required": ["target", "correction", "correction_revision", "expected_state_revision"],
         "additionalProperties": false
       }
     },
@@ -380,6 +482,42 @@
           }
         },
         "required": ["target", "subject_revision", "strategy_revision", "route_id", "commands"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "verification.accept-correction",
+      "owner": "verification",
+      "effects": [],
+      "binding": "verification.accept_correction",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "correction": {"type": "object"},
+          "correction_revision": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "owner_ref": {"type": "string", "minLength": 1},
+          "owner_revision": {"type": "string", "minLength": 1}
+        },
+        "required": ["target", "correction", "correction_revision", "owner_ref", "owner_revision"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "assignment.accept-correction",
+      "owner": "assignment",
+      "effects": [],
+      "binding": "assignment.accept_correction",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "correction": {"type": "object"},
+          "correction_revision": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "owner_ref": {"type": "string", "minLength": 1},
+          "owner_revision": {"type": "string", "minLength": 1}
+        },
+        "required": ["target", "correction", "correction_revision", "owner_ref", "owner_revision"],
         "additionalProperties": false
       }
     }

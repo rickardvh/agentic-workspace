@@ -191,9 +191,18 @@ def _operation(
     operation_id: str,
     handler: Callable[[dict[str, Any]], dict[str, Any]],
     recover: Callable[[dict[str, Any]], dict[str, Any] | None] | None = None,
+    *,
+    accepted_handoffs: tuple[str, ...] = (),
 ) -> Operation:
     contract = operation_contract(operation_id)
-    return Operation(operation_id, contract["input"], tuple(contract["effects"]), handler, recover)
+    return Operation(
+        operation_id,
+        contract["input"],
+        tuple(contract["effects"]),
+        handler,
+        recover,
+        accepted_handoffs,
+    )
 
 
 def _workspace_contribution(context: Mapping[str, Any]) -> dict[str, Any] | None:
@@ -626,6 +635,9 @@ def _planning_semantic_revision(subject: Mapping[str, Any]) -> str:
 def _planning_set(arguments: dict[str, Any]) -> dict[str, Any]:
     root = _root(arguments)
     path = root / PLANNING_STATE
+    expected_revision = str(arguments.get("expected_state_revision") or "")
+    if expected_revision and _state_revision(root, PLANNING_STATE) != expected_revision:
+        return {"status": "rejected", "effects": [], "value": {"reason": "stale-planning-state"}}
     state = _json(path) or {"schema_version": 1, "revision": 0}
     subjects = _planning_subjects(state)
     current = subjects.get(arguments["item"], {})
@@ -680,6 +692,106 @@ def _recover_planning(arguments: dict[str, Any]) -> dict[str, Any] | None:
             return None
         return {"status": "applied", "effects": ["planning-state"], "value": subject}
     return None
+
+
+def _correction_revision(correction: Mapping[str, Any]) -> str:
+    return semantic_digest(
+        {
+            "correction_id": correction.get("correction_id"),
+            "statement": correction.get("statement"),
+            "subject": dict(correction.get("subject", {})),
+            "applicability": dict(correction.get("applicability", {})),
+            "provenance": dict(correction.get("provenance", {})),
+            "future_usefulness": correction.get("future_usefulness"),
+            "existing_owner": dict(correction.get("existing_owner", {})),
+            "deterministic_owner_failure": dict(correction.get("deterministic_owner_failure", {})),
+        }
+    )
+
+
+def _planning_accept_correction_failure(arguments: dict[str, Any]) -> dict[str, Any]:
+    from .repository_controls import repository_rule_revision
+
+    root = _root(arguments)
+    correction = arguments["correction"]
+    failure = correction.get("deterministic_owner_failure", {}) if isinstance(correction, Mapping) else {}
+    subject = correction.get("subject", {}) if isinstance(correction, Mapping) else {}
+    failed_owner = str(failure.get("owner") or "") if isinstance(failure, Mapping) else ""
+    owner_ref = arguments["owner_ref"]
+    owner_revision = arguments["owner_revision"]
+    owner_current = False
+    if failed_owner == "repository":
+        owner_current = (
+            subject.get("kind") == "repository-rule"
+            and subject.get("id") == owner_ref
+            and repository_rule_revision(root, owner_ref) == owner_revision
+        )
+    elif failed_owner == "verification":
+        policy_path = root / VERIFICATION_POLICY
+        try:
+            policy = tomllib.loads(policy_path.read_text(encoding="utf-8")) if policy_path.is_file() else {}
+        except (OSError, tomllib.TOMLDecodeError):
+            policy = {}
+        routes = policy.get("routes", []) if isinstance(policy, Mapping) else []
+        owner_current = (
+            subject.get("kind") == "verification-route"
+            and subject.get("id") == owner_ref
+            and _revision(policy_path) == owner_revision
+            and any(isinstance(route, Mapping) and route.get("id") == owner_ref for route in routes)
+        )
+    elif failed_owner == "assignment":
+        from .orchestration import assignment_evidence_current
+
+        owner_current = assignment_evidence_current(root, owner_ref, owner_revision, subject)
+    valid = (
+        isinstance(failure, Mapping)
+        and isinstance(subject, Mapping)
+        and _correction_revision(correction) == arguments["correction_revision"]
+        and correction.get("provenance", {}).get("authority") == "human"
+        and failure.get("ref") == arguments["owner_ref"]
+        and failure.get("revision") == arguments["owner_revision"]
+        and owner_current
+        and _state_revision(root, PLANNING_STATE) == arguments["expected_state_revision"]
+    )
+    if not valid:
+        return {"status": "rejected", "effects": [], "value": {"reason": "owner-failure-not-established"}}
+    outcome = _planning_set(
+        {
+            "target": str(root),
+            "item": f"correction-repair:{correction['correction_id']}",
+            "status": "in-progress",
+            "outcome": f"Repair deterministic {failed_owner} owner failure: {correction['statement']}",
+            "scope": [arguments["owner_ref"]],
+            "constraints": [
+                f"correction_revision={arguments['correction_revision']}",
+                f"failed_owner_revision={arguments['owner_revision']}",
+            ],
+            "dependencies": [],
+            "stops": ["do not create compensating Memory guidance"],
+            "proof_claims": ["complete"],
+            "expected_state_revision": arguments["expected_state_revision"],
+        }
+    )
+    if outcome["status"] == "applied":
+        outcome["value"] = {**outcome["value"], "correction_revision": arguments["correction_revision"]}
+    return outcome
+
+
+def _recover_planning_correction(arguments: dict[str, Any]) -> dict[str, Any] | None:
+    root = _root(arguments)
+    item = f"correction-repair:{arguments['correction']['correction_id']}"
+    subject = _json(root / PLANNING_STATE).get("subjects", {}).get(item)
+    if (
+        not isinstance(subject, Mapping)
+        or f"correction_revision={arguments['correction_revision']}" not in subject.get("constraints", [])
+        or not _repair_owned_record(root, PLANNING_STATE, "planning", "durable-module-state")
+    ):
+        return None
+    return {
+        "status": "applied",
+        "effects": ["planning-state"],
+        "value": {**subject, "correction_revision": arguments["correction_revision"]},
+    }
 
 
 def _recover_planning_complete(arguments: dict[str, Any]) -> dict[str, Any] | None:
@@ -777,7 +889,13 @@ def planning_module() -> Module:
         claims=("progress",),
         contribute=_planning_contribution,
         operations=(
-            _operation("planning.set", _planning_set, _recover_planning),
+            _operation("planning.set", _planning_set, _recover_planning, accepted_handoffs=("correction",)),
+            _operation(
+                "planning.accept-correction-failure",
+                _planning_accept_correction_failure,
+                _recover_planning_correction,
+                accepted_handoffs=("correction",),
+            ),
             _operation("planning.complete", _planning_complete, _recover_planning_complete),
             _operation("planning.reconcile", _planning_reconcile, _recover_planning_reconcile),
             _operation("planning.record-attempt", _planning_record_attempt, _recover_planning_attempt),
@@ -906,6 +1024,9 @@ def _memory_contribution(context: Mapping[str, Any]) -> dict[str, Any] | None:
 def _memory_record(arguments: dict[str, Any]) -> dict[str, Any]:
     root = _root(arguments)
     path = root / MEMORY_STATE
+    expected_revision = str(arguments.get("expected_state_revision") or "")
+    if expected_revision and _state_revision(root, MEMORY_STATE) != expected_revision:
+        return {"status": "rejected", "effects": [], "value": {"reason": "stale-memory-state"}}
     state = _json(path) or {"schema_version": 1, "revision": 0, "records": []}
     records = state.get("records", [])
     if not isinstance(records, list):
@@ -921,6 +1042,8 @@ def _memory_record(arguments: dict[str, Any]) -> dict[str, Any]:
         "kind": arguments.get("kind") or "advisory",
         "disposition": "active",
     }
+    if arguments.get("correction_revision"):
+        record["correction_revision"] = arguments["correction_revision"]
     records = [item for item in records if not isinstance(item, dict) or item.get("key") != arguments["key"]]
     records.append(record)
     state.setdefault("schema_version", 1)
@@ -959,6 +1082,68 @@ def _recover_memory_record(arguments: dict[str, Any]) -> dict[str, Any] | None:
             return None
         return {"status": "applied", "effects": ["memory-state"], "value": record}
     return None
+
+
+def _memory_accept_correction(arguments: dict[str, Any]) -> dict[str, Any]:
+    root = _root(arguments)
+    correction = arguments["correction"]
+    applicability = correction.get("applicability", {}) if isinstance(correction, Mapping) else {}
+    valid = (
+        isinstance(applicability, Mapping)
+        and _correction_revision(correction) == arguments["correction_revision"]
+        and correction.get("provenance", {}).get("authority") == "human"
+        and not correction.get("existing_owner")
+        and not correction.get("deterministic_owner_failure")
+        and correction.get("future_usefulness") != "do-not-retain"
+        and (
+            correction.get("future_usefulness") == "retain"
+            or bool(applicability.get("task_terms"))
+            or bool(applicability.get("paths"))
+            or bool(applicability.get("dependency_revision"))
+        )
+        and _state_revision(root, MEMORY_STATE) == arguments["expected_state_revision"]
+    )
+    if not valid:
+        return {"status": "rejected", "effects": [], "value": {"reason": "correction-not-retainable"}}
+    outcome = _memory_record(
+        {
+            "target": str(root),
+            "key": f"human-correction:{correction['correction_id']}",
+            "value": correction["statement"],
+            "summary": correction["statement"],
+            "provenance": "trusted-human-correction:" + arguments["correction_revision"],
+            "task_terms": list(applicability.get("task_terms", [])),
+            "paths": list(applicability.get("paths", [])),
+            "dependency_revision": str(applicability.get("dependency_revision") or ""),
+            "kind": "advisory",
+            "expected_state_revision": arguments["expected_state_revision"],
+            "correction_revision": arguments["correction_revision"],
+        }
+    )
+    if outcome["status"] == "applied":
+        outcome["value"] = {**outcome["value"], "correction_revision": arguments["correction_revision"]}
+    return outcome
+
+
+def _recover_memory_correction(arguments: dict[str, Any]) -> dict[str, Any] | None:
+    correction = arguments["correction"]
+    record = next(
+        (
+            item
+            for item in _json(_root(arguments) / MEMORY_STATE).get("records", [])
+            if isinstance(item, Mapping)
+            and item.get("key") == f"human-correction:{correction['correction_id']}"
+            and item.get("correction_revision") == arguments["correction_revision"]
+        ),
+        None,
+    )
+    if record is None or not _repair_owned_record(_root(arguments), MEMORY_STATE, "memory", "durable-module-state"):
+        return None
+    return {
+        "status": "applied",
+        "effects": ["memory-state"],
+        "value": {**record, "correction_revision": arguments["correction_revision"]},
+    }
 
 
 def _memory_disposition(arguments: dict[str, Any]) -> dict[str, Any]:
@@ -1021,7 +1206,13 @@ def memory_module() -> Module:
         contribute=_memory_contribution,
         operations=(
             _operation("memory.read", _memory_read),
-            _operation("memory.record", _memory_record, _recover_memory_record),
+            _operation("memory.record", _memory_record, _recover_memory_record, accepted_handoffs=("correction",)),
+            _operation(
+                "memory.accept-correction",
+                _memory_accept_correction,
+                _recover_memory_correction,
+                accepted_handoffs=("correction",),
+            ),
             _operation("memory.disposition", _memory_disposition, _recover_memory_disposition),
         ),
         currentness=lambda context: (
@@ -1214,13 +1405,61 @@ def _recover_verification(arguments: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
+def _verification_accept_correction(arguments: dict[str, Any]) -> dict[str, Any]:
+    root = _root(arguments)
+    correction = arguments["correction"]
+    evidence = correction.get("existing_owner", {}) if isinstance(correction, Mapping) else {}
+    subject = correction.get("subject", {}) if isinstance(correction, Mapping) else {}
+    policy_path = root / VERIFICATION_POLICY
+    try:
+        policy = tomllib.loads(policy_path.read_text(encoding="utf-8")) if policy_path.is_file() else {}
+    except (OSError, tomllib.TOMLDecodeError):
+        policy = {}
+    routes = policy.get("routes", []) if isinstance(policy, Mapping) else []
+    valid = (
+        isinstance(evidence, Mapping)
+        and isinstance(subject, Mapping)
+        and _correction_revision(correction) == arguments["correction_revision"]
+        and correction.get("provenance", {}).get("authority") == "human"
+        and evidence.get("owner") == "verification"
+        and evidence.get("ref") == arguments["owner_ref"]
+        and evidence.get("revision") == arguments["owner_revision"]
+        and _revision(policy_path) == arguments["owner_revision"]
+        and subject.get("kind") == "verification-route"
+        and subject.get("id") == arguments["owner_ref"]
+        and any(isinstance(route, Mapping) and route.get("id") == arguments["owner_ref"] for route in routes)
+    )
+    if not valid:
+        return {"status": "rejected", "effects": [], "value": {"reason": "correction-not-enforced-by-owner"}}
+    return {
+        "status": "unchanged",
+        "effects": [],
+        "value": {
+            "correction_revision": arguments["correction_revision"],
+            "owner": "verification",
+            "owner_ref": arguments["owner_ref"],
+            "owner_revision": arguments["owner_revision"],
+            "disposition": "already-owned",
+            "justification": "the exact Verification route already enforces this correction",
+        },
+    }
+
+
 def verification_module() -> Module:
     return Module(
         name="verification",
         owns=("verification-state", "completion-claim"),
         claims=("complete",),
         contribute=_verification_contribution,
-        operations=(_operation("verification.run", _verification_run, _recover_verification),),
+        operations=(
+            _operation("verification.run", _verification_run, _recover_verification),
+            _operation(
+                "verification.accept-correction",
+                _verification_accept_correction,
+                _verification_accept_correction,
+                accepted_handoffs=("correction",),
+            ),
+        ),
         currentness=lambda context: (
             semantic_digest(
                 {

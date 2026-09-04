@@ -9,6 +9,15 @@ from typing import Any
 
 IR: dict[str, Any] = {
     "api_version": "1.0",
+    "correction": {
+        "authority": "transport-bound-not-payload-asserted",
+        "deduplication": "stable-correction-id-plus-operation-receipt",
+        "dispositions": ["already-owned", "memory", "owner-repair", "no-new-durable-record"],
+        "external_adapters": "consumers-and-transports-only",
+        "ingress": "trusted-host-capability",
+        "owner_consequence": "accepted-typed-owner-handoff",
+        "owner_evidence": "exact-current-source-ref-and-revision",
+    },
     "decision": {
         "action_order": ["priority:descending", "owner:ascending", "operation_id:ascending"],
         "claim_policy": "blocked-overrides-allowed",
@@ -48,6 +57,7 @@ IR: dict[str, Any] = {
             "contribution/decisions",
             "operation/typed-result",
             "operation/durable-commit",
+            "operation/owner-handoff",
             "state/owned-paths",
         ],
         "compatibility": "1.x",
@@ -175,6 +185,49 @@ IR: dict[str, Any] = {
             "owner": "assignment",
         },
         {
+            "binding": "correction.disposition",
+            "effects": ["correction-disposition"],
+            "id": "correction.disposition",
+            "input": {
+                "additionalProperties": False,
+                "properties": {
+                    "correction_id": {"minLength": 1, "type": "string"},
+                    "correction_revision": {"pattern": "^sha256:[0-9a-f]{64}$", "type": "string"},
+                    "disposition": {"enum": ["already-owned", "memory", "owner-repair", "no-new-durable-record"]},
+                    "owner": {"minLength": 1, "type": "string"},
+                    "owner_revision": {"type": "string"},
+                    "target": {"minLength": 1, "type": "string"},
+                },
+                "required": [
+                    "target",
+                    "correction_id",
+                    "correction_revision",
+                    "disposition",
+                    "owner",
+                    "owner_revision",
+                ],
+                "type": "object",
+            },
+            "owner": "correction",
+        },
+        {
+            "binding": "correction.choose_retention",
+            "effects": ["correction-disposition"],
+            "id": "correction.choose-retention",
+            "input": {
+                "additionalProperties": False,
+                "properties": {
+                    "answer": {"enum": ["retain", "no-new-durable-record"]},
+                    "correction_id": {"minLength": 1, "type": "string"},
+                    "correction_revision": {"pattern": "^sha256:[0-9a-f]{64}$", "type": "string"},
+                    "target": {"minLength": 1, "type": "string"},
+                },
+                "required": ["target", "correction_id", "correction_revision", "answer"],
+                "type": "object",
+            },
+            "owner": "correction",
+        },
+        {
             "binding": "repository.answer",
             "effects": ["repository-configuration"],
             "id": "repository.answer",
@@ -188,6 +241,24 @@ IR: dict[str, Any] = {
                     "target": {"minLength": 1, "type": "string"},
                 },
                 "required": ["target", "rule_id", "rule_revision", "answer", "scope"],
+                "type": "object",
+            },
+            "owner": "repository",
+        },
+        {
+            "binding": "repository.accept_correction",
+            "effects": [],
+            "id": "repository.accept-correction",
+            "input": {
+                "additionalProperties": False,
+                "properties": {
+                    "correction": {"type": "object"},
+                    "correction_revision": {"pattern": "^sha256:[0-9a-f]{64}$", "type": "string"},
+                    "owner_ref": {"minLength": 1, "type": "string"},
+                    "owner_revision": {"minLength": 1, "type": "string"},
+                    "target": {"minLength": 1, "type": "string"},
+                },
+                "required": ["target", "correction", "correction_revision", "owner_ref", "owner_revision"],
                 "type": "object",
             },
             "owner": "repository",
@@ -244,6 +315,7 @@ IR: dict[str, Any] = {
                 "properties": {
                     "constraints": {"items": {"type": "string"}, "type": "array"},
                     "dependencies": {"items": {"type": "string"}, "type": "array"},
+                    "expected_state_revision": {"type": "string"},
                     "item": {"minLength": 1, "type": "string"},
                     "outcome": {"type": "string"},
                     "proof_claims": {"items": {"type": "string"}, "type": "array"},
@@ -281,6 +353,32 @@ IR: dict[str, Any] = {
                     "target": {"minLength": 1, "type": "string"},
                 },
                 "required": ["target", "item", "expected_subject_revision", "disposition"],
+                "type": "object",
+            },
+            "owner": "planning",
+        },
+        {
+            "binding": "planning.accept_correction_failure",
+            "effects": ["planning-state"],
+            "id": "planning.accept-correction-failure",
+            "input": {
+                "additionalProperties": False,
+                "properties": {
+                    "correction": {"type": "object"},
+                    "correction_revision": {"pattern": "^sha256:[0-9a-f]{64}$", "type": "string"},
+                    "expected_state_revision": {"minLength": 1, "type": "string"},
+                    "owner_ref": {"minLength": 1, "type": "string"},
+                    "owner_revision": {"minLength": 1, "type": "string"},
+                    "target": {"minLength": 1, "type": "string"},
+                },
+                "required": [
+                    "target",
+                    "correction",
+                    "correction_revision",
+                    "owner_ref",
+                    "owner_revision",
+                    "expected_state_revision",
+                ],
                 "type": "object",
             },
             "owner": "planning",
@@ -340,6 +438,7 @@ IR: dict[str, Any] = {
                 "additionalProperties": False,
                 "properties": {
                     "dependency_revision": {"type": "string"},
+                    "expected_state_revision": {"type": "string"},
                     "key": {"minLength": 1, "type": "string"},
                     "kind": {"enum": ["advisory", "workaround"]},
                     "paths": {"items": {"type": "string"}, "type": "array"},
@@ -372,6 +471,23 @@ IR: dict[str, Any] = {
             "owner": "memory",
         },
         {
+            "binding": "memory.accept_correction",
+            "effects": ["memory-state"],
+            "id": "memory.accept-correction",
+            "input": {
+                "additionalProperties": False,
+                "properties": {
+                    "correction": {"type": "object"},
+                    "correction_revision": {"pattern": "^sha256:[0-9a-f]{64}$", "type": "string"},
+                    "expected_state_revision": {"minLength": 1, "type": "string"},
+                    "target": {"minLength": 1, "type": "string"},
+                },
+                "required": ["target", "correction", "correction_revision", "expected_state_revision"],
+                "type": "object",
+            },
+            "owner": "memory",
+        },
+        {
             "binding": "verification.run",
             "effects": ["verification-state", "process"],
             "id": "verification.run",
@@ -391,6 +507,42 @@ IR: dict[str, Any] = {
                 "type": "object",
             },
             "owner": "verification",
+        },
+        {
+            "binding": "verification.accept_correction",
+            "effects": [],
+            "id": "verification.accept-correction",
+            "input": {
+                "additionalProperties": False,
+                "properties": {
+                    "correction": {"type": "object"},
+                    "correction_revision": {"pattern": "^sha256:[0-9a-f]{64}$", "type": "string"},
+                    "owner_ref": {"minLength": 1, "type": "string"},
+                    "owner_revision": {"minLength": 1, "type": "string"},
+                    "target": {"minLength": 1, "type": "string"},
+                },
+                "required": ["target", "correction", "correction_revision", "owner_ref", "owner_revision"],
+                "type": "object",
+            },
+            "owner": "verification",
+        },
+        {
+            "binding": "assignment.accept_correction",
+            "effects": [],
+            "id": "assignment.accept-correction",
+            "input": {
+                "additionalProperties": False,
+                "properties": {
+                    "correction": {"type": "object"},
+                    "correction_revision": {"pattern": "^sha256:[0-9a-f]{64}$", "type": "string"},
+                    "owner_ref": {"minLength": 1, "type": "string"},
+                    "owner_revision": {"minLength": 1, "type": "string"},
+                    "target": {"minLength": 1, "type": "string"},
+                },
+                "required": ["target", "correction", "correction_revision", "owner_ref", "owner_revision"],
+                "type": "object",
+            },
+            "owner": "assignment",
         },
     ],
     "package_version": "1.0.0",
@@ -534,6 +686,8 @@ def normalize_contribution(value: Mapping[str, Any]) -> dict[str, Any]:
                 "arguments": dict(arguments),
                 "effects": _strings(item.get("effects"), field=f"{owner}.actions[{index}].effects"),
                 "authority": str(item.get("authority") or owner),
+                "source_owner": str(item.get("source_owner") or owner),
+                "handoff_source": str(item.get("handoff_source") or ""),
                 "priority": priority,
             }
         )
@@ -660,7 +814,8 @@ def compile_source_decision(
                 "intent": dict(intent or {}),
                 "effects": action["effects"],
                 "authority": action["authority"],
-                "source_owner": owner,
+                "source_owner": action["source_owner"],
+                **({"handoff_source": action["handoff_source"]} if action["handoff_source"] else {}),
                 "expected_input_revision": input_revision,
                 "idempotency_key": _digest(
                     {

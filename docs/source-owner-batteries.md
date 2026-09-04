@@ -60,3 +60,25 @@ dependency database. Direct and irrelevant modules create no reuse residue.
 Focused conformance exercises this path with the retained Memory and
 Verification owners, including fresh-process reuse, owner-local invalidation,
 and contribution-call counters that demonstrate avoided reconstruction.
+
+## Trusted human corrections
+
+A host that already has authenticated human custody may create a
+`TrustedCorrectionIngress` capability and admit one bounded correction. The
+capability, not caller-controlled JSON such as `source=human`, supplies
+provenance. Ordinary `start` then returns the selected owner's accepted typed
+operation. Memory retention therefore executes as `memory.record`, and a
+deterministic owner failure becomes a `planning.set` repair subject; correction
+custody never calls another owner's handler.
+
+Existing repository/proof/delegation policy wins over duplicate Memory only
+when its exact current owner reference and revision validate. A stale or
+unknown hint blocks disposition. A
+future-useful advisory may be recorded by Memory, deterministic owner failure
+is returned as adaptation evidence for that owner, and a correction with no
+future value receives an explicit justified `no-new-durable-record`
+disposition. Operation receipts deduplicate host retries; there is no
+correction archive, transcript scan, vendor adapter registry, or no-signal
+startup work. The generated TypeScript package exposes the same constructible
+trusted-ingress capability with an injected current-owner disposition resolver;
+providers remain outside AW.

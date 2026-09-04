@@ -33,6 +33,13 @@ def _rules(root: Path) -> list[dict[str, Any]]:
     return rules
 
 
+def repository_rule_revision(root: Path, rule_id: str) -> str | None:
+    """Return the current exact revision of one repository-owned rule."""
+
+    rule = next((item for item in _rules(root.resolve()) if item["id"] == rule_id), None)
+    return str(rule["revision"]) if rule is not None else None
+
+
 def _json(path: Path) -> dict[str, Any]:
     if not path.is_file():
         return {}
@@ -164,8 +171,58 @@ def _recover_answer(arguments: dict[str, Any]) -> dict[str, Any] | None:
     return None
 
 
+def _correction_revision(correction: Mapping[str, Any]) -> str:
+    return semantic_digest(
+        {
+            "correction_id": correction.get("correction_id"),
+            "statement": correction.get("statement"),
+            "subject": dict(correction.get("subject", {})),
+            "applicability": dict(correction.get("applicability", {})),
+            "provenance": dict(correction.get("provenance", {})),
+            "future_usefulness": correction.get("future_usefulness"),
+            "existing_owner": dict(correction.get("existing_owner", {})),
+            "deterministic_owner_failure": dict(correction.get("deterministic_owner_failure", {})),
+        }
+    )
+
+
+def _accept_correction(arguments: dict[str, Any]) -> dict[str, Any]:
+    root = Path(arguments["target"]).resolve()
+    correction = arguments["correction"]
+    evidence = correction.get("existing_owner", {}) if isinstance(correction, Mapping) else {}
+    subject = correction.get("subject", {}) if isinstance(correction, Mapping) else {}
+    current = repository_rule_revision(root, arguments["owner_ref"])
+    valid = (
+        isinstance(evidence, Mapping)
+        and isinstance(subject, Mapping)
+        and _correction_revision(correction) == arguments["correction_revision"]
+        and correction.get("provenance", {}).get("authority") == "human"
+        and evidence.get("owner") == "repository"
+        and evidence.get("ref") == arguments["owner_ref"]
+        and evidence.get("revision") == arguments["owner_revision"]
+        and current == arguments["owner_revision"]
+        and subject.get("kind") == "repository-rule"
+        and subject.get("id") == arguments["owner_ref"]
+    )
+    if not valid:
+        return {"status": "rejected", "effects": [], "value": {"reason": "correction-not-enforced-by-owner"}}
+    return {
+        "status": "unchanged",
+        "effects": [],
+        "value": {
+            "correction_revision": arguments["correction_revision"],
+            "owner": "repository",
+            "owner_ref": arguments["owner_ref"],
+            "owner_revision": current,
+            "disposition": "already-owned",
+            "justification": "the exact repository rule already enforces this correction",
+        },
+    }
+
+
 def repository_module() -> Module:
     contract = operation_contract("repository.answer")
+    correction_contract = operation_contract("repository.accept-correction")
     return Module(
         name="repository",
         owns=("repository-configuration",),
@@ -178,6 +235,14 @@ def repository_module() -> Module:
                 tuple(contract["effects"]),
                 _answer,
                 _recover_answer,
+            ),
+            Operation(
+                "repository.accept-correction",
+                correction_contract["input"],
+                tuple(correction_contract["effects"]),
+                _accept_correction,
+                _accept_correction,
+                accepted_handoffs=("correction",),
             ),
         ),
         currentness=lambda context: (
