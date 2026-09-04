@@ -22,3 +22,7 @@ nothing and do not appear in the decision.
 
 See [the v1 contract](docs/v1-contract.md), [module API](docs/module-api.md), and
 [1.x compatibility policy](docs/compatibility-policy.md).
+
+Repository maintainers can explicitly opt in to ignored, local CLI session
+logs using `AW_SESSION_LOG`; see
+[maintainer session logging](docs/maintainer-session-logging.md).
