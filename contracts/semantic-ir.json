@@ -64,6 +64,77 @@
   },
   "operations": [
     {
+      "id": "assignment.choose",
+      "owner": "assignment",
+      "effects": ["assignment-state"],
+      "binding": "assignment.choose",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "assignment_revision": {"type": "string", "minLength": 1},
+          "target_id": {"type": "string", "minLength": 1}
+        },
+        "required": ["target", "assignment_revision", "target_id"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "assignment.record-evidence",
+      "owner": "assignment",
+      "effects": ["target-evidence"],
+      "binding": "assignment.record_evidence",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "record": {"type": "object"}
+        },
+        "required": ["target", "record"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "delegation.dispatch",
+      "owner": "assignment",
+      "effects": ["delegation-attempt"],
+      "binding": "delegation.dispatch",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "assignment_revision": {"type": "string", "minLength": 1},
+          "target_id": {"type": "string", "minLength": 1},
+          "attempt_id": {"type": "string", "minLength": 1},
+          "subject_revision": {"type": "string", "minLength": 1},
+          "scope": {"type": "array", "items": {"type": "string"}},
+          "stops": {"type": "array", "items": {"type": "string"}},
+          "transport": {"type": "object"}
+        },
+        "required": ["target", "assignment_revision", "target_id", "attempt_id", "subject_revision", "scope", "stops", "transport"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "delegation.return",
+      "owner": "assignment",
+      "effects": ["delegation-attempt"],
+      "binding": "delegation.return",
+      "input": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "minLength": 1},
+          "attempt_id": {"type": "string", "minLength": 1},
+          "assignment_revision": {"type": "string", "minLength": 1},
+          "delivery": {"enum": ["already-materialized", "unapplied-delta"]},
+          "changed_paths": {"type": "array", "items": {"type": "string"}},
+          "result": {"type": "object"}
+        },
+        "required": ["target", "attempt_id", "assignment_revision", "delivery", "changed_paths", "result"],
+        "additionalProperties": false
+      }
+    },
+    {
       "id": "repository.answer",
       "owner": "repository",
       "effects": ["repository-configuration"],

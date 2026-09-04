@@ -65,6 +65,83 @@ IR: dict[str, Any] = {
     },
     "operations": [
         {
+            "binding": "assignment.choose",
+            "effects": ["assignment-state"],
+            "id": "assignment.choose",
+            "input": {
+                "additionalProperties": False,
+                "properties": {
+                    "assignment_revision": {"minLength": 1, "type": "string"},
+                    "target": {"minLength": 1, "type": "string"},
+                    "target_id": {"minLength": 1, "type": "string"},
+                },
+                "required": ["target", "assignment_revision", "target_id"],
+                "type": "object",
+            },
+            "owner": "assignment",
+        },
+        {
+            "binding": "assignment.record_evidence",
+            "effects": ["target-evidence"],
+            "id": "assignment.record-evidence",
+            "input": {
+                "additionalProperties": False,
+                "properties": {"record": {"type": "object"}, "target": {"minLength": 1, "type": "string"}},
+                "required": ["target", "record"],
+                "type": "object",
+            },
+            "owner": "assignment",
+        },
+        {
+            "binding": "delegation.dispatch",
+            "effects": ["delegation-attempt"],
+            "id": "delegation.dispatch",
+            "input": {
+                "additionalProperties": False,
+                "properties": {
+                    "assignment_revision": {"minLength": 1, "type": "string"},
+                    "attempt_id": {"minLength": 1, "type": "string"},
+                    "scope": {"items": {"type": "string"}, "type": "array"},
+                    "stops": {"items": {"type": "string"}, "type": "array"},
+                    "subject_revision": {"minLength": 1, "type": "string"},
+                    "target": {"minLength": 1, "type": "string"},
+                    "target_id": {"minLength": 1, "type": "string"},
+                    "transport": {"type": "object"},
+                },
+                "required": [
+                    "target",
+                    "assignment_revision",
+                    "target_id",
+                    "attempt_id",
+                    "subject_revision",
+                    "scope",
+                    "stops",
+                    "transport",
+                ],
+                "type": "object",
+            },
+            "owner": "assignment",
+        },
+        {
+            "binding": "delegation.return",
+            "effects": ["delegation-attempt"],
+            "id": "delegation.return",
+            "input": {
+                "additionalProperties": False,
+                "properties": {
+                    "assignment_revision": {"minLength": 1, "type": "string"},
+                    "attempt_id": {"minLength": 1, "type": "string"},
+                    "changed_paths": {"items": {"type": "string"}, "type": "array"},
+                    "delivery": {"enum": ["already-materialized", "unapplied-delta"]},
+                    "result": {"type": "object"},
+                    "target": {"minLength": 1, "type": "string"},
+                },
+                "required": ["target", "attempt_id", "assignment_revision", "delivery", "changed_paths", "result"],
+                "type": "object",
+            },
+            "owner": "assignment",
+        },
+        {
             "binding": "repository.answer",
             "effects": ["repository-configuration"],
             "id": "repository.answer",
@@ -589,6 +666,7 @@ def compile_source_decision(
     procedures = [procedure for item in relevant for procedure in item["procedures"]]
     resources = list({canonical_serialize(item): item for item in resources}.values())
     procedures = list({canonical_serialize(item): item for item in procedures}.values())
+    context = {item["owner"]: item["facts"] for item in relevant if item["facts"]}
     answer = {
         "input_revision": input_revision,
         "status": status,
@@ -597,6 +675,7 @@ def compile_source_decision(
         "blockers": blockers,
         "claim_boundary": {"allowed": allowed, "blocked": blocked},
         "relevant_owners": owners,
+        "context": context,
         "resources": resources,
         "procedures": procedures,
     }

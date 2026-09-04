@@ -32,6 +32,8 @@ nothing and do not appear in the decision.
 Repository-scoped controls, selective anti-rediscovery Memory, semantic Planning
 custody, Verification-owned proof strategy, and per-owner conclusion reuse are
 described in [source-owner batteries](docs/source-owner-batteries.md).
+Optional best-fit routing and host/shared-worktree handoff semantics are described
+in [assignment and delegation](docs/assignment-and-delegation.md).
 
 See [the v1 contract](docs/v1-contract.md), [module API](docs/module-api.md), and
 [generated two-language contract](docs/generated-contract.md). Python,

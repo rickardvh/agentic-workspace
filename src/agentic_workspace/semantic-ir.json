@@ -76,6 +76,170 @@
   },
   "operations": [
     {
+      "binding": "assignment.choose",
+      "effects": [
+        "assignment-state"
+      ],
+      "id": "assignment.choose",
+      "input": {
+        "additionalProperties": false,
+        "properties": {
+          "assignment_revision": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "target": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "target_id": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "target",
+          "assignment_revision",
+          "target_id"
+        ],
+        "type": "object"
+      },
+      "owner": "assignment"
+    },
+    {
+      "binding": "assignment.record_evidence",
+      "effects": [
+        "target-evidence"
+      ],
+      "id": "assignment.record-evidence",
+      "input": {
+        "additionalProperties": false,
+        "properties": {
+          "record": {
+            "type": "object"
+          },
+          "target": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "target",
+          "record"
+        ],
+        "type": "object"
+      },
+      "owner": "assignment"
+    },
+    {
+      "binding": "delegation.dispatch",
+      "effects": [
+        "delegation-attempt"
+      ],
+      "id": "delegation.dispatch",
+      "input": {
+        "additionalProperties": false,
+        "properties": {
+          "assignment_revision": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "attempt_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "scope": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "stops": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "subject_revision": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "target": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "target_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "transport": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "target",
+          "assignment_revision",
+          "target_id",
+          "attempt_id",
+          "subject_revision",
+          "scope",
+          "stops",
+          "transport"
+        ],
+        "type": "object"
+      },
+      "owner": "assignment"
+    },
+    {
+      "binding": "delegation.return",
+      "effects": [
+        "delegation-attempt"
+      ],
+      "id": "delegation.return",
+      "input": {
+        "additionalProperties": false,
+        "properties": {
+          "assignment_revision": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "attempt_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "changed_paths": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "delivery": {
+            "enum": [
+              "already-materialized",
+              "unapplied-delta"
+            ]
+          },
+          "result": {
+            "type": "object"
+          },
+          "target": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "target",
+          "attempt_id",
+          "assignment_revision",
+          "delivery",
+          "changed_paths",
+          "result"
+        ],
+        "type": "object"
+      },
+      "owner": "assignment"
+    },
+    {
       "binding": "repository.answer",
       "effects": [
         "repository-configuration"

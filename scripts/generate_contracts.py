@@ -275,6 +275,7 @@ def compile_source_decision(contributions: Iterable[Mapping[str, Any]], *, inten
     procedures = [procedure for item in relevant for procedure in item["procedures"]]
     resources = list({canonical_serialize(item): item for item in resources}.values())
     procedures = list({canonical_serialize(item): item for item in procedures}.values())
+    context = {item["owner"]: item["facts"] for item in relevant if item["facts"]}
     answer = {
         "input_revision": input_revision,
         "status": status,
@@ -283,6 +284,7 @@ def compile_source_decision(contributions: Iterable[Mapping[str, Any]], *, inten
         "blockers": blockers,
         "claim_boundary": {"allowed": allowed, "blocked": blocked},
         "relevant_owners": owners,
+        "context": context,
         "resources": resources,
         "procedures": procedures,
     }
@@ -472,7 +474,8 @@ export function compileSourceDecision(contributions, intent = {}) {
   if (blockers.length) { primaryAction = null; decisionRequest = null; }
   const resources = [...new Map(relevant.flatMap((item) => item.resources).map((item) => [canonicalSerialize(item), item])).values()];
   const procedures = [...new Map(relevant.flatMap((item) => item.procedures).map((item) => [canonicalSerialize(item), item])).values()];
-  const answer = { input_revision: inputRevision, status, primary_action: primaryAction, decision_request: decisionRequest, blockers, claim_boundary: { allowed, blocked }, relevant_owners: owners, resources, procedures };
+  const context = Object.fromEntries(relevant.filter((item) => Object.keys(item.facts).length).map((item) => [item.owner, item.facts]));
+  const answer = { input_revision: inputRevision, status, primary_action: primaryAction, decision_request: decisionRequest, blockers, claim_boundary: { allowed, blocked }, relevant_owners: owners, context, resources, procedures };
   return { kind: kinds.decision, decision_id: "operating-decision:" + hash(answer).slice(7, 23), ...answer };
 }
 
