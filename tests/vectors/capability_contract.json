@@ -103,6 +103,24 @@
               }
             }
           }
+        },
+        {
+          "kind": "example.external/answer/v1",
+          "result_kind": "answer-result/v1",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object",
+            "properties": {
+              "answer": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "answer"
+            ],
+            "additionalProperties": false
+          }
         }
       ]
     },
@@ -218,6 +236,26 @@
             "type": "object",
             "properties": {},
             "required": [],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "requests": [
+        {
+          "kind": "repository/answer/v1",
+          "result_kind": "answer-result/v1",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object",
+            "properties": {
+              "answer": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "answer"
+            ],
             "additionalProperties": false
           }
         }

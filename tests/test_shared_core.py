@@ -10,7 +10,7 @@ from typing import Any
 import pytest
 from jsonschema import Draft202012Validator
 
-from agentic_workspace.decision import DecisionContractError, admit_invocation, compile_source_decision, prepare_request
+from agentic_workspace.decision import DecisionContractError, admit_invocation, answer_decision, compile_source_decision, prepare_request
 
 ROOT = Path(__file__).resolve().parents[1]
 VECTORS = json.loads((ROOT / "tests/vectors/source_decision.json").read_text(encoding="utf-8"))
@@ -332,3 +332,57 @@ def test_request_identity_and_local_response_are_publicly_constructible(shared_c
         invalid = deepcopy(owner)
         invalid["request_response"]["consequence_ids"] = ["action:absent"]
         compile_source_decision([invalid], intent=intent, capability_contract=payload["capability_contract"])
+
+
+def test_human_answer_uses_only_current_returned_authority(shared_core_binary: Path) -> None:
+    payload = _expanded(next(v["input"] for v in VECTORS["cases"] if v["id"] == "task-decision-is-current-and-bounded"))
+    decision = _compile(payload)
+    question = decision["pending_consequences"]["decisions"][0]
+    prepared = answer_decision(decision, question["consequence_id"], "mit", payload["capability_contract"])
+    assert prepared["request"] == {**question["response_request"], "arguments": {"answer": "mit"}}
+    direct = _direct(
+        shared_core_binary,
+        {
+            "answer_decision": {
+                "decision": decision,
+                "question": question["consequence_id"],
+                "answer": "mit",
+                "capability_contract": payload["capability_contract"],
+            }
+        },
+    )
+    assert direct.returncode == 0
+    assert json.loads(direct.stdout) == prepared
+    with pytest.raises(DecisionContractError, match="not a returned bounded choice"):
+        answer_decision(decision, question["consequence_id"], "hidden-choice", payload["capability_contract"])
+    changed = deepcopy(payload)
+    changed["contributions"][0]["revision"] = "r3"
+    with pytest.raises(DecisionContractError, match="stale or absent"):
+        answer_decision(_compile(changed), question["consequence_id"], "mit", payload["capability_contract"])
+    contract = deepcopy(payload["capability_contract"])
+    contract["revision"] = "sha256:" + "f" * 64
+    with pytest.raises(DecisionContractError, match="stale for the current capability"):
+        answer_decision(decision, question["consequence_id"], "mit", contract)
+    tampered = _direct(
+        shared_core_binary,
+        {
+            "answer_decision": {
+                "decision": decision,
+                "question": question["consequence_id"],
+                "answer": "mit",
+                "capability_contract": payload["capability_contract"],
+                "effects": ["other"],
+            }
+        },
+    )
+    assert tampered.returncode != 0
+    assert "unknown field" in tampered.stderr
+    opened = deepcopy(payload)
+    opened["contributions"][0]["decisions"][0].pop("choices")
+    current = _compile(opened)
+    key = current["pending_consequences"]["decisions"][0]["consequence_id"]
+    assert answer_decision(current, key, "human judgment", payload["capability_contract"])["request"]["arguments"] == {
+        "answer": "human judgment"
+    }
+    with pytest.raises(DecisionContractError, match="violate input_schema"):
+        answer_decision(current, key, {"hidden_target": "other"}, payload["capability_contract"])

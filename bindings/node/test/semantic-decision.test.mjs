@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
-import { compileSourceDecision, admitInvocation, prepareRequest } from "../semantic-decision.mjs";
+import { compileSourceDecision, admitInvocation, prepareRequest, answerDecision } from "../semantic-decision.mjs";
 
 const vectors = JSON.parse(readFileSync(new URL("../../../tests/vectors/source_decision.json", import.meta.url), "utf8"));
 const capabilityContract = JSON.parse(readFileSync(new URL("../../../tests/vectors/capability_contract.json", import.meta.url), "utf8"));
@@ -76,4 +76,23 @@ test("request preparation is shared and same-ID argument changes reject old resp
   assert.equal(prepared.identity, p.contributions[0].request_response.request_identity);
   p.intent.public_request.arguments.subject.name = "different";
   assert.throws(() => compileSourceDecision(p.contributions, p.intent, capabilityContract), /references a different request/);
+});
+
+
+test("finite and open answers need only returned question and human answer", () => {
+  const payload = structuredClone(vectors.cases.find(v => v.id === "task-decision-is-current-and-bounded").input);
+  const current = compileSourceDecision(payload.contributions, payload.intent, capabilityContract);
+  const key = current.pending_consequences.decisions[0].consequence_id;
+  const result = answerDecision(current, key, "mit", capabilityContract);
+  assert.deepEqual(result.request.arguments, {answer: "mit"});
+  assert.deepEqual(result, direct({answer_decision: {decision: current, question: key, answer: "mit", capability_contract: capabilityContract}}));
+  assert.throws(() => answerDecision(current, key, "other", capabilityContract), /not a returned bounded choice/);
+  payload.contributions[0].revision = "new";
+  const changed = compileSourceDecision(payload.contributions, payload.intent, capabilityContract);
+  assert.throws(() => answerDecision(changed, key, "mit", capabilityContract), /stale or absent/);
+  delete payload.contributions[0].decisions[0].choices;
+  const open = compileSourceDecision(payload.contributions, payload.intent, capabilityContract);
+  const openKey = open.pending_consequences.decisions[0].consequence_id;
+  assert.deepEqual(answerDecision(open, openKey, "human judgment", capabilityContract).request.arguments, {answer: "human judgment"});
+  assert.throws(() => answerDecision(open, openKey, 17, capabilityContract), /violate input_schema/);
 });
