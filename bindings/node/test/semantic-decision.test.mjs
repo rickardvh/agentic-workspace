@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
-import { compileSourceDecision, admitInvocation, prepareRequest, answerDecision, operationResult } from "../semantic-decision.mjs";
+import { compileSourceDecision, admitInvocation, prepareRequest, answerDecision, operationResult, admitAttempt, commitAttempt } from "../semantic-decision.mjs";
 
 const vectors = JSON.parse(readFileSync(new URL("../../../tests/vectors/source_decision.json", import.meta.url), "utf8"));
 const capabilityContract = JSON.parse(readFileSync(new URL("../../../tests/vectors/capability_contract.json", import.meta.url), "utf8"));
@@ -127,4 +127,21 @@ test("replay rejects incompatible operation semantics without minting an effect"
   assert.notEqual(current.primary_action.operation_revision, original.operation_revision);
   assert.throws(() => admitInvocation(current, original, original), /current operation semantics/);
   assert.throws(() => admitInvocation(current, current.primary_action, original), /current operation semantics/);
+});
+
+
+test("retained attempt cannot become a retry and committed evidence replays", () => {
+  const payload = vectors.cases.find(v => v.id === "action-material-dependencies").input;
+  const decision = compileSourceDecision(payload.contributions, payload.intent, capabilityContract);
+  const action = decision.primary_action;
+  const admitted = admitAttempt(decision, action);
+  assert.equal(admitted.disposition, "execute");
+  assert.equal(admitAttempt(decision, action, admitted.record).disposition, "uncertain");
+  const committed = commitAttempt(admitted.record, {status: "applied", effects: action.effects, value: 1});
+  const replay = admitAttempt(decision, action, committed);
+  assert.equal(replay.disposition, "replay");
+  assert.equal(replay.attempt_id, admitted.attempt_id);
+  assert.deepEqual(replay, direct({admit_attempt: {decision, invocation: action, record: committed}}));
+  assert.throws(() => admitAttempt(decision, action, {...committed, attempt_id: "retry-random"}), /invalid/);
+  assert.throws(() => commitAttempt(committed, {status: "applied", effects: action.effects, value: 2}), /cannot change/);
 });

@@ -29,6 +29,16 @@ fn main() {
         .is_some_and(|item| item.len() == 1 && item.contains_key("operation_result"))
     {
         agentic_workspace_core::operation_result_value(request["operation_result"].clone())
+    } else if request
+        .as_object()
+        .is_some_and(|item| item.len() == 1 && item.contains_key("admit_attempt"))
+    {
+        agentic_workspace_core::attempt::admit(request["admit_attempt"].clone())
+    } else if request
+        .as_object()
+        .is_some_and(|item| item.len() == 1 && item.contains_key("commit_attempt"))
+    {
+        agentic_workspace_core::attempt::commit(request["commit_attempt"].clone())
     } else {
         agentic_workspace_core::compile_value(request)
     };
