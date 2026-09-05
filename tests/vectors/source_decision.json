@@ -2,6 +2,485 @@
   "schema_version": 1,
   "cases": [
     {
+      "id": "complete-outcome-with-optional-action",
+      "input": {
+        "intent": {
+          "outcome": {
+            "id": "ship",
+            "owner": "planning",
+            "claim": "complete"
+          }
+        },
+        "contributions": [
+          {
+            "owner": "planning",
+            "revision": "p2",
+            "settled": true,
+            "claims": {
+              "allowed": [
+                "complete"
+              ]
+            },
+            "outcome": {
+              "id": "ship",
+              "status": "complete",
+              "claim": "complete",
+              "evidence_revision": "p2"
+            }
+          },
+          {
+            "owner": "workspace",
+            "revision": "w1",
+            "actions": [
+              {
+                "operation_id": "workspace.edit",
+                "dependency_revision": "w1",
+                "arguments": {
+                  "path": "README.md"
+                },
+                "effects": [
+                  "workspace-files"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "status": "terminal",
+        "primary_action": null,
+        "ready_actions.0.operation_id": "workspace.edit",
+        "pending_consequences.actions.0.operation_id": "workspace.edit",
+        "terminal_authority.id": "ship"
+      }
+    },
+    {
+      "id": "optional-conflict-does-not-block-selected-outcome",
+      "input": {
+        "intent": {
+          "outcome": {
+            "id": "ship",
+            "owner": "planning",
+            "claim": "complete"
+          }
+        },
+        "contributions": [
+          {
+            "owner": "planning",
+            "revision": "p2",
+            "settled": true,
+            "claims": {
+              "allowed": [
+                "complete"
+              ]
+            },
+            "outcome": {
+              "id": "ship",
+              "status": "complete",
+              "claim": "complete",
+              "evidence_revision": "p2"
+            }
+          },
+          {
+            "owner": "workspace",
+            "revision": "w1",
+            "actions": [
+              {
+                "operation_id": "workspace.edit",
+                "dependency_revision": "w1",
+                "arguments": {
+                  "path": "README.md"
+                },
+                "effects": [
+                  "workspace-files"
+                ]
+              },
+              {
+                "operation_id": "workspace.edit",
+                "dependency_revision": "w1",
+                "arguments": {
+                  "path": "optional.md"
+                },
+                "effects": [
+                  "workspace-files"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "status": "terminal",
+        "primary_action": null,
+        "ready_actions": [],
+        "blockers.0.code": "multiple-actions",
+        "terminal_authority.id": "ship"
+      }
+    },
+    {
+      "id": "missing-required-claim-owner-does-not-waive-proof",
+      "input": {
+        "intent": {
+          "outcome": {
+            "id": "ship",
+            "owner": "planning",
+            "claim": "complete"
+          }
+        },
+        "contributions": [
+          {
+            "owner": "planning",
+            "revision": "p2",
+            "settled": true,
+            "claims": {
+              "allowed": [
+                "complete"
+              ]
+            },
+            "outcome": {
+              "id": "ship",
+              "status": "complete",
+              "claim": "complete",
+              "evidence_revision": "p2",
+              "required_claims": [
+                "release"
+              ]
+            }
+          },
+          {
+            "owner": "workspace",
+            "revision": "w1",
+            "actions": [
+              {
+                "operation_id": "workspace.edit",
+                "dependency_revision": "w1",
+                "arguments": {
+                  "path": "README.md"
+                },
+                "effects": [
+                  "workspace-files"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "status": "actionable",
+        "terminal_authority": null
+      }
+    },
+    {
+      "id": "required-claim-evidence-completes-selected-outcome",
+      "input": {
+        "intent": {
+          "outcome": {
+            "id": "ship",
+            "owner": "planning",
+            "claim": "complete"
+          }
+        },
+        "contributions": [
+          {
+            "owner": "planning",
+            "revision": "p2",
+            "settled": true,
+            "claims": {
+              "allowed": [
+                "complete"
+              ]
+            },
+            "outcome": {
+              "id": "ship",
+              "status": "complete",
+              "claim": "complete",
+              "evidence_revision": "p2",
+              "required_claims": [
+                "release"
+              ]
+            }
+          },
+          {
+            "owner": "workspace",
+            "revision": "w1",
+            "actions": [
+              {
+                "operation_id": "workspace.edit",
+                "dependency_revision": "w1",
+                "arguments": {
+                  "path": "README.md"
+                },
+                "effects": [
+                  "workspace-files"
+                ]
+              }
+            ]
+          },
+          {
+            "owner": "release-owner",
+            "revision": "proof-1",
+            "claims": {
+              "allowed": [
+                "release"
+              ]
+            }
+          }
+        ]
+      },
+      "expect": {
+        "status": "terminal",
+        "terminal_authority.required_claims": [
+          "release"
+        ]
+      }
+    },
+    {
+      "id": "blocked-required-claim-prevents-terminal",
+      "input": {
+        "intent": {
+          "outcome": {
+            "id": "ship",
+            "owner": "planning",
+            "claim": "complete"
+          }
+        },
+        "contributions": [
+          {
+            "owner": "planning",
+            "revision": "p2",
+            "settled": true,
+            "claims": {
+              "allowed": [
+                "complete"
+              ]
+            },
+            "outcome": {
+              "id": "ship",
+              "status": "complete",
+              "claim": "complete",
+              "evidence_revision": "p2",
+              "required_claims": [
+                "release"
+              ]
+            }
+          },
+          {
+            "owner": "workspace",
+            "revision": "w1",
+            "actions": [
+              {
+                "operation_id": "workspace.edit",
+                "dependency_revision": "w1",
+                "arguments": {
+                  "path": "README.md"
+                },
+                "effects": [
+                  "workspace-files"
+                ]
+              }
+            ]
+          },
+          {
+            "owner": "release-owner",
+            "revision": "proof-1",
+            "claims": {
+              "allowed": [
+                "release"
+              ]
+            }
+          },
+          {
+            "owner": "verification",
+            "revision": "v1",
+            "claims": {
+              "blocked": [
+                "release"
+              ]
+            }
+          }
+        ]
+      },
+      "expect": {
+        "status": "actionable",
+        "terminal_authority": null
+      }
+    },
+    {
+      "id": "required-residual-work-prevents-terminal",
+      "input": {
+        "intent": {
+          "outcome": {
+            "id": "ship",
+            "owner": "planning",
+            "claim": "complete"
+          }
+        },
+        "contributions": [
+          {
+            "owner": "planning",
+            "revision": "p2",
+            "settled": true,
+            "claims": {
+              "allowed": [
+                "complete"
+              ]
+            },
+            "outcome": {
+              "id": "ship",
+              "status": "complete",
+              "claim": "complete",
+              "evidence_revision": "p2",
+              "residual_work": [
+                "required implementation is unfinished"
+              ]
+            }
+          },
+          {
+            "owner": "workspace",
+            "revision": "w1",
+            "actions": [
+              {
+                "operation_id": "workspace.edit",
+                "dependency_revision": "w1",
+                "arguments": {
+                  "path": "README.md"
+                },
+                "effects": [
+                  "workspace-files"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "status": "actionable",
+        "terminal_authority": null
+      }
+    },
+    {
+      "id": "admitted-task-blocker-prevents-outcome-terminal",
+      "input": {
+        "intent": {
+          "outcome": {
+            "id": "ship",
+            "owner": "planning",
+            "claim": "complete"
+          }
+        },
+        "contributions": [
+          {
+            "owner": "planning",
+            "revision": "p2",
+            "settled": true,
+            "claims": {
+              "allowed": [
+                "complete"
+              ]
+            },
+            "outcome": {
+              "id": "ship",
+              "status": "complete",
+              "claim": "complete",
+              "evidence_revision": "p2"
+            }
+          },
+          {
+            "owner": "workspace",
+            "revision": "w1",
+            "actions": [
+              {
+                "operation_id": "workspace.edit",
+                "dependency_revision": "w1",
+                "arguments": {
+                  "path": "README.md"
+                },
+                "effects": [
+                  "workspace-files"
+                ]
+              }
+            ]
+          },
+          {
+            "owner": "repository",
+            "revision": "r2",
+            "blockers": [
+              {
+                "code": "stop",
+                "message": "required task-wide gate",
+                "affects": [
+                  "task"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "status": "blocked",
+        "terminal_authority": null
+      }
+    },
+    {
+      "id": "unrelated-claim-gap-does-not-block-outcome",
+      "input": {
+        "intent": {
+          "outcome": {
+            "id": "ship",
+            "owner": "planning",
+            "claim": "complete"
+          }
+        },
+        "contributions": [
+          {
+            "owner": "planning",
+            "revision": "p2",
+            "settled": true,
+            "claims": {
+              "allowed": [
+                "complete"
+              ]
+            },
+            "outcome": {
+              "id": "ship",
+              "status": "complete",
+              "claim": "complete",
+              "evidence_revision": "p2"
+            }
+          },
+          {
+            "owner": "workspace",
+            "revision": "w1",
+            "actions": [
+              {
+                "operation_id": "workspace.edit",
+                "dependency_revision": "w1",
+                "arguments": {
+                  "path": "README.md"
+                },
+                "effects": [
+                  "workspace-files"
+                ]
+              }
+            ]
+          },
+          {
+            "owner": "verification",
+            "revision": "v1",
+            "claims": {
+              "blocked": [
+                "release"
+              ]
+            }
+          }
+        ]
+      },
+      "expect": {
+        "status": "terminal",
+        "terminal_authority.id": "ship"
+      }
+    },
+    {
       "id": "two-independent-ready-actions",
       "input": {
         "contributions": [

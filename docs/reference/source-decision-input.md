@@ -40,6 +40,7 @@ Language-neutral input envelope for the shared operating-decision core.
 | `intent.public_request.task_identity.id` | string | yes |  | Opaque current task or Planning identity. |  |  |
 | `intent.public_request.arguments` | object | yes |  | Arguments admitted by the declared bounded request shape. |  |  |
 | `intent.outcome` | object | no |  | Exact outcome authority required before the task may be terminal. |  |  |
+| `intent.outcome.required_claims` | array of string | no |  | Outcome-owner-declared claims that must be currently allowed before completion; absence of their owner or evidence does not waive them. |  |  |
 | `intent.outcome.id` | string | yes |  | Stable intended outcome identity. |  |  |
 | `intent.outcome.owner` | string | yes |  | Owner authorized to establish the intended outcome. |  |  |
 | `intent.outcome.claim` | string | yes |  | Claim that must be allowed for terminal status. |  |  |

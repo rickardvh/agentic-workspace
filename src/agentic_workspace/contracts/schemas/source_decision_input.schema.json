@@ -30,6 +30,7 @@
           "description": "Exact outcome authority required before the task may be terminal.",
           "type": "object",
           "properties": {
+        "required_claims": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true, "description": "Outcome-owner-declared claims that must be currently allowed before completion; absence of their owner or evidence does not waive them."},
             "id": {"type": "string", "minLength": 1, "description": "Stable intended outcome identity."},
             "owner": {"type": "string", "minLength": 1, "description": "Owner authorized to establish the intended outcome."},
             "claim": {"type": "string", "minLength": 1, "description": "Claim that must be allowed for terminal status."}

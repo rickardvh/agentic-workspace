@@ -215,6 +215,8 @@ struct ClaimsInput {
 #[derive(Debug, Deserialize)]
 struct OutcomeInput {
     #[serde(default)]
+    required_claims: Vec<String>,
+    #[serde(default)]
     id: String,
     #[serde(default)]
     status: String,
@@ -373,6 +375,7 @@ struct NormalizedClaims {
 
 #[derive(Debug, Clone, Serialize)]
 struct NormalizedOutcome {
+    required_claims: Vec<String>,
     id: String,
     status: String,
     claim: String,
@@ -874,6 +877,15 @@ fn normalize_contribution(
             outcome.claim
         )));
     }
+    if let (Some(contract), Some(outcome)) = (capabilities, outcome.as_ref()) {
+        for claim in &outcome.required_claims {
+            if !contract.claim_authorities.contains_key(claim) {
+                return Err(CoreError::new(format!(
+                    "{owner} outcome requires unknown claim {claim}"
+                )));
+            }
+        }
+    }
     let request_response = input
         .request_response
         .map(|response| normalize_request_response(response, &owner))
@@ -1092,6 +1104,7 @@ fn normalize_decision(
 
 fn normalize_outcome(input: OutcomeInput, owner: &str) -> Result<NormalizedOutcome, CoreError> {
     Ok(NormalizedOutcome {
+        required_claims: unique_strings(input.required_claims, "outcome.required_claims")?,
         id: require_text(&input.id, &format!("{owner}.outcome.id"))?,
         status: require_text(&input.status, &format!("{owner}.outcome.status"))?,
         claim: require_text(&input.claim, &format!("{owner}.outcome.claim"))?,
@@ -1609,7 +1622,7 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
             "message": "current actions have conflicting or unknown read/effect relationships",
             "owner": "operating-decision",
             "revision": input_revision,
-            "affects": [TASK],
+            "affects": available_actions.iter().map(|action| &action.action.consequence_id).collect::<Vec<_>>(),
             "alternatives": available_actions.iter().map(pending_action).collect::<Vec<_>>(),
         })
     });
@@ -1660,9 +1673,6 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
     let terminal_authority = terminal_authority(
         intended.as_ref(),
         &relevant,
-        &actions,
-        &task_decisions,
-        composition_blocker.as_ref(),
         &constrained,
         &allowed_claims,
         &blocked_claims,
@@ -1671,14 +1681,14 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
         || blockers
             .iter()
             .any(|item| item.affects.iter().any(|affected| affected == TASK));
-    let status = if !ready_actions.is_empty() {
+    let status = if terminal_authority.is_some() {
+        "terminal"
+    } else if !ready_actions.is_empty() {
         "actionable"
     } else if globally_blocked {
         "blocked"
     } else if decision_request.is_some() {
         "decision"
-    } else if terminal_authority.is_some() {
-        "terminal"
     } else {
         "direct"
     };
@@ -1687,7 +1697,7 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
     let mut answer = json!({
         "input_revision": input_revision,
         "status": status,
-        "primary_action": primary_action,
+        "primary_action": if terminal_authority.is_some() { None } else { primary_action },
         "ready_actions": ready_actions,
         "decision_request": decision_request,
         "blockers": blocker_values,
@@ -1893,21 +1903,14 @@ fn independent_actions(
         && right_writes.is_disjoint(&left_reads)
 }
 
-#[allow(clippy::too_many_arguments)]
 fn terminal_authority(
     intended: Option<&IntendedOutcome>,
     relevant: &[NormalizedContribution],
-    actions: &[OwnedAction],
-    task_decisions: &[NormalizedDecision],
-    composition_blocker: Option<&Value>,
     constrained: &BTreeSet<String>,
     allowed_claims: &BTreeSet<String>,
     blocked_claims: &BTreeSet<String>,
 ) -> Option<Value> {
     let intended = intended?;
-    if !actions.is_empty() || !task_decisions.is_empty() || composition_blocker.is_some() {
-        return None;
-    }
     let owner = relevant.iter().find(|item| item.owner == intended.owner)?;
     let outcome = owner.outcome.as_ref()?;
     let terminal_consequences = [
@@ -1920,6 +1923,11 @@ fn terminal_authority(
         || outcome.status != "complete"
         || outcome.evidence_revision != owner.revision
         || !outcome.residual_work.is_empty()
+        || outcome.required_claims.iter().any(|claim| {
+            !allowed_claims.contains(claim)
+                || blocked_claims.contains(claim)
+                || constrained.contains(&format!("claim:{claim}"))
+        })
         || !allowed_claims.contains(&outcome.claim)
         || blocked_claims.contains(&outcome.claim)
         || terminal_consequences
@@ -1936,5 +1944,6 @@ fn terminal_authority(
         "claim": outcome.claim,
         "evidence_revision": outcome.evidence_revision,
         "residual_work": outcome.residual_work,
+        "required_claims": outcome.required_claims,
     }))
 }
