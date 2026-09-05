@@ -901,19 +901,40 @@ def test_material_planning_source_change_reopens_but_keeps_subject(shared_core_b
         reconcile_planning({**refreshed, "invocation": operation})
 
 
-def test_direct_planning_view_is_quiet_and_uncertain_reconciliation_keeps_former_authority(
-    shared_core_binary: Path, tmp_path: Path
-) -> None:
+def test_direct_planning_view_is_quiet_and_interrupted_reconciliation_can_finish(shared_core_binary: Path, tmp_path: Path) -> None:
     direct = planning_view({"target": str(tmp_path), "relevant": False})
     assert direct["relevant_owners"] == []
     assert list(tmp_path.iterdir()) == []
     context = _planning_context(tmp_path)
     operation = planning_view(context)["primary_action"]
-    admission = admit_stored_attempt(str(tmp_path), planning_view(context), operation)
-    result = reconcile_planning({**context, "invocation": operation, "custody": admission["custody"]})
-    assert result["disposition"] == "uncertain"
-    assert (tmp_path / context["source"]["path"]).is_file()
+    import sys
+
+    worker = """
+import os, subprocess, sys
+result = subprocess.run([sys.argv[1]], input=sys.stdin.read(), text=True, capture_output=True)
+if result.returncode: sys.exit(result.returncode)
+print(result.stdout, flush=True)
+os._exit(29)
+"""
+    crashed = subprocess.run(
+        [sys.executable, "-c", worker, str(shared_core_binary)],
+        input=json.dumps({"admit_stored_attempt": {"target": str(tmp_path), "decision": planning_view(context), "invocation": operation}}),
+        text=True,
+        capture_output=True,
+    )
+    assert crashed.returncode == 29
+    admission = json.loads(crashed.stdout)
+    resumed = {**context, "custody": admission["custody"]}
+    before = planning_view(resumed)
+    assert before["planning"]["current"] is False
+    assert before["primary_action"] == operation
     assert not list((tmp_path / ".agentic-workspace/local/effects").glob("*.result.json"))
+    result = reconcile_planning({**resumed, "invocation": before["primary_action"]})
+    record = json.loads((tmp_path / result["custody"]["committed"]["path"]).read_text())
+    assert record["attempt_id"] == admission["attempt_id"]
+    assert record["invocation"]["idempotency_key"] == admission["logical_effect_id"]
+    assert result["status"] == "applied"
+    assert (tmp_path / context["source"]["path"]).is_file()
 
 
 def test_planning_unmapped_current_semantics_block_complete_reconciliation(shared_core_binary: Path, tmp_path: Path) -> None:
@@ -928,3 +949,54 @@ def test_planning_unmapped_current_semantics_block_complete_reconciliation(share
         "omitted_history": [],
     }
     assert not (tmp_path / ".agentic-workspace/local").exists()
+
+
+@pytest.mark.parametrize("residue", ["partial", "committed-reply-lost"])
+def test_planning_recovery_preserves_result_without_exact_custody(shared_core_binary: Path, tmp_path: Path, residue: str) -> None:
+    import hashlib
+
+    context = _planning_context(tmp_path)
+    decision = planning_view(context)
+    action = decision["primary_action"]
+    admitted = admit_stored_attempt(str(tmp_path), decision, action)
+    resumed = {**context, "custody": admitted["custody"], "invocation": action}
+    if residue == "committed-reply-lost":
+        completed = reconcile_planning(resumed)
+        path = tmp_path / completed["custody"]["committed"]["path"]
+    else:
+        path = (
+            tmp_path
+            / ".agentic-workspace/local/effects"
+            / (hashlib.sha256(action["idempotency_key"].encode()).hexdigest() + ".result.json")
+        )
+        path.write_bytes(b'{"partial":')
+    before = path.read_bytes()
+    with pytest.raises(DecisionContractError, match="requires exact custody; preserved"):
+        reconcile_planning(resumed)
+    assert path.read_bytes() == before
+    assert planning_view(resumed)["planning"]["current"] is False
+
+
+def test_concurrent_planning_recovery_commits_one_same_attempt(shared_core_binary: Path, tmp_path: Path) -> None:
+    context = _planning_context(tmp_path)
+    decision = planning_view(context)
+    action = decision["primary_action"]
+    admitted = admit_stored_attempt(str(tmp_path), decision, action)
+    request = json.dumps({"reconcile_planning": {**context, "invocation": action, "custody": admitted["custody"]}})
+    processes = [
+        subprocess.Popen([str(shared_core_binary)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        for _ in range(2)
+    ]
+    for process in processes:
+        assert process.stdin is not None
+        process.stdin.write(request)
+        process.stdin.close()
+        process.stdin = None
+    results = [process.communicate(timeout=20) for process in processes]
+    assert sorted(process.returncode for process in processes) == [0, 2]
+    completed = [json.loads(stdout) for process, (stdout, _) in zip(processes, results, strict=True) if process.returncode == 0][0]
+    record = json.loads((tmp_path / completed["custody"]["committed"]["path"]).read_text())
+    assert record["attempt_id"] == admitted["attempt_id"]
+    assert record["invocation"]["idempotency_key"] == action["idempotency_key"]
+    assert planning_view({**context, "custody": completed["custody"]})["planning"]["current"] is True
+    assert len(list((tmp_path / ".agentic-workspace/local/effects").glob("*.result.json"))) == 1
