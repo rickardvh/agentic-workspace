@@ -148,7 +148,7 @@ Assume as little as possible about the host repository, language, environment ma
 
 Dogfooding must not turn this repository's current shape into hidden universal requirements. Repo-, provider-, language-, or module-specific choices remain outside the durable core unless repeated evidence justifies promotion.
 
-Portable deterministic first-party semantics should have one implementation-independent executable authority and generated projections for each supported language. Handwritten target code is limited to a small reviewed set of irreducible platform primitives; neither language implementation becomes the semantic oracle for the other.
+Portable deterministic first-party semantics have one shared executable authority. Python, TypeScript, and JSON project or bind that authority and contain no independent ordinary domain semantics. Language-neutral schemas and contracts may remain declarative public authority where useful.
 
 ### 10. Convert repeated friction into better context or control
 
