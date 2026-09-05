@@ -11,6 +11,11 @@ Language-neutral input envelope for the shared operating-decision core.
 | Field | Type | Required | Default | Description | Examples | Annotations |
 | --- | --- | --- | --- | --- | --- | --- |
 | (root) | object | yes |  | Language-neutral input envelope for the shared operating-decision core. |  | x-agentic-workspace-doc-role: "contract-reference" |
+| `decision_context` | ref `#/$defs/decision_context` | no |  | Optional independently admitted material decision context; absent or unrelated input remains quiet. |  |  |
+| `decision_context.records` | array of ref `#/$defs/material_decision` | yes |  | Bounded owner-selected records with complete applicable supersession closure. |  |  |
+| `decision_context.admissions` | array of ref `#/$defs/decision_admission` | yes |  | Source/authority-owner admissions. |  |  |
+| `decision_context.current_dependencies` | array of ref `#/$defs/decision_reference` | yes |  | Current independently observed material revisions. |  |  |
+| `decision_context.applicable_scope` | array of string | yes |  | Current exact scope selected by host/agent; no semantic inference. |  |  |
 | `intent` | object | no |  | Explicit task intent supplied by the acting agent or human rather than inferred by the reducer. |  |  |
 | `intent.current_work` | ref `#/$defs/current_work` | no |  | Current task identity used only to reject a stale semantic-route selection. |  |  |
 | `intent.current_work.kind` | const `"current-work"` | yes |  | Identity namespace for current task binding. |  |  |

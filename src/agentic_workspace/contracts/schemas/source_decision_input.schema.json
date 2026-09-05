@@ -6,6 +6,7 @@
   "x-agentic-workspace-doc-role": "contract-reference",
   "type": "object",
   "properties": {
+    "decision_context": {"$ref": "#/$defs/decision_context", "description": "Optional independently admitted material decision context; absent or unrelated input remains quiet."},
     "intent": {
       "description": "Explicit task intent supplied by the acting agent or human rather than inferred by the reducer.",
       "type": "object",
@@ -58,6 +59,284 @@
   "required": ["contributions"],
   "additionalProperties": false,
   "$defs": {
+    "decision_reference": {
+      "type": "object",
+      "description": "Source reference; neither strings nor hashes grant custody or authority.",
+      "properties": {
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Independent source owner."
+        },
+        "reference": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Exact source or material dependency identity."
+        },
+        "revision": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Revision currently expected from this source owner."
+        }
+      },
+      "required": [
+        "owner",
+        "reference",
+        "revision"
+      ],
+      "additionalProperties": false
+    },
+    "decision_actor": {
+      "type": "object",
+      "description": "Semantic actor. AW context is evidence, not an actor.",
+      "properties": {
+        "kind": {
+          "enum": [
+            "agent",
+            "human"
+          ],
+          "description": "Semantic actor kind, independently admitted by the host."
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Stable actor identity."
+        }
+      },
+      "required": [
+        "kind",
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "decision_authority": {
+      "type": "object",
+      "description": "Deciding authority, distinct from authorship and contribution.",
+      "properties": {
+        "actor": {
+          "$ref": "#/$defs/decision_actor",
+          "description": "The actor supplying the decisive authority."
+        },
+        "basis": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/decision_reference",
+            "description": "Admitted authority basis."
+          },
+          "description": "Delegation/domain/human evidence establishing deciding authority.",
+          "minItems": 1
+        }
+      },
+      "required": [
+        "actor",
+        "basis"
+      ],
+      "additionalProperties": false
+    },
+    "decision_scope": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^(path|owner|contract|source|operation):.+$"
+      },
+      "description": "Exact affected identities. No glob or prose matching.",
+      "minItems": 1
+    },
+    "decision_supersedes": {
+      "type": "object",
+      "description": "Explicit scoped replacement by a distinct identity.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Prior stable decision identity."
+        },
+        "material_revision": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Exact prior semantic revision."
+        },
+        "scope": {
+          "$ref": "#/$defs/decision_scope",
+          "description": "Superseded subset of both decisions scopes."
+        }
+      },
+      "required": [
+        "id",
+        "material_revision",
+        "scope"
+      ],
+      "additionalProperties": false
+    },
+    "material_decision": {
+      "type": "object",
+      "description": "Semantic record. Normalization does not admit its authorship, authority or source custody.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Stable source-assigned decision identity; not a workspace/view digest."
+        },
+        "source": {
+          "$ref": "#/$defs/decision_reference",
+          "description": "Current canonical source admission, separate from material revision."
+        },
+        "decision": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Compact semantic choice authored by agents/humans."
+        },
+        "consequence": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Compact consequence for later applicable work; grants no executable authority."
+        },
+        "rationale_reference": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Source reference for rationale, meaningful alternatives and history."
+        },
+        "authors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/decision_actor",
+            "description": "Semantic author."
+          },
+          "description": "Actors that developed the choice.",
+          "minItems": 1
+        },
+        "contributors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/decision_actor",
+            "description": "Contributor."
+          },
+          "description": "Other semantic contributors."
+        },
+        "authority": {
+          "$ref": "#/$defs/decision_authority",
+          "description": "Exact decisive authority/provenance."
+        },
+        "scope": {
+          "$ref": "#/$defs/decision_scope",
+          "description": "Governed scope."
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/decision_reference",
+            "description": "Dependency."
+          },
+          "description": "Material evidence/source dependencies."
+        },
+        "context": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/decision_reference",
+            "description": "Material context."
+          },
+          "description": "Context that informed the choice, including AW owner evidence without AW authorship."
+        },
+        "supersedes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/decision_supersedes",
+            "description": "Prior decision replacement."
+          },
+          "description": "Explicit prior decisions replaced within scope."
+        },
+        "material_revision": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Rust-derived material revision; when supplied it must match the record."
+        }
+      },
+      "required": [
+        "id",
+        "source",
+        "decision",
+        "consequence",
+        "rationale_reference",
+        "authors",
+        "authority",
+        "scope"
+      ],
+      "additionalProperties": false
+    },
+    "decision_admission": {
+      "type": "object",
+      "description": "Independent trusted-host admission, not a client declaration. The host must establish provenance and source custody before supplying this binding.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Admitted stable identity."
+        },
+        "material_revision": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Exact admitted semantic revision, including deciding authority and provenance."
+        },
+        "source": {
+          "$ref": "#/$defs/decision_reference",
+          "description": "Exact currently admitted canonical source."
+        }
+      },
+      "required": [
+        "id",
+        "material_revision",
+        "source"
+      ],
+      "additionalProperties": false
+    },
+    "decision_context": {
+      "type": "object",
+      "description": "Bounded material decisions supplied to the existing compiler. No storage, discovery, execution permissions or authority creation.",
+      "properties": {
+        "records": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/material_decision",
+            "description": "Selected record."
+          },
+          "description": "Bounded owner-selected records with complete applicable supersession closure.",
+          "maxItems": 64
+        },
+        "admissions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/decision_admission",
+            "description": "Independent admission."
+          },
+          "description": "Source/authority-owner admissions."
+        },
+        "current_dependencies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/decision_reference",
+            "description": "Current dependency."
+          },
+          "description": "Current independently observed material revisions."
+        },
+        "applicable_scope": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^(path|owner|contract|source|operation):.+$"
+          },
+          "description": "Current exact scope selected by host/agent; no semantic inference."
+        }
+      },
+      "required": [
+        "records",
+        "admissions",
+        "current_dependencies",
+        "applicable_scope"
+      ],
+      "additionalProperties": false
+    },
     "current_work": {
       "type": "object",
       "properties": {
