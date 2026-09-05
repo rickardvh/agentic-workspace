@@ -12,6 +12,12 @@ Language-neutral input envelope for the shared operating-decision core.
 | --- | --- | --- | --- | --- | --- | --- |
 | (root) | object | yes |  | Language-neutral input envelope for the shared operating-decision core. |  | x-agentic-workspace-doc-role: "contract-reference" |
 | `decision_context` | ref `#/$defs/decision_context` | no |  | Optional independently admitted material decision context; absent or unrelated input remains quiet. |  |  |
+| `decision_context.reconciliation` | ref `#/$defs/decision_reconciliation` | no |  | Optional explicit residue and independently admitted durable dispositions. |  |  |
+| `decision_context.reconciliation.residue` | array of string | yes |  | Explicit agent/human-selected future-value residue; every item receives an outcome or pending route. |  |  |
+| `decision_context.reconciliation.native_owner` | string \| null | yes |  | Independently configured/discovered repo-native durable owner, or admitted absence. |  |  |
+| `decision_context.reconciliation.fallback_owner` | string | yes |  | Existing admitted AW fallback durable owner used only when native owner is absent. |  |  |
+| `decision_context.reconciliation.destinations` | array of ref `#/$defs/decision_admission` | yes |  | Independent destination evidence, rechecked against current source observations. |  |  |
+| `decision_context.reconciliation.dismissals` | array of ref `#/$defs/decision_dismissal` | yes |  | Explicit judgments, each bound to decision revision and current authority evidence. |  |  |
 | `decision_context.records` | array of ref `#/$defs/material_decision` | yes |  | Bounded owner-selected records with complete applicable supersession closure. |  |  |
 | `decision_context.admissions` | array of ref `#/$defs/decision_admission` | yes |  | Source/authority-owner admissions. |  |  |
 | `decision_context.current_dependencies` | array of ref `#/$defs/decision_reference` | yes |  | Current independently observed material revisions. |  |  |

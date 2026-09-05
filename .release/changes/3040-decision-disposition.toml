@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Keep material decision residue pending until explicit dismissal, supersession or current exact native/fallback owner admission."
+issues = [3040, 2570, 2909]
