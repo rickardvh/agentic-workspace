@@ -204,9 +204,10 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
             }
             return decision(&input, &reconciled, true);
         }
-        return Err(error(
-            "Planning reconciliation is uncertain; former source remains authoritative",
-        ));
+        // This owner can finish only its deterministic immutable result write.
+        // An incomplete attempt does not make the subject current; return the
+        // exact current action without creating anything during this view.
+        return Ok(pending);
     }
     Ok(pending)
 }
@@ -227,11 +228,12 @@ pub fn reconcile(value: Value) -> Result<Value, CoreError> {
     let admission = attempt_store::admit(
         json!({"target": input.target, "decision": pending, "invocation": invocation, "custody": input.custody}),
     )?;
-    if admission["disposition"] == "uncertain" {
-        return Ok(admission);
-    }
-    let stored = if admission["disposition"] == "execute" {
+    let stored = if admission["disposition"] != "replay" {
         // Recheck the former authority before the only semantic commit.
+        // Planning has no external side effect here: finishing this same
+        // attempt can only atomically create the exact immutable result.
+        // Existing results without retained custody still fail closed in the
+        // store, including partial writes and a lost successful commit reply.
         reconciliation(&input)?;
         attempt_store::commit(
             json!({"target": input.target, "custody": admission["custody"], "outcome": {
