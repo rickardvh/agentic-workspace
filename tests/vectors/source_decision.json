@@ -2,6 +2,402 @@
   "schema_version": 1,
   "cases": [
     {
+      "id": "two-independent-ready-actions",
+      "input": {
+        "contributions": [
+          {
+            "owner": "a",
+            "revision": "1",
+            "actions": [
+              {
+                "operation_id": "a.write",
+                "dependency_revision": "subject-1",
+                "effects": [
+                  "a-write"
+                ]
+              }
+            ]
+          },
+          {
+            "owner": "b",
+            "revision": "1",
+            "actions": [
+              {
+                "operation_id": "b.write",
+                "dependency_revision": "subject-1",
+                "effects": [
+                  "b-write"
+                ]
+              }
+            ]
+          }
+        ],
+        "intent": {},
+        "capability_contract": {
+          "kind": "agentic-workspace/capability-contract/v1",
+          "revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "owners": [
+            {
+              "owner": "a",
+              "revision": "1",
+              "domains": [
+                "a"
+              ],
+              "effects": [
+                {
+                  "id": "a-write",
+                  "domain": "a"
+                }
+              ],
+              "operations": [
+                {
+                  "id": "a.write",
+                  "reads": [],
+                  "effects": [
+                    "a-write"
+                  ],
+                  "input_schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "type": "object"
+                  },
+                  "result_kind": "write-result/v1"
+                }
+              ]
+            },
+            {
+              "owner": "b",
+              "revision": "1",
+              "domains": [
+                "b"
+              ],
+              "effects": [
+                {
+                  "id": "b-write",
+                  "domain": "b"
+                }
+              ],
+              "operations": [
+                {
+                  "id": "b.write",
+                  "reads": [],
+                  "effects": [
+                    "b-write"
+                  ],
+                  "input_schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "type": "object"
+                  },
+                  "result_kind": "write-result/v1"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "expect": {
+        "status": "actionable",
+        "primary_action": null,
+        "blockers": [],
+        "ready_actions.0.operation_id": "a.write",
+        "ready_actions.1.operation_id": "b.write"
+      }
+    },
+    {
+      "id": "unknown-read-footprint",
+      "input": {
+        "contributions": [
+          {
+            "owner": "a",
+            "revision": "1",
+            "actions": [
+              {
+                "operation_id": "a.write",
+                "dependency_revision": "subject-1",
+                "effects": [
+                  "a-write"
+                ]
+              }
+            ]
+          },
+          {
+            "owner": "b",
+            "revision": "1",
+            "actions": [
+              {
+                "operation_id": "b.write",
+                "dependency_revision": "subject-1",
+                "effects": [
+                  "b-write"
+                ]
+              }
+            ]
+          }
+        ],
+        "intent": {},
+        "capability_contract": {
+          "kind": "agentic-workspace/capability-contract/v1",
+          "revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "owners": [
+            {
+              "owner": "a",
+              "revision": "1",
+              "domains": [
+                "a"
+              ],
+              "effects": [
+                {
+                  "id": "a-write",
+                  "domain": "a"
+                }
+              ],
+              "operations": [
+                {
+                  "id": "a.write",
+                  "reads": [],
+                  "effects": [
+                    "a-write"
+                  ],
+                  "input_schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "type": "object"
+                  },
+                  "result_kind": "write-result/v1"
+                }
+              ]
+            },
+            {
+              "owner": "b",
+              "revision": "1",
+              "domains": [
+                "b"
+              ],
+              "effects": [
+                {
+                  "id": "b-write",
+                  "domain": "b"
+                }
+              ],
+              "operations": [
+                {
+                  "id": "b.write",
+                  "effects": [
+                    "b-write"
+                  ],
+                  "input_schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "type": "object"
+                  },
+                  "result_kind": "write-result/v1"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "expect": {
+        "status": "blocked",
+        "ready_actions": [],
+        "blockers.0.code": "multiple-actions"
+      }
+    },
+    {
+      "id": "conflicting-read-write-footprints",
+      "input": {
+        "contributions": [
+          {
+            "owner": "a",
+            "revision": "1",
+            "actions": [
+              {
+                "operation_id": "a.write",
+                "dependency_revision": "subject-1",
+                "effects": [
+                  "a-write"
+                ]
+              }
+            ]
+          },
+          {
+            "owner": "b",
+            "revision": "1",
+            "actions": [
+              {
+                "operation_id": "b.write",
+                "dependency_revision": "subject-1",
+                "effects": [
+                  "b-write"
+                ]
+              }
+            ]
+          }
+        ],
+        "intent": {},
+        "capability_contract": {
+          "kind": "agentic-workspace/capability-contract/v1",
+          "revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "owners": [
+            {
+              "owner": "a",
+              "revision": "1",
+              "domains": [
+                "a"
+              ],
+              "effects": [
+                {
+                  "id": "a-write",
+                  "domain": "a"
+                }
+              ],
+              "operations": [
+                {
+                  "id": "a.write",
+                  "reads": [],
+                  "effects": [
+                    "a-write"
+                  ],
+                  "input_schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "type": "object"
+                  },
+                  "result_kind": "write-result/v1"
+                }
+              ]
+            },
+            {
+              "owner": "b",
+              "revision": "1",
+              "domains": [
+                "b"
+              ],
+              "effects": [
+                {
+                  "id": "b-write",
+                  "domain": "b"
+                }
+              ],
+              "operations": [
+                {
+                  "id": "b.write",
+                  "reads": [
+                    "a"
+                  ],
+                  "effects": [
+                    "b-write"
+                  ],
+                  "input_schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "type": "object"
+                  },
+                  "result_kind": "write-result/v1"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "expect": {
+        "status": "blocked",
+        "ready_actions": [],
+        "blockers.0.code": "multiple-actions"
+      }
+    },
+    {
+      "id": "conflicting-writes-in-one-domain",
+      "input": {
+        "contributions": [
+          {
+            "owner": "a",
+            "revision": "1",
+            "actions": [
+              {
+                "operation_id": "a.write",
+                "dependency_revision": "subject-1",
+                "effects": [
+                  "a-write"
+                ]
+              },
+              {
+                "operation_id": "a.write",
+                "dependency_revision": "subject-1",
+                "effects": [
+                  "a-write"
+                ],
+                "arguments": {
+                  "target": "other"
+                }
+              }
+            ]
+          }
+        ],
+        "intent": {},
+        "capability_contract": {
+          "kind": "agentic-workspace/capability-contract/v1",
+          "revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "owners": [
+            {
+              "owner": "a",
+              "revision": "1",
+              "domains": [
+                "a"
+              ],
+              "effects": [
+                {
+                  "id": "a-write",
+                  "domain": "a"
+                }
+              ],
+              "operations": [
+                {
+                  "id": "a.write",
+                  "reads": [],
+                  "effects": [
+                    "a-write"
+                  ],
+                  "input_schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "type": "object"
+                  },
+                  "result_kind": "write-result/v1"
+                }
+              ]
+            },
+            {
+              "owner": "b",
+              "revision": "1",
+              "domains": [
+                "b"
+              ],
+              "effects": [
+                {
+                  "id": "b-write",
+                  "domain": "b"
+                }
+              ],
+              "operations": [
+                {
+                  "id": "b.write",
+                  "reads": [],
+                  "effects": [
+                    "b-write"
+                  ],
+                  "input_schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "type": "object"
+                  },
+                  "result_kind": "write-result/v1"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "expect": {
+        "status": "blocked",
+        "ready_actions": [],
+        "blockers.0.code": "multiple-actions"
+      }
+    },
+    {
       "id": "action-material-dependencies",
       "input": {
         "contributions": [
@@ -949,6 +1345,193 @@
     }
   ],
   "equivalent_inputs": [
+    {
+      "id": "ready-set-permutation-is-stable",
+      "inputs": [
+        {
+          "contributions": [
+            {
+              "owner": "a",
+              "revision": "1",
+              "actions": [
+                {
+                  "operation_id": "a.write",
+                  "dependency_revision": "subject-1",
+                  "effects": [
+                    "a-write"
+                  ]
+                }
+              ]
+            },
+            {
+              "owner": "b",
+              "revision": "1",
+              "actions": [
+                {
+                  "operation_id": "b.write",
+                  "dependency_revision": "subject-1",
+                  "effects": [
+                    "b-write"
+                  ]
+                }
+              ]
+            }
+          ],
+          "intent": {},
+          "capability_contract": {
+            "kind": "agentic-workspace/capability-contract/v1",
+            "revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "owners": [
+              {
+                "owner": "a",
+                "revision": "1",
+                "domains": [
+                  "a"
+                ],
+                "effects": [
+                  {
+                    "id": "a-write",
+                    "domain": "a"
+                  }
+                ],
+                "operations": [
+                  {
+                    "id": "a.write",
+                    "reads": [],
+                    "effects": [
+                      "a-write"
+                    ],
+                    "input_schema": {
+                      "$schema": "https://json-schema.org/draft/2020-12/schema",
+                      "type": "object"
+                    },
+                    "result_kind": "write-result/v1"
+                  }
+                ]
+              },
+              {
+                "owner": "b",
+                "revision": "1",
+                "domains": [
+                  "b"
+                ],
+                "effects": [
+                  {
+                    "id": "b-write",
+                    "domain": "b"
+                  }
+                ],
+                "operations": [
+                  {
+                    "id": "b.write",
+                    "reads": [],
+                    "effects": [
+                      "b-write"
+                    ],
+                    "input_schema": {
+                      "$schema": "https://json-schema.org/draft/2020-12/schema",
+                      "type": "object"
+                    },
+                    "result_kind": "write-result/v1"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "contributions": [
+            {
+              "owner": "b",
+              "revision": "1",
+              "actions": [
+                {
+                  "operation_id": "b.write",
+                  "dependency_revision": "subject-1",
+                  "effects": [
+                    "b-write"
+                  ]
+                }
+              ]
+            },
+            {
+              "owner": "a",
+              "revision": "1",
+              "actions": [
+                {
+                  "operation_id": "a.write",
+                  "dependency_revision": "subject-1",
+                  "effects": [
+                    "a-write"
+                  ]
+                }
+              ]
+            }
+          ],
+          "intent": {},
+          "capability_contract": {
+            "kind": "agentic-workspace/capability-contract/v1",
+            "revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "owners": [
+              {
+                "owner": "b",
+                "revision": "1",
+                "domains": [
+                  "b"
+                ],
+                "effects": [
+                  {
+                    "id": "b-write",
+                    "domain": "b"
+                  }
+                ],
+                "operations": [
+                  {
+                    "id": "b.write",
+                    "reads": [],
+                    "effects": [
+                      "b-write"
+                    ],
+                    "input_schema": {
+                      "$schema": "https://json-schema.org/draft/2020-12/schema",
+                      "type": "object"
+                    },
+                    "result_kind": "write-result/v1"
+                  }
+                ]
+              },
+              {
+                "owner": "a",
+                "revision": "1",
+                "domains": [
+                  "a"
+                ],
+                "effects": [
+                  {
+                    "id": "a-write",
+                    "domain": "a"
+                  }
+                ],
+                "operations": [
+                  {
+                    "id": "a.write",
+                    "reads": [],
+                    "effects": [
+                      "a-write"
+                    ],
+                    "input_schema": {
+                      "$schema": "https://json-schema.org/draft/2020-12/schema",
+                      "type": "object"
+                    },
+                    "result_kind": "write-result/v1"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
     {
       "id": "restriction-grant-and-contribution-order-is-immaterial",
       "inputs": [

@@ -170,6 +170,7 @@
     "operation_capability": {
       "type": "object",
       "properties": {
+        "reads": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true, "description": "Complete admitted material read-domain footprint for independence proof. Absent means unknown; an empty array explicitly means no reads. Writes use the declared effect ceiling."},
         "id": {
           "type": "string",
           "minLength": 1,

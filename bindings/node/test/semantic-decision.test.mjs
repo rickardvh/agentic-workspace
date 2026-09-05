@@ -58,3 +58,12 @@ test("action dependencies and logical effects have separate lifetimes", () => {
   payload.contributions[0].actions[0].effect_generation = "authorized-repeat-2";
   assert.notEqual(first.primary_action.idempotency_key, compile().primary_action.idempotency_key);
 });
+
+
+test("a client can choose either exact ready action", () => {
+  const p = vectors.cases.find(v => v.id === "two-independent-ready-actions").input;
+  const decision = compileSourceDecision(p.contributions, p.intent, p.capability_contract);
+  assert.equal(decision.primary_action, null);
+  assert.equal(decision.ready_actions.length, 2);
+  for (const action of decision.ready_actions) assert.equal(admitInvocation(decision, action).disposition, "execute");
+});
