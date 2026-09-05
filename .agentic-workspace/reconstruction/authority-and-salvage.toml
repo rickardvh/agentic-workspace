@@ -1,0 +1,864 @@
+# Temporary reconstruction gate for issues #3012 and #3013.
+# This file classifies semantics; it is not a replacement domain authority.
+
+[meta]
+kind = "agentic-workspace/reconstruction-disposition/v1"
+temporary = true
+authority = "disposition-only"
+work_base = "reconstruct/baseline-and-salvage"
+baseline = "82e1e79c32e6edfa02824d87845c5480ed8928bb"
+salvage_snapshot = "4973f26d31951a002607455578412ad176415995"
+salvage_commit_count = 36
+retire_when = "all retained semantics have been admitted by their corrected owners and destructive migration no longer depends on this map"
+
+[gate]
+policy = "fail-closed"
+destructive_ready = false
+reason = "current-checkout authority has a semantic disposition, but retained and transferred meanings are not destructive-ready until their corrected destination owners admit them"
+current_checkout_required = false
+current_checkout_evidence = "redacted semantic inspection of the lived-in reconstruction checkout on 2026-09-05"
+privacy_boundary = "record source classes, currentness, and migration meaning only; never persist local target locations, prompts, logs, machine identifiers, secrets, or policy values"
+rule = "A destructive reconstruction change may remove a baseline source only when every semantic entry that covers it is either destructive_ready or demonstrably replaced by its named destination; ask/current-checkout entries always block deletion until resolved."
+
+[coverage]
+required_areas = [
+  "shared-config",
+  "local-config",
+  "scoped-instructions",
+  "planning",
+  "memory",
+  "verification-proof",
+  "assignment-delegation-target",
+  "ownership-custody",
+  "correction-feedback",
+  "support-provenance",
+  "maintainer-local-diagnostics",
+]
+snapshot_prs = [2992, 2993, 2996, 2999, 3002, 3004, 3005, 3006, 3007, 3008]
+required_salvage_prs = [2992, 2993, 3002, 3004, 3005, 3006, 3008, 3011]
+outside_snapshot_followups = [3011]
+
+[[baseline]]
+id = "system-intent-source"
+area = "shared-config"
+paths = ["SYSTEM_INTENT.md"]
+source_class = "shared_repo_authority"
+authority = "primary"
+semantic_owner = "system-intent"
+disposition = "retain"
+destination = "corrected durable system-intent source"
+owner_issues = ["#2997"]
+evidence = "baseline-git"
+current_checkout_required = false
+destructive_ready = false
+rationale = "Human-owned why and durable system-shaping constraints survive representation changes."
+
+[[baseline]]
+id = "system-intent-projections"
+area = "shared-config"
+paths = [".agentic-workspace/system-intent/**"]
+source_class = "derived_projection"
+authority = "derived"
+semantic_owner = "system-intent"
+disposition = "derive"
+destination = "projection generated from the corrected system-intent source"
+owner_issues = ["#2997", "#2984"]
+evidence = "baseline-git"
+current_checkout_required = false
+destructive_ready = false
+rationale = "Normalized mirrors may be replaced, but only after the stronger source is admitted and projection parity is proven."
+
+[[baseline]]
+id = "shared-config-core"
+area = "shared-config"
+paths = [".agentic-workspace/config.toml"]
+selector = "module enablement, public invocation/control policy, repo-owned defaults"
+source_class = "shared_repo_authority"
+authority = "primary"
+semantic_owner = "workspace-config"
+disposition = "retain"
+destination = "small corrected repo-owned config/control surface"
+owner_issues = ["#2613", "#2767", "#2986"]
+evidence = "baseline-git"
+current_checkout_required = false
+destructive_ready = false
+rationale = "Keep only configuration that changes behavior and has an explicit consumer."
+
+[[baseline]]
+id = "shared-config-proof-routing"
+area = "verification-proof"
+paths = [".agentic-workspace/config.toml"]
+selector = "assurance defaults, proof profiles, proof requirements, proof-lane routing"
+source_class = "shared_repo_authority"
+authority = "primary"
+semantic_owner = "verification"
+disposition = "transfer"
+destination = "Verification-owned subject/claim-bound proof model with queryable reuse"
+owner_issues = ["#2334", "#2981"]
+evidence = "baseline-git"
+current_checkout_required = false
+destructive_ready = false
+rationale = "Retain trust questions and proof obligations; retire duplicate route/config machinery after Verification owns them."
+
+[[baseline]]
+id = "shared-config-assignment-policy"
+area = "assignment-delegation-target"
+paths = [".agentic-workspace/config.toml"]
+selector = "assignment policy, delegation control, target selection, total-cost policy"
+source_class = "shared_repo_authority"
+authority = "primary"
+semantic_owner = "assignment-delegation"
+disposition = "transfer"
+destination = "corrected assignment/delegation policy and target-evidence owners"
+owner_issues = ["#2916", "#2210", "#2209", "#2817", "#2818"]
+evidence = "baseline-git"
+current_checkout_required = false
+destructive_ready = false
+rationale = "Policy belongs with assignment/delegation owners, not as duplicated ambient workspace posture."
+
+[[baseline]]
+id = "shared-config-posture-compatibility"
+area = "shared-config"
+paths = [".agentic-workspace/config.toml"]
+selector = "improvement-latitude, optimization-bias, advanced-feature, legacy compatibility and alias posture"
+source_class = "shared_repo_authority"
+authority = "primary"
+semantic_owner = "workspace-config"
+disposition = "retire"
+destination = "derive only behavior-changing controls from system intent or corrected public config"
+owner_issues = ["#2613", "#2997"]
+evidence = "baseline-git"
+current_checkout_required = false
+destructive_ready = false
+rationale = "Do not preserve a growing posture model merely because the prototype consumed it."
+
+[[baseline]]
+id = "local-config-overrides"
+area = "local-config"
+paths = [".agentic-workspace/config.local.toml", "agentic-workspace.local.toml"]
+selector = "source-checkout invocation, runtime capability, and command-safety overrides"
+source_class = "ignored_local_authority"
+authority = "local_override"
+semantic_owner = "workspace-config"
+disposition = "retain"
+destination = "small corrected ignored local override surface owned by workspace configuration"
+owner_issues = ["#2613", "#2767"]
+evidence = "current-checkout-redacted-structure-2026-09-05"
+current_checkout_required = false
+destructive_ready = false
+rationale = "The lived-in checkout has behavior-changing local invocation, runtime-capability, and command-safety controls. Preserve those meanings without copying values or rebuilding the baseline configuration maze."
+
+[[baseline]]
+id = "local-config-assignment-policy"
+area = "assignment-delegation-target"
+paths = [".agentic-workspace/config.local.toml", "agentic-workspace.local.toml"]
+selector = "assignment policy, transport authority, human override policy, and selected target identity"
+source_class = "ignored_local_authority"
+authority = "local_override"
+semantic_owner = "assignment-delegation"
+disposition = "transfer"
+destination = "corrected assignment/delegation policy, work-revision decision, and transport owners"
+owner_issues = ["#2916", "#2210", "#2817", "#2947"]
+evidence = "current-checkout-redacted-structure-2026-09-05"
+current_checkout_required = false
+destructive_ready = false
+rationale = "The local configuration contains active assignment and transport policy. Transfer its meaning through typed owners; do not preserve duplicated ambient policy fields or their machine-specific values."
+
+[[baseline]]
+id = "local-config-target-evidence"
+area = "assignment-delegation-target"
+paths = [".agentic-workspace/config.local.toml", "agentic-workspace.local.toml"]
+selector = "target capabilities, task-fit evidence, transport support, confidence provenance, and time-bounded economic evidence"
+source_class = "ignored_local_authority"
+authority = "local_override"
+semantic_owner = "target-evidence"
+disposition = "transfer"
+destination = "producer/version/currentness-aware target evidence re-observed for the current host; never a copied machine profile"
+owner_issues = ["#2209", "#2818", "#2817", "#2981"]
+evidence = "current-checkout-redacted-structure-2026-09-05"
+current_checkout_required = false
+destructive_ready = false
+rationale = "Capability and cost observations can affect best-fit routing, but target locations and observations are machine-local facts that must be freshly admitted rather than checked in or blindly migrated."
+
+[[baseline]]
+id = "local-delegation-decision-projection"
+area = "assignment-delegation-target"
+paths = [
+  ".agentic-workspace/local/delegation.json",
+  ".agentic-workspace/local/delegation-reconciliation.json",
+  ".agentic-workspace/delegation-outcomes.json",
+  "agentic-workspace.delegation-outcomes.json",
+]
+selector = "effective assignment choice and retired-policy reconciliation"
+source_class = "derived_projection"
+authority = "derived"
+semantic_owner = "assignment-delegation"
+disposition = "derive"
+destination = "fresh effective decision from current local policy, target evidence, and the corrected assignment owner"
+owner_issues = ["#2916", "#2210", "#2209", "#2817"]
+evidence = "current-checkout-redacted-structure-2026-09-05"
+current_checkout_required = false
+destructive_ready = false
+rationale = "The observed effective choice is represented by stronger local configuration and a reconciliation receipt. Preserve no second policy authority in the projection."
+
+[[baseline]]
+id = "local-assignment-run-history"
+area = "assignment-delegation-target"
+paths = [".agentic-workspace/local/assignment-runs/**"]
+selector = "dispatch, worker return, admission, integration, and closeout records"
+source_class = "historical_residue"
+authority = "history"
+semantic_owner = "assignment-delegation"
+disposition = "retire"
+destination = "no live-state migration; retain only tests or expensive-to-rediscover failure evidence outside the local record"
+owner_issues = ["#2916", "#2210", "#2947"]
+evidence = "current-checkout-redacted-lifecycle-2026-09-05"
+current_checkout_required = false
+destructive_ready = true
+rationale = "The only observed assignment run is integrated and closed. Its transport corpus is history, not current assignment or Planning authority."
+
+[[baseline]]
+id = "local-assignment-conclusions"
+area = "assignment-delegation-target"
+paths = [".agentic-workspace/local/conclusions/assignment/**"]
+selector = "cached assignment facts, actions, claims, procedures, and resources"
+source_class = "durable_domain_state"
+authority = "evidence"
+semantic_owner = "assignment-delegation"
+disposition = "transfer"
+destination = "only producer/version/currentness-compatible conclusions re-admitted for the exact work subject"
+owner_issues = ["#2209", "#2817", "#2981"]
+evidence = "current-checkout-redacted-structure-2026-09-05"
+current_checkout_required = false
+destructive_ready = false
+rationale = "The checkout contains multiple structured conclusion records. Do not bulk-migrate them or treat their cache shape as authority; the corrected owner must re-admit any still-useful conclusion."
+
+[[baseline]]
+id = "maintainer-local-diagnostics"
+area = "maintainer-local-diagnostics"
+paths = [".agentic-workspace/local/logs/**"]
+selector = "session log records; no current local logging preference was observed"
+source_class = "maintainer_local"
+authority = "history"
+semantic_owner = "repo-maintainer-diagnostics"
+disposition = "retire"
+destination = "no record migration; future diagnostics remain local and require an explicit current opt-in owned by local configuration"
+owner_issues = ["#2995"]
+evidence = "current-checkout-redacted-presence-2026-09-05"
+current_checkout_required = false
+destructive_ready = true
+rationale = "An observed log file is historical diagnostic output, not evidence of a current opt-in preference. Do not persist its contents or identity in Git."
+
+[[baseline]]
+id = "startup-agent-adapter"
+area = "scoped-instructions"
+paths = ["AGENTS.md"]
+source_class = "shared_repo_authority"
+authority = "primary"
+semantic_owner = "workspace-routing"
+disposition = "retain"
+destination = "small repo-owned first-contact adapter into corrected public contracts"
+owner_issues = ["#2930", "#2986"]
+evidence = "baseline-git"
+current_checkout_required = false
+destructive_ready = false
+rationale = "Keep a cheap entry point, not a second operating framework."
+
+[[baseline]]
+id = "workspace-managed-routing-payload"
+area = "scoped-instructions"
+paths = [
+  ".agentic-workspace/AGENTS.md",
+  ".agentic-workspace/WORKFLOW.md",
+  ".agentic-workspace/skills/**",
+  ".agentic-workspace/fallback/**",
+]
+source_class = "package_state"
+authority = "derived"
+semantic_owner = "workspace-routing"
+disposition = "derive"
+destination = "small installed projection of corrected public routing/capability contracts"
+owner_issues = ["#2984", "#2986", "#2930"]
+evidence = "baseline-git"
+current_checkout_required = false
+destructive_ready = false
+rationale = "Installed helpers are projections; preserve behavior, not the current payload layout."
+
+[[baseline]]
+id = "scoped-procedure-obligations"
+area = "scoped-instructions"
+paths = [".agentic-workspace/instructions/**"]
+source_class = "shared_repo_authority"
+authority = "primary"
+semantic_owner = "semantic-routing-and-repo-procedures"
+disposition = "transfer"
+destination = "agent-selected semantic applicability plus repo-owned procedure skills"
+owner_issues = ["#2930", "#2929"]
+evidence = "baseline-git"
+current_checkout_required = false
+destructive_ready = false
+rationale = "Preserve obligation/procedure boundaries without hard-coding task-text keyword authority."
+
+[[baseline]]
+id = "planning-current-local-state"
+area = "planning"
+paths = [
+  ".agentic-workspace/planning/state.toml",
+  ".agentic-workspace/planning/external-intent-evidence.json",
+  ".agentic-workspace/planning/finished-work-evidence.json",
+]
+source_class = "ignored_local_authority"
+authority = "primary"
+semantic_owner = "planning"
+disposition = "retire"
+destination = "none for this checkout; the named ignored root-state files are absent, while current intent remains in the active tracked plan entry below"
+owner_issues = ["#2970", "#2989", "#2984"]
+evidence = "current-checkout-presence-check-2026-09-05"
+current_checkout_required = false
+destructive_ready = true
+rationale = "The lived-in checkout has none of these ignored root-state files. This absence does not retire Planning semantics; the active tracked plan and local continuation carry are dispositioned separately."
+
+[[baseline]]
+id = "planning-active-intent"
+area = "planning"
+paths = [
+  ".agentic-workspace/planning/execplans/*.json",
+  ".agentic-workspace/planning/lanes/*.json",
+  ".agentic-workspace/planning/decompositions/*.json",
+  ".agentic-workspace/planning/issue-relations/*.json",
+]
+source_class = "durable_domain_state"
+authority = "primary"
+semantic_owner = "planning"
+disposition = "transfer"
+destination = "corrected Planning subject, continuation, custody, and terminality model"
+owner_issues = ["#2970", "#2989", "#2984"]
+evidence = "baseline-git-plus-current-checkout-2026-09-05"
+current_checkout_required = false
+destructive_ready = false
+rationale = "The current #2983 reconstruction plan remains active authority. Migrate its unresolved intent, dependency graph, and custody by meaning, not the historical plan record format."
+
+[[baseline]]
+id = "planning-assignment-projections"
+area = "assignment-delegation-target"
+paths = [
+  ".agentic-workspace/planning/assignments/**",
+  ".agentic-workspace/planning/assignment-receipts/**",
+  ".agentic-workspace/planning/integration-proposals/**",
+  ".agentic-workspace/planning/integration-receipts/**",
+  ".agentic-workspace/local/planning/owner-selection*.json",
+  ".agentic-workspace/local/planning/reconciliation-*/**",
+  ".agentic-workspace/local/planning/targeted-execplan-receipts/**",
+]
+source_class = "derived_projection"
+authority = "derived"
+semantic_owner = "planning-and-assignment"
+disposition = "derive"
+destination = "fresh projections from current Planning subject plus assignment/delegation owners"
+owner_issues = ["#2970", "#2210", "#2916", "#2947"]
+evidence = "baseline-git-plus-current-checkout-redacted-structure-2026-09-05"
+current_checkout_required = false
+destructive_ready = false
+rationale = "The checkout contains a selected-owner projection, applied targeted-plan receipts, and an applied reconciliation with recorded conflicts. Preserve owner results through fresh projections; receipts and embedded policy snapshots are not new authority."
+
+[[baseline]]
+id = "planning-decision-point-intent-carry"
+area = "planning"
+paths = [".agentic-workspace/local/decision-point-intent/**"]
+selector = "active work binding, plan continuation, source revisions, and required carry-forward confirmations"
+source_class = "durable_domain_state"
+authority = "primary"
+semantic_owner = "planning"
+disposition = "transfer"
+destination = "corrected Planning continuation/custody state bound to current work and source revision"
+owner_issues = ["#2970", "#2989", "#2984", "#2210"]
+evidence = "current-checkout-redacted-lifecycle-2026-09-05"
+current_checkout_required = false
+destructive_ready = false
+rationale = "The observed carry is active, bound to plan continuation, commit-on-use, and requires carry-forward. Its semantic commitment must survive even though its forecast and confirmation representation should not."
+
+[[baseline]]
+id = "local-improvement-consequence-history"
+area = "correction-feedback"
+paths = [".agentic-workspace/local/improvement-pressure/**"]
+selector = "repeated consequence observations"
+source_class = "historical_residue"
+authority = "evidence"
+semantic_owner = "owner-directed-improvement"
+disposition = "transfer"
+destination = "only repeated future-relevant friction admitted by the smallest affected source owner; retire the raw event stream"
+owner_issues = ["#2647", "#2648", "#2809"]
+evidence = "current-checkout-redacted-count-and-kind-2026-09-05"
+current_checkout_required = false
+destructive_ready = false
+rationale = "The checkout contains consequence history, not a standalone learning authority. Promote only an owner-relevant conclusion that changes later equivalent work; do not migrate the event corpus."
+
+[[baseline]]
+id = "local-projection-caches"
+area = "support-provenance"
+paths = [
+  ".agentic-workspace/local/cache/**",
+  ".agentic-workspace/local/projection-cache/**",
+]
+selector = "generated fingerprints, external-intent cache, proof reuse cache, PR comment cache, and command projections"
+source_class = "derived_projection"
+authority = "derived"
+semantic_owner = "producing-owner"
+disposition = "derive"
+destination = "fresh bounded projections from current sources after reconstruction"
+owner_issues = ["#2984", "#2981", "#2987"]
+evidence = "current-checkout-redacted-presence-2026-09-05"
+current_checkout_required = false
+destructive_ready = true
+rationale = "Caches may accelerate the current implementation but carry no independent meaning across owner, source, producer, or representation changes."
+
+[[baseline]]
+id = "planning-history"
+area = "planning"
+paths = [
+  ".agentic-workspace/planning/execplans/archive/**",
+  ".agentic-workspace/planning/lanes/archive/**",
+  ".agentic-workspace/planning/reviews/**",
+  ".agentic-workspace/planning/closeout-evidence/**",
+]
+source_class = "historical_residue"
+authority = "history"
+semantic_owner = "planning"
+disposition = "retire"
+destination = "Git history; selectively promote only expensive-to-rediscover future-useful knowledge"
+owner_issues = ["#2970", "#2570"]
+evidence = "baseline-git"
+current_checkout_required = false
+destructive_ready = true
+rationale = "Do not migrate a prose/evidence archive as live Planning state."
+
+[[baseline]]
+id = "memory-durable-knowledge"
+area = "memory"
+paths = [
+  ".agentic-workspace/memory/repo/manifest.toml",
+  ".agentic-workspace/memory/repo/decisions/**",
+  ".agentic-workspace/memory/repo/domains/**",
+  ".agentic-workspace/memory/repo/invariants/**",
+  ".agentic-workspace/memory/repo/mistakes/**",
+  ".agentic-workspace/memory/repo/runbooks/**",
+]
+source_class = "durable_domain_state"
+authority = "advisory"
+semantic_owner = "memory"
+disposition = "transfer"
+destination = "minimal corrected Memory store; promote owner-specific facts to stronger owners before pruning"
+owner_issues = ["#2570", "#2970", "#2989"]
+evidence = "baseline-git-plus-current-checkout-presence-check-2026-09-05"
+current_checkout_required = false
+destructive_ready = false
+rationale = "No ignored Memory state was observed; tracked root Memory remains the operational advisory source. Retain future-useful knowledge, and move Planning-owned next-action facts to Planning rather than copying the store."
+
+[[baseline]]
+id = "memory-routing-scaffolding"
+area = "memory"
+paths = [
+  ".agentic-workspace/memory/repo/index.md",
+  ".agentic-workspace/memory/repo/templates/**",
+  ".agentic-workspace/memory/repo/skills/**",
+  ".agentic-workspace/memory/skills/**",
+  ".agentic-workspace/memory/WORKFLOW.md",
+  ".agentic-workspace/memory/SKILLS.md",
+]
+source_class = "package_state"
+authority = "derived"
+semantic_owner = "memory"
+disposition = "derive"
+destination = "small corrected Memory capability and routing projection"
+owner_issues = ["#2570"]
+evidence = "baseline-git"
+current_checkout_required = false
+destructive_ready = false
+rationale = "Indexes, templates, and package skills are replaceable machinery around the durable knowledge owner."
+
+[[baseline]]
+id = "verification-protocols"
+area = "verification-proof"
+paths = [".agentic-workspace/verification/manifest.toml"]
+source_class = "shared_repo_authority"
+authority = "primary"
+semantic_owner = "verification"
+disposition = "retain"
+destination = "corrected subject/claim-bound Verification protocol source"
+owner_issues = ["#2334", "#2981"]
+evidence = "baseline-git"
+current_checkout_required = false
+destructive_ready = false
+rationale = "Keep repeatable proof questions and evidence admission; Verification must not become semantic acceptance authority."
+
+[[baseline]]
+id = "verification-current-evidence-state"
+area = "verification-proof"
+paths = [
+  ".agentic-workspace/verification/proof-decision.json",
+  ".agentic-workspace/verification/assurance-evidence-records.json",
+  ".agentic-workspace/verification/reasoning-economy-evidence.json",
+  ".agentic-workspace/verification/test-strategy-dispositions/**",
+  ".agentic-workspace/verification/test-suite-budget.json",
+]
+source_class = "durable_domain_state"
+authority = "evidence"
+semantic_owner = "verification"
+disposition = "transfer"
+destination = "only current, exact-subject reusable evidence under corrected Verification"
+owner_issues = ["#2334", "#2981"]
+evidence = "baseline-git-plus-current-checkout-presence-check-2026-09-05"
+current_checkout_required = false
+destructive_ready = false
+rationale = "The current evidence sources are tracked; ignored proof receipts are dispositioned below. Subject-bound current evidence may survive only through fresh Verification admission; stale strategy residue should not."
+
+[[baseline]]
+id = "proof-receipt-corpus"
+area = "verification-proof"
+paths = [
+  ".agentic-workspace/proof/receipts/**",
+  ".agentic-workspace/local/proof-receipts/**",
+]
+source_class = "historical_residue"
+authority = "history"
+semantic_owner = "verification"
+disposition = "retire"
+destination = "Git history except current exact-subject evidence explicitly re-admitted by Verification"
+owner_issues = ["#2334", "#2981"]
+evidence = "baseline-git-plus-current-checkout-redacted-subject-boundary-2026-09-05"
+current_checkout_required = false
+destructive_ready = false
+rationale = "Bulk receipts are evidence/history, not an authority source. The ignored aggregate currently crosses branch subjects, so no bulk migration is valid; Verification must first admit or reject any exact-subject record before deletion."
+
+[[baseline]]
+id = "ownership-custody-ledger"
+area = "ownership-custody"
+paths = [".agentic-workspace/OWNERSHIP.toml"]
+source_class = "shared_repo_authority"
+authority = "primary"
+semantic_owner = "workspace-ownership"
+disposition = "transfer"
+destination = "corrected ownership/custody model with acquired-and-proven destructive authority"
+owner_issues = ["#3001", "#2984"]
+evidence = "baseline-git"
+current_checkout_required = false
+destructive_ready = false
+rationale = "Preserve source/owner boundaries while allowing the ledger representation itself to be replaced."
+
+[[baseline]]
+id = "correction-feedback-semantics"
+area = "correction-feedback"
+paths = [
+  "docs/reference/correction-event-*.md",
+  "src/agentic_workspace/contracts/correction_event_*.json",
+  "src/agentic_workspace/contracts/operation_contracts.json",
+]
+source_class = "shared_repo_authority"
+authority = "primary"
+semantic_owner = "correction-feedback"
+disposition = "transfer"
+destination = "trusted human-correction ingress and corrected source-owner handoff"
+owner_issues = ["#2726"]
+evidence = "baseline-git"
+current_checkout_required = false
+destructive_ready = false
+rationale = "Human provenance and correction custody survive; generated/request shapes remain subordinate to the corrected owner."
+
+[[baseline]]
+id = "baseline-source-first-kernel"
+area = "shared-config"
+paths = [
+  "src/agentic_workspace/decision.py",
+  "src/agentic_workspace/operations.py",
+  "src/agentic_workspace/modules.py",
+  "src/agentic_workspace/workspace.py",
+]
+source_class = "package_state"
+authority = "implementation"
+semantic_owner = "workspace-operating-loop"
+disposition = "transfer"
+destination = "corrected resolve-act-reconcile kernel with truthful terminality and small typed public requests"
+owner_issues = ["#2984", "#2989", "#2986", "#2606"]
+evidence = "baseline-git"
+current_checkout_required = false
+destructive_ready = false
+rationale = "The baseline already contains the #2991 kernel; reuse its source-first mechanics without treating that implementation shape as durable authority."
+
+[[baseline]]
+id = "generated-contract-projections"
+area = "support-provenance"
+paths = ["generated/**", "docs/reference/**", "src/agentic_workspace/contracts/**"]
+selector = "generated command packages, reference projections, generated schemas and mirrors"
+source_class = "derived_projection"
+authority = "derived"
+semantic_owner = "semantic-contract-generation"
+disposition = "derive"
+destination = "one corrected semantic authority generating one Python and one TypeScript package"
+owner_issues = ["#2985", "#2987", "#2606"]
+evidence = "baseline-git"
+current_checkout_required = false
+destructive_ready = false
+rationale = "Generated surfaces are consumers/projections, never the semantic source merely because they are checked in."
+
+[[baseline]]
+id = "payload-provenance-and-support"
+area = "support-provenance"
+paths = [
+  ".agentic-workspace/payload-provenance.json",
+  ".github/release-ownership.json",
+  ".github/support-bearing-promotion.json",
+  "docs/release-admission.md",
+]
+source_class = "package_state"
+authority = "evidence"
+semantic_owner = "release-support-admission"
+disposition = "derive"
+destination = "current installer/release provenance plus final-admission-bound support truth"
+owner_issues = ["#2616", "#2990"]
+evidence = "baseline-git"
+current_checkout_required = false
+destructive_ready = false
+rationale = "The checked-in payload snapshot is historical evidence; support and provenance must be regenerated from current release sources."
+
+[[salvage]]
+id = "small-public-v1-surface"
+origin_prs = [2992]
+component_level = true
+disposition = "ADAPT"
+current_owner = "public request and module surface"
+owner_issues = ["#2986", "#2606", "#2987"]
+reuse = "small start/invoke-style front door, one generic module seam, consumer parity expectations"
+corrected_source_dependency = true
+independent_reason = "Surface compression is useful, but the exact command/request shape must follow reconstructed semantics rather than define them."
+
+[[salvage]]
+id = "wholesale-v1-contraction"
+origin_prs = [2992]
+component_level = true
+disposition = "DROP"
+current_owner = "reconstruction migration gate"
+owner_issues = ["#2983", "#3012"]
+reuse = "none as an implementation unit"
+corrected_source_dependency = true
+rejected_assumption = "Deletion of authority-bearing trees was treated as proof that their semantics were obsolete before migration/disposition."
+
+[[salvage]]
+id = "contraction-loss-inventory"
+origin_prs = [2992]
+component_level = true
+disposition = "EVIDENCE"
+current_owner = "reconstruction migration gate"
+owner_issues = ["#3012"]
+reuse = "changed-file/deletion inventory demonstrating which authority domains were removed"
+corrected_source_dependency = false
+independent_reason = "The deletion set is valuable as evidence of migration risk even though the contraction implementation is rejected."
+
+[[salvage]]
+id = "clean-room-release-conformance"
+origin_prs = [2993]
+component_level = true
+disposition = "EVIDENCE"
+current_owner = "release admission and conformance"
+owner_issues = ["#2990", "#2909"]
+reuse = "negative release scenarios and clean-room admission questions"
+corrected_source_dependency = true
+independent_reason = "Proof scenarios survive as evidence; they do not define release authority."
+
+[[salvage]]
+id = "maintainer-session-logging"
+origin_prs = [2996]
+component_level = true
+disposition = "ADAPT"
+current_owner = "repo-maintainer diagnostics"
+owner_issues = ["#2995", "#2613"]
+reuse = "zero-default-residue local event logging, bounded metadata, explicit gaps, share-safe export"
+corrected_source_dependency = true
+independent_reason = "Useful diagnostics should move behind the corrected local-config owner rather than retain AW_SESSION_LOG as a separate control surface."
+
+[[salvage]]
+id = "durable-v1-intent-delta"
+origin_prs = [2999]
+component_level = true
+disposition = "ADAPT"
+current_owner = "system-intent"
+owner_issues = ["#2997"]
+reuse = "compression candidates and newly identified invariants that survive comparison with the baseline human-owned intent"
+corrected_source_dependency = true
+independent_reason = "The restored v1 intent is evidence for refinement, not permission to overwrite baseline human-owned why wholesale."
+
+[[salvage]]
+id = "generated-semantic-ir-packages"
+origin_prs = [3002]
+component_level = true
+disposition = "ADAPT"
+current_owner = "semantic contract generation"
+owner_issues = ["#2985", "#2987", "#2606"]
+reuse = "small semantic IR, generated Python/TypeScript projections, cross-consumer conformance"
+corrected_source_dependency = true
+independent_reason = "Generation shape is useful but must target corrected public contracts and owners."
+
+[[salvage]]
+id = "durable-operation-primitives"
+origin_prs = [3002, 3007]
+component_level = true
+disposition = "ADAPT"
+current_owner = "truthful commit/recovery and custody"
+owner_issues = ["#3000", "#3001"]
+reuse = "atomic state replacement, retry/recovery identity, bounded path/effect confinement"
+corrected_source_dependency = true
+independent_reason = "Mechanisms are useful, but the prototype PID lock had a Windows portability failure and cannot be ported as-is."
+
+[[salvage]]
+id = "ownership-path-confinement"
+origin_prs = [3002]
+component_level = true
+disposition = "ADAPT"
+current_owner = "ownership/custody"
+owner_issues = ["#3001"]
+reuse = "explicit ownership acquisition, collision refusal, traversal/absolute-path/symlink confinement"
+corrected_source_dependency = true
+independent_reason = "Safety mechanisms are reusable only when attached to corrected custody authority and truthful destructive ownership."
+
+[[salvage]]
+id = "generated-contract-conformance-tests"
+origin_prs = [3002]
+component_level = true
+disposition = "EVIDENCE"
+current_owner = "semantic contract generation"
+owner_issues = ["#2985", "#2987", "#2909"]
+reuse = "isolated Python/TypeScript/JSON parity, package install, stale/retry and cross-process cases"
+corrected_source_dependency = true
+independent_reason = "The scenarios are reusable evidence after replacing prototype source assumptions."
+
+[[salvage]]
+id = "windows-lock-test-quarantine"
+origin_prs = [3007]
+component_level = true
+disposition = "DROP"
+current_owner = "truthful commit/recovery"
+owner_issues = ["#3000"]
+reuse = "none as a permanent correctness mechanism"
+corrected_source_dependency = true
+rejected_assumption = "Skipping the cross-process check on Windows is a temporary prototype quarantine, not a reconstructed durability solution."
+
+[[salvage]]
+id = "durability-portability-failure"
+origin_prs = [3007]
+component_level = true
+disposition = "EVIDENCE"
+current_owner = "truthful commit/recovery"
+owner_issues = ["#3000"]
+reuse = "Windows lock-worker failure and proof gap"
+corrected_source_dependency = false
+independent_reason = "The failure is durable evidence against claiming the #3002 lock primitive independently portable."
+
+[[salvage]]
+id = "source-owner-batteries"
+origin_prs = [3004]
+component_level = true
+disposition = "ADAPT"
+current_owner = "domain source owners"
+owner_issues = ["#2613", "#2570", "#2970", "#2334", "#2981"]
+reuse = "owner-specific contribution, operation, currentness, and restart cases"
+corrected_source_dependency = true
+independent_reason = "Battery structure is useful; individual owner semantics must be replaced with reconstructed contracts."
+
+[[salvage]]
+id = "source-owner-battery-tests"
+origin_prs = [3004]
+component_level = true
+disposition = "EVIDENCE"
+current_owner = "domain source owners"
+owner_issues = ["#2613", "#2570", "#2970", "#2334"]
+reuse = "test cases that expose cross-owner currentness and effect-boundary assumptions"
+corrected_source_dependency = true
+independent_reason = "Tests are evidence inputs, not proof that prototype owner semantics are correct."
+
+[[salvage]]
+id = "assignment-total-cost-and-bounded-return"
+origin_prs = [3005]
+component_level = true
+disposition = "ADAPT"
+current_owner = "assignment/delegation/transport"
+owner_issues = ["#2916", "#2210", "#2209", "#2817", "#2818", "#2947"]
+reuse = "total-cost target ranking, explicit binding handoff, scoped return/integration, stale-return checks"
+corrected_source_dependency = true
+independent_reason = "The intent survives but must consume agent-shaped applicability and corrected Planning/assignment state."
+
+[[salvage]]
+id = "lexical-runtime-task-applicability"
+origin_prs = [3005]
+component_level = true
+disposition = "DROP"
+current_owner = "semantic routing"
+owner_issues = ["#2930"]
+reuse = "none"
+corrected_source_dependency = true
+rejected_assumption = "Runtime task_terms substring matching was treated as semantic applicability; reconstructed policy assigns applicability judgment to the acting agent."
+
+[[salvage]]
+id = "assignment-delegation-tests"
+origin_prs = [3005]
+component_level = true
+disposition = "EVIDENCE"
+current_owner = "assignment/delegation/transport"
+owner_issues = ["#2916", "#2210", "#2817", "#2818", "#2947"]
+reuse = "handoff, scope, return, retry and total-cost cases after owner assumptions are corrected"
+corrected_source_dependency = true
+independent_reason = "Tests may be rewritten as conformance evidence but cannot bless the lexical routing assumption."
+
+[[salvage]]
+id = "repo-maintainer-skills"
+origin_prs = [3006]
+component_level = true
+disposition = "PORT"
+current_owner = "repo-maintainer workflow"
+owner_issues = ["#2998"]
+reuse = "tools/skills/github-issue-shaping, github-issue-creation, pr-review-recheck, self-improvement-dogfooding plus focused toolbox discoverability checks"
+corrected_source_dependency = false
+independent_reason = "The four skills are repo-only procedures outside shipped AW packages, are explicitly retained by reopened #2998, and do not depend on prototype runtime semantics."
+
+[[salvage]]
+id = "model-evaluation-harness"
+origin_prs = [3006]
+component_level = true
+disposition = "ADAPT"
+current_owner = "repo-maintainer research harness"
+owner_issues = ["#2998", "#2647", "#2648", "#2809"]
+reuse = "small external runner/scenario scaffold only after public-contract and independent-scoring repair"
+corrected_source_dependency = true
+independent_reason = "Reopened #2998 records private-intent, unmatched-condition, and self-report validity defects."
+
+[[salvage]]
+id = "trusted-human-correction-ingress"
+origin_prs = [3008]
+component_level = true
+disposition = "ADAPT"
+current_owner = "correction-feedback"
+owner_issues = ["#2726"]
+reuse = "host-held human provenance, stable correction identity, future-usefulness decision, source-owner handoff"
+corrected_source_dependency = true
+independent_reason = "Trust custody is sound, but prototype Memory/Planning owner routing must be replaced."
+
+[[salvage]]
+id = "correction-owner-parity-tests"
+origin_prs = [3008]
+component_level = true
+disposition = "EVIDENCE"
+current_owner = "correction-feedback"
+owner_issues = ["#2726"]
+reuse = "trusted-provenance and owner-handoff cases"
+corrected_source_dependency = true
+independent_reason = "Retain as evidence design; rerun against reconstructed owners rather than prototype implementation."
+
+[[salvage]]
+id = "readme-restoration"
+origin_prs = [3011]
+component_level = true
+outside_snapshot = true
+disposition = "ADAPT"
+current_owner = "public first-contact/support truth"
+owner_issues = ["#2616"]
+reuse = "problem framing and compact capability overview after public contracts stabilize"
+corrected_source_dependency = true
+independent_reason = "README copy depends on the final reconstructed product surface and must not freeze prototype APIs."
