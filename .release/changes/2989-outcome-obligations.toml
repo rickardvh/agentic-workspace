@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Scope terminality to selected outcome evidence, required claims, and residual work while retaining optional consequences."
+issues = [2989]
