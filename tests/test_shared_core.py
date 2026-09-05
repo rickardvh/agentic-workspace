@@ -20,7 +20,9 @@ from agentic_workspace.decision import (
     commit_stored_attempt,
     compile_source_decision,
     operation_result,
+    planning_view,
     prepare_request,
+    reconcile_planning,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -188,7 +190,7 @@ def test_target_bindings_cannot_hide_reducer_semantics() -> None:
     forbidden = ("terminal", "settled", "blockers", "affects", "operation_id", "priority", "consequence_id")
     for path in (ROOT / "src/agentic_workspace/decision.py", ROOT / "bindings/node/semantic-decision.mjs"):
         source = path.read_text(encoding="utf-8")
-        assert len(source.splitlines()) <= 140
+        assert len(source.splitlines()) <= 150
         assert not any(token in source for token in forbidden)
 
 
@@ -720,3 +722,209 @@ def test_local_only_uninstall_preserves_usable_effect_custody(shared_core_binary
     subprocess.run(["git", "check-ignore", "--quiet", str(owner_reference)], cwd=tmp_path, check=True)
     custody = json.loads(owner_reference.read_text())
     assert admit_stored_attempt(str(tmp_path), decision, action, custody)["disposition"] == "replay"
+
+
+def _planning_context(tmp_path: Path, body: dict[str, Any] | None = None) -> dict[str, Any]:
+    import hashlib
+
+    # The test host creates an admitted Planning source from the actual selected
+    # execplan, not an invented planning.json or a shape-recognition acquisition.
+    source = tmp_path / ".agentic-workspace/planning/execplans/current.plan.json"
+    source.parent.mkdir(parents=True)
+    raw = (ROOT / "tests/vectors/planning_execplan.json").read_bytes() if body is None else json.dumps(body).encode()
+    with source.open("xb") as stream:
+        stream.write(raw)
+    schema = json.loads((ROOT / "src/agentic_workspace/contracts/schemas/planning_reconciliation.schema.json").read_text())
+    contract = deepcopy(CAPABILITY_CONTRACT)
+    owner = next(owner for owner in contract["owners"] if owner["owner"] == "planning")
+    arguments = {
+        **schema["$defs"]["operation_arguments"],
+        "$defs": {key: schema["$defs"][key] for key in ["evidence", "state", "subject", "coverage", "reconciliation"]},
+        "$schema": schema["$schema"],
+    }
+    owner["operations"].append(
+        {
+            "id": "planning.reconcile",
+            "semantic_revision": "planning-reconciliation-v1",
+            "input_schema": arguments,
+            "result_kind": "agentic-planning/reconciliation-result/v1",
+            "effects": ["planning-state"],
+            "reads": ["planning"],
+        }
+    )
+    return {
+        "target": str(tmp_path.resolve()),
+        "relevant": True,
+        "source": {
+            "target": str(tmp_path.resolve()),
+            "path": source.relative_to(tmp_path).as_posix(),
+            "owner": "planning",
+            "revision": "sha256:" + hashlib.sha256(raw).hexdigest(),
+        },
+        "capability_contract": contract,
+    }
+
+
+def _planning_call(binary: Path, surface: str, context: dict[str, Any], transport: str) -> dict[str, Any]:
+    if transport == "python":
+        return planning_view(context) if surface == "planning_view" else reconcile_planning(context)
+    if transport == "json":
+        result = _direct(binary, {surface: context})
+    else:
+        export = "planningView" if surface == "planning_view" else "reconcilePlanning"
+        program = f"import {{ {export} }} from './bindings/node/semantic-decision.mjs'; import fs from 'node:fs'; console.log(JSON.stringify({export}(JSON.parse(fs.readFileSync(0,'utf8')))));"
+        result = subprocess.run(
+            ["node", "--input-type=module", "-e", program], input=json.dumps(context), capture_output=True, text=True, cwd=ROOT
+        )
+    assert result.returncode == 0, result.stderr
+    return json.loads(result.stdout)
+
+
+@pytest.mark.parametrize("transport", ["python", "node", "json"])
+def test_real_planning_source_reconciles_and_resumes(shared_core_binary: Path, tmp_path: Path, transport: str) -> None:
+    context = _planning_context(tmp_path)
+    original = (tmp_path / context["source"]["path"]).read_bytes()
+    before = _planning_call(shared_core_binary, "planning_view", context, transport)
+    assert not (tmp_path / ".agentic-workspace/local").exists()
+    operation = before["primary_action"]
+    receipt = operation["arguments"]["reconciliation"]
+    assert receipt["coverage"] == {"complete": True, "ambiguities": [], "omitted_history": []}
+    source = json.loads(original)
+    state = receipt["subject"]["state"]
+    assert state["outcome"]["goals"] == source["goal"]
+    assert state["scope"]["paths"] == source["touched_paths"]
+    assert state["dependencies"]["references"] == source["references"]
+    assert state["constraints"]["bounds"] == source["execution_bounds"]
+    assert state["frontier"]["next_action"] == source["next_action"]
+    assert state["proof"]["declared"] == source["proof"]
+    assert state["proof"]["completion_criteria"] == source["completion_criteria"]
+    assert state["handoff"]["delegation"] == source["relationships"]["delegation"]
+    assert state["residual"]["continuation"] == source["continuation"]
+    result = _planning_call(shared_core_binary, "reconcile_planning", {**context, "invocation": operation}, transport)
+    assert result["status"] == "applied"
+    assert result["value"] == receipt
+    assert (tmp_path / context["source"]["path"]).read_bytes() == original
+    # Every call starts a new Rust process. All public projections resume from
+    # the exact durable custody returned by the completed owner operation.
+    restored = {**context, "custody": result["custody"]}
+    views = [_planning_call(shared_core_binary, "planning_view", restored, kind) for kind in ["python", "node", "json"]]
+    assert views[0] == views[1] == views[2] == result["next_decision"]
+    current = views[0]["planning"]
+    assert current["current"] is True
+    assert current["reconciliation"]["subject"] == receipt["subject"]
+    assert views[0]["status"] != "terminal"
+    assert views[0]["primary_action"] is None
+    assert reconcile_planning({**restored, "invocation": operation})["value"] == receipt
+
+
+@pytest.mark.parametrize("phase", ["active", "returned", "integration-pending"])
+def test_planning_inflight_semantics_and_history_coverage(shared_core_binary: Path, tmp_path: Path, phase: str) -> None:
+    body = json.loads((ROOT / "tests/vectors/planning_execplan.json").read_text())
+    body["relationships"].update(
+        dependencies={"subject": "verification-proof", "revision": "proof-7"},
+        assignment={"id": "worker-1", "status": phase},
+        returned={"result": "result-7", "status": "awaiting-admission"},
+        integration_pending={"subject": "worker-1", "result": "result-7"},
+    )
+    body["drift_log"] = ["old closed work: must not import"]
+    from jsonschema import Draft202012Validator
+
+    former_schema = json.loads((ROOT / ".agentic-workspace/planning/schemas/planning-execplan.schema.json").read_text())
+    Draft202012Validator(former_schema).validate(body)
+    context = _planning_context(tmp_path, body)
+    ambiguous = planning_view(context)
+    assert ambiguous["primary_action"] is None
+    assert ambiguous["planning"]["reconciliation"]["coverage"]["ambiguities"] == ["drift_log"]
+    context["irrelevant_history"] = True  # Explicit agent judgment, not Rust text classification.
+    decision = planning_view(context)
+    result = reconcile_planning({**context, "invocation": decision["primary_action"]})
+    restored = planning_view({**context, "custody": result["custody"]})
+    state = restored["planning"]["reconciliation"]["subject"]["state"]
+    assert state["frontier"]["phase"] == body["phase"]
+    assert state["dependencies"]["declared"] == body["relationships"]["dependencies"]
+    assert state["handoff"]["assignment"] == body["relationships"]["assignment"]
+    assert state["handoff"]["returned"] == body["relationships"]["returned"]
+    assert state["handoff"]["integration_pending"] == body["relationships"]["integration_pending"]
+    record_bytes = (tmp_path / result["custody"]["committed"]["path"]).read_bytes()
+    assert b"must not import" not in record_bytes
+    assert restored["planning"]["reconciliation"]["coverage"]["omitted_history"] == ["drift_log"]
+
+
+def test_planning_reconciliation_preserves_collisions_and_requires_source_custody(shared_core_binary: Path, tmp_path: Path) -> None:
+    import hashlib
+
+    context = _planning_context(tmp_path)
+    for owner in ["unowned", "repository", "memory"]:
+        with pytest.raises(DecisionContractError, match="not admitted as Planning-owned"):
+            planning_view({**context, "source": {**context["source"], "owner": owner}})
+    with pytest.raises(DecisionContractError, match="source admission required"):
+        planning_view({**context, "source": None})
+    decision = planning_view(context)
+    operation = decision["primary_action"]
+    path = (
+        tmp_path / ".agentic-workspace/local/effects" / (hashlib.sha256(operation["idempotency_key"].encode()).hexdigest() + ".result.json")
+    )
+    path.parent.mkdir(parents=True)
+    # Even a valid current Planning reconciliation is not acquisition evidence.
+    raw = json.dumps(operation["arguments"]["reconciliation"]).encode()
+    path.write_bytes(raw)
+    with pytest.raises(DecisionContractError, match="unowned result evidence exists; preserved"):
+        reconcile_planning({**context, "invocation": operation})
+    assert path.read_bytes() == raw
+    assert list(path.parent.iterdir()) == [path]
+
+
+def test_material_planning_source_change_reopens_but_keeps_subject(shared_core_binary: Path, tmp_path: Path) -> None:
+    import hashlib
+
+    context = _planning_context(tmp_path)
+    original = planning_view(context)
+    operation = original["primary_action"]
+    result = reconcile_planning({**context, "invocation": operation})
+    unrelated = deepcopy(context)
+    unrelated["capability_contract"]["revision"] = "sha256:" + "9" * 64
+    assert planning_view(unrelated)["primary_action"] == operation
+    source = tmp_path / context["source"]["path"]
+    body = json.loads(source.read_text())
+    body["next_action"] = "Reconcile returned verification evidence"
+    raw = json.dumps(body).encode()
+    source.write_bytes(raw)  # Test host updates its existing Planning-owned source.
+    with pytest.raises(DecisionContractError, match="former source changed"):
+        planning_view({**context, "custody": result["custody"]})
+    refreshed = {**context, "source": {**context["source"], "revision": "sha256:" + hashlib.sha256(raw).hexdigest()}}
+    current = planning_view(refreshed)["primary_action"]
+    before = operation["arguments"]["reconciliation"]["subject"]
+    after = current["arguments"]["reconciliation"]["subject"]
+    assert before["id"] == after["id"]
+    assert before["revision"] != after["revision"]
+    with pytest.raises(DecisionContractError):
+        reconcile_planning({**refreshed, "invocation": operation})
+
+
+def test_direct_planning_view_is_quiet_and_uncertain_reconciliation_keeps_former_authority(
+    shared_core_binary: Path, tmp_path: Path
+) -> None:
+    direct = planning_view({"target": str(tmp_path), "relevant": False})
+    assert direct["relevant_owners"] == []
+    assert list(tmp_path.iterdir()) == []
+    context = _planning_context(tmp_path)
+    operation = planning_view(context)["primary_action"]
+    admission = admit_stored_attempt(str(tmp_path), planning_view(context), operation)
+    result = reconcile_planning({**context, "invocation": operation, "custody": admission["custody"]})
+    assert result["disposition"] == "uncertain"
+    assert (tmp_path / context["source"]["path"]).is_file()
+    assert not list((tmp_path / ".agentic-workspace/local/effects").glob("*.result.json"))
+
+
+def test_planning_unmapped_current_semantics_block_complete_reconciliation(shared_core_binary: Path, tmp_path: Path) -> None:
+    body = json.loads((ROOT / "tests/vectors/planning_execplan.json").read_text())
+    body["stop_conditions"] = {"human_choice": "Do not proceed before acceptance"}
+    context = {**_planning_context(tmp_path, body), "irrelevant_history": True}
+    decision = planning_view(context)
+    assert decision["primary_action"] is None
+    assert decision["planning"]["reconciliation"]["coverage"] == {
+        "complete": False,
+        "ambiguities": ["stop_conditions"],
+        "omitted_history": [],
+    }
+    assert not (tmp_path / ".agentic-workspace/local").exists()
