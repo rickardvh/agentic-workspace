@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any
 
 from jsonschema import Draft202012Validator
 
-from agentic_workspace.decision import DecisionContractError, admit_invocation
+from agentic_workspace.decision import DecisionContractError, admit_invocation, operation_result
 
 
 class OperationError(RuntimeError):
@@ -60,7 +61,6 @@ class OperationDispatcher:
         if operation is None:
             raise OperationContractError(f"unknown operation: {operation_id}")
 
-        expected_revision = str(invocation.get("expected_dependency_revision") or "")
         arguments = invocation.get("arguments", {})
         if not isinstance(arguments, Mapping):
             raise OperationContractError("arguments must be an object")
@@ -74,37 +74,36 @@ class OperationDispatcher:
         key = str(invocation.get("idempotency_key") or "")
         if not key:
             raise OperationContractError("idempotency_key is required")
-        request_identity = dict(invocation)
+        request_identity = deepcopy(dict(invocation))
         previous = self._receipts.get(key)
-        current = dict(resolve_decision())
         try:
-            admission = admit_invocation(current, invocation, previous[0] if previous else None)
+            current = dict(resolve_decision())
+        except Exception:
+            if previous is None:
+                raise
+            current = None
+        try:
+            admission = admit_invocation(current or {}, invocation, previous[0] if previous else None)
         except DecisionContractError as error:
             if previous:
                 raise OperationContractError("idempotency key was already used; " + str(error)) from error
             raise StaleInvocationError(str(error)) from error
         if admission["disposition"] == "replay" and previous is not None:
-            return dict(previous[1])
+            return operation_result(previous[0], previous[1], current)
 
         raw_outcome = operation.handler(dict(arguments))
         if not isinstance(raw_outcome, Mapping):
             raise OperationContractError("operation handler must return an object")
-        reported_effects = raw_outcome.get("effects", [])
-        if not isinstance(reported_effects, list) or any(effect not in operation.effects for effect in reported_effects):
-            raise OperationContractError("operation result widened its declared effects")
-        status = str(raw_outcome.get("status") or "")
-        if status not in {"applied", "unchanged", "rejected"}:
-            raise OperationContractError("operation result status must be applied, unchanged, or rejected")
-
-        next_decision = dict(resolve_decision())
-        result = {
-            "kind": "agentic-workspace/operation-result/v1",
-            "operation_id": operation_id,
-            "status": status,
-            "effects": list(reported_effects),
-            "value": raw_outcome.get("value"),
-            "dependency_revision": expected_revision,
-            "next_decision": next_decision,
-        }
-        self._receipts[key] = (request_identity, result)
-        return dict(result)
+        outcome = deepcopy(dict(raw_outcome))
+        try:
+            # Validate before retaining committed evidence. Never retain a view.
+            operation_result(request_identity, outcome, None)
+        except DecisionContractError as error:
+            raise OperationContractError(str(error)) from error
+        self._receipts[key] = (request_identity, outcome)
+        try:
+            next_decision = dict(resolve_decision())
+        except Exception:
+            # The effect remains committed even when current sources cannot resolve.
+            next_decision = None
+        return operation_result(request_identity, outcome, next_decision)

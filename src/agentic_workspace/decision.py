@@ -74,6 +74,10 @@ def answer_decision(decision: Mapping[str, Any], consequence: str, answer: Any, 
     )
 
 
+def operation_result(invocation: Mapping[str, Any], outcome: Mapping[str, Any], decision: Mapping[str, Any] | None) -> dict[str, Any]:
+    return _request({"operation_result": {"invocation": invocation, "outcome": outcome, "decision": decision}})
+
+
 def select_decision_detail(decision: Mapping[str, Any], fields: Iterable[str]) -> dict[str, Any]:
     return {
         "kind": "agentic-workspace/decision-view/v1",
@@ -91,4 +95,5 @@ __all__ = [
     "admit_invocation",
     "prepare_request",
     "answer_decision",
+    "operation_result",
 ]

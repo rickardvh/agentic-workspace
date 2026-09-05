@@ -1508,6 +1508,60 @@ pub fn compile_value(value: Value) -> Result<Value, CoreError> {
     compile(input)
 }
 
+/// Compose a validated owner result with a fresh host-resolved continuation.
+/// The outcome and invocation are committed evidence; the view is never stored
+/// as part of that evidence. Null means current resolution is unavailable.
+pub fn operation_result_value(value: Value) -> Result<Value, CoreError> {
+    #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct ResultInput {
+        invocation: Value,
+        outcome: Outcome,
+        decision: Value,
+    }
+    #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct Outcome {
+        status: String,
+        #[serde(default)]
+        effects: Vec<String>,
+        #[serde(default)]
+        value: Value,
+    }
+    let input: ResultInput =
+        serde_json::from_value(value).map_err(|error| CoreError::new(error.to_string()))?;
+    if !matches!(
+        input.outcome.status.as_str(),
+        "applied" | "unchanged" | "rejected"
+    ) {
+        return Err(CoreError::new(
+            "operation result status must be applied, unchanged, or rejected",
+        ));
+    }
+    let effects = input.invocation["effects"]
+        .as_array()
+        .ok_or_else(|| CoreError::new("invocation effects must be an array"))?;
+    if input
+        .outcome
+        .effects
+        .iter()
+        .any(|effect| !effects.contains(&json!(effect)))
+    {
+        return Err(CoreError::new(
+            "operation result widened its declared effects",
+        ));
+    }
+    Ok(json!({
+        "kind": "agentic-workspace/operation-result/v1",
+        "operation_id": input.invocation["operation_id"],
+        "status": input.outcome.status, "effects": input.outcome.effects,
+        "value": input.outcome.value,
+        "dependency_revision": input.invocation["expected_dependency_revision"],
+        "continuation_status": if input.decision.is_null() { "unavailable" } else { "current" },
+        "next_decision": input.decision,
+    }))
+}
+
 /// Admission consumes a freshly resolved trusted decision and, when present,
 /// a trusted receipt's original invocation. It does not execute or store effects.
 pub fn admit_invocation_value(value: Value) -> Result<Value, CoreError> {

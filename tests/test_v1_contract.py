@@ -85,9 +85,10 @@ def test_canonical_compiler_routes_source_contributions_without_consumer_semanti
 def test_result_reconciles_to_the_next_decision_without_polling(shared_core_binary: object) -> None:
     state = {"status": "open", "revision": "p1"}
     calls = 0
+    other = {"owner": "memory", "revision": "m1", "facts": {"advice": "old"}}
 
     def resolve() -> dict[str, Any]:
-        return compile_source_decision([_planning(state)], intent=_ship_intent(), capability_contract=CAPABILITY_CONTRACT)
+        return compile_source_decision([_planning(state), other], intent=_ship_intent(), capability_contract=CAPABILITY_CONTRACT)
 
     def complete(values: dict[str, Any]) -> dict[str, Any]:
         nonlocal calls
@@ -117,6 +118,14 @@ def test_result_reconciles_to_the_next_decision_without_polling(shared_core_bina
     assert result["next_decision"]["status"] == "terminal"
     assert result["next_decision"]["claim_boundary"] == {"allowed": ["complete", "planning-progress"], "blocked": []}
     assert dispatcher.invoke(invocation, resolve_decision=resolve) == result
+    other.update(revision="m2", facts={"advice": "new"})
+    replay = dispatcher.invoke(invocation, resolve_decision=resolve)
+    assert replay["next_decision"] == resolve()
+    assert replay["next_decision"] != result["next_decision"]
+    assert {k: v for k, v in replay.items() if k != "next_decision"} == {k: v for k, v in result.items() if k != "next_decision"}
+    # A caller cannot mutate the retained effect value through the returned result.
+    result["value"]["item"] = "tampered"
+    assert dispatcher.invoke(invocation, resolve_decision=resolve)["value"] == {"item": "ship-v1"}
     assert calls == 1
 
     with pytest.raises(OperationContractError, match="idempotency key was already used"):
@@ -247,3 +256,37 @@ def test_dependency_change_is_rejected_before_effect_and_repeat_is_owner_authori
     generation = "owner-authorized-repeat-2"
     dispatcher.invoke(resolve()["primary_action"], resolve_decision=resolve)
     assert calls == 2
+
+
+def test_committed_effect_survives_unavailable_post_effect_view(shared_core_binary: object) -> None:
+    state = {"status": "open", "revision": "p1"}
+    calls = 0
+    fail_resolution = False
+
+    def resolve() -> dict[str, Any]:
+        if fail_resolution:
+            raise RuntimeError("source currently unavailable")
+        return compile_source_decision([_planning(state)], capability_contract=CAPABILITY_CONTRACT)
+
+    def effect(_: dict[str, Any]) -> dict[str, Any]:
+        nonlocal calls, fail_resolution
+        calls += 1
+        state.update(status="complete", revision="p2")
+        fail_resolution = True
+        return {"status": "applied", "effects": ["planning-state"], "value": {"committed": True}}
+
+    dispatcher = OperationDispatcher()
+    dispatcher.register(Operation("planning.complete", {"type": "object"}, ("planning-state",), effect))
+    invocation = resolve()["primary_action"]
+    result = dispatcher.invoke(invocation, resolve_decision=resolve)
+    assert result["status"] == "applied"
+    assert result["continuation_status"] == "unavailable"
+    assert result["next_decision"] is None
+    assert dispatcher.invoke(invocation, resolve_decision=resolve) == result
+    assert calls == 1
+    fail_resolution = False
+    replay = dispatcher.invoke(invocation, resolve_decision=resolve)
+    assert replay["value"] == result["value"]
+    assert replay["continuation_status"] == "current"
+    assert replay["next_decision"] == resolve()
+    assert calls == 1

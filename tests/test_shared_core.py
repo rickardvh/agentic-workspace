@@ -10,7 +10,14 @@ from typing import Any
 import pytest
 from jsonschema import Draft202012Validator
 
-from agentic_workspace.decision import DecisionContractError, admit_invocation, answer_decision, compile_source_decision, prepare_request
+from agentic_workspace.decision import (
+    DecisionContractError,
+    admit_invocation,
+    answer_decision,
+    compile_source_decision,
+    operation_result,
+    prepare_request,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 VECTORS = json.loads((ROOT / "tests/vectors/source_decision.json").read_text(encoding="utf-8"))
@@ -177,7 +184,7 @@ def test_target_bindings_cannot_hide_reducer_semantics() -> None:
     forbidden = ("terminal", "settled", "blockers", "affects", "operation_id", "priority", "consequence_id")
     for path in (ROOT / "src/agentic_workspace/decision.py", ROOT / "bindings/node/semantic-decision.mjs"):
         source = path.read_text(encoding="utf-8")
-        assert len(source.splitlines()) <= 95
+        assert len(source.splitlines()) <= 105
         assert not any(token in source for token in forbidden)
 
 
@@ -386,3 +393,25 @@ def test_human_answer_uses_only_current_returned_authority(shared_core_binary: P
     }
     with pytest.raises(DecisionContractError, match="violate input_schema"):
         answer_decision(current, key, {"hidden_target": "other"}, payload["capability_contract"])
+
+
+def test_result_composition_is_shared_and_never_reuses_a_view(shared_core_binary: Path) -> None:
+    payload = _expanded(next(v["input"] for v in VECTORS["cases"] if v["id"] == "action-material-dependencies"))
+    current = _compile(payload)
+    invocation = current["primary_action"]
+    outcome = {"status": "applied", "effects": invocation["effects"], "value": {"exact": "committed"}}
+    for view in (current, compile_source_decision([]), None):
+        result = operation_result(invocation, outcome, view)
+        direct = _direct(shared_core_binary, {"operation_result": {"invocation": invocation, "outcome": outcome, "decision": view}})
+        assert direct.returncode == 0
+        assert json.loads(direct.stdout) == result
+        assert result["value"] == outcome["value"]
+        assert result["next_decision"] == view
+        assert result["continuation_status"] == ("unavailable" if view is None else "current")
+    for invalid, message in (
+        ({**outcome, "effects": ["unowned"]}, "widened"),
+        ({**outcome, "status": "guessed"}, "status must"),
+        ({**outcome, "next_decision": current}, "unknown field"),
+    ):
+        with pytest.raises(DecisionContractError, match=message):
+            operation_result(invocation, invalid, current)

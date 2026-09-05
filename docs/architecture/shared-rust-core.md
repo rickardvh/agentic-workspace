@@ -101,3 +101,12 @@ Python `answer_decision`, Node `answerDecision`, and JSON `answer_decision` cons
 As with invocation admission, hosts must supply the freshly resolved decision rather than accept client-authored decision JSON as authority. Removed/revised questions fail against that current view; request-response admission still checks source currentness before accepting the owner's response. This is no new state store or authentication layer.
 
 #2909 uses the existing shared vectors for admitted request kinds, current-work requirements, fixed-field and prefilled-answer rejection, and open question projection. Python/Node/JSON proof exercises finite/open answers, stale questions and contracts, invalid choices/schema values, and extra effect-bearing fields. Real first-party journeys, runtime identity continuity, generated package builders and hidden-vocabulary subtraction remain #2986/#3020 work; this kernel slice closes no issue.
+
+
+## Committed outcome and current continuation (#3000)
+
+The transitional process-local dispatcher retains only the exact admitted invocation and a copied, validated owner outcome. It stores no `next_decision`. Rust `operation_result` validates result status/effect bounds and composes the committed value with the host's fresh continuation; Python and Node expose transport-only helpers. Historical views inside owner outcomes are rejected. A returned mutable value cannot mutate the retained outcome.
+
+The outcome is retained before post-effect source resolution. If that resolution throws, the result still reports the proven effect/value with `continuation_status: unavailable` and `next_decision: null`. A later valid replay resolves current owners again without re-executing the effect. With available sources, continuation status is `current`. Pre-effect currentness remains required before a new effect; unavailable pre-effect resolution never authorizes execution.
+
+Existing #2909 shared-core/v1 Python/Node/JSON lanes prove changed-owner replay, post-effect resolution failure, retained value isolation, result effect/status validation, and rejection of historical views in outcome evidence. This removes the wrong lifetime coupling before durable storage. It does not supply durable custody, attempt/recovery identity, operation upgrade compatibility, concurrency or crash recovery. Those remain #2984/#3000/#3001, as does truthful treatment of a handler that fails after an unrecorded external effect. No issue closes.
