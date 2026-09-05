@@ -11,6 +11,8 @@ This reconstruction slice uses one executable authority for deterministic operat
 | JSON access | `agentic-workspace-core` stdin/stdout | Transport projection of the same Rust call. |
 | Semantic applicability and acting-agent/human judgment | current typed context and the acting agent/human | Not inferred by the deterministic core. |
 
+Semantic route selection is ephemeral input, not a task classifier or history. The acting agent chooses a declared route; the Rust core only verifies that the fact is bound to the supplied current-work identity and current route-source revision, rejects removed/unknown routes, canonicalizes route order, and projects the fact with an `applicability-only` authority ceiling. Task prose alone never creates a route fact, and route selection cannot add actions, effects, or claims.
+
 The candidate initial matrix is the repository's support-bearing hosted Linux x86-64 lanes (Python 3.11/3.13 and Node 20/24) and Windows x86-64 lane (Python 3.14 and Node 24), all on Rust stable. A cell is admitted only after its support-bearing core and binding checks pass; toolchain availability alone does not admit another platform. Native artifact bundling and final release support remain owned by #2985/#2987.
 
 ## #3018/#3019 disposition
@@ -26,3 +28,5 @@ The candidate initial matrix is the repository's support-bearing hosted Linux x8
 | Generated schemas/types/builders and package/conformance machinery | ADAPT later | Retained as downstream #2985/#2987 input; no executable target runtime is added here. |
 
 This slice advances #3020, #2987, and #2989. It does not close them or claim that built-in state owners have migrated.
+
+The stacked #2930 slice adapts the pre-contraction route identity/currentness contract but drops its local selection file and handwritten Python/TypeScript route runtimes. Progressive vocabulary discovery remains a host/declarative concern; repository-control, Memory, Verification, and other owner consumption remains with their owning issues.

@@ -14,6 +14,12 @@
     "prefixes": ["action:", "decision:", "effect:", "claim:", "outcome:"],
     "action_identity_fields": ["owner", "revision", "operation_id", "arguments", "effects", "authority"]
   },
+  "semantic_routes": {
+    "selection_owner": "acting-agent",
+    "currentness": ["current-work identity", "route-source revision", "current declared route"],
+    "authority_effect": "applicability-only",
+    "persistent_history": "none"
+  },
   "authority": {
     "data_shapes": "this JSON contract and referenced JSON Schema",
     "executable_semantics": "crates/agentic-workspace-core",
