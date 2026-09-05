@@ -8,7 +8,14 @@ from typing import Any
 
 from jsonschema import Draft202012Validator
 
-from agentic_workspace.decision import DecisionContractError, admit_attempt, commit_attempt, operation_result
+from agentic_workspace.decision import (
+    DecisionContractError,
+    admit_attempt,
+    admit_stored_attempt,
+    commit_attempt,
+    commit_stored_attempt,
+    operation_result,
+)
 
 
 class OperationError(RuntimeError):
@@ -45,6 +52,7 @@ class OperationDispatcher:
     def __init__(self) -> None:
         self._operations: dict[str, Operation] = {}
         self._attempts: dict[str, dict[str, Any]] = {}
+        self._custody: dict[str, dict[str, Any]] = {}
         self._admission_lock = Lock()
 
     def register(self, operation: Operation) -> None:
@@ -63,6 +71,7 @@ class OperationDispatcher:
         invocation: Mapping[str, Any],
         *,
         resolve_decision: Callable[[], Mapping[str, Any]],
+        custody: Mapping[str, Any] | None = None,
     ) -> dict[str, Any]:
         if invocation.get("kind") != "agentic-workspace/operation-invocation/v1":
             raise OperationContractError("unsupported invocation kind")
@@ -92,31 +101,52 @@ class OperationDispatcher:
             current = None
         with self._admission_lock:
             previous = self._attempts.get(key)
+            retained = deepcopy(dict(custody)) if custody is not None else self._custody.get(key)
             try:
-                admission = admit_attempt(current or {}, request_identity, previous)
+                admission = (
+                    admit_stored_attempt(str(arguments.get("target") or ""), current or {}, request_identity, retained)
+                    if operation.effects
+                    else admit_attempt(current or {}, request_identity, previous)
+                )
             except DecisionContractError as error:
                 if previous:
                     raise OperationContractError("idempotency key was already used; " + str(error)) from error
                 raise StaleInvocationError(str(error)) from error
             record = admission["record"]
             self._attempts[key] = record
+            if operation.effects:
+                self._custody[key] = deepcopy(admission["custody"])
         if admission["disposition"] == "uncertain":
             raise UncertainOperationError(admission)
         if admission["disposition"] == "replay":
-            return operation_result(record["invocation"], record["outcome"], current)
+            result = operation_result(record["invocation"], record["outcome"], current)
+            if operation.effects:
+                result["custody"] = deepcopy(admission["custody"])
+            return result
 
         try:
             raw_outcome = operation.handler(dict(arguments))
             if not isinstance(raw_outcome, Mapping):
                 raise OperationContractError("operation handler must return an object")
-            committed = commit_attempt(record, deepcopy(dict(raw_outcome)))
+            if operation.effects:
+                stored = commit_stored_attempt(str(arguments["target"]), admission["custody"], deepcopy(dict(raw_outcome)))
+                committed = stored["record"]
+            else:
+                committed = commit_attempt(record, deepcopy(dict(raw_outcome)))
         except Exception as error:
             uncertain = admit_attempt(current or {}, request_identity, record)
+            if operation.effects:
+                uncertain["custody"] = deepcopy(admission["custody"])
             raise UncertainOperationError(uncertain) from error
         with self._admission_lock:
             self._attempts[key] = committed
+            if operation.effects:
+                self._custody[key] = deepcopy(stored["custody"])
         try:
             next_decision = dict(resolve_decision())
         except Exception:
             next_decision = None
-        return operation_result(committed["invocation"], committed["outcome"], next_decision)
+        result = operation_result(committed["invocation"], committed["outcome"], next_decision)
+        if operation.effects:
+            result["custody"] = deepcopy(stored["custody"])
+        return result
