@@ -72,6 +72,15 @@ struct CapabilityContractInput {
     owners: Vec<CapabilityOwnerInput>,
     #[serde(default)]
     claim_authorities: Vec<ClaimAuthorityInput>,
+    #[serde(default)]
+    restriction_authorities: Vec<RestrictionAuthorityInput>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RestrictionAuthorityInput {
+    owner: String,
+    affects: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -268,6 +277,7 @@ struct NormalizedCapabilityContract {
     revision: String,
     owners: BTreeMap<String, NormalizedCapabilityOwner>,
     claim_authorities: BTreeMap<String, String>,
+    restriction_authorities: BTreeMap<String, BTreeSet<String>>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -424,7 +434,7 @@ fn affects(values: Vec<String>, field: &str) -> Result<Vec<String>, CoreError> {
         value != TASK
             && !CONSEQUENCE_PREFIXES
                 .iter()
-                .any(|prefix| value.starts_with(prefix))
+                .any(|prefix| value.starts_with(prefix) && value.len() > prefix.len())
     }) {
         return Err(CoreError::new(format!(
             "{field} contains an unsupported consequence identity"
@@ -631,11 +641,47 @@ fn normalize_capability_contract(
         }
     }
 
+    let mut restriction_authorities = BTreeMap::new();
+    for grant in input.restriction_authorities {
+        let owner = require_text(&grant.owner, "restriction authority.owner")?;
+        if !owners.contains_key(&owner) {
+            return Err(CoreError::new(format!(
+                "restriction authority names unknown owner {owner}"
+            )));
+        }
+        let scopes = affects(grant.affects, "restriction authority.affects")?;
+        for scope in &scopes {
+            if let Some(claim) = scope.strip_prefix("claim:")
+                && !claim_authorities.contains_key(claim)
+            {
+                return Err(CoreError::new(format!(
+                    "restriction authority names unknown claim {claim}"
+                )));
+            }
+            if let Some(effect) = scope.strip_prefix("effect:")
+                && !owned_effects.contains_key(effect)
+            {
+                return Err(CoreError::new(format!(
+                    "restriction authority names unknown effect {effect}"
+                )));
+            }
+        }
+        if restriction_authorities
+            .insert(owner.clone(), scopes.into_iter().collect())
+            .is_some()
+        {
+            return Err(CoreError::new(format!(
+                "restriction authority for {owner} is declared more than once"
+            )));
+        }
+    }
+
     Ok(NormalizedCapabilityContract {
         kind: CAPABILITY_CONTRACT_KIND,
         revision,
         owners,
         claim_authorities,
+        restriction_authorities,
     })
 }
 
@@ -749,10 +795,7 @@ fn normalize_contribution(
         input.claims.allowed,
         &format!("{owner}.claims.allowed"),
         true,
-    )?
-    .into_iter()
-    .filter(|claim| !blocked_set.contains(claim))
-    .collect::<Vec<_>>();
+    )?;
     if let Some(contract) = capabilities {
         for claim in &blocked {
             if !contract.claim_authorities.contains_key(claim) {
@@ -768,7 +811,33 @@ fn normalize_contribution(
                 )));
             }
         }
+        // Every restriction is admitted independently of allow/effect authority.
+        // `task` is an exact scope, never a wildcard granting other vetoes.
+        for scope in blockers
+            .iter()
+            .flat_map(|item| item.affects.iter().cloned())
+            .chain(
+                decisions
+                    .iter()
+                    .flat_map(|item| item.affects.iter().cloned()),
+            )
+            .chain(blocked.iter().map(|claim| format!("claim:{claim}")))
+        {
+            if !contract
+                .restriction_authorities
+                .get(&owner)
+                .is_some_and(|scopes| scopes.contains(&scope))
+            {
+                return Err(CoreError::new(format!(
+                    "{owner} restricts {scope} without admitted restriction authority"
+                )));
+            }
+        }
     }
+    let allowed = allowed
+        .into_iter()
+        .filter(|claim| !blocked_set.contains(claim))
+        .collect();
     let outcome = input
         .outcome
         .map(|value| normalize_outcome(value, &owner))
@@ -893,6 +962,11 @@ fn normalize_blocker(
         .owner
         .filter(|value| !value.is_empty())
         .unwrap_or_else(|| owner.to_owned());
+    if blocker_owner != owner {
+        return Err(CoreError::new(format!(
+            "{owner} blocker cannot claim owner {blocker_owner}"
+        )));
+    }
     let affected = affects(input.affects, &format!("{owner}.blockers[{index}].affects"))?;
     let identity = json!({"code": code, "message": message, "owner": blocker_owner, "revision": revision, "affects": affected, "recovery": input.recovery});
     Ok(NormalizedBlocker {

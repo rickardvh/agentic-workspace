@@ -105,6 +105,8 @@ def test_exact_action_identity_separates_arguments_and_currentness(shared_core_b
     pending = ambiguous["pending_consequences"]["actions"]
     assert pending[0]["consequence_id"] != pending[1]["consequence_id"]
 
+    scoped_contract = deepcopy(CAPABILITY_CONTRACT)
+    scoped_contract["restriction_authorities"] = [{"owner": "planning", "affects": [pending[0]["consequence_id"]]}]
     selected = compile_source_decision(
         [
             {
@@ -120,7 +122,7 @@ def test_exact_action_identity_separates_arguments_and_currentness(shared_core_b
                 ],
             }
         ],
-        capability_contract=CAPABILITY_CONTRACT,
+        capability_contract=scoped_contract,
     )
     assert selected["primary_action"]["consequence_id"] == pending[1]["consequence_id"]
 
@@ -228,6 +230,7 @@ def test_public_request_is_revision_bound_typed_and_cannot_resolve_as_a_noop(sha
         _compile(no_response)
 
     mixed_response = deepcopy(payload)
+    mixed_response["capability_contract"]["restriction_authorities"].append({"owner": "example.external", "affects": ["task"]})
     mixed_response["contributions"][0]["blockers"] = [{"code": "also-blocked", "message": "competing response", "affects": ["task"]}]
     with pytest.raises(DecisionContractError, match="one exact returned action without a competing consequence"):
         _compile(mixed_response)

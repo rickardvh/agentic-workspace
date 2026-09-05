@@ -47,5 +47,6 @@ Language-neutral input envelope for the shared operating-decision core.
 | `capability_contract.kind` | const `"agentic-workspace/capability-contract/v1"` | yes |  | Capability contract discriminator. |  |  |
 | `capability_contract.revision` | string | yes |  | Current source revision to which public requests bind. |  |  |
 | `capability_contract.owners` | array of ref `#/$defs/capability_owner` | yes |  | Current admitted capability owners. |  |  |
+| `capability_contract.restriction_authorities` | array of object | no |  | Trusted admission of exact restriction scopes, independent of claim grants and effect ownership. Task is an explicit scope, not a wildcard. No contribution or implementation descriptor can self-grant these rights. |  |  |
 | `capability_contract.claim_authorities` | array of object | no |  | Exclusive claim-to-owner assignments admitted independently of source contributions. |  |  |
 | `contributions` | array of ref `#/$defs/contribution` | yes |  | Current source-owned contributions composed by the shared reducer. |  |  |
