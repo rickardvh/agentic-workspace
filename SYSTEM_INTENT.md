@@ -22,7 +22,7 @@ The ordinary conceptual loop is:
 
 The existing compiled operating-decision and typed-action boundary is the implementation center of this loop. `resolve -> act -> reconcile` is a conceptual projection of that authority, not a second compiler or another user-facing workflow.
 
-Closeout is the terminal case of reconciliation: no further action remains, required evidence and authority are sufficient for the intended claim, and any future-relevant residue has an explicit owner or is deliberately absent.
+Closeout is the terminal case of reconciliation: no further action remains, required evidence and authority are sufficient for the intended claim, and any future-relevant residue has an explicit owner or is deliberately absent. An individual source owner being settled or having nothing to require is only owner-local quiescence; it does not establish that the user's outcome is terminal or that a broader claim is supportable.
 
 ## Authority model
 
@@ -31,6 +31,10 @@ The human or domain expert owns **why**. The system-shaping layer reasons about 
 AW must preserve that ladder across decomposition, interruption, delegation, review, and reconciliation. It must not silently narrow the intended outcome because a smaller local interpretation is easier to implement or prove.
 
 Repository context remains source-owned. Canonical docs, config, ownership declarations, module state, Planning state, proof evidence, Memory findings, and other authorities keep their own semantics and lifecycle. AW composes their current effect; its generated instruction or operating contract does not become a new source of truth merely because it is convenient to consume.
+
+Still-current recognized authority survives a change of representation. Obsolete representations may be removed only after their current meaning has been transferred, explicitly dispositioned by its owner, or made to block only the behavior that depends on it. This is a bounded transition rule, not a promise of indefinite compatibility.
+
+Persisted caches, receipts, journals, and prior decisions are projections or results, not independent current authority. Reuse or replay requires their producer, contract, source dependencies, and subject to remain current and compatible.
 
 External trackers and services normally provide evidence rather than repo intent or completion authority unless a repository explicitly assigns them a stronger role.
 
@@ -45,6 +49,8 @@ Keep context when its durable or current availability materially changes safe ag
 Do not preserve chat, logs, plans, reviews, histories, or arbitrary repository facts merely because they exist. Do not duplicate canonical repository truth into AW just to make it searchable.
 
 `Operating context` is an ownership and routing category, not a central database.
+
+A durable plan or prior work binding does not implicitly become the current task. Selection and resume are explicit, current dependencies remain actionable, and Planning custody does not manufacture completion authority.
 
 ### 2. Surface only what matters now
 
@@ -72,15 +78,23 @@ A clause should express only control effects the kernel already knows how to com
 
 Composition must preserve authority and be deterministic. Lower-authority guidance cannot widen a higher-authority permission or claim. Restrictions and requirements compose conservatively, conflicts become visible facts rather than hidden precedence, and decisions remain revision/provenance bound.
 
+A blocker or unresolved decision constrains only the action, effect, or claim that depends on it unless explicit authority makes it task-global. Selecting one visible consequence may compress presentation, but it must retain exact, queryable identities and recovery routes for unresolved peer consequences.
+
+An exact typed operation means the complete current action selected by its owner: operation and source identity, arguments, target, effects, handoff, currentness, and idempotency. A caller cannot retain the operation name while substituting other schema-valid effect-bearing values.
+
+A bounded human or domain judgment must be constructible from the public request. The owner supplies currentness, authority, and every effect-bearing field; the human supplies only the bounded answer.
+
 Do not create a second instruction compiler or a general-purpose policy/rule language. Existing specialized mechanisms—workflow obligations, assurance/proof declarations, scoped instructions, skill routing, target/correction guidance, and module relevance—should converge on or compile through a shared internal control normal form where their semantics overlap. They may retain domain-specific authoring surfaces when those surfaces carry genuine domain meaning.
 
-Natural-language or keyword applicability may help advisory discovery, but hard authority should be grounded in typed facts, owners, explicit references, or admitted results wherever feasible.
+Natural-language or keyword matching may help discovery, but it cannot decide genuine semantic applicability. That classification remains acting-agent judgment admitted as current structured context; deterministic path, operation, source, and authority facts remain owner-derived rather than matters of prose interpretation.
 
 ### 4. Optimize total successful-completion cost
 
 Reduce rereads, rediscovery, clarification loops, route reversals, retries, proof reruns, repair cycles, handoff reconstruction, and unnecessary user roundtrips.
 
 Prompt size, token count, latency, command count, and file count are useful only when they improve the total path to a correct result. A local optimization that makes another stage heavier is not a product improvement.
+
+Delegation follows the same measure: bounded self-sufficient worker context and observable expected total successful-completion burden, not declared price alone. A host or shared-worktree transport must carry a complete public assignment and return contract; hidden orchestrator relay is not semantic completion.
 
 ### 5. Keep modules as practical peer extensions of the loop
 
@@ -95,6 +109,8 @@ Workspace derives how those declarations affect resolution, action, and reconcil
 Useful genericity must reduce extension cost as well as conceptual duplication. Adding a later independent module should normally be module-package work plus its public descriptor/contracts and tests—not semantic Workspace edits, module-name switches, fixed slot/phase registration, canonical-skill changes, or another core-owned per-module list merely to recognize the capability.
 
 Modules contribute facts, capabilities, procedures, operations, and result semantics. They should not define new global instruction operators merely because their domain is new; repo-owned instruction policy and Workspace composition remain the control layer.
+
+Peer owners compose through typed public facts, results, evidence, and operations. One owner does not inspect another's private storage or run arbitrary callbacks after another owner's effect; the responsible owner admits cross-owner results before mutating its own state or claims.
 
 Keep three mechanisms distinct:
 
@@ -118,7 +134,7 @@ Package-owned machinery, module-owned state, repo-owned policy, local-only runti
 
 Keep package-owned artifacts under `.agentic-workspace/` as far as reasonably possible. Local caches, diagnostics, and integration residue do not become shared authority merely because they exist. Promoted output should become ordinary repo-owned output.
 
-AW should remain plausibly removable.
+AW should remain plausibly removable. Removing executable integration does not abandon durable state that survives it: custody must remain readable and actionable, or be explicitly transferred or retired by its authority, until deliberate removal is complete.
 
 ### 8. Work under partial compliance and mixed agents
 
@@ -131,6 +147,8 @@ Correct use should be progressively discoverable and cheaper than bypass. When a
 Assume as little as possible about the host repository, language, environment manager, model, provider, and selected modules.
 
 Dogfooding must not turn this repository's current shape into hidden universal requirements. Repo-, provider-, language-, or module-specific choices remain outside the durable core unless repeated evidence justifies promotion.
+
+Portable deterministic first-party semantics should have one implementation-independent executable authority and generated projections for each supported language. Handwritten target code is limited to a small reviewed set of irreducible platform primitives; neither language implementation becomes the semantic oracle for the other.
 
 ### 10. Convert repeated friction into better context or control
 
@@ -175,11 +193,13 @@ A change is not validated merely because its requested slice landed. Ask whether
 - surfaced less but better context at the right decision point;
 - produced an exact supported next action rather than another instruction to infer;
 - respected source ownership and provenance;
+- preserved recognized current authority before retiring its representation or custody;
 - reduced or bounded total successful-completion cost;
 - kept direct work cheap and irrelevant capabilities/instruction clauses quiet;
 - made modules easier to author as well as more peer-like, with module-specific meaning remaining module-owned;
 - avoided requiring a new independent module to modify semantic core code or register itself in fixed AW choreography;
 - reconciled results and claims without another parallel authority;
+- kept stability, version, and platform support claims behind current final-admission evidence and explicit platform proof;
 - removed, derived, backgrounded, or replaced older machinery where a new abstraction was introduced.
 
 Question new work when it does not materially improve operating context, dynamic control, programmable instruction composition, or a module's bounded contribution to that loop.
