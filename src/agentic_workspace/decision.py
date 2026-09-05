@@ -78,6 +78,14 @@ def operation_result(invocation: Mapping[str, Any], outcome: Mapping[str, Any], 
     return _request({"operation_result": {"invocation": invocation, "outcome": outcome, "decision": decision}})
 
 
+def admit_attempt(decision: Mapping[str, Any], invocation: Mapping[str, Any], record: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    return _request({"admit_attempt": {"decision": decision, "invocation": invocation, "record": record}})
+
+
+def commit_attempt(record: Mapping[str, Any], outcome: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"commit_attempt": {"record": record, "outcome": outcome}})
+
+
 def select_decision_detail(decision: Mapping[str, Any], fields: Iterable[str]) -> dict[str, Any]:
     return {
         "kind": "agentic-workspace/decision-view/v1",
@@ -96,4 +104,6 @@ __all__ = [
     "prepare_request",
     "answer_decision",
     "operation_result",
+    "admit_attempt",
+    "commit_attempt",
 ]

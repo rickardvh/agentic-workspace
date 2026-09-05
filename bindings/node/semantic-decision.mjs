@@ -52,3 +52,11 @@ function request(payload) {
 export function operationResult(invocation, outcome, decision) {
   return request({ operation_result: { invocation, outcome, decision } });
 }
+
+export function admitAttempt(decision, invocation, record = null) {
+  return request({admit_attempt: {decision, invocation, record}});
+}
+
+export function commitAttempt(record, outcome) {
+  return request({commit_attempt: {record, outcome}});
+}

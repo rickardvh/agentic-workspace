@@ -12,8 +12,10 @@ from jsonschema import Draft202012Validator
 
 from agentic_workspace.decision import (
     DecisionContractError,
+    admit_attempt,
     admit_invocation,
     answer_decision,
+    commit_attempt,
     compile_source_decision,
     operation_result,
     prepare_request,
@@ -184,7 +186,7 @@ def test_target_bindings_cannot_hide_reducer_semantics() -> None:
     forbidden = ("terminal", "settled", "blockers", "affects", "operation_id", "priority", "consequence_id")
     for path in (ROOT / "src/agentic_workspace/decision.py", ROOT / "bindings/node/semantic-decision.mjs"):
         source = path.read_text(encoding="utf-8")
-        assert len(source.splitlines()) <= 105
+        assert len(source.splitlines()) <= 120
         assert not any(token in source for token in forbidden)
 
 
@@ -443,3 +445,46 @@ def test_replay_requires_current_exact_operation_semantics(shared_core_binary: P
     malformed = {**original, "operation_revision": None}
     with pytest.raises(DecisionContractError, match="current operation semantics"):
         admit_invocation(first, malformed, malformed)
+
+
+def test_attempt_identity_uncertainty_and_committed_replay(shared_core_binary: Path) -> None:
+    payload = _expanded(next(v["input"] for v in VECTORS["cases"] if v["id"] == "action-material-dependencies"))
+    decision = _compile(payload)
+    action = decision["primary_action"]
+    admitted = admit_attempt(decision, action)
+    record = admitted["record"]
+    assert admitted["disposition"] == "execute"
+    assert admitted["logical_effect_id"] == action["idempotency_key"]
+    assert admitted["attempt_id"] != admitted["logical_effect_id"]
+    assert record["outcome"] is None
+    assert admit_attempt(decision, action, record)["disposition"] == "uncertain"
+    changed = deepcopy(payload)
+    changed["contributions"][0]["revision"] = "unrelated-change"
+    changed["contributions"][0]["actions"][0]["dependency_revision"] = "relevant-change"
+    current = _compile(changed)
+    assert admit_attempt(current, current["primary_action"], record)["record"] == record
+    committed = commit_attempt(record, {"status": "applied", "effects": action["effects"], "value": {"count": 1}})
+    replay = admit_attempt(current, current["primary_action"], committed)
+    assert replay["disposition"] == "replay"
+    assert replay["attempt_id"] == admitted["attempt_id"]
+    assert "next_decision" not in committed
+    direct = _direct(
+        shared_core_binary, {"admit_attempt": {"decision": current, "invocation": current["primary_action"], "record": committed}}
+    )
+    assert json.loads(direct.stdout) == replay
+    for mutate in (
+        lambda r: r.update(attempt_id="retry-random"),
+        lambda r: r["outcome"].update(value="hand-edited"),
+        lambda r: r.update(next_decision=decision),
+    ):
+        invalid = deepcopy(committed)
+        mutate(invalid)
+        with pytest.raises(DecisionContractError):
+            admit_attempt(current, current["primary_action"], invalid)
+    with pytest.raises(DecisionContractError, match="cannot change its outcome"):
+        commit_attempt(committed, {"status": "applied", "effects": action["effects"], "value": 2})
+    changed["contributions"][0]["actions"][0]["effect_generation"] = "authorized-repeat"
+    repeated = _compile(changed)
+    assert admit_attempt(repeated, repeated["primary_action"])["attempt_id"] != admitted["attempt_id"]
+    with pytest.raises(DecisionContractError):
+        admit_attempt(repeated, repeated["primary_action"], committed)

@@ -3,11 +3,12 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from copy import deepcopy
 from dataclasses import dataclass
+from threading import Lock
 from typing import Any
 
 from jsonschema import Draft202012Validator
 
-from agentic_workspace.decision import DecisionContractError, admit_invocation, operation_result
+from agentic_workspace.decision import DecisionContractError, admit_attempt, commit_attempt, operation_result
 
 
 class OperationError(RuntimeError):
@@ -20,6 +21,14 @@ class StaleInvocationError(OperationError):
 
 class OperationContractError(OperationError):
     """An operation or result violated its declared contract."""
+
+
+class UncertainOperationError(OperationError):
+    """The exact attempt may have effected; owner recovery is required."""
+
+    def __init__(self, admission: dict[str, Any]) -> None:
+        self.admission = admission
+        super().__init__(f"operation attempt {admission['attempt_id']} is uncertain; owner recovery required")
 
 
 @dataclass(frozen=True)
@@ -35,7 +44,8 @@ class OperationDispatcher:
 
     def __init__(self) -> None:
         self._operations: dict[str, Operation] = {}
-        self._receipts: dict[str, tuple[dict[str, Any], dict[str, Any]]] = {}
+        self._attempts: dict[str, dict[str, Any]] = {}
+        self._admission_lock = Lock()
 
     def register(self, operation: Operation) -> None:
         if not operation.operation_id:
@@ -75,35 +85,38 @@ class OperationDispatcher:
         if not key:
             raise OperationContractError("idempotency_key is required")
         request_identity = deepcopy(dict(invocation))
-        previous = self._receipts.get(key)
+        # Serialize only process-local admission, never the handler or resolution.
         try:
             current = dict(resolve_decision())
         except Exception:
-            if previous is None:
-                raise
             current = None
-        try:
-            admission = admit_invocation(current or {}, invocation, previous[0] if previous else None)
-        except DecisionContractError as error:
-            if previous:
-                raise OperationContractError("idempotency key was already used; " + str(error)) from error
-            raise StaleInvocationError(str(error)) from error
-        if admission["disposition"] == "replay" and previous is not None:
-            return operation_result(previous[0], previous[1], current)
+        with self._admission_lock:
+            previous = self._attempts.get(key)
+            try:
+                admission = admit_attempt(current or {}, request_identity, previous)
+            except DecisionContractError as error:
+                if previous:
+                    raise OperationContractError("idempotency key was already used; " + str(error)) from error
+                raise StaleInvocationError(str(error)) from error
+            record = admission["record"]
+            self._attempts[key] = record
+        if admission["disposition"] == "uncertain":
+            raise UncertainOperationError(admission)
+        if admission["disposition"] == "replay":
+            return operation_result(record["invocation"], record["outcome"], current)
 
-        raw_outcome = operation.handler(dict(arguments))
-        if not isinstance(raw_outcome, Mapping):
-            raise OperationContractError("operation handler must return an object")
-        outcome = deepcopy(dict(raw_outcome))
         try:
-            # Validate before retaining committed evidence. Never retain a view.
-            operation_result(request_identity, outcome, None)
-        except DecisionContractError as error:
-            raise OperationContractError(str(error)) from error
-        self._receipts[key] = (request_identity, outcome)
+            raw_outcome = operation.handler(dict(arguments))
+            if not isinstance(raw_outcome, Mapping):
+                raise OperationContractError("operation handler must return an object")
+            committed = commit_attempt(record, deepcopy(dict(raw_outcome)))
+        except Exception as error:
+            uncertain = admit_attempt(current or {}, request_identity, record)
+            raise UncertainOperationError(uncertain) from error
+        with self._admission_lock:
+            self._attempts[key] = committed
         try:
             next_decision = dict(resolve_decision())
         except Exception:
-            # The effect remains committed even when current sources cannot resolve.
             next_decision = None
-        return operation_result(request_identity, outcome, next_decision)
+        return operation_result(committed["invocation"], committed["outcome"], next_decision)

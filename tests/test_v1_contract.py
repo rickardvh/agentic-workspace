@@ -10,7 +10,13 @@ import pytest
 from agentic_workspace.decision import compile_source_decision, select_decision_detail
 from agentic_workspace.modules import Module, discover_modules, module_contributions, register_module_operations
 from agentic_workspace.operating_decision import compile_operating_decision
-from agentic_workspace.operations import Operation, OperationContractError, OperationDispatcher, StaleInvocationError
+from agentic_workspace.operations import (
+    Operation,
+    OperationContractError,
+    OperationDispatcher,
+    StaleInvocationError,
+    UncertainOperationError,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 CAPABILITY_CONTRACT = json.loads((ROOT / "tests/vectors/capability_contract.json").read_text(encoding="utf-8"))
@@ -290,4 +296,24 @@ def test_committed_effect_survives_unavailable_post_effect_view(shared_core_bina
     assert replay["value"] == result["value"]
     assert replay["continuation_status"] == "current"
     assert replay["next_decision"] == resolve()
+    assert calls == 1
+
+
+def test_failed_effect_attempt_cannot_be_blindly_retried(shared_core_binary: object) -> None:
+    decision = compile_source_decision([_planning({"status": "open", "revision": "p1"})], capability_contract=CAPABILITY_CONTRACT)
+    calls = 0
+
+    def effect(_: dict[str, Any]) -> dict[str, Any]:
+        nonlocal calls
+        calls += 1
+        raise RuntimeError("process may already have effected")
+
+    dispatcher = OperationDispatcher()
+    dispatcher.register(Operation("planning.complete", {"type": "object"}, ("planning-state",), effect))
+    for _ in range(2):
+        with pytest.raises(UncertainOperationError) as failure:
+            dispatcher.invoke(decision["primary_action"], resolve_decision=lambda: decision)
+        assert failure.value.admission["disposition"] == "uncertain"
+        assert failure.value.admission["owner"] == "planning"
+        assert failure.value.admission["effects"] == ["planning-state"]
     assert calls == 1
