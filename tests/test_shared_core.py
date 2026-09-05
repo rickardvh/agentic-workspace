@@ -415,3 +415,31 @@ def test_result_composition_is_shared_and_never_reuses_a_view(shared_core_binary
     ):
         with pytest.raises(DecisionContractError, match=message):
             operation_result(invocation, invalid, current)
+
+
+def test_replay_requires_current_exact_operation_semantics(shared_core_binary: Path) -> None:
+    payload = _expanded(next(v["input"] for v in VECTORS["cases"] if v["id"] == "action-material-dependencies"))
+    first = _compile(payload)
+    original = first["primary_action"]
+    for change in ("semantic_revision", "result_kind", "input_schema"):
+        revised = deepcopy(payload)
+        operation = next(
+            op for owner in revised["capability_contract"]["owners"] for op in owner["operations"] if op["id"] == original["operation_id"]
+        )
+        operation[change] = {**operation[change], "description": "revised semantic contract"} if change == "input_schema" else "upgraded/v2"
+        current = _compile(revised)
+        assert current["primary_action"]["idempotency_key"] == original["idempotency_key"]
+        assert current["primary_action"]["operation_revision"] != original["operation_revision"]
+        for submitted in (original, current["primary_action"]):
+            with pytest.raises(DecisionContractError, match="current operation semantics"):
+                admit_invocation(current, submitted, original)
+    removed = deepcopy(payload)
+    removed["contributions"][0]["actions"] = []
+    current = _compile(removed)
+    assert admit_invocation(current, original, original)["disposition"] == "replay"
+    current["operation_revisions"].pop(original["operation_id"])
+    with pytest.raises(DecisionContractError, match="current operation semantics"):
+        admit_invocation(current, original, original)
+    malformed = {**original, "operation_revision": None}
+    with pytest.raises(DecisionContractError, match="current operation semantics"):
+        admit_invocation(first, malformed, malformed)

@@ -116,6 +116,7 @@ struct ClaimAuthorityInput {
 #[serde(deny_unknown_fields)]
 struct OperationCapabilityInput {
     id: String,
+    semantic_revision: String,
     reads: Option<Vec<String>>,
     input_schema: Value,
     result_kind: String,
@@ -304,6 +305,7 @@ struct NormalizedCapabilityOwner {
 
 #[derive(Debug, Clone, Serialize)]
 struct NormalizedOperationCapability {
+    semantic_revision: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     reads: Option<BTreeSet<String>>,
     input_schema: Value,
@@ -345,6 +347,7 @@ struct NormalizedAction {
     consequence_id: String,
     dependency_revision: String,
     logical_effect_id: String,
+    operation_revision: String,
     operation_id: String,
     arguments: Value,
     effects: Vec<String>,
@@ -579,6 +582,10 @@ fn normalize_capability_contract(
             operations.insert(
                 id,
                 NormalizedOperationCapability {
+                    semantic_revision: require_text(
+                        &operation.semantic_revision,
+                        "operation.semantic_revision",
+                    )?,
                     reads: operation
                         .reads
                         .map(|reads| {
@@ -931,6 +938,19 @@ fn normalize_request_response(
     })
 }
 
+fn operation_revision(
+    owner: &str,
+    id: &str,
+    capability: &NormalizedCapabilityOwner,
+) -> Result<String, CoreError> {
+    let operation = capability
+        .operations
+        .get(id)
+        .ok_or_else(|| CoreError::new("operation is not declared by its capability owner"))?;
+    digest(&json!({"owner": owner, "id": id, "operation": operation,
+        "custody": operation.effects.iter().map(|effect| (effect, capability.effects.get(effect))).collect::<BTreeMap<_, _>>()}))
+}
+
 fn normalize_action(
     input: ActionInput,
     owner: &str,
@@ -988,6 +1008,11 @@ fn normalize_action(
         consequence_id,
         dependency_revision,
         logical_effect_id,
+        operation_revision: operation_revision(
+            owner,
+            &operation_id,
+            capability.ok_or_else(|| CoreError::new("operation requires admitted owner"))?,
+        )?,
         operation_id: identity["operation_id"]
             .as_str()
             .expect("identity operation is text")
@@ -1577,6 +1602,20 @@ pub fn admit_invocation_value(value: Value) -> Result<Value, CoreError> {
     if input.invocation.get("kind").and_then(Value::as_str) != Some(INVOCATION_KIND) {
         return Err(CoreError::new("unsupported invocation kind"));
     }
+    if let Some(previous) = &input.previous_invocation {
+        let id = previous["operation_id"].as_str().unwrap_or("");
+        let revision = previous["operation_revision"]
+            .as_str()
+            .filter(|v| !v.is_empty());
+        if revision.is_none()
+            || input.decision["operation_revisions"][id].as_str() != revision
+            || input.invocation["operation_revision"].as_str() != revision
+        {
+            return Err(CoreError::new(
+                "retained result is incompatible with current operation semantics",
+            ));
+        }
+    }
     let exact_receipt = input.previous_invocation.as_ref() == Some(&input.invocation);
     let exact_current = input
         .decision
@@ -1744,6 +1783,7 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
                     "authority": selected.action.authority,
                     "source_owner": selected.owner,
                     "expected_dependency_revision": selected.action.dependency_revision,
+                    "operation_revision": selected.action.operation_revision,
                     "idempotency_key": selected.action.logical_effect_id,
                 })
             })
@@ -1862,6 +1902,23 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
             .insert("request_resolution".to_owned(), resolution);
     }
     if let Some(capabilities) = capabilities {
+        let revisions = capabilities
+            .owners
+            .iter()
+            .flat_map(|(owner, capability)| {
+                capability
+                    .operations
+                    .keys()
+                    .map(move |id| (owner, capability, id))
+            })
+            .map(|(owner, capability, id)| {
+                Ok((id.clone(), operation_revision(owner, id, capability)?))
+            })
+            .collect::<Result<BTreeMap<_, _>, CoreError>>()?;
+        answer
+            .as_object_mut()
+            .unwrap()
+            .insert("operation_revisions".to_owned(), json!(revisions));
         answer.as_object_mut().expect("answer is an object").insert(
             "capability_revision".to_owned(),
             Value::String(capabilities.revision),

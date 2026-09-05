@@ -12,6 +12,7 @@
       "operations": [
         {
           "id": "alpha.act",
+          "semantic_revision": "v1",
           "result_kind": "example/alpha-act-result/v1",
           "input_schema": {
             "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -44,6 +45,7 @@
       "operations": [
         {
           "id": "example.finish",
+          "semantic_revision": "v1",
           "result_kind": "example/finish-result/v1",
           "effects": [
             "external-state"
@@ -133,6 +135,7 @@
       "operations": [
         {
           "id": "module.act",
+          "semantic_revision": "v1",
           "result_kind": "example/module-act-result/v1",
           "input_schema": {
             "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -167,6 +170,7 @@
       "operations": [
         {
           "id": "planning.advance",
+          "semantic_revision": "v1",
           "result_kind": "planning/advance-result/v1",
           "effects": [
             "plan-a",
@@ -189,6 +193,7 @@
         },
         {
           "id": "planning.complete",
+          "semantic_revision": "v1",
           "result_kind": "planning/complete-result/v1",
           "effects": [
             "planning-state"
@@ -230,6 +235,7 @@
       "operations": [
         {
           "id": "repository.answer",
+          "semantic_revision": "v1",
           "result_kind": "repository/answer-result/v1",
           "input_schema": {
             "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -288,6 +294,7 @@
       "operations": [
         {
           "id": "workspace.edit",
+          "semantic_revision": "v1",
           "result_kind": "workspace/edit-result/v1",
           "effects": [
             "workspace-files"
@@ -308,6 +315,7 @@
         },
         {
           "id": "workspace.inspect",
+          "semantic_revision": "v1",
           "result_kind": "workspace/inspect-result/v1",
           "effects": [
             "workspace-read"
@@ -334,6 +342,7 @@
       "operations": [
         {
           "id": "zeta.act",
+          "semantic_revision": "v1",
           "result_kind": "example/zeta-act-result/v1",
           "input_schema": {
             "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -351,6 +360,7 @@
         },
         {
           "id": "same",
+          "semantic_revision": "v1",
           "result_kind": "example/same-result/v1",
           "input_schema": {
             "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -399,7 +409,7 @@
     {
       "owner": "planning",
       "affects": [
-        "action:planning:sha256:5a1d35c377be38d91c3220e4b99eae114b5bc389d24c8867674c209a6a780019",
+        "action:planning:sha256:af9d1ddb17ae8cd5c66a6c9ab17c2ca4a863c83444a0080faa0f7d0b1c20cb63",
         "claim:complete"
       ]
     },

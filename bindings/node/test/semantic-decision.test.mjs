@@ -113,3 +113,18 @@ test("committed outcome is composed only with current continuation", () => {
   assert.throws(() => operationResult(invocation, {...outcome, effects: ["unowned"]}, first), /widened/);
   assert.throws(() => operationResult(invocation, {...outcome, next_decision: first}, first), /unknown field/);
 });
+
+
+test("replay rejects incompatible operation semantics without minting an effect", () => {
+  const payload = structuredClone(vectors.cases.find(v => v.id === "action-material-dependencies").input);
+  const contract = structuredClone(capabilityContract);
+  const first = compileSourceDecision(payload.contributions, payload.intent, contract);
+  const original = first.primary_action;
+  const operation = contract.owners.flatMap(owner => owner.operations).find(op => op.id === original.operation_id);
+  operation.semantic_revision = "v2";
+  const current = compileSourceDecision(payload.contributions, payload.intent, contract);
+  assert.equal(current.primary_action.idempotency_key, original.idempotency_key);
+  assert.notEqual(current.primary_action.operation_revision, original.operation_revision);
+  assert.throws(() => admitInvocation(current, original, original), /current operation semantics/);
+  assert.throws(() => admitInvocation(current, current.primary_action, original), /current operation semantics/);
+});
