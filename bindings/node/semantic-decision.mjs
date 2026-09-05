@@ -60,3 +60,11 @@ export function admitAttempt(decision, invocation, record = null) {
 export function commitAttempt(record, outcome) {
   return request({commit_attempt: {record, outcome}});
 }
+
+export function admitStoredAttempt(target, decision, invocation, custody = null) {
+  return request({admit_stored_attempt: {target, decision, invocation, custody}});
+}
+
+export function commitStoredAttempt(target, custody, outcome) {
+  return request({commit_stored_attempt: {target, custody, outcome}});
+}

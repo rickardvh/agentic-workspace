@@ -86,6 +86,16 @@ def commit_attempt(record: Mapping[str, Any], outcome: Mapping[str, Any]) -> dic
     return _request({"commit_attempt": {"record": record, "outcome": outcome}})
 
 
+def admit_stored_attempt(
+    target: str, decision: Mapping[str, Any], invocation: Mapping[str, Any], custody: Mapping[str, Any] | None = None
+) -> dict[str, Any]:
+    return _request({"admit_stored_attempt": {"target": target, "decision": decision, "invocation": invocation, "custody": custody}})
+
+
+def commit_stored_attempt(target: str, custody: Mapping[str, Any], outcome: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"commit_stored_attempt": {"target": target, "custody": custody, "outcome": outcome}})
+
+
 def select_decision_detail(decision: Mapping[str, Any], fields: Iterable[str]) -> dict[str, Any]:
     return {
         "kind": "agentic-workspace/decision-view/v1",
@@ -106,4 +116,6 @@ __all__ = [
     "operation_result",
     "admit_attempt",
     "commit_attempt",
+    "admit_stored_attempt",
+    "commit_stored_attempt",
 ]
