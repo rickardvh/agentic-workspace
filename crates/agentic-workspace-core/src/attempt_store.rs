@@ -137,13 +137,9 @@ fn create(root: &Root, relative: String, record: &Value) -> Result<Evidence, Cor
         })?;
     file.write_all(&bytes).map_err(error)?;
     file.sync_all().map_err(error)?;
-    #[cfg(unix)]
-    root.dir
-        .open_dir(DIRECTORY)
-        .map_err(error)?
-        .into_std_file()
-        .sync_all()
-        .map_err(error)?;
+    // Directory capabilities may use non-syncable handles (O_PATH on Linux).
+    // The store promises process-interruption safety, not directory-entry
+    // persistence across power loss; do not fsync this capability handle.
     Ok(Evidence {
         target: root.path.to_string_lossy().into_owned(),
         path: relative,
