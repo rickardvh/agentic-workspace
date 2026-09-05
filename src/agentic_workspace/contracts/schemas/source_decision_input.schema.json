@@ -59,6 +59,89 @@
   "required": ["contributions"],
   "additionalProperties": false,
   "$defs": {
+    "decision_dismissal": {
+      "type": "object",
+      "description": "Trusted owner-admitted dismissal. A client-authored assertion cannot admit human or domain authority.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Exact dismissed decision identity."
+        },
+        "material_revision": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Exact dismissed semantic revision."
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Agent/human judgment explaining lack of future retention value."
+        },
+        "authority": {
+          "$ref": "#/$defs/decision_authority",
+          "description": "Independently admitted decisive authority for dismissal, not inferred from authorship."
+        }
+      },
+      "required": [
+        "id",
+        "material_revision",
+        "reason",
+        "authority"
+      ],
+      "additionalProperties": false
+    },
+    "decision_reconciliation": {
+      "type": "object",
+      "description": "Bounded reconciliation facts, not capture UX, storage or mutation authority.",
+      "properties": {
+        "residue": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Known material decision identity."
+          },
+          "description": "Explicit agent/human-selected future-value residue; every item receives an outcome or pending route."
+        },
+        "native_owner": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Independently configured/discovered repo-native durable owner, or admitted absence."
+        },
+        "fallback_owner": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Existing admitted AW fallback durable owner used only when native owner is absent."
+        },
+        "destinations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/decision_admission",
+            "description": "Exact durable owner admission of the same material decision."
+          },
+          "description": "Independent destination evidence, rechecked against current source observations."
+        },
+        "dismissals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/decision_dismissal",
+            "description": "Owner-admitted dismissal."
+          },
+          "description": "Explicit judgments, each bound to decision revision and current authority evidence."
+        }
+      },
+      "required": [
+        "residue",
+        "native_owner",
+        "fallback_owner",
+        "destinations",
+        "dismissals"
+      ],
+      "additionalProperties": false
+    },
     "decision_reference": {
       "type": "object",
       "description": "Source reference; neither strings nor hashes grant custody or authority.",
@@ -297,6 +380,7 @@
       "type": "object",
       "description": "Bounded material decisions supplied to the existing compiler. No storage, discovery, execution permissions or authority creation.",
       "properties": {
+        "reconciliation": {"$ref": "#/$defs/decision_reconciliation", "description": "Optional explicit residue and independently admitted durable dispositions."},
         "records": {
           "type": "array",
           "items": {

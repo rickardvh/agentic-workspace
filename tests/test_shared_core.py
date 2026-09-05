@@ -1219,3 +1219,102 @@ def test_supersession_current_heads_follow_scope_through_ancestry(shared_core_bi
     if shape == "disjoint-scope":
         payload["decision_context"]["applicable_scope"] = ["contract:operation-result"]
         assert "B" in {item["id"] for item in _compile(payload)["decision_context"]["consequences"]}
+
+
+def _decision_reconciliation(record: dict[str, Any], native: str | None) -> dict[str, Any]:
+    return {"residue": [record["id"]], "native_owner": native, "fallback_owner": "memory", "destinations": [], "dismissals": []}
+
+
+@pytest.mark.parametrize("native", [None, "repository-decisions"])
+def test_explicit_decision_disposition_requires_current_destination_admission(shared_core_binary: Path, native: str | None) -> None:
+    record = _material_decision()
+    context = _admitted_decisions([record])
+    context["reconciliation"] = _decision_reconciliation(record, native)
+    payload = {"contributions": [], "decision_context": context}
+    Draft202012Validator(SCHEMA).validate(payload)
+    pending = _compile(payload)["decision_context"]
+    assert pending["reconciliation"][0]["status"] == "pending"
+    assert pending["consequences"][0]["source"] == record["source"]
+    destination = deepcopy(context["admissions"][0])
+    destination["source"] = {
+        "owner": native or "memory",
+        "reference": "native/decision-1" if native else ".agentic-workspace/fallback-1",
+        "revision": "destination-1",
+    }
+    destination["rationale_reference"] = destination["source"]["reference"] + "#rationale"
+    context["reconciliation"]["destinations"] = [destination]
+    assert _compile(payload)["decision_context"]["reconciliation"][0]["status"] == "pending"
+    context["current_dependencies"].append(deepcopy(destination["source"]))
+    accepted = _compile(payload)
+    assert accepted == json.loads(_direct(shared_core_binary, payload).stdout)
+    assert accepted["decision_context"]["reconciliation"][0]["status"] == ("repo-native" if native else "fallback")
+    assert accepted["decision_context"]["consequences"][0]["source"] == destination["source"]
+    assert accepted["decision_context"]["states"][0]["rationale_reference"] == destination["rationale_reference"]
+    # A later lost/stale stronger owner cannot hide the former current value.
+    context["current_dependencies"][-1]["revision"] = "changed-or-unavailable"
+    lost = _compile(payload)["decision_context"]
+    assert lost["reconciliation"][0]["status"] == "pending"
+    assert lost["consequences"][0]["source"] == record["source"]
+    context["current_dependencies"][-1]["revision"] = "destination-1"
+    destination["material_revision"] = "different-decision"
+    assert _compile(payload)["decision_context"]["reconciliation"][0]["status"] == "pending"
+
+
+def test_native_owner_prevents_fallback_shortcut_and_unrelated_residue_cannot_disappear(shared_core_binary: Path) -> None:
+    record = _material_decision()
+    context = _admitted_decisions([record])
+    resolution = _decision_reconciliation(record, "repository-decisions")
+    context["reconciliation"] = resolution
+    fallback = deepcopy(context["admissions"][0])
+    fallback["source"] = {"owner": "memory", "reference": "fallback", "revision": "1"}
+    resolution["destinations"] = [fallback]
+    context["current_dependencies"].append(fallback["source"])
+    context["applicable_scope"] = ["path:unrelated"]
+    result = _compile({"contributions": [], "decision_context": context})["decision_context"]
+    assert result["consequences"] == []
+    assert result["reconciliation"][0]["status"] == "pending"
+    assert result["reconciliation"][0]["owner"] == "repository-decisions"
+    context["records"] = []
+    with pytest.raises(DecisionContractError, match="missing its admitted record"):
+        _compile({"contributions": [], "decision_context": context})
+
+
+def test_dismissal_is_an_explicit_current_authority_judgment(shared_core_binary: Path) -> None:
+    record = _material_decision()
+    context = _admitted_decisions([record])
+    resolution = _decision_reconciliation(record, None)
+    context["reconciliation"] = resolution
+    dismissal = {
+        "id": record["id"],
+        "material_revision": context["records"][0]["material_revision"],
+        "reason": "Temporary choice has no continuing value",
+        "authority": {
+            "actor": {"kind": "human", "id": "domain-owner"},
+            "basis": [{"owner": "repository", "reference": "dismissal-confirmation", "revision": "1"}],
+        },
+    }
+    resolution["dismissals"] = [dismissal]  # Independent host/owner admission, not an ordinary client record.
+    pending = _compile({"contributions": [], "decision_context": context})["decision_context"]
+    assert pending["reconciliation"][0]["status"] == "pending"
+    assert pending["consequences"]
+    context["current_dependencies"] += dismissal["authority"]["basis"]
+    accepted = _compile({"contributions": [], "decision_context": context})
+    assert accepted["decision_context"]["reconciliation"][0]["status"] == "dismissed"
+    assert accepted["decision_context"]["consequences"] == []
+    assert accepted["claim_boundary"] == {"allowed": [], "blocked": []}
+    assert accepted["status"] == "direct"
+    dismissal["material_revision"] = "old-revision"
+    with pytest.raises(DecisionContractError, match="exact material decision"):
+        _compile({"contributions": [], "decision_context": context})
+
+
+def test_full_supersession_satisfies_known_decision_residue(shared_core_binary: Path) -> None:
+    old = _material_decision()
+    new = deepcopy(old)
+    new["id"] = "replacement"
+    new["supersedes"] = [{"id": old["id"], "material_revision": normalize_decision_record(old)["material_revision"], "scope": old["scope"]}]
+    context = _admitted_decisions([old, new])
+    context["reconciliation"] = _decision_reconciliation(old, None)
+    value = _compile({"contributions": [], "decision_context": context})["decision_context"]
+    assert value["reconciliation"][0]["status"] == "superseded"
+    assert [item["id"] for item in value["consequences"]] == [new["id"]]

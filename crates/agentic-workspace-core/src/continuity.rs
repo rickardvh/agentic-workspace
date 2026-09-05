@@ -75,6 +75,129 @@ pub(crate) struct Context {
     admissions: Vec<Admission>,
     current_dependencies: Vec<Reference>,
     applicable_scope: Vec<String>,
+    reconciliation: Option<Reconciliation>,
+}
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Reconciliation {
+    residue: Vec<String>,
+    native_owner: Option<String>,
+    fallback_owner: String,
+    destinations: Vec<Admission>,
+    dismissals: Vec<Dismissal>,
+}
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Dismissal {
+    id: String,
+    material_revision: String,
+    reason: String,
+    authority: Authority,
+}
+#[derive(Default)]
+struct Resolved {
+    rows: Vec<Value>,
+    sources: BTreeMap<String, (Reference, String)>,
+    dismissed: BTreeSet<String>,
+}
+fn reconcile(
+    input: Option<Reconciliation>,
+    records: &BTreeMap<String, Record>,
+    current: &BTreeMap<(String, String), String>,
+    replaced: &BTreeMap<String, BTreeSet<String>>,
+) -> Result<Resolved, CoreError> {
+    let mut result = Resolved::default();
+    let Some(input) = input else {
+        return Ok(result);
+    };
+    let preferred = input.native_owner.as_ref().unwrap_or(&input.fallback_owner);
+    require_text(preferred, "admitted durable owner")?;
+    let role = if input.native_owner.is_some() {
+        "repo-native"
+    } else {
+        "fallback"
+    };
+    let mut seen = BTreeSet::new();
+    for id in input.residue {
+        if !seen.insert(id.clone()) {
+            return Err(error("duplicate decision residue"));
+        }
+        let record = records
+            .get(&id)
+            .ok_or_else(|| error("known decision residue is missing its admitted record"))?;
+        let revision = record.material_revision.as_ref().unwrap();
+        let mut row = json!({"id": id, "material_revision": revision, "status": "pending", "owner": preferred});
+        let dismissed: Vec<_> = input.dismissals.iter().filter(|d| d.id == id).collect();
+        if dismissed.len() > 1 {
+            return Err(error("competing decision dismissals"));
+        }
+        if let Some(dismissal) = dismissed.first() {
+            require_text(&dismissal.reason, "decision dismissal reason")?;
+            require_text(&dismissal.authority.actor.id, "dismissal deciding actor")?;
+            if dismissal.material_revision != *revision || dismissal.authority.basis.is_empty() {
+                return Err(error(
+                    "dismissal must bind the exact material decision and admitted authority basis",
+                ));
+            }
+            for basis in &dismissal.authority.basis {
+                reference(basis)?;
+            }
+            if dismissal.authority.basis.iter().all(|basis| {
+                current.get(&(basis.owner.clone(), basis.reference.clone()))
+                    == Some(&basis.revision)
+            }) {
+                row = json!({"id": id, "material_revision": revision, "status": "dismissed", "reason": dismissal.reason, "authority": dismissal.authority});
+                result.dismissed.insert(id.clone());
+            } else {
+                row["reason"] = json!("dismissal authority is stale or unavailable");
+            }
+        } else if replaced
+            .get(&id)
+            .is_some_and(|scopes| record.scope.iter().all(|s| scopes.contains(s)))
+        {
+            row["status"] = json!("superseded");
+        } else {
+            let matches: Vec<_> = input
+                .destinations
+                .iter()
+                .filter(|d| {
+                    d.id == id
+                        && d.material_revision == *revision
+                        && d.source.owner == *preferred
+                        && current.get(&(d.source.owner.clone(), d.source.reference.clone()))
+                            == Some(&d.source.revision)
+                })
+                .collect();
+            if matches.len() > 1 {
+                return Err(error("multiple current durable decision destinations"));
+            }
+            if let Some(destination) = matches.first() {
+                reference(&destination.source)?;
+                require_text(
+                    &destination.rationale_reference,
+                    "destination rationale reference",
+                )?;
+                row["status"] = json!(role);
+                row["source"] = json!(destination.source);
+                result.sources.insert(
+                    id.clone(),
+                    (
+                        destination.source.clone(),
+                        destination.rationale_reference.clone(),
+                    ),
+                );
+            } else {
+                row["reason"] = json!(
+                    "preferred owner has not currently admitted this exact material decision; preserve former source"
+                );
+            }
+        }
+        result.rows.push(row);
+    }
+    result
+        .rows
+        .sort_by(|a, b| a["id"].as_str().cmp(&b["id"].as_str()));
+    Ok(result)
 }
 fn error(message: impl Into<String>) -> CoreError {
     CoreError::new(message)
@@ -313,6 +436,7 @@ pub(crate) fn project(mut context: Context) -> Result<Option<Value>, CoreError> 
             }
         }
     }
+    let reconciled = reconcile(context.reconciliation, &records, &current, &replaced)?;
     let mut consequences = Vec::new();
     let mut states = Vec::new();
     for record in records.values() {
@@ -354,10 +478,22 @@ pub(crate) fn project(mut context: Context) -> Result<Option<Value>, CoreError> 
         } else {
             "current"
         };
-        states.push(json!({"id": record.id, "material_revision": record.material_revision, "source": record.source, "status": status, "current_scope": if status == "current" { remaining.clone() } else { vec![] }, "superseded_scope": selected.iter().filter(|s| superseded.contains(*s)).collect::<Vec<_>>(), "stale_dependencies": stale, "rationale_reference": record.rationale_reference}));
-        if status == "current" {
-            consequences.push(json!({"id": record.id, "material_revision": record.material_revision, "scope": remaining, "summary": record.consequence, "source": record.source, "authors": record.authors, "authority": record.authority}));
+        let (source, rationale) = reconciled
+            .sources
+            .get(&record.id)
+            .map(|(source, rationale)| (source, rationale))
+            .unwrap_or((&record.source, &record.rationale_reference));
+        states.push(json!({"id": record.id, "material_revision": record.material_revision, "source": source, "status": status, "current_scope": if status == "current" { remaining.clone() } else { vec![] }, "superseded_scope": selected.iter().filter(|s| superseded.contains(*s)).collect::<Vec<_>>(), "stale_dependencies": stale, "rationale_reference": rationale}));
+        if status == "current" && !reconciled.dismissed.contains(&record.id) {
+            consequences.push(json!({"id": record.id, "material_revision": record.material_revision, "scope": remaining, "summary": record.consequence, "source": source, "authors": record.authors, "authority": record.authority}));
         }
     }
-    Ok((!states.is_empty()).then(|| json!({"consequences": consequences, "states": states})))
+    if states.is_empty() && reconciled.rows.is_empty() {
+        return Ok(None);
+    }
+    let mut output = json!({"consequences": consequences, "states": states});
+    if !reconciled.rows.is_empty() {
+        output["reconciliation"] = json!(reconciled.rows);
+    }
+    Ok(Some(output))
 }
