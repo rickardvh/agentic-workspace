@@ -3,8 +3,41 @@
   "cases": [
     {
       "id": "owner-settled-is-not-terminal",
-      "input": {"contributions": [{"owner": "memory", "revision": "m1", "settled": true}], "intent": {"task": "inspect"}},
+      "input": {"contributions": [{"owner": "memory", "revision": "m1", "settled": true}], "intent": {}},
       "expect": {"status": "direct", "terminal_authority": null, "owner_states.0.settled": true}
+    },
+    {
+      "id": "typed-public-request-returns-an-exact-owner-action",
+      "input": {
+        "contributions": [{
+          "owner": "example.external",
+          "revision": "ext1",
+          "actions": [{"operation_id": "example.finish", "arguments": {"subject": "case-17"}, "effects": ["external-state"]}],
+          "request_response": {"request_id": "finish-17", "status": "action"}
+        }],
+        "intent": {
+          "current_work": {"kind": "current-work", "id": "work-17"},
+          "public_request": {
+            "kind": "agentic-workspace/public-request/v1",
+            "id": "finish-17",
+            "owner": "example.external",
+            "owner_revision": "ext1",
+            "source_revision": "ext1",
+            "operation_id": "example.finish",
+            "request_kind": "example/finish-request/v1",
+            "capability_revision": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "task_identity": {"kind": "current-work", "id": "work-17"},
+            "arguments": {"subject": "case-17"}
+          }
+        }
+      },
+      "expect": {
+        "status": "actionable",
+        "primary_action.operation_id": "example.finish",
+        "request_resolution.status": "action",
+        "request_resolution.result_kind": "example/finish-result/v1",
+        "request_resolution.consequence_ids.0": "action:example.external:ext1:sha256:dce17bb46073a018e2342808dbc162124ba7a957e6e0f7f3b8ffa1d8f762aa9f"
+      }
     },
     {
       "id": "agent-selected-route-is-current-applicability-only",
@@ -59,7 +92,7 @@
     },
     {
       "id": "claim-blocker-preserves-independent-action",
-      "input": {"intent": {"task": "edit"}, "contributions": [
+      "input": {"intent": {}, "contributions": [
         {"owner": "verification", "revision": "v1", "blockers": [{"code": "proof-missing", "message": "release proof is missing", "recovery": "run verification.release", "affects": ["claim:release"]}], "claims": {"blocked": ["release"]}},
         {"owner": "workspace", "revision": "w1", "actions": [{"operation_id": "workspace.edit", "arguments": {"path": "README.md"}, "effects": ["workspace-files"]}]}
       ]},
@@ -92,6 +125,43 @@
     }
   ],
   "error_cases": [
+    {
+      "id": "hidden-owner-intent-union-is-rejected",
+      "input": {"contributions": [], "intent": {"planning": {"operation": "complete"}}},
+      "error_contains": "unsupported public request field planning"
+    },
+    {
+      "id": "cross-owner-effect-is-rejected",
+      "input": {"contributions": [{"owner": "workspace", "revision": "w1", "actions": [{"operation_id": "workspace.edit", "arguments": {"path": "README.md"}, "effects": ["external-state"]}]}], "intent": {}},
+      "error_contains": "advertises undeclared effect external-state"
+    },
+    {
+      "id": "self-declared-claim-authority-is-rejected",
+      "input": {"contributions": [{"owner": "workspace", "revision": "w1", "claims": {"allowed": ["complete"]}}], "intent": {}},
+      "error_contains": "allows claim complete without exclusive claim authority"
+    },
+    {
+      "id": "unknown-public-request-kind-is-rejected",
+      "input": {
+        "contributions": [{"owner": "example.external", "revision": "ext1", "request_response": {"request_id": "finish-17", "status": "settled"}, "settled": true}],
+        "intent": {
+          "current_work": {"kind": "current-work", "id": "work-17"},
+          "public_request": {
+            "kind": "agentic-workspace/public-request/v1",
+            "id": "finish-17",
+            "owner": "example.external",
+            "owner_revision": "ext1",
+            "source_revision": "ext1",
+            "operation_id": "example.finish",
+            "request_kind": "example/unknown-request/v1",
+            "capability_revision": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "task_identity": {"kind": "current-work", "id": "work-17"},
+            "arguments": {}
+          }
+        }
+      },
+      "error_contains": "does not construct operation example.finish"
+    },
     {
       "id": "numeric-priority-is-rejected",
       "input": {"contributions": [{"owner": "module", "revision": "one", "actions": [{"operation_id": "module.act", "priority": 1}]}], "intent": {}},
@@ -160,10 +230,10 @@
       "inputs": [
         {"contributions": [
           {"owner": "zeta", "revision": "z1", "actions": [{"operation_id": "same", "arguments": {"value": "b"}}, {"operation_id": "same", "arguments": {"value": "a"}}]},
-          {"owner": "alpha", "revision": "a1", "claims": {"allowed": ["progress"]}}
+          {"owner": "alpha", "revision": "a1", "claims": {"allowed": ["alpha-progress"]}}
         ], "intent": {}},
         {"contributions": [
-          {"owner": "alpha", "revision": "a1", "claims": {"allowed": ["progress"]}},
+          {"owner": "alpha", "revision": "a1", "claims": {"allowed": ["alpha-progress"]}},
           {"owner": "zeta", "revision": "z1", "actions": [{"operation_id": "same", "arguments": {"value": "a"}}, {"operation_id": "same", "arguments": {"value": "b"}}]}
         ], "intent": {}}
       ]

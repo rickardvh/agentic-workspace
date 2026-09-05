@@ -22,6 +22,10 @@
           "description": "Acting-agent selection bound to the current task and route-source revisions.",
           "$ref": "#/$defs/semantic_route_selection"
         },
+        "public_request": {
+          "description": "One typed source-owner intention selected by an agent or human and bound to current task and capability revisions.",
+          "$ref": "#/$defs/public_request"
+        },
         "outcome": {
           "description": "Exact outcome authority required before the task may be terminal.",
           "type": "object",
@@ -34,10 +38,15 @@
         }
       },
       "dependentRequired": {
-        "current_work": ["semantic_route_source", "semantic_task_routes"],
         "semantic_route_source": ["current_work", "semantic_task_routes"],
-        "semantic_task_routes": ["current_work", "semantic_route_source"]
-      }
+        "semantic_task_routes": ["current_work", "semantic_route_source"],
+        "public_request": ["current_work"]
+      },
+      "additionalProperties": false
+    },
+    "capability_contract": {
+      "description": "Current declarative ownership and constructibility authority for any authority-bearing contribution or public request.",
+      "$ref": "#/$defs/capability_contract"
     },
     "contributions": {
       "description": "Current source-owned contributions composed by the shared reducer.",
@@ -120,6 +129,99 @@
       ],
       "additionalProperties": false
     },
+    "request_argument": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string", "minLength": 1, "description": "Public argument name."},
+        "type": {"enum": ["string", "boolean", "integer", "number", "string-list", "object"], "description": "Small data-shape primitive used to validate the argument."},
+        "required": {"type": "boolean", "description": "Whether the request must carry this argument."}
+      },
+      "required": ["name", "type"],
+      "additionalProperties": false
+    },
+    "operation_capability": {
+      "type": "object",
+      "properties": {
+        "id": {"type": "string", "minLength": 1, "description": "Globally unique operation identity owned by one capability owner."},
+        "request": {
+          "type": "object",
+          "properties": {
+            "kind": {"type": "string", "minLength": 1, "description": "Unique public request discriminator for this operation."},
+            "arguments": {"type": "array", "items": {"$ref": "#/$defs/request_argument"}, "description": "Bounded typed argument declarations; undeclared arguments fail closed."}
+          },
+          "required": ["kind"],
+          "additionalProperties": false
+        },
+        "result_kind": {"type": "string", "minLength": 1, "description": "Typed result discriminator clients may expect after invocation."},
+        "effects": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true, "description": "Maximum effects this operation may advertise, all owned by the same capability owner."},
+        "claims": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true, "description": "Claims this operation may establish when the same owner has exclusive claim authority."}
+      },
+      "required": ["id", "request", "result_kind"],
+      "additionalProperties": false
+    },
+    "capability_owner": {
+      "type": "object",
+      "properties": {
+        "owner": {"type": "string", "minLength": 1, "description": "Stable capability owner identity."},
+        "revision": {"type": "string", "minLength": 1, "description": "Current semantic revision of this owner declaration."},
+        "domains": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true, "description": "Exclusive domains managed by this owner."},
+        "effects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {"type": "string", "minLength": 1, "description": "Stable effect identity."},
+              "domain": {"type": "string", "minLength": 1, "description": "One domain declared by the same owner."}
+            },
+            "required": ["id", "domain"],
+            "additionalProperties": false
+          }
+        },
+        "operations": {"type": "array", "items": {"$ref": "#/$defs/operation_capability"}, "description": "Public operations this owner can construct and answer."}
+      },
+      "required": ["owner", "revision"],
+      "additionalProperties": false
+    },
+    "capability_contract": {
+      "type": "object",
+      "properties": {
+        "kind": {"const": "agentic-workspace/capability-contract/v1", "description": "Capability contract discriminator."},
+        "revision": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$", "description": "Current source revision to which public requests bind."},
+        "owners": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/capability_owner"}, "description": "Current admitted capability owners."},
+        "claim_authorities": {
+          "type": "array",
+          "description": "Exclusive claim-to-owner assignments admitted independently of source contributions.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "claim": {"type": "string", "minLength": 1, "description": "Grantable claim identity."},
+              "owner": {"type": "string", "minLength": 1, "description": "Sole capability owner authorized to grant the claim."}
+            },
+            "required": ["claim", "owner"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["kind", "revision", "owners"],
+      "additionalProperties": false
+    },
+    "public_request": {
+      "type": "object",
+      "properties": {
+        "kind": {"const": "agentic-workspace/public-request/v1", "description": "Public request envelope discriminator."},
+        "id": {"type": "string", "minLength": 1, "description": "Caller correlation identity for one bounded request."},
+        "owner": {"type": "string", "minLength": 1, "description": "Capability owner asked to interpret the request."},
+        "owner_revision": {"type": "string", "minLength": 1, "description": "Capability-owner semantic revision current when selected."},
+        "source_revision": {"type": "string", "minLength": 1, "description": "Owner contribution revision current when selected."},
+        "operation_id": {"type": "string", "minLength": 1, "description": "Declared owner operation the request may construct."},
+        "request_kind": {"type": "string", "minLength": 1, "description": "Declared typed request discriminator."},
+        "capability_revision": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$", "description": "Capability contract revision current when selected."},
+        "task_identity": {"$ref": "#/$defs/current_work", "description": "Current work identity when the acting agent or human selected the request."},
+        "arguments": {"type": "object", "description": "Arguments admitted by the declared bounded request shape."}
+      },
+      "required": ["kind", "id", "owner", "owner_revision", "source_revision", "operation_id", "request_kind", "capability_revision", "task_identity", "arguments"],
+      "additionalProperties": false
+    },
     "affects": {
       "type": "array",
       "minItems": 1,
@@ -196,7 +298,16 @@
             "blocked": {"type": "array", "items": {"type": "string", "minLength": 1}}
           }
         },
-        "outcome": {"$ref": "#/$defs/outcome"}
+        "outcome": {"$ref": "#/$defs/outcome"},
+        "request_response": {
+          "type": "object",
+          "properties": {
+            "request_id": {"type": "string", "minLength": 1, "description": "Public request correlation identity being answered."},
+            "status": {"enum": ["action", "decision", "blocked", "settled"], "description": "Kind of exact owner response present in this contribution."}
+          },
+          "required": ["request_id", "status"],
+          "additionalProperties": false
+        }
       },
       "required": ["owner", "revision"],
       "not": {"required": ["terminal"]}

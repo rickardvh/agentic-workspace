@@ -3611,12 +3611,16 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
             raise TypeError("source_contributions must be a list")
         intent = inputs.get("intent")
         if intent is None:
-            intent = {"task": str(inputs.get("task") or ""), "changed_paths": _as_list(inputs.get("changed_paths"))}
+            intent = {}
         if not isinstance(intent, dict):
             raise TypeError("intent must be an object")
+        capability_contract = inputs.get("capability_contract")
+        if capability_contract is not None and not isinstance(capability_contract, dict):
+            raise TypeError("capability_contract must be an object")
         return compile_source_decision(
             [item for item in contributions if isinstance(item, dict)],
             intent=intent,
+            capability_contract=capability_contract,
         )
 
     future_context_signals = [_as_dict(item) for item in _as_list(inputs.get("future_context_signals")) if isinstance(item, dict)]

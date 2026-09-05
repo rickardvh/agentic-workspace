@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -9,6 +11,9 @@ from agentic_workspace.decision import compile_source_decision, select_decision_
 from agentic_workspace.modules import Module, discover_modules, module_contributions, register_module_operations
 from agentic_workspace.operating_decision import compile_operating_decision
 from agentic_workspace.operations import Operation, OperationContractError, OperationDispatcher, StaleInvocationError
+
+ROOT = Path(__file__).resolve().parents[1]
+CAPABILITY_CONTRACT = json.loads((ROOT / "tests/vectors/capability_contract.json").read_text(encoding="utf-8"))
 
 
 def _planning(state: dict[str, Any]) -> dict[str, Any]:
@@ -27,7 +32,7 @@ def _planning(state: dict[str, Any]) -> dict[str, Any]:
         "facts": {"status": state["status"]},
         "actions": actions,
         "claims": {
-            "allowed": ["progress", "complete"] if state["status"] == "complete" else ["progress"],
+            "allowed": ["planning-progress", "complete"] if state["status"] == "complete" else ["planning-progress"],
             "blocked": [] if state["status"] == "complete" else ["complete"],
         },
         "settled": state["status"] == "complete",
@@ -40,11 +45,13 @@ def _planning(state: dict[str, Any]) -> dict[str, Any]:
 
 
 def _ship_intent() -> dict[str, Any]:
-    return {"task": "ship", "outcome": {"id": "ship", "owner": "planning", "claim": "complete"}}
+    return {"outcome": {"id": "ship", "owner": "planning", "claim": "complete"}}
 
 
 def test_same_source_state_has_one_answer_across_views(shared_core_binary: object) -> None:
-    decision = compile_source_decision([_planning({"status": "open", "revision": "p1"})], intent=_ship_intent())
+    decision = compile_source_decision(
+        [_planning({"status": "open", "revision": "p1"})], intent=_ship_intent(), capability_contract=CAPABILITY_CONTRACT
+    )
     cli = select_decision_detail(decision, ["status", "primary_action", "claim_boundary"])
     python = select_decision_detail(decision, ["primary_action", "status"])
 
@@ -55,8 +62,22 @@ def test_same_source_state_has_one_answer_across_views(shared_core_binary: objec
 
 def test_canonical_compiler_routes_source_contributions_without_consumer_semantics(shared_core_binary: object) -> None:
     contribution = _planning({"status": "open", "revision": "p1"})
-    cli = compile_operating_decision(inputs={"consumer": "cli", "source_contributions": [contribution], "intent": _ship_intent()})
-    python = compile_operating_decision(inputs={"consumer": "python", "source_contributions": [contribution], "intent": _ship_intent()})
+    cli = compile_operating_decision(
+        inputs={
+            "consumer": "cli",
+            "source_contributions": [contribution],
+            "intent": _ship_intent(),
+            "capability_contract": CAPABILITY_CONTRACT,
+        }
+    )
+    python = compile_operating_decision(
+        inputs={
+            "consumer": "python",
+            "source_contributions": [contribution],
+            "intent": _ship_intent(),
+            "capability_contract": CAPABILITY_CONTRACT,
+        }
+    )
     assert cli == python
 
 
@@ -65,7 +86,7 @@ def test_result_reconciles_to_the_next_decision_without_polling(shared_core_bina
     calls = 0
 
     def resolve() -> dict[str, Any]:
-        return compile_source_decision([_planning(state)], intent=_ship_intent())
+        return compile_source_decision([_planning(state)], intent=_ship_intent(), capability_contract=CAPABILITY_CONTRACT)
 
     def complete(values: dict[str, Any]) -> dict[str, Any]:
         nonlocal calls
@@ -93,7 +114,7 @@ def test_result_reconciles_to_the_next_decision_without_polling(shared_core_bina
 
     assert result["status"] == "applied"
     assert result["next_decision"]["status"] == "terminal"
-    assert result["next_decision"]["claim_boundary"] == {"allowed": ["complete", "progress"], "blocked": []}
+    assert result["next_decision"]["claim_boundary"] == {"allowed": ["complete", "planning-progress"], "blocked": []}
     assert dispatcher.invoke(invocation, resolve_decision=resolve) == result
     assert calls == 1
 
@@ -115,7 +136,7 @@ def test_stale_and_invalid_invocations_fail_closed(shared_core_binary: object) -
     dispatcher.register(
         Operation("planning.complete", {"type": "object"}, ("planning-state",), lambda _: {"status": "applied", "effects": []})
     )
-    decision = compile_source_decision([_planning(state)])
+    decision = compile_source_decision([_planning(state)], capability_contract=CAPABILITY_CONTRACT)
     stale = {**decision["primary_action"], "expected_input_revision": "sha256:stale"}
 
     with pytest.raises(StaleInvocationError):
@@ -142,9 +163,9 @@ def test_out_of_tree_module_uses_the_generic_contribution_and_operation_seam(sha
             "relevant": context["task"] == "external",
             "actions": [{"operation_id": "example.finish", "arguments": {}, "effects": ["external-state"]}] if state["pending"] else [],
             "settled": not state["pending"],
-            "claims": {"allowed": ["complete"] if not state["pending"] else []},
+            "claims": {"allowed": ["external-complete"] if not state["pending"] else []},
             "outcome": (
-                {"id": "external", "status": "complete", "claim": "complete", "evidence_revision": state["revision"]}
+                {"id": "external", "status": "complete", "claim": "external-complete", "evidence_revision": state["revision"]}
                 if not state["pending"]
                 else None
             ),
@@ -163,8 +184,11 @@ def test_out_of_tree_module_uses_the_generic_contribution_and_operation_seam(sha
     register_module_operations(dispatcher, modules)
 
     def resolve() -> dict[str, Any]:
-        context = {"task": "external", "outcome": {"id": "external", "owner": "example.external", "claim": "complete"}}
-        return compile_source_decision(module_contributions(modules, context=context), intent=context)
+        context = {"task": "external"}
+        intent = {"outcome": {"id": "external", "owner": "example.external", "claim": "external-complete"}}
+        return compile_source_decision(
+            module_contributions(modules, context=context), intent=intent, capability_contract=CAPABILITY_CONTRACT
+        )
 
     first = resolve()
     result = dispatcher.invoke(first["primary_action"], resolve_decision=resolve)
@@ -178,4 +202,4 @@ def test_irrelevant_modules_are_absent_from_the_decision(shared_core_binary: obj
         contribute=lambda context: None if context["task"] != "external" else {"revision": "one"},
     )
     contributions = module_contributions([module], context={"task": "direct"})
-    assert compile_source_decision(contributions, intent={"task": "direct"})["relevant_owners"] == []
+    assert compile_source_decision(contributions)["relevant_owners"] == []

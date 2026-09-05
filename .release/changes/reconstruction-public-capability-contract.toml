@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "major"
+summary = "Bind typed public requests and module effects, operations, and claims to one declarative capability contract enforced by the shared Rust core."
+issues = [2986, 2606, 3020]

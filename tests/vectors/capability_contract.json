@@ -1,0 +1,136 @@
+{
+  "kind": "agentic-workspace/capability-contract/v1",
+  "revision": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "owners": [
+    {
+      "owner": "alpha",
+      "revision": "a1",
+      "domains": ["alpha-domain"],
+      "effects": [],
+      "operations": [
+        {
+          "id": "alpha.act",
+          "request": {"kind": "example/alpha-act-request/v1", "arguments": [{"name": "value", "type": "string", "required": true}]},
+          "result_kind": "example/alpha-act-result/v1"
+        }
+      ]
+    },
+    {
+      "owner": "example.external",
+      "revision": "ext1",
+      "domains": ["external-worker"],
+      "effects": [{"id": "external-state", "domain": "external-worker"}],
+      "operations": [
+        {
+          "id": "example.finish",
+          "request": {"kind": "example/finish-request/v1", "arguments": [{"name": "subject", "type": "string"}]},
+          "result_kind": "example/finish-result/v1",
+          "effects": ["external-state"],
+          "claims": ["external-complete"]
+        }
+      ]
+    },
+    {
+      "owner": "module",
+      "revision": "one",
+      "domains": ["module-domain"],
+      "operations": [
+        {"id": "module.act", "request": {"kind": "example/module-act-request/v1"}, "result_kind": "example/module-act-result/v1"}
+      ]
+    },
+    {
+      "owner": "planning",
+      "revision": "p1",
+      "domains": ["planning"],
+      "effects": [
+        {"id": "plan-a", "domain": "planning"},
+        {"id": "plan-b", "domain": "planning"},
+        {"id": "planning-state", "domain": "planning"}
+      ],
+      "operations": [
+        {
+          "id": "planning.advance",
+          "request": {"kind": "planning/advance-request/v1", "arguments": [{"name": "item", "type": "string", "required": true}]},
+          "result_kind": "planning/advance-result/v1",
+          "effects": ["plan-a", "plan-b", "planning-state"]
+        },
+        {
+          "id": "planning.complete",
+          "request": {"kind": "planning/complete-request/v1", "arguments": [{"name": "item", "type": "string", "required": true}]},
+          "result_kind": "planning/complete-result/v1",
+          "effects": ["planning-state"],
+          "claims": ["complete", "planning-progress"]
+        }
+      ]
+    },
+    {
+      "owner": "release-owner",
+      "revision": "r1",
+      "domains": ["release"],
+      "operations": []
+    },
+    {
+      "owner": "repository",
+      "revision": "r2",
+      "domains": ["repository"],
+      "operations": [
+        {"id": "repository.answer", "request": {"kind": "repository/answer-request/v1"}, "result_kind": "repository/answer-result/v1"}
+      ]
+    },
+    {
+      "owner": "verification",
+      "revision": "v1",
+      "domains": ["verification"],
+      "operations": []
+    },
+    {
+      "owner": "workspace",
+      "revision": "w1",
+      "domains": ["workspace"],
+      "effects": [
+        {"id": "workspace-files", "domain": "workspace"},
+        {"id": "workspace-read", "domain": "workspace"}
+      ],
+      "operations": [
+        {
+          "id": "workspace.edit",
+          "request": {"kind": "workspace/edit-request/v1", "arguments": [{"name": "path", "type": "string", "required": true}]},
+          "result_kind": "workspace/edit-result/v1",
+          "effects": ["workspace-files"]
+        },
+        {
+          "id": "workspace.inspect",
+          "request": {"kind": "workspace/inspect-request/v1"},
+          "result_kind": "workspace/inspect-result/v1",
+          "effects": ["workspace-read"],
+          "claims": ["workspace-progress"]
+        }
+      ]
+    },
+    {
+      "owner": "zeta",
+      "revision": "z1",
+      "domains": ["zeta-domain"],
+      "operations": [
+        {
+          "id": "zeta.act",
+          "request": {"kind": "example/zeta-act-request/v1", "arguments": [{"name": "value", "type": "string", "required": true}]},
+          "result_kind": "example/zeta-act-result/v1"
+        },
+        {
+          "id": "same",
+          "request": {"kind": "example/same-request/v1", "arguments": [{"name": "value", "type": "string", "required": true}]},
+          "result_kind": "example/same-result/v1"
+        }
+      ]
+    }
+  ],
+  "claim_authorities": [
+    {"claim": "alpha-progress", "owner": "alpha"},
+    {"claim": "complete", "owner": "planning"},
+    {"claim": "external-complete", "owner": "example.external"},
+    {"claim": "planning-progress", "owner": "planning"},
+    {"claim": "release", "owner": "release-owner"},
+    {"claim": "workspace-progress", "owner": "workspace"}
+  ]
+}

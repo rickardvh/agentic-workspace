@@ -27,8 +27,26 @@ Language-neutral input envelope for the shared operating-decision core.
 | `intent.semantic_task_routes.source_revision` | string | yes |  | Route declaration revision current when the selection was made. |  |  |
 | `intent.semantic_task_routes.provenance` | const `"agent-selected"` | yes |  | Selection authority, never a lexical classifier. |  |  |
 | `intent.semantic_task_routes.authority_effect` | const `"applicability-only"` | yes |  | Ceiling preventing a route from granting effects or claims. |  |  |
+| `intent.public_request` | ref `#/$defs/public_request` | no |  | One typed source-owner intention selected by an agent or human and bound to current task and capability revisions. |  |  |
+| `intent.public_request.kind` | const `"agentic-workspace/public-request/v1"` | yes |  | Public request envelope discriminator. |  |  |
+| `intent.public_request.id` | string | yes |  | Caller correlation identity for one bounded request. |  |  |
+| `intent.public_request.owner` | string | yes |  | Capability owner asked to interpret the request. |  |  |
+| `intent.public_request.owner_revision` | string | yes |  | Capability-owner semantic revision current when selected. |  |  |
+| `intent.public_request.source_revision` | string | yes |  | Owner contribution revision current when selected. |  |  |
+| `intent.public_request.operation_id` | string | yes |  | Declared owner operation the request may construct. |  |  |
+| `intent.public_request.request_kind` | string | yes |  | Declared typed request discriminator. |  |  |
+| `intent.public_request.capability_revision` | string | yes |  | Capability contract revision current when selected. |  |  |
+| `intent.public_request.task_identity` | ref `#/$defs/current_work` | yes |  | Current work identity when the acting agent or human selected the request. |  |  |
+| `intent.public_request.task_identity.kind` | const `"current-work"` | yes |  | Identity namespace for current task binding. |  |  |
+| `intent.public_request.task_identity.id` | string | yes |  | Opaque current task or Planning identity. |  |  |
+| `intent.public_request.arguments` | object | yes |  | Arguments admitted by the declared bounded request shape. |  |  |
 | `intent.outcome` | object | no |  | Exact outcome authority required before the task may be terminal. |  |  |
 | `intent.outcome.id` | string | yes |  | Stable intended outcome identity. |  |  |
 | `intent.outcome.owner` | string | yes |  | Owner authorized to establish the intended outcome. |  |  |
 | `intent.outcome.claim` | string | yes |  | Claim that must be allowed for terminal status. |  |  |
+| `capability_contract` | ref `#/$defs/capability_contract` | no |  | Current declarative ownership and constructibility authority for any authority-bearing contribution or public request. |  |  |
+| `capability_contract.kind` | const `"agentic-workspace/capability-contract/v1"` | yes |  | Capability contract discriminator. |  |  |
+| `capability_contract.revision` | string | yes |  | Current source revision to which public requests bind. |  |  |
+| `capability_contract.owners` | array of ref `#/$defs/capability_owner` | yes |  | Current admitted capability owners. |  |  |
+| `capability_contract.claim_authorities` | array of object | no |  | Exclusive claim-to-owner assignments admitted independently of source contributions. |  |  |
 | `contributions` | array of ref `#/$defs/contribution` | yes |  | Current source-owned contributions composed by the shared reducer. |  |  |

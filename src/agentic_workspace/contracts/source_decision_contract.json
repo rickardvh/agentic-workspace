@@ -6,7 +6,9 @@
     "contribution": "agentic-workspace/source-contribution/v1",
     "decision": "agentic-workspace/operating-decision/v1",
     "decision_view": "agentic-workspace/decision-view/v1",
-    "invocation": "agentic-workspace/operation-invocation/v1"
+    "invocation": "agentic-workspace/operation-invocation/v1",
+    "capability_contract": "agentic-workspace/capability-contract/v1",
+    "public_request": "agentic-workspace/public-request/v1"
   },
   "statuses": ["direct", "actionable", "decision", "blocked", "terminal"],
   "consequences": {
@@ -19,6 +21,21 @@
     "currentness": ["current-work identity", "route-source revision", "current declared route"],
     "authority_effect": "applicability-only",
     "persistent_history": "none"
+  },
+  "public_requests": {
+    "selection_owner": "acting-agent-or-human",
+    "binding": ["current-work identity", "capability-contract revision", "capability-owner revision", "source-contribution revision"],
+    "constructibility": "declared request kind plus bounded typed arguments",
+    "owner_responses": ["action", "decision", "blocked", "settled"],
+    "unknown_variants": "fail-closed",
+    "execution": "invoke only the exact returned operation envelope"
+  },
+  "capability_ownership": {
+    "domains": "exclusive among current declared owners",
+    "effects": "bound to one owned domain and admitted operation",
+    "claims": "exclusive authority declared separately from a module contribution",
+    "cross_owner_results": "evidence only until the responsible owner admits a typed request",
+    "procedure_references": "non-authoritative"
   },
   "authority": {
     "data_shapes": "this JSON contract and referenced JSON Schema",

@@ -9,6 +9,48 @@ fn vectors() -> Value {
         .expect("shared vectors are valid JSON")
 }
 
+fn capability_contract() -> Value {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests/vectors/capability_contract.json");
+    serde_json::from_str(&fs::read_to_string(path).expect("capability contract is readable"))
+        .expect("capability contract is valid JSON")
+}
+
+fn authority_bearing(input: &Value) -> bool {
+    input["intent"].get("outcome").is_some()
+        || input["intent"].get("public_request").is_some()
+        || input["contributions"]
+            .as_array()
+            .is_some_and(|contributions| {
+                contributions.iter().any(|contribution| {
+                    ["actions", "blockers", "decisions"].iter().any(|field| {
+                        contribution[*field]
+                            .as_array()
+                            .is_some_and(|items| !items.is_empty())
+                    }) || contribution
+                        .get("outcome")
+                        .is_some_and(|value| !value.is_null())
+                        || contribution.get("request_response").is_some()
+                        || ["allowed", "blocked"].iter().any(|field| {
+                            contribution["claims"][*field]
+                                .as_array()
+                                .is_some_and(|items| !items.is_empty())
+                        })
+                })
+            })
+}
+
+fn expanded(input: &Value) -> Value {
+    let mut payload = input.clone();
+    if authority_bearing(&payload) {
+        payload
+            .as_object_mut()
+            .expect("input is an object")
+            .insert("capability_contract".to_owned(), capability_contract());
+    }
+    payload
+}
+
 fn selected<'a>(mut value: &'a Value, path: &str) -> &'a Value {
     for part in path.split('.') {
         value = if let Ok(index) = part.parse::<usize>() {
@@ -23,7 +65,7 @@ fn selected<'a>(mut value: &'a Value, path: &str) -> &'a Value {
 #[test]
 fn shared_success_vectors_match() {
     for case in vectors()["cases"].as_array().expect("cases are an array") {
-        let decision = agentic_workspace_core::compile_value(case["input"].clone())
+        let decision = agentic_workspace_core::compile_value(expanded(&case["input"]))
             .unwrap_or_else(|error| panic!("{}: {error}", case["id"]));
         for (path, expected) in case["expect"].as_object().expect("expect is an object") {
             assert_eq!(
@@ -42,7 +84,7 @@ fn shared_error_vectors_fail_closed() {
         .as_array()
         .expect("error cases are an array")
     {
-        let error = agentic_workspace_core::compile_value(case["input"].clone())
+        let error = agentic_workspace_core::compile_value(expanded(&case["input"]))
             .expect_err("case must fail");
         assert!(
             error.to_string().contains(
@@ -67,7 +109,8 @@ fn normalized_source_permutations_are_stable() {
             .expect("inputs are an array")
             .iter()
             .map(|input| {
-                agentic_workspace_core::compile_value(input.clone()).expect("permutation compiles")
+                agentic_workspace_core::compile_value(expanded(input))
+                    .expect("permutation compiles")
             })
             .collect::<Vec<_>>();
         assert!(
