@@ -286,24 +286,35 @@ def test_action_specific_blocker_does_not_suppress_an_independent_action() -> No
     normalized = normalize_contribution({"owner": "planning", "revision": "one", "actions": actions})
     first_identity, second_identity = [action["consequence_id"] for action in normalized["actions"]]
 
-    decision = compile_source_decision(
-        [
+    contribution = {
+        "owner": "planning",
+        "revision": "one",
+        "blockers": [
             {
-                "owner": "planning",
-                "revision": "one",
-                "blockers": [
-                    {
-                        "code": "subject-blocked",
-                        "message": "the planning subject is blocked",
-                        "affects": [first_identity],
-                    }
-                ],
-                "actions": actions,
+                "code": "subject-blocked",
+                "message": "the planning subject is blocked",
+                "affects": [first_identity],
             }
-        ]
+        ],
+        "actions": actions,
+    }
+    decision = compile_source_decision([contribution])
+    script = (
+        'import { compileSourceDecision } from "./generated/workspace/typescript/src/semanticDecision.mjs";'
+        'let text=""; for await (const chunk of process.stdin) text += chunk;'
+        "process.stdout.write(JSON.stringify(compileSourceDecision(JSON.parse(text))));"
+    )
+    typescript = subprocess.run(
+        ["node", "--input-type=module", "--eval", script],
+        cwd=Path(__file__).resolve().parents[1],
+        input=json.dumps([contribution]),
+        text=True,
+        capture_output=True,
+        check=True,
     )
 
     assert first_identity != second_identity
+    assert json.loads(typescript.stdout) == decision
     assert decision["status"] == "actionable"
     assert decision["primary_action"]["arguments"] == {"item": "b"}
     assert decision["primary_action"]["effects"] == ["plan-b"]
