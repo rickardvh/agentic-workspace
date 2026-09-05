@@ -189,12 +189,18 @@ struct BoundedDecisionInput {
     id: String,
     #[serde(default)]
     question: String,
-    #[serde(default)]
-    response_operation_id: String,
+    response_request: AnswerRequestInput,
     #[serde(default)]
     choices: Vec<Choice>,
     #[serde(default)]
     affects: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct AnswerRequestInput {
+    request_kind: String,
+    arguments: Value,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -364,7 +370,8 @@ struct NormalizedDecision {
     owner: String,
     revision: String,
     question: String,
-    response_operation_id: String,
+    response_request: Value,
+    response_schema: Value,
     choices: Vec<Choice>,
     affects: Vec<String>,
 }
@@ -717,6 +724,7 @@ fn normalize_capability_contract(
 fn normalize_contribution(
     input: ContributionInput,
     capabilities: Option<&NormalizedCapabilityContract>,
+    intent: &Value,
 ) -> Result<NormalizedContribution, CoreError> {
     let owner = require_text(&input.owner, "contribution.owner")?;
     let revision = require_text(&input.revision, &format!("{owner}.revision"))?;
@@ -797,22 +805,11 @@ fn normalize_contribution(
         .decisions
         .into_iter()
         .enumerate()
-        .map(|(index, decision)| normalize_decision(decision, &owner, &revision, index))
+        .map(|(index, decision)| {
+            normalize_decision(decision, &owner, &revision, index, capabilities, intent)
+        })
         .collect::<Result<Vec<_>, _>>()?;
     decisions.sort_by(|left, right| left.consequence_id.cmp(&right.consequence_id));
-    if let Some(capability) = capability {
-        for decision in &decisions {
-            if !capability
-                .operations
-                .contains_key(&decision.response_operation_id)
-            {
-                return Err(CoreError::new(format!(
-                    "{owner} decision {} names undeclared response operation {}",
-                    decision.id, decision.response_operation_id
-                )));
-            }
-        }
-    }
 
     let blocked = strings(
         input.claims.blocked,
@@ -1049,20 +1046,44 @@ fn normalize_decision(
     owner: &str,
     revision: &str,
     index: usize,
+    capabilities: Option<&NormalizedCapabilityContract>,
+    intent: &Value,
 ) -> Result<NormalizedDecision, CoreError> {
     let id = require_text(&input.id, &format!("{owner}.decisions[{index}].id"))?;
     let question = require_text(
         &input.question,
         &format!("{owner}.decisions[{index}].question"),
     )?;
-    let response_operation_id = require_text(
-        &input.response_operation_id,
-        &format!("{owner}.decisions[{index}].response_operation_id"),
-    )?;
-    if input.choices.is_empty() {
-        return Err(CoreError::new(format!(
-            "{owner}.decisions[{index}] requires bounded choices"
-        )));
+    let contract = capabilities
+        .ok_or_else(|| CoreError::new("bounded answer requires admitted capabilities"))?;
+    let capability = contract
+        .owners
+        .get(owner)
+        .ok_or_else(|| CoreError::new("bounded answer owner is not admitted"))?;
+    let shape = capability
+        .requests
+        .get(&input.response_request.request_kind)
+        .ok_or_else(|| CoreError::new("bounded answer names undeclared response request"))?;
+    let current = current_work(intent)?
+        .ok_or_else(|| CoreError::new("bounded answer requires current_work"))?;
+    let fixed = input
+        .response_request
+        .arguments
+        .as_object()
+        .ok_or_else(|| CoreError::new("response request arguments must be an object"))?;
+    if fixed.contains_key("answer") {
+        return Err(CoreError::new(
+            "response request cannot prefill the human answer",
+        ));
+    }
+    for choice in &input.choices {
+        let mut arguments = fixed.clone();
+        arguments.insert("answer".to_owned(), Value::String(choice.id.clone()));
+        validate_operation_arguments(
+            &Value::Object(arguments),
+            &shape.input_schema,
+            "bounded answer choice",
+        )?;
     }
     let choices = input
         .choices
@@ -1087,20 +1108,23 @@ fn normalize_decision(
     )?;
     let identity = json!({
         "id": id, "owner": owner, "revision": revision, "question": question,
-        "response_operation_id": response_operation_id, "choices": choices, "affects": affected,
+        "response_request": input.response_request, "response_schema": shape.input_schema, "current_work": current, "capability_revision": contract.revision, "choices": choices, "affects": affected,
     });
+    let consequence_id = format!("decision:{owner}:{revision}:{}", digest(&identity)?);
+    let response_request = json!({"kind": PUBLIC_REQUEST_KIND, "id": format!("answer:{consequence_id}"),
+        "owner": owner, "owner_revision": capability.revision, "source_revision": revision,
+        "request_kind": input.response_request.request_kind, "capability_revision": contract.revision,
+        "task_identity": current, "arguments": input.response_request.arguments});
     Ok(NormalizedDecision {
-        consequence_id: format!("decision:{owner}:{revision}:{}", digest(&identity)?),
+        consequence_id,
+        response_request,
+        response_schema: shape.input_schema.clone(),
         id: identity["id"].as_str().expect("id is text").to_owned(),
         owner: owner.to_owned(),
         revision: revision.to_owned(),
         question: identity["question"]
             .as_str()
             .expect("question is text")
-            .to_owned(),
-        response_operation_id: identity["response_operation_id"]
-            .as_str()
-            .expect("response operation is text")
             .to_owned(),
         choices: serde_json::from_value(identity["choices"].clone()).expect("choices are valid"),
         affects: serde_json::from_value(identity["affects"].clone()).expect("affects are strings"),
@@ -1443,6 +1467,41 @@ pub fn prepare_request_value(value: Value) -> Result<Value, CoreError> {
     )
 }
 
+/// Bind only the human/domain-owned answer into the current owner's request.
+pub fn answer_decision_value(value: Value) -> Result<Value, CoreError> {
+    #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct Answer {
+        decision: Value,
+        question: String,
+        answer: Value,
+        capability_contract: Value,
+    }
+    let input: Answer =
+        serde_json::from_value(value).map_err(|error| CoreError::new(error.to_string()))?;
+    let question = input.decision["pending_consequences"]["decisions"]
+        .as_array()
+        .and_then(|items| {
+            items
+                .iter()
+                .find(|item| item["consequence_id"] == input.question)
+        })
+        .ok_or_else(|| CoreError::new("answer references a stale or absent decision"))?;
+    if question["choices"].as_array().is_some_and(|items| {
+        !items.is_empty() && !items.iter().any(|item| item["id"] == input.answer)
+    }) {
+        return Err(CoreError::new("answer is not a returned bounded choice"));
+    }
+    let mut request = question["response_request"].clone();
+    request["arguments"]
+        .as_object_mut()
+        .ok_or_else(|| CoreError::new("current decision has no response request"))?
+        .insert("answer".to_owned(), input.answer);
+    prepare_request_value(
+        json!({"current_work": request["task_identity"], "request": request, "capability_contract": input.capability_contract}),
+    )
+}
+
 pub fn compile_value(value: Value) -> Result<Value, CoreError> {
     let input: DecisionInput =
         serde_json::from_value(value).map_err(|error| CoreError::new(error.to_string()))?;
@@ -1531,7 +1590,7 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
     let normalized = input
         .contributions
         .into_iter()
-        .map(|contribution| normalize_contribution(contribution, capabilities.as_ref()))
+        .map(|contribution| normalize_contribution(contribution, capabilities.as_ref(), &intent))
         .collect::<Result<Vec<_>, _>>()?;
     let request_resolution = resolve_public_request(public_request.as_ref(), &normalized)?;
     let mut relevant = normalized

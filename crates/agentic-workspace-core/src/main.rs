@@ -19,6 +19,11 @@ fn main() {
         .is_some_and(|item| item.len() == 1 && item.contains_key("prepare_request"))
     {
         agentic_workspace_core::prepare_request_value(request["prepare_request"].clone())
+    } else if request
+        .as_object()
+        .is_some_and(|item| item.len() == 1 && item.contains_key("answer_decision"))
+    {
+        agentic_workspace_core::answer_decision_value(request["answer_decision"].clone())
     } else {
         agentic_workspace_core::compile_value(request)
     };

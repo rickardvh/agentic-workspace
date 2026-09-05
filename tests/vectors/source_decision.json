@@ -1,6 +1,43 @@
 {
   "schema_version": 1,
   "cases": [
+{
+  "id": "open-answer-returns-owner-request-and-schema",
+  "input": {
+    "contributions": [
+      {
+        "owner": "repository",
+        "revision": "r2",
+        "decisions": [
+          {
+            "id": "license",
+            "question": "Choose a license",
+            "response_request": {
+              "request_kind": "repository/answer/v1",
+              "arguments": {}
+            },
+            "affects": [
+              "task"
+            ]
+          }
+        ]
+      }
+    ],
+    "intent": {
+      "current_work": {
+        "kind": "current-work",
+        "id": "answer-work"
+      }
+    }
+  },
+  "expect": {
+    "pending_consequences.decisions.0.choices": [],
+    "pending_consequences.decisions.0.response_request.arguments": {},
+    "pending_consequences.decisions.0.response_schema.required": [
+      "answer"
+    ]
+  }
+},
     {
       "id": "request-specific-response-with-unrelated-owner-action",
       "input": {
@@ -1258,7 +1295,7 @@
     },
     {
       "id": "task-decision-is-current-and-bounded",
-      "input": {"contributions": [{"owner": "repository", "revision": "r2", "decisions": [{"id": "license", "question": "Choose a license", "response_operation_id": "repository.answer", "choices": [{"id": "mit", "label": "MIT"}], "affects": ["task"]}]}], "intent": {}},
+      "input": {"contributions": [{"owner": "repository", "revision": "r2", "decisions": [{"id": "license", "question": "Choose a license", "response_request": {"request_kind": "repository/answer/v1", "arguments": {}}, "choices": [{"id": "mit", "label": "MIT"}], "affects": ["task"]}]}], "intent": {"current_work": {"kind": "current-work", "id": "answer-work"}}},
       "expect": {"status": "decision", "decision_request.owner": "repository", "decision_request.revision": "r2", "decision_request.choices.0.id": "mit"}
     },
     {
@@ -1271,6 +1308,153 @@
     }
   ],
   "error_cases": [
+{
+  "id": "answer-cannot-prefill-human-choice",
+  "input": {
+    "contributions": [
+      {
+        "owner": "repository",
+        "revision": "r2",
+        "decisions": [
+          {
+            "id": "license",
+            "question": "Choose a license",
+            "response_request": {
+              "request_kind": "repository/answer/v1",
+              "arguments": {
+                "answer": "mit"
+              }
+            },
+            "choices": [
+              {
+                "id": "mit",
+                "label": "MIT"
+              }
+            ],
+            "affects": [
+              "task"
+            ]
+          }
+        ]
+      }
+    ],
+    "intent": {
+      "current_work": {
+        "kind": "current-work",
+        "id": "answer-work"
+      }
+    }
+  },
+  "error_contains": "cannot prefill"
+},
+{
+  "id": "answer-request-must-be-admitted",
+  "input": {
+    "contributions": [
+      {
+        "owner": "repository",
+        "revision": "r2",
+        "decisions": [
+          {
+            "id": "license",
+            "question": "Choose a license",
+            "response_request": {
+              "request_kind": "hidden/answer",
+              "arguments": {}
+            },
+            "choices": [
+              {
+                "id": "mit",
+                "label": "MIT"
+              }
+            ],
+            "affects": [
+              "task"
+            ]
+          }
+        ]
+      }
+    ],
+    "intent": {
+      "current_work": {
+        "kind": "current-work",
+        "id": "answer-work"
+      }
+    }
+  },
+  "error_contains": "undeclared response request"
+},
+{
+  "id": "answer-fixed-fields-must-fit-schema",
+  "input": {
+    "contributions": [
+      {
+        "owner": "repository",
+        "revision": "r2",
+        "decisions": [
+          {
+            "id": "license",
+            "question": "Choose a license",
+            "response_request": {
+              "request_kind": "repository/answer/v1",
+              "arguments": {
+                "hidden_target": "other"
+              }
+            },
+            "choices": [
+              {
+                "id": "mit",
+                "label": "MIT"
+              }
+            ],
+            "affects": [
+              "task"
+            ]
+          }
+        ]
+      }
+    ],
+    "intent": {
+      "current_work": {
+        "kind": "current-work",
+        "id": "answer-work"
+      }
+    }
+  },
+  "error_contains": "violate input_schema"
+},
+{
+  "id": "answer-requires-current-work",
+  "input": {
+    "intent": {},
+    "contributions": [
+      {
+        "owner": "repository",
+        "revision": "r2",
+        "decisions": [
+          {
+            "id": "license",
+            "question": "Choose a license",
+            "response_request": {
+              "request_kind": "repository/answer/v1",
+              "arguments": {}
+            },
+            "choices": [
+              {
+                "id": "mit",
+                "label": "MIT"
+              }
+            ],
+            "affects": [
+              "task"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "error_contains": "requires current_work"
+},
     {
       "id": "same-request-id-changed-valid-arguments-rejects-old-response",
       "input": {
@@ -1626,7 +1810,7 @@
               {
                 "id": "wait",
                 "question": "Proceed?",
-                "response_operation_id": "example.finish",
+                "response_request": {"request_kind": "example.external/answer/v1", "arguments": {}},
                 "choices": [
                   {
                     "id": "yes",
@@ -1640,7 +1824,7 @@
             ]
           }
         ],
-        "intent": {}
+        "intent": {"current_work": {"kind": "current-work", "id": "answer-work"}}
       },
       "error_contains": "without admitted restriction authority"
     },
