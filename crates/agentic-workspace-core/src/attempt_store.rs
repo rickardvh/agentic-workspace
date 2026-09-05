@@ -13,11 +13,11 @@ const DIRECTORY: &str = ".agentic-workspace/local/effects";
 
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
-struct Evidence {
-    target: String,
-    path: String,
-    owner: String,
-    revision: String,
+pub(crate) struct Evidence {
+    pub(crate) target: String,
+    pub(crate) path: String,
+    pub(crate) owner: String,
+    pub(crate) revision: String,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -67,6 +67,20 @@ fn checked(root: &Root, relative: &str, create_parents: bool) -> Result<PathBuf,
     {
         return Err(error("invalid effect evidence name"));
     }
+    confined(root, relative, create_parents)
+}
+fn confined(root: &Root, relative: &str, create_parents: bool) -> Result<PathBuf, CoreError> {
+    use std::path::Component;
+    let path = std::path::Path::new(relative);
+    if relative.is_empty()
+        || relative.contains('\\')
+        || path
+            .components()
+            .any(|part| !matches!(part, Component::Normal(_)))
+    {
+        return Err(error("evidence path must be relative and confined"));
+    }
+    let name = relative.rsplit('/').next().unwrap_or("");
     let mut current = PathBuf::new();
     for part in relative.split('/') {
         current.push(part);
@@ -102,6 +116,25 @@ fn checked(root: &Root, relative: &str, create_parents: bool) -> Result<PathBuf,
         }
     }
     Ok(current)
+}
+
+/// The trusted source owner supplies this exact evidence; a caller-computed
+/// checksum or recognizable path is not admission of source authority.
+pub(crate) fn read_source(target: &str, reference: &Evidence) -> Result<Value, CoreError> {
+    let root = root(target)?;
+    if root.path != fs::canonicalize(&reference.target).map_err(error)? {
+        return Err(error("source custody belongs to a different target"));
+    }
+    let bytes = root
+        .dir
+        .read(confined(&root, &reference.path, false)?)
+        .map_err(error)?;
+    if hash(&bytes) != reference.revision {
+        return Err(error(
+            "former source changed; Planning reconciliation must reopen",
+        ));
+    }
+    serde_json::from_slice(&bytes).map_err(error)
 }
 fn read(root: &Root, reference: &Evidence) -> Result<Value, CoreError> {
     if root.path.to_string_lossy() != reference.target {

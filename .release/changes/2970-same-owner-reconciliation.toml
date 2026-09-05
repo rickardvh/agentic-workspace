@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Reconcile an admitted former Planning execplan under the same semantic owner into an exact durable subject with fresh-session custody and coverage checks."
+issues = [2970, 2984, 3000, 3001, 2909]

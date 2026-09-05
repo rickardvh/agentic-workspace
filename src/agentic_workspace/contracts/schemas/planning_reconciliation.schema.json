@@ -1,0 +1,357 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentic-workspace.dev/schemas/planning_reconciliation.schema.json",
+  "title": "Planning same-owner reconciliation",
+  "x-agentic-workspace-doc-role": "contract-reference",
+  "type": "object",
+  "description": "Trusted Planning host boundary. Source custody is admitted outside this payload; shape, names and hashes cannot establish it.",
+  "properties": {
+    "target": {
+      "type": "string",
+      "description": "Host-selected target root."
+    },
+    "relevant": {
+      "type": "boolean",
+      "description": "Agent/human-owned Planning applicability; false does not read sources or create files."
+    },
+    "source": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/evidence",
+          "description": "Exact source authority supplied by the trusted source owner."
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Established Planning source custody, not caller-created authority."
+    },
+    "irrelevant_history": {
+      "type": "boolean",
+      "description": "Agent/human judgment that explicit drift_log fields have no continuation value."
+    },
+    "intent": {
+      "type": "object",
+      "description": "Current work and requested outcome context."
+    },
+    "capability_contract": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Independently admitted capability/effect contract."
+    },
+    "custody": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/custody",
+          "description": "Independently retained result custody."
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Current reconciliation custody supplied by the responsible host."
+    },
+    "invocation": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Exact returned action for effect admission."
+    }
+  },
+  "required": [
+    "target",
+    "relevant"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target",
+        "path",
+        "owner",
+        "revision"
+      ],
+      "properties": {
+        "target": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Canonical workspace target to which this custody reference is bound."
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Exact relative evidence path within the acquired workspace target."
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Responsible owner independently established by the host custody source."
+        },
+        "revision": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Digest of the exact acquired evidence bytes."
+        }
+      }
+    },
+    "custody": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "attempt",
+        "committed"
+      ],
+      "properties": {
+        "attempt": {
+          "$ref": "#/$defs/evidence",
+          "description": "Acquired immutable pre-effect evidence reference."
+        },
+        "committed": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/evidence"
+            }
+          ],
+          "description": "Acquired immutable committed result reference, if available."
+        }
+      }
+    },
+    "former_execplan": {
+      "type": "object",
+      "description": "Minimum shape of the admitted former execplan; unknown fields remain a coverage ambiguity.",
+      "properties": {
+        "kind": {
+          "const": "planning-execplan/v1",
+          "description": "Supported former Planning representation."
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Established Planning subject identity."
+        },
+        "lifecycle": {
+          "type": "string",
+          "description": "Preserved current lifecycle."
+        },
+        "phase": {
+          "type": "string",
+          "description": "Preserved current phase."
+        },
+        "next_action": {
+          "type": "string",
+          "description": "Preserved current next_action."
+        },
+        "intent": {
+          "type": "object",
+          "description": "Former owner intent state."
+        },
+        "scope": {
+          "type": "object",
+          "description": "Former owner scope state."
+        },
+        "proof": {
+          "type": "object",
+          "description": "Former owner proof state."
+        },
+        "continuation": {
+          "type": "object",
+          "description": "Former owner continuation state."
+        },
+        "relationships": {
+          "type": "object",
+          "description": "Former owner relationships state."
+        }
+      },
+      "required": [
+        "kind",
+        "id",
+        "lifecycle",
+        "phase",
+        "next_action",
+        "intent",
+        "scope",
+        "proof",
+        "continuation",
+        "relationships"
+      ],
+      "additionalProperties": true
+    },
+    "state": {
+      "type": "object",
+      "description": "Current material Planning state, excluding execution history.",
+      "properties": {
+        "outcome": {
+          "type": "object",
+          "description": "Preserved current outcome semantics."
+        },
+        "scope": {
+          "type": "object",
+          "description": "Preserved current scope semantics."
+        },
+        "dependencies": {
+          "type": "object",
+          "description": "Preserved current dependencies semantics."
+        },
+        "constraints": {
+          "type": "object",
+          "description": "Preserved current constraints semantics."
+        },
+        "frontier": {
+          "type": "object",
+          "description": "Preserved current frontier semantics."
+        },
+        "proof": {
+          "type": "object",
+          "description": "Preserved current proof semantics."
+        },
+        "handoff": {
+          "type": "object",
+          "description": "Preserved current handoff semantics."
+        },
+        "residual": {
+          "type": "object",
+          "description": "Preserved current residual semantics."
+        }
+      },
+      "required": [
+        "outcome",
+        "scope",
+        "dependencies",
+        "constraints",
+        "frontier",
+        "proof",
+        "handoff",
+        "residual"
+      ],
+      "additionalProperties": false
+    },
+    "subject": {
+      "type": "object",
+      "description": "Planning current subject.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Stable subject identity across representation/source revisions."
+        },
+        "revision": {
+          "type": "string",
+          "description": "Material semantic revision, separate from source/currentness and attempts."
+        },
+        "label": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Former display title."
+        },
+        "state": {
+          "$ref": "#/$defs/state",
+          "description": "Preserved material semantic state."
+        }
+      },
+      "required": [
+        "id",
+        "revision",
+        "label",
+        "state"
+      ],
+      "additionalProperties": false
+    },
+    "coverage": {
+      "type": "object",
+      "description": "Bounded reconciliation coverage, not task completion.",
+      "properties": {
+        "complete": {
+          "type": "boolean",
+          "description": "Whether this reader accounted for every current source field."
+        },
+        "ambiguities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Unaccounted source fields requiring Planning or agent judgment."
+        },
+        "omitted_history": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "History fields explicitly judged irrelevant by the acting agent or human."
+        }
+      },
+      "required": [
+        "complete",
+        "ambiguities",
+        "omitted_history"
+      ],
+      "additionalProperties": false
+    },
+    "reconciliation": {
+      "type": "object",
+      "description": "Committed same-owner Planning reconciliation, without historical continuation decisions.",
+      "properties": {
+        "kind": {
+          "const": "agentic-planning/reconciliation/v1",
+          "description": "Same-owner representation reconciliation."
+        },
+        "owner": {
+          "const": "planning",
+          "description": "Semantic custody stays with Planning."
+        },
+        "former_source": {
+          "$ref": "#/$defs/evidence",
+          "description": "Independently admitted exact former-source evidence."
+        },
+        "subject": {
+          "$ref": "#/$defs/subject",
+          "description": "Exact reconciled Planning identity and material revision."
+        },
+        "coverage": {
+          "$ref": "#/$defs/coverage",
+          "description": "Explicit unresolved source coverage."
+        },
+        "former_source_retained": {
+          "const": true,
+          "description": "This operation never deletes or hides the former source."
+        }
+      },
+      "required": [
+        "kind",
+        "owner",
+        "former_source",
+        "subject",
+        "coverage",
+        "former_source_retained"
+      ],
+      "additionalProperties": false
+    },
+    "operation_arguments": {
+      "type": "object",
+      "description": "Exact operation arguments returned by Planning; clients do not author them.",
+      "properties": {
+        "target": {
+          "type": "string",
+          "description": "Owner-derived target root."
+        },
+        "reconciliation": {
+          "$ref": "#/$defs/reconciliation",
+          "description": "Owner-derived exact selected semantic state and source binding."
+        }
+      },
+      "required": [
+        "target",
+        "reconciliation"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

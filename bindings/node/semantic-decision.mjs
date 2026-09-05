@@ -68,3 +68,11 @@ export function admitStoredAttempt(target, decision, invocation, custody = null)
 export function commitStoredAttempt(target, custody, outcome) {
   return request({commit_stored_attempt: {target, custody, outcome}});
 }
+
+export function planningView(context) {
+  return request({planning_view: context});
+}
+
+export function reconcilePlanning(context) {
+  return request({reconcile_planning: context});
+}

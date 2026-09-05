@@ -49,6 +49,16 @@ fn main() {
         .is_some_and(|item| item.len() == 1 && item.contains_key("commit_stored_attempt"))
     {
         agentic_workspace_core::attempt_store::commit(request["commit_stored_attempt"].clone())
+    } else if request
+        .as_object()
+        .is_some_and(|item| item.len() == 1 && item.contains_key("planning_view"))
+    {
+        agentic_workspace_core::planning::view(request["planning_view"].clone())
+    } else if request
+        .as_object()
+        .is_some_and(|item| item.len() == 1 && item.contains_key("reconcile_planning"))
+    {
+        agentic_workspace_core::planning::reconcile(request["reconcile_planning"].clone())
     } else {
         agentic_workspace_core::compile_value(request)
     };

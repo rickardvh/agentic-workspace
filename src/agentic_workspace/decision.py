@@ -106,6 +106,14 @@ def select_decision_detail(decision: Mapping[str, Any], fields: Iterable[str]) -
     }
 
 
+def planning_view(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"planning_view": context})
+
+
+def reconcile_planning(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"reconcile_planning": context})
+
+
 __all__ = [
     "DecisionContractError",
     "compile_source_decision",
@@ -118,4 +126,6 @@ __all__ = [
     "commit_attempt",
     "admit_stored_attempt",
     "commit_stored_attempt",
+    "planning_view",
+    "reconcile_planning",
 ]
