@@ -2,6 +2,109 @@
   "schema_version": 1,
   "cases": [
     {
+      "id": "admitted-policy-restricts-without-owning-effect-or-claim",
+      "input": {
+        "contributions": [
+          {
+            "owner": "policy",
+            "revision": "ext1",
+            "blockers": [
+              {
+                "code": "policy",
+                "message": "not admitted",
+                "affects": [
+                  "effect:write"
+                ]
+              }
+            ],
+            "claims": {
+              "blocked": [
+                "done"
+              ]
+            }
+          },
+          {
+            "owner": "producer",
+            "revision": "p1",
+            "actions": [
+              {
+                "operation_id": "produce",
+                "effects": [
+                  "write"
+                ]
+              }
+            ],
+            "claims": {
+              "allowed": [
+                "done"
+              ]
+            }
+          }
+        ],
+        "intent": {},
+        "capability_contract": {
+          "kind": "agentic-workspace/capability-contract/v1",
+          "revision": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "owners": [
+            {
+              "owner": "producer",
+              "revision": "p1",
+              "domains": [
+                "output"
+              ],
+              "effects": [
+                {
+                  "id": "write",
+                  "domain": "output"
+                }
+              ],
+              "operations": [
+                {
+                  "id": "produce",
+                  "input_schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "type": "object"
+                  },
+                  "result_kind": "output/v1",
+                  "effects": [
+                    "write"
+                  ]
+                }
+              ]
+            },
+            {
+              "owner": "policy",
+              "revision": "r1"
+            }
+          ],
+          "claim_authorities": [
+            {
+              "owner": "producer",
+              "claim": "done"
+            }
+          ],
+          "restriction_authorities": [
+            {
+              "owner": "policy",
+              "affects": [
+                "effect:write",
+                "claim:done"
+              ]
+            }
+          ]
+        }
+      },
+      "expect": {
+        "status": "direct",
+        "primary_action": null,
+        "claim_boundary.allowed": [],
+        "claim_boundary.blocked": [
+          "done"
+        ],
+        "pending_consequences.actions.0.operation_id": "produce"
+      }
+    },
+    {
       "id": "owner-settled-is-not-terminal",
       "input": {"contributions": [{"owner": "memory", "revision": "m1", "settled": true}], "intent": {}},
       "expect": {"status": "direct", "terminal_authority": null, "owner_states.0.settled": true}
@@ -124,6 +227,589 @@
     }
   ],
   "error_cases": [
+    {
+      "id": "ungranted-known-claim-veto",
+      "input": {
+        "contributions": [
+          {
+            "owner": "example.external",
+            "revision": "ext1",
+            "claims": {
+              "blocked": [
+                "complete"
+              ]
+            }
+          }
+        ],
+        "intent": {}
+      },
+      "error_contains": "without admitted restriction authority"
+    },
+    {
+      "id": "claim-grant-does-not-grant-veto",
+      "input": {
+        "contributions": [
+          {
+            "owner": "example.external",
+            "revision": "ext1",
+            "claims": {
+              "blocked": [
+                "external-complete"
+              ]
+            }
+          }
+        ],
+        "intent": {}
+      },
+      "error_contains": "without admitted restriction authority"
+    },
+    {
+      "id": "ungranted-task-global-blocker",
+      "input": {
+        "contributions": [
+          {
+            "owner": "example.external",
+            "revision": "ext1",
+            "blockers": [
+              {
+                "code": "policy",
+                "message": "not admitted",
+                "affects": [
+                  "task"
+                ]
+              }
+            ]
+          }
+        ],
+        "intent": {}
+      },
+      "error_contains": "without admitted restriction authority"
+    },
+    {
+      "id": "effect-ownership-does-not-grant-restriction",
+      "input": {
+        "contributions": [
+          {
+            "owner": "example.external",
+            "revision": "ext1",
+            "blockers": [
+              {
+                "code": "policy",
+                "message": "not admitted",
+                "affects": [
+                  "effect:external-state"
+                ]
+              }
+            ]
+          }
+        ],
+        "intent": {}
+      },
+      "error_contains": "without admitted restriction authority"
+    },
+    {
+      "id": "ungranted-cross-domain-effect-restriction",
+      "input": {
+        "contributions": [
+          {
+            "owner": "example.external",
+            "revision": "ext1",
+            "blockers": [
+              {
+                "code": "policy",
+                "message": "not admitted",
+                "affects": [
+                  "effect:planning-state"
+                ]
+              }
+            ]
+          }
+        ],
+        "intent": {}
+      },
+      "error_contains": "without admitted restriction authority"
+    },
+    {
+      "id": "ungranted-outcome-restriction",
+      "input": {
+        "contributions": [
+          {
+            "owner": "example.external",
+            "revision": "ext1",
+            "blockers": [
+              {
+                "code": "policy",
+                "message": "not admitted",
+                "affects": [
+                  "outcome:work-1"
+                ]
+              }
+            ]
+          }
+        ],
+        "intent": {}
+      },
+      "error_contains": "without admitted restriction authority"
+    },
+    {
+      "id": "task-grant-is-not-a-wildcard",
+      "input": {
+        "contributions": [
+          {
+            "owner": "repository",
+            "revision": "ext1",
+            "blockers": [
+              {
+                "code": "policy",
+                "message": "not admitted",
+                "affects": [
+                  "claim:complete"
+                ]
+              }
+            ]
+          }
+        ],
+        "intent": {}
+      },
+      "error_contains": "without admitted restriction authority"
+    },
+    {
+      "id": "bounded-question-cannot-self-grant-task-veto",
+      "input": {
+        "contributions": [
+          {
+            "owner": "example.external",
+            "revision": "ext1",
+            "decisions": [
+              {
+                "id": "wait",
+                "question": "Proceed?",
+                "response_operation_id": "example.finish",
+                "choices": [
+                  {
+                    "id": "yes",
+                    "label": "Yes"
+                  }
+                ],
+                "affects": [
+                  "task"
+                ]
+              }
+            ]
+          }
+        ],
+        "intent": {}
+      },
+      "error_contains": "without admitted restriction authority"
+    },
+    {
+      "id": "contribution-cannot-self-grant-restrictions",
+      "input": {
+        "contributions": [
+          {
+            "owner": "example.external",
+            "revision": "ext1",
+            "blockers": [
+              {
+                "code": "policy",
+                "message": "not admitted",
+                "affects": [
+                  "task"
+                ]
+              }
+            ],
+            "restriction_authorities": [
+              {
+                "owner": "example.external",
+                "affects": [
+                  "task"
+                ]
+              }
+            ]
+          }
+        ],
+        "intent": {}
+      },
+      "error_contains": "without admitted restriction authority"
+    },
+    {
+      "id": "restriction-cannot-spoof-admitted-owner",
+      "input": {
+        "contributions": [
+          {
+            "owner": "example.external",
+            "revision": "ext1",
+            "blockers": [
+              {
+                "code": "policy",
+                "message": "not admitted",
+                "affects": [
+                  "task"
+                ],
+                "owner": "repository"
+              }
+            ]
+          }
+        ],
+        "intent": {}
+      },
+      "error_contains": "blocker cannot claim owner"
+    },
+    {
+      "id": "effect-restriction-does-not-grant-task-veto",
+      "input": {
+        "contributions": [
+          {
+            "owner": "policy",
+            "revision": "ext1",
+            "blockers": [
+              {
+                "code": "policy",
+                "message": "not admitted",
+                "affects": [
+                  "task"
+                ]
+              }
+            ]
+          }
+        ],
+        "intent": {},
+        "capability_contract": {
+          "kind": "agentic-workspace/capability-contract/v1",
+          "revision": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "owners": [
+            {
+              "owner": "producer",
+              "revision": "p1",
+              "domains": [
+                "output"
+              ],
+              "effects": [
+                {
+                  "id": "write",
+                  "domain": "output"
+                }
+              ],
+              "operations": [
+                {
+                  "id": "produce",
+                  "input_schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "type": "object"
+                  },
+                  "result_kind": "output/v1",
+                  "effects": [
+                    "write"
+                  ]
+                }
+              ]
+            },
+            {
+              "owner": "policy",
+              "revision": "r1"
+            }
+          ],
+          "claim_authorities": [
+            {
+              "owner": "producer",
+              "claim": "done"
+            }
+          ],
+          "restriction_authorities": [
+            {
+              "owner": "policy",
+              "affects": [
+                "effect:write",
+                "claim:done"
+              ]
+            }
+          ]
+        }
+      },
+      "error_contains": "without admitted restriction authority"
+    },
+    {
+      "id": "restriction-does-not-grant-claim-even-when-also-blocked",
+      "input": {
+        "contributions": [
+          {
+            "owner": "policy",
+            "revision": "r1",
+            "claims": {
+              "allowed": [
+                "done"
+              ],
+              "blocked": [
+                "done"
+              ]
+            }
+          }
+        ],
+        "intent": {},
+        "capability_contract": {
+          "kind": "agentic-workspace/capability-contract/v1",
+          "revision": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "owners": [
+            {
+              "owner": "producer",
+              "revision": "p1",
+              "domains": [
+                "output"
+              ],
+              "effects": [
+                {
+                  "id": "write",
+                  "domain": "output"
+                }
+              ],
+              "operations": [
+                {
+                  "id": "produce",
+                  "input_schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "type": "object"
+                  },
+                  "result_kind": "output/v1",
+                  "effects": [
+                    "write"
+                  ]
+                }
+              ]
+            },
+            {
+              "owner": "policy",
+              "revision": "r1"
+            }
+          ],
+          "claim_authorities": [
+            {
+              "owner": "producer",
+              "claim": "done"
+            }
+          ],
+          "restriction_authorities": [
+            {
+              "owner": "policy",
+              "affects": [
+                "effect:write",
+                "claim:done"
+              ]
+            }
+          ]
+        }
+      },
+      "error_contains": "without exclusive claim authority"
+    },
+    {
+      "id": "restriction-does-not-grant-operation-or-effect",
+      "input": {
+        "contributions": [
+          {
+            "owner": "policy",
+            "revision": "ext1",
+            "blockers": [
+              {
+                "code": "policy",
+                "message": "not admitted",
+                "affects": [
+                  "effect:write"
+                ]
+              }
+            ],
+            "actions": [
+              {
+                "operation_id": "produce",
+                "effects": [
+                  "write"
+                ]
+              }
+            ]
+          }
+        ],
+        "intent": {},
+        "capability_contract": {
+          "kind": "agentic-workspace/capability-contract/v1",
+          "revision": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "owners": [
+            {
+              "owner": "producer",
+              "revision": "p1",
+              "domains": [
+                "output"
+              ],
+              "effects": [
+                {
+                  "id": "write",
+                  "domain": "output"
+                }
+              ],
+              "operations": [
+                {
+                  "id": "produce",
+                  "input_schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "type": "object"
+                  },
+                  "result_kind": "output/v1",
+                  "effects": [
+                    "write"
+                  ]
+                }
+              ]
+            },
+            {
+              "owner": "policy",
+              "revision": "r1"
+            }
+          ],
+          "claim_authorities": [
+            {
+              "owner": "producer",
+              "claim": "done"
+            }
+          ],
+          "restriction_authorities": [
+            {
+              "owner": "policy",
+              "affects": [
+                "effect:write",
+                "claim:done"
+              ]
+            }
+          ]
+        }
+      },
+      "error_contains": "not declared by its capability owner"
+    },
+    {
+      "id": "removed-restriction-grant-fails-closed",
+      "input": {
+        "contributions": [
+          {
+            "owner": "policy",
+            "revision": "ext1",
+            "blockers": [
+              {
+                "code": "policy",
+                "message": "not admitted",
+                "affects": [
+                  "effect:write"
+                ]
+              }
+            ]
+          }
+        ],
+        "intent": {},
+        "capability_contract": {
+          "kind": "agentic-workspace/capability-contract/v1",
+          "revision": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "owners": [
+            {
+              "owner": "producer",
+              "revision": "p1",
+              "domains": [
+                "output"
+              ],
+              "effects": [
+                {
+                  "id": "write",
+                  "domain": "output"
+                }
+              ],
+              "operations": [
+                {
+                  "id": "produce",
+                  "input_schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "type": "object"
+                  },
+                  "result_kind": "output/v1",
+                  "effects": [
+                    "write"
+                  ]
+                }
+              ]
+            },
+            {
+              "owner": "policy",
+              "revision": "r1"
+            }
+          ],
+          "claim_authorities": [
+            {
+              "owner": "producer",
+              "claim": "done"
+            }
+          ],
+          "restriction_authorities": []
+        }
+      },
+      "error_contains": "without admitted restriction authority"
+    },
+    {
+      "id": "restriction-grant-requires-admitted-owner",
+      "input": {
+        "contributions": [
+          {
+            "owner": "policy",
+            "revision": "r1"
+          }
+        ],
+        "intent": {},
+        "capability_contract": {
+          "kind": "agentic-workspace/capability-contract/v1",
+          "revision": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "owners": [
+            {
+              "owner": "producer",
+              "revision": "p1",
+              "domains": [
+                "output"
+              ],
+              "effects": [
+                {
+                  "id": "write",
+                  "domain": "output"
+                }
+              ],
+              "operations": [
+                {
+                  "id": "produce",
+                  "input_schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "type": "object"
+                  },
+                  "result_kind": "output/v1",
+                  "effects": [
+                    "write"
+                  ]
+                }
+              ]
+            },
+            {
+              "owner": "policy",
+              "revision": "r1"
+            }
+          ],
+          "claim_authorities": [
+            {
+              "owner": "producer",
+              "claim": "done"
+            }
+          ],
+          "restriction_authorities": [
+            {
+              "owner": "absent",
+              "affects": [
+                "effect:write",
+                "claim:done"
+              ]
+            }
+          ]
+        }
+      },
+      "error_contains": "restriction authority names unknown owner"
+    },
     {"id":"owner-schema-cannot-widen-public-envelope","input":{"contributions":[{"owner":"example.external","revision":"ext1","actions":[{"operation_id":"example.finish","arguments":{"subject":"case-17"},"effects":["external-state"]}],"request_response":{"request_id":"finish-17","status":"action"}}],"intent":{"current_work":{"kind":"current-work","id":"work-17"},"public_request":{"kind":"agentic-workspace/public-request/v1","id":"finish-17","owner":"example.external","owner_revision":"ext1","source_revision":"ext1","request_kind":"example/finish-request/v1","capability_revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","task_identity":{"kind":"current-work","id":"work-17"},"arguments":17}},"capability_contract":{"kind":"agentic-workspace/capability-contract/v1","revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","owners":[{"owner":"example.external","revision":"ext1","requests":[{"kind":"example/finish-request/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"integer"},"result_kind":"example/finish-result/v1"}]}]}},"error_contains":"arguments must be an object"},
     {"id":"invalid-json-schema-is-rejected","input":{"contributions":[],"intent":{},"capability_contract":{"kind":"agentic-workspace/capability-contract/v1","revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","owners":[{"owner":"example.external","revision":"ext1","requests":[{"kind":"example/request/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"not-a-json-schema-type"},"result_kind":"example/result/v1"}]}]}},"error_contains":"input_schema is invalid"},
     {"id":"external-schema-reference-is-rejected","input":{"contributions":[],"intent":{},"capability_contract":{"kind":"agentic-workspace/capability-contract/v1","revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","owners":[{"owner":"example.external","revision":"ext1","requests":[{"kind":"example/request/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","$ref":"https://example.invalid/hidden-schema.json"},"result_kind":"example/result/v1"}]}]}},"error_contains":"input_schema is invalid"},
@@ -233,6 +919,193 @@
     }
   ],
   "equivalent_inputs": [
+    {
+      "id": "restriction-grant-and-contribution-order-is-immaterial",
+      "inputs": [
+        {
+          "contributions": [
+            {
+              "owner": "policy",
+              "revision": "ext1",
+              "blockers": [
+                {
+                  "code": "policy",
+                  "message": "not admitted",
+                  "affects": [
+                    "effect:write"
+                  ]
+                }
+              ],
+              "claims": {
+                "blocked": [
+                  "done"
+                ]
+              }
+            },
+            {
+              "owner": "producer",
+              "revision": "p1",
+              "actions": [
+                {
+                  "operation_id": "produce",
+                  "effects": [
+                    "write"
+                  ]
+                }
+              ],
+              "claims": {
+                "allowed": [
+                  "done"
+                ]
+              }
+            }
+          ],
+          "intent": {},
+          "capability_contract": {
+            "kind": "agentic-workspace/capability-contract/v1",
+            "revision": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+            "owners": [
+              {
+                "owner": "producer",
+                "revision": "p1",
+                "domains": [
+                  "output"
+                ],
+                "effects": [
+                  {
+                    "id": "write",
+                    "domain": "output"
+                  }
+                ],
+                "operations": [
+                  {
+                    "id": "produce",
+                    "input_schema": {
+                      "$schema": "https://json-schema.org/draft/2020-12/schema",
+                      "type": "object"
+                    },
+                    "result_kind": "output/v1",
+                    "effects": [
+                      "write"
+                    ]
+                  }
+                ]
+              },
+              {
+                "owner": "policy",
+                "revision": "r1"
+              }
+            ],
+            "claim_authorities": [
+              {
+                "owner": "producer",
+                "claim": "done"
+              }
+            ],
+            "restriction_authorities": [
+              {
+                "owner": "policy",
+                "affects": [
+                  "effect:write",
+                  "claim:done"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "contributions": [
+            {
+              "owner": "producer",
+              "revision": "p1",
+              "actions": [
+                {
+                  "operation_id": "produce",
+                  "effects": [
+                    "write"
+                  ]
+                }
+              ],
+              "claims": {
+                "allowed": [
+                  "done"
+                ]
+              }
+            },
+            {
+              "owner": "policy",
+              "revision": "ext1",
+              "blockers": [
+                {
+                  "code": "policy",
+                  "message": "not admitted",
+                  "affects": [
+                    "effect:write"
+                  ]
+                }
+              ],
+              "claims": {
+                "blocked": [
+                  "done"
+                ]
+              }
+            }
+          ],
+          "intent": {},
+          "capability_contract": {
+            "kind": "agentic-workspace/capability-contract/v1",
+            "revision": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+            "owners": [
+              {
+                "owner": "producer",
+                "revision": "p1",
+                "domains": [
+                  "output"
+                ],
+                "effects": [
+                  {
+                    "id": "write",
+                    "domain": "output"
+                  }
+                ],
+                "operations": [
+                  {
+                    "id": "produce",
+                    "input_schema": {
+                      "$schema": "https://json-schema.org/draft/2020-12/schema",
+                      "type": "object"
+                    },
+                    "result_kind": "output/v1",
+                    "effects": [
+                      "write"
+                    ]
+                  }
+                ]
+              },
+              {
+                "owner": "policy",
+                "revision": "r1"
+              }
+            ],
+            "claim_authorities": [
+              {
+                "owner": "producer",
+                "claim": "done"
+              }
+            ],
+            "restriction_authorities": [
+              {
+                "owner": "policy",
+                "affects": [
+                  "claim:done",
+                  "effect:write"
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
     {
       "id": "contribution-and-action-permutation",
       "inputs": [

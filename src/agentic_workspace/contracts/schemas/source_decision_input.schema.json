@@ -240,6 +240,19 @@
         "kind": {"const": "agentic-workspace/capability-contract/v1", "description": "Capability contract discriminator."},
         "revision": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$", "description": "Current source revision to which public requests bind."},
         "owners": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/capability_owner"}, "description": "Current admitted capability owners."},
+        "restriction_authorities": {
+          "type": "array",
+          "description": "Trusted admission of exact restriction scopes, independent of claim grants and effect ownership. Task is an explicit scope, not a wildcard. No contribution or implementation descriptor can self-grant these rights.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "owner": {"type": "string", "minLength": 1},
+              "affects": {"$ref": "#/$defs/affects"}
+            },
+            "required": ["owner", "affects"],
+            "additionalProperties": false
+          }
+        },
         "claim_authorities": {
           "type": "array",
           "description": "Exclusive claim-to-owner assignments admitted independently of source contributions.",

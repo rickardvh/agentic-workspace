@@ -356,5 +356,26 @@
       "claim": "workspace-progress",
       "owner": "workspace"
     }
+  ],
+  "restriction_authorities": [
+    {
+      "owner": "planning",
+      "affects": [
+        "action:planning:one:sha256:994d5986140e342326f094188d5f0e36af2ae2a10ed3ee092ef58906e228c57a",
+        "claim:complete"
+      ]
+    },
+    {
+      "owner": "verification",
+      "affects": [
+        "claim:release"
+      ]
+    },
+    {
+      "owner": "repository",
+      "affects": [
+        "task"
+      ]
+    }
   ]
 }
