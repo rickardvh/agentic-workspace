@@ -60,6 +60,7 @@ struct Record {
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Admission {
+    rationale_reference: String,
     id: String,
     material_revision: String,
     source: Reference,
@@ -170,6 +171,10 @@ fn normalized(mut record: Record) -> Result<Record, CoreError> {
     material
         .as_object_mut()
         .unwrap()
+        .remove("rationale_reference");
+    material
+        .as_object_mut()
+        .unwrap()
         .remove("material_revision");
     let revision = digest(&material)?;
     if record
@@ -227,6 +232,7 @@ pub(crate) fn project(mut context: Context) -> Result<Option<Value>, CoreError> 
             .ok_or_else(|| error("decision lacks independent host provenance admission"))?;
         if Some(&admission.material_revision) != record.material_revision.as_ref()
             || admission.source != record.source
+            || admission.rationale_reference != record.rationale_reference
         {
             return Err(error(
                 "decision admission does not bind exact source and semantic provenance",

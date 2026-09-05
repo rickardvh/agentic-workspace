@@ -269,6 +269,7 @@
       "type": "object",
       "description": "Independent trusted-host admission, not a client declaration. The host must establish provenance and source custody before supplying this binding.",
       "properties": {
+        "rationale_reference": {"type": "string", "minLength": 1, "description": "Exact independently admitted rationale locator."},
         "id": {
           "type": "string",
           "minLength": 1,
@@ -285,6 +286,7 @@
         }
       },
       "required": [
+        "rationale_reference",
         "id",
         "material_revision",
         "source"

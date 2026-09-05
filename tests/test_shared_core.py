@@ -1035,7 +1035,7 @@ def _admitted_decisions(records: list[dict[str, Any]]) -> dict[str, Any]:
     }
     return {
         "records": normalized,
-        "admissions": [{key: record[key] for key in ["id", "material_revision", "source"]} for record in normalized],
+        "admissions": [{key: record[key] for key in ["id", "material_revision", "source", "rationale_reference"]} for record in normalized],
         "current_dependencies": list(references.values()),
         "applicable_scope": ["owner:planning"],
     }
@@ -1083,6 +1083,7 @@ def test_decision_semantic_revision_is_not_source_or_view_revision(shared_core_b
     original = first["records"][0]
     changed = deepcopy(record)
     changed["source"]["revision"] = "nonmaterial-source-edit"
+    changed["rationale_reference"] = "relocated-source#same-rationale"
     current = _admitted_decisions([changed])
     assert current["records"][0]["material_revision"] == original["material_revision"]
     assert current["records"][0]["id"] == original["id"]
