@@ -674,9 +674,17 @@ def test_stored_effect_cannot_move_to_another_target(shared_core_binary: Path, t
 @pytest.mark.parametrize("modified_ledger", [False, True])
 def test_local_only_uninstall_preserves_usable_effect_custody(shared_core_binary: Path, tmp_path: Path, modified_ledger: bool) -> None:
     from agentic_workspace.config import load_workspace_config
-    from agentic_workspace.workspace_runtime_core import _workspace_payload_bytes_for_target, _workspace_uninstall_report
+    from agentic_workspace.workspace_runtime_core import (
+        LOCAL_ONLY_IGNORE_BLOCK,
+        _workspace_payload_bytes_for_target,
+        _workspace_uninstall_report,
+    )
 
     subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
+    ignore_files = [tmp_path / ".git/info/exclude", tmp_path / ".gitignore"]
+    for path in ignore_files:
+        path.write_text(LOCAL_ONLY_IGNORE_BLOCK)
+    ignored_before = {path: path.read_bytes() for path in ignore_files}
     decision = _compile(_stored_payload(tmp_path))
     action = decision["primary_action"]
     admitted = admit_stored_attempt(str(tmp_path), decision, action)
@@ -708,5 +716,7 @@ def test_local_only_uninstall_preserves_usable_effect_custody(shared_core_binary
     assert ledger.read_bytes() == ledger_bytes
     assert any(a["kind"] == "preserved" and a["path"] == ledger_relative.as_posix() for a in report["actions"])
     assert all(path.read_bytes() == value for path, value in retained.items())
+    assert all(path.read_bytes() == value for path, value in ignored_before.items())
+    subprocess.run(["git", "check-ignore", "--quiet", str(owner_reference)], cwd=tmp_path, check=True)
     custody = json.loads(owner_reference.read_text())
     assert admit_stored_attempt(str(tmp_path), decision, action, custody)["disposition"] == "replay"

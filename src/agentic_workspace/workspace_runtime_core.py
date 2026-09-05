@@ -10715,7 +10715,7 @@ def _workspace_uninstall_report(
                 {
                     "kind": "preserved",
                     "path": ".agentic-workspace",
-                    "detail": "retain remaining state and custody; package removal does not authorize deleting the workspace tree",
+                    "detail": "retain remaining state, custody and local ignore rules; package removal does not authorize deleting the workspace tree",
                 }
             )
         actions.extend(
@@ -10726,8 +10726,6 @@ def _workspace_uninstall_report(
                 cli_invoke=config.cli_invoke,
             )
         )
-        actions.append(_remove_local_only_git_exclude(repo_root=local_only_repo_root, dry_run=dry_run))
-        actions.append(_remove_legacy_local_only_gitignore(repo_root=local_only_repo_root, dry_run=dry_run))
     return _workspace_report(target_root=target_root, message="Uninstall report", dry_run=dry_run, actions=actions, warnings=warnings)
 
 
