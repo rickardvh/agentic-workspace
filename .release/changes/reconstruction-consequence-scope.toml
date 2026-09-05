@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "major"
+summary = "Scope blockers and bounded decisions to explicit affected consequences while preserving independent safe actions and exact peer details."
+issues = [2989]
