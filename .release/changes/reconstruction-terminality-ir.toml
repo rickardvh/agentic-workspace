@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "major"
+summary = "Generate source-decision semantics for Python and TypeScript from shared IR, separating owner-local quiescence from explicit current outcome terminality."
+issues = [2989, 2987]
