@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 
-from agentic_workspace.decision import compile_source_decision, select_decision_detail
+from agentic_workspace.decision import compile_source_decision, normalize_contribution, select_decision_detail
 from agentic_workspace.modules import Module, discover_modules, module_contributions, register_module_operations
 from agentic_workspace.operating_decision import compile_operating_decision
 from agentic_workspace.operations import Operation, OperationContractError, OperationDispatcher, StaleInvocationError
@@ -248,8 +248,161 @@ def test_multiple_actions_preserve_exact_alternatives_without_priority_choreogra
     assert [item["source_owner"] for item in decision["blockers"][0]["alternatives"]] == ["alpha", "zeta"]
 
 
-def test_python_and_typescript_project_the_same_terminality_semantics() -> None:
-    payload = {"contributions": [_planning({"status": "complete", "revision": "p2"})], "intent": _ship_intent()}
+def test_claim_specific_blocker_preserves_unrelated_action_and_exact_recovery() -> None:
+    contributions = [
+        {
+            "owner": "verification",
+            "revision": "proof-one",
+            "blockers": [
+                {
+                    "code": "proof-missing",
+                    "message": "release proof is missing",
+                    "recovery": "run verification.release",
+                    "affects": ["claim:release"],
+                }
+            ],
+            "claims": {"blocked": ["release"]},
+        },
+        {
+            "owner": "workspace",
+            "revision": "work-one",
+            "actions": [{"operation_id": "workspace.edit", "arguments": {"path": "README.md"}, "effects": ["workspace-files"]}],
+        },
+    ]
+
+    decision = compile_source_decision(reversed(contributions))
+
+    assert decision["status"] == "actionable"
+    assert decision["primary_action"]["operation_id"] == "workspace.edit"
+    assert decision["blockers"] == decision["pending_consequences"]["blockers"]
+    assert decision["blockers"][0]["recovery"] == "run verification.release"
+
+
+def test_action_specific_blocker_does_not_suppress_an_independent_action() -> None:
+    actions = [
+        {"operation_id": "planning.advance", "arguments": {"item": "a"}, "effects": ["plan-a"]},
+        {"operation_id": "planning.advance", "arguments": {"item": "b"}, "effects": ["plan-b"]},
+    ]
+    normalized = normalize_contribution({"owner": "planning", "revision": "one", "actions": actions})
+    first_identity, second_identity = [action["consequence_id"] for action in normalized["actions"]]
+
+    decision = compile_source_decision(
+        [
+            {
+                "owner": "planning",
+                "revision": "one",
+                "blockers": [
+                    {
+                        "code": "subject-blocked",
+                        "message": "the planning subject is blocked",
+                        "affects": [first_identity],
+                    }
+                ],
+                "actions": actions,
+            }
+        ]
+    )
+
+    assert first_identity != second_identity
+    assert decision["status"] == "actionable"
+    assert decision["primary_action"]["arguments"] == {"item": "b"}
+    assert decision["primary_action"]["effects"] == ["plan-b"]
+
+
+def test_only_explicit_task_wide_blocker_preempts_the_answer() -> None:
+    decision = compile_source_decision(
+        [
+            {
+                "owner": "repository",
+                "revision": "one",
+                "blockers": [{"code": "unsafe", "message": "task is unsafe", "affects": ["task"]}],
+            },
+            {"owner": "workspace", "revision": "one", "actions": [{"operation_id": "workspace.edit"}]},
+        ]
+    )
+
+    assert decision["status"] == "blocked"
+    assert decision["primary_action"] is None
+
+
+def test_optional_decision_is_retained_without_preempting_direct_work() -> None:
+    optional = {
+        "owner": "repository",
+        "revision": "one",
+        "decisions": [
+            {
+                "id": "format",
+                "question": "Which optional format?",
+                "response_operation_id": "repository.answer",
+                "choices": [{"id": "a", "label": "A"}, {"id": "b", "label": "B"}],
+                "affects": ["claim:formatted-output"],
+            }
+        ],
+    }
+
+    decision = compile_source_decision([optional])
+
+    assert decision["status"] == "direct"
+    assert decision["decision_request"] is None
+    assert decision["pending_consequences"]["decisions"][0]["id"] == "format"
+
+
+def test_task_wide_decision_is_constructible_and_revision_bound() -> None:
+    contribution = {
+        "owner": "repository",
+        "revision": "rule-two",
+        "decisions": [
+            {
+                "id": "license",
+                "question": "Choose the repository license",
+                "response_operation_id": "repository.answer",
+                "choices": [{"id": "mit", "label": "MIT"}],
+                "affects": ["task"],
+            }
+        ],
+    }
+
+    decision = compile_source_decision([contribution])
+
+    assert decision["status"] == "decision"
+    assert decision["decision_request"] == decision["pending_consequences"]["decisions"][0]
+    assert decision["decision_request"]["owner"] == "repository"
+    assert decision["decision_request"]["revision"] == "rule-two"
+
+
+def test_blocker_and_decision_consequence_identity_is_required() -> None:
+    with pytest.raises(ValueError, match="must name at least one affected consequence"):
+        compile_source_decision([{"owner": "module", "revision": "one", "blockers": [{"code": "x", "message": "x"}]}])
+    with pytest.raises(ValueError, match="unsupported consequence identity"):
+        compile_source_decision(
+            [
+                {
+                    "owner": "module",
+                    "revision": "one",
+                    "blockers": [{"code": "x", "message": "x", "affects": ["everything"]}],
+                }
+            ]
+        )
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"contributions": [_planning({"status": "complete", "revision": "p2"})], "intent": _ship_intent()},
+        {
+            "contributions": [
+                {
+                    "owner": "verification",
+                    "revision": "proof-one",
+                    "blockers": [{"code": "gap", "message": "proof gap", "affects": ["claim:release"]}],
+                },
+                {"owner": "workspace", "revision": "work-one", "actions": [{"operation_id": "workspace.edit"}]},
+            ],
+            "intent": {"task": "edit"},
+        },
+    ],
+)
+def test_python_and_typescript_project_the_same_semantics(payload: dict[str, Any]) -> None:
     script = (
         'import { compileSourceDecision } from "./generated/workspace/typescript/src/semanticDecision.mjs";'
         'let text=""; for await (const chunk of process.stdin) text += chunk;'

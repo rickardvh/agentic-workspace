@@ -57,6 +57,17 @@ def _outcome(value: object, *, owner: str) -> dict[str, Any] | None:
     }
 
 
+def _affects(value: object, *, field: str) -> list[str]:
+    affects = _strings(value, field=field)
+    if not affects:
+        raise DecisionContractError(f"{field} must name at least one affected consequence")
+    task = IR["consequences"]["task"]
+    prefixes = tuple(IR["consequences"]["prefixes"])
+    if any(item != task and not item.startswith(prefixes) for item in affects):
+        raise DecisionContractError(f"{field} contains an unsupported consequence identity")
+    return sorted(set(affects))
+
+
 def normalize_contribution(value: Mapping[str, Any]) -> dict[str, Any]:
     owner = str(value.get("owner") or "").strip()
     revision = str(value.get("revision") or "").strip()
@@ -67,10 +78,13 @@ def normalize_contribution(value: Mapping[str, Any]) -> dict[str, Any]:
             raise DecisionContractError(f"{owner}.{field} is obsolete; use settled plus explicit outcome authority")
     blockers = value.get("blockers", [])
     actions = value.get("actions", [])
+    decisions = value.get("decisions", [])
     if not isinstance(blockers, list) or any(not isinstance(item, Mapping) for item in blockers):
         raise DecisionContractError(f"{owner}.blockers must be a list of objects")
     if not isinstance(actions, list) or any(not isinstance(item, Mapping) for item in actions):
         raise DecisionContractError(f"{owner}.actions must be a list of objects")
+    if not isinstance(decisions, list) or any(not isinstance(item, Mapping) for item in decisions):
+        raise DecisionContractError(f"{owner}.decisions must be a list of objects")
     normalized_actions = []
     for index, raw in enumerate(actions):
         item = dict(cast(Mapping[str, Any], raw))
@@ -82,12 +96,14 @@ def normalize_contribution(value: Mapping[str, Any]) -> dict[str, Any]:
             raise DecisionContractError(f"{owner}.actions[{index}].operation_id is required")
         if not isinstance(arguments, Mapping):
             raise DecisionContractError(f"{owner}.actions[{index}].arguments must be an object")
-        normalized_actions.append({
+        action = {
             "operation_id": operation_id,
             "arguments": dict(arguments),
             "effects": _strings(item.get("effects"), field=f"{owner}.actions[{index}].effects"),
             "authority": str(item.get("authority") or owner),
-        })
+        }
+        identity = {field: action[field] for field in IR["consequences"]["action_identity_fields"]}
+        normalized_actions.append({"consequence_id": f"action:{owner}:{revision}:{_digest(identity)}", **action})
     normalized_blockers = []
     for index, raw in enumerate(blockers):
         item = dict(cast(Mapping[str, Any], raw))
@@ -95,11 +111,47 @@ def normalize_contribution(value: Mapping[str, Any]) -> dict[str, Any]:
         message = str(item.get("message") or "").strip()
         if not code or not message:
             raise DecisionContractError(f"{owner}.blockers[{index}] requires code and message")
-        blocker = {"code": code, "message": message, "owner": str(item.get("owner") or owner)}
+        blocker = {
+            "code": code,
+            "message": message,
+            "owner": str(item.get("owner") or owner),
+            "affects": _affects(item.get(IR["consequences"]["affected_field"]), field=f"{owner}.blockers[{index}].affects"),
+        }
         recovery = str(item.get("recovery") or "").strip()
         if recovery:
             blocker["recovery"] = recovery
         normalized_blockers.append(blocker)
+    normalized_decisions = []
+    for index, raw in enumerate(decisions):
+        item = dict(cast(Mapping[str, Any], raw))
+        decision_id = str(item.get("id") or "").strip()
+        question = str(item.get("question") or "").strip()
+        response_operation_id = str(item.get("response_operation_id") or "").strip()
+        choices = item.get("choices", [])
+        if not decision_id or not question or not response_operation_id:
+            raise DecisionContractError(f"{owner}.decisions[{index}] requires id, question, and response_operation_id")
+        if not isinstance(choices, list) or any(not isinstance(choice, Mapping) for choice in choices):
+            raise DecisionContractError(f"{owner}.decisions[{index}].choices must be a list of objects")
+        normalized_choices = []
+        for choice_index, raw_choice in enumerate(choices):
+            choice = dict(cast(Mapping[str, Any], raw_choice))
+            choice_id = str(choice.get("id") or "").strip()
+            label = str(choice.get("label") or "").strip()
+            if not choice_id or not label:
+                raise DecisionContractError(f"{owner}.decisions[{index}].choices[{choice_index}] requires id and label")
+            normalized_choices.append({"id": choice_id, "label": label})
+        if not normalized_choices:
+            raise DecisionContractError(f"{owner}.decisions[{index}] requires bounded choices")
+        normalized_decisions.append({
+            "consequence_id": f"decision:{owner}:{decision_id}",
+            "id": decision_id,
+            "owner": owner,
+            "revision": revision,
+            "question": question,
+            "response_operation_id": response_operation_id,
+            "choices": normalized_choices,
+            "affects": _affects(item.get(IR["consequences"]["affected_field"]), field=f"{owner}.decisions[{index}].affects"),
+        })
     claims = value.get("claims", {})
     facts = value.get("facts", {})
     if not isinstance(claims, Mapping):
@@ -113,6 +165,7 @@ def normalize_contribution(value: Mapping[str, Any]) -> dict[str, Any]:
         "settled": value.get(IR["contribution"]["local_state_field"], False) is True,
         "facts": dict(facts),
         "blockers": normalized_blockers,
+        "decisions": normalized_decisions,
         "actions": normalized_actions,
         "claims": {
             "allowed": _strings(claims.get("allowed"), field=f"{owner}.claims.allowed"),
@@ -170,7 +223,7 @@ def _eval(expression: Any, environment: Mapping[str, Any]) -> Any:
         if isinstance(value, list) and isinstance(key, int) and 0 <= key < len(value):
             return value[key]
         return None
-    if operation in {"map", "filter", "flat_map", "find"}:
+    if operation in {"map", "filter", "flat_map", "find", "any"}:
         values = list(_eval(arguments[0], environment))
         name, body = arguments[1], arguments[2]
         evaluated = [(_eval(body, {**environment, name: value}), value) for value in values]
@@ -180,6 +233,8 @@ def _eval(expression: Any, environment: Mapping[str, Any]) -> Any:
             return [value for result, value in evaluated if result]
         if operation == "flat_map":
             return [nested for result, _ in evaluated for nested in result]
+        if operation == "any":
+            return any(result for result, _ in evaluated)
         return next((value for result, value in evaluated if result), None)
     if operation == "sort":
         values = list(_eval(arguments[0], environment))
@@ -256,20 +311,23 @@ const stable = (value) => {
 const digest = (value) => "sha256:" + createHash("sha256").update(JSON.stringify(stable(value))).digest("hex");
 const strings = (value, field) => { if (value == null) return []; if (!Array.isArray(value) || value.some((item) => typeof item !== "string" || !item)) throw new Error(`${field} must be a list of non-empty strings`); return [...value]; };
 const outcome = (value, owner) => { if (value == null) return null; if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(`${owner}.outcome must be an object`); for (const field of IR.outcome.required_contribution_fields) if (!String(value[field] || "").trim()) throw new Error(`${owner}.outcome.${field} is required`); return { id: String(value.id), status: String(value.status), claim: String(value.claim), evidence_revision: String(value.evidence_revision), residual_work: strings(value.residual_work, `${owner}.outcome.residual_work`) }; };
+const affects = (value, field) => { const result = strings(value, field); if (!result.length) throw new Error(`${field} must name at least one affected consequence`); if (result.some((item) => item !== IR.consequences.task && !IR.consequences.prefixes.some((prefix) => item.startsWith(prefix)))) throw new Error(`${field} contains an unsupported consequence identity`); return [...new Set(result)].sort(); };
 
 export function normalizeContribution(value) {
   const owner = String(value.owner || "").trim(); const revision = String(value.revision || "").trim();
   if (!owner || !revision) throw new Error("a contribution requires owner and revision");
   for (const field of IR.contribution.rejected_legacy_fields) if (field in value) throw new Error(`${owner}.${field} is obsolete; use settled plus explicit outcome authority`);
-  const blockers = value.blockers || []; const actions = value.actions || [];
+  const blockers = value.blockers || []; const actions = value.actions || []; const decisions = value.decisions || [];
   if (!Array.isArray(blockers) || blockers.some((item) => !item || typeof item !== "object" || Array.isArray(item))) throw new Error(`${owner}.blockers must be a list of objects`);
   if (!Array.isArray(actions) || actions.some((item) => !item || typeof item !== "object" || Array.isArray(item))) throw new Error(`${owner}.actions must be a list of objects`);
-  const normalizedActions = actions.map((item, index) => { if ("priority" in item) throw new Error(`${owner}.actions[${index}].priority is obsolete; authority cannot be self-ranked`); const operationId = String(item.operation_id || "").trim(); const args = item.arguments || {}; if (!operationId) throw new Error(`${owner}.actions[${index}].operation_id is required`); if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error(`${owner}.actions[${index}].arguments must be an object`); return { operation_id: operationId, arguments: args, effects: strings(item.effects, `${owner}.actions[${index}].effects`), authority: String(item.authority || owner) }; });
-  const normalizedBlockers = blockers.map((item, index) => { if (!item.code || !item.message) throw new Error(`${owner}.blockers[${index}] requires code and message`); return { code: String(item.code), message: String(item.message), owner: String(item.owner || owner), ...(item.recovery ? { recovery: String(item.recovery) } : {}) }; });
+  if (!Array.isArray(decisions) || decisions.some((item) => !item || typeof item !== "object" || Array.isArray(item))) throw new Error(`${owner}.decisions must be a list of objects`);
+  const normalizedActions = actions.map((item, index) => { if ("priority" in item) throw new Error(`${owner}.actions[${index}].priority is obsolete; authority cannot be self-ranked`); const operationId = String(item.operation_id || "").trim(); const args = item.arguments || {}; if (!operationId) throw new Error(`${owner}.actions[${index}].operation_id is required`); if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error(`${owner}.actions[${index}].arguments must be an object`); const action = { operation_id: operationId, arguments: args, effects: strings(item.effects, `${owner}.actions[${index}].effects`), authority: String(item.authority || owner) }; const identity = Object.fromEntries(IR.consequences.action_identity_fields.map((field) => [field, action[field]])); return { consequence_id: `action:${owner}:${revision}:${digest(identity)}`, ...action }; });
+  const normalizedBlockers = blockers.map((item, index) => { if (!item.code || !item.message) throw new Error(`${owner}.blockers[${index}] requires code and message`); return { code: String(item.code), message: String(item.message), owner: String(item.owner || owner), affects: affects(item[IR.consequences.affected_field], `${owner}.blockers[${index}].affects`), ...(item.recovery ? { recovery: String(item.recovery) } : {}) }; });
+  const normalizedDecisions = decisions.map((item, index) => { const id = String(item.id || "").trim(); const question = String(item.question || "").trim(); const responseOperationId = String(item.response_operation_id || "").trim(); const choices = item.choices || []; if (!id || !question || !responseOperationId) throw new Error(`${owner}.decisions[${index}] requires id, question, and response_operation_id`); if (!Array.isArray(choices) || choices.some((choice) => !choice || typeof choice !== "object" || Array.isArray(choice))) throw new Error(`${owner}.decisions[${index}].choices must be a list of objects`); const normalizedChoices = choices.map((choice, choiceIndex) => { if (!String(choice.id || "").trim() || !String(choice.label || "").trim()) throw new Error(`${owner}.decisions[${index}].choices[${choiceIndex}] requires id and label`); return { id: String(choice.id), label: String(choice.label) }; }); if (!normalizedChoices.length) throw new Error(`${owner}.decisions[${index}] requires bounded choices`); return { consequence_id: `decision:${owner}:${id}`, id, owner, revision, question, response_operation_id: responseOperationId, choices: normalizedChoices, affects: affects(item[IR.consequences.affected_field], `${owner}.decisions[${index}].affects`) }; });
   const claims = value.claims || {}; const facts = value.facts || {};
   if (!claims || typeof claims !== "object" || Array.isArray(claims)) throw new Error(`${owner}.claims must be an object`);
   if (!facts || typeof facts !== "object" || Array.isArray(facts)) throw new Error(`${owner}.facts must be an object`);
-  return { owner, revision, relevant: value.relevant !== false, settled: value[IR.contribution.local_state_field] === true, facts, blockers: normalizedBlockers, actions: normalizedActions, claims: { allowed: strings(claims.allowed, `${owner}.claims.allowed`), blocked: strings(claims.blocked, `${owner}.claims.blocked`) }, outcome: outcome(value[IR.outcome.contribution_field], owner) };
+  return { owner, revision, relevant: value.relevant !== false, settled: value[IR.contribution.local_state_field] === true, facts, blockers: normalizedBlockers, decisions: normalizedDecisions, actions: normalizedActions, claims: { allowed: strings(claims.allowed, `${owner}.claims.allowed`), blocked: strings(claims.blocked, `${owner}.claims.blocked`) }, outcome: outcome(value[IR.outcome.contribution_field], owner) };
 }
 
 const pathValue = (value, path) => path.split(".").reduce((current, part) => current && typeof current === "object" ? current[part] : null, value);
@@ -294,11 +352,12 @@ const evaluate = (expression, environment) => {
   if (operation === "array") return args.map((value) => evaluate(value, environment));
   if (operation === "let") { const local = { ...environment }; for (const [name, value] of args[0]) local[name] = evaluate(value, local); return evaluate(args[1], local); }
   if (operation === "get") { const value = evaluate(args[0], environment); const key = evaluate(args[1], environment); return value != null && typeof value === "object" && key in value ? value[key] : null; }
-  if (["map", "filter", "flat_map", "find"].includes(operation)) {
+  if (["map", "filter", "flat_map", "find", "any"].includes(operation)) {
     const values = [...evaluate(args[0], environment)]; const [name, body] = args.slice(1); const pairs = values.map((value) => [evaluate(body, { ...environment, [name]: value }), value]);
     if (operation === "map") return pairs.map(([result]) => result);
     if (operation === "filter") return pairs.filter(([result]) => result).map(([, value]) => value);
     if (operation === "flat_map") return pairs.flatMap(([result]) => result);
+    if (operation === "any") return pairs.some(([result]) => result);
     return pairs.find(([result]) => result)?.[1] ?? null;
   }
   if (operation === "sort") { const values = [...evaluate(args[0], environment)]; const paths = evaluate(args[1], environment); return values.sort((left, right) => { for (const path of paths) { const order = compareValues(pathValue(left, path), pathValue(right, path)); if (order) return order; } return paths.length ? 0 : compareValues(left, right); }); }

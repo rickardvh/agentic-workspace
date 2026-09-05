@@ -29,11 +29,18 @@
     ]
   },
   "composition": {
-    "statuses": ["direct", "actionable", "blocked", "terminal"],
+    "statuses": ["direct", "actionable", "decision", "blocked", "terminal"],
     "multiple_actions": "block-with-lossless-alternatives",
     "action_order": ["owner:ascending", "operation_id:ascending"],
     "claim_policy": "blocked-overrides-allowed",
     "rule": "A source owner cannot gain global authority through a numeric priority."
+  },
+  "consequences": {
+    "task": "task",
+    "affected_field": "affects",
+    "prefixes": ["action:", "decision:", "effect:", "claim:", "outcome:"],
+    "action_identity_fields": ["operation_id", "arguments", "effects", "authority"],
+    "rule": "A blocker or bounded decision constrains only declared exact current consequences; task-global preemption must name task explicitly."
   },
   "executable_authority": {
     "kind": "agentic-workspace/portable-expression-program/v1",
@@ -52,10 +59,20 @@
       ["owner_check", ["ensure", ["eq", ["length", ["var", "owners"]], ["length", ["unique", ["var", "owners"]]]], "each source owner may contribute at most once"]],
       ["input_revision", ["digest", ["object", {"intent": ["var", "current_intent"], "sources": ["var", "relevant"]}]]],
       ["base_blockers", ["flat_map", ["var", "relevant"], "item", ["get", ["var", "item"], "blockers"]]],
+      ["decisions", ["sort", ["flat_map", ["var", "relevant"], "item", ["get", ["var", "item"], "decisions"]], ["array", "owner", "id"]]],
       ["actions", ["sort", ["flat_map", ["var", "relevant"], "item", ["map", ["get", ["var", "item"], "actions"], "action", ["object", {"owner": ["get", ["var", "item"], "owner"], "action": ["var", "action"]}]]], ["array", "owner", "action.operation_id"]]],
-      ["primary_action", ["if", ["and", ["eq", ["length", ["var", "base_blockers"]], 0], ["eq", ["length", ["var", "actions"]], 1]],
+      ["task_consequence", ["ir", "consequences.task"]],
+      ["constrained", ["unique", ["flat_map", ["concat", ["var", "base_blockers"], ["var", "decisions"]], "item", ["get", ["var", "item"], "affects"]]]],
+      ["available_actions", ["filter", ["var", "actions"], "pair", ["let", [
+        ["action", ["get", ["var", "pair"], "action"]]
+      ], ["and",
+        ["not", ["contains", ["var", "constrained"], ["var", "task_consequence"]]],
+        ["not", ["contains", ["var", "constrained"], ["get", ["var", "action"], "consequence_id"]]],
+        ["not", ["any", ["get", ["var", "action"], "effects"], "effect", ["contains", ["var", "constrained"], ["join", "effect:", ["var", "effect"]]]]]
+      ]]]],
+      ["primary_action", ["if", ["eq", ["length", ["var", "available_actions"]], 1],
         ["let", [
-          ["pair", ["get", ["var", "actions"], 0]],
+          ["pair", ["get", ["var", "available_actions"], 0]],
           ["action", ["get", ["var", "pair"], "action"]]
         ], ["object", {
           "kind": ["ir", "kinds.invocation"],
@@ -67,30 +84,45 @@
           "expected_input_revision": ["var", "input_revision"],
           "idempotency_key": ["digest", ["object", {"operation_id": ["get", ["var", "action"], "operation_id"], "arguments": ["get", ["var", "action"], "arguments"], "input_revision": ["var", "input_revision"]}]]
         }]], null]],
-      ["composition_blocker", ["if", ["and", ["eq", ["length", ["var", "base_blockers"]], 0], ["gt", ["length", ["var", "actions"]], 1]], ["object", {
+      ["action_composition_blocker", ["if", ["gt", ["length", ["var", "available_actions"]], 1], ["object", {
         "code": "multiple-actions",
         "message": "multiple current actions require an explicit dependency or authority relation",
         "owner": "operating-decision",
-        "alternatives": ["map", ["var", "actions"], "pair", ["merge", ["object", {"source_owner": ["get", ["var", "pair"], "owner"]}], ["get", ["var", "pair"], "action"]]]
+        "affects": ["array", ["var", "task_consequence"]],
+        "alternatives": ["map", ["var", "available_actions"], "pair", ["merge", ["object", {"source_owner": ["get", ["var", "pair"], "owner"]}], ["get", ["var", "pair"], "action"]]]
       }], null]],
+      ["task_decisions", ["filter", ["var", "decisions"], "item", ["contains", ["get", ["var", "item"], "affects"], ["var", "task_consequence"]]]],
+      ["decision_request", ["if", ["and", ["not", ["var", "primary_action"]], ["not", ["var", "action_composition_blocker"]], ["eq", ["length", ["var", "task_decisions"]], 1]], ["get", ["var", "task_decisions"], 0], null]],
+      ["decision_composition_blocker", ["if", ["and", ["not", ["var", "primary_action"]], ["not", ["var", "action_composition_blocker"]], ["gt", ["length", ["var", "task_decisions"]], 1]], ["object", {
+        "code": "multiple-decisions",
+        "message": "multiple task-wide decisions require an explicit dependency or authority relation",
+        "owner": "operating-decision",
+        "affects": ["array", ["var", "task_consequence"]],
+        "alternatives": ["var", "task_decisions"]
+      }], null]],
+      ["composition_blocker", ["fallback", ["var", "action_composition_blocker"], ["var", "decision_composition_blocker"]]],
       ["blockers", ["concat", ["var", "base_blockers"], ["if", ["var", "composition_blocker"], ["array", ["var", "composition_blocker"]], ["array"]]]],
       ["blocked_claims", ["sort", ["unique", ["flat_map", ["var", "relevant"], "item", ["get", ["get", ["var", "item"], "claims"], "blocked"]]], ["array"]]],
       ["allowed_claims", ["sort", ["unique", ["filter", ["flat_map", ["var", "relevant"], "item", ["get", ["get", ["var", "item"], "claims"], "allowed"]], "claim", ["not", ["contains", ["var", "blocked_claims"], ["var", "claim"]]]]], ["array"]]],
       ["owner_item", ["if", ["var", "intended"], ["find", ["var", "relevant"], "item", ["eq", ["get", ["var", "item"], "owner"], ["get", ["var", "intended"], "owner"]]], null]],
       ["found_outcome", ["if", ["var", "owner_item"], ["get", ["var", "owner_item"], "outcome"], null]],
+      ["terminal_consequences", ["if", ["var", "intended"], ["array", ["var", "task_consequence"], ["join", "claim:", ["get", ["var", "intended"], "claim"]], ["join", "outcome:", ["get", ["var", "intended"], "id"]]], ["array"]]],
       ["terminal_authority", ["if", ["and",
-        ["var", "intended"], ["eq", ["length", ["var", "blockers"]], 0], ["eq", ["length", ["var", "actions"]], 0], ["var", "owner_item"], ["var", "found_outcome"],
+        ["var", "intended"], ["eq", ["length", ["var", "actions"]], 0], ["eq", ["length", ["var", "task_decisions"]], 0], ["not", ["var", "composition_blocker"]], ["var", "owner_item"], ["var", "found_outcome"],
         ["eq", ["get", ["var", "found_outcome"], "id"], ["get", ["var", "intended"], "id"]],
         ["eq", ["get", ["var", "found_outcome"], "claim"], ["get", ["var", "intended"], "claim"]],
         ["eq", ["get", ["var", "found_outcome"], "status"], ["ir", "outcome.complete_status"]],
         ["eq", ["get", ["var", "found_outcome"], "evidence_revision"], ["get", ["var", "owner_item"], "revision"]],
         ["eq", ["length", ["get", ["var", "found_outcome"], "residual_work"]], 0],
         ["contains", ["var", "allowed_claims"], ["get", ["var", "found_outcome"], "claim"]],
-        ["not", ["contains", ["var", "blocked_claims"], ["get", ["var", "found_outcome"], "claim"]]]
+        ["not", ["contains", ["var", "blocked_claims"], ["get", ["var", "found_outcome"], "claim"]]],
+        ["not", ["any", ["var", "terminal_consequences"], "consequence", ["contains", ["var", "constrained"], ["var", "consequence"]]]]
       ], ["merge", ["object", {"owner": ["get", ["var", "owner_item"], "owner"], "revision": ["get", ["var", "owner_item"], "revision"]}], ["var", "found_outcome"]], null]],
-      ["status", ["if", ["gt", ["length", ["var", "blockers"]], 0], "blocked", ["if", ["var", "primary_action"], "actionable", ["if", ["var", "terminal_authority"], "terminal", "direct"]]]],
+      ["global_blocked", ["or", ["var", "composition_blocker"], ["any", ["var", "blockers"], "item", ["contains", ["get", ["var", "item"], "affects"], ["var", "task_consequence"]]]]],
+      ["status", ["if", ["var", "primary_action"], "actionable", ["if", ["var", "global_blocked"], "blocked", ["if", ["var", "decision_request"], "decision", ["if", ["var", "terminal_authority"], "terminal", "direct"]]]]],
       ["answer", ["object", {
-        "input_revision": ["var", "input_revision"], "status": ["var", "status"], "primary_action": ["var", "primary_action"], "blockers": ["var", "blockers"],
+        "input_revision": ["var", "input_revision"], "status": ["var", "status"], "primary_action": ["var", "primary_action"], "decision_request": ["var", "decision_request"], "blockers": ["var", "blockers"],
+        "pending_consequences": ["object", {"blockers": ["var", "blockers"], "decisions": ["var", "decisions"]}],
         "claim_boundary": ["object", {"allowed": ["var", "allowed_claims"], "blocked": ["var", "blocked_claims"]}],
         "relevant_owners": ["var", "owners"],
         "owner_states": ["map", ["var", "relevant"], "item", ["object", {"owner": ["get", ["var", "item"], "owner"], "settled": ["get", ["var", "item"], "settled"]}]],

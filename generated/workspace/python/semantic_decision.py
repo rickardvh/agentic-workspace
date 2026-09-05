@@ -6,7 +6,7 @@ import json
 from collections.abc import Iterable, Mapping
 from typing import Any, cast
 
-IR: dict[str, Any] = {'schema_version': 1, 'kinds': {'contribution': 'agentic-workspace/source-contribution/v1', 'decision': 'agentic-workspace/operating-decision/v1', 'decision_view': 'agentic-workspace/decision-view/v1', 'invocation': 'agentic-workspace/operation-invocation/v1'}, 'contribution': {'local_state_field': 'settled', 'rejected_legacy_fields': ['terminal'], 'rule': 'Owner-local quiescence never grants task terminality.'}, 'outcome': {'intent_field': 'outcome', 'contribution_field': 'outcome', 'complete_status': 'complete', 'required_identity_fields': ['id', 'owner', 'claim'], 'required_contribution_fields': ['id', 'status', 'claim', 'evidence_revision'], 'terminal_requires': ['exact-current-outcome-owner', 'matching-outcome-id', 'matching-claim', 'current-evidence-revision', 'claim-allowed-and-not-blocked', 'no-blockers', 'no-actions', 'no-residual-work']}, 'composition': {'statuses': ['direct', 'actionable', 'blocked', 'terminal'], 'multiple_actions': 'block-with-lossless-alternatives', 'action_order': ['owner:ascending', 'operation_id:ascending'], 'claim_policy': 'blocked-overrides-allowed', 'rule': 'A source owner cannot gain global authority through a numeric priority.'}, 'executable_authority': {'kind': 'agentic-workspace/portable-expression-program/v1', 'target_primitive_boundary': ['canonical SHA-256 digest', 'host value type inspection', 'portable expression evaluation'], 'rule': 'Reducer policy is expressed only by this target-neutral program; language projections contain only the portable evaluator and host primitives.', 'compile_source_decision': ['let', [['current_intent', ['fallback', ['var', 'intent'], ['object', {}]]], ['intended', ['intent_outcome', ['var', 'current_intent']]], ['normalized', ['map', ['var', 'contributions'], 'item', ['normalize', ['var', 'item']]]], ['relevant', ['sort', ['filter', ['var', 'normalized'], 'item', ['get', ['var', 'item'], 'relevant']], ['array', 'owner']]], ['owners', ['map', ['var', 'relevant'], 'item', ['get', ['var', 'item'], 'owner']]], ['owner_check', ['ensure', ['eq', ['length', ['var', 'owners']], ['length', ['unique', ['var', 'owners']]]], 'each source owner may contribute at most once']], ['input_revision', ['digest', ['object', {'intent': ['var', 'current_intent'], 'sources': ['var', 'relevant']}]]], ['base_blockers', ['flat_map', ['var', 'relevant'], 'item', ['get', ['var', 'item'], 'blockers']]], ['actions', ['sort', ['flat_map', ['var', 'relevant'], 'item', ['map', ['get', ['var', 'item'], 'actions'], 'action', ['object', {'owner': ['get', ['var', 'item'], 'owner'], 'action': ['var', 'action']}]]], ['array', 'owner', 'action.operation_id']]], ['primary_action', ['if', ['and', ['eq', ['length', ['var', 'base_blockers']], 0], ['eq', ['length', ['var', 'actions']], 1]], ['let', [['pair', ['get', ['var', 'actions'], 0]], ['action', ['get', ['var', 'pair'], 'action']]], ['object', {'kind': ['ir', 'kinds.invocation'], 'operation_id': ['get', ['var', 'action'], 'operation_id'], 'arguments': ['get', ['var', 'action'], 'arguments'], 'effects': ['get', ['var', 'action'], 'effects'], 'authority': ['get', ['var', 'action'], 'authority'], 'source_owner': ['get', ['var', 'pair'], 'owner'], 'expected_input_revision': ['var', 'input_revision'], 'idempotency_key': ['digest', ['object', {'operation_id': ['get', ['var', 'action'], 'operation_id'], 'arguments': ['get', ['var', 'action'], 'arguments'], 'input_revision': ['var', 'input_revision']}]]}]], None]], ['composition_blocker', ['if', ['and', ['eq', ['length', ['var', 'base_blockers']], 0], ['gt', ['length', ['var', 'actions']], 1]], ['object', {'code': 'multiple-actions', 'message': 'multiple current actions require an explicit dependency or authority relation', 'owner': 'operating-decision', 'alternatives': ['map', ['var', 'actions'], 'pair', ['merge', ['object', {'source_owner': ['get', ['var', 'pair'], 'owner']}], ['get', ['var', 'pair'], 'action']]]}], None]], ['blockers', ['concat', ['var', 'base_blockers'], ['if', ['var', 'composition_blocker'], ['array', ['var', 'composition_blocker']], ['array']]]], ['blocked_claims', ['sort', ['unique', ['flat_map', ['var', 'relevant'], 'item', ['get', ['get', ['var', 'item'], 'claims'], 'blocked']]], ['array']]], ['allowed_claims', ['sort', ['unique', ['filter', ['flat_map', ['var', 'relevant'], 'item', ['get', ['get', ['var', 'item'], 'claims'], 'allowed']], 'claim', ['not', ['contains', ['var', 'blocked_claims'], ['var', 'claim']]]]], ['array']]], ['owner_item', ['if', ['var', 'intended'], ['find', ['var', 'relevant'], 'item', ['eq', ['get', ['var', 'item'], 'owner'], ['get', ['var', 'intended'], 'owner']]], None]], ['found_outcome', ['if', ['var', 'owner_item'], ['get', ['var', 'owner_item'], 'outcome'], None]], ['terminal_authority', ['if', ['and', ['var', 'intended'], ['eq', ['length', ['var', 'blockers']], 0], ['eq', ['length', ['var', 'actions']], 0], ['var', 'owner_item'], ['var', 'found_outcome'], ['eq', ['get', ['var', 'found_outcome'], 'id'], ['get', ['var', 'intended'], 'id']], ['eq', ['get', ['var', 'found_outcome'], 'claim'], ['get', ['var', 'intended'], 'claim']], ['eq', ['get', ['var', 'found_outcome'], 'status'], ['ir', 'outcome.complete_status']], ['eq', ['get', ['var', 'found_outcome'], 'evidence_revision'], ['get', ['var', 'owner_item'], 'revision']], ['eq', ['length', ['get', ['var', 'found_outcome'], 'residual_work']], 0], ['contains', ['var', 'allowed_claims'], ['get', ['var', 'found_outcome'], 'claim']], ['not', ['contains', ['var', 'blocked_claims'], ['get', ['var', 'found_outcome'], 'claim']]]], ['merge', ['object', {'owner': ['get', ['var', 'owner_item'], 'owner'], 'revision': ['get', ['var', 'owner_item'], 'revision']}], ['var', 'found_outcome']], None]], ['status', ['if', ['gt', ['length', ['var', 'blockers']], 0], 'blocked', ['if', ['var', 'primary_action'], 'actionable', ['if', ['var', 'terminal_authority'], 'terminal', 'direct']]]], ['answer', ['object', {'input_revision': ['var', 'input_revision'], 'status': ['var', 'status'], 'primary_action': ['var', 'primary_action'], 'blockers': ['var', 'blockers'], 'claim_boundary': ['object', {'allowed': ['var', 'allowed_claims'], 'blocked': ['var', 'blocked_claims']}], 'relevant_owners': ['var', 'owners'], 'owner_states': ['map', ['var', 'relevant'], 'item', ['object', {'owner': ['get', ['var', 'item'], 'owner'], 'settled': ['get', ['var', 'item'], 'settled']}]], 'terminal_authority': ['var', 'terminal_authority']}]]], ['merge', ['object', {'kind': ['ir', 'kinds.decision'], 'decision_id': ['join', 'operating-decision:', ['slice', ['digest', ['var', 'answer']], 7, 23]]}], ['var', 'answer']]]}}
+IR: dict[str, Any] = {'schema_version': 1, 'kinds': {'contribution': 'agentic-workspace/source-contribution/v1', 'decision': 'agentic-workspace/operating-decision/v1', 'decision_view': 'agentic-workspace/decision-view/v1', 'invocation': 'agentic-workspace/operation-invocation/v1'}, 'contribution': {'local_state_field': 'settled', 'rejected_legacy_fields': ['terminal'], 'rule': 'Owner-local quiescence never grants task terminality.'}, 'outcome': {'intent_field': 'outcome', 'contribution_field': 'outcome', 'complete_status': 'complete', 'required_identity_fields': ['id', 'owner', 'claim'], 'required_contribution_fields': ['id', 'status', 'claim', 'evidence_revision'], 'terminal_requires': ['exact-current-outcome-owner', 'matching-outcome-id', 'matching-claim', 'current-evidence-revision', 'claim-allowed-and-not-blocked', 'no-blockers', 'no-actions', 'no-residual-work']}, 'composition': {'statuses': ['direct', 'actionable', 'decision', 'blocked', 'terminal'], 'multiple_actions': 'block-with-lossless-alternatives', 'action_order': ['owner:ascending', 'operation_id:ascending'], 'claim_policy': 'blocked-overrides-allowed', 'rule': 'A source owner cannot gain global authority through a numeric priority.'}, 'consequences': {'task': 'task', 'affected_field': 'affects', 'prefixes': ['action:', 'decision:', 'effect:', 'claim:', 'outcome:'], 'action_identity_fields': ['operation_id', 'arguments', 'effects', 'authority'], 'rule': 'A blocker or bounded decision constrains only declared exact current consequences; task-global preemption must name task explicitly.'}, 'executable_authority': {'kind': 'agentic-workspace/portable-expression-program/v1', 'target_primitive_boundary': ['canonical SHA-256 digest', 'host value type inspection', 'portable expression evaluation'], 'rule': 'Reducer policy is expressed only by this target-neutral program; language projections contain only the portable evaluator and host primitives.', 'compile_source_decision': ['let', [['current_intent', ['fallback', ['var', 'intent'], ['object', {}]]], ['intended', ['intent_outcome', ['var', 'current_intent']]], ['normalized', ['map', ['var', 'contributions'], 'item', ['normalize', ['var', 'item']]]], ['relevant', ['sort', ['filter', ['var', 'normalized'], 'item', ['get', ['var', 'item'], 'relevant']], ['array', 'owner']]], ['owners', ['map', ['var', 'relevant'], 'item', ['get', ['var', 'item'], 'owner']]], ['owner_check', ['ensure', ['eq', ['length', ['var', 'owners']], ['length', ['unique', ['var', 'owners']]]], 'each source owner may contribute at most once']], ['input_revision', ['digest', ['object', {'intent': ['var', 'current_intent'], 'sources': ['var', 'relevant']}]]], ['base_blockers', ['flat_map', ['var', 'relevant'], 'item', ['get', ['var', 'item'], 'blockers']]], ['decisions', ['sort', ['flat_map', ['var', 'relevant'], 'item', ['get', ['var', 'item'], 'decisions']], ['array', 'owner', 'id']]], ['actions', ['sort', ['flat_map', ['var', 'relevant'], 'item', ['map', ['get', ['var', 'item'], 'actions'], 'action', ['object', {'owner': ['get', ['var', 'item'], 'owner'], 'action': ['var', 'action']}]]], ['array', 'owner', 'action.operation_id']]], ['task_consequence', ['ir', 'consequences.task']], ['constrained', ['unique', ['flat_map', ['concat', ['var', 'base_blockers'], ['var', 'decisions']], 'item', ['get', ['var', 'item'], 'affects']]]], ['available_actions', ['filter', ['var', 'actions'], 'pair', ['let', [['action', ['get', ['var', 'pair'], 'action']]], ['and', ['not', ['contains', ['var', 'constrained'], ['var', 'task_consequence']]], ['not', ['contains', ['var', 'constrained'], ['get', ['var', 'action'], 'consequence_id']]], ['not', ['any', ['get', ['var', 'action'], 'effects'], 'effect', ['contains', ['var', 'constrained'], ['join', 'effect:', ['var', 'effect']]]]]]]]], ['primary_action', ['if', ['eq', ['length', ['var', 'available_actions']], 1], ['let', [['pair', ['get', ['var', 'available_actions'], 0]], ['action', ['get', ['var', 'pair'], 'action']]], ['object', {'kind': ['ir', 'kinds.invocation'], 'operation_id': ['get', ['var', 'action'], 'operation_id'], 'arguments': ['get', ['var', 'action'], 'arguments'], 'effects': ['get', ['var', 'action'], 'effects'], 'authority': ['get', ['var', 'action'], 'authority'], 'source_owner': ['get', ['var', 'pair'], 'owner'], 'expected_input_revision': ['var', 'input_revision'], 'idempotency_key': ['digest', ['object', {'operation_id': ['get', ['var', 'action'], 'operation_id'], 'arguments': ['get', ['var', 'action'], 'arguments'], 'input_revision': ['var', 'input_revision']}]]}]], None]], ['action_composition_blocker', ['if', ['gt', ['length', ['var', 'available_actions']], 1], ['object', {'code': 'multiple-actions', 'message': 'multiple current actions require an explicit dependency or authority relation', 'owner': 'operating-decision', 'affects': ['array', ['var', 'task_consequence']], 'alternatives': ['map', ['var', 'available_actions'], 'pair', ['merge', ['object', {'source_owner': ['get', ['var', 'pair'], 'owner']}], ['get', ['var', 'pair'], 'action']]]}], None]], ['task_decisions', ['filter', ['var', 'decisions'], 'item', ['contains', ['get', ['var', 'item'], 'affects'], ['var', 'task_consequence']]]], ['decision_request', ['if', ['and', ['not', ['var', 'primary_action']], ['not', ['var', 'action_composition_blocker']], ['eq', ['length', ['var', 'task_decisions']], 1]], ['get', ['var', 'task_decisions'], 0], None]], ['decision_composition_blocker', ['if', ['and', ['not', ['var', 'primary_action']], ['not', ['var', 'action_composition_blocker']], ['gt', ['length', ['var', 'task_decisions']], 1]], ['object', {'code': 'multiple-decisions', 'message': 'multiple task-wide decisions require an explicit dependency or authority relation', 'owner': 'operating-decision', 'affects': ['array', ['var', 'task_consequence']], 'alternatives': ['var', 'task_decisions']}], None]], ['composition_blocker', ['fallback', ['var', 'action_composition_blocker'], ['var', 'decision_composition_blocker']]], ['blockers', ['concat', ['var', 'base_blockers'], ['if', ['var', 'composition_blocker'], ['array', ['var', 'composition_blocker']], ['array']]]], ['blocked_claims', ['sort', ['unique', ['flat_map', ['var', 'relevant'], 'item', ['get', ['get', ['var', 'item'], 'claims'], 'blocked']]], ['array']]], ['allowed_claims', ['sort', ['unique', ['filter', ['flat_map', ['var', 'relevant'], 'item', ['get', ['get', ['var', 'item'], 'claims'], 'allowed']], 'claim', ['not', ['contains', ['var', 'blocked_claims'], ['var', 'claim']]]]], ['array']]], ['owner_item', ['if', ['var', 'intended'], ['find', ['var', 'relevant'], 'item', ['eq', ['get', ['var', 'item'], 'owner'], ['get', ['var', 'intended'], 'owner']]], None]], ['found_outcome', ['if', ['var', 'owner_item'], ['get', ['var', 'owner_item'], 'outcome'], None]], ['terminal_consequences', ['if', ['var', 'intended'], ['array', ['var', 'task_consequence'], ['join', 'claim:', ['get', ['var', 'intended'], 'claim']], ['join', 'outcome:', ['get', ['var', 'intended'], 'id']]], ['array']]], ['terminal_authority', ['if', ['and', ['var', 'intended'], ['eq', ['length', ['var', 'actions']], 0], ['eq', ['length', ['var', 'task_decisions']], 0], ['not', ['var', 'composition_blocker']], ['var', 'owner_item'], ['var', 'found_outcome'], ['eq', ['get', ['var', 'found_outcome'], 'id'], ['get', ['var', 'intended'], 'id']], ['eq', ['get', ['var', 'found_outcome'], 'claim'], ['get', ['var', 'intended'], 'claim']], ['eq', ['get', ['var', 'found_outcome'], 'status'], ['ir', 'outcome.complete_status']], ['eq', ['get', ['var', 'found_outcome'], 'evidence_revision'], ['get', ['var', 'owner_item'], 'revision']], ['eq', ['length', ['get', ['var', 'found_outcome'], 'residual_work']], 0], ['contains', ['var', 'allowed_claims'], ['get', ['var', 'found_outcome'], 'claim']], ['not', ['contains', ['var', 'blocked_claims'], ['get', ['var', 'found_outcome'], 'claim']]], ['not', ['any', ['var', 'terminal_consequences'], 'consequence', ['contains', ['var', 'constrained'], ['var', 'consequence']]]]], ['merge', ['object', {'owner': ['get', ['var', 'owner_item'], 'owner'], 'revision': ['get', ['var', 'owner_item'], 'revision']}], ['var', 'found_outcome']], None]], ['global_blocked', ['or', ['var', 'composition_blocker'], ['any', ['var', 'blockers'], 'item', ['contains', ['get', ['var', 'item'], 'affects'], ['var', 'task_consequence']]]]], ['status', ['if', ['var', 'primary_action'], 'actionable', ['if', ['var', 'global_blocked'], 'blocked', ['if', ['var', 'decision_request'], 'decision', ['if', ['var', 'terminal_authority'], 'terminal', 'direct']]]]], ['answer', ['object', {'input_revision': ['var', 'input_revision'], 'status': ['var', 'status'], 'primary_action': ['var', 'primary_action'], 'decision_request': ['var', 'decision_request'], 'blockers': ['var', 'blockers'], 'pending_consequences': ['object', {'blockers': ['var', 'blockers'], 'decisions': ['var', 'decisions']}], 'claim_boundary': ['object', {'allowed': ['var', 'allowed_claims'], 'blocked': ['var', 'blocked_claims']}], 'relevant_owners': ['var', 'owners'], 'owner_states': ['map', ['var', 'relevant'], 'item', ['object', {'owner': ['get', ['var', 'item'], 'owner'], 'settled': ['get', ['var', 'item'], 'settled']}]], 'terminal_authority': ['var', 'terminal_authority']}]]], ['merge', ['object', {'kind': ['ir', 'kinds.decision'], 'decision_id': ['join', 'operating-decision:', ['slice', ['digest', ['var', 'answer']], 7, 23]]}], ['var', 'answer']]]}}
 KINDS = IR["kinds"]
 
 
@@ -46,6 +46,17 @@ def _outcome(value: object, *, owner: str) -> dict[str, Any] | None:
     }
 
 
+def _affects(value: object, *, field: str) -> list[str]:
+    affects = _strings(value, field=field)
+    if not affects:
+        raise DecisionContractError(f"{field} must name at least one affected consequence")
+    task = IR["consequences"]["task"]
+    prefixes = tuple(IR["consequences"]["prefixes"])
+    if any(item != task and not item.startswith(prefixes) for item in affects):
+        raise DecisionContractError(f"{field} contains an unsupported consequence identity")
+    return sorted(set(affects))
+
+
 def normalize_contribution(value: Mapping[str, Any]) -> dict[str, Any]:
     owner = str(value.get("owner") or "").strip()
     revision = str(value.get("revision") or "").strip()
@@ -56,10 +67,13 @@ def normalize_contribution(value: Mapping[str, Any]) -> dict[str, Any]:
             raise DecisionContractError(f"{owner}.{field} is obsolete; use settled plus explicit outcome authority")
     blockers = value.get("blockers", [])
     actions = value.get("actions", [])
+    decisions = value.get("decisions", [])
     if not isinstance(blockers, list) or any(not isinstance(item, Mapping) for item in blockers):
         raise DecisionContractError(f"{owner}.blockers must be a list of objects")
     if not isinstance(actions, list) or any(not isinstance(item, Mapping) for item in actions):
         raise DecisionContractError(f"{owner}.actions must be a list of objects")
+    if not isinstance(decisions, list) or any(not isinstance(item, Mapping) for item in decisions):
+        raise DecisionContractError(f"{owner}.decisions must be a list of objects")
     normalized_actions = []
     for index, raw in enumerate(actions):
         item = dict(cast(Mapping[str, Any], raw))
@@ -71,12 +85,14 @@ def normalize_contribution(value: Mapping[str, Any]) -> dict[str, Any]:
             raise DecisionContractError(f"{owner}.actions[{index}].operation_id is required")
         if not isinstance(arguments, Mapping):
             raise DecisionContractError(f"{owner}.actions[{index}].arguments must be an object")
-        normalized_actions.append({
+        action = {
             "operation_id": operation_id,
             "arguments": dict(arguments),
             "effects": _strings(item.get("effects"), field=f"{owner}.actions[{index}].effects"),
             "authority": str(item.get("authority") or owner),
-        })
+        }
+        identity = {field: action[field] for field in IR["consequences"]["action_identity_fields"]}
+        normalized_actions.append({"consequence_id": f"action:{owner}:{revision}:{_digest(identity)}", **action})
     normalized_blockers = []
     for index, raw in enumerate(blockers):
         item = dict(cast(Mapping[str, Any], raw))
@@ -84,11 +100,47 @@ def normalize_contribution(value: Mapping[str, Any]) -> dict[str, Any]:
         message = str(item.get("message") or "").strip()
         if not code or not message:
             raise DecisionContractError(f"{owner}.blockers[{index}] requires code and message")
-        blocker = {"code": code, "message": message, "owner": str(item.get("owner") or owner)}
+        blocker = {
+            "code": code,
+            "message": message,
+            "owner": str(item.get("owner") or owner),
+            "affects": _affects(item.get(IR["consequences"]["affected_field"]), field=f"{owner}.blockers[{index}].affects"),
+        }
         recovery = str(item.get("recovery") or "").strip()
         if recovery:
             blocker["recovery"] = recovery
         normalized_blockers.append(blocker)
+    normalized_decisions = []
+    for index, raw in enumerate(decisions):
+        item = dict(cast(Mapping[str, Any], raw))
+        decision_id = str(item.get("id") or "").strip()
+        question = str(item.get("question") or "").strip()
+        response_operation_id = str(item.get("response_operation_id") or "").strip()
+        choices = item.get("choices", [])
+        if not decision_id or not question or not response_operation_id:
+            raise DecisionContractError(f"{owner}.decisions[{index}] requires id, question, and response_operation_id")
+        if not isinstance(choices, list) or any(not isinstance(choice, Mapping) for choice in choices):
+            raise DecisionContractError(f"{owner}.decisions[{index}].choices must be a list of objects")
+        normalized_choices = []
+        for choice_index, raw_choice in enumerate(choices):
+            choice = dict(cast(Mapping[str, Any], raw_choice))
+            choice_id = str(choice.get("id") or "").strip()
+            label = str(choice.get("label") or "").strip()
+            if not choice_id or not label:
+                raise DecisionContractError(f"{owner}.decisions[{index}].choices[{choice_index}] requires id and label")
+            normalized_choices.append({"id": choice_id, "label": label})
+        if not normalized_choices:
+            raise DecisionContractError(f"{owner}.decisions[{index}] requires bounded choices")
+        normalized_decisions.append({
+            "consequence_id": f"decision:{owner}:{decision_id}",
+            "id": decision_id,
+            "owner": owner,
+            "revision": revision,
+            "question": question,
+            "response_operation_id": response_operation_id,
+            "choices": normalized_choices,
+            "affects": _affects(item.get(IR["consequences"]["affected_field"]), field=f"{owner}.decisions[{index}].affects"),
+        })
     claims = value.get("claims", {})
     facts = value.get("facts", {})
     if not isinstance(claims, Mapping):
@@ -102,6 +154,7 @@ def normalize_contribution(value: Mapping[str, Any]) -> dict[str, Any]:
         "settled": value.get(IR["contribution"]["local_state_field"], False) is True,
         "facts": dict(facts),
         "blockers": normalized_blockers,
+        "decisions": normalized_decisions,
         "actions": normalized_actions,
         "claims": {
             "allowed": _strings(claims.get("allowed"), field=f"{owner}.claims.allowed"),
@@ -159,7 +212,7 @@ def _eval(expression: Any, environment: Mapping[str, Any]) -> Any:
         if isinstance(value, list) and isinstance(key, int) and 0 <= key < len(value):
             return value[key]
         return None
-    if operation in {"map", "filter", "flat_map", "find"}:
+    if operation in {"map", "filter", "flat_map", "find", "any"}:
         values = list(_eval(arguments[0], environment))
         name, body = arguments[1], arguments[2]
         evaluated = [(_eval(body, {**environment, name: value}), value) for value in values]
@@ -169,6 +222,8 @@ def _eval(expression: Any, environment: Mapping[str, Any]) -> Any:
             return [value for result, value in evaluated if result]
         if operation == "flat_map":
             return [nested for result, _ in evaluated for nested in result]
+        if operation == "any":
+            return any(result for result, _ in evaluated)
         return next((value for result, value in evaluated if result), None)
     if operation == "sort":
         values = list(_eval(arguments[0], environment))
