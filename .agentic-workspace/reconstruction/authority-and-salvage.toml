@@ -14,8 +14,10 @@ retire_when = "all retained semantics have been admitted by their corrected owne
 [gate]
 policy = "fail-closed"
 destructive_ready = false
-reason = "ignored/local checkout sources cannot be inspected through repository history and require current-checkout disposition before dependent deletion"
-current_checkout_required = true
+reason = "current-checkout authority has a semantic disposition, but retained and transferred meanings are not destructive-ready until their corrected destination owners admit them"
+current_checkout_required = false
+current_checkout_evidence = "redacted semantic inspection of the lived-in reconstruction checkout on 2026-09-05"
+privacy_boundary = "record source classes, currentness, and migration meaning only; never persist local target locations, prompts, logs, machine identifiers, secrets, or policy values"
 rule = "A destructive reconstruction change may remove a baseline source only when every semantic entry that covers it is either destructive_ready or demonstrably replaced by its named destination; ask/current-checkout entries always block deletion until resolved."
 
 [coverage]
@@ -134,52 +136,118 @@ rationale = "Do not preserve a growing posture model merely because the prototyp
 id = "local-config-overrides"
 area = "local-config"
 paths = [".agentic-workspace/config.local.toml", "agentic-workspace.local.toml"]
+selector = "source-checkout invocation, runtime capability, and command-safety overrides"
 source_class = "ignored_local_authority"
 authority = "local_override"
 semantic_owner = "workspace-config"
-disposition = "ask"
-destination = "current-checkout reconciliation into corrected local override surface or explicit retirement"
+disposition = "retain"
+destination = "small corrected ignored local override surface owned by workspace configuration"
 owner_issues = ["#2613", "#2767"]
-evidence = "current-checkout-required"
-current_checkout_required = true
+evidence = "current-checkout-redacted-structure-2026-09-05"
+current_checkout_required = false
 destructive_ready = false
-rationale = "Ignored local policy may be newer than Git and cannot be inferred from the baseline snapshot."
+rationale = "The lived-in checkout has behavior-changing local invocation, runtime-capability, and command-safety controls. Preserve those meanings without copying values or rebuilding the baseline configuration maze."
 
 [[baseline]]
-id = "local-delegation-evidence"
+id = "local-config-assignment-policy"
 area = "assignment-delegation-target"
-paths = [
-  ".agentic-workspace/delegation-outcomes.json",
-  "agentic-workspace.delegation-outcomes.json",
-  ".agentic-workspace/local/**",
-]
-selector = "delegation outcomes, target evidence, assignment runtime residue"
+paths = [".agentic-workspace/config.local.toml", "agentic-workspace.local.toml"]
+selector = "assignment policy, transport authority, human override policy, and selected target identity"
 source_class = "ignored_local_authority"
 authority = "local_override"
 semantic_owner = "assignment-delegation"
-disposition = "ask"
-destination = "current-checkout reconciliation into target evidence / assignment / transport owners"
-owner_issues = ["#2916", "#2209", "#2210", "#2817", "#2947"]
-evidence = "current-checkout-required"
-current_checkout_required = true
+disposition = "transfer"
+destination = "corrected assignment/delegation policy, work-revision decision, and transport owners"
+owner_issues = ["#2916", "#2210", "#2817", "#2947"]
+evidence = "current-checkout-redacted-structure-2026-09-05"
+current_checkout_required = false
 destructive_ready = false
-rationale = "Local target and transport evidence may affect current best-fit decisions and must be checked before deletion."
+rationale = "The local configuration contains active assignment and transport policy. Transfer its meaning through typed owners; do not preserve duplicated ambient policy fields or their machine-specific values."
+
+[[baseline]]
+id = "local-config-target-evidence"
+area = "assignment-delegation-target"
+paths = [".agentic-workspace/config.local.toml", "agentic-workspace.local.toml"]
+selector = "target capabilities, task-fit evidence, transport support, confidence provenance, and time-bounded economic evidence"
+source_class = "ignored_local_authority"
+authority = "local_override"
+semantic_owner = "target-evidence"
+disposition = "transfer"
+destination = "producer/version/currentness-aware target evidence re-observed for the current host; never a copied machine profile"
+owner_issues = ["#2209", "#2818", "#2817", "#2981"]
+evidence = "current-checkout-redacted-structure-2026-09-05"
+current_checkout_required = false
+destructive_ready = false
+rationale = "Capability and cost observations can affect best-fit routing, but target locations and observations are machine-local facts that must be freshly admitted rather than checked in or blindly migrated."
+
+[[baseline]]
+id = "local-delegation-decision-projection"
+area = "assignment-delegation-target"
+paths = [
+  ".agentic-workspace/local/delegation.json",
+  ".agentic-workspace/local/delegation-reconciliation.json",
+  ".agentic-workspace/delegation-outcomes.json",
+  "agentic-workspace.delegation-outcomes.json",
+]
+selector = "effective assignment choice and retired-policy reconciliation"
+source_class = "derived_projection"
+authority = "derived"
+semantic_owner = "assignment-delegation"
+disposition = "derive"
+destination = "fresh effective decision from current local policy, target evidence, and the corrected assignment owner"
+owner_issues = ["#2916", "#2210", "#2209", "#2817"]
+evidence = "current-checkout-redacted-structure-2026-09-05"
+current_checkout_required = false
+destructive_ready = false
+rationale = "The observed effective choice is represented by stronger local configuration and a reconciliation receipt. Preserve no second policy authority in the projection."
+
+[[baseline]]
+id = "local-assignment-run-history"
+area = "assignment-delegation-target"
+paths = [".agentic-workspace/local/assignment-runs/**"]
+selector = "dispatch, worker return, admission, integration, and closeout records"
+source_class = "historical_residue"
+authority = "history"
+semantic_owner = "assignment-delegation"
+disposition = "retire"
+destination = "no live-state migration; retain only tests or expensive-to-rediscover failure evidence outside the local record"
+owner_issues = ["#2916", "#2210", "#2947"]
+evidence = "current-checkout-redacted-lifecycle-2026-09-05"
+current_checkout_required = false
+destructive_ready = true
+rationale = "The only observed assignment run is integrated and closed. Its transport corpus is history, not current assignment or Planning authority."
+
+[[baseline]]
+id = "local-assignment-conclusions"
+area = "assignment-delegation-target"
+paths = [".agentic-workspace/local/conclusions/assignment/**"]
+selector = "cached assignment facts, actions, claims, procedures, and resources"
+source_class = "durable_domain_state"
+authority = "evidence"
+semantic_owner = "assignment-delegation"
+disposition = "transfer"
+destination = "only producer/version/currentness-compatible conclusions re-admitted for the exact work subject"
+owner_issues = ["#2209", "#2817", "#2981"]
+evidence = "current-checkout-redacted-structure-2026-09-05"
+current_checkout_required = false
+destructive_ready = false
+rationale = "The checkout contains multiple structured conclusion records. Do not bulk-migrate them or treat their cache shape as authority; the corrected owner must re-admit any still-useful conclusion."
 
 [[baseline]]
 id = "maintainer-local-diagnostics"
 area = "maintainer-local-diagnostics"
-paths = [".agentic-workspace/local/**"]
-selector = "maintainer session logging and diagnostic preferences"
+paths = [".agentic-workspace/local/logs/**"]
+selector = "session log records; no current local logging preference was observed"
 source_class = "maintainer_local"
-authority = "local_override"
+authority = "history"
 semantic_owner = "repo-maintainer-diagnostics"
-disposition = "ask"
-destination = "correct local-config-owned opt-in diagnostic surface"
+disposition = "retire"
+destination = "no record migration; future diagnostics remain local and require an explicit current opt-in owned by local configuration"
 owner_issues = ["#2995"]
-evidence = "current-checkout-required"
-current_checkout_required = true
-destructive_ready = false
-rationale = "Diagnostics stay local and opt-in; current local preference is not repository history."
+evidence = "current-checkout-redacted-presence-2026-09-05"
+current_checkout_required = false
+destructive_ready = true
+rationale = "An observed log file is historical diagnostic output, not evidence of a current opt-in preference. Do not persist its contents or identity in Git."
 
 [[baseline]]
 id = "startup-agent-adapter"
@@ -242,13 +310,13 @@ paths = [
 source_class = "ignored_local_authority"
 authority = "primary"
 semantic_owner = "planning"
-disposition = "ask"
-destination = "current-checkout reconciliation into corrected Planning subject/custody state"
+disposition = "retire"
+destination = "none for this checkout; the named ignored root-state files are absent, while current intent remains in the active tracked plan entry below"
 owner_issues = ["#2970", "#2989", "#2984"]
-evidence = "current-checkout-required"
-current_checkout_required = true
-destructive_ready = false
-rationale = "The ownership ledger declares live Planning state even when Git does not contain it; absence from Git is not evidence of absence."
+evidence = "current-checkout-presence-check-2026-09-05"
+current_checkout_required = false
+destructive_ready = true
+rationale = "The lived-in checkout has none of these ignored root-state files. This absence does not retire Planning semantics; the active tracked plan and local continuation carry are dispositioned separately."
 
 [[baseline]]
 id = "planning-active-intent"
@@ -265,10 +333,10 @@ semantic_owner = "planning"
 disposition = "transfer"
 destination = "corrected Planning subject, continuation, custody, and terminality model"
 owner_issues = ["#2970", "#2989", "#2984"]
-evidence = "baseline-git-plus-current-checkout-reconciliation"
-current_checkout_required = true
+evidence = "baseline-git-plus-current-checkout-2026-09-05"
+current_checkout_required = false
 destructive_ready = false
-rationale = "Migrate active intent and unresolved commitments by meaning, not the historical plan record format."
+rationale = "The current #2983 reconstruction plan remains active authority. Migrate its unresolved intent, dependency graph, and custody by meaning, not the historical plan record format."
 
 [[baseline]]
 id = "planning-assignment-projections"
@@ -278,6 +346,9 @@ paths = [
   ".agentic-workspace/planning/assignment-receipts/**",
   ".agentic-workspace/planning/integration-proposals/**",
   ".agentic-workspace/planning/integration-receipts/**",
+  ".agentic-workspace/local/planning/owner-selection*.json",
+  ".agentic-workspace/local/planning/reconciliation-*/**",
+  ".agentic-workspace/local/planning/targeted-execplan-receipts/**",
 ]
 source_class = "derived_projection"
 authority = "derived"
@@ -285,10 +356,61 @@ semantic_owner = "planning-and-assignment"
 disposition = "derive"
 destination = "fresh projections from current Planning subject plus assignment/delegation owners"
 owner_issues = ["#2970", "#2210", "#2916", "#2947"]
-evidence = "baseline-git-plus-current-checkout-reconciliation"
-current_checkout_required = true
+evidence = "baseline-git-plus-current-checkout-redacted-structure-2026-09-05"
+current_checkout_required = false
 destructive_ready = false
-rationale = "Receipts may preserve evidence, but embedded policy snapshots are not a new policy source."
+rationale = "The checkout contains a selected-owner projection, applied targeted-plan receipts, and an applied reconciliation with recorded conflicts. Preserve owner results through fresh projections; receipts and embedded policy snapshots are not new authority."
+
+[[baseline]]
+id = "planning-decision-point-intent-carry"
+area = "planning"
+paths = [".agentic-workspace/local/decision-point-intent/**"]
+selector = "active work binding, plan continuation, source revisions, and required carry-forward confirmations"
+source_class = "durable_domain_state"
+authority = "primary"
+semantic_owner = "planning"
+disposition = "transfer"
+destination = "corrected Planning continuation/custody state bound to current work and source revision"
+owner_issues = ["#2970", "#2989", "#2984", "#2210"]
+evidence = "current-checkout-redacted-lifecycle-2026-09-05"
+current_checkout_required = false
+destructive_ready = false
+rationale = "The observed carry is active, bound to plan continuation, commit-on-use, and requires carry-forward. Its semantic commitment must survive even though its forecast and confirmation representation should not."
+
+[[baseline]]
+id = "local-improvement-consequence-history"
+area = "correction-feedback"
+paths = [".agentic-workspace/local/improvement-pressure/**"]
+selector = "repeated consequence observations"
+source_class = "historical_residue"
+authority = "evidence"
+semantic_owner = "owner-directed-improvement"
+disposition = "transfer"
+destination = "only repeated future-relevant friction admitted by the smallest affected source owner; retire the raw event stream"
+owner_issues = ["#2647", "#2648", "#2809"]
+evidence = "current-checkout-redacted-count-and-kind-2026-09-05"
+current_checkout_required = false
+destructive_ready = false
+rationale = "The checkout contains consequence history, not a standalone learning authority. Promote only an owner-relevant conclusion that changes later equivalent work; do not migrate the event corpus."
+
+[[baseline]]
+id = "local-projection-caches"
+area = "support-provenance"
+paths = [
+  ".agentic-workspace/local/cache/**",
+  ".agentic-workspace/local/projection-cache/**",
+]
+selector = "generated fingerprints, external-intent cache, proof reuse cache, PR comment cache, and command projections"
+source_class = "derived_projection"
+authority = "derived"
+semantic_owner = "producing-owner"
+disposition = "derive"
+destination = "fresh bounded projections from current sources after reconstruction"
+owner_issues = ["#2984", "#2981", "#2987"]
+evidence = "current-checkout-redacted-presence-2026-09-05"
+current_checkout_required = false
+destructive_ready = true
+rationale = "Caches may accelerate the current implementation but carry no independent meaning across owner, source, producer, or representation changes."
 
 [[baseline]]
 id = "planning-history"
@@ -327,10 +449,10 @@ semantic_owner = "memory"
 disposition = "transfer"
 destination = "minimal corrected Memory store; promote owner-specific facts to stronger owners before pruning"
 owner_issues = ["#2570", "#2970", "#2989"]
-evidence = "baseline-git-plus-current-checkout-reconciliation"
-current_checkout_required = true
+evidence = "baseline-git-plus-current-checkout-presence-check-2026-09-05"
+current_checkout_required = false
 destructive_ready = false
-rationale = "Retain future-useful knowledge, not every note; Planning-owned next-action facts should move to Planning."
+rationale = "No ignored Memory state was observed; tracked root Memory remains the operational advisory source. Retain future-useful knowledge, and move Planning-owned next-action facts to Planning rather than copying the store."
 
 [[baseline]]
 id = "memory-routing-scaffolding"
@@ -385,25 +507,28 @@ semantic_owner = "verification"
 disposition = "transfer"
 destination = "only current, exact-subject reusable evidence under corrected Verification"
 owner_issues = ["#2334", "#2981"]
-evidence = "baseline-git-plus-current-checkout-reconciliation"
-current_checkout_required = true
+evidence = "baseline-git-plus-current-checkout-presence-check-2026-09-05"
+current_checkout_required = false
 destructive_ready = false
-rationale = "Subject-bound current evidence may survive; stale strategy residue should not."
+rationale = "The current evidence sources are tracked; ignored proof receipts are dispositioned below. Subject-bound current evidence may survive only through fresh Verification admission; stale strategy residue should not."
 
 [[baseline]]
 id = "proof-receipt-corpus"
 area = "verification-proof"
-paths = [".agentic-workspace/proof/receipts/**"]
+paths = [
+  ".agentic-workspace/proof/receipts/**",
+  ".agentic-workspace/local/proof-receipts/**",
+]
 source_class = "historical_residue"
 authority = "history"
 semantic_owner = "verification"
 disposition = "retire"
 destination = "Git history except current exact-subject evidence explicitly re-admitted by Verification"
 owner_issues = ["#2334", "#2981"]
-evidence = "baseline-git"
+evidence = "baseline-git-plus-current-checkout-redacted-subject-boundary-2026-09-05"
 current_checkout_required = false
-destructive_ready = true
-rationale = "Bulk receipts are evidence/history, not an authority source."
+destructive_ready = false
+rationale = "Bulk receipts are evidence/history, not an authority source. The ignored aggregate currently crosses branch subjects, so no bulk migration is valid; Verification must first admit or reject any exact-subject record before deletion."
 
 [[baseline]]
 id = "ownership-custody-ledger"

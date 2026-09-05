@@ -38,8 +38,10 @@ def test_reconstruction_map_is_temporary_and_fail_closed() -> None:
 
     assert gate["policy"] == "fail-closed"
     assert gate["destructive_ready"] is False
-    assert gate["current_checkout_required"] is True
-    assert "current-checkout" in gate["reason"]
+    assert gate["current_checkout_required"] is False
+    assert "destination owners" in gate["reason"]
+    assert "redacted semantic inspection" in gate["current_checkout_evidence"]
+    assert "never persist" in gate["privacy_boundary"]
     assert "destructive" in gate["rule"].lower()
 
 
@@ -74,10 +76,7 @@ def test_baseline_authority_has_complete_owner_and_disposition_coverage() -> Non
             assert entry["current_checkout_required"] is True
             assert entry["destructive_ready"] is False
 
-    assert any(
-        entry["source_class"] == "shared_repo_authority" and entry["authority"] == "primary"
-        for entry in entries
-    )
+    assert any(entry["source_class"] == "shared_repo_authority" and entry["authority"] == "primary" for entry in entries)
     assert any(entry["source_class"] == "ignored_local_authority" for entry in entries)
     assert any(entry["source_class"] == "package_state" for entry in entries)
     assert any(entry["source_class"] == "durable_domain_state" for entry in entries)
@@ -86,7 +85,8 @@ def test_baseline_authority_has_complete_owner_and_disposition_coverage() -> Non
 
     assert document["gate"]["destructive_ready"] is False
     unresolved = [entry["id"] for entry in entries if entry["current_checkout_required"]]
-    assert unresolved
+    assert unresolved == []
+    assert all(entry["disposition"] != "ask" for entry in entries)
 
 
 def test_baseline_map_keeps_known_primary_sources_out_of_the_retirement_bucket() -> None:
@@ -99,8 +99,29 @@ def test_baseline_map_keeps_known_primary_sources_out_of_the_retirement_bucket()
     assert by_id["ownership-custody-ledger"]["disposition"] == "transfer"
     assert by_id["planning-history"]["disposition"] == "retire"
     assert by_id["proof-receipt-corpus"]["disposition"] == "retire"
-    assert by_id["local-config-overrides"]["evidence"] == "current-checkout-required"
-    assert by_id["planning-current-local-state"]["evidence"] == "current-checkout-required"
+    assert by_id["local-config-overrides"]["disposition"] == "retain"
+    assert by_id["local-config-assignment-policy"]["disposition"] == "transfer"
+    assert by_id["local-config-target-evidence"]["disposition"] == "transfer"
+    assert by_id["local-delegation-decision-projection"]["disposition"] == "derive"
+    assert by_id["local-assignment-run-history"]["destructive_ready"] is True
+    assert by_id["local-assignment-conclusions"]["destructive_ready"] is False
+    assert by_id["planning-current-local-state"]["destructive_ready"] is True
+    assert by_id["planning-decision-point-intent-carry"]["disposition"] == "transfer"
+    assert by_id["planning-decision-point-intent-carry"]["destructive_ready"] is False
+    assert by_id["local-improvement-consequence-history"]["disposition"] == "transfer"
+    assert by_id["maintainer-local-diagnostics"]["destructive_ready"] is True
+
+
+def test_current_checkout_disposition_records_semantics_without_local_values() -> None:
+    document = load_map()
+    serialized = MAP_PATH.read_text(encoding="utf-8")
+    current_evidence = [entry for entry in document["baseline"] if "current-checkout" in entry["evidence"]]
+
+    assert current_evidence
+    assert all(entry["current_checkout_required"] is False for entry in current_evidence)
+    assert "user-local:" not in serialized
+    assert ".agentic-workspace/local/logs/aw-session-" not in serialized
+    assert "assignment-runs/run-" not in serialized
 
 
 def test_salvage_map_covers_the_snapshot_by_component_not_by_pr() -> None:
@@ -135,9 +156,7 @@ def test_salvage_map_covers_the_snapshot_by_component_not_by_pr() -> None:
         else:
             assert entry["independent_reason"]
 
-    outside_snapshot = {
-        pr for entry in entries if entry.get("outside_snapshot") for pr in entry["origin_prs"]
-    }
+    outside_snapshot = {pr for entry in entries if entry.get("outside_snapshot") for pr in entry["origin_prs"]}
     assert outside_snapshot == set(coverage["outside_snapshot_followups"])
 
 
