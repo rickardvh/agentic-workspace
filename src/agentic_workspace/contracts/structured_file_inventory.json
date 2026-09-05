@@ -1561,6 +1561,54 @@
       "storage_class": "source-of-truth"
     },
     {
+      "checked_in_justification": "Checked in as the minimal Node package boundary for exercising the shared native semantic core without a target-language reducer.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "notes": "The manifest exposes only the thin hand-maintained process binding permitted at the shared-core boundary.",
+      "owner": "workspace-runtime",
+      "pattern": "bindings/node/package.json",
+      "schema_or_validator": "validator: uv run pytest tests/test_shared_core.py -q",
+      "status": "typed-validator-backed",
+      "storage_class": "source-of-truth"
+    },
+    {
+      "checked_in_justification": "Checked in as language-neutral black-box evidence for the shared operating-decision reducer.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "notes": "Rust, Python, Node, and direct JSON tests consume the same success, negative, stale, and permutation corpus.",
+      "owner": "workspace-runtime",
+      "pattern": "tests/vectors/source_decision.json",
+      "schema_or_validator": "validator: uv run pytest tests/test_shared_core.py -q",
+      "status": "typed-validator-backed",
+      "storage_class": "diagnostic-fixture"
+    },
+    {
+      "checked_in_justification": "Checked in as the locked root manifest for the shared deterministic Rust core workspace.",
+      "editable_by_agents": true,
+      "format": "toml",
+      "generated": false,
+      "notes": "The root manifest only declares the Rust workspace and carries no operating-decision policy.",
+      "owner": "workspace-runtime",
+      "pattern": "Cargo.toml",
+      "schema_or_validator": "parser: cargo metadata --locked --no-deps",
+      "status": "typed-validator-backed",
+      "storage_class": "source-of-truth"
+    },
+    {
+      "checked_in_justification": "Checked in as crate build metadata for the shared deterministic Rust core.",
+      "editable_by_agents": true,
+      "format": "toml",
+      "generated": false,
+      "notes": "Crate manifests declare native build inputs; executable reducer authority remains Rust source.",
+      "owner": "workspace-runtime",
+      "pattern": "crates/*/Cargo.toml",
+      "schema_or_validator": "parser: cargo metadata --locked --no-deps",
+      "status": "typed-validator-backed",
+      "storage_class": "source-of-truth"
+    },
+    {
       "checked_in_justification": "Checked in so source-checkout launcher behavior, CI, and local package checks can validate generated command package freshness without regenerating first.",
       "editable_by_agents": false,
       "format": "json",
