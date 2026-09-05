@@ -285,3 +285,76 @@ def test_source_decision_projections_are_current() -> None:
     )
 
     assert completed.returncode == 0, completed.stdout + completed.stderr
+
+
+def test_portable_program_change_alters_both_executable_projections(tmp_path: Path) -> None:
+    root = Path(__file__).resolve().parents[1]
+    source = tmp_path / "source"
+    contract = source / "src/agentic_workspace/contracts/source_decision_ir.json"
+    contract.parent.mkdir(parents=True)
+    authority = json.loads((root / "src/agentic_workspace/contracts/source_decision_ir.json").read_text(encoding="utf-8"))
+    program = authority["executable_authority"]["compile_source_decision"]
+    authority["executable_authority"]["compile_source_decision"] = json.loads(json.dumps(program).replace('"direct"', '"waiting"'))
+    contract.write_text(json.dumps(authority), encoding="utf-8")
+    output = tmp_path / "output"
+    subprocess.run(
+        [
+            "uv",
+            "run",
+            "--frozen",
+            "--active",
+            "--no-sync",
+            "python",
+            "scripts/generate/generate_source_decision.py",
+            "--root",
+            str(source),
+            "--output-root",
+            str(output),
+        ],
+        cwd=root,
+        check=True,
+    )
+
+    python_result = subprocess.run(
+        [
+            "uv",
+            "run",
+            "--frozen",
+            "--active",
+            "--no-sync",
+            "python",
+            "-c",
+            (
+                "import importlib.util; "
+                f"spec=importlib.util.spec_from_file_location('projected_decision', {str(output / 'generated/workspace/python/semantic_decision.py')!r}); "
+                "module=importlib.util.module_from_spec(spec); spec.loader.exec_module(module); "
+                "print(module.compile_source_decision([])['status'])"
+            ),
+        ],
+        cwd=root,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    module = (output / "generated/workspace/typescript/src/semanticDecision.mjs").as_uri()
+    typescript_result = subprocess.run(
+        [
+            "node",
+            "--input-type=module",
+            "--eval",
+            f'import {{ compileSourceDecision }} from "{module}"; console.log(compileSourceDecision([]).status);',
+        ],
+        cwd=root,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+
+    assert python_result.stdout.strip() == typescript_result.stdout.strip() == "waiting"
+
+
+def test_generator_contains_only_portable_engine_not_reducer_policy() -> None:
+    generator = (Path(__file__).resolve().parents[1] / "scripts/generate/generate_source_decision.py").read_text(encoding="utf-8")
+
+    assert "multiple current actions require" not in generator
+    assert 'status = "blocked" if blockers' not in generator

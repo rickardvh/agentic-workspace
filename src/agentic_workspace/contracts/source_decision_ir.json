@@ -34,6 +34,68 @@
     "action_order": ["owner:ascending", "operation_id:ascending"],
     "claim_policy": "blocked-overrides-allowed",
     "rule": "A source owner cannot gain global authority through a numeric priority."
+  },
+  "executable_authority": {
+    "kind": "agentic-workspace/portable-expression-program/v1",
+    "target_primitive_boundary": [
+      "canonical SHA-256 digest",
+      "host value type inspection",
+      "portable expression evaluation"
+    ],
+    "rule": "Reducer policy is expressed only by this target-neutral program; language projections contain only the portable evaluator and host primitives.",
+    "compile_source_decision": ["let", [
+      ["current_intent", ["fallback", ["var", "intent"], ["object", {}]]],
+      ["intended", ["intent_outcome", ["var", "current_intent"]]],
+      ["normalized", ["map", ["var", "contributions"], "item", ["normalize", ["var", "item"]]]],
+      ["relevant", ["sort", ["filter", ["var", "normalized"], "item", ["get", ["var", "item"], "relevant"]], ["array", "owner"]]],
+      ["owners", ["map", ["var", "relevant"], "item", ["get", ["var", "item"], "owner"]]],
+      ["owner_check", ["ensure", ["eq", ["length", ["var", "owners"]], ["length", ["unique", ["var", "owners"]]]], "each source owner may contribute at most once"]],
+      ["input_revision", ["digest", ["object", {"intent": ["var", "current_intent"], "sources": ["var", "relevant"]}]]],
+      ["base_blockers", ["flat_map", ["var", "relevant"], "item", ["get", ["var", "item"], "blockers"]]],
+      ["actions", ["sort", ["flat_map", ["var", "relevant"], "item", ["map", ["get", ["var", "item"], "actions"], "action", ["object", {"owner": ["get", ["var", "item"], "owner"], "action": ["var", "action"]}]]], ["array", "owner", "action.operation_id"]]],
+      ["primary_action", ["if", ["and", ["eq", ["length", ["var", "base_blockers"]], 0], ["eq", ["length", ["var", "actions"]], 1]],
+        ["let", [
+          ["pair", ["get", ["var", "actions"], 0]],
+          ["action", ["get", ["var", "pair"], "action"]]
+        ], ["object", {
+          "kind": ["ir", "kinds.invocation"],
+          "operation_id": ["get", ["var", "action"], "operation_id"],
+          "arguments": ["get", ["var", "action"], "arguments"],
+          "effects": ["get", ["var", "action"], "effects"],
+          "authority": ["get", ["var", "action"], "authority"],
+          "source_owner": ["get", ["var", "pair"], "owner"],
+          "expected_input_revision": ["var", "input_revision"],
+          "idempotency_key": ["digest", ["object", {"operation_id": ["get", ["var", "action"], "operation_id"], "arguments": ["get", ["var", "action"], "arguments"], "input_revision": ["var", "input_revision"]}]]
+        }]], null]],
+      ["composition_blocker", ["if", ["and", ["eq", ["length", ["var", "base_blockers"]], 0], ["gt", ["length", ["var", "actions"]], 1]], ["object", {
+        "code": "multiple-actions",
+        "message": "multiple current actions require an explicit dependency or authority relation",
+        "owner": "operating-decision",
+        "alternatives": ["map", ["var", "actions"], "pair", ["merge", ["object", {"source_owner": ["get", ["var", "pair"], "owner"]}], ["get", ["var", "pair"], "action"]]]
+      }], null]],
+      ["blockers", ["concat", ["var", "base_blockers"], ["if", ["var", "composition_blocker"], ["array", ["var", "composition_blocker"]], ["array"]]]],
+      ["blocked_claims", ["sort", ["unique", ["flat_map", ["var", "relevant"], "item", ["get", ["get", ["var", "item"], "claims"], "blocked"]]], ["array"]]],
+      ["allowed_claims", ["sort", ["unique", ["filter", ["flat_map", ["var", "relevant"], "item", ["get", ["get", ["var", "item"], "claims"], "allowed"]], "claim", ["not", ["contains", ["var", "blocked_claims"], ["var", "claim"]]]]], ["array"]]],
+      ["owner_item", ["if", ["var", "intended"], ["find", ["var", "relevant"], "item", ["eq", ["get", ["var", "item"], "owner"], ["get", ["var", "intended"], "owner"]]], null]],
+      ["found_outcome", ["if", ["var", "owner_item"], ["get", ["var", "owner_item"], "outcome"], null]],
+      ["terminal_authority", ["if", ["and",
+        ["var", "intended"], ["eq", ["length", ["var", "blockers"]], 0], ["eq", ["length", ["var", "actions"]], 0], ["var", "owner_item"], ["var", "found_outcome"],
+        ["eq", ["get", ["var", "found_outcome"], "id"], ["get", ["var", "intended"], "id"]],
+        ["eq", ["get", ["var", "found_outcome"], "claim"], ["get", ["var", "intended"], "claim"]],
+        ["eq", ["get", ["var", "found_outcome"], "status"], ["ir", "outcome.complete_status"]],
+        ["eq", ["get", ["var", "found_outcome"], "evidence_revision"], ["get", ["var", "owner_item"], "revision"]],
+        ["eq", ["length", ["get", ["var", "found_outcome"], "residual_work"]], 0],
+        ["contains", ["var", "allowed_claims"], ["get", ["var", "found_outcome"], "claim"]],
+        ["not", ["contains", ["var", "blocked_claims"], ["get", ["var", "found_outcome"], "claim"]]]
+      ], ["merge", ["object", {"owner": ["get", ["var", "owner_item"], "owner"], "revision": ["get", ["var", "owner_item"], "revision"]}], ["var", "found_outcome"]], null]],
+      ["status", ["if", ["gt", ["length", ["var", "blockers"]], 0], "blocked", ["if", ["var", "primary_action"], "actionable", ["if", ["var", "terminal_authority"], "terminal", "direct"]]]],
+      ["answer", ["object", {
+        "input_revision": ["var", "input_revision"], "status": ["var", "status"], "primary_action": ["var", "primary_action"], "blockers": ["var", "blockers"],
+        "claim_boundary": ["object", {"allowed": ["var", "allowed_claims"], "blocked": ["var", "blocked_claims"]}],
+        "relevant_owners": ["var", "owners"],
+        "owner_states": ["map", ["var", "relevant"], "item", ["object", {"owner": ["get", ["var", "item"], "owner"], "settled": ["get", ["var", "item"], "settled"]}]],
+        "terminal_authority": ["var", "terminal_authority"]
+      }]]
+    ], ["merge", ["object", {"kind": ["ir", "kinds.decision"], "decision_id": ["join", "operating-decision:", ["slice", ["digest", ["var", "answer"]], 7, 23]]}], ["var", "answer"]]]
   }
 }
-

@@ -15,7 +15,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Iterable, Mapping
-from typing import Any
+from typing import Any, cast
 
 IR: dict[str, Any] = __IR__
 KINDS = IR["kinds"]
@@ -35,7 +35,7 @@ def _strings(value: object, *, field: str) -> list[str]:
         return []
     if not isinstance(value, list) or any(not isinstance(item, str) or not item for item in value):
         raise DecisionContractError(f"{field} must be a list of non-empty strings")
-    return list(value)
+    return cast(list[str], list(value))
 
 
 def _outcome(value: object, *, owner: str) -> dict[str, Any] | None:
@@ -73,7 +73,7 @@ def normalize_contribution(value: Mapping[str, Any]) -> dict[str, Any]:
         raise DecisionContractError(f"{owner}.actions must be a list of objects")
     normalized_actions = []
     for index, raw in enumerate(actions):
-        item = dict(raw)
+        item = dict(cast(Mapping[str, Any], raw))
         if "priority" in item:
             raise DecisionContractError(f"{owner}.actions[{index}].priority is obsolete; authority cannot be self-ranked")
         operation_id = str(item.get("operation_id") or "").strip()
@@ -90,7 +90,7 @@ def normalize_contribution(value: Mapping[str, Any]) -> dict[str, Any]:
         })
     normalized_blockers = []
     for index, raw in enumerate(blockers):
-        item = dict(raw)
+        item = dict(cast(Mapping[str, Any], raw))
         code = str(item.get("code") or "").strip()
         message = str(item.get("message") or "").strip()
         if not code or not message:
@@ -134,71 +134,103 @@ def _intent_outcome(intent: Mapping[str, Any]) -> dict[str, str] | None:
     return result
 
 
+def _path(value: Any, path: str) -> Any:
+    current = value
+    for part in path.split("."):
+        if not isinstance(current, Mapping):
+            return None
+        current = current.get(part)
+    return current
+
+
+def _eval(expression: Any, environment: Mapping[str, Any]) -> Any:
+    if isinstance(expression, dict):
+        return {key: _eval(value, environment) for key, value in expression.items()}
+    if not isinstance(expression, list):
+        return expression
+    operation, *arguments = expression
+    if operation == "var":
+        return environment.get(arguments[0])
+    if operation == "ir":
+        return _path(IR, arguments[0])
+    if operation == "object":
+        return _eval(arguments[0], environment)
+    if operation == "array":
+        return [_eval(value, environment) for value in arguments]
+    if operation == "let":
+        local = dict(environment)
+        for name, value in arguments[0]:
+            local[name] = _eval(value, local)
+        return _eval(arguments[1], local)
+    if operation == "get":
+        value = _eval(arguments[0], environment)
+        key = _eval(arguments[1], environment)
+        if isinstance(value, Mapping):
+            return value.get(key)
+        if isinstance(value, list) and isinstance(key, int) and 0 <= key < len(value):
+            return value[key]
+        return None
+    if operation in {"map", "filter", "flat_map", "find"}:
+        values = list(_eval(arguments[0], environment))
+        name, body = arguments[1], arguments[2]
+        evaluated = [(_eval(body, {**environment, name: value}), value) for value in values]
+        if operation == "map":
+            return [result for result, _ in evaluated]
+        if operation == "filter":
+            return [value for result, value in evaluated if result]
+        if operation == "flat_map":
+            return [nested for result, _ in evaluated for nested in result]
+        return next((value for result, value in evaluated if result), None)
+    if operation == "sort":
+        values = list(_eval(arguments[0], environment))
+        paths = _eval(arguments[1], environment)
+        return sorted(values, key=lambda value: tuple(_path(value, path) for path in paths) if paths else value)
+    if operation == "unique":
+        values = list(_eval(arguments[0], environment))
+        return list(dict.fromkeys(values))
+    if operation == "normalize":
+        return normalize_contribution(_eval(arguments[0], environment))
+    if operation == "intent_outcome":
+        return _intent_outcome(_eval(arguments[0], environment))
+    if operation == "digest":
+        return _digest(_eval(arguments[0], environment))
+    if operation == "ensure":
+        if not _eval(arguments[0], environment):
+            raise DecisionContractError(str(_eval(arguments[1], environment)))
+        return _eval(arguments[2], environment) if len(arguments) > 2 else True
+    if operation == "if":
+        return _eval(arguments[1] if _eval(arguments[0], environment) else arguments[2], environment)
+    if operation == "and":
+        return all(_eval(value, environment) for value in arguments)
+    if operation == "or":
+        return any(_eval(value, environment) for value in arguments)
+    if operation == "not":
+        return not _eval(arguments[0], environment)
+    if operation == "eq":
+        return _eval(arguments[0], environment) == _eval(arguments[1], environment)
+    if operation == "gt":
+        return _eval(arguments[0], environment) > _eval(arguments[1], environment)
+    if operation == "length":
+        return len(_eval(arguments[0], environment))
+    if operation == "contains":
+        return _eval(arguments[1], environment) in _eval(arguments[0], environment)
+    if operation == "fallback":
+        value = _eval(arguments[0], environment)
+        return value if value is not None else _eval(arguments[1], environment)
+    if operation == "concat":
+        return [item for value in arguments for item in _eval(value, environment)]
+    if operation == "merge":
+        return {key: item for value in arguments for key, item in _eval(value, environment).items()}
+    if operation == "join":
+        return "".join(str(_eval(value, environment)) for value in arguments)
+    if operation == "slice":
+        return _eval(arguments[0], environment)[arguments[1] : arguments[2]]
+    raise DecisionContractError(f"unsupported portable expression operation: {operation}")
+
+
 def compile_source_decision(contributions: Iterable[Mapping[str, Any]], *, intent: Mapping[str, Any] | None = None) -> dict[str, Any]:
-    current_intent = dict(intent or {})
-    intended_outcome = _intent_outcome(current_intent)
-    normalized = [normalize_contribution(item) for item in contributions]
-    relevant = sorted((item for item in normalized if item["relevant"]), key=lambda item: item["owner"])
-    owners = [item["owner"] for item in relevant]
-    if len(owners) != len(set(owners)):
-        raise DecisionContractError("each source owner may contribute at most once")
-    source_input = {"intent": current_intent, "sources": relevant}
-    input_revision = _digest(source_input)
-    blockers = [blocker for item in relevant for blocker in item["blockers"]]
-    actions = sorted(
-        ((item["owner"], action) for item in relevant for action in item["actions"]),
-        key=lambda pair: (pair[0], pair[1]["operation_id"]),
-    )
-    primary_action = None
-    if not blockers and len(actions) == 1:
-        owner, action = actions[0]
-        primary_action = {
-            "kind": KINDS["invocation"],
-            "operation_id": action["operation_id"],
-            "arguments": action["arguments"],
-            "effects": action["effects"],
-            "authority": action["authority"],
-            "source_owner": owner,
-            "expected_input_revision": input_revision,
-            "idempotency_key": _digest({"operation_id": action["operation_id"], "arguments": action["arguments"], "input_revision": input_revision}),
-        }
-    elif not blockers and len(actions) > 1:
-        blockers.append({
-            "code": "multiple-actions",
-            "message": "multiple current actions require an explicit dependency or authority relation",
-            "owner": "operating-decision",
-            "alternatives": [{"source_owner": owner, **action} for owner, action in actions],
-        })
-    blocked_claims = sorted({claim for item in relevant for claim in item["claims"]["blocked"]})
-    allowed_claims = sorted({claim for item in relevant for claim in item["claims"]["allowed"] if claim not in blocked_claims})
-    terminal_authority = None
-    if intended_outcome and not blockers and not actions:
-        owner_item = next((item for item in relevant if item["owner"] == intended_outcome["owner"]), None)
-        outcome = owner_item["outcome"] if owner_item else None
-        if (
-            owner_item
-            and outcome
-            and outcome["id"] == intended_outcome["id"]
-            and outcome["claim"] == intended_outcome["claim"]
-            and outcome["status"] == IR["outcome"]["complete_status"]
-            and outcome["evidence_revision"] == owner_item["revision"]
-            and not outcome["residual_work"]
-            and outcome["claim"] in allowed_claims
-            and outcome["claim"] not in blocked_claims
-        ):
-            terminal_authority = {"owner": owner_item["owner"], "revision": owner_item["revision"], **outcome}
-    status = "blocked" if blockers else "actionable" if primary_action else "terminal" if terminal_authority else "direct"
-    answer = {
-        "input_revision": input_revision,
-        "status": status,
-        "primary_action": primary_action,
-        "blockers": blockers,
-        "claim_boundary": {"allowed": allowed_claims, "blocked": blocked_claims},
-        "relevant_owners": owners,
-        "owner_states": [{"owner": item["owner"], "settled": item["settled"]} for item in relevant],
-        "terminal_authority": terminal_authority,
-    }
-    return {"kind": KINDS["decision"], "decision_id": "operating-decision:" + _digest(answer).removeprefix("sha256:")[:16], **answer}
+    program = IR["executable_authority"]["compile_source_decision"]
+    return cast(dict[str, Any], _eval(program, {"contributions": list(contributions), "intent": dict(intent or {})}))
 
 
 def select_decision_detail(decision: Mapping[str, Any], fields: Iterable[str]) -> dict[str, Any]:
@@ -240,39 +272,88 @@ export function normalizeContribution(value) {
   return { owner, revision, relevant: value.relevant !== false, settled: value[IR.contribution.local_state_field] === true, facts, blockers: normalizedBlockers, actions: normalizedActions, claims: { allowed: strings(claims.allowed, `${owner}.claims.allowed`), blocked: strings(claims.blocked, `${owner}.claims.blocked`) }, outcome: outcome(value[IR.outcome.contribution_field], owner) };
 }
 
+const pathValue = (value, path) => path.split(".").reduce((current, part) => current && typeof current === "object" ? current[part] : null, value);
+const compareValues = (left, right) => String(left).localeCompare(String(right));
+const intentOutcome = (intent) => {
+  const value = intent[IR.outcome.intent_field];
+  if (value == null) return null;
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("intent.outcome must be an object");
+  const result = Object.fromEntries(IR.outcome.required_identity_fields.map((field) => [field, String(value[field] || "").trim()]));
+  if (Object.values(result).some((value) => !value)) throw new Error("intent.outcome requires id, owner, and claim");
+  return result;
+};
+const evaluate = (expression, environment) => {
+  if (!Array.isArray(expression)) {
+    if (expression && typeof expression === "object") return Object.fromEntries(Object.entries(expression).map(([key, value]) => [key, evaluate(value, environment)]));
+    return expression;
+  }
+  const [operation, ...args] = expression;
+  if (operation === "var") return environment[args[0]];
+  if (operation === "ir") return pathValue(IR, args[0]);
+  if (operation === "object") return evaluate(args[0], environment);
+  if (operation === "array") return args.map((value) => evaluate(value, environment));
+  if (operation === "let") { const local = { ...environment }; for (const [name, value] of args[0]) local[name] = evaluate(value, local); return evaluate(args[1], local); }
+  if (operation === "get") { const value = evaluate(args[0], environment); const key = evaluate(args[1], environment); return value != null && typeof value === "object" && key in value ? value[key] : null; }
+  if (["map", "filter", "flat_map", "find"].includes(operation)) {
+    const values = [...evaluate(args[0], environment)]; const [name, body] = args.slice(1); const pairs = values.map((value) => [evaluate(body, { ...environment, [name]: value }), value]);
+    if (operation === "map") return pairs.map(([result]) => result);
+    if (operation === "filter") return pairs.filter(([result]) => result).map(([, value]) => value);
+    if (operation === "flat_map") return pairs.flatMap(([result]) => result);
+    return pairs.find(([result]) => result)?.[1] ?? null;
+  }
+  if (operation === "sort") { const values = [...evaluate(args[0], environment)]; const paths = evaluate(args[1], environment); return values.sort((left, right) => { for (const path of paths) { const order = compareValues(pathValue(left, path), pathValue(right, path)); if (order) return order; } return paths.length ? 0 : compareValues(left, right); }); }
+  if (operation === "unique") return [...new Set(evaluate(args[0], environment))];
+  if (operation === "normalize") return normalizeContribution(evaluate(args[0], environment));
+  if (operation === "intent_outcome") return intentOutcome(evaluate(args[0], environment));
+  if (operation === "digest") return digest(evaluate(args[0], environment));
+  if (operation === "ensure") { if (!evaluate(args[0], environment)) throw new Error(String(evaluate(args[1], environment))); return args.length > 2 ? evaluate(args[2], environment) : true; }
+  if (operation === "if") return evaluate(evaluate(args[0], environment) ? args[1] : args[2], environment);
+  if (operation === "and") return args.every((value) => evaluate(value, environment));
+  if (operation === "or") return args.some((value) => evaluate(value, environment));
+  if (operation === "not") return !evaluate(args[0], environment);
+  if (operation === "eq") return JSON.stringify(stable(evaluate(args[0], environment))) === JSON.stringify(stable(evaluate(args[1], environment)));
+  if (operation === "gt") return evaluate(args[0], environment) > evaluate(args[1], environment);
+  if (operation === "length") return evaluate(args[0], environment).length;
+  if (operation === "contains") return evaluate(args[0], environment).includes(evaluate(args[1], environment));
+  if (operation === "fallback") { const value = evaluate(args[0], environment); return value == null ? evaluate(args[1], environment) : value; }
+  if (operation === "concat") return args.flatMap((value) => evaluate(value, environment));
+  if (operation === "merge") return Object.assign({}, ...args.map((value) => evaluate(value, environment)));
+  if (operation === "join") return args.map((value) => String(evaluate(value, environment))).join("");
+  if (operation === "slice") return evaluate(args[0], environment).slice(args[1], args[2]);
+  throw new Error(`unsupported portable expression operation: ${operation}`);
+};
+
 export function compileSourceDecision(contributions, intent = {}) {
-  const intendedValue = intent[IR.outcome.intent_field]; let intended = null;
-  if (intendedValue != null) { if (!intendedValue || typeof intendedValue !== "object" || Array.isArray(intendedValue)) throw new Error("intent.outcome must be an object"); intended = Object.fromEntries(IR.outcome.required_identity_fields.map((field) => [field, String(intendedValue[field] || "").trim()])); if (Object.values(intended).some((value) => !value)) throw new Error("intent.outcome requires id, owner, and claim"); }
-  const relevant = contributions.map(normalizeContribution).filter((item) => item.relevant).sort((a, b) => a.owner.localeCompare(b.owner)); const owners = relevant.map((item) => item.owner); if (new Set(owners).size !== owners.length) throw new Error("each source owner may contribute at most once");
-  const inputRevision = digest({ intent, sources: relevant }); const blockers = relevant.flatMap((item) => item.blockers); const actions = relevant.flatMap((item) => item.actions.map((action) => [item.owner, action])).sort((a, b) => a[0].localeCompare(b[0]) || a[1].operation_id.localeCompare(b[1].operation_id)); let primaryAction = null;
-  if (!blockers.length && actions.length === 1) { const [owner, action] = actions[0]; primaryAction = { kind: kinds.invocation, operation_id: action.operation_id, arguments: action.arguments, effects: action.effects, authority: action.authority, source_owner: owner, expected_input_revision: inputRevision, idempotency_key: digest({ operation_id: action.operation_id, arguments: action.arguments, input_revision: inputRevision }) }; }
-  else if (!blockers.length && actions.length > 1) blockers.push({ code: "multiple-actions", message: "multiple current actions require an explicit dependency or authority relation", owner: "operating-decision", alternatives: actions.map(([owner, action]) => ({ source_owner: owner, ...action })) });
-  const blocked = [...new Set(relevant.flatMap((item) => item.claims.blocked))].sort(); const allowed = [...new Set(relevant.flatMap((item) => item.claims.allowed))].filter((claim) => !blocked.includes(claim)).sort(); let terminalAuthority = null;
-  if (intended && !blockers.length && !actions.length) { const item = relevant.find((candidate) => candidate.owner === intended.owner); const found = item?.outcome; if (item && found && found.id === intended.id && found.claim === intended.claim && found.status === IR.outcome.complete_status && found.evidence_revision === item.revision && !found.residual_work.length && allowed.includes(found.claim) && !blocked.includes(found.claim)) terminalAuthority = { owner: item.owner, revision: item.revision, ...found }; }
-  const status = blockers.length ? "blocked" : primaryAction ? "actionable" : terminalAuthority ? "terminal" : "direct"; const answer = { input_revision: inputRevision, status, primary_action: primaryAction, blockers, claim_boundary: { allowed, blocked }, relevant_owners: owners, owner_states: relevant.map((item) => ({ owner: item.owner, settled: item.settled })), terminal_authority: terminalAuthority }; return { kind: kinds.decision, decision_id: "operating-decision:" + digest(answer).slice(7, 23), ...answer };
+  return evaluate(IR.executable_authority.compile_source_decision, { contributions: [...contributions], intent: { ...(intent || {}) } });
 }
 
 export function selectDecisionDetail(decision, fields) { return { kind: kinds.decision_view, decision_id: decision.decision_id, input_revision: decision.input_revision, authoritative: false, values: Object.fromEntries(fields.filter((field) => field in decision).map((field) => [field, decision[field]])) }; }
 '''
 
 
-def _render(template: str, ir: dict[str, object]) -> str:
-    return template.replace("__IR__", json.dumps(ir, sort_keys=True, separators=(",", ":"))).rstrip() + "\n"
+def _render(template: str, ir: dict[str, object], *, python: bool = False) -> str:
+    encoded = repr(ir) if python else json.dumps(ir, sort_keys=True, separators=(",", ":"))
+    return template.replace("__IR__", encoded).rstrip() + "\n"
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--check", action="store_true")
+    parser.add_argument("--root", type=Path, default=REPO_ROOT)
+    parser.add_argument("--output-root", type=Path)
     args = parser.parse_args()
-    ir = json.loads(IR_PATH.read_text(encoding="utf-8"))
+    source_root = args.root.resolve()
+    output_root = (args.output_root or source_root).resolve()
+    ir_path = source_root / IR_PATH.relative_to(REPO_ROOT)
+    ir = json.loads(ir_path.read_text(encoding="utf-8"))
     outputs = {
-        PYTHON_PATH: _render(PYTHON_TEMPLATE, ir),
-        TYPESCRIPT_PATH: _render(TYPESCRIPT_TEMPLATE, ir),
+        output_root / PYTHON_PATH.relative_to(REPO_ROOT): _render(PYTHON_TEMPLATE, ir, python=True),
+        output_root / TYPESCRIPT_PATH.relative_to(REPO_ROOT): _render(TYPESCRIPT_TEMPLATE, ir),
     }
     stale = [path for path, content in outputs.items() if not path.is_file() or path.read_text(encoding="utf-8") != content]
     if args.check:
         if stale:
-            print("stale generated source-decision projections: " + ", ".join(str(path.relative_to(REPO_ROOT)) for path in stale))
+            print("stale generated source-decision projections: " + ", ".join(str(path.relative_to(output_root)) for path in stale))
             return 1
         return 0
     for path, content in outputs.items():

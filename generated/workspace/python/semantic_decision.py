@@ -4,9 +4,9 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Iterable, Mapping
-from typing import Any
+from typing import Any, cast
 
-IR: dict[str, Any] = {"composition":{"action_order":["owner:ascending","operation_id:ascending"],"claim_policy":"blocked-overrides-allowed","multiple_actions":"block-with-lossless-alternatives","rule":"A source owner cannot gain global authority through a numeric priority.","statuses":["direct","actionable","blocked","terminal"]},"contribution":{"local_state_field":"settled","rejected_legacy_fields":["terminal"],"rule":"Owner-local quiescence never grants task terminality."},"kinds":{"contribution":"agentic-workspace/source-contribution/v1","decision":"agentic-workspace/operating-decision/v1","decision_view":"agentic-workspace/decision-view/v1","invocation":"agentic-workspace/operation-invocation/v1"},"outcome":{"complete_status":"complete","contribution_field":"outcome","intent_field":"outcome","required_contribution_fields":["id","status","claim","evidence_revision"],"required_identity_fields":["id","owner","claim"],"terminal_requires":["exact-current-outcome-owner","matching-outcome-id","matching-claim","current-evidence-revision","claim-allowed-and-not-blocked","no-blockers","no-actions","no-residual-work"]},"schema_version":1}
+IR: dict[str, Any] = {'schema_version': 1, 'kinds': {'contribution': 'agentic-workspace/source-contribution/v1', 'decision': 'agentic-workspace/operating-decision/v1', 'decision_view': 'agentic-workspace/decision-view/v1', 'invocation': 'agentic-workspace/operation-invocation/v1'}, 'contribution': {'local_state_field': 'settled', 'rejected_legacy_fields': ['terminal'], 'rule': 'Owner-local quiescence never grants task terminality.'}, 'outcome': {'intent_field': 'outcome', 'contribution_field': 'outcome', 'complete_status': 'complete', 'required_identity_fields': ['id', 'owner', 'claim'], 'required_contribution_fields': ['id', 'status', 'claim', 'evidence_revision'], 'terminal_requires': ['exact-current-outcome-owner', 'matching-outcome-id', 'matching-claim', 'current-evidence-revision', 'claim-allowed-and-not-blocked', 'no-blockers', 'no-actions', 'no-residual-work']}, 'composition': {'statuses': ['direct', 'actionable', 'blocked', 'terminal'], 'multiple_actions': 'block-with-lossless-alternatives', 'action_order': ['owner:ascending', 'operation_id:ascending'], 'claim_policy': 'blocked-overrides-allowed', 'rule': 'A source owner cannot gain global authority through a numeric priority.'}, 'executable_authority': {'kind': 'agentic-workspace/portable-expression-program/v1', 'target_primitive_boundary': ['canonical SHA-256 digest', 'host value type inspection', 'portable expression evaluation'], 'rule': 'Reducer policy is expressed only by this target-neutral program; language projections contain only the portable evaluator and host primitives.', 'compile_source_decision': ['let', [['current_intent', ['fallback', ['var', 'intent'], ['object', {}]]], ['intended', ['intent_outcome', ['var', 'current_intent']]], ['normalized', ['map', ['var', 'contributions'], 'item', ['normalize', ['var', 'item']]]], ['relevant', ['sort', ['filter', ['var', 'normalized'], 'item', ['get', ['var', 'item'], 'relevant']], ['array', 'owner']]], ['owners', ['map', ['var', 'relevant'], 'item', ['get', ['var', 'item'], 'owner']]], ['owner_check', ['ensure', ['eq', ['length', ['var', 'owners']], ['length', ['unique', ['var', 'owners']]]], 'each source owner may contribute at most once']], ['input_revision', ['digest', ['object', {'intent': ['var', 'current_intent'], 'sources': ['var', 'relevant']}]]], ['base_blockers', ['flat_map', ['var', 'relevant'], 'item', ['get', ['var', 'item'], 'blockers']]], ['actions', ['sort', ['flat_map', ['var', 'relevant'], 'item', ['map', ['get', ['var', 'item'], 'actions'], 'action', ['object', {'owner': ['get', ['var', 'item'], 'owner'], 'action': ['var', 'action']}]]], ['array', 'owner', 'action.operation_id']]], ['primary_action', ['if', ['and', ['eq', ['length', ['var', 'base_blockers']], 0], ['eq', ['length', ['var', 'actions']], 1]], ['let', [['pair', ['get', ['var', 'actions'], 0]], ['action', ['get', ['var', 'pair'], 'action']]], ['object', {'kind': ['ir', 'kinds.invocation'], 'operation_id': ['get', ['var', 'action'], 'operation_id'], 'arguments': ['get', ['var', 'action'], 'arguments'], 'effects': ['get', ['var', 'action'], 'effects'], 'authority': ['get', ['var', 'action'], 'authority'], 'source_owner': ['get', ['var', 'pair'], 'owner'], 'expected_input_revision': ['var', 'input_revision'], 'idempotency_key': ['digest', ['object', {'operation_id': ['get', ['var', 'action'], 'operation_id'], 'arguments': ['get', ['var', 'action'], 'arguments'], 'input_revision': ['var', 'input_revision']}]]}]], None]], ['composition_blocker', ['if', ['and', ['eq', ['length', ['var', 'base_blockers']], 0], ['gt', ['length', ['var', 'actions']], 1]], ['object', {'code': 'multiple-actions', 'message': 'multiple current actions require an explicit dependency or authority relation', 'owner': 'operating-decision', 'alternatives': ['map', ['var', 'actions'], 'pair', ['merge', ['object', {'source_owner': ['get', ['var', 'pair'], 'owner']}], ['get', ['var', 'pair'], 'action']]]}], None]], ['blockers', ['concat', ['var', 'base_blockers'], ['if', ['var', 'composition_blocker'], ['array', ['var', 'composition_blocker']], ['array']]]], ['blocked_claims', ['sort', ['unique', ['flat_map', ['var', 'relevant'], 'item', ['get', ['get', ['var', 'item'], 'claims'], 'blocked']]], ['array']]], ['allowed_claims', ['sort', ['unique', ['filter', ['flat_map', ['var', 'relevant'], 'item', ['get', ['get', ['var', 'item'], 'claims'], 'allowed']], 'claim', ['not', ['contains', ['var', 'blocked_claims'], ['var', 'claim']]]]], ['array']]], ['owner_item', ['if', ['var', 'intended'], ['find', ['var', 'relevant'], 'item', ['eq', ['get', ['var', 'item'], 'owner'], ['get', ['var', 'intended'], 'owner']]], None]], ['found_outcome', ['if', ['var', 'owner_item'], ['get', ['var', 'owner_item'], 'outcome'], None]], ['terminal_authority', ['if', ['and', ['var', 'intended'], ['eq', ['length', ['var', 'blockers']], 0], ['eq', ['length', ['var', 'actions']], 0], ['var', 'owner_item'], ['var', 'found_outcome'], ['eq', ['get', ['var', 'found_outcome'], 'id'], ['get', ['var', 'intended'], 'id']], ['eq', ['get', ['var', 'found_outcome'], 'claim'], ['get', ['var', 'intended'], 'claim']], ['eq', ['get', ['var', 'found_outcome'], 'status'], ['ir', 'outcome.complete_status']], ['eq', ['get', ['var', 'found_outcome'], 'evidence_revision'], ['get', ['var', 'owner_item'], 'revision']], ['eq', ['length', ['get', ['var', 'found_outcome'], 'residual_work']], 0], ['contains', ['var', 'allowed_claims'], ['get', ['var', 'found_outcome'], 'claim']], ['not', ['contains', ['var', 'blocked_claims'], ['get', ['var', 'found_outcome'], 'claim']]]], ['merge', ['object', {'owner': ['get', ['var', 'owner_item'], 'owner'], 'revision': ['get', ['var', 'owner_item'], 'revision']}], ['var', 'found_outcome']], None]], ['status', ['if', ['gt', ['length', ['var', 'blockers']], 0], 'blocked', ['if', ['var', 'primary_action'], 'actionable', ['if', ['var', 'terminal_authority'], 'terminal', 'direct']]]], ['answer', ['object', {'input_revision': ['var', 'input_revision'], 'status': ['var', 'status'], 'primary_action': ['var', 'primary_action'], 'blockers': ['var', 'blockers'], 'claim_boundary': ['object', {'allowed': ['var', 'allowed_claims'], 'blocked': ['var', 'blocked_claims']}], 'relevant_owners': ['var', 'owners'], 'owner_states': ['map', ['var', 'relevant'], 'item', ['object', {'owner': ['get', ['var', 'item'], 'owner'], 'settled': ['get', ['var', 'item'], 'settled']}]], 'terminal_authority': ['var', 'terminal_authority']}]]], ['merge', ['object', {'kind': ['ir', 'kinds.decision'], 'decision_id': ['join', 'operating-decision:', ['slice', ['digest', ['var', 'answer']], 7, 23]]}], ['var', 'answer']]]}}
 KINDS = IR["kinds"]
 
 
@@ -24,7 +24,7 @@ def _strings(value: object, *, field: str) -> list[str]:
         return []
     if not isinstance(value, list) or any(not isinstance(item, str) or not item for item in value):
         raise DecisionContractError(f"{field} must be a list of non-empty strings")
-    return list(value)
+    return cast(list[str], list(value))
 
 
 def _outcome(value: object, *, owner: str) -> dict[str, Any] | None:
@@ -62,7 +62,7 @@ def normalize_contribution(value: Mapping[str, Any]) -> dict[str, Any]:
         raise DecisionContractError(f"{owner}.actions must be a list of objects")
     normalized_actions = []
     for index, raw in enumerate(actions):
-        item = dict(raw)
+        item = dict(cast(Mapping[str, Any], raw))
         if "priority" in item:
             raise DecisionContractError(f"{owner}.actions[{index}].priority is obsolete; authority cannot be self-ranked")
         operation_id = str(item.get("operation_id") or "").strip()
@@ -79,7 +79,7 @@ def normalize_contribution(value: Mapping[str, Any]) -> dict[str, Any]:
         })
     normalized_blockers = []
     for index, raw in enumerate(blockers):
-        item = dict(raw)
+        item = dict(cast(Mapping[str, Any], raw))
         code = str(item.get("code") or "").strip()
         message = str(item.get("message") or "").strip()
         if not code or not message:
@@ -123,71 +123,103 @@ def _intent_outcome(intent: Mapping[str, Any]) -> dict[str, str] | None:
     return result
 
 
+def _path(value: Any, path: str) -> Any:
+    current = value
+    for part in path.split("."):
+        if not isinstance(current, Mapping):
+            return None
+        current = current.get(part)
+    return current
+
+
+def _eval(expression: Any, environment: Mapping[str, Any]) -> Any:
+    if isinstance(expression, dict):
+        return {key: _eval(value, environment) for key, value in expression.items()}
+    if not isinstance(expression, list):
+        return expression
+    operation, *arguments = expression
+    if operation == "var":
+        return environment.get(arguments[0])
+    if operation == "ir":
+        return _path(IR, arguments[0])
+    if operation == "object":
+        return _eval(arguments[0], environment)
+    if operation == "array":
+        return [_eval(value, environment) for value in arguments]
+    if operation == "let":
+        local = dict(environment)
+        for name, value in arguments[0]:
+            local[name] = _eval(value, local)
+        return _eval(arguments[1], local)
+    if operation == "get":
+        value = _eval(arguments[0], environment)
+        key = _eval(arguments[1], environment)
+        if isinstance(value, Mapping):
+            return value.get(key)
+        if isinstance(value, list) and isinstance(key, int) and 0 <= key < len(value):
+            return value[key]
+        return None
+    if operation in {"map", "filter", "flat_map", "find"}:
+        values = list(_eval(arguments[0], environment))
+        name, body = arguments[1], arguments[2]
+        evaluated = [(_eval(body, {**environment, name: value}), value) for value in values]
+        if operation == "map":
+            return [result for result, _ in evaluated]
+        if operation == "filter":
+            return [value for result, value in evaluated if result]
+        if operation == "flat_map":
+            return [nested for result, _ in evaluated for nested in result]
+        return next((value for result, value in evaluated if result), None)
+    if operation == "sort":
+        values = list(_eval(arguments[0], environment))
+        paths = _eval(arguments[1], environment)
+        return sorted(values, key=lambda value: tuple(_path(value, path) for path in paths) if paths else value)
+    if operation == "unique":
+        values = list(_eval(arguments[0], environment))
+        return list(dict.fromkeys(values))
+    if operation == "normalize":
+        return normalize_contribution(_eval(arguments[0], environment))
+    if operation == "intent_outcome":
+        return _intent_outcome(_eval(arguments[0], environment))
+    if operation == "digest":
+        return _digest(_eval(arguments[0], environment))
+    if operation == "ensure":
+        if not _eval(arguments[0], environment):
+            raise DecisionContractError(str(_eval(arguments[1], environment)))
+        return _eval(arguments[2], environment) if len(arguments) > 2 else True
+    if operation == "if":
+        return _eval(arguments[1] if _eval(arguments[0], environment) else arguments[2], environment)
+    if operation == "and":
+        return all(_eval(value, environment) for value in arguments)
+    if operation == "or":
+        return any(_eval(value, environment) for value in arguments)
+    if operation == "not":
+        return not _eval(arguments[0], environment)
+    if operation == "eq":
+        return _eval(arguments[0], environment) == _eval(arguments[1], environment)
+    if operation == "gt":
+        return _eval(arguments[0], environment) > _eval(arguments[1], environment)
+    if operation == "length":
+        return len(_eval(arguments[0], environment))
+    if operation == "contains":
+        return _eval(arguments[1], environment) in _eval(arguments[0], environment)
+    if operation == "fallback":
+        value = _eval(arguments[0], environment)
+        return value if value is not None else _eval(arguments[1], environment)
+    if operation == "concat":
+        return [item for value in arguments for item in _eval(value, environment)]
+    if operation == "merge":
+        return {key: item for value in arguments for key, item in _eval(value, environment).items()}
+    if operation == "join":
+        return "".join(str(_eval(value, environment)) for value in arguments)
+    if operation == "slice":
+        return _eval(arguments[0], environment)[arguments[1] : arguments[2]]
+    raise DecisionContractError(f"unsupported portable expression operation: {operation}")
+
+
 def compile_source_decision(contributions: Iterable[Mapping[str, Any]], *, intent: Mapping[str, Any] | None = None) -> dict[str, Any]:
-    current_intent = dict(intent or {})
-    intended_outcome = _intent_outcome(current_intent)
-    normalized = [normalize_contribution(item) for item in contributions]
-    relevant = sorted((item for item in normalized if item["relevant"]), key=lambda item: item["owner"])
-    owners = [item["owner"] for item in relevant]
-    if len(owners) != len(set(owners)):
-        raise DecisionContractError("each source owner may contribute at most once")
-    source_input = {"intent": current_intent, "sources": relevant}
-    input_revision = _digest(source_input)
-    blockers = [blocker for item in relevant for blocker in item["blockers"]]
-    actions = sorted(
-        ((item["owner"], action) for item in relevant for action in item["actions"]),
-        key=lambda pair: (pair[0], pair[1]["operation_id"]),
-    )
-    primary_action = None
-    if not blockers and len(actions) == 1:
-        owner, action = actions[0]
-        primary_action = {
-            "kind": KINDS["invocation"],
-            "operation_id": action["operation_id"],
-            "arguments": action["arguments"],
-            "effects": action["effects"],
-            "authority": action["authority"],
-            "source_owner": owner,
-            "expected_input_revision": input_revision,
-            "idempotency_key": _digest({"operation_id": action["operation_id"], "arguments": action["arguments"], "input_revision": input_revision}),
-        }
-    elif not blockers and len(actions) > 1:
-        blockers.append({
-            "code": "multiple-actions",
-            "message": "multiple current actions require an explicit dependency or authority relation",
-            "owner": "operating-decision",
-            "alternatives": [{"source_owner": owner, **action} for owner, action in actions],
-        })
-    blocked_claims = sorted({claim for item in relevant for claim in item["claims"]["blocked"]})
-    allowed_claims = sorted({claim for item in relevant for claim in item["claims"]["allowed"] if claim not in blocked_claims})
-    terminal_authority = None
-    if intended_outcome and not blockers and not actions:
-        owner_item = next((item for item in relevant if item["owner"] == intended_outcome["owner"]), None)
-        outcome = owner_item["outcome"] if owner_item else None
-        if (
-            owner_item
-            and outcome
-            and outcome["id"] == intended_outcome["id"]
-            and outcome["claim"] == intended_outcome["claim"]
-            and outcome["status"] == IR["outcome"]["complete_status"]
-            and outcome["evidence_revision"] == owner_item["revision"]
-            and not outcome["residual_work"]
-            and outcome["claim"] in allowed_claims
-            and outcome["claim"] not in blocked_claims
-        ):
-            terminal_authority = {"owner": owner_item["owner"], "revision": owner_item["revision"], **outcome}
-    status = "blocked" if blockers else "actionable" if primary_action else "terminal" if terminal_authority else "direct"
-    answer = {
-        "input_revision": input_revision,
-        "status": status,
-        "primary_action": primary_action,
-        "blockers": blockers,
-        "claim_boundary": {"allowed": allowed_claims, "blocked": blocked_claims},
-        "relevant_owners": owners,
-        "owner_states": [{"owner": item["owner"], "settled": item["settled"]} for item in relevant],
-        "terminal_authority": terminal_authority,
-    }
-    return {"kind": KINDS["decision"], "decision_id": "operating-decision:" + _digest(answer).removeprefix("sha256:")[:16], **answer}
+    program = IR["executable_authority"]["compile_source_decision"]
+    return cast(dict[str, Any], _eval(program, {"contributions": list(contributions), "intent": dict(intent or {})}))
 
 
 def select_decision_detail(decision: Mapping[str, Any], fields: Iterable[str]) -> dict[str, Any]:
