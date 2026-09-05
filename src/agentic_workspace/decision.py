@@ -46,8 +46,16 @@ def _request(payload: Mapping[str, Any]) -> dict[str, Any]:
     return dict(json.loads(completed.stdout))
 
 
-def compile_source_decision(contributions: Iterable[Mapping[str, Any]], *, intent: Mapping[str, Any] | None = None) -> dict[str, Any]:
-    return _request({"contributions": list(contributions), "intent": dict(intent or {})})
+def compile_source_decision(
+    contributions: Iterable[Mapping[str, Any]],
+    *,
+    intent: Mapping[str, Any] | None = None,
+    capability_contract: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {"contributions": list(contributions), "intent": dict(intent or {})}
+    if capability_contract is not None:
+        payload["capability_contract"] = dict(capability_contract)
+    return _request(payload)
 
 
 def select_decision_detail(decision: Mapping[str, Any], fields: Iterable[str]) -> dict[str, Any]:

@@ -1,12 +1,14 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
-use std::collections::{BTreeSet, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::fmt::{Display, Formatter};
 
 const CONTRIBUTION_KIND: &str = "agentic-workspace/source-contribution/v1";
 const DECISION_KIND: &str = "agentic-workspace/operating-decision/v1";
 const INVOCATION_KIND: &str = "agentic-workspace/operation-invocation/v1";
+const CAPABILITY_CONTRACT_KIND: &str = "agentic-workspace/capability-contract/v1";
+const PUBLIC_REQUEST_KIND: &str = "agentic-workspace/public-request/v1";
 const TASK: &str = "task";
 const CONSEQUENCE_PREFIXES: [&str; 5] = ["action:", "decision:", "effect:", "claim:", "outcome:"];
 
@@ -28,10 +30,12 @@ impl Display for CoreError {
 impl std::error::Error for CoreError {}
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct DecisionInput {
     contributions: Vec<ContributionInput>,
     #[serde(default = "empty_object")]
     intent: Value,
+    capability_contract: Option<CapabilityContractInput>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -55,8 +59,89 @@ struct ContributionInput {
     #[serde(default)]
     claims: ClaimsInput,
     outcome: Option<OutcomeInput>,
+    request_response: Option<RequestResponseInput>,
     #[serde(flatten)]
     extra: Map<String, Value>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CapabilityContractInput {
+    kind: String,
+    revision: String,
+    owners: Vec<CapabilityOwnerInput>,
+    #[serde(default)]
+    claim_authorities: Vec<ClaimAuthorityInput>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CapabilityOwnerInput {
+    owner: String,
+    revision: String,
+    #[serde(default)]
+    domains: Vec<String>,
+    #[serde(default)]
+    effects: Vec<EffectAuthorityInput>,
+    #[serde(default)]
+    operations: Vec<OperationCapabilityInput>,
+    #[serde(default)]
+    requests: Vec<RequestShapeInput>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct EffectAuthorityInput {
+    id: String,
+    domain: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ClaimAuthorityInput {
+    claim: String,
+    owner: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct OperationCapabilityInput {
+    id: String,
+    input_schema: Value,
+    result_kind: String,
+    #[serde(default)]
+    effects: Vec<String>,
+    #[serde(default)]
+    claims: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RequestShapeInput {
+    kind: String,
+    input_schema: Value,
+    result_kind: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct PublicRequestInput {
+    kind: String,
+    id: String,
+    owner: String,
+    owner_revision: String,
+    source_revision: String,
+    request_kind: String,
+    capability_revision: String,
+    task_identity: CurrentWorkIdentity,
+    arguments: Value,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RequestResponseInput {
+    request_id: String,
+    status: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -135,7 +220,7 @@ struct IntendedOutcome {
     claim: String,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 struct CurrentWorkIdentity {
     kind: String,
@@ -173,6 +258,60 @@ struct NormalizedContribution {
     actions: Vec<NormalizedAction>,
     claims: NormalizedClaims,
     outcome: Option<NormalizedOutcome>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    request_response: Option<NormalizedRequestResponse>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct NormalizedCapabilityContract {
+    kind: &'static str,
+    revision: String,
+    owners: BTreeMap<String, NormalizedCapabilityOwner>,
+    claim_authorities: BTreeMap<String, String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct NormalizedCapabilityOwner {
+    revision: String,
+    domains: BTreeSet<String>,
+    effects: BTreeMap<String, String>,
+    operations: BTreeMap<String, NormalizedOperationCapability>,
+    requests: BTreeMap<String, NormalizedRequestShape>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct NormalizedOperationCapability {
+    input_schema: Value,
+    result_kind: String,
+    effects: BTreeSet<String>,
+    claims: BTreeSet<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct NormalizedRequestShape {
+    input_schema: Value,
+    result_kind: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct NormalizedPublicRequest {
+    kind: &'static str,
+    id: String,
+    identity: String,
+    owner: String,
+    owner_revision: String,
+    source_revision: String,
+    request_kind: String,
+    result_kind: String,
+    capability_revision: String,
+    task_identity: CurrentWorkIdentity,
+    arguments: Value,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct NormalizedRequestResponse {
+    request_id: String,
+    status: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -263,6 +402,17 @@ fn strings(
     Ok(values)
 }
 
+fn unique_strings(values: Vec<String>, field: &str) -> Result<Vec<String>, CoreError> {
+    let original_len = values.len();
+    let values = strings(values, field, true)?;
+    if values.len() != original_len {
+        return Err(CoreError::new(format!(
+            "{field} must not contain duplicate values"
+        )));
+    }
+    Ok(values)
+}
+
 fn affects(values: Vec<String>, field: &str) -> Result<Vec<String>, CoreError> {
     let values = strings(values, field, true)?;
     if values.is_empty() {
@@ -289,7 +439,210 @@ fn digest(value: &impl Serialize) -> Result<String, CoreError> {
     Ok(format!("sha256:{bytes:x}"))
 }
 
-fn normalize_contribution(input: ContributionInput) -> Result<NormalizedContribution, CoreError> {
+fn normalize_capability_contract(
+    input: CapabilityContractInput,
+) -> Result<NormalizedCapabilityContract, CoreError> {
+    if input.kind != CAPABILITY_CONTRACT_KIND {
+        return Err(CoreError::new(format!(
+            "capability_contract.kind must be {CAPABILITY_CONTRACT_KIND}"
+        )));
+    }
+    let revision = require_text(&input.revision, "capability_contract.revision")?;
+    if !sha256_revision(&revision) {
+        return Err(CoreError::new(
+            "capability_contract.revision must be a lowercase sha256 revision",
+        ));
+    }
+
+    let mut owners = BTreeMap::new();
+    let mut owned_domains = BTreeMap::<String, String>::new();
+    let mut owned_effects = BTreeMap::<String, String>::new();
+    let mut operation_owners = BTreeMap::<String, String>::new();
+    let mut request_kinds = BTreeMap::<String, String>::new();
+    for (owner_index, input_owner) in input.owners.into_iter().enumerate() {
+        let owner = require_text(
+            &input_owner.owner,
+            &format!("capability_contract.owners[{owner_index}].owner"),
+        )?;
+        if owners.contains_key(&owner) {
+            return Err(CoreError::new(format!(
+                "capability owner {owner} is declared more than once"
+            )));
+        }
+        let owner_revision = require_text(
+            &input_owner.revision,
+            &format!("capability_contract.owners[{owner_index}].revision"),
+        )?;
+        let domains = unique_strings(
+            input_owner.domains,
+            &format!("capability_contract owner {owner}.domains"),
+        )?
+        .into_iter()
+        .collect::<BTreeSet<_>>();
+        for domain in &domains {
+            if let Some(existing) = owned_domains.insert(domain.clone(), owner.clone()) {
+                return Err(CoreError::new(format!(
+                    "domain {domain} has conflicting owners {existing} and {owner}"
+                )));
+            }
+        }
+
+        let mut effects = BTreeMap::new();
+        for (effect_index, effect) in input_owner.effects.into_iter().enumerate() {
+            let id = require_text(
+                &effect.id,
+                &format!("capability_contract owner {owner}.effects[{effect_index}].id"),
+            )?;
+            let domain = require_text(
+                &effect.domain,
+                &format!("capability_contract owner {owner}.effects[{effect_index}].domain"),
+            )?;
+            if !domains.contains(&domain) {
+                return Err(CoreError::new(format!(
+                    "effect {id} names domain {domain}, which is not owned by {owner}"
+                )));
+            }
+            if effects.insert(id.clone(), domain).is_some() {
+                return Err(CoreError::new(format!(
+                    "effect {id} is declared more than once by {owner}"
+                )));
+            }
+            if let Some(existing) = owned_effects.insert(id.clone(), owner.clone()) {
+                return Err(CoreError::new(format!(
+                    "effect {id} has conflicting owners {existing} and {owner}"
+                )));
+            }
+        }
+
+        let mut operations = BTreeMap::new();
+        for (operation_index, operation) in input_owner.operations.into_iter().enumerate() {
+            let id = require_text(
+                &operation.id,
+                &format!("capability_contract owner {owner}.operations[{operation_index}].id"),
+            )?;
+            if let Some(existing) = operation_owners.insert(id.clone(), owner.clone()) {
+                return Err(CoreError::new(format!(
+                    "operation {id} has conflicting owners {existing} and {owner}"
+                )));
+            }
+            schema_validator(&operation.input_schema, &format!("operation {id}"))?;
+            let operation_effects = unique_strings(
+                operation.effects,
+                &format!("capability_contract operation {id}.effects"),
+            )?
+            .into_iter()
+            .collect::<BTreeSet<_>>();
+            if let Some(effect) = operation_effects
+                .iter()
+                .find(|effect| !effects.contains_key(*effect))
+            {
+                return Err(CoreError::new(format!(
+                    "operation {id} advertises effect {effect} outside owner {owner}"
+                )));
+            }
+            let claims = unique_strings(
+                operation.claims,
+                &format!("capability_contract operation {id}.claims"),
+            )?
+            .into_iter()
+            .collect::<BTreeSet<_>>();
+            operations.insert(
+                id,
+                NormalizedOperationCapability {
+                    input_schema: operation.input_schema,
+                    result_kind: require_text(
+                        &operation.result_kind,
+                        "capability_contract operation result_kind",
+                    )?,
+                    effects: operation_effects,
+                    claims,
+                },
+            );
+        }
+        let mut requests = BTreeMap::new();
+        for request in input_owner.requests {
+            let kind = require_text(&request.kind, "capability request.kind")?;
+            if let Some(existing) = request_kinds.insert(kind.clone(), owner.clone()) {
+                return Err(CoreError::new(format!(
+                    "public request kind {kind} has conflicting declarations by {existing} and {owner}"
+                )));
+            }
+            schema_validator(&request.input_schema, &format!("request {kind}"))?;
+            requests.insert(
+                kind,
+                NormalizedRequestShape {
+                    input_schema: request.input_schema,
+                    result_kind: require_text(
+                        &request.result_kind,
+                        "capability request.result_kind",
+                    )?,
+                },
+            );
+        }
+        owners.insert(
+            owner,
+            NormalizedCapabilityOwner {
+                revision: owner_revision,
+                domains,
+                effects,
+                operations,
+                requests,
+            },
+        );
+    }
+    if owners.is_empty() {
+        return Err(CoreError::new(
+            "capability_contract must declare at least one owner",
+        ));
+    }
+
+    let mut claim_authorities = BTreeMap::new();
+    for (index, authority) in input.claim_authorities.into_iter().enumerate() {
+        let claim = require_text(
+            &authority.claim,
+            &format!("capability_contract.claim_authorities[{index}].claim"),
+        )?;
+        let owner = require_text(
+            &authority.owner,
+            &format!("capability_contract.claim_authorities[{index}].owner"),
+        )?;
+        if !owners.contains_key(&owner) {
+            return Err(CoreError::new(format!(
+                "claim {claim} names unknown authority owner {owner}"
+            )));
+        }
+        if let Some(existing) = claim_authorities.insert(claim.clone(), owner.clone()) {
+            return Err(CoreError::new(format!(
+                "claim {claim} has conflicting authorities {existing} and {owner}"
+            )));
+        }
+    }
+    for (owner, capability) in &owners {
+        for (operation_id, operation) in &capability.operations {
+            if let Some(claim) = operation
+                .claims
+                .iter()
+                .find(|claim| claim_authorities.get(*claim) != Some(owner))
+            {
+                return Err(CoreError::new(format!(
+                    "operation {operation_id} advertises claim {claim} without authority owned by {owner}"
+                )));
+            }
+        }
+    }
+
+    Ok(NormalizedCapabilityContract {
+        kind: CAPABILITY_CONTRACT_KIND,
+        revision,
+        owners,
+        claim_authorities,
+    })
+}
+
+fn normalize_contribution(
+    input: ContributionInput,
+    capabilities: Option<&NormalizedCapabilityContract>,
+) -> Result<NormalizedContribution, CoreError> {
     let owner = require_text(&input.owner, "contribution.owner")?;
     let revision = require_text(&input.revision, &format!("{owner}.revision"))?;
     if input.extra.contains_key("terminal") {
@@ -301,6 +654,20 @@ fn normalize_contribution(input: ContributionInput) -> Result<NormalizedContribu
         return Err(CoreError::new(format!("{owner}.facts must be an object")));
     }
 
+    let authority_bearing = !input.blockers.is_empty()
+        || !input.decisions.is_empty()
+        || !input.actions.is_empty()
+        || !input.claims.allowed.is_empty()
+        || !input.claims.blocked.is_empty()
+        || input.outcome.is_some()
+        || input.request_response.is_some();
+    let capability = capabilities.and_then(|contract| contract.owners.get(&owner));
+    if authority_bearing && capability.is_none() {
+        return Err(CoreError::new(format!(
+            "authority-bearing contribution {owner} requires a current capability owner declaration"
+        )));
+    }
+
     let mut actions = input
         .actions
         .into_iter()
@@ -308,6 +675,40 @@ fn normalize_contribution(input: ContributionInput) -> Result<NormalizedContribu
         .map(|(index, action)| normalize_action(action, &owner, &revision, index))
         .collect::<Result<Vec<_>, _>>()?;
     actions.sort_by(|left, right| left.consequence_id.cmp(&right.consequence_id));
+    if let Some(capability) = capability {
+        for action in &actions {
+            let operation = capability
+                .operations
+                .get(&action.operation_id)
+                .ok_or_else(|| {
+                    CoreError::new(format!(
+                        "{owner} action {} is not declared by its capability owner",
+                        action.operation_id
+                    ))
+                })?;
+            if action.authority != owner {
+                return Err(CoreError::new(format!(
+                    "{owner} action {} cannot claim authority {}",
+                    action.operation_id, action.authority
+                )));
+            }
+            validate_operation_arguments(
+                &action.arguments,
+                &operation.input_schema,
+                &format!("{owner} action {}", action.operation_id),
+            )?;
+            if let Some(effect) = action
+                .effects
+                .iter()
+                .find(|effect| !operation.effects.contains(*effect))
+            {
+                return Err(CoreError::new(format!(
+                    "{owner} action {} advertises undeclared effect {effect}",
+                    action.operation_id
+                )));
+            }
+        }
+    }
 
     let mut blockers = input
         .blockers
@@ -324,6 +725,19 @@ fn normalize_contribution(input: ContributionInput) -> Result<NormalizedContribu
         .map(|(index, decision)| normalize_decision(decision, &owner, &revision, index))
         .collect::<Result<Vec<_>, _>>()?;
     decisions.sort_by(|left, right| left.consequence_id.cmp(&right.consequence_id));
+    if let Some(capability) = capability {
+        for decision in &decisions {
+            if !capability
+                .operations
+                .contains_key(&decision.response_operation_id)
+            {
+                return Err(CoreError::new(format!(
+                    "{owner} decision {} names undeclared response operation {}",
+                    decision.id, decision.response_operation_id
+                )));
+            }
+        }
+    }
 
     let blocked = strings(
         input.claims.blocked,
@@ -338,10 +752,38 @@ fn normalize_contribution(input: ContributionInput) -> Result<NormalizedContribu
     )?
     .into_iter()
     .filter(|claim| !blocked_set.contains(claim))
-    .collect();
+    .collect::<Vec<_>>();
+    if let Some(contract) = capabilities {
+        for claim in &blocked {
+            if !contract.claim_authorities.contains_key(claim) {
+                return Err(CoreError::new(format!(
+                    "{owner} blocks unknown claim {claim}"
+                )));
+            }
+        }
+        for claim in &allowed {
+            if contract.claim_authorities.get(claim) != Some(&owner) {
+                return Err(CoreError::new(format!(
+                    "{owner} allows claim {claim} without exclusive claim authority"
+                )));
+            }
+        }
+    }
     let outcome = input
         .outcome
         .map(|value| normalize_outcome(value, &owner))
+        .transpose()?;
+    if let (Some(contract), Some(outcome)) = (capabilities, outcome.as_ref())
+        && contract.claim_authorities.get(&outcome.claim) != Some(&owner)
+    {
+        return Err(CoreError::new(format!(
+            "{owner} outcome grants claim {} without exclusive claim authority",
+            outcome.claim
+        )));
+    }
+    let request_response = input
+        .request_response
+        .map(|response| normalize_request_response(response, &owner))
         .transpose()?;
 
     Ok(NormalizedContribution {
@@ -356,6 +798,29 @@ fn normalize_contribution(input: ContributionInput) -> Result<NormalizedContribu
         actions,
         claims: NormalizedClaims { allowed, blocked },
         outcome,
+        request_response,
+    })
+}
+
+fn normalize_request_response(
+    input: RequestResponseInput,
+    owner: &str,
+) -> Result<NormalizedRequestResponse, CoreError> {
+    let request_id = require_text(
+        &input.request_id,
+        &format!("{owner}.request_response.request_id"),
+    )?;
+    if !matches!(
+        input.status.as_str(),
+        "action" | "decision" | "blocked" | "settled"
+    ) {
+        return Err(CoreError::new(format!(
+            "{owner}.request_response.status must be action, decision, blocked, or settled"
+        )));
+    }
+    Ok(NormalizedRequestResponse {
+        request_id,
+        status: input.status,
     })
 }
 
@@ -589,7 +1054,7 @@ fn normalize_semantic_routes(intent: &mut Value) -> Result<Option<Value>, CoreEr
     let current = object.get("current_work");
     let source = object.get("semantic_route_source");
     let selection = object.get("semantic_task_routes");
-    if current.is_none() && source.is_none() && selection.is_none() {
+    if source.is_none() && selection.is_none() {
         return Ok(None);
     }
     if current.is_none() || source.is_none() || selection.is_none() {
@@ -682,6 +1147,145 @@ fn normalize_semantic_routes(intent: &mut Value) -> Result<Option<Value>, CoreEr
     Ok(Some(normalized))
 }
 
+fn current_work(intent: &Value) -> Result<Option<CurrentWorkIdentity>, CoreError> {
+    let Some(value) = intent.get("current_work") else {
+        return Ok(None);
+    };
+    let mut current: CurrentWorkIdentity = serde_json::from_value(value.clone())
+        .map_err(|error| CoreError::new(format!("intent.current_work is invalid: {error}")))?;
+    current.kind = require_text(&current.kind, "intent.current_work.kind")?;
+    current.id = require_text(&current.id, "intent.current_work.id")?;
+    if current.kind != "current-work" {
+        return Err(CoreError::new(
+            "intent.current_work.kind must be current-work",
+        ));
+    }
+    Ok(Some(current))
+}
+
+fn schema_validator(schema: &Value, field: &str) -> Result<jsonschema::Validator, CoreError> {
+    if schema.get("$schema").and_then(Value::as_str)
+        != Some("https://json-schema.org/draft/2020-12/schema")
+    {
+        return Err(CoreError::new(format!(
+            "{field}.input_schema must declare JSON Schema Draft 2020-12"
+        )));
+    }
+    // Schemas are carried in the current capability contract. External HTTP/file
+    // retrieval is disabled; local $defs/$ref remain ordinary JSON Schema.
+    jsonschema::draft202012::options()
+        .build(schema)
+        .map_err(|error| CoreError::new(format!("{field}.input_schema is invalid: {error}")))
+}
+
+fn validate_operation_arguments(
+    value: &Value,
+    schema: &Value,
+    field: &str,
+) -> Result<(), CoreError> {
+    if !value.is_object() {
+        return Err(CoreError::new(format!(
+            "{field}.arguments must be an object"
+        )));
+    }
+    schema_validator(schema, field)?
+        .validate(value)
+        .map_err(|error| CoreError::new(format!("{field}.arguments violate input_schema: {error}")))
+}
+
+fn normalize_public_request(
+    intent: &mut Value,
+    capabilities: Option<&NormalizedCapabilityContract>,
+) -> Result<Option<NormalizedPublicRequest>, CoreError> {
+    let Some(value) = intent.get("public_request") else {
+        return Ok(None);
+    };
+    let capabilities = capabilities.ok_or_else(|| {
+        CoreError::new("intent.public_request requires a current capability_contract")
+    })?;
+    let parsed: PublicRequestInput = serde_json::from_value(value.clone())
+        .map_err(|error| CoreError::new(format!("intent.public_request is invalid: {error}")))?;
+    if parsed.kind != PUBLIC_REQUEST_KIND {
+        return Err(CoreError::new(format!(
+            "intent.public_request.kind must be {PUBLIC_REQUEST_KIND}"
+        )));
+    }
+    let id = require_text(&parsed.id, "intent.public_request.id")?;
+    let owner = require_text(&parsed.owner, "intent.public_request.owner")?;
+    let owner_revision = require_text(
+        &parsed.owner_revision,
+        "intent.public_request.owner_revision",
+    )?;
+    let source_revision = require_text(
+        &parsed.source_revision,
+        "intent.public_request.source_revision",
+    )?;
+    let request_kind = require_text(&parsed.request_kind, "intent.public_request.request_kind")?;
+    if parsed.capability_revision != capabilities.revision {
+        return Err(CoreError::new(
+            "public request is stale for the current capability contract revision",
+        ));
+    }
+    let current = current_work(intent)?
+        .ok_or_else(|| CoreError::new("intent.public_request requires intent.current_work"))?;
+    if parsed.task_identity.kind != current.kind || parsed.task_identity.id != current.id {
+        return Err(CoreError::new(
+            "public request is stale for the current task identity",
+        ));
+    }
+    let owner_capability = capabilities.owners.get(&owner).ok_or_else(|| {
+        CoreError::new(format!(
+            "public request names unknown capability owner {owner}"
+        ))
+    })?;
+    if owner_revision != owner_capability.revision {
+        return Err(CoreError::new(format!(
+            "public request is stale for capability owner {owner}"
+        )));
+    }
+    let request_shape = owner_capability
+        .requests
+        .get(&request_kind)
+        .ok_or_else(|| {
+            CoreError::new(format!(
+                "public request names undeclared request kind {request_kind} for {owner}"
+            ))
+        })?;
+    validate_operation_arguments(
+        &parsed.arguments,
+        &request_shape.input_schema,
+        &format!("public request {request_kind}"),
+    )?;
+    let identity = digest(&json!({
+        "id": id,
+        "owner": owner,
+        "owner_revision": owner_revision,
+        "source_revision": source_revision,
+        "request_kind": request_kind,
+        "capability_revision": capabilities.revision,
+        "task_identity": current,
+        "arguments": parsed.arguments,
+    }))?;
+    let normalized = NormalizedPublicRequest {
+        kind: PUBLIC_REQUEST_KIND,
+        id,
+        identity: format!("request:{identity}"),
+        owner,
+        owner_revision,
+        source_revision,
+        request_kind,
+        result_kind: request_shape.result_kind.clone(),
+        capability_revision: capabilities.revision.clone(),
+        task_identity: current,
+        arguments: parsed.arguments,
+    };
+    intent.as_object_mut().expect("intent is an object").insert(
+        "public_request".to_owned(),
+        serde_json::to_value(&normalized).expect("normalized public request serializes"),
+    );
+    Ok(Some(normalized))
+}
+
 pub fn compile_value(value: Value) -> Result<Value, CoreError> {
     let input: DecisionInput =
         serde_json::from_value(value).map_err(|error| CoreError::new(error.to_string()))?;
@@ -692,14 +1296,50 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
     if !input.intent.is_object() {
         return Err(CoreError::new("intent must be an object"));
     }
+    let capabilities = input
+        .capability_contract
+        .map(normalize_capability_contract)
+        .transpose()?;
     let mut intent = input.intent;
+    let supported_intent_fields = [
+        "current_work",
+        "semantic_route_source",
+        "semantic_task_routes",
+        "outcome",
+        "public_request",
+    ];
+    if let Some(field) = intent
+        .as_object()
+        .expect("intent is an object")
+        .keys()
+        .find(|field| !supported_intent_fields.contains(&field.as_str()))
+    {
+        return Err(CoreError::new(format!(
+            "intent contains unsupported public request field {field}"
+        )));
+    }
     let semantic_task_routes = normalize_semantic_routes(&mut intent)?;
+    let public_request = normalize_public_request(&mut intent, capabilities.as_ref())?;
     let intended = intended_outcome(&intent)?;
-    let mut relevant = input
+    if let (Some(intended), Some(capabilities)) = (intended.as_ref(), capabilities.as_ref())
+        && capabilities.claim_authorities.get(&intended.claim) != Some(&intended.owner)
+    {
+        return Err(CoreError::new(format!(
+            "intended outcome owner {} lacks exclusive authority for claim {}",
+            intended.owner, intended.claim
+        )));
+    } else if intended.is_some() && capabilities.is_none() {
+        return Err(CoreError::new(
+            "intent.outcome requires a current capability_contract",
+        ));
+    }
+    let normalized = input
         .contributions
         .into_iter()
-        .map(normalize_contribution)
-        .collect::<Result<Vec<_>, _>>()?
+        .map(|contribution| normalize_contribution(contribution, capabilities.as_ref()))
+        .collect::<Result<Vec<_>, _>>()?;
+    let request_resolution = resolve_public_request(public_request.as_ref(), &normalized)?;
+    let mut relevant = normalized
         .into_iter()
         .filter(|item| item.relevant)
         .collect::<Vec<_>>();
@@ -713,7 +1353,11 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
         ));
     }
 
-    let input_revision = digest(&json!({"intent": intent, "sources": relevant}))?;
+    let input_revision = digest(&json!({
+        "intent": intent,
+        "capability_contract": capabilities,
+        "sources": relevant,
+    }))?;
     let blockers = relevant
         .iter()
         .flat_map(|item| item.blockers.iter().cloned())
@@ -899,11 +1543,150 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
             .expect("answer is an object")
             .insert("semantic_task_routes".to_owned(), routes);
     }
+    if let Some(resolution) = request_resolution {
+        answer
+            .as_object_mut()
+            .expect("answer is an object")
+            .insert("request_resolution".to_owned(), resolution);
+    }
+    if let Some(capabilities) = capabilities {
+        answer.as_object_mut().expect("answer is an object").insert(
+            "capability_revision".to_owned(),
+            Value::String(capabilities.revision),
+        );
+    }
     let decision_id = format!("operating-decision:{}", &digest(&answer)?[7..23]);
     let mut output = answer.as_object().expect("answer is an object").clone();
     output.insert("kind".to_owned(), Value::String(DECISION_KIND.to_owned()));
     output.insert("decision_id".to_owned(), Value::String(decision_id));
     Ok(Value::Object(output))
+}
+
+fn resolve_public_request(
+    request: Option<&NormalizedPublicRequest>,
+    contributions: &[NormalizedContribution],
+) -> Result<Option<Value>, CoreError> {
+    let responses = contributions
+        .iter()
+        .filter(|contribution| contribution.request_response.is_some())
+        .collect::<Vec<_>>();
+    let Some(request) = request else {
+        if !responses.is_empty() {
+            return Err(CoreError::new(
+                "request_response cannot exist without intent.public_request",
+            ));
+        }
+        return Ok(None);
+    };
+    if responses.len() != 1 {
+        return Err(CoreError::new(
+            "public request requires exactly one owner response",
+        ));
+    }
+    let contribution = responses[0];
+    let response = contribution
+        .request_response
+        .as_ref()
+        .expect("response was selected");
+    if contribution.owner != request.owner {
+        return Err(CoreError::new(format!(
+            "public request owner {} cannot be answered by {}",
+            request.owner, contribution.owner
+        )));
+    }
+    if !contribution.relevant {
+        return Err(CoreError::new(format!(
+            "public request owner {} returned a non-current response",
+            request.owner
+        )));
+    }
+    if contribution.revision != request.source_revision {
+        return Err(CoreError::new(format!(
+            "public request response from {} is stale for its source revision",
+            request.owner
+        )));
+    }
+    if response.request_id != request.id {
+        return Err(CoreError::new(format!(
+            "public request response from {} references a different request",
+            request.owner
+        )));
+    }
+
+    let consequence_ids = match response.status.as_str() {
+        "action" => {
+            if contribution.actions.len() != 1
+                || !contribution.decisions.is_empty()
+                || !contribution.blockers.is_empty()
+                || contribution.settled
+            {
+                return Err(CoreError::new(format!(
+                    "public request {} requires one exact returned action without a competing consequence",
+                    request.id
+                )));
+            }
+            vec![contribution.actions[0].consequence_id.clone()]
+        }
+        "decision" => {
+            if contribution.decisions.len() != 1
+                || !contribution.actions.is_empty()
+                || !contribution.blockers.is_empty()
+                || contribution.settled
+            {
+                return Err(CoreError::new(format!(
+                    "public request {} requires one exact returned decision without a competing consequence",
+                    request.id
+                )));
+            }
+            contribution
+                .decisions
+                .iter()
+                .map(|decision| decision.consequence_id.clone())
+                .collect()
+        }
+        "blocked" => {
+            if contribution.blockers.len() != 1
+                || !contribution.actions.is_empty()
+                || !contribution.decisions.is_empty()
+                || contribution.settled
+            {
+                return Err(CoreError::new(format!(
+                    "public request {} requires one exact returned blocker without a competing consequence",
+                    request.id
+                )));
+            }
+            contribution
+                .blockers
+                .iter()
+                .map(|blocker| blocker.consequence_id.clone())
+                .collect()
+        }
+        "settled" => {
+            if !contribution.settled
+                || !contribution.actions.is_empty()
+                || !contribution.decisions.is_empty()
+                || !contribution.blockers.is_empty()
+            {
+                return Err(CoreError::new(format!(
+                    "public request {} declared settled while owner work remains",
+                    request.id
+                )));
+            }
+            Vec::new()
+        }
+        _ => unreachable!("response status was normalized"),
+    };
+    Ok(Some(json!({
+        "request_id": request.id,
+        "request_identity": request.identity,
+        "owner": request.owner,
+        "owner_revision": request.owner_revision,
+        "source_revision": request.source_revision,
+        "request_kind": request.request_kind,
+        "result_kind": request.result_kind,
+        "status": response.status,
+        "consequence_ids": consequence_ids,
+    })))
 }
 
 fn pending_action(owned: &OwnedAction) -> Value {

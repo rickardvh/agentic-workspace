@@ -1585,6 +1585,18 @@
       "storage_class": "diagnostic-fixture"
     },
     {
+      "checked_in_justification": "Checked in as the shared declarative capability/request authority fixture exercised through every core binding.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "notes": "The fixture declares constructible request shapes and exclusive domain, effect, operation, and claim ownership without encoding executable policy.",
+      "owner": "workspace-runtime",
+      "pattern": "tests/vectors/capability_contract.json",
+      "schema_or_validator": "validator: uv run pytest tests/test_shared_core.py -q",
+      "status": "typed-validator-backed",
+      "storage_class": "diagnostic-fixture"
+    },
+    {
       "checked_in_justification": "Checked in as the locked root manifest for the shared deterministic Rust core workspace.",
       "editable_by_agents": true,
       "format": "toml",
