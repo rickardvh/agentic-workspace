@@ -282,7 +282,8 @@ def test_committed_effect_survives_unavailable_post_effect_view(shared_core_bina
     assert result["status"] == "applied"
     assert result["continuation_status"] == "unavailable"
     assert result["next_decision"] is None
-    assert dispatcher.invoke(invocation, resolve_decision=resolve) == result
+    with pytest.raises(OperationContractError, match="current operation semantics"):
+        dispatcher.invoke(invocation, resolve_decision=resolve)
     assert calls == 1
     fail_resolution = False
     replay = dispatcher.invoke(invocation, resolve_decision=resolve)
