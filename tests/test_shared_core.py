@@ -1176,3 +1176,46 @@ def test_decision_supersession_scope_and_competing_heads_fail_closed(shared_core
     forged["authors"][0]["kind"] = "aw"
     with pytest.raises(DecisionContractError):
         normalize_decision_record(forged)
+
+
+@pytest.mark.parametrize("shape", ["advanced-fork", "linear", "joined", "independent", "disjoint-scope"])
+def test_supersession_current_heads_follow_scope_through_ancestry(shared_core_binary: Path, shape: str) -> None:
+    old = _material_decision()
+
+    def successor(identity: str, parents: list[dict[str, Any]], scope: str = "owner:planning") -> dict[str, Any]:
+        record = deepcopy(old)
+        record["id"] = identity
+        record["supersedes"] = [
+            {"id": parent["id"], "material_revision": normalize_decision_record(parent)["material_revision"], "scope": [scope]}
+            for parent in parents
+        ]
+        return record
+
+    a = successor("A", [old])
+    b = successor("B", [old], "contract:operation-result" if shape == "disjoint-scope" else "owner:planning")
+    c = successor("C", [a, b] if shape == "joined" else [a])
+    records = [old, a, c]
+    if shape in ["advanced-fork", "joined", "disjoint-scope"]:
+        records.append(b)
+    if shape == "independent":
+        records.append(successor("independent", []))
+    payload = {"contributions": [], "decision_context": _admitted_decisions(records)}
+    if shape == "advanced-fork":
+        with pytest.raises(DecisionContractError, match="competing decision supersession"):
+            _compile(payload)
+        direct = _direct(shared_core_binary, payload)
+        assert direct.returncode == 2
+        assert "competing decision supersession" in direct.stderr
+        return
+    result = _compile(payload)
+    assert result == json.loads(_direct(shared_core_binary, payload).stdout)
+    current = {item["id"] for item in result["decision_context"]["consequences"]}
+    assert "C" in current
+    assert "A" not in current and old["id"] not in current
+    if shape == "independent":
+        assert "independent" in current
+    if shape == "joined":
+        assert "B" not in current
+    if shape == "disjoint-scope":
+        payload["decision_context"]["applicable_scope"] = ["contract:operation-result"]
+        assert "B" in {item["id"] for item in _compile(payload)["decision_context"]["consequences"]}

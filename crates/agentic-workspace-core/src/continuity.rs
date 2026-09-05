@@ -277,19 +277,39 @@ pub(crate) fn project(mut context: Context) -> Result<Option<Value>, CoreError> 
     for id in records.keys() {
         visit(id, &records, &mut BTreeSet::new(), &mut done)?;
     }
-    let mut successors = BTreeSet::new();
+    // Each scope-specific ancestry may have only one remaining head. Checking
+    // immediate edges alone loses a competing branch when its peer advances.
+    let mut lineage_heads = BTreeMap::new();
     for record in records.values() {
-        for relation in &record.supersedes {
-            for scope in &relation.scope {
-                if !replaced
-                    .get(&record.id)
-                    .is_some_and(|scopes| scopes.contains(scope))
-                    && !successors.insert((relation.id.clone(), scope.clone()))
+        for scope in &record.scope {
+            if replaced
+                .get(&record.id)
+                .is_some_and(|scopes| scopes.contains(scope))
+            {
+                continue;
+            }
+            let mut pending = vec![record.id.as_str()];
+            let mut visited = BTreeSet::new();
+            while let Some(ancestor) = pending.pop() {
+                // A resolved diamond can reach the same ancestor more than once.
+                if !visited.insert(ancestor) {
+                    continue;
+                }
+                if lineage_heads
+                    .insert((ancestor, scope), &record.id)
+                    .is_some_and(|head| head != &record.id)
                 {
                     return Err(error(
                         "competing decision supersession requires owner resolution",
                     ));
                 }
+                pending.extend(
+                    records[ancestor]
+                        .supersedes
+                        .iter()
+                        .filter(|relation| relation.scope.contains(scope))
+                        .map(|relation| relation.id.as_str()),
+                );
             }
         }
     }
