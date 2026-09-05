@@ -23,11 +23,10 @@
             "owner": "example.external",
             "owner_revision": "ext1",
             "source_revision": "ext1",
-            "operation_id": "example.finish",
             "request_kind": "example/finish-request/v1",
             "capability_revision": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
             "task_identity": {"kind": "current-work", "id": "work-17"},
-            "arguments": {"subject": "case-17"}
+            "arguments": {"subject": {"name": "case-17", "mode": "finish"}}
           }
         }
       },
@@ -125,6 +124,15 @@
     }
   ],
   "error_cases": [
+    {"id":"invalid-json-schema-is-rejected","input":{"contributions":[],"intent":{},"capability_contract":{"kind":"agentic-workspace/capability-contract/v1","revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","owners":[{"owner":"example.external","revision":"ext1","requests":[{"kind":"example/request/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"not-a-json-schema-type"},"result_kind":"example/result/v1"}]}]}},"error_contains":"input_schema is invalid"},
+    {"id":"external-schema-reference-is-rejected","input":{"contributions":[],"intent":{},"capability_contract":{"kind":"agentic-workspace/capability-contract/v1","revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","owners":[{"owner":"example.external","revision":"ext1","requests":[{"kind":"example/request/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","$ref":"https://example.invalid/hidden-schema.json"},"result_kind":"example/result/v1"}]}]}},"error_contains":"input_schema is invalid"},
+    {"id":"file-schema-reference-is-rejected","input":{"contributions":[],"intent":{},"capability_contract":{"kind":"agentic-workspace/capability-contract/v1","revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","owners":[{"owner":"example.external","revision":"ext1","requests":[{"kind":"example/request/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","$ref":"file:///unavailable-schema.json"},"result_kind":"example/result/v1"}]}]}},"error_contains":"input_schema is invalid"},
+    {"id":"wrong-schema-dialect-is-rejected","input":{"contributions":[],"intent":{},"capability_contract":{"kind":"agentic-workspace/capability-contract/v1","revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","owners":[{"owner":"example.external","revision":"ext1","requests":[{"kind":"example/request/v1","input_schema":{"$schema":"http://json-schema.org/draft-07/schema#","type":"object"},"result_kind":"example/result/v1"}]}]}},"error_contains":"must declare JSON Schema Draft 2020-12"},
+    {"id":"nested-hidden-command-is-rejected","input":{"contributions":[{"owner":"example.external","revision":"ext1","actions":[{"operation_id":"example.finish","arguments":{"subject":"case-17"},"effects":["external-state"]}],"request_response":{"request_id":"finish-17","status":"action"}}],"intent":{"current_work":{"kind":"current-work","id":"work-17"},"public_request":{"kind":"agentic-workspace/public-request/v1","id":"finish-17","owner":"example.external","owner_revision":"ext1","source_revision":"ext1","request_kind":"example/finish-request/v1","capability_revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","task_identity":{"kind":"current-work","id":"work-17"},"arguments":{"subject":{"name":"case-17","mode":"finish","command":"delete"}}}}},"error_contains":"violate input_schema"},
+    {"id":"nested-enum-is-enforced","input":{"contributions":[{"owner":"example.external","revision":"ext1","actions":[{"operation_id":"example.finish","arguments":{"subject":"case-17"},"effects":["external-state"]}],"request_response":{"request_id":"finish-17","status":"action"}}],"intent":{"current_work":{"kind":"current-work","id":"work-17"},"public_request":{"kind":"agentic-workspace/public-request/v1","id":"finish-17","owner":"example.external","owner_revision":"ext1","source_revision":"ext1","request_kind":"example/finish-request/v1","capability_revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","task_identity":{"kind":"current-work","id":"work-17"},"arguments":{"subject":{"name":"case-17","mode":"execute-private-command"}}}}},"error_contains":"violate input_schema"},
+    {"id":"caller-operation-selection-is-rejected","input":{"contributions":[{"owner":"example.external","revision":"ext1","actions":[{"operation_id":"example.finish","arguments":{"subject":"case-17"},"effects":["external-state"]}],"request_response":{"request_id":"finish-17","status":"action"}}],"intent":{"current_work":{"kind":"current-work","id":"work-17"},"public_request":{"kind":"agentic-workspace/public-request/v1","id":"finish-17","owner":"example.external","owner_revision":"ext1","source_revision":"ext1","request_kind":"example/finish-request/v1","capability_revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","task_identity":{"kind":"current-work","id":"work-17"},"arguments":{"subject":{"name":"case-17","mode":"finish"}},"operation_id":"example.finish"}}},"error_contains":"unknown field `operation_id`"},
+    {"id":"owner-derived-action-schema-is-enforced","input":{"contributions":[{"owner":"example.external","revision":"ext1","actions":[{"operation_id":"example.finish","arguments":{"subject":{"command":"delete"}},"effects":["external-state"]}],"request_response":{"request_id":"finish-17","status":"action"}}],"intent":{"current_work":{"kind":"current-work","id":"work-17"},"public_request":{"kind":"agentic-workspace/public-request/v1","id":"finish-17","owner":"example.external","owner_revision":"ext1","source_revision":"ext1","request_kind":"example/finish-request/v1","capability_revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","task_identity":{"kind":"current-work","id":"work-17"},"arguments":{"subject":{"name":"case-17","mode":"finish"}}}}},"error_contains":"violate input_schema"},
+    {"id":"owner-cannot-derive-undeclared-operation","input":{"contributions":[{"owner":"example.external","revision":"ext1","actions":[{"operation_id":"workspace.edit","arguments":{"subject":"case-17"},"effects":["external-state"]}],"request_response":{"request_id":"finish-17","status":"action"}}],"intent":{"current_work":{"kind":"current-work","id":"work-17"},"public_request":{"kind":"agentic-workspace/public-request/v1","id":"finish-17","owner":"example.external","owner_revision":"ext1","source_revision":"ext1","request_kind":"example/finish-request/v1","capability_revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","task_identity":{"kind":"current-work","id":"work-17"},"arguments":{"subject":{"name":"case-17","mode":"finish"}}}}},"error_contains":"not declared by its capability owner"},
     {
       "id": "hidden-owner-intent-union-is-rejected",
       "input": {"contributions": [], "intent": {"planning": {"operation": "complete"}}},
@@ -152,7 +160,6 @@
             "owner": "example.external",
             "owner_revision": "ext1",
             "source_revision": "ext1",
-            "operation_id": "example.finish",
             "request_kind": "example/unknown-request/v1",
             "capability_revision": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
             "task_identity": {"kind": "current-work", "id": "work-17"},
@@ -160,7 +167,7 @@
           }
         }
       },
-      "error_contains": "does not construct operation example.finish"
+      "error_contains": "undeclared request kind example/unknown-request/v1"
     },
     {
       "id": "numeric-priority-is-rejected",

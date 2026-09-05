@@ -5,132 +5,356 @@
     {
       "owner": "alpha",
       "revision": "a1",
-      "domains": ["alpha-domain"],
+      "domains": [
+        "alpha-domain"
+      ],
       "effects": [],
       "operations": [
         {
           "id": "alpha.act",
-          "request": {"kind": "example/alpha-act-request/v1", "arguments": [{"name": "value", "type": "string", "required": true}]},
-          "result_kind": "example/alpha-act-result/v1"
+          "result_kind": "example/alpha-act-result/v1",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "value"
+            ],
+            "additionalProperties": false
+          }
         }
       ]
     },
     {
       "owner": "example.external",
       "revision": "ext1",
-      "domains": ["external-worker"],
-      "effects": [{"id": "external-state", "domain": "external-worker"}],
+      "domains": [
+        "external-worker"
+      ],
+      "effects": [
+        {
+          "id": "external-state",
+          "domain": "external-worker"
+        }
+      ],
       "operations": [
         {
           "id": "example.finish",
-          "request": {"kind": "example/finish-request/v1", "arguments": [{"name": "subject", "type": "string"}]},
           "result_kind": "example/finish-result/v1",
-          "effects": ["external-state"],
-          "claims": ["external-complete"]
+          "effects": [
+            "external-state"
+          ],
+          "claims": [
+            "external-complete"
+          ],
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object",
+            "properties": {
+              "subject": {
+                "type": "string"
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "requests": [
+        {
+          "kind": "example/finish-request/v1",
+          "result_kind": "example/finish-result/v1",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object",
+            "properties": {
+              "subject": {
+                "$ref": "#/$defs/subject"
+              }
+            },
+            "required": [
+              "subject"
+            ],
+            "additionalProperties": false,
+            "$defs": {
+              "subject": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "mode": {
+                    "enum": [
+                      "finish",
+                      "inspect"
+                    ]
+                  }
+                },
+                "required": [
+                  "name",
+                  "mode"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
         }
       ]
     },
     {
       "owner": "module",
       "revision": "one",
-      "domains": ["module-domain"],
+      "domains": [
+        "module-domain"
+      ],
       "operations": [
-        {"id": "module.act", "request": {"kind": "example/module-act-request/v1"}, "result_kind": "example/module-act-result/v1"}
+        {
+          "id": "module.act",
+          "result_kind": "example/module-act-result/v1",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": false
+          }
+        }
       ]
     },
     {
       "owner": "planning",
       "revision": "p1",
-      "domains": ["planning"],
+      "domains": [
+        "planning"
+      ],
       "effects": [
-        {"id": "plan-a", "domain": "planning"},
-        {"id": "plan-b", "domain": "planning"},
-        {"id": "planning-state", "domain": "planning"}
+        {
+          "id": "plan-a",
+          "domain": "planning"
+        },
+        {
+          "id": "plan-b",
+          "domain": "planning"
+        },
+        {
+          "id": "planning-state",
+          "domain": "planning"
+        }
       ],
       "operations": [
         {
           "id": "planning.advance",
-          "request": {"kind": "planning/advance-request/v1", "arguments": [{"name": "item", "type": "string", "required": true}]},
           "result_kind": "planning/advance-result/v1",
-          "effects": ["plan-a", "plan-b", "planning-state"]
+          "effects": [
+            "plan-a",
+            "plan-b",
+            "planning-state"
+          ],
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object",
+            "properties": {
+              "item": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "item"
+            ],
+            "additionalProperties": false
+          }
         },
         {
           "id": "planning.complete",
-          "request": {"kind": "planning/complete-request/v1", "arguments": [{"name": "item", "type": "string", "required": true}]},
           "result_kind": "planning/complete-result/v1",
-          "effects": ["planning-state"],
-          "claims": ["complete", "planning-progress"]
+          "effects": [
+            "planning-state"
+          ],
+          "claims": [
+            "complete",
+            "planning-progress"
+          ],
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object",
+            "properties": {
+              "item": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "item"
+            ],
+            "additionalProperties": false
+          }
         }
       ]
     },
     {
       "owner": "release-owner",
       "revision": "r1",
-      "domains": ["release"],
+      "domains": [
+        "release"
+      ],
       "operations": []
     },
     {
       "owner": "repository",
       "revision": "r2",
-      "domains": ["repository"],
+      "domains": [
+        "repository"
+      ],
       "operations": [
-        {"id": "repository.answer", "request": {"kind": "repository/answer-request/v1"}, "result_kind": "repository/answer-result/v1"}
+        {
+          "id": "repository.answer",
+          "result_kind": "repository/answer-result/v1",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": false
+          }
+        }
       ]
     },
     {
       "owner": "verification",
       "revision": "v1",
-      "domains": ["verification"],
+      "domains": [
+        "verification"
+      ],
       "operations": []
     },
     {
       "owner": "workspace",
       "revision": "w1",
-      "domains": ["workspace"],
+      "domains": [
+        "workspace"
+      ],
       "effects": [
-        {"id": "workspace-files", "domain": "workspace"},
-        {"id": "workspace-read", "domain": "workspace"}
+        {
+          "id": "workspace-files",
+          "domain": "workspace"
+        },
+        {
+          "id": "workspace-read",
+          "domain": "workspace"
+        }
       ],
       "operations": [
         {
           "id": "workspace.edit",
-          "request": {"kind": "workspace/edit-request/v1", "arguments": [{"name": "path", "type": "string", "required": true}]},
           "result_kind": "workspace/edit-result/v1",
-          "effects": ["workspace-files"]
+          "effects": [
+            "workspace-files"
+          ],
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "path"
+            ],
+            "additionalProperties": false
+          }
         },
         {
           "id": "workspace.inspect",
-          "request": {"kind": "workspace/inspect-request/v1"},
           "result_kind": "workspace/inspect-result/v1",
-          "effects": ["workspace-read"],
-          "claims": ["workspace-progress"]
+          "effects": [
+            "workspace-read"
+          ],
+          "claims": [
+            "workspace-progress"
+          ],
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": false
+          }
         }
       ]
     },
     {
       "owner": "zeta",
       "revision": "z1",
-      "domains": ["zeta-domain"],
+      "domains": [
+        "zeta-domain"
+      ],
       "operations": [
         {
           "id": "zeta.act",
-          "request": {"kind": "example/zeta-act-request/v1", "arguments": [{"name": "value", "type": "string", "required": true}]},
-          "result_kind": "example/zeta-act-result/v1"
+          "result_kind": "example/zeta-act-result/v1",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "value"
+            ],
+            "additionalProperties": false
+          }
         },
         {
           "id": "same",
-          "request": {"kind": "example/same-request/v1", "arguments": [{"name": "value", "type": "string", "required": true}]},
-          "result_kind": "example/same-result/v1"
+          "result_kind": "example/same-result/v1",
+          "input_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "value"
+            ],
+            "additionalProperties": false
+          }
         }
       ]
     }
   ],
   "claim_authorities": [
-    {"claim": "alpha-progress", "owner": "alpha"},
-    {"claim": "complete", "owner": "planning"},
-    {"claim": "external-complete", "owner": "example.external"},
-    {"claim": "planning-progress", "owner": "planning"},
-    {"claim": "release", "owner": "release-owner"},
-    {"claim": "workspace-progress", "owner": "workspace"}
+    {
+      "claim": "alpha-progress",
+      "owner": "alpha"
+    },
+    {
+      "claim": "complete",
+      "owner": "planning"
+    },
+    {
+      "claim": "external-complete",
+      "owner": "example.external"
+    },
+    {
+      "claim": "planning-progress",
+      "owner": "planning"
+    },
+    {
+      "claim": "release",
+      "owner": "release-owner"
+    },
+    {
+      "claim": "workspace-progress",
+      "owner": "workspace"
+    }
   ]
 }

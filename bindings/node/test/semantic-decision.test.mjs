@@ -26,7 +26,7 @@ const direct = (input) => {
 
 test("Node binding executes the exact shared core", () => {
   for (const vector of vectors.cases) {
-    const contract = authorityBearing(vector.input) ? capabilityContract : null;
+    const contract = vector.input.capability_contract ?? (authorityBearing(vector.input) ? capabilityContract : null);
     assert.deepEqual(compileSourceDecision(vector.input.contributions, vector.input.intent, contract), direct({...vector.input, ...(contract && {capability_contract: contract})}), vector.id);
   }
 });
@@ -34,7 +34,7 @@ test("Node binding executes the exact shared core", () => {
 test("Node binding preserves shared fail-closed errors", () => {
   for (const vector of vectors.error_cases) {
     assert.throws(
-      () => compileSourceDecision(vector.input.contributions, vector.input.intent, authorityBearing(vector.input) ? capabilityContract : null),
+      () => compileSourceDecision(vector.input.contributions, vector.input.intent, vector.input.capability_contract ?? (authorityBearing(vector.input) ? capabilityContract : null)),
       (error) => error.message.includes(vector.error_contains),
       vector.id,
     );

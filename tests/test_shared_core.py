@@ -46,7 +46,7 @@ def _authority_bearing(payload: dict[str, Any]) -> bool:
 
 def _expanded(payload: dict[str, Any]) -> dict[str, Any]:
     expanded = deepcopy(payload)
-    if _authority_bearing(expanded):
+    if _authority_bearing(expanded) and "capability_contract" not in expanded:
         expanded["capability_contract"] = deepcopy(CAPABILITY_CONTRACT)
     return expanded
 
@@ -201,6 +201,9 @@ def test_public_request_is_revision_bound_typed_and_cannot_resolve_as_a_noop(sha
     resolved = _compile(payload)
     assert resolved["request_resolution"]["status"] == "action"
     assert resolved["request_resolution"]["consequence_ids"] == [resolved["primary_action"]["consequence_id"]]
+    assert "operation_id" not in payload["intent"]["public_request"]
+    assert resolved["primary_action"]["arguments"] != payload["intent"]["public_request"]["arguments"]
+    assert resolved["primary_action"]["operation_id"] == "example.finish"
 
     mutations = [
         ("stale for the current task identity", lambda value: value["intent"]["public_request"]["task_identity"].update(id="other")),
@@ -209,8 +212,9 @@ def test_public_request_is_revision_bound_typed_and_cannot_resolve_as_a_noop(sha
             lambda value: value["intent"]["public_request"].update(capability_revision="sha256:" + "d" * 64),
         ),
         ("stale for capability owner", lambda value: value["intent"]["public_request"].update(owner_revision="ext2")),
-        ("must be string", lambda value: value["intent"]["public_request"]["arguments"].update(subject=17)),
-        ("contains unknown argument", lambda value: value["intent"]["public_request"]["arguments"].update(hidden_command="run")),
+        ("violate input_schema", lambda value: value["intent"]["public_request"]["arguments"].update(subject=17)),
+        ("violate input_schema", lambda value: value["intent"]["public_request"]["arguments"].update(hidden_command="run")),
+        ("stale for its source revision", lambda value: value["intent"]["public_request"].update(source_revision="ext2")),
     ]
     for message, mutate in mutations:
         changed = deepcopy(payload)

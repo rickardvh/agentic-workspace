@@ -33,7 +33,6 @@ Language-neutral input envelope for the shared operating-decision core.
 | `intent.public_request.owner` | string | yes |  | Capability owner asked to interpret the request. |  |  |
 | `intent.public_request.owner_revision` | string | yes |  | Capability-owner semantic revision current when selected. |  |  |
 | `intent.public_request.source_revision` | string | yes |  | Owner contribution revision current when selected. |  |  |
-| `intent.public_request.operation_id` | string | yes |  | Declared owner operation the request may construct. |  |  |
 | `intent.public_request.request_kind` | string | yes |  | Declared typed request discriminator. |  |  |
 | `intent.public_request.capability_revision` | string | yes |  | Capability contract revision current when selected. |  |  |
 | `intent.public_request.task_identity` | ref `#/$defs/current_work` | yes |  | Current work identity when the acting agent or human selected the request. |  |  |

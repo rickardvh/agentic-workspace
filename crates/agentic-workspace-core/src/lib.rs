@@ -85,6 +85,8 @@ struct CapabilityOwnerInput {
     effects: Vec<EffectAuthorityInput>,
     #[serde(default)]
     operations: Vec<OperationCapabilityInput>,
+    #[serde(default)]
+    requests: Vec<RequestShapeInput>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -105,7 +107,7 @@ struct ClaimAuthorityInput {
 #[serde(deny_unknown_fields)]
 struct OperationCapabilityInput {
     id: String,
-    request: RequestShapeInput,
+    input_schema: Value,
     result_kind: String,
     #[serde(default)]
     effects: Vec<String>,
@@ -117,18 +119,8 @@ struct OperationCapabilityInput {
 #[serde(deny_unknown_fields)]
 struct RequestShapeInput {
     kind: String,
-    #[serde(default)]
-    arguments: Vec<RequestArgumentInput>,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct RequestArgumentInput {
-    name: String,
-    #[serde(rename = "type")]
-    value_type: String,
-    #[serde(default)]
-    required: bool,
+    input_schema: Value,
+    result_kind: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -139,7 +131,6 @@ struct PublicRequestInput {
     owner: String,
     owner_revision: String,
     source_revision: String,
-    operation_id: String,
     request_kind: String,
     capability_revision: String,
     task_identity: CurrentWorkIdentity,
@@ -285,21 +276,21 @@ struct NormalizedCapabilityOwner {
     domains: BTreeSet<String>,
     effects: BTreeMap<String, String>,
     operations: BTreeMap<String, NormalizedOperationCapability>,
+    requests: BTreeMap<String, NormalizedRequestShape>,
 }
 
 #[derive(Debug, Clone, Serialize)]
 struct NormalizedOperationCapability {
-    request_kind: String,
-    arguments: BTreeMap<String, NormalizedRequestArgument>,
+    input_schema: Value,
     result_kind: String,
     effects: BTreeSet<String>,
     claims: BTreeSet<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
-struct NormalizedRequestArgument {
-    value_type: String,
-    required: bool,
+struct NormalizedRequestShape {
+    input_schema: Value,
+    result_kind: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -310,7 +301,6 @@ struct NormalizedPublicRequest {
     owner: String,
     owner_revision: String,
     source_revision: String,
-    operation_id: String,
     request_kind: String,
     result_kind: String,
     capability_revision: String,
@@ -535,47 +525,7 @@ fn normalize_capability_contract(
                     "operation {id} has conflicting owners {existing} and {owner}"
                 )));
             }
-            let request_kind = require_text(
-                &operation.request.kind,
-                &format!("capability_contract operation {id}.request.kind"),
-            )?;
-            if let Some(existing) = request_kinds.insert(request_kind.clone(), id.clone()) {
-                return Err(CoreError::new(format!(
-                    "public request kind {request_kind} is shared by operations {existing} and {id}"
-                )));
-            }
-            let mut arguments = BTreeMap::new();
-            for (argument_index, argument) in operation.request.arguments.into_iter().enumerate() {
-                let name = require_text(
-                    &argument.name,
-                    &format!(
-                        "capability_contract operation {id}.request.arguments[{argument_index}].name"
-                    ),
-                )?;
-                if !matches!(
-                    argument.value_type.as_str(),
-                    "string" | "boolean" | "integer" | "number" | "string-list" | "object"
-                ) {
-                    return Err(CoreError::new(format!(
-                        "capability_contract operation {id} argument {name} has unsupported type {}",
-                        argument.value_type
-                    )));
-                }
-                if arguments
-                    .insert(
-                        name.clone(),
-                        NormalizedRequestArgument {
-                            value_type: argument.value_type,
-                            required: argument.required,
-                        },
-                    )
-                    .is_some()
-                {
-                    return Err(CoreError::new(format!(
-                        "capability_contract operation {id} declares argument {name} more than once"
-                    )));
-                }
-            }
+            schema_validator(&operation.input_schema, &format!("operation {id}"))?;
             let operation_effects = unique_strings(
                 operation.effects,
                 &format!("capability_contract operation {id}.effects"),
@@ -599,14 +549,33 @@ fn normalize_capability_contract(
             operations.insert(
                 id,
                 NormalizedOperationCapability {
-                    request_kind,
-                    arguments,
+                    input_schema: operation.input_schema,
                     result_kind: require_text(
                         &operation.result_kind,
                         "capability_contract operation result_kind",
                     )?,
                     effects: operation_effects,
                     claims,
+                },
+            );
+        }
+        let mut requests = BTreeMap::new();
+        for request in input_owner.requests {
+            let kind = require_text(&request.kind, "capability request.kind")?;
+            if let Some(existing) = request_kinds.insert(kind.clone(), owner.clone()) {
+                return Err(CoreError::new(format!(
+                    "public request kind {kind} has conflicting declarations by {existing} and {owner}"
+                )));
+            }
+            schema_validator(&request.input_schema, &format!("request {kind}"))?;
+            requests.insert(
+                kind,
+                NormalizedRequestShape {
+                    input_schema: request.input_schema,
+                    result_kind: require_text(
+                        &request.result_kind,
+                        "capability request.result_kind",
+                    )?,
                 },
             );
         }
@@ -617,6 +586,7 @@ fn normalize_capability_contract(
                 domains,
                 effects,
                 operations,
+                requests,
             },
         );
     }
@@ -724,7 +694,7 @@ fn normalize_contribution(
             }
             validate_operation_arguments(
                 &action.arguments,
-                operation,
+                &operation.input_schema,
                 &format!("{owner} action {}", action.operation_id),
             )?;
             if let Some(effect) = action
@@ -1193,51 +1163,29 @@ fn current_work(intent: &Value) -> Result<Option<CurrentWorkIdentity>, CoreError
     Ok(Some(current))
 }
 
-fn argument_matches(value: &Value, value_type: &str) -> bool {
-    match value_type {
-        "string" => value.is_string(),
-        "boolean" => value.is_boolean(),
-        "integer" => value.as_i64().is_some() || value.as_u64().is_some(),
-        "number" => value.is_number(),
-        "string-list" => value
-            .as_array()
-            .is_some_and(|items| items.iter().all(Value::is_string)),
-        "object" => value.is_object(),
-        _ => false,
+fn schema_validator(schema: &Value, field: &str) -> Result<jsonschema::Validator, CoreError> {
+    if schema.get("$schema").and_then(Value::as_str)
+        != Some("https://json-schema.org/draft/2020-12/schema")
+    {
+        return Err(CoreError::new(format!(
+            "{field}.input_schema must declare JSON Schema Draft 2020-12"
+        )));
     }
+    // Schemas are carried in the current capability contract. External HTTP/file
+    // retrieval is disabled; local $defs/$ref remain ordinary JSON Schema.
+    jsonschema::draft202012::options()
+        .build(schema)
+        .map_err(|error| CoreError::new(format!("{field}.input_schema is invalid: {error}")))
 }
 
 fn validate_operation_arguments(
     value: &Value,
-    operation: &NormalizedOperationCapability,
+    schema: &Value,
     field: &str,
 ) -> Result<(), CoreError> {
-    let arguments = value
-        .as_object()
-        .ok_or_else(|| CoreError::new(format!("{field}.arguments must be an object")))?;
-    if let Some(name) = arguments
-        .keys()
-        .find(|name| !operation.arguments.contains_key(*name))
-    {
-        return Err(CoreError::new(format!(
-            "{field} contains unknown argument {name}"
-        )));
-    }
-    for (name, shape) in &operation.arguments {
-        match arguments.get(name) {
-            Some(value) if !argument_matches(value, &shape.value_type) => {
-                return Err(CoreError::new(format!(
-                    "{field} argument {name} must be {}",
-                    shape.value_type
-                )));
-            }
-            None if shape.required => {
-                return Err(CoreError::new(format!("{field} requires argument {name}")));
-            }
-            _ => {}
-        }
-    }
-    Ok(())
+    schema_validator(schema, field)?
+        .validate(value)
+        .map_err(|error| CoreError::new(format!("{field}.arguments violate input_schema: {error}")))
 }
 
 fn normalize_public_request(
@@ -1267,7 +1215,6 @@ fn normalize_public_request(
         &parsed.source_revision,
         "intent.public_request.source_revision",
     )?;
-    let operation_id = require_text(&parsed.operation_id, "intent.public_request.operation_id")?;
     let request_kind = require_text(&parsed.request_kind, "intent.public_request.request_kind")?;
     if parsed.capability_revision != capabilities.revision {
         return Err(CoreError::new(
@@ -1291,30 +1238,24 @@ fn normalize_public_request(
             "public request is stale for capability owner {owner}"
         )));
     }
-    let operation = owner_capability
-        .operations
-        .get(&operation_id)
+    let request_shape = owner_capability
+        .requests
+        .get(&request_kind)
         .ok_or_else(|| {
             CoreError::new(format!(
-                "public request names undeclared operation {operation_id} for {owner}"
+                "public request names undeclared request kind {request_kind} for {owner}"
             ))
         })?;
-    if request_kind != operation.request_kind {
-        return Err(CoreError::new(format!(
-            "public request kind {request_kind} does not construct operation {operation_id}"
-        )));
-    }
     validate_operation_arguments(
         &parsed.arguments,
-        operation,
-        &format!("public request for {operation_id}"),
+        &request_shape.input_schema,
+        &format!("public request {request_kind}"),
     )?;
     let identity = digest(&json!({
         "id": id,
         "owner": owner,
         "owner_revision": owner_revision,
         "source_revision": source_revision,
-        "operation_id": operation_id,
         "request_kind": request_kind,
         "capability_revision": capabilities.revision,
         "task_identity": current,
@@ -1327,9 +1268,8 @@ fn normalize_public_request(
         owner,
         owner_revision,
         source_revision,
-        operation_id,
         request_kind,
-        result_kind: operation.result_kind.clone(),
+        result_kind: request_shape.result_kind.clone(),
         capability_revision: capabilities.revision.clone(),
         task_identity: current,
         arguments: parsed.arguments,
@@ -1670,16 +1610,7 @@ fn resolve_public_request(
 
     let consequence_ids = match response.status.as_str() {
         "action" => {
-            let matches = contribution
-                .actions
-                .iter()
-                .filter(|action| {
-                    action.operation_id == request.operation_id
-                        && action.arguments == request.arguments
-                })
-                .collect::<Vec<_>>();
-            if matches.len() != 1
-                || contribution.actions.len() != 1
+            if contribution.actions.len() != 1
                 || !contribution.decisions.is_empty()
                 || !contribution.blockers.is_empty()
                 || contribution.settled
@@ -1689,7 +1620,7 @@ fn resolve_public_request(
                     request.id
                 )));
             }
-            vec![matches[0].consequence_id.clone()]
+            vec![contribution.actions[0].consequence_id.clone()]
         }
         "decision" => {
             if contribution.decisions.len() != 1
@@ -1746,7 +1677,6 @@ fn resolve_public_request(
         "owner": request.owner,
         "owner_revision": request.owner_revision,
         "source_revision": request.source_revision,
-        "operation_id": request.operation_id,
         "request_kind": request.request_kind,
         "result_kind": request.result_kind,
         "status": response.status,

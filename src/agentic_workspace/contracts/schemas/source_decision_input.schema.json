@@ -129,34 +129,85 @@
       ],
       "additionalProperties": false
     },
-    "request_argument": {
+    "input_schema": {
+      "description": "Self-contained Draft 2020-12 JSON Schema; Rust validates the schema and its instances with external retrieval disabled.",
       "type": "object",
       "properties": {
-        "name": {"type": "string", "minLength": 1, "description": "Public argument name."},
-        "type": {"enum": ["string", "boolean", "integer", "number", "string-list", "object"], "description": "Small data-shape primitive used to validate the argument."},
-        "required": {"type": "boolean", "description": "Whether the request must carry this argument."}
+        "$schema": {
+          "const": "https://json-schema.org/draft/2020-12/schema",
+          "description": "JSON Schema dialect."
+        }
       },
-      "required": ["name", "type"],
+      "required": [
+        "$schema"
+      ]
+    },
+    "request_shape": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Public owner intention discriminator, independent of operation identity."
+        },
+        "input_schema": {
+          "$ref": "#/$defs/input_schema",
+          "description": "JSON Schema for intention arguments."
+        },
+        "result_kind": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Owner response discriminator."
+        }
+      },
+      "required": [
+        "kind",
+        "input_schema",
+        "result_kind"
+      ],
       "additionalProperties": false
     },
     "operation_capability": {
       "type": "object",
       "properties": {
-        "id": {"type": "string", "minLength": 1, "description": "Globally unique operation identity owned by one capability owner."},
-        "request": {
-          "type": "object",
-          "properties": {
-            "kind": {"type": "string", "minLength": 1, "description": "Unique public request discriminator for this operation."},
-            "arguments": {"type": "array", "items": {"$ref": "#/$defs/request_argument"}, "description": "Bounded typed argument declarations; undeclared arguments fail closed."}
-          },
-          "required": ["kind"],
-          "additionalProperties": false
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Globally unique operation identity owned by one capability owner."
         },
-        "result_kind": {"type": "string", "minLength": 1, "description": "Typed result discriminator clients may expect after invocation."},
-        "effects": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true, "description": "Maximum effects this operation may advertise, all owned by the same capability owner."},
-        "claims": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true, "description": "Claims this operation may establish when the same owner has exclusive claim authority."}
+        "input_schema": {
+          "$ref": "#/$defs/input_schema",
+          "description": "JSON Schema for exact owner-derived operation arguments."
+        },
+        "result_kind": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Typed operation result discriminator."
+        },
+        "effects": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Maximum effects this operation may advertise, all owned by the same owner."
+        },
+        "claims": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "description": "Claims for which the same owner has exclusive authority."
+        }
       },
-      "required": ["id", "request", "result_kind"],
+      "required": [
+        "id",
+        "input_schema",
+        "result_kind"
+      ],
       "additionalProperties": false
     },
     "capability_owner": {
@@ -177,6 +228,7 @@
             "additionalProperties": false
           }
         },
+        "requests": {"type": "array", "items": {"$ref": "#/$defs/request_shape"}, "description": "Public owner intentions, independently declared from operations."},
         "operations": {"type": "array", "items": {"$ref": "#/$defs/operation_capability"}, "description": "Public operations this owner can construct and answer."}
       },
       "required": ["owner", "revision"],
@@ -213,13 +265,12 @@
         "owner": {"type": "string", "minLength": 1, "description": "Capability owner asked to interpret the request."},
         "owner_revision": {"type": "string", "minLength": 1, "description": "Capability-owner semantic revision current when selected."},
         "source_revision": {"type": "string", "minLength": 1, "description": "Owner contribution revision current when selected."},
-        "operation_id": {"type": "string", "minLength": 1, "description": "Declared owner operation the request may construct."},
         "request_kind": {"type": "string", "minLength": 1, "description": "Declared typed request discriminator."},
         "capability_revision": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$", "description": "Capability contract revision current when selected."},
         "task_identity": {"$ref": "#/$defs/current_work", "description": "Current work identity when the acting agent or human selected the request."},
         "arguments": {"type": "object", "description": "Arguments admitted by the declared bounded request shape."}
       },
-      "required": ["kind", "id", "owner", "owner_revision", "source_revision", "operation_id", "request_kind", "capability_revision", "task_identity", "arguments"],
+      "required": ["kind", "id", "owner", "owner_revision", "source_revision", "request_kind", "capability_revision", "task_identity", "arguments"],
       "additionalProperties": false
     },
     "affects": {

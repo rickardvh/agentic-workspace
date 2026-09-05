@@ -25,7 +25,9 @@
   "public_requests": {
     "selection_owner": "acting-agent-or-human",
     "binding": ["current-work identity", "capability-contract revision", "capability-owner revision", "source-contribution revision"],
-    "constructibility": "declared request kind plus bounded typed arguments",
+    "constructibility": "owner intention kind plus arguments validated by its declared JSON Schema Draft 2020-12",
+    "resolution": "responsible owner derives a separately declared operation and exact arguments, decision, blocker, or settled response",
+    "schema_authority": "self-contained input_schema in the revision-bound capability contract; external retrieval disabled",
     "owner_responses": ["action", "decision", "blocked", "settled"],
     "unknown_variants": "fail-closed",
     "execution": "invoke only the exact returned operation envelope"

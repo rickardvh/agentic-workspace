@@ -42,7 +42,7 @@ fn authority_bearing(input: &Value) -> bool {
 
 fn expanded(input: &Value) -> Value {
     let mut payload = input.clone();
-    if authority_bearing(&payload) {
+    if authority_bearing(&payload) && payload.get("capability_contract").is_none() {
         payload
             .as_object_mut()
             .expect("input is an object")
