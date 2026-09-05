@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "kinds": {
+    "contribution": "agentic-workspace/source-contribution/v1",
+    "decision": "agentic-workspace/operating-decision/v1",
+    "decision_view": "agentic-workspace/decision-view/v1",
+    "invocation": "agentic-workspace/operation-invocation/v1"
+  },
+  "contribution": {
+    "local_state_field": "settled",
+    "rejected_legacy_fields": ["terminal"],
+    "rule": "Owner-local quiescence never grants task terminality."
+  },
+  "outcome": {
+    "intent_field": "outcome",
+    "contribution_field": "outcome",
+    "complete_status": "complete",
+    "required_identity_fields": ["id", "owner", "claim"],
+    "required_contribution_fields": ["id", "status", "claim", "evidence_revision"],
+    "terminal_requires": [
+      "exact-current-outcome-owner",
+      "matching-outcome-id",
+      "matching-claim",
+      "current-evidence-revision",
+      "claim-allowed-and-not-blocked",
+      "no-blockers",
+      "no-actions",
+      "no-residual-work"
+    ]
+  },
+  "composition": {
+    "statuses": ["direct", "actionable", "blocked", "terminal"],
+    "multiple_actions": "block-with-lossless-alternatives",
+    "action_order": ["owner:ascending", "operation_id:ascending"],
+    "claim_policy": "blocked-overrides-allowed",
+    "rule": "A source owner cannot gain global authority through a numeric priority."
+  }
+}
+

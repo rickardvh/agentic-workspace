@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import subprocess
-import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SEQUENCE = (
+    ("uv", "run", "python", "scripts/generate/generate_source_decision.py"),
     ("uv", "run", "python", "scripts/generate/generate_command_packages.py"),
     ("uv", "run", "python", "scripts/generate/generate_external_consumer_profile.py"),
     ("uv", "run", "python", "scripts/generate/generate_command_adapters.py"),

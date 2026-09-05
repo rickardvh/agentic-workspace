@@ -78,6 +78,7 @@ packages = ["src/agentic_workspace"]
 [tool.hatch.build.targets.wheel.force-include]
 "generated/workspace/python/__init__.py" = "src/agentic_workspace/_generated_cli_package_impl/__init__.py"
 "generated/workspace/python/cli.py" = "src/agentic_workspace/_generated_cli_package_impl/cli.py"
+"generated/workspace/python/semantic_decision.py" = "src/agentic_workspace/_generated_cli_package_impl/semantic_decision.py"
 "generated/workspace/python/command_package.json" = "src/agentic_workspace/_generated_cli_package_impl/command_package.json"
 "generated/workspace/python/adapter_commands.json" = "src/agentic_workspace/_generated_cli_package_impl/adapter_commands.json"
 "generated/workspace/python/external_consumer_profile.json" = "src/agentic_workspace/_generated_cli_package_impl/external_consumer_profile.json"
@@ -97,6 +98,7 @@ include = [
   "/generated/workspace/python/generated_command_adapters.json",
   "/generated/workspace/python/__init__.py",
   "/generated/workspace/python/cli.py",
+  "/generated/workspace/python/semantic_decision.py",
   "/generated/workspace/python/command_package.json",
   "/generated/workspace/python/adapter_commands.json",
   "/generated/workspace/python/operations",

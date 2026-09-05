@@ -232,9 +232,11 @@ def test_workspace_artifacts_ship_generated_cli_package_import_dependency(worksp
     assert "agentic_workspace/generated_cli_package.py" not in wheel_inventory
     assert "agentic_workspace/generated_cli_package/__init__.py" not in wheel_inventory
     assert "agentic_workspace/_generated_cli_package_impl/__init__.py" in wheel_inventory
+    assert "agentic_workspace/_generated_cli_package_impl/semantic_decision.py" in wheel_inventory
     assert "agentic_workspace/_generated_cli_package_impl/command_package.json" in wheel_inventory
     assert "agentic_workspace/_generated_cli_package_impl/adapter_commands.json" in wheel_inventory
     assert any(name.endswith("/generated/workspace/python/__init__.py") for name in sdist_inventory)
+    assert any(name.endswith("/generated/workspace/python/semantic_decision.py") for name in sdist_inventory)
     assert any(name.endswith("/generated/workspace/python/command_package.json") for name in sdist_inventory)
     assert any(name.endswith("/generated/workspace/python/adapter_commands.json") for name in sdist_inventory)
     assert not any(name.endswith("/src/agentic_workspace/generated_cli_package.py") for name in sdist_inventory)
@@ -248,6 +250,7 @@ def test_root_wheel_ships_generated_cli_package_import_dependency(workspace_whee
     assert "agentic_workspace/generated_cli_package.py" not in inventory
     assert "agentic_workspace/generated_cli_package/__init__.py" not in inventory
     assert "agentic_workspace/_generated_cli_package_impl/__init__.py" in inventory
+    assert "agentic_workspace/_generated_cli_package_impl/semantic_decision.py" in inventory
     assert "agentic_workspace/_generated_cli_package_impl/command_package.json" in inventory
     assert "agentic_workspace/_generated_cli_package_impl/adapter_commands.json" in inventory
     assert "agentic_workspace/_generated_cli_package_impl/external_consumer_profile.json" in inventory
@@ -265,6 +268,7 @@ def test_root_sdist_ships_generated_cli_package_import_dependency(workspace_sdis
     assert not any(name.endswith("/src/agentic_workspace/generated_cli_package.py") for name in inventory)
     assert not any(name.endswith("/src/agentic_workspace/generated_cli_package/__init__.py") for name in inventory)
     assert any(name.endswith("/generated/workspace/python/__init__.py") for name in inventory)
+    assert any(name.endswith("/generated/workspace/python/semantic_decision.py") for name in inventory)
     assert any(name.endswith("/generated/workspace/python/command_package.json") for name in inventory)
     assert any(name.endswith("/generated/workspace/python/adapter_commands.json") for name in inventory)
 
@@ -292,6 +296,31 @@ def test_installed_workspace_wheel_imports_cli_module(workspace_wheel: Path, tmp
         check=False,
     )
 
+    assert result.returncode == 0, result.stderr
+
+
+def test_installed_workspace_wheel_uses_generated_source_decision(workspace_wheel: Path, tmp_path: Path) -> None:
+    install_root = tmp_path / "installed-decision"
+    subprocess.run(
+        ["uv", "pip", "install", "--no-deps", "--target", str(install_root), str(workspace_wheel)],
+        cwd=WORKSPACE_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "from agentic_workspace.decision import compile_source_decision; "
+            "assert compile_source_decision([{'owner':'memory','revision':'one','settled':True}])['status'] == 'direct'",
+        ],
+        cwd=tmp_path,
+        env={**os.environ, "PYTHONPATH": str(install_root)},
+        capture_output=True,
+        text=True,
+        check=False,
+    )
     assert result.returncode == 0, result.stderr
 
 
