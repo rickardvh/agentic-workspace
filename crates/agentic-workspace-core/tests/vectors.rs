@@ -120,3 +120,40 @@ fn normalized_source_permutations_are_stable() {
         );
     }
 }
+
+#[test]
+fn action_material_dependencies_and_effect_generation() {
+    let all = vectors();
+    let case = all["cases"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|case| case["id"] == "action-material-dependencies")
+        .unwrap();
+    let mut payload = expanded(&case["input"]);
+    let first = agentic_workspace_core::compile_value(payload.clone()).unwrap();
+    payload["contributions"][0]["revision"] = "unrelated-advice-change".into();
+    payload["capability_contract"]["revision"] = format!("sha256:{}", "e".repeat(64)).into();
+    let unrelated = agentic_workspace_core::compile_value(payload.clone()).unwrap();
+    assert_ne!(first["input_revision"], unrelated["input_revision"]);
+    assert_eq!(first["primary_action"], unrelated["primary_action"]);
+    payload["contributions"][0]["actions"][0]["dependency_revision"] = "proof-2".into();
+    let current = agentic_workspace_core::compile_value(payload.clone()).unwrap();
+    assert_eq!(
+        first["primary_action"]["idempotency_key"],
+        current["primary_action"]["idempotency_key"]
+    );
+    assert_ne!(first["primary_action"], current["primary_action"]);
+    assert!(
+        agentic_workspace_core::admit_invocation_value(
+            serde_json::json!({"decision":current,"invocation":first["primary_action"]})
+        )
+        .is_err()
+    );
+    payload["contributions"][0]["actions"][0]["effect_generation"] = "authorized-repeat-2".into();
+    let repeat = agentic_workspace_core::compile_value(payload).unwrap();
+    assert_ne!(
+        first["primary_action"]["idempotency_key"],
+        repeat["primary_action"]["idempotency_key"]
+    );
+}

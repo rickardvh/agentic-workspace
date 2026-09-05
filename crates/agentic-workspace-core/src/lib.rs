@@ -155,6 +155,9 @@ struct RequestResponseInput {
 
 #[derive(Debug, Deserialize)]
 struct ActionInput {
+    dependency_revision: String,
+    #[serde(default)]
+    effect_generation: String,
     #[serde(default)]
     operation_id: String,
     #[serde(default = "empty_object")]
@@ -327,6 +330,8 @@ struct NormalizedRequestResponse {
 #[derive(Debug, Clone, Serialize)]
 struct NormalizedAction {
     consequence_id: String,
+    dependency_revision: String,
+    logical_effect_id: String,
     operation_id: String,
     arguments: Value,
     effects: Vec<String>,
@@ -718,7 +723,7 @@ fn normalize_contribution(
         .actions
         .into_iter()
         .enumerate()
-        .map(|(index, action)| normalize_action(action, &owner, &revision, index))
+        .map(|(index, action)| normalize_action(action, &owner, capability, index))
         .collect::<Result<Vec<_>, _>>()?;
     actions.sort_by(|left, right| left.consequence_id.cmp(&right.consequence_id));
     if let Some(capability) = capability {
@@ -896,7 +901,7 @@ fn normalize_request_response(
 fn normalize_action(
     input: ActionInput,
     owner: &str,
-    revision: &str,
+    capability: Option<&NormalizedCapabilityOwner>,
     index: usize,
 ) -> Result<NormalizedAction, CoreError> {
     if input.extra.contains_key("priority") {
@@ -922,17 +927,34 @@ fn normalize_action(
         .authority
         .filter(|value| !value.is_empty())
         .unwrap_or_else(|| owner.to_owned());
+    let dependency_revision =
+        require_text(&input.dependency_revision, "action.dependency_revision")?;
     let identity = json!({
         "owner": owner,
-        "revision": revision,
+        "effect_generation": input.effect_generation,
         "operation_id": operation_id,
         "arguments": input.arguments,
         "effects": effects,
         "authority": authority,
     });
-    let consequence_id = format!("action:{owner}:{revision}:{}", digest(&identity)?);
+    let logical_effect_id = digest(&identity)?;
+    // The operation contract and its effect custody are material; unrelated
+    // owner descriptors and aggregate contract revisions are not dependencies.
+    let dependency_revision = digest(&json!({
+        "source_dependencies": dependency_revision,
+        "operation": capability.and_then(|item| item.operations.get(&operation_id)),
+        "effect_custody": effects.iter().map(|effect| (effect, capability.and_then(|item| item.effects.get(effect)))).collect::<BTreeMap<_, _>>(),
+    }))?;
+    let consequence_id = format!(
+        "action:{owner}:{}",
+        digest(
+            &json!({"logical_effect_id": logical_effect_id, "dependency_revision": dependency_revision})
+        )?
+    );
     Ok(NormalizedAction {
         consequence_id,
+        dependency_revision,
+        logical_effect_id,
         operation_id: identity["operation_id"]
             .as_str()
             .expect("identity operation is text")
@@ -1366,6 +1388,40 @@ pub fn compile_value(value: Value) -> Result<Value, CoreError> {
     compile(input)
 }
 
+/// Admission consumes a freshly resolved trusted decision and, when present,
+/// a trusted receipt's original invocation. It does not execute or store effects.
+pub fn admit_invocation_value(value: Value) -> Result<Value, CoreError> {
+    #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct Admission {
+        decision: Value,
+        invocation: Value,
+        previous_invocation: Option<Value>,
+    }
+    let input: Admission =
+        serde_json::from_value(value).map_err(|error| CoreError::new(error.to_string()))?;
+    if input.invocation.get("kind").and_then(Value::as_str) != Some(INVOCATION_KIND) {
+        return Err(CoreError::new("unsupported invocation kind"));
+    }
+    let exact_receipt = input.previous_invocation.as_ref() == Some(&input.invocation);
+    let exact_current = input.decision.get("primary_action") == Some(&input.invocation);
+    if !exact_receipt && !exact_current {
+        return Err(CoreError::new(
+            "invocation is stale or differs from the exact returned action",
+        ));
+    }
+    if let Some(previous) = &input.previous_invocation
+        && previous.get("idempotency_key") != input.invocation.get("idempotency_key")
+    {
+        return Err(CoreError::new(
+            "receipt belongs to a different logical effect",
+        ));
+    }
+    Ok(
+        json!({"kind": "agentic-workspace/invocation-admission/v1", "disposition": if input.previous_invocation.is_some() {"replay"} else {"execute"}}),
+    )
+}
+
 fn compile(input: DecisionInput) -> Result<Value, CoreError> {
     if !input.intent.is_object() {
         return Err(CoreError::new("intent must be an object"));
@@ -1494,10 +1550,6 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
 
     let primary_action = if available_actions.len() == 1 {
         let selected = &available_actions[0];
-        let idempotency_key = digest(&json!({
-            "action_consequence_id": selected.action.consequence_id,
-            "input_revision": input_revision,
-        }))?;
         Some(json!({
             "kind": INVOCATION_KIND,
             "consequence_id": selected.action.consequence_id,
@@ -1506,8 +1558,8 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
             "effects": selected.action.effects,
             "authority": selected.action.authority,
             "source_owner": selected.owner,
-            "expected_input_revision": input_revision,
-            "idempotency_key": idempotency_key,
+            "expected_dependency_revision": selected.action.dependency_revision,
+            "idempotency_key": selected.action.logical_effect_id,
         }))
     } else {
         None

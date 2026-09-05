@@ -6,6 +6,8 @@ from typing import Any
 
 from jsonschema import Draft202012Validator
 
+from agentic_workspace.decision import DecisionContractError, admit_invocation
+
 
 class OperationError(RuntimeError):
     """Base error for typed operation transport failures."""
@@ -58,7 +60,7 @@ class OperationDispatcher:
         if operation is None:
             raise OperationContractError(f"unknown operation: {operation_id}")
 
-        expected_revision = str(invocation.get("expected_input_revision") or "")
+        expected_revision = str(invocation.get("expected_dependency_revision") or "")
         arguments = invocation.get("arguments", {})
         if not isinstance(arguments, Mapping):
             raise OperationContractError("arguments must be an object")
@@ -72,20 +74,17 @@ class OperationDispatcher:
         key = str(invocation.get("idempotency_key") or "")
         if not key:
             raise OperationContractError("idempotency_key is required")
-        request_identity = {"operation_id": operation_id, "arguments": dict(arguments), "revision": expected_revision}
+        request_identity = dict(invocation)
         previous = self._receipts.get(key)
-        if previous is not None:
-            previous_identity, previous_result = previous
-            if previous_identity != request_identity:
-                raise OperationContractError("idempotency key was already used for another invocation")
-            return dict(previous_result)
-
         current = dict(resolve_decision())
-        if not expected_revision or expected_revision != current.get("input_revision"):
-            raise StaleInvocationError("source state changed; resolve a fresh operating decision")
-        current_action = current.get("primary_action")
-        if not isinstance(current_action, Mapping) or current_action.get("operation_id") != operation_id:
-            raise StaleInvocationError("operation is no longer the current source-owned action")
+        try:
+            admission = admit_invocation(current, invocation, previous[0] if previous else None)
+        except DecisionContractError as error:
+            if previous:
+                raise OperationContractError("idempotency key was already used; " + str(error)) from error
+            raise StaleInvocationError(str(error)) from error
+        if admission["disposition"] == "replay" and previous is not None:
+            return dict(previous[1])
 
         raw_outcome = operation.handler(dict(arguments))
         if not isinstance(raw_outcome, Mapping):
@@ -104,7 +103,7 @@ class OperationDispatcher:
             "status": status,
             "effects": list(reported_effects),
             "value": raw_outcome.get("value"),
-            "input_revision": expected_revision,
+            "dependency_revision": expected_revision,
             "next_decision": next_decision,
         }
         self._receipts[key] = (request_identity, result)

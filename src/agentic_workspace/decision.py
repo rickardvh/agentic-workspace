@@ -58,6 +58,12 @@ def compile_source_decision(
     return _request(payload)
 
 
+def admit_invocation(
+    decision: Mapping[str, Any], invocation: Mapping[str, Any], previous: Mapping[str, Any] | None = None
+) -> dict[str, Any]:
+    return _request({"admission": {"decision": decision, "invocation": invocation, "previous_invocation": previous}})
+
+
 def select_decision_detail(decision: Mapping[str, Any], fields: Iterable[str]) -> dict[str, Any]:
     return {
         "kind": "agentic-workspace/decision-view/v1",
@@ -68,4 +74,4 @@ def select_decision_detail(decision: Mapping[str, Any], fields: Iterable[str]) -
     }
 
 
-__all__ = ["DecisionContractError", "compile_source_decision", "select_decision_detail"]
+__all__ = ["DecisionContractError", "compile_source_decision", "select_decision_detail", "admit_invocation"]

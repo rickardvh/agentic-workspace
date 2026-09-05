@@ -2,6 +2,36 @@
   "schema_version": 1,
   "cases": [
     {
+      "id": "action-material-dependencies",
+      "input": {
+        "contributions": [
+          {
+            "owner": "planning",
+            "revision": "owner-1",
+            "actions": [
+              {
+                "operation_id": "planning.advance",
+                "arguments": {
+                  "item": "a"
+                },
+                "effects": [
+                  "planning-state"
+                ],
+                "dependency_revision": "proof-1"
+              }
+            ]
+          }
+        ],
+        "intent": {}
+      },
+      "expect": {
+        "status": "actionable",
+        "primary_action.arguments": {
+          "item": "a"
+        }
+      }
+    },
+    {
       "id": "admitted-policy-restricts-without-owning-effect-or-claim",
       "input": {
         "contributions": [
@@ -27,7 +57,7 @@
             "owner": "producer",
             "revision": "p1",
             "actions": [
-              {
+              {"dependency_revision": "p1", 
                 "operation_id": "produce",
                 "effects": [
                   "write"
@@ -115,7 +145,7 @@
         "contributions": [{
           "owner": "example.external",
           "revision": "ext1",
-          "actions": [{"operation_id": "example.finish", "arguments": {"subject": "case-17"}, "effects": ["external-state"]}],
+          "actions": [{"dependency_revision": "ext1", "operation_id": "example.finish", "arguments": {"subject": "case-17"}, "effects": ["external-state"]}],
           "request_response": {"request_id": "finish-17", "status": "action"}
         }],
         "intent": {
@@ -138,7 +168,7 @@
         "primary_action.operation_id": "example.finish",
         "request_resolution.status": "action",
         "request_resolution.result_kind": "example/finish-result/v1",
-        "request_resolution.consequence_ids.0": "action:example.external:ext1:sha256:dce17bb46073a018e2342808dbc162124ba7a957e6e0f7f3b8ffa1d8f762aa9f"
+        "request_resolution.consequence_ids.0": "action:example.external:sha256:9b8db23f0a665a5e2d5f01436c5e663428f2a8bf045762170cd1b5d5ad038856"
       }
     },
     {
@@ -196,7 +226,7 @@
       "id": "claim-blocker-preserves-independent-action",
       "input": {"intent": {}, "contributions": [
         {"owner": "verification", "revision": "v1", "blockers": [{"code": "proof-missing", "message": "release proof is missing", "recovery": "run verification.release", "affects": ["claim:release"]}], "claims": {"blocked": ["release"]}},
-        {"owner": "workspace", "revision": "w1", "actions": [{"operation_id": "workspace.edit", "arguments": {"path": "README.md"}, "effects": ["workspace-files"]}]}
+        {"owner": "workspace", "revision": "w1", "actions": [{"dependency_revision": "w1", "operation_id": "workspace.edit", "arguments": {"path": "README.md"}, "effects": ["workspace-files"]}]}
       ]},
       "expect": {"status": "actionable", "primary_action.operation_id": "workspace.edit", "blockers.0.recovery": "run verification.release"}
     },
@@ -204,10 +234,10 @@
       "id": "exact-same-operation-action-scope",
       "input": {"contributions": [{
         "owner": "planning", "revision": "one",
-        "blockers": [{"code": "subject-blocked", "message": "only action a is blocked", "affects": ["action:planning:one:sha256:994d5986140e342326f094188d5f0e36af2ae2a10ed3ee092ef58906e228c57a"]}],
+        "blockers": [{"code": "subject-blocked", "message": "only action a is blocked", "affects": ["action:planning:sha256:5a1d35c377be38d91c3220e4b99eae114b5bc389d24c8867674c209a6a780019"]}],
         "actions": [
-          {"operation_id": "planning.advance", "arguments": {"item": "a"}, "effects": ["plan-a"]},
-          {"operation_id": "planning.advance", "arguments": {"item": "b"}, "effects": ["plan-b"]}
+          {"dependency_revision": "one", "operation_id": "planning.advance", "arguments": {"item": "a"}, "effects": ["plan-a"]},
+          {"dependency_revision": "one", "operation_id": "planning.advance", "arguments": {"item": "b"}, "effects": ["plan-b"]}
         ]
       }], "intent": {}},
       "expect": {"status": "actionable", "primary_action.arguments.item": "b", "primary_action.effects.0": "plan-b", "pending_consequences.actions.0.arguments.item": "a", "pending_consequences.actions.1.arguments.item": "b"}
@@ -220,8 +250,8 @@
     {
       "id": "incomparable-actions-fail-closed-losslessly",
       "input": {"contributions": [
-        {"owner": "zeta", "revision": "z1", "actions": [{"operation_id": "zeta.act", "arguments": {"value": "z"}}]},
-        {"owner": "alpha", "revision": "a1", "actions": [{"operation_id": "alpha.act", "arguments": {"value": "a"}}]}
+        {"owner": "zeta", "revision": "z1", "actions": [{"dependency_revision": "z1", "operation_id": "zeta.act", "arguments": {"value": "z"}}]},
+        {"owner": "alpha", "revision": "a1", "actions": [{"dependency_revision": "a1", "operation_id": "alpha.act", "arguments": {"value": "a"}}]}
       ], "intent": {}},
       "expect": {"status": "blocked", "blockers.0.code": "multiple-actions", "blockers.0.alternatives.0.source_owner": "alpha", "blockers.0.alternatives.1.source_owner": "zeta"}
     }
@@ -617,7 +647,7 @@
               }
             ],
             "actions": [
-              {
+              {"dependency_revision": "ext1", 
                 "operation_id": "produce",
                 "effects": [
                   "write"
@@ -810,16 +840,16 @@
       },
       "error_contains": "restriction authority names unknown owner"
     },
-    {"id":"owner-schema-cannot-widen-public-envelope","input":{"contributions":[{"owner":"example.external","revision":"ext1","actions":[{"operation_id":"example.finish","arguments":{"subject":"case-17"},"effects":["external-state"]}],"request_response":{"request_id":"finish-17","status":"action"}}],"intent":{"current_work":{"kind":"current-work","id":"work-17"},"public_request":{"kind":"agentic-workspace/public-request/v1","id":"finish-17","owner":"example.external","owner_revision":"ext1","source_revision":"ext1","request_kind":"example/finish-request/v1","capability_revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","task_identity":{"kind":"current-work","id":"work-17"},"arguments":17}},"capability_contract":{"kind":"agentic-workspace/capability-contract/v1","revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","owners":[{"owner":"example.external","revision":"ext1","requests":[{"kind":"example/finish-request/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"integer"},"result_kind":"example/finish-result/v1"}]}]}},"error_contains":"arguments must be an object"},
+    {"id":"owner-schema-cannot-widen-public-envelope","input":{"contributions":[{"owner":"example.external","revision":"ext1","actions":[{"dependency_revision": "ext1", "operation_id":"example.finish","arguments":{"subject":"case-17"},"effects":["external-state"]}],"request_response":{"request_id":"finish-17","status":"action"}}],"intent":{"current_work":{"kind":"current-work","id":"work-17"},"public_request":{"kind":"agentic-workspace/public-request/v1","id":"finish-17","owner":"example.external","owner_revision":"ext1","source_revision":"ext1","request_kind":"example/finish-request/v1","capability_revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","task_identity":{"kind":"current-work","id":"work-17"},"arguments":17}},"capability_contract":{"kind":"agentic-workspace/capability-contract/v1","revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","owners":[{"owner":"example.external","revision":"ext1","requests":[{"kind":"example/finish-request/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"integer"},"result_kind":"example/finish-result/v1"}]}]}},"error_contains":"arguments must be an object"},
     {"id":"invalid-json-schema-is-rejected","input":{"contributions":[],"intent":{},"capability_contract":{"kind":"agentic-workspace/capability-contract/v1","revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","owners":[{"owner":"example.external","revision":"ext1","requests":[{"kind":"example/request/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"not-a-json-schema-type"},"result_kind":"example/result/v1"}]}]}},"error_contains":"input_schema is invalid"},
     {"id":"external-schema-reference-is-rejected","input":{"contributions":[],"intent":{},"capability_contract":{"kind":"agentic-workspace/capability-contract/v1","revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","owners":[{"owner":"example.external","revision":"ext1","requests":[{"kind":"example/request/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","$ref":"https://example.invalid/hidden-schema.json"},"result_kind":"example/result/v1"}]}]}},"error_contains":"input_schema is invalid"},
     {"id":"file-schema-reference-is-rejected","input":{"contributions":[],"intent":{},"capability_contract":{"kind":"agentic-workspace/capability-contract/v1","revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","owners":[{"owner":"example.external","revision":"ext1","requests":[{"kind":"example/request/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","$ref":"file:///unavailable-schema.json"},"result_kind":"example/result/v1"}]}]}},"error_contains":"input_schema is invalid"},
     {"id":"wrong-schema-dialect-is-rejected","input":{"contributions":[],"intent":{},"capability_contract":{"kind":"agentic-workspace/capability-contract/v1","revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","owners":[{"owner":"example.external","revision":"ext1","requests":[{"kind":"example/request/v1","input_schema":{"$schema":"http://json-schema.org/draft-07/schema#","type":"object"},"result_kind":"example/result/v1"}]}]}},"error_contains":"must declare JSON Schema Draft 2020-12"},
-    {"id":"nested-hidden-command-is-rejected","input":{"contributions":[{"owner":"example.external","revision":"ext1","actions":[{"operation_id":"example.finish","arguments":{"subject":"case-17"},"effects":["external-state"]}],"request_response":{"request_id":"finish-17","status":"action"}}],"intent":{"current_work":{"kind":"current-work","id":"work-17"},"public_request":{"kind":"agentic-workspace/public-request/v1","id":"finish-17","owner":"example.external","owner_revision":"ext1","source_revision":"ext1","request_kind":"example/finish-request/v1","capability_revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","task_identity":{"kind":"current-work","id":"work-17"},"arguments":{"subject":{"name":"case-17","mode":"finish","command":"delete"}}}}},"error_contains":"violate input_schema"},
-    {"id":"nested-enum-is-enforced","input":{"contributions":[{"owner":"example.external","revision":"ext1","actions":[{"operation_id":"example.finish","arguments":{"subject":"case-17"},"effects":["external-state"]}],"request_response":{"request_id":"finish-17","status":"action"}}],"intent":{"current_work":{"kind":"current-work","id":"work-17"},"public_request":{"kind":"agentic-workspace/public-request/v1","id":"finish-17","owner":"example.external","owner_revision":"ext1","source_revision":"ext1","request_kind":"example/finish-request/v1","capability_revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","task_identity":{"kind":"current-work","id":"work-17"},"arguments":{"subject":{"name":"case-17","mode":"execute-private-command"}}}}},"error_contains":"violate input_schema"},
-    {"id":"caller-operation-selection-is-rejected","input":{"contributions":[{"owner":"example.external","revision":"ext1","actions":[{"operation_id":"example.finish","arguments":{"subject":"case-17"},"effects":["external-state"]}],"request_response":{"request_id":"finish-17","status":"action"}}],"intent":{"current_work":{"kind":"current-work","id":"work-17"},"public_request":{"kind":"agentic-workspace/public-request/v1","id":"finish-17","owner":"example.external","owner_revision":"ext1","source_revision":"ext1","request_kind":"example/finish-request/v1","capability_revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","task_identity":{"kind":"current-work","id":"work-17"},"arguments":{"subject":{"name":"case-17","mode":"finish"}},"operation_id":"example.finish"}}},"error_contains":"unknown field `operation_id`"},
-    {"id":"owner-derived-action-schema-is-enforced","input":{"contributions":[{"owner":"example.external","revision":"ext1","actions":[{"operation_id":"example.finish","arguments":{"subject":{"command":"delete"}},"effects":["external-state"]}],"request_response":{"request_id":"finish-17","status":"action"}}],"intent":{"current_work":{"kind":"current-work","id":"work-17"},"public_request":{"kind":"agentic-workspace/public-request/v1","id":"finish-17","owner":"example.external","owner_revision":"ext1","source_revision":"ext1","request_kind":"example/finish-request/v1","capability_revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","task_identity":{"kind":"current-work","id":"work-17"},"arguments":{"subject":{"name":"case-17","mode":"finish"}}}}},"error_contains":"violate input_schema"},
-    {"id":"owner-cannot-derive-undeclared-operation","input":{"contributions":[{"owner":"example.external","revision":"ext1","actions":[{"operation_id":"workspace.edit","arguments":{"subject":"case-17"},"effects":["external-state"]}],"request_response":{"request_id":"finish-17","status":"action"}}],"intent":{"current_work":{"kind":"current-work","id":"work-17"},"public_request":{"kind":"agentic-workspace/public-request/v1","id":"finish-17","owner":"example.external","owner_revision":"ext1","source_revision":"ext1","request_kind":"example/finish-request/v1","capability_revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","task_identity":{"kind":"current-work","id":"work-17"},"arguments":{"subject":{"name":"case-17","mode":"finish"}}}}},"error_contains":"not declared by its capability owner"},
+    {"id":"nested-hidden-command-is-rejected","input":{"contributions":[{"owner":"example.external","revision":"ext1","actions":[{"dependency_revision": "ext1", "operation_id":"example.finish","arguments":{"subject":"case-17"},"effects":["external-state"]}],"request_response":{"request_id":"finish-17","status":"action"}}],"intent":{"current_work":{"kind":"current-work","id":"work-17"},"public_request":{"kind":"agentic-workspace/public-request/v1","id":"finish-17","owner":"example.external","owner_revision":"ext1","source_revision":"ext1","request_kind":"example/finish-request/v1","capability_revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","task_identity":{"kind":"current-work","id":"work-17"},"arguments":{"subject":{"name":"case-17","mode":"finish","command":"delete"}}}}},"error_contains":"violate input_schema"},
+    {"id":"nested-enum-is-enforced","input":{"contributions":[{"owner":"example.external","revision":"ext1","actions":[{"dependency_revision": "ext1", "operation_id":"example.finish","arguments":{"subject":"case-17"},"effects":["external-state"]}],"request_response":{"request_id":"finish-17","status":"action"}}],"intent":{"current_work":{"kind":"current-work","id":"work-17"},"public_request":{"kind":"agentic-workspace/public-request/v1","id":"finish-17","owner":"example.external","owner_revision":"ext1","source_revision":"ext1","request_kind":"example/finish-request/v1","capability_revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","task_identity":{"kind":"current-work","id":"work-17"},"arguments":{"subject":{"name":"case-17","mode":"execute-private-command"}}}}},"error_contains":"violate input_schema"},
+    {"id":"caller-operation-selection-is-rejected","input":{"contributions":[{"owner":"example.external","revision":"ext1","actions":[{"dependency_revision": "ext1", "operation_id":"example.finish","arguments":{"subject":"case-17"},"effects":["external-state"]}],"request_response":{"request_id":"finish-17","status":"action"}}],"intent":{"current_work":{"kind":"current-work","id":"work-17"},"public_request":{"kind":"agentic-workspace/public-request/v1","id":"finish-17","owner":"example.external","owner_revision":"ext1","source_revision":"ext1","request_kind":"example/finish-request/v1","capability_revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","task_identity":{"kind":"current-work","id":"work-17"},"arguments":{"subject":{"name":"case-17","mode":"finish"}},"operation_id":"example.finish"}}},"error_contains":"unknown field `operation_id`"},
+    {"id":"owner-derived-action-schema-is-enforced","input":{"contributions":[{"owner":"example.external","revision":"ext1","actions":[{"dependency_revision": "ext1", "operation_id":"example.finish","arguments":{"subject":{"command":"delete"}},"effects":["external-state"]}],"request_response":{"request_id":"finish-17","status":"action"}}],"intent":{"current_work":{"kind":"current-work","id":"work-17"},"public_request":{"kind":"agentic-workspace/public-request/v1","id":"finish-17","owner":"example.external","owner_revision":"ext1","source_revision":"ext1","request_kind":"example/finish-request/v1","capability_revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","task_identity":{"kind":"current-work","id":"work-17"},"arguments":{"subject":{"name":"case-17","mode":"finish"}}}}},"error_contains":"violate input_schema"},
+    {"id":"owner-cannot-derive-undeclared-operation","input":{"contributions":[{"owner":"example.external","revision":"ext1","actions":[{"dependency_revision": "ext1", "operation_id":"workspace.edit","arguments":{"subject":"case-17"},"effects":["external-state"]}],"request_response":{"request_id":"finish-17","status":"action"}}],"intent":{"current_work":{"kind":"current-work","id":"work-17"},"public_request":{"kind":"agentic-workspace/public-request/v1","id":"finish-17","owner":"example.external","owner_revision":"ext1","source_revision":"ext1","request_kind":"example/finish-request/v1","capability_revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","task_identity":{"kind":"current-work","id":"work-17"},"arguments":{"subject":{"name":"case-17","mode":"finish"}}}}},"error_contains":"not declared by its capability owner"},
     {
       "id": "hidden-owner-intent-union-is-rejected",
       "input": {"contributions": [], "intent": {"planning": {"operation": "complete"}}},
@@ -827,7 +857,7 @@
     },
     {
       "id": "cross-owner-effect-is-rejected",
-      "input": {"contributions": [{"owner": "workspace", "revision": "w1", "actions": [{"operation_id": "workspace.edit", "arguments": {"path": "README.md"}, "effects": ["external-state"]}]}], "intent": {}},
+      "input": {"contributions": [{"owner": "workspace", "revision": "w1", "actions": [{"dependency_revision": "w1", "operation_id": "workspace.edit", "arguments": {"path": "README.md"}, "effects": ["external-state"]}]}], "intent": {}},
       "error_contains": "advertises undeclared effect external-state"
     },
     {
@@ -858,7 +888,7 @@
     },
     {
       "id": "numeric-priority-is-rejected",
-      "input": {"contributions": [{"owner": "module", "revision": "one", "actions": [{"operation_id": "module.act", "priority": 1}]}], "intent": {}},
+      "input": {"contributions": [{"owner": "module", "revision": "one", "actions": [{"dependency_revision": "one", "operation_id": "module.act", "priority": 1}]}], "intent": {}},
       "error_contains": "priority is obsolete"
     },
     {
@@ -946,7 +976,7 @@
               "owner": "producer",
               "revision": "p1",
               "actions": [
-                {
+                {"dependency_revision": "p1", 
                   "operation_id": "produce",
                   "effects": [
                     "write"
@@ -1019,7 +1049,7 @@
               "owner": "producer",
               "revision": "p1",
               "actions": [
-                {
+                {"dependency_revision": "p1", 
                   "operation_id": "produce",
                   "effects": [
                     "write"
@@ -1110,12 +1140,12 @@
       "id": "contribution-and-action-permutation",
       "inputs": [
         {"contributions": [
-          {"owner": "zeta", "revision": "z1", "actions": [{"operation_id": "same", "arguments": {"value": "b"}}, {"operation_id": "same", "arguments": {"value": "a"}}]},
+          {"owner": "zeta", "revision": "z1", "actions": [{"dependency_revision": "z1", "operation_id": "same", "arguments": {"value": "b"}}, {"dependency_revision": "z1", "operation_id": "same", "arguments": {"value": "a"}}]},
           {"owner": "alpha", "revision": "a1", "claims": {"allowed": ["alpha-progress"]}}
         ], "intent": {}},
         {"contributions": [
           {"owner": "alpha", "revision": "a1", "claims": {"allowed": ["alpha-progress"]}},
-          {"owner": "zeta", "revision": "z1", "actions": [{"operation_id": "same", "arguments": {"value": "a"}}, {"operation_id": "same", "arguments": {"value": "b"}}]}
+          {"owner": "zeta", "revision": "z1", "actions": [{"dependency_revision": "z1", "operation_id": "same", "arguments": {"value": "a"}}, {"dependency_revision": "z1", "operation_id": "same", "arguments": {"value": "b"}}]}
         ], "intent": {}}
       ]
     },
