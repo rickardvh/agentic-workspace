@@ -10,6 +10,18 @@
       "description": "Explicit task intent supplied by the acting agent or human rather than inferred by the reducer.",
       "type": "object",
       "properties": {
+        "current_work": {
+          "description": "Current task identity used only to reject a stale semantic-route selection.",
+          "$ref": "#/$defs/current_work"
+        },
+        "semantic_route_source": {
+          "description": "Current repo-owned semantic-route identities and their source revision.",
+          "$ref": "#/$defs/semantic_route_source"
+        },
+        "semantic_task_routes": {
+          "description": "Acting-agent selection bound to the current task and route-source revisions.",
+          "$ref": "#/$defs/semantic_route_selection"
+        },
         "outcome": {
           "description": "Exact outcome authority required before the task may be terminal.",
           "type": "object",
@@ -20,6 +32,11 @@
           },
           "required": ["id", "owner", "claim"]
         }
+      },
+      "dependentRequired": {
+        "current_work": ["semantic_route_source", "semantic_task_routes"],
+        "semantic_route_source": ["current_work", "semantic_task_routes"],
+        "semantic_task_routes": ["current_work", "semantic_route_source"]
       }
     },
     "contributions": {
@@ -31,6 +48,78 @@
   "required": ["contributions"],
   "additionalProperties": false,
   "$defs": {
+    "current_work": {
+      "type": "object",
+      "properties": {
+        "kind": {"const": "current-work", "description": "Identity namespace for current task binding."},
+        "id": {"type": "string", "minLength": 1, "description": "Opaque current task or Planning identity."}
+      },
+      "required": ["kind", "id"],
+      "additionalProperties": false
+    },
+    "route_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*(/[a-z0-9][a-z0-9-]*)+$"
+    },
+    "semantic_route_source": {
+      "type": "object",
+      "properties": {
+        "revision": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "description": "Current digest of the repo-owned route declarations."
+        },
+        "routes": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/route_id"},
+          "uniqueItems": true,
+          "description": "Currently declared leaf route identities."
+        }
+      },
+      "required": ["revision", "routes"],
+      "additionalProperties": false
+    },
+    "semantic_route_selection": {
+      "type": "object",
+      "properties": {
+        "posture": {
+          "enum": ["selected", "none", "unresolved"],
+          "description": "Explicit acting-agent classification posture."
+        },
+        "routes": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/route_id"},
+          "uniqueItems": true,
+          "description": "Agent-selected declared leaf routes; empty for none or unresolved."
+        },
+        "task_identity": {
+          "$ref": "#/$defs/current_work",
+          "description": "Task identity current when the acting agent made the selection."
+        },
+        "source_revision": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "description": "Route declaration revision current when the selection was made."
+        },
+        "provenance": {"const": "agent-selected", "description": "Selection authority, never a lexical classifier."},
+        "authority_effect": {
+          "const": "applicability-only",
+          "description": "Ceiling preventing a route from granting effects or claims."
+        }
+      },
+      "required": ["posture", "routes", "task_identity", "source_revision", "provenance", "authority_effect"],
+      "allOf": [
+        {
+          "if": {"properties": {"posture": {"const": "selected"}}},
+          "then": {"properties": {"routes": {"minItems": 1}}}
+        },
+        {
+          "if": {"properties": {"posture": {"enum": ["none", "unresolved"]}}},
+          "then": {"properties": {"routes": {"maxItems": 0}}}
+        }
+      ],
+      "additionalProperties": false
+    },
     "affects": {
       "type": "array",
       "minItems": 1,

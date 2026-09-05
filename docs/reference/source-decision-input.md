@@ -12,6 +12,21 @@ Language-neutral input envelope for the shared operating-decision core.
 | --- | --- | --- | --- | --- | --- | --- |
 | (root) | object | yes |  | Language-neutral input envelope for the shared operating-decision core. |  | x-agentic-workspace-doc-role: "contract-reference" |
 | `intent` | object | no |  | Explicit task intent supplied by the acting agent or human rather than inferred by the reducer. |  |  |
+| `intent.current_work` | ref `#/$defs/current_work` | no |  | Current task identity used only to reject a stale semantic-route selection. |  |  |
+| `intent.current_work.kind` | const `"current-work"` | yes |  | Identity namespace for current task binding. |  |  |
+| `intent.current_work.id` | string | yes |  | Opaque current task or Planning identity. |  |  |
+| `intent.semantic_route_source` | ref `#/$defs/semantic_route_source` | no |  | Current repo-owned semantic-route identities and their source revision. |  |  |
+| `intent.semantic_route_source.revision` | string | yes |  | Current digest of the repo-owned route declarations. |  |  |
+| `intent.semantic_route_source.routes` | array of ref `#/$defs/route_id` | yes |  | Currently declared leaf route identities. |  |  |
+| `intent.semantic_task_routes` | ref `#/$defs/semantic_route_selection` | no |  | Acting-agent selection bound to the current task and route-source revisions. |  |  |
+| `intent.semantic_task_routes.posture` | enum `"selected"`, `"none"`, `"unresolved"` | yes |  | Explicit acting-agent classification posture. |  |  |
+| `intent.semantic_task_routes.routes` | array of ref `#/$defs/route_id` | yes |  | Agent-selected declared leaf routes; empty for none or unresolved. |  |  |
+| `intent.semantic_task_routes.task_identity` | ref `#/$defs/current_work` | yes |  | Task identity current when the acting agent made the selection. |  |  |
+| `intent.semantic_task_routes.task_identity.kind` | const `"current-work"` | yes |  | Identity namespace for current task binding. |  |  |
+| `intent.semantic_task_routes.task_identity.id` | string | yes |  | Opaque current task or Planning identity. |  |  |
+| `intent.semantic_task_routes.source_revision` | string | yes |  | Route declaration revision current when the selection was made. |  |  |
+| `intent.semantic_task_routes.provenance` | const `"agent-selected"` | yes |  | Selection authority, never a lexical classifier. |  |  |
+| `intent.semantic_task_routes.authority_effect` | const `"applicability-only"` | yes |  | Ceiling preventing a route from granting effects or claims. |  |  |
 | `intent.outcome` | object | no |  | Exact outcome authority required before the task may be terminal. |  |  |
 | `intent.outcome.id` | string | yes |  | Stable intended outcome identity. |  |  |
 | `intent.outcome.owner` | string | yes |  | Owner authorized to establish the intended outcome. |  |  |

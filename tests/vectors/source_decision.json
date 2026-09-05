@@ -7,6 +7,33 @@
       "expect": {"status": "direct", "terminal_authority": null, "owner_states.0.settled": true}
     },
     {
+      "id": "agent-selected-route-is-current-applicability-only",
+      "input": {
+        "contributions": [],
+        "intent": {
+          "current_work": {"kind": "current-work", "id": "work-17"},
+          "semantic_route_source": {
+            "revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "routes": ["github/pulls/review", "github/issues/create"]
+          },
+          "semantic_task_routes": {
+            "posture": "selected",
+            "routes": ["github/pulls/review"],
+            "task_identity": {"kind": "current-work", "id": "work-17"},
+            "source_revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "provenance": "agent-selected",
+            "authority_effect": "applicability-only"
+          }
+        }
+      },
+      "expect": {
+        "status": "direct",
+        "semantic_task_routes.routes.0": "github/pulls/review",
+        "semantic_task_routes.task_identity.id": "work-17",
+        "semantic_task_routes.authority_effect": "applicability-only"
+      }
+    },
+    {
       "id": "explicit-current-outcome-is-terminal",
       "input": {
         "intent": {"outcome": {"id": "ship", "owner": "planning", "claim": "complete"}},
@@ -74,6 +101,57 @@
       "id": "unscoped-blocker-is-rejected",
       "input": {"contributions": [{"owner": "module", "revision": "one", "blockers": [{"code": "gap", "message": "gap"}]}], "intent": {}},
       "error_contains": "must name at least one affected consequence"
+    },
+    {
+      "id": "stale-agent-route-task-is-rejected",
+      "input": {
+        "contributions": [],
+        "intent": {
+          "current_work": {"kind": "current-work", "id": "work-current"},
+          "semantic_route_source": {"revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "routes": ["github/issues/create"]},
+          "semantic_task_routes": {
+            "posture": "selected", "routes": ["github/issues/create"],
+            "task_identity": {"kind": "current-work", "id": "work-stale"},
+            "source_revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "provenance": "agent-selected", "authority_effect": "applicability-only"
+          }
+        }
+      },
+      "error_contains": "stale for the current task identity"
+    },
+    {
+      "id": "stale-agent-route-source-is-rejected",
+      "input": {
+        "contributions": [],
+        "intent": {
+          "current_work": {"kind": "current-work", "id": "work-current"},
+          "semantic_route_source": {"revision": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "routes": ["github/issues/create"]},
+          "semantic_task_routes": {
+            "posture": "selected", "routes": ["github/issues/create"],
+            "task_identity": {"kind": "current-work", "id": "work-current"},
+            "source_revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "provenance": "agent-selected", "authority_effect": "applicability-only"
+          }
+        }
+      },
+      "error_contains": "stale for the current route-source revision"
+    },
+    {
+      "id": "unknown-agent-route-is-rejected",
+      "input": {
+        "contributions": [],
+        "intent": {
+          "current_work": {"kind": "current-work", "id": "work-current"},
+          "semantic_route_source": {"revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "routes": ["github/issues/create"]},
+          "semantic_task_routes": {
+            "posture": "selected", "routes": ["github/pulls/review"],
+            "task_identity": {"kind": "current-work", "id": "work-current"},
+            "source_revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "provenance": "agent-selected", "authority_effect": "applicability-only"
+          }
+        }
+      },
+      "error_contains": "route absent from the current source"
     }
   ],
   "equivalent_inputs": [
@@ -88,6 +166,37 @@
           {"owner": "alpha", "revision": "a1", "claims": {"allowed": ["progress"]}},
           {"owner": "zeta", "revision": "z1", "actions": [{"operation_id": "same", "arguments": {"value": "a"}}, {"operation_id": "same", "arguments": {"value": "b"}}]}
         ], "intent": {}}
+      ]
+    },
+    {
+      "id": "semantic-route-order-is-not-authority",
+      "inputs": [
+        {
+          "contributions": [],
+          "intent": {
+            "current_work": {"kind": "current-work", "id": "work-current"},
+            "semantic_route_source": {"revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "routes": ["github/pulls/review", "github/issues/create"]},
+            "semantic_task_routes": {
+              "posture": "selected", "routes": ["github/pulls/review", "github/issues/create"],
+              "task_identity": {"kind": "current-work", "id": "work-current"},
+              "source_revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "provenance": "agent-selected", "authority_effect": "applicability-only"
+            }
+          }
+        },
+        {
+          "contributions": [],
+          "intent": {
+            "current_work": {"kind": "current-work", "id": "work-current"},
+            "semantic_route_source": {"revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "routes": ["github/issues/create", "github/pulls/review"]},
+            "semantic_task_routes": {
+              "posture": "selected", "routes": ["github/issues/create", "github/pulls/review"],
+              "task_identity": {"kind": "current-work", "id": "work-current"},
+              "source_revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "provenance": "agent-selected", "authority_effect": "applicability-only"
+            }
+          }
+        }
       ]
     }
   ]

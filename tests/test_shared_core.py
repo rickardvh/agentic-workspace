@@ -86,6 +86,38 @@ def test_exact_action_identity_separates_arguments_and_currentness(shared_core_b
     assert next_revision["primary_action"]["consequence_id"] != pending[1]["consequence_id"]
 
 
+def test_semantic_routes_do_not_infer_from_task_text_or_widen_authority(shared_core_binary: Path) -> None:
+    contribution = {
+        "owner": "workspace",
+        "revision": "w1",
+        "actions": [{"operation_id": "workspace.inspect", "effects": ["workspace-read"]}],
+        "claims": {"allowed": ["progress"]},
+    }
+    lexical_only = compile_source_decision([contribution], intent={"task": "create a GitHub issue"})
+    assert "semantic_task_routes" not in lexical_only
+
+    route_intent = {
+        "task": "create a GitHub issue",
+        "current_work": {"kind": "current-work", "id": "work-1"},
+        "semantic_route_source": {
+            "revision": "sha256:" + "a" * 64,
+            "routes": ["github/issues/create"],
+        },
+        "semantic_task_routes": {
+            "posture": "selected",
+            "routes": ["github/issues/create"],
+            "task_identity": {"kind": "current-work", "id": "work-1"},
+            "source_revision": "sha256:" + "a" * 64,
+            "provenance": "agent-selected",
+            "authority_effect": "applicability-only",
+        },
+    }
+    selected = compile_source_decision([contribution], intent=route_intent)
+    assert selected["primary_action"]["consequence_id"] == lexical_only["primary_action"]["consequence_id"]
+    assert selected["primary_action"]["effects"] == lexical_only["primary_action"]["effects"]
+    assert selected["claim_boundary"] == lexical_only["claim_boundary"]
+
+
 def test_node_binding_executes_the_same_core(shared_core_binary: Path) -> None:
     subprocess.run(
         ["node", "--test", "bindings/node/test/semantic-decision.test.mjs"],

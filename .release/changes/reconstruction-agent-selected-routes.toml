@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "major"
+summary = "Admit agent-selected semantic route facts through the shared Rust core with task and route-source currentness guards."
+issues = [2930, 3020]

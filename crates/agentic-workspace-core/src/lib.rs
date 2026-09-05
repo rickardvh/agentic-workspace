@@ -135,6 +135,31 @@ struct IntendedOutcome {
     claim: String,
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct CurrentWorkIdentity {
+    kind: String,
+    id: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SemanticRouteSource {
+    revision: String,
+    routes: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SemanticRouteSelection {
+    posture: String,
+    routes: Vec<String>,
+    task_identity: CurrentWorkIdentity,
+    source_revision: String,
+    provenance: String,
+    authority_effect: String,
+}
+
 #[derive(Debug, Clone, Serialize)]
 struct NormalizedContribution {
     kind: &'static str,
@@ -518,6 +543,145 @@ fn intended_outcome(intent: &Value) -> Result<Option<IntendedOutcome>, CoreError
     }))
 }
 
+fn semantic_route_id(value: &str) -> bool {
+    let segments = value.split('/').collect::<Vec<_>>();
+    segments.len() >= 2
+        && segments.iter().all(|segment| {
+            !segment.is_empty()
+                && segment.chars().next().is_some_and(|character| {
+                    character.is_ascii_lowercase() || character.is_ascii_digit()
+                })
+                && segment.chars().all(|character| {
+                    character.is_ascii_lowercase() || character.is_ascii_digit() || character == '-'
+                })
+        })
+}
+
+fn sha256_revision(value: &str) -> bool {
+    value.len() == 71
+        && value.starts_with("sha256:")
+        && value[7..]
+            .chars()
+            .all(|character| character.is_ascii_hexdigit() && !character.is_ascii_uppercase())
+}
+
+fn route_ids(mut values: Vec<String>, field: &str) -> Result<Vec<String>, CoreError> {
+    if values.iter().any(|value| !semantic_route_id(value)) {
+        return Err(CoreError::new(format!(
+            "{field} contains an invalid semantic route identity"
+        )));
+    }
+    let original_len = values.len();
+    values.sort();
+    values.dedup();
+    if values.len() != original_len {
+        return Err(CoreError::new(format!(
+            "{field} must not contain duplicate routes"
+        )));
+    }
+    Ok(values)
+}
+
+fn normalize_semantic_routes(intent: &mut Value) -> Result<Option<Value>, CoreError> {
+    let object = intent
+        .as_object_mut()
+        .expect("intent was checked as an object");
+    let current = object.get("current_work");
+    let source = object.get("semantic_route_source");
+    let selection = object.get("semantic_task_routes");
+    if current.is_none() && source.is_none() && selection.is_none() {
+        return Ok(None);
+    }
+    if current.is_none() || source.is_none() || selection.is_none() {
+        return Err(CoreError::new(
+            "current_work, semantic_route_source, and semantic_task_routes must be supplied together",
+        ));
+    }
+    let mut current: CurrentWorkIdentity =
+        serde_json::from_value(current.expect("present").clone())
+            .map_err(|error| CoreError::new(format!("intent.current_work is invalid: {error}")))?;
+    current.kind = require_text(&current.kind, "intent.current_work.kind")?;
+    current.id = require_text(&current.id, "intent.current_work.id")?;
+    if current.kind != "current-work" {
+        return Err(CoreError::new(
+            "intent.current_work.kind must be current-work",
+        ));
+    }
+
+    let mut source: SemanticRouteSource = serde_json::from_value(source.expect("present").clone())
+        .map_err(|error| {
+            CoreError::new(format!("intent.semantic_route_source is invalid: {error}"))
+        })?;
+    source.revision = require_text(&source.revision, "intent.semantic_route_source.revision")?;
+    if !sha256_revision(&source.revision) {
+        return Err(CoreError::new(
+            "intent.semantic_route_source.revision must be a lowercase sha256 revision",
+        ));
+    }
+    source.routes = route_ids(source.routes, "intent.semantic_route_source.routes")?;
+
+    let mut selection: SemanticRouteSelection =
+        serde_json::from_value(selection.expect("present").clone()).map_err(|error| {
+            CoreError::new(format!("intent.semantic_task_routes is invalid: {error}"))
+        })?;
+    selection.routes = route_ids(selection.routes, "intent.semantic_task_routes.routes")?;
+    if !matches!(
+        selection.posture.as_str(),
+        "selected" | "none" | "unresolved"
+    ) {
+        return Err(CoreError::new(
+            "intent.semantic_task_routes.posture must be selected, none, or unresolved",
+        ));
+    }
+    if (selection.posture == "selected") != !selection.routes.is_empty() {
+        return Err(CoreError::new(
+            "selected semantic-route posture requires routes; none and unresolved require no routes",
+        ));
+    }
+    if selection.task_identity.kind != current.kind || selection.task_identity.id != current.id {
+        return Err(CoreError::new(
+            "semantic route selection is stale for the current task identity",
+        ));
+    }
+    if selection.source_revision != source.revision {
+        return Err(CoreError::new(
+            "semantic route selection is stale for the current route-source revision",
+        ));
+    }
+    let known = source.routes.iter().collect::<HashSet<_>>();
+    if selection.routes.iter().any(|route| !known.contains(route)) {
+        return Err(CoreError::new(
+            "semantic route selection contains a route absent from the current source",
+        ));
+    }
+    if selection.provenance != "agent-selected"
+        || selection.authority_effect != "applicability-only"
+    {
+        return Err(CoreError::new(
+            "semantic routes must be agent-selected and applicability-only",
+        ));
+    }
+
+    let normalized = json!({
+        "posture": selection.posture,
+        "routes": selection.routes,
+        "task_identity": current,
+        "source_revision": source.revision,
+        "provenance": "agent-selected",
+        "authority_effect": "applicability-only",
+    });
+    object.insert(
+        "current_work".to_owned(),
+        normalized["task_identity"].clone(),
+    );
+    object.insert(
+        "semantic_route_source".to_owned(),
+        json!({"revision": normalized["source_revision"], "routes": source.routes}),
+    );
+    object.insert("semantic_task_routes".to_owned(), normalized.clone());
+    Ok(Some(normalized))
+}
+
 pub fn compile_value(value: Value) -> Result<Value, CoreError> {
     let input: DecisionInput =
         serde_json::from_value(value).map_err(|error| CoreError::new(error.to_string()))?;
@@ -528,7 +692,9 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
     if !input.intent.is_object() {
         return Err(CoreError::new("intent must be an object"));
     }
-    let intended = intended_outcome(&input.intent)?;
+    let mut intent = input.intent;
+    let semantic_task_routes = normalize_semantic_routes(&mut intent)?;
+    let intended = intended_outcome(&intent)?;
     let mut relevant = input
         .contributions
         .into_iter()
@@ -547,7 +713,7 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
         ));
     }
 
-    let input_revision = digest(&json!({"intent": input.intent, "sources": relevant}))?;
+    let input_revision = digest(&json!({"intent": intent, "sources": relevant}))?;
     let blockers = relevant
         .iter()
         .flat_map(|item| item.blockers.iter().cloned())
@@ -715,7 +881,7 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
     };
 
     let pending_actions = actions.iter().map(pending_action).collect::<Vec<_>>();
-    let answer = json!({
+    let mut answer = json!({
         "input_revision": input_revision,
         "status": status,
         "primary_action": primary_action,
@@ -727,6 +893,12 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
         "owner_states": relevant.iter().map(|item| json!({"owner": item.owner, "revision": item.revision, "settled": item.settled})).collect::<Vec<_>>(),
         "terminal_authority": terminal_authority,
     });
+    if let Some(routes) = semantic_task_routes {
+        answer
+            .as_object_mut()
+            .expect("answer is an object")
+            .insert("semantic_task_routes".to_owned(), routes);
+    }
     let decision_id = format!("operating-decision:{}", &digest(&answer)?[7..23]);
     let mut output = answer.as_object().expect("answer is an object").clone();
     output.insert("kind".to_owned(), Value::String(DECISION_KIND.to_owned()));
