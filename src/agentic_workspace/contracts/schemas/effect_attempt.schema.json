@@ -1,0 +1,196 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentic-workspace.dev/schemas/effect_attempt.schema.json",
+  "title": "Exact retained effect attempt",
+  "description": "Record shape only. Rust checks identity and current admission; the host supplies independently established custody.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "attempt_id",
+    "invocation",
+    "outcome",
+    "record_revision"
+  ],
+  "properties": {
+    "kind": {
+      "const": "agentic-workspace/effect-attempt/v1",
+      "description": "Versioned envelope discriminator."
+    },
+    "attempt_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Derived identity of this execution attempt, distinct from its logical effect."
+    },
+    "record_revision": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Digest of the exact retained invocation and outcome; integrity is not custody authority."
+    },
+    "invocation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "consequence_id",
+        "operation_id",
+        "arguments",
+        "effects",
+        "authority",
+        "source_owner",
+        "expected_dependency_revision",
+        "operation_revision",
+        "idempotency_key"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/operation-invocation/v1",
+          "description": "Versioned envelope discriminator."
+        },
+        "consequence_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Current action dependency identity returned by the core."
+        },
+        "operation_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Admitted responsible-owner operation identity."
+        },
+        "arguments": {
+          "type": "object",
+          "description": "Exact effect-bearing values derived by the responsible owner."
+        },
+        "effects": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Exact effect scope admitted for the operation."
+        },
+        "authority": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Authority carried by the returned invocation."
+        },
+        "source_owner": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Admitted owner responsible for the operation."
+        },
+        "expected_dependency_revision": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Material source dependency revision of the admitted action."
+        },
+        "operation_revision": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Exact admitted operation semantics required to interpret retained results."
+        },
+        "idempotency_key": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Logical effect identity, unchanged by a recovery retry."
+        }
+      },
+      "description": "Exact owner-derived invocation admitted before the effect."
+    },
+    "outcome": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "applied",
+                "unchanged",
+                "rejected"
+              ],
+              "description": "Truthful committed operation outcome status."
+            },
+            "effects": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Exact effect scope admitted for the operation."
+            },
+            "value": {
+              "description": "Domain-owned committed value, never a current continuation."
+            }
+          }
+        }
+      ],
+      "description": "Validated committed owner outcome, or null when completion is unknown."
+    }
+  },
+  "$defs": {
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target",
+        "path",
+        "owner",
+        "revision"
+      ],
+      "properties": {
+        "target": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Canonical workspace target to which this custody reference is bound."
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Exact relative evidence path within the acquired workspace target."
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Responsible owner independently established by the host custody source."
+        },
+        "revision": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Digest of the exact acquired evidence bytes."
+        }
+      }
+    },
+    "custody": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "attempt",
+        "committed"
+      ],
+      "properties": {
+        "attempt": {
+          "$ref": "#/$defs/evidence",
+          "description": "Acquired immutable pre-effect evidence reference."
+        },
+        "committed": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/evidence"
+            }
+          ],
+          "description": "Acquired immutable committed result reference, if available."
+        }
+      }
+    }
+  },
+  "x-agentic-workspace-doc-role": "contract-reference"
+}

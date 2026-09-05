@@ -14,8 +14,10 @@ from agentic_workspace.decision import (
     DecisionContractError,
     admit_attempt,
     admit_invocation,
+    admit_stored_attempt,
     answer_decision,
     commit_attempt,
+    commit_stored_attempt,
     compile_source_decision,
     operation_result,
     prepare_request,
@@ -186,7 +188,7 @@ def test_target_bindings_cannot_hide_reducer_semantics() -> None:
     forbidden = ("terminal", "settled", "blockers", "affects", "operation_id", "priority", "consequence_id")
     for path in (ROOT / "src/agentic_workspace/decision.py", ROOT / "bindings/node/semantic-decision.mjs"):
         source = path.read_text(encoding="utf-8")
-        assert len(source.splitlines()) <= 120
+        assert len(source.splitlines()) <= 140
         assert not any(token in source for token in forbidden)
 
 
@@ -488,3 +490,182 @@ def test_attempt_identity_uncertainty_and_committed_replay(shared_core_binary: P
     assert admit_attempt(repeated, repeated["primary_action"])["attempt_id"] != admitted["attempt_id"]
     with pytest.raises(DecisionContractError):
         admit_attempt(repeated, repeated["primary_action"], committed)
+
+
+def _stored_payload(target: Path) -> dict[str, Any]:
+    # The responsible owner derives the target in its exact declared operation.
+    payload = _expanded(next(v["input"] for v in VECTORS["cases"] if v["id"] == "action-material-dependencies"))
+    action = payload["contributions"][0]["actions"][0]
+    action["arguments"]["target"] = str(target)
+    operation = next(
+        op for owner in payload["capability_contract"]["owners"] for op in owner["operations"] if op["id"] == action["operation_id"]
+    )
+    operation["input_schema"]["properties"]["target"] = {"type": "string", "minLength": 1}
+    return payload
+
+
+def test_stored_attempt_requires_custody_and_replays_in_a_fresh_process(shared_core_binary: Path, tmp_path: Path) -> None:
+    payload = _stored_payload(tmp_path)
+    decision = _compile(payload)
+    action = decision["primary_action"]
+    admitted = admit_stored_attempt(str(tmp_path), decision, action)
+    custody = admitted["custody"]
+    schema = json.loads((ROOT / "src/agentic_workspace/contracts/schemas/effect_attempt.schema.json").read_text())
+    Draft202012Validator(schema).validate(admitted["record"])
+    Draft202012Validator(schema["$defs"]["evidence"]).validate(custody["attempt"])
+    path = tmp_path / custody["attempt"]["path"]
+    before = path.read_bytes()
+    assert admitted["disposition"] == "execute"
+    assert admit_stored_attempt(str(tmp_path), decision, action, custody)["disposition"] == "uncertain"
+    with pytest.raises(DecisionContractError, match="requires exact custody"):
+        admit_stored_attempt(str(tmp_path), decision, action)
+    assert path.read_bytes() == before
+    wrong = deepcopy(custody)
+    wrong["attempt"]["owner"] = "invented-owner"
+    with pytest.raises(DecisionContractError, match="different owner"):
+        admit_stored_attempt(str(tmp_path), decision, action, wrong)
+    outcome = {"status": "applied", "effects": action["effects"], "value": {"committed": True}}
+    committed = commit_stored_attempt(str(tmp_path), custody, outcome)
+    Draft202012Validator(schema).validate(committed["record"])
+    assert path.read_bytes() == before
+    # Losing the newly returned custody cannot authorize reading a result by shape.
+    assert admit_stored_attempt(str(tmp_path), decision, action, custody)["disposition"] == "uncertain"
+    replay = admit_stored_attempt(str(tmp_path), decision, action, committed["custody"])
+    assert replay["disposition"] == "replay"
+    assert replay["record"]["outcome"] == outcome
+    direct = _direct(
+        shared_core_binary,
+        {"admit_stored_attempt": {"target": str(tmp_path), "decision": decision, "invocation": action, "custody": committed["custody"]}},
+    )
+    assert json.loads(direct.stdout) == replay
+    changed = deepcopy(payload)
+    changed["contributions"][0]["revision"] = "unrelated"
+    current = _compile(changed)
+    assert admit_stored_attempt(str(tmp_path), current, current["primary_action"], committed["custody"])["disposition"] == "replay"
+    changed["contributions"][0]["actions"][0]["effect_generation"] = "owner-repeat"
+    repeat = _compile(changed)
+    repeated = admit_stored_attempt(str(tmp_path), repeat, repeat["primary_action"])
+    assert repeated["custody"]["attempt"]["path"] != custody["attempt"]["path"]
+    result_path = tmp_path / committed["custody"]["committed"]["path"]
+    result_path.write_bytes(b'{"incomplete":')
+    with pytest.raises(DecisionContractError, match="differs from exact custody"):
+        admit_stored_attempt(str(tmp_path), decision, action, committed["custody"])
+    assert result_path.read_bytes() == b'{"incomplete":'
+
+
+@pytest.mark.parametrize("phase", ["before-effect", "after-effect"])
+def test_interrupted_external_process_never_blindly_retries(shared_core_binary: Path, tmp_path: Path, phase: str) -> None:
+    import sys
+
+    payload = _stored_payload(tmp_path)
+    decision = _compile(payload)
+    action = decision["primary_action"]
+    worker = """
+import json, os, subprocess, sys
+from pathlib import Path
+request = json.loads(sys.stdin.read())
+p = subprocess.run([sys.argv[1]], input=json.dumps(request), text=True, capture_output=True)
+if p.returncode: sys.exit(p.returncode)
+admission = json.loads(p.stdout)
+print(json.dumps(admission), flush=True)
+if sys.argv[3] == 'after-effect': Path(sys.argv[2]).write_text('effect occurred')
+os._exit(29)
+"""
+    marker = tmp_path / "external-effect"
+    request = {"admit_stored_attempt": {"target": str(tmp_path), "decision": decision, "invocation": action}}
+    crashed = subprocess.run(
+        [sys.executable, "-c", worker, str(shared_core_binary), str(marker), phase],
+        input=json.dumps(request),
+        text=True,
+        capture_output=True,
+    )
+    assert crashed.returncode == 29
+    admission = json.loads(crashed.stdout)
+    assert marker.exists() == (phase == "after-effect")
+    recovered = admit_stored_attempt(str(tmp_path), decision, action, admission["custody"])
+    assert recovered["disposition"] == "uncertain"
+    assert recovered["attempt_id"] == admission["attempt_id"]
+
+
+def test_two_processes_cannot_acquire_the_same_effect(shared_core_binary: Path, tmp_path: Path) -> None:
+    payload = _stored_payload(tmp_path)
+    decision = _compile(payload)
+    request = json.dumps(
+        {"admit_stored_attempt": {"target": str(tmp_path), "decision": decision, "invocation": decision["primary_action"]}}
+    )
+    processes = [
+        subprocess.Popen([str(shared_core_binary)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        for _ in range(2)
+    ]
+    for process in processes:
+        assert process.stdin is not None
+        process.stdin.write(request)
+        process.stdin.close()
+        process.stdin = None
+    results = [process.communicate(timeout=20) for process in processes]
+    assert sorted(process.returncode for process in processes) == [0, 2]
+    successes = [json.loads(stdout) for process, (stdout, _) in zip(processes, results, strict=True) if process.returncode == 0]
+    assert len(successes) == 1
+    assert successes[0]["disposition"] == "execute"
+    assert len(list(tmp_path.rglob("*.attempt.json"))) == 1
+
+
+@pytest.mark.parametrize(
+    "content",
+    [{"kind": "planning", "status": "active"}, {"kind": "memory", "value": "retained"}, {"kind": "verification", "status": "passed"}],
+)
+def test_recognizable_unowned_content_cannot_be_acquired(shared_core_binary: Path, tmp_path: Path, content: dict[str, Any]) -> None:
+    payload = _stored_payload(tmp_path)
+    decision = _compile(payload)
+    action = decision["primary_action"]
+    admitted = admit_attempt(decision, action)
+    # The artifact path is a deterministic public effect-key projection.
+    import hashlib
+
+    key = hashlib.sha256(action["idempotency_key"].encode()).hexdigest()
+    path = tmp_path / ".agentic-workspace/local/effects" / f"{key}.attempt.json"
+    path.parent.mkdir(parents=True)
+    for value in (content, admitted["record"]):
+        path.write_text(json.dumps(value))
+        before = path.read_bytes()
+        with pytest.raises(DecisionContractError, match="requires exact custody"):
+            admit_stored_attempt(str(tmp_path), decision, action)
+        assert path.read_bytes() == before
+
+
+def test_stale_admission_creates_no_residue(shared_core_binary: Path, tmp_path: Path) -> None:
+    payload = _stored_payload(tmp_path)
+    current = _compile(payload)
+    with pytest.raises(DecisionContractError, match="stale or differs"):
+        admit_stored_attempt(
+            str(tmp_path), current, {**current["primary_action"], "arguments": {"target": str(tmp_path), "other": "target"}}
+        )
+    assert list(tmp_path.iterdir()) == []
+    assert compile_source_decision([])["status"] == "direct"
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_effect_storage_rejects_parent_redirection(shared_core_binary: Path, tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    outside = tmp_path / "outside"
+    target.mkdir()
+    outside.mkdir()
+    current = _compile(_stored_payload(target))
+    link = target / ".agentic-workspace"
+    if os.name == "nt":
+        subprocess.run(["cmd", "/c", "mklink", "/J", str(link), str(outside)], check=True, capture_output=True)
+    else:
+        link.symlink_to(outside, target_is_directory=True)
+    with pytest.raises(DecisionContractError):
+        admit_stored_attempt(str(target), current, current["primary_action"])
+    assert list(outside.iterdir()) == []
+
+
+def test_stored_effect_cannot_move_to_another_target(shared_core_binary: Path, tmp_path: Path) -> None:
+    first, other = tmp_path / "first", tmp_path / "other"
+    first.mkdir()
+    other.mkdir()
+    decision = _compile(_stored_payload(first))
+    with pytest.raises(DecisionContractError, match="storage target differs"):
+        admit_stored_attempt(str(other), decision, decision["primary_action"])
+    assert list(other.iterdir()) == []

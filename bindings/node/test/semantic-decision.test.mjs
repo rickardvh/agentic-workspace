@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
-import { compileSourceDecision, admitInvocation, prepareRequest, answerDecision, operationResult, admitAttempt, commitAttempt } from "../semantic-decision.mjs";
+import { compileSourceDecision, admitInvocation, prepareRequest, answerDecision, operationResult, admitAttempt, commitAttempt, admitStoredAttempt, commitStoredAttempt } from "../semantic-decision.mjs";
 
 const vectors = JSON.parse(readFileSync(new URL("../../../tests/vectors/source_decision.json", import.meta.url), "utf8"));
 const capabilityContract = JSON.parse(readFileSync(new URL("../../../tests/vectors/capability_contract.json", import.meta.url), "utf8"));
@@ -144,4 +145,26 @@ test("retained attempt cannot become a retry and committed evidence replays", ()
   assert.deepEqual(replay, direct({admit_attempt: {decision, invocation: action, record: committed}}));
   assert.throws(() => admitAttempt(decision, action, {...committed, attempt_id: "retry-random"}), /invalid/);
   assert.throws(() => commitAttempt(committed, {status: "applied", effects: action.effects, value: 2}), /cannot change/);
+});
+
+
+test("stored attempts require custody and preserve exact committed evidence", () => {
+  const target = mkdtempSync(join(tmpdir(), "aw-custody-"));
+  try {
+    const payload = structuredClone(vectors.cases.find(v => v.id === "action-material-dependencies").input);
+    const contract = structuredClone(capabilityContract);
+    const ownerAction = payload.contributions[0].actions[0];
+    ownerAction.arguments.target = target;
+    contract.owners.flatMap(owner => owner.operations).find(op => op.id === ownerAction.operation_id).input_schema.properties.target = {type: "string"};
+    const decision = compileSourceDecision(payload.contributions, payload.intent, contract);
+    const action = decision.primary_action;
+    const admitted = admitStoredAttempt(target, decision, action);
+    assert.equal(admitted.disposition, "execute");
+    assert.throws(() => admitStoredAttempt(target, decision, action), /requires exact custody/);
+    assert.equal(admitStoredAttempt(target, decision, action, admitted.custody).disposition, "uncertain");
+    const committed = commitStoredAttempt(target, admitted.custody, {status: "applied", effects: action.effects, value: 1});
+    const replay = admitStoredAttempt(target, decision, action, committed.custody);
+    assert.equal(replay.disposition, "replay");
+    assert.deepEqual(replay, direct({admit_stored_attempt: {target, decision, invocation: action, custody: committed.custody}}));
+  } finally { rmSync(target, {recursive: true, force: true}); }
 });
