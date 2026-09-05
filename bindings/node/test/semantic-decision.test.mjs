@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
-import { compileSourceDecision, admitInvocation, prepareRequest, answerDecision } from "../semantic-decision.mjs";
+import { compileSourceDecision, admitInvocation, prepareRequest, answerDecision, operationResult } from "../semantic-decision.mjs";
 
 const vectors = JSON.parse(readFileSync(new URL("../../../tests/vectors/source_decision.json", import.meta.url), "utf8"));
 const capabilityContract = JSON.parse(readFileSync(new URL("../../../tests/vectors/capability_contract.json", import.meta.url), "utf8"));
@@ -95,4 +95,21 @@ test("finite and open answers need only returned question and human answer", () 
   const openKey = open.pending_consequences.decisions[0].consequence_id;
   assert.deepEqual(answerDecision(open, openKey, "human judgment", capabilityContract).request.arguments, {answer: "human judgment"});
   assert.throws(() => answerDecision(open, openKey, 17, capabilityContract), /violate input_schema/);
+});
+
+
+test("committed outcome is composed only with current continuation", () => {
+  const payload = vectors.cases.find(v => v.id === "action-material-dependencies").input;
+  const first = compileSourceDecision(payload.contributions, payload.intent, capabilityContract);
+  const invocation = first.primary_action;
+  const outcome = {status: "applied", effects: invocation.effects, value: {exact: "committed"}};
+  for (const decision of [first, compileSourceDecision([]), null]) {
+    const result = operationResult(invocation, outcome, decision);
+    assert.deepEqual(result, direct({operation_result: {invocation, outcome, decision}}));
+    assert.deepEqual(result.value, outcome.value);
+    assert.deepEqual(result.next_decision, decision);
+    assert.equal(result.continuation_status, decision === null ? "unavailable" : "current");
+  }
+  assert.throws(() => operationResult(invocation, {...outcome, effects: ["unowned"]}, first), /widened/);
+  assert.throws(() => operationResult(invocation, {...outcome, next_decision: first}, first), /unknown field/);
 });

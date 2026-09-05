@@ -48,3 +48,7 @@ function request(payload) {
   }
   return JSON.parse(result.stdout);
 }
+
+export function operationResult(invocation, outcome, decision) {
+  return request({ operation_result: { invocation, outcome, decision } });
+}

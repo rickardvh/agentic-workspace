@@ -24,6 +24,11 @@ fn main() {
         .is_some_and(|item| item.len() == 1 && item.contains_key("answer_decision"))
     {
         agentic_workspace_core::answer_decision_value(request["answer_decision"].clone())
+    } else if request
+        .as_object()
+        .is_some_and(|item| item.len() == 1 && item.contains_key("operation_result"))
+    {
+        agentic_workspace_core::operation_result_value(request["operation_result"].clone())
     } else {
         agentic_workspace_core::compile_value(request)
     };
