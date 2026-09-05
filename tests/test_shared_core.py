@@ -669,3 +669,44 @@ def test_stored_effect_cannot_move_to_another_target(shared_core_binary: Path, t
     with pytest.raises(DecisionContractError, match="storage target differs"):
         admit_stored_attempt(str(other), decision, decision["primary_action"])
     assert list(other.iterdir()) == []
+
+
+@pytest.mark.parametrize("modified_ledger", [False, True])
+def test_local_only_uninstall_preserves_usable_effect_custody(shared_core_binary: Path, tmp_path: Path, modified_ledger: bool) -> None:
+    from agentic_workspace.config import load_workspace_config
+    from agentic_workspace.workspace_runtime_core import _workspace_payload_bytes_for_target, _workspace_uninstall_report
+
+    subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
+    decision = _compile(_stored_payload(tmp_path))
+    action = decision["primary_action"]
+    admitted = admit_stored_attempt(str(tmp_path), decision, action)
+    committed = commit_stored_attempt(str(tmp_path), admitted["custody"], {"status": "applied", "effects": action["effects"], "value": 1})
+    owner_reference = tmp_path / ".agentic-workspace/local/owner-custody.json"
+    owner_reference.write_text(json.dumps(committed["custody"]))
+    retained = {path: path.read_bytes() for path in (tmp_path / ".agentic-workspace/local").rglob("*") if path.is_file()}
+    relative = Path(".agentic-workspace/WORKFLOW.md")
+    package_file = tmp_path / relative
+    package_file.write_bytes(_workspace_payload_bytes_for_target(relative, target_root=tmp_path))
+    ledger_relative = Path(".agentic-workspace/OWNERSHIP.toml")
+    ledger = tmp_path / ledger_relative
+    ledger_bytes = _workspace_payload_bytes_for_target(ledger_relative, target_root=tmp_path)
+    if modified_ledger:
+        ledger_bytes += b"\n# repository-owned amendment\n"
+    ledger.write_bytes(ledger_bytes)
+    config = load_workspace_config(target_root=tmp_path)
+    preview = _workspace_uninstall_report(
+        target_root=tmp_path, selected_modules=[], descriptors={}, dry_run=True, config=config, local_only_repo_root=tmp_path
+    )
+    assert any(a["kind"] == "preserved" and a["path"] == ".agentic-workspace" for a in preview["actions"])
+    assert package_file.exists()
+    report = _workspace_uninstall_report(
+        target_root=tmp_path, selected_modules=[], descriptors={}, dry_run=False, config=config, local_only_repo_root=tmp_path
+    )
+    expected = "skipped" if modified_ledger else "removed"
+    assert any(a["kind"] == expected and a["path"] == relative.as_posix() for a in report["actions"])
+    assert package_file.exists() is modified_ledger
+    assert ledger.read_bytes() == ledger_bytes
+    assert any(a["kind"] == "preserved" and a["path"] == ledger_relative.as_posix() for a in report["actions"])
+    assert all(path.read_bytes() == value for path, value in retained.items())
+    custody = json.loads(owner_reference.read_text())
+    assert admit_stored_attempt(str(tmp_path), decision, action, custody)["disposition"] == "replay"

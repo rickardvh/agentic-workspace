@@ -143,3 +143,10 @@ Directory-handle-relative file operations use `cap-std` to prevent parent-path r
 The existing #2909 Python/Node/JSON lanes prove pre/post-effect process interruption, fresh-process committed replay, same-effect two-process contention, owner-authorized repeat, unrelated view churn, exact custody reuse, unowned recognizable content preservation, partial-result rejection, cross-target substitution, Windows junction/Unix symlink refusal and quiet invalid/direct paths. The external-process fixture consumes the actual public storage seam; first-party domain migration is not claimed.
 
 Explicit two-sided ownership transfer, authority-correct durable reference ingress for real source owners, domain multi-write recovery, de-adoption and reconciliation-backed cleanup remain #3001/#3000/#2984. Existing ownership/source disposition is preserved; no legacy content is adopted or deleted here. No issue closes.
+
+
+## Local-only de-adoption preserves remaining state (#2984)
+
+The legacy lifecycle host no longer recursively deletes the entire local-only workspace tree after its selective package removal. It reports the remaining tree as preserved in preview and apply. It also preserves `OWNERSHIP.toml` even when its bytes match the package: its authority still requires reconciliation before removal. A modified ledger continues to block selective removal under the existing ambiguity rule. This is subtraction from the transitional host, not another semantic reducer or an assertion that all legacy per-file deletion rules have acquired exact custody.
+
+The existing #2909 shared-core test surface now exercises the actual local-only uninstall report: a package payload is removed while the ownership ledger, acquired attempt/result files and the host's retained custody reference survive byte-for-byte, then a fresh Rust process replays the committed result through that reference. This removes two premature deletion paths. Existing ownership-ledger transfer, other owner deletion rules, explicit two-sided transfer, and exact reconciliation-backed cleanup remain #2984/#3001. No issue closes and no current checkout authority is removed.
