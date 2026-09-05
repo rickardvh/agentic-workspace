@@ -8,6 +8,7 @@ import re
 import subprocess
 import sys
 import time
+import tomllib
 import uuid
 from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
@@ -569,6 +570,19 @@ def _editable_distribution_origin(distribution: importlib.metadata.Distribution)
     return Path(path_text).resolve()
 
 
+def _source_distribution_version(*, repo_root: Path, relative_project: Path) -> str | None:
+    pyproject_path = repo_root / relative_project / "pyproject.toml"
+    try:
+        document = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return None
+    project = document.get("project")
+    if not isinstance(project, dict):
+        return None
+    version = project.get("version")
+    return str(version).strip() if isinstance(version, str) and version.strip() else None
+
+
 def runtime_identity_admission(
     *,
     repo_root: Path = REPO_ROOT,
@@ -590,6 +604,18 @@ def runtime_identity_admission(
         observed.append(item)
         if origin != expected:
             mismatches.append(item)
+            continue
+        source_version = _source_distribution_version(repo_root=target_root, relative_project=relative_expected)
+        installed_version = str(getattr(distribution, "version", "") or "").strip()
+        if source_version is not None and installed_version and installed_version != source_version:
+            mismatches.append(
+                {
+                    **item,
+                    "mismatch": "stale-editable-metadata",
+                    "source_version": source_version,
+                    "installed_version": installed_version,
+                }
+            )
     status = "mismatch" if mismatches else "matched" if observed else "no-editable-runtime"
     return {
         "kind": "agentic-workspace/runtime-identity/v1",
@@ -607,10 +633,20 @@ def _admit_runtime_identity() -> bool:
     os.environ["AW_RUNTIME_IDENTITY"] = json.dumps(identity, sort_keys=True, separators=(",", ":"))
     if identity["status"] != "mismatch":
         return True
-    recovery = f'uv run --project "{REPO_ROOT.as_posix()}" --no-sync python scripts/run_agentic_workspace.py'
-    print("Agentic Workspace refused a runtime from another checkout before command effects.", file=sys.stderr)
+    stale_metadata = any(
+        mismatch.get("mismatch") == "stale-editable-metadata" for mismatch in identity.get("mismatches", [])
+    )
+    if stale_metadata:
+        message = "Agentic Workspace refused stale editable distribution metadata before command effects."
+        recovery = f'uv sync --frozen --project "{REPO_ROOT.as_posix()}"'
+        recovery_suffix = ""
+    else:
+        message = "Agentic Workspace refused a runtime from another checkout before command effects."
+        recovery = f'uv run --project "{REPO_ROOT.as_posix()}" --no-sync python scripts/run_agentic_workspace.py'
+        recovery_suffix = " <command arguments>"
+    print(message, file=sys.stderr)
     print(f"Runtime identity: {json.dumps(identity, sort_keys=True)}", file=sys.stderr)
-    print(f"Recovery: {recovery} <command arguments>", file=sys.stderr)
+    print(f"Recovery: {recovery}{recovery_suffix}", file=sys.stderr)
     return False
 
 

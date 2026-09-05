@@ -239,6 +239,56 @@ def test_runtime_identity_accepts_matching_active_editable_distribution(tmp_path
     assert identity["mismatches"] == []
 
 
+def test_runtime_identity_rejects_stale_editable_metadata_from_same_checkout(tmp_path: Path) -> None:
+    module = _load_module()
+    target = tmp_path / "target"
+    target.mkdir()
+    _write(target / "pyproject.toml", '[project]\nname = "agentic-workspace"\nversion = "0.51.0"\n')
+
+    class Distribution:
+        version = "1.0.0"
+
+        def read_text(self, _name: str) -> str:
+            return json.dumps({"url": target.as_uri(), "dir_info": {"editable": True}})
+
+    def lookup(name: str):
+        if name == "agentic-workspace":
+            return Distribution()
+        raise module.importlib.metadata.PackageNotFoundError(name)
+
+    identity = module.runtime_identity_admission(repo_root=target, distribution_lookup=lookup)
+
+    assert identity["status"] == "mismatch"
+    assert identity["mismatches"] == [
+        {
+            "distribution": "agentic-workspace",
+            "origin": target.resolve().as_posix(),
+            "expected": target.resolve().as_posix(),
+            "mismatch": "stale-editable-metadata",
+            "source_version": "0.51.0",
+            "installed_version": "1.0.0",
+        }
+    ]
+
+
+def test_stale_editable_metadata_recovery_requires_sync(monkeypatch, capsys) -> None:
+    module = _load_module()
+    monkeypatch.setattr(
+        module,
+        "runtime_identity_admission",
+        lambda: {
+            "status": "mismatch",
+            "mismatches": [{"mismatch": "stale-editable-metadata"}],
+        },
+    )
+
+    assert module._admit_runtime_identity() is False
+    error = capsys.readouterr().err
+    assert "refused stale editable distribution metadata before command effects" in error
+    assert "uv sync --frozen --project" in error
+    assert "<command arguments>" not in error
+
+
 def test_runtime_identity_rejection_precedes_refresh_and_dispatch(monkeypatch) -> None:
     module = _load_module()
     monkeypatch.setattr(module, "_admit_runtime_identity", lambda: False)
@@ -277,7 +327,7 @@ def test_active_no_sync_runtime_identity_is_stable_across_two_checkouts(tmp_path
     def bind_active_runtime(checkout: Path) -> None:
         for name, relative in distributions.items():
             dist_info = fake_site / f"{name.replace('-', '_')}-0.dist-info"
-            _write(dist_info / "METADATA", f"Name: {name}\nVersion: 0\n")
+            _write(dist_info / "METADATA", f"Name: {name}\nVersion: 0.0.0\n")
             _write(
                 dist_info / "direct_url.json",
                 json.dumps({"url": (checkout / relative).resolve().as_uri(), "dir_info": {"editable": True}}),
