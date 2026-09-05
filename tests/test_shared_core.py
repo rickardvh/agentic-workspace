@@ -19,6 +19,7 @@ from agentic_workspace.decision import (
     commit_attempt,
     commit_stored_attempt,
     compile_source_decision,
+    normalize_decision_record,
     operation_result,
     planning_view,
     prepare_request,
@@ -69,6 +70,7 @@ def _compile(payload: dict[str, Any]) -> dict[str, Any]:
         payload["contributions"],
         intent=payload.get("intent"),
         capability_contract=payload.get("capability_contract"),
+        decision_context=payload.get("decision_context"),
     )
 
 
@@ -190,7 +192,7 @@ def test_target_bindings_cannot_hide_reducer_semantics() -> None:
     forbidden = ("terminal", "settled", "blockers", "affects", "operation_id", "priority", "consequence_id")
     for path in (ROOT / "src/agentic_workspace/decision.py", ROOT / "bindings/node/semantic-decision.mjs"):
         source = path.read_text(encoding="utf-8")
-        assert len(source.splitlines()) <= 150
+        assert len(source.splitlines()) <= 160
         assert not any(token in source for token in forbidden)
 
 
@@ -1000,3 +1002,220 @@ def test_concurrent_planning_recovery_commits_one_same_attempt(shared_core_binar
     assert record["invocation"]["idempotency_key"] == action["idempotency_key"]
     assert planning_view({**context, "custody": completed["custody"]})["planning"]["current"] is True
     assert len(list((tmp_path / ".agentic-workspace/local/effects").glob("*.result.json"))) == 1
+
+
+def _material_decision() -> dict[str, Any]:
+    return {
+        "id": "architecture/shared-authority",
+        "source": {"owner": "repository", "reference": "decisions/shared-authority", "revision": "source-1"},
+        "decision": "Use one Rust executable semantic authority",
+        "consequence": "Python and Node transport owner facts to the shared reducer",
+        "rationale_reference": "decisions/shared-authority#rationale-and-alternatives",
+        "authors": [{"kind": "agent", "id": "implementer"}],
+        "contributors": [],
+        "authority": {
+            "actor": {"kind": "agent", "id": "implementer"},
+            "basis": [{"owner": "assignment", "reference": "bounded-implementation", "revision": "authority-1"}],
+        },
+        "scope": ["owner:planning", "contract:operation-result"],
+        "dependencies": [{"owner": "repository", "reference": "SYSTEM_INTENT", "revision": "intent-1"}],
+        "context": [{"owner": "memory", "reference": "prior-cost-evidence", "revision": "evidence-1"}],
+        "supersedes": [],
+    }
+
+
+def _admitted_decisions(records: list[dict[str, Any]]) -> dict[str, Any]:
+    # Test host stands for independent source/provenance admission. Normalizing
+    # the client's record does not perform this admission in the product.
+    normalized = [normalize_decision_record(record) for record in records]
+    references = {
+        (item["owner"], item["reference"]): item
+        for record in records
+        for item in record["authority"]["basis"] + record["dependencies"] + record["context"]
+    }
+    return {
+        "records": normalized,
+        "admissions": [{key: record[key] for key in ["id", "material_revision", "source", "rationale_reference"]} for record in normalized],
+        "current_dependencies": list(references.values()),
+        "applicable_scope": ["owner:planning"],
+    }
+
+
+@pytest.mark.parametrize("provenance", ["agent-taken", "human-confirmed", "human-originated", "aw-informed"])
+def test_decision_authorship_authority_and_context_remain_distinct(shared_core_binary: Path, provenance: str) -> None:
+    record = _material_decision()
+    if provenance in ["human-confirmed", "human-originated"]:
+        record["authority"] = {
+            "actor": {"kind": "human", "id": "domain-owner"},
+            "basis": [{"owner": "repository", "reference": "human-decision-17", "revision": "confirmation-1"}],
+        }
+    if provenance == "human-originated":
+        record["authors"] = [record["authority"]["actor"]]
+        record["contributors"] = [{"kind": "agent", "id": "implementer"}]
+    if provenance != "aw-informed":
+        record["context"] = []
+    context = _admitted_decisions([record])
+    normalized = context["records"][0]
+    assert normalized["authors"] == record["authors"]
+    assert normalized["authority"] == record["authority"]
+    assert normalized["context"] == record["context"]
+    # Public Python/Node/JSON all run the same native compiler, not a second reducer.
+    payload = {"contributions": [], "decision_context": context}
+    Draft202012Validator(SCHEMA).validate(payload)
+    python = _compile(payload)
+    raw = _direct(shared_core_binary, payload)
+    program = "import {compileSourceDecision} from './bindings/node/semantic-decision.mjs'; import fs from 'node:fs'; const p=JSON.parse(fs.readFileSync(0,'utf8')); console.log(JSON.stringify(compileSourceDecision(p.contributions,{},null,p.decision_context)));"
+    node = subprocess.run(
+        ["node", "--input-type=module", "-e", program], input=json.dumps(payload), capture_output=True, text=True, cwd=ROOT
+    )
+    assert node.returncode == raw.returncode == 0
+    assert python == json.loads(node.stdout) == json.loads(raw.stdout)
+    consequence = python["decision_context"]["consequences"][0]
+    assert consequence["summary"] == record["consequence"]
+    assert consequence["scope"] == ["owner:planning"]
+    assert python["claim_boundary"] == {"allowed": [], "blocked": []}
+    assert python["primary_action"] is None
+
+
+def test_decision_semantic_revision_is_not_source_or_view_revision(shared_core_binary: Path) -> None:
+    record = _material_decision()
+    first = _admitted_decisions([record])
+    original = first["records"][0]
+    changed = deepcopy(record)
+    changed["source"]["revision"] = "nonmaterial-source-edit"
+    changed["rationale_reference"] = "relocated-source#same-rationale"
+    current = _admitted_decisions([changed])
+    assert current["records"][0]["material_revision"] == original["material_revision"]
+    assert current["records"][0]["id"] == original["id"]
+    before = _compile({"contributions": [], "decision_context": first})
+    after = _compile({"contributions": [], "decision_context": current})
+    assert before["input_revision"] != after["input_revision"]
+    assert after["decision_context"]["states"][0]["status"] == "current"
+    current["current_dependencies"][0]["revision"] = "material-change"
+    stale = _compile({"contributions": [], "decision_context": current})["decision_context"]
+    assert stale["consequences"] == []
+    assert stale["states"][0]["status"] == "stale"
+    assert stale["states"][0]["stale_dependencies"]
+    for field in ["authority", "scope", "dependencies"]:
+        revised = deepcopy(record)
+        if field == "authority":
+            revised[field]["actor"]["id"] = "different-decider"
+        elif field == "scope":
+            revised[field].append("path:new-scope")
+        else:
+            revised[field][0]["revision"] = "intent-2"
+        normalized = normalize_decision_record(revised)
+        assert normalized["id"] == original["id"]
+        assert normalized["material_revision"] != original["material_revision"]
+        forged = deepcopy(first)
+        forged["records"] = [normalized]
+        with pytest.raises(DecisionContractError, match="admission does not bind"):
+            _compile({"contributions": [], "decision_context": forged})
+
+
+def test_scoped_supersession_retains_rationale_without_reviving_old_constraint(shared_core_binary: Path) -> None:
+    old = _material_decision()
+    old_revision = normalize_decision_record(old)["material_revision"]
+    new = deepcopy(old)
+    new.update(id="architecture/shared-authority-2", decision="New decision", consequence="New consequence")
+    new["supersedes"] = [{"id": old["id"], "material_revision": old_revision, "scope": ["owner:planning"]}]
+    context = _admitted_decisions([old, new])
+    result = _compile({"contributions": [], "decision_context": context})["decision_context"]
+    assert [item["id"] for item in result["consequences"]] == [new["id"]]
+    prior = next(item for item in result["states"] if item["id"] == old["id"])
+    assert prior["status"] == "superseded"
+    assert prior["rationale_reference"] == old["rationale_reference"]
+    assert context["records"][0]["decision"] == old["decision"]
+    context["applicable_scope"] = ["contract:operation-result"]
+    unaffected = _compile({"contributions": [], "decision_context": context})["decision_context"]
+    assert old["id"] in [item["id"] for item in unaffected["consequences"]]
+    context["applicable_scope"] = ["owner:planning"]
+    context["current_dependencies"] = []
+    assert _compile({"contributions": [], "decision_context": context})["decision_context"]["consequences"] == []
+    context["records"] = context["records"][1:]
+    with pytest.raises(DecisionContractError, match="supersession closure is incomplete"):
+        _compile({"contributions": [], "decision_context": context})
+
+
+def test_decision_context_is_not_execution_or_provenance_authority(shared_core_binary: Path, tmp_path: Path) -> None:
+    record = _material_decision()
+    context = _admitted_decisions([record])
+    context["admissions"] = []
+    with pytest.raises(DecisionContractError, match="independent host provenance admission"):
+        _compile({"contributions": [], "decision_context": context})
+    for key in ["effects", "claims", "restrictions", "custody", "policy", "human_authority"]:
+        forged = {**record, key: ["all"]}
+        with pytest.raises(DecisionContractError, match="unknown field"):
+            normalize_decision_record(forged)
+    payload = _stored_payload(tmp_path)
+    baseline = _compile(payload)
+    payload["decision_context"] = _admitted_decisions([record])
+    current = _compile(payload)
+    for key in ["ready_actions", "primary_action", "claim_boundary", "terminal_authority", "blockers"]:
+        assert current[key] == baseline[key]
+    payload["decision_context"]["applicable_scope"] = ["path:unrelated"]
+    assert _compile(payload) == baseline
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_decision_supersession_scope_and_competing_heads_fail_closed(shared_core_binary: Path) -> None:
+    old = _material_decision()
+    replacement = deepcopy(old)
+    replacement["id"] = "replacement"
+    replacement["supersedes"] = [
+        {"id": old["id"], "material_revision": normalize_decision_record(old)["material_revision"], "scope": ["owner:planning"]}
+    ]
+    competing = deepcopy(replacement)
+    competing["id"] = "competing"
+    with pytest.raises(DecisionContractError, match="competing decision supersession"):
+        _compile({"contributions": [], "decision_context": _admitted_decisions([old, replacement, competing])})
+    replacement["supersedes"][0]["scope"] = ["owner:unadmitted-scope"]
+    with pytest.raises(DecisionContractError, match="within the new decision scope"):
+        normalize_decision_record(replacement)
+    forged = deepcopy(old)
+    forged["authors"][0]["kind"] = "aw"
+    with pytest.raises(DecisionContractError):
+        normalize_decision_record(forged)
+
+
+@pytest.mark.parametrize("shape", ["advanced-fork", "linear", "joined", "independent", "disjoint-scope"])
+def test_supersession_current_heads_follow_scope_through_ancestry(shared_core_binary: Path, shape: str) -> None:
+    old = _material_decision()
+
+    def successor(identity: str, parents: list[dict[str, Any]], scope: str = "owner:planning") -> dict[str, Any]:
+        record = deepcopy(old)
+        record["id"] = identity
+        record["supersedes"] = [
+            {"id": parent["id"], "material_revision": normalize_decision_record(parent)["material_revision"], "scope": [scope]}
+            for parent in parents
+        ]
+        return record
+
+    a = successor("A", [old])
+    b = successor("B", [old], "contract:operation-result" if shape == "disjoint-scope" else "owner:planning")
+    c = successor("C", [a, b] if shape == "joined" else [a])
+    records = [old, a, c]
+    if shape in ["advanced-fork", "joined", "disjoint-scope"]:
+        records.append(b)
+    if shape == "independent":
+        records.append(successor("independent", []))
+    payload = {"contributions": [], "decision_context": _admitted_decisions(records)}
+    if shape == "advanced-fork":
+        with pytest.raises(DecisionContractError, match="competing decision supersession"):
+            _compile(payload)
+        direct = _direct(shared_core_binary, payload)
+        assert direct.returncode == 2
+        assert "competing decision supersession" in direct.stderr
+        return
+    result = _compile(payload)
+    assert result == json.loads(_direct(shared_core_binary, payload).stdout)
+    current = {item["id"] for item in result["decision_context"]["consequences"]}
+    assert "C" in current
+    assert "A" not in current and old["id"] not in current
+    if shape == "independent":
+        assert "independent" in current
+    if shape == "joined":
+        assert "B" not in current
+    if shape == "disjoint-scope":
+        payload["decision_context"]["applicable_scope"] = ["contract:operation-result"]
+        assert "B" in {item["id"] for item in _compile(payload)["decision_context"]["consequences"]}

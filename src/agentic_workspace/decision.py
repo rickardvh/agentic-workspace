@@ -51,10 +51,13 @@ def compile_source_decision(
     *,
     intent: Mapping[str, Any] | None = None,
     capability_contract: Mapping[str, Any] | None = None,
+    decision_context: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {"contributions": list(contributions), "intent": dict(intent or {})}
     if capability_contract is not None:
         payload["capability_contract"] = dict(capability_contract)
+    if decision_context is not None:
+        payload["decision_context"] = dict(decision_context)
     return _request(payload)
 
 
@@ -115,6 +118,7 @@ def reconcile_planning(context: Mapping[str, Any]) -> dict[str, Any]:
 
 
 __all__ = [
+    "normalize_decision_record",
     "DecisionContractError",
     "compile_source_decision",
     "select_decision_detail",
@@ -129,3 +133,7 @@ __all__ = [
     "planning_view",
     "reconcile_planning",
 ]
+
+
+def normalize_decision_record(record: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"normalize_decision_record": record})

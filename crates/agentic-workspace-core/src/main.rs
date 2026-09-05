@@ -59,6 +59,11 @@ fn main() {
         .is_some_and(|item| item.len() == 1 && item.contains_key("reconcile_planning"))
     {
         agentic_workspace_core::planning::reconcile(request["reconcile_planning"].clone())
+    } else if request
+        .as_object()
+        .is_some_and(|item| item.len() == 1 && item.contains_key("normalize_decision_record"))
+    {
+        agentic_workspace_core::continuity::normalize(request["normalize_decision_record"].clone())
     } else {
         agentic_workspace_core::compile_value(request)
     };

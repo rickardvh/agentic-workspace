@@ -1,5 +1,6 @@
 pub mod attempt;
 pub mod attempt_store;
+pub mod continuity;
 pub mod planning;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
@@ -36,6 +37,7 @@ impl std::error::Error for CoreError {}
 #[serde(deny_unknown_fields)]
 struct DecisionInput {
     contributions: Vec<ContributionInput>,
+    decision_context: Option<continuity::Context>,
     #[serde(default = "empty_object")]
     intent: Value,
     capability_contract: Option<CapabilityContractInput>,
@@ -1646,6 +1648,11 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
     if !input.intent.is_object() {
         return Err(CoreError::new("intent must be an object"));
     }
+    let decision_context = input
+        .decision_context
+        .map(continuity::project)
+        .transpose()?
+        .flatten();
     let capabilities = input
         .capability_contract
         .map(normalize_capability_contract)
@@ -1703,11 +1710,12 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
         ));
     }
 
-    let input_revision = digest(&json!({
-        "intent": intent,
-        "capability_contract": capabilities,
-        "sources": relevant,
-    }))?;
+    let mut revision_input =
+        json!({"intent": intent, "capability_contract": capabilities, "sources": relevant});
+    if let Some(context) = &decision_context {
+        revision_input["decision_context"] = context.clone();
+    }
+    let input_revision = digest(&revision_input)?;
     let blockers = relevant
         .iter()
         .flat_map(|item| item.blockers.iter().cloned())
@@ -1892,6 +1900,9 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
         "owner_states": relevant.iter().map(|item| json!({"owner": item.owner, "revision": item.revision, "settled": item.settled})).collect::<Vec<_>>(),
         "terminal_authority": terminal_authority,
     });
+    if let Some(context) = decision_context {
+        answer["decision_context"] = context;
+    }
     if let Some(routes) = semantic_task_routes {
         answer
             .as_object_mut()

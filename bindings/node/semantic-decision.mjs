@@ -17,9 +17,10 @@ const coreBinary = () => {
   return candidate;
 };
 
-export function compileSourceDecision(contributions, intent = {}, capabilityContract = null) {
+export function compileSourceDecision(contributions, intent = {}, capabilityContract = null, decisionContext = null) {
   const payload = { contributions: [...contributions], intent: { ...(intent || {}) } };
   if (capabilityContract !== null) payload.capability_contract = { ...capabilityContract };
+  if (decisionContext !== null) payload.decision_context = { ...decisionContext };
   return request(payload);
 }
 
@@ -75,4 +76,8 @@ export function planningView(context) {
 
 export function reconcilePlanning(context) {
   return request({reconcile_planning: context});
+}
+
+export function normalizeDecisionRecord(record) {
+  return request({normalize_decision_record: record});
 }
