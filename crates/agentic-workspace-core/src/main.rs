@@ -5,11 +5,19 @@ fn main() {
     if let Err(error) = io::stdin().read_to_string(&mut input) {
         fail("transport-read", &error.to_string());
     }
-    let request = match serde_json::from_str(&input) {
+    let request: serde_json::Value = match serde_json::from_str(&input) {
         Ok(value) => value,
         Err(error) => fail("invalid-json", &error.to_string()),
     };
-    match agentic_workspace_core::compile_value(request) {
+    let result = if request
+        .as_object()
+        .is_some_and(|item| item.len() == 1 && item.contains_key("admission"))
+    {
+        agentic_workspace_core::admit_invocation_value(request["admission"].clone())
+    } else {
+        agentic_workspace_core::compile_value(request)
+    };
+    match result {
         Ok(decision) => println!(
             "{}",
             serde_json::to_string(&decision).expect("decision is JSON serializable")

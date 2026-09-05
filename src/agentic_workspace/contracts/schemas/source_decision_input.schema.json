@@ -296,11 +296,13 @@
       "type": "object",
       "properties": {
         "operation_id": {"type": "string", "minLength": 1},
+        "dependency_revision": {"type": "string", "minLength": 1, "description": "Owner-derived revision of material action dependencies, excluding unrelated source changes."},
+        "effect_generation": {"type": "string", "description": "Owner-authorized repeat boundary; absent means the initial logical effect, never ambient revision churn."},
         "arguments": {"type": "object"},
         "effects": {"type": "array", "items": {"type": "string", "minLength": 1}},
         "authority": {"type": "string", "minLength": 1}
       },
-      "required": ["operation_id"],
+      "required": ["operation_id", "dependency_revision"],
       "not": {"required": ["priority"]}
     },
     "blocker": {

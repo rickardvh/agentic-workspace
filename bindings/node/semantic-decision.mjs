@@ -20,6 +20,14 @@ const coreBinary = () => {
 export function compileSourceDecision(contributions, intent = {}, capabilityContract = null) {
   const payload = { contributions: [...contributions], intent: { ...(intent || {}) } };
   if (capabilityContract !== null) payload.capability_contract = { ...capabilityContract };
+  return request(payload);
+}
+
+export function admitInvocation(decision, invocation, previousInvocation = null) {
+  return request({admission: {decision, invocation, previous_invocation: previousInvocation}});
+}
+
+function request(payload) {
   const result = spawnSync(coreBinary(), [], {
     input: JSON.stringify(payload),
     encoding: "utf8",

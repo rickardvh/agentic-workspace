@@ -10,7 +10,7 @@ from typing import Any
 import pytest
 from jsonschema import Draft202012Validator
 
-from agentic_workspace.decision import DecisionContractError, compile_source_decision
+from agentic_workspace.decision import DecisionContractError, admit_invocation, compile_source_decision
 
 ROOT = Path(__file__).resolve().parents[1]
 VECTORS = json.loads((ROOT / "tests/vectors/source_decision.json").read_text(encoding="utf-8"))
@@ -96,8 +96,8 @@ def test_python_and_json_share_fail_closed_errors(shared_core_binary: Path) -> N
 
 def test_exact_action_identity_separates_arguments_and_currentness(shared_core_binary: Path) -> None:
     actions = [
-        {"operation_id": "planning.advance", "arguments": {"item": "a"}, "effects": ["planning-state"]},
-        {"operation_id": "planning.advance", "arguments": {"item": "b"}, "effects": ["planning-state"]},
+        {"dependency_revision": "p1", "operation_id": "planning.advance", "arguments": {"item": "a"}, "effects": ["planning-state"]},
+        {"dependency_revision": "p1", "operation_id": "planning.advance", "arguments": {"item": "b"}, "effects": ["planning-state"]},
     ]
     ambiguous = compile_source_decision(
         [{"owner": "planning", "revision": "p1", "actions": actions}], capability_contract=CAPABILITY_CONTRACT
@@ -127,16 +127,17 @@ def test_exact_action_identity_separates_arguments_and_currentness(shared_core_b
     assert selected["primary_action"]["consequence_id"] == pending[1]["consequence_id"]
 
     next_revision = compile_source_decision(
-        [{"owner": "planning", "revision": "p2", "actions": [actions[1]]}], capability_contract=CAPABILITY_CONTRACT
+        [{"owner": "planning", "revision": "p2", "actions": [{**actions[1], "arguments": pending[1]["arguments"]}]}],
+        capability_contract=CAPABILITY_CONTRACT,
     )
-    assert next_revision["primary_action"]["consequence_id"] != pending[1]["consequence_id"]
+    assert next_revision["primary_action"]["consequence_id"] == pending[1]["consequence_id"]
 
 
 def test_semantic_routes_do_not_infer_from_task_text_or_widen_authority(shared_core_binary: Path) -> None:
     contribution = {
         "owner": "workspace",
         "revision": "w1",
-        "actions": [{"operation_id": "workspace.inspect", "effects": ["workspace-read"]}],
+        "actions": [{"dependency_revision": "w1", "operation_id": "workspace.inspect", "effects": ["workspace-read"]}],
         "claims": {"allowed": ["workspace-progress"]},
     }
     lexical_only = compile_source_decision([contribution], capability_contract=CAPABILITY_CONTRACT)
@@ -182,7 +183,9 @@ def test_target_bindings_cannot_hide_reducer_semantics() -> None:
 
 def test_authority_bearing_contributions_require_an_admitted_capability_owner(shared_core_binary: Path) -> None:
     with pytest.raises(DecisionContractError, match="requires a current capability owner declaration"):
-        compile_source_decision([{"owner": "workspace", "revision": "w1", "actions": [{"operation_id": "workspace.inspect"}]}])
+        compile_source_decision(
+            [{"owner": "workspace", "revision": "w1", "actions": [{"dependency_revision": "w1", "operation_id": "workspace.inspect"}]}]
+        )
 
 
 def test_capability_domains_effects_and_claims_have_one_owner(shared_core_binary: Path) -> None:
@@ -241,3 +244,48 @@ def test_current_work_does_not_require_semantic_classification_or_module_context
     assert decision["status"] == "direct"
     assert "semantic_task_routes" not in decision
     assert "capability_revision" not in decision
+
+
+def test_action_lifetimes_and_exact_admission(shared_core_binary: Path) -> None:
+    payload = _expanded(next(v["input"] for v in VECTORS["cases"] if v["id"] == "action-material-dependencies"))
+    first = _compile(payload)
+    action = first["primary_action"]
+    unrelated = deepcopy(payload)
+    unrelated["contributions"][0]["revision"] = "owner-advice-changed"
+    unrelated["contributions"].append({"owner": "memory", "revision": "new-advice", "facts": {"advice": "optional"}})
+    unrelated["capability_contract"]["revision"] = "sha256:" + "e" * 64
+    current = _compile(unrelated)
+    assert current["input_revision"] != first["input_revision"]
+    assert current["primary_action"] == action
+    assert admit_invocation(current, action)["disposition"] == "execute"
+
+    relevant = deepcopy(unrelated)
+    relevant["contributions"][0]["actions"][0]["dependency_revision"] = "proof-2"
+    changed = _compile(relevant)
+    assert changed["primary_action"]["idempotency_key"] == action["idempotency_key"]
+    assert changed["primary_action"]["consequence_id"] != action["consequence_id"]
+    with pytest.raises(DecisionContractError, match="stale or differs"):
+        admit_invocation(changed, action)
+    assert admit_invocation(changed, changed["primary_action"], action)["disposition"] == "replay"
+
+    repeat = deepcopy(relevant)
+    repeat["contributions"][0]["actions"][0]["effect_generation"] = "owner-authorized-repeat-2"
+    assert _compile(repeat)["primary_action"]["idempotency_key"] != action["idempotency_key"]
+    for field, value in (
+        ("arguments", {"item": "wider"}),
+        ("effects", []),
+        ("authority", "other"),
+        ("idempotency_key", "fresh"),
+        ("source_owner", "other"),
+        ("expected_dependency_revision", "other"),
+        ("unexpected", True),
+    ):
+        with pytest.raises(DecisionContractError, match="stale or differs"):
+            admit_invocation(current, {**action, field: value})
+
+    removed = deepcopy(unrelated)
+    removed["contributions"][0]["actions"] = []
+    with pytest.raises(DecisionContractError, match="stale or differs"):
+        admit_invocation(_compile(removed), action)
+    # A trusted exact receipt permits a read-only replay after owner completion.
+    assert admit_invocation(_compile(removed), action, action)["disposition"] == "replay"

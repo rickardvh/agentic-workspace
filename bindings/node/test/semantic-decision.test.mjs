@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
-import { compileSourceDecision } from "../semantic-decision.mjs";
+import { compileSourceDecision, admitInvocation } from "../semantic-decision.mjs";
 
 const vectors = JSON.parse(readFileSync(new URL("../../../tests/vectors/source_decision.json", import.meta.url), "utf8"));
 const capabilityContract = JSON.parse(readFileSync(new URL("../../../tests/vectors/capability_contract.json", import.meta.url), "utf8"));
@@ -39,4 +39,22 @@ test("Node binding preserves shared fail-closed errors", () => {
       vector.id,
     );
   }
+});
+
+
+test("action dependencies and logical effects have separate lifetimes", () => {
+  const payload = structuredClone(vectors.cases.find(v => v.id === "action-material-dependencies").input);
+  const compile = () => compileSourceDecision(payload.contributions, payload.intent, capabilityContract);
+  const first = compile();
+  payload.contributions[0].revision = "unrelated-advice";
+  const unrelated = compile();
+  assert.notEqual(first.input_revision, unrelated.input_revision);
+  assert.deepEqual(first.primary_action, unrelated.primary_action);
+  assert.equal(admitInvocation(unrelated, first.primary_action).disposition, "execute");
+  payload.contributions[0].actions[0].dependency_revision = "proof-2";
+  const changed = compile();
+  assert.equal(first.primary_action.idempotency_key, changed.primary_action.idempotency_key);
+  assert.throws(() => admitInvocation(changed, first.primary_action), /stale or differs/);
+  payload.contributions[0].actions[0].effect_generation = "authorized-repeat-2";
+  assert.notEqual(first.primary_action.idempotency_key, compile().primary_action.idempotency_key);
 });

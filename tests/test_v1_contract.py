@@ -21,6 +21,7 @@ def _planning(state: dict[str, Any]) -> dict[str, Any]:
     if state["status"] == "open":
         actions.append(
             {
+                "dependency_revision": state["revision"],
                 "operation_id": "planning.complete",
                 "arguments": {"item": "ship-v1"},
                 "effects": ["planning-state"],
@@ -125,7 +126,7 @@ def test_result_reconciles_to_the_next_decision_without_polling(shared_core_bina
         )
     with pytest.raises(OperationContractError, match="idempotency key was already used"):
         dispatcher.invoke(
-            {**invocation, "expected_input_revision": "sha256:different"},
+            {**invocation, "expected_dependency_revision": "sha256:different"},
             resolve_decision=resolve,
         )
 
@@ -137,7 +138,7 @@ def test_stale_and_invalid_invocations_fail_closed(shared_core_binary: object) -
         Operation("planning.complete", {"type": "object"}, ("planning-state",), lambda _: {"status": "applied", "effects": []})
     )
     decision = compile_source_decision([_planning(state)], capability_contract=CAPABILITY_CONTRACT)
-    stale = {**decision["primary_action"], "expected_input_revision": "sha256:stale"}
+    stale = {**decision["primary_action"], "expected_dependency_revision": "sha256:stale"}
 
     with pytest.raises(StaleInvocationError):
         dispatcher.invoke(stale, resolve_decision=lambda: decision)
@@ -161,7 +162,11 @@ def test_out_of_tree_module_uses_the_generic_contribution_and_operation_seam(sha
         contribute=lambda context: {
             "revision": state["revision"],
             "relevant": context["task"] == "external",
-            "actions": [{"operation_id": "example.finish", "arguments": {}, "effects": ["external-state"]}] if state["pending"] else [],
+            "actions": [
+                {"dependency_revision": state["revision"], "operation_id": "example.finish", "arguments": {}, "effects": ["external-state"]}
+            ]
+            if state["pending"]
+            else [],
             "settled": not state["pending"],
             "claims": {"allowed": ["external-complete"] if not state["pending"] else []},
             "outcome": (
@@ -203,3 +208,42 @@ def test_irrelevant_modules_are_absent_from_the_decision(shared_core_binary: obj
     )
     contributions = module_contributions([module], context={"task": "direct"})
     assert compile_source_decision(contributions)["relevant_owners"] == []
+
+
+def test_dependency_change_is_rejected_before_effect_and_repeat_is_owner_authorized(shared_core_binary: object) -> None:
+    state = {"status": "open", "revision": "proof-1"}
+    advice = "advice-1"
+    generation = ""
+    calls = 0
+
+    def resolve() -> dict[str, Any]:
+        contribution = _planning(state)
+        contribution["revision"] = advice
+        contribution["actions"][0]["effect_generation"] = generation
+        return compile_source_decision([contribution], capability_contract=CAPABILITY_CONTRACT)
+
+    def effect(_: dict[str, Any]) -> dict[str, Any]:
+        nonlocal calls
+        calls += 1
+        return {"status": "applied", "effects": ["planning-state"]}
+
+    dispatcher = OperationDispatcher()
+    dispatcher.register(Operation("planning.complete", {"type": "object"}, ("planning-state",), effect))
+    first = resolve()["primary_action"]
+    state["revision"] = "proof-2"
+    with pytest.raises(StaleInvocationError):
+        dispatcher.invoke(first, resolve_decision=resolve)
+    assert calls == 0
+    current = resolve()["primary_action"]
+    advice = "advice-2"
+    dispatcher.invoke(current, resolve_decision=resolve)
+    assert calls == 1
+    advice = "advice-3"
+    dispatcher.invoke(resolve()["primary_action"], resolve_decision=resolve)
+    assert calls == 1
+    state["revision"] = "proof-3"
+    dispatcher.invoke(resolve()["primary_action"], resolve_decision=resolve)
+    assert calls == 1
+    generation = "owner-authorized-repeat-2"
+    dispatcher.invoke(resolve()["primary_action"], resolve_decision=resolve)
+    assert calls == 2
