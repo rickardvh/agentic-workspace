@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
-import { compileSourceDecision, admitInvocation } from "../semantic-decision.mjs";
+import { compileSourceDecision, admitInvocation, prepareRequest } from "../semantic-decision.mjs";
 
 const vectors = JSON.parse(readFileSync(new URL("../../../tests/vectors/source_decision.json", import.meta.url), "utf8"));
 const capabilityContract = JSON.parse(readFileSync(new URL("../../../tests/vectors/capability_contract.json", import.meta.url), "utf8"));
@@ -66,4 +66,14 @@ test("a client can choose either exact ready action", () => {
   assert.equal(decision.primary_action, null);
   assert.equal(decision.ready_actions.length, 2);
   for (const action of decision.ready_actions) assert.equal(admitInvocation(decision, action).disposition, "execute");
+});
+
+
+test("request preparation is shared and same-ID argument changes reject old responses", () => {
+  const p = structuredClone(vectors.cases.find(v => v.id === "typed-public-request-returns-an-exact-owner-action").input);
+  const prepared = prepareRequest(p.intent.public_request, p.intent.current_work, capabilityContract);
+  assert.deepEqual(prepared.request, p.intent.public_request);
+  assert.equal(prepared.identity, p.contributions[0].request_response.request_identity);
+  p.intent.public_request.arguments.subject.name = "different";
+  assert.throws(() => compileSourceDecision(p.contributions, p.intent, capabilityContract), /references a different request/);
 });

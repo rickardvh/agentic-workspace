@@ -64,6 +64,10 @@ def admit_invocation(
     return _request({"admission": {"decision": decision, "invocation": invocation, "previous_invocation": previous}})
 
 
+def prepare_request(request: Mapping[str, Any], current_work: Mapping[str, Any], capability_contract: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"prepare_request": {"request": request, "current_work": current_work, "capability_contract": capability_contract}})
+
+
 def select_decision_detail(decision: Mapping[str, Any], fields: Iterable[str]) -> dict[str, Any]:
     return {
         "kind": "agentic-workspace/decision-view/v1",
@@ -74,4 +78,4 @@ def select_decision_detail(decision: Mapping[str, Any], fields: Iterable[str]) -
     }
 
 
-__all__ = ["DecisionContractError", "compile_source_decision", "select_decision_detail", "admit_invocation"]
+__all__ = ["DecisionContractError", "compile_source_decision", "select_decision_detail", "admit_invocation", "prepare_request"]

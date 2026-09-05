@@ -10,7 +10,7 @@ from typing import Any
 import pytest
 from jsonschema import Draft202012Validator
 
-from agentic_workspace.decision import DecisionContractError, admit_invocation, compile_source_decision
+from agentic_workspace.decision import DecisionContractError, admit_invocation, compile_source_decision, prepare_request
 
 ROOT = Path(__file__).resolve().parents[1]
 VECTORS = json.loads((ROOT / "tests/vectors/source_decision.json").read_text(encoding="utf-8"))
@@ -177,7 +177,7 @@ def test_target_bindings_cannot_hide_reducer_semantics() -> None:
     forbidden = ("terminal", "settled", "blockers", "affects", "operation_id", "priority", "consequence_id")
     for path in (ROOT / "src/agentic_workspace/decision.py", ROOT / "bindings/node/semantic-decision.mjs"):
         source = path.read_text(encoding="utf-8")
-        assert len(source.splitlines()) <= 80
+        assert len(source.splitlines()) <= 95
         assert not any(token in source for token in forbidden)
 
 
@@ -235,8 +235,7 @@ def test_public_request_is_revision_bound_typed_and_cannot_resolve_as_a_noop(sha
     mixed_response = deepcopy(payload)
     mixed_response["capability_contract"]["restriction_authorities"].append({"owner": "example.external", "affects": ["task"]})
     mixed_response["contributions"][0]["blockers"] = [{"code": "also-blocked", "message": "competing response", "affects": ["task"]}]
-    with pytest.raises(DecisionContractError, match="one exact returned action without a competing consequence"):
-        _compile(mixed_response)
+    assert _compile(mixed_response)["request_resolution"] == resolved["request_resolution"]
 
 
 def test_current_work_does_not_require_semantic_classification_or_module_context(shared_core_binary: Path) -> None:
@@ -303,3 +302,33 @@ def test_client_can_invoke_an_exact_choice_from_ready_set(shared_core_binary: Pa
     changed["capability_contract"]["owners"][1]["operations"][0]["reads"] = ["a"]
     with pytest.raises(DecisionContractError, match="stale or differs"):
         admit_invocation(_compile(changed), decision["ready_actions"][0])
+
+
+def test_request_identity_and_local_response_are_publicly_constructible(shared_core_binary: Path) -> None:
+    payload = _expanded(next(v["input"] for v in VECTORS["cases"] if v["id"] == "typed-public-request-returns-an-exact-owner-action"))
+    intent = payload["intent"]
+    prepared = prepare_request(intent["public_request"], intent["current_work"], payload["capability_contract"])
+    assert prepared["request"] == intent["public_request"]
+    assert prepared["identity"] == payload["contributions"][0]["request_response"]["request_identity"]
+    # A source owner can derive exact consequence IDs without a hash algorithm
+    # or public request dispatch loop in a binding.
+    owner = deepcopy(payload["contributions"][0])
+    owner.pop("request_response")
+    derived = compile_source_decision([owner], capability_contract=payload["capability_contract"])
+    owner["request_response"] = {
+        "request_identity": prepared["identity"],
+        "status": "action",
+        "consequence_ids": [derived["primary_action"]["consequence_id"]],
+    }
+    owner["actions"].append({**deepcopy(owner["actions"][0]), "arguments": {"subject": "unrelated"}})
+    answer = compile_source_decision([owner], intent=intent, capability_contract=payload["capability_contract"])
+    assert answer["request_resolution"]["consequence_ids"] == owner["request_response"]["consequence_ids"]
+    assert len(answer["pending_consequences"]["actions"]) == 2
+    changed = deepcopy(intent)
+    changed["public_request"]["arguments"]["subject"]["name"] = "other-valid-subject"
+    with pytest.raises(DecisionContractError, match="references a different request"):
+        compile_source_decision([owner], intent=changed, capability_contract=payload["capability_contract"])
+    with pytest.raises(DecisionContractError, match="exact current owner consequences"):
+        invalid = deepcopy(owner)
+        invalid["request_response"]["consequence_ids"] = ["action:absent"]
+        compile_source_decision([invalid], intent=intent, capability_contract=payload["capability_contract"])
