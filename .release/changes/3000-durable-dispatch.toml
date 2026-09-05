@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Require durable exact attempt custody before effectful callback dispatch; preserve read-only dispatch without durable residue."
+issues = [3000, 3001, 2987]
