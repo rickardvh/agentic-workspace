@@ -289,3 +289,17 @@ def test_action_lifetimes_and_exact_admission(shared_core_binary: Path) -> None:
         admit_invocation(_compile(removed), action)
     # A trusted exact receipt permits a read-only replay after owner completion.
     assert admit_invocation(_compile(removed), action, action)["disposition"] == "replay"
+
+
+def test_client_can_invoke_an_exact_choice_from_ready_set(shared_core_binary: Path) -> None:
+    payload = next(v["input"] for v in VECTORS["cases"] if v["id"] == "two-independent-ready-actions")
+    decision = _compile(payload)
+    assert decision["primary_action"] is None
+    for action in decision["ready_actions"]:
+        assert admit_invocation(decision, action)["disposition"] == "execute"
+        with pytest.raises(DecisionContractError, match="stale or differs"):
+            admit_invocation(decision, {**action, "arguments": {"widen": True}})
+    changed = deepcopy(payload)
+    changed["capability_contract"]["owners"][1]["operations"][0]["reads"] = ["a"]
+    with pytest.raises(DecisionContractError, match="stale or differs"):
+        admit_invocation(_compile(changed), decision["ready_actions"][0])

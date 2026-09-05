@@ -116,6 +116,7 @@ struct ClaimAuthorityInput {
 #[serde(deny_unknown_fields)]
 struct OperationCapabilityInput {
     id: String,
+    reads: Option<Vec<String>>,
     input_schema: Value,
     result_kind: String,
     #[serde(default)]
@@ -294,6 +295,8 @@ struct NormalizedCapabilityOwner {
 
 #[derive(Debug, Clone, Serialize)]
 struct NormalizedOperationCapability {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    reads: Option<BTreeSet<String>>,
     input_schema: Value,
     result_kind: String,
     effects: BTreeSet<String>,
@@ -564,6 +567,13 @@ fn normalize_capability_contract(
             operations.insert(
                 id,
                 NormalizedOperationCapability {
+                    reads: operation
+                        .reads
+                        .map(|reads| {
+                            unique_strings(reads, "operation.reads")
+                                .map(|reads| reads.into_iter().collect())
+                        })
+                        .transpose()?,
                     input_schema: operation.input_schema,
                     result_kind: require_text(
                         &operation.result_kind,
@@ -634,6 +644,15 @@ fn normalize_capability_contract(
     }
     for (owner, capability) in &owners {
         for (operation_id, operation) in &capability.operations {
+            if let Some(reads) = &operation.reads {
+                for domain in reads {
+                    if !owned_domains.contains_key(domain) {
+                        return Err(CoreError::new(format!(
+                            "operation {operation_id} reads unknown domain {domain}"
+                        )));
+                    }
+                }
+            }
             if let Some(claim) = operation
                 .claims
                 .iter()
@@ -1404,7 +1423,11 @@ pub fn admit_invocation_value(value: Value) -> Result<Value, CoreError> {
         return Err(CoreError::new("unsupported invocation kind"));
     }
     let exact_receipt = input.previous_invocation.as_ref() == Some(&input.invocation);
-    let exact_current = input.decision.get("primary_action") == Some(&input.invocation);
+    let exact_current = input
+        .decision
+        .get("ready_actions")
+        .and_then(Value::as_array)
+        .is_some_and(|actions| actions.contains(&input.invocation));
     if !exact_receipt && !exact_current {
         return Err(CoreError::new(
             "invocation is stale or differs from the exact returned action",
@@ -1548,32 +1571,42 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
         .cloned()
         .collect::<Vec<_>>();
 
-    let primary_action = if available_actions.len() == 1 {
-        let selected = &available_actions[0];
-        Some(json!({
-            "kind": INVOCATION_KIND,
-            "consequence_id": selected.action.consequence_id,
-            "operation_id": selected.action.operation_id,
-            "arguments": selected.action.arguments,
-            "effects": selected.action.effects,
-            "authority": selected.action.authority,
-            "source_owner": selected.owner,
-            "expected_dependency_revision": selected.action.dependency_revision,
-            "idempotency_key": selected.action.logical_effect_id,
-        }))
+    let independent = available_actions.iter().enumerate().all(|(index, left)| {
+        available_actions[index + 1..]
+            .iter()
+            .all(|right| independent_actions(left, right, capabilities.as_ref()))
+    });
+    let ready_actions = if independent {
+        available_actions
+            .iter()
+            .map(|selected| {
+                json!({
+                    "kind": INVOCATION_KIND,
+                    "consequence_id": selected.action.consequence_id,
+                    "operation_id": selected.action.operation_id,
+                    "arguments": selected.action.arguments,
+                    "effects": selected.action.effects,
+                    "authority": selected.action.authority,
+                    "source_owner": selected.owner,
+                    "expected_dependency_revision": selected.action.dependency_revision,
+                    "idempotency_key": selected.action.logical_effect_id,
+                })
+            })
+            .collect::<Vec<_>>()
     } else {
-        None
+        Vec::new()
     };
+    let primary_action = (ready_actions.len() == 1).then(|| ready_actions[0].clone());
 
     let task_decisions = decisions
         .iter()
         .filter(|item| item.affects.iter().any(|affected| affected == TASK))
         .cloned()
         .collect::<Vec<_>>();
-    let action_composition = (available_actions.len() > 1).then(|| {
+    let action_composition = (!independent).then(|| {
         json!({
             "code": "multiple-actions",
-            "message": "multiple current actions require an explicit dependency or authority relation",
+            "message": "current actions have conflicting or unknown read/effect relationships",
             "owner": "operating-decision",
             "revision": input_revision,
             "affects": [TASK],
@@ -1581,7 +1614,7 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
         })
     });
     let decision_request =
-        if primary_action.is_none() && action_composition.is_none() && task_decisions.len() == 1 {
+        if ready_actions.is_empty() && action_composition.is_none() && task_decisions.len() == 1 {
             Some(serde_json::to_value(&task_decisions[0]).expect("normalized decision serializes"))
         } else {
             None
@@ -1638,7 +1671,7 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
         || blockers
             .iter()
             .any(|item| item.affects.iter().any(|affected| affected == TASK));
-    let status = if primary_action.is_some() {
+    let status = if !ready_actions.is_empty() {
         "actionable"
     } else if globally_blocked {
         "blocked"
@@ -1655,6 +1688,7 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
         "input_revision": input_revision,
         "status": status,
         "primary_action": primary_action,
+        "ready_actions": ready_actions,
         "decision_request": decision_request,
         "blockers": blocker_values,
         "pending_consequences": {"blockers": blocker_values, "decisions": decisions, "actions": pending_actions},
@@ -1826,6 +1860,37 @@ fn pending_action(owned: &OwnedAction) -> Value {
         Value::String(owned.owner.clone()),
     );
     Value::Object(value)
+}
+
+fn independent_actions(
+    left: &OwnedAction,
+    right: &OwnedAction,
+    capabilities: Option<&NormalizedCapabilityContract>,
+) -> bool {
+    let Some(contract) = capabilities else {
+        return false;
+    };
+    let footprint = |action: &OwnedAction| -> Option<(BTreeSet<String>, BTreeSet<String>)> {
+        let owner = contract.owners.get(&action.owner)?;
+        let operation = owner.operations.get(&action.action.operation_id)?;
+        // Missing reads means unknown, not an empty read set. Use the full
+        // admitted effect ceiling, never a contribution's narrowed effects.
+        let reads = operation.reads.clone()?;
+        let writes = operation
+            .effects
+            .iter()
+            .map(|effect| owner.effects[effect].clone())
+            .collect();
+        Some((reads, writes))
+    };
+    let (Some((left_reads, left_writes)), Some((right_reads, right_writes))) =
+        (footprint(left), footprint(right))
+    else {
+        return false;
+    };
+    left_writes.is_disjoint(&right_writes)
+        && left_writes.is_disjoint(&right_reads)
+        && right_writes.is_disjoint(&left_reads)
 }
 
 #[allow(clippy::too_many_arguments)]
