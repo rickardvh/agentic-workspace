@@ -10659,6 +10659,17 @@ def _workspace_uninstall_report(
         if not destination.exists():
             actions.append({"kind": "skipped", "path": destination.as_posix(), "detail": "already absent"})
             continue
+        if relative == Path(".agentic-workspace/OWNERSHIP.toml"):
+            actions.append(
+                {
+                    "kind": "preserved",
+                    "path": relative.as_posix(),
+                    "detail": "ownership authority requires reconciliation before removal, even when it matches package content",
+                }
+            )
+            if destination.read_bytes() != _workspace_payload_bytes_for_target(relative, target_root=target_root):
+                ambiguous_payloads.append(relative)
+            continue
         if destination.read_bytes() == _workspace_payload_bytes_for_target(relative, target_root=target_root):
             removable_candidates.append(relative)
             continue
@@ -10698,12 +10709,15 @@ def _workspace_uninstall_report(
         _prune_empty_parent_dirs(target_root=target_root, relatives=removable)
         if local_only_repo_root is not None:
             actions.append(_remove_local_only_state(target_root=target_root, dry_run=dry_run))
-            local_workspace_root = target_root / ".agentic-workspace"
-            if local_workspace_root.exists():
-                shutil.rmtree(local_workspace_root)
     if local_only_repo_root is not None:
-        if dry_run and target_root.exists():
-            actions.append({"kind": "would remove", "path": ".agentic-workspace", "detail": "remove the local-only workspace tree"})
+        if (target_root / ".agentic-workspace").exists():
+            actions.append(
+                {
+                    "kind": "preserved",
+                    "path": ".agentic-workspace",
+                    "detail": "retain remaining state, custody and local ignore rules; package removal does not authorize deleting the workspace tree",
+                }
+            )
         actions.extend(
             _remove_local_agent_startup(
                 repo_root=local_only_repo_root,
@@ -10712,8 +10726,6 @@ def _workspace_uninstall_report(
                 cli_invoke=config.cli_invoke,
             )
         )
-        actions.append(_remove_local_only_git_exclude(repo_root=local_only_repo_root, dry_run=dry_run))
-        actions.append(_remove_legacy_local_only_gitignore(repo_root=local_only_repo_root, dry_run=dry_run))
     return _workspace_report(target_root=target_root, message="Uninstall report", dry_run=dry_run, actions=actions, warnings=warnings)
 
 
