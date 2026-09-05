@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "kind": "agentic-workspace/source-decision-contract/v1",
+  "request_schema": "schemas/source_decision_input.schema.json",
+  "kinds": {
+    "contribution": "agentic-workspace/source-contribution/v1",
+    "decision": "agentic-workspace/operating-decision/v1",
+    "decision_view": "agentic-workspace/decision-view/v1",
+    "invocation": "agentic-workspace/operation-invocation/v1"
+  },
+  "statuses": ["direct", "actionable", "decision", "blocked", "terminal"],
+  "consequences": {
+    "task": "task",
+    "prefixes": ["action:", "decision:", "effect:", "claim:", "outcome:"],
+    "action_identity_fields": ["owner", "revision", "operation_id", "arguments", "effects", "authority"]
+  },
+  "authority": {
+    "data_shapes": "this JSON contract and referenced JSON Schema",
+    "executable_semantics": "crates/agentic-workspace-core",
+    "bindings": ["src/agentic_workspace/decision.py", "bindings/node/semantic-decision.mjs"],
+    "json_transport": "agentic-workspace-core binary stdin/stdout"
+  }
+}

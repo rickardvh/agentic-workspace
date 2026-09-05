@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentic-workspace.dev/schemas/source-decision-input/v1",
+  "title": "Source decision input",
+  "description": "Language-neutral input envelope for the shared operating-decision core.",
+  "x-agentic-workspace-doc-role": "contract-reference",
+  "type": "object",
+  "properties": {
+    "intent": {
+      "description": "Explicit task intent supplied by the acting agent or human rather than inferred by the reducer.",
+      "type": "object",
+      "properties": {
+        "outcome": {
+          "description": "Exact outcome authority required before the task may be terminal.",
+          "type": "object",
+          "properties": {
+            "id": {"type": "string", "minLength": 1, "description": "Stable intended outcome identity."},
+            "owner": {"type": "string", "minLength": 1, "description": "Owner authorized to establish the intended outcome."},
+            "claim": {"type": "string", "minLength": 1, "description": "Claim that must be allowed for terminal status."}
+          },
+          "required": ["id", "owner", "claim"]
+        }
+      }
+    },
+    "contributions": {
+      "description": "Current source-owned contributions composed by the shared reducer.",
+      "type": "array",
+      "items": {"$ref": "#/$defs/contribution"}
+    }
+  },
+  "required": ["contributions"],
+  "additionalProperties": false,
+  "$defs": {
+    "affects": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^(task|(action|decision|effect|claim|outcome):.+)$"}
+    },
+    "action": {
+      "type": "object",
+      "properties": {
+        "operation_id": {"type": "string", "minLength": 1},
+        "arguments": {"type": "object"},
+        "effects": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "authority": {"type": "string", "minLength": 1}
+      },
+      "required": ["operation_id"],
+      "not": {"required": ["priority"]}
+    },
+    "blocker": {
+      "type": "object",
+      "properties": {
+        "code": {"type": "string", "minLength": 1},
+        "message": {"type": "string", "minLength": 1},
+        "owner": {"type": "string", "minLength": 1},
+        "recovery": {"type": "string", "minLength": 1},
+        "affects": {"$ref": "#/$defs/affects"}
+      },
+      "required": ["code", "message", "affects"]
+    },
+    "decision": {
+      "type": "object",
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "question": {"type": "string", "minLength": 1},
+        "response_operation_id": {"type": "string", "minLength": 1},
+        "choices": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "properties": {"id": {"type": "string", "minLength": 1}, "label": {"type": "string", "minLength": 1}},
+            "required": ["id", "label"]
+          }
+        },
+        "affects": {"$ref": "#/$defs/affects"}
+      },
+      "required": ["id", "question", "response_operation_id", "choices", "affects"]
+    },
+    "outcome": {
+      "type": "object",
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "status": {"type": "string", "minLength": 1},
+        "claim": {"type": "string", "minLength": 1},
+        "evidence_revision": {"type": "string", "minLength": 1},
+        "residual_work": {"type": "array", "items": {"type": "string", "minLength": 1}}
+      },
+      "required": ["id", "status", "claim", "evidence_revision"]
+    },
+    "contribution": {
+      "type": "object",
+      "properties": {
+        "owner": {"type": "string", "minLength": 1},
+        "revision": {"type": "string", "minLength": 1},
+        "relevant": {"type": "boolean"},
+        "settled": {"type": "boolean"},
+        "facts": {"type": "object"},
+        "blockers": {"type": "array", "items": {"$ref": "#/$defs/blocker"}},
+        "decisions": {"type": "array", "items": {"$ref": "#/$defs/decision"}},
+        "actions": {"type": "array", "items": {"$ref": "#/$defs/action"}},
+        "claims": {
+          "type": "object",
+          "properties": {
+            "allowed": {"type": "array", "items": {"type": "string", "minLength": 1}},
+            "blocked": {"type": "array", "items": {"type": "string", "minLength": 1}}
+          }
+        },
+        "outcome": {"$ref": "#/$defs/outcome"}
+      },
+      "required": ["owner", "revision"],
+      "not": {"required": ["terminal"]}
+    }
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "owner-settled-is-not-terminal",
+      "input": {"contributions": [{"owner": "memory", "revision": "m1", "settled": true}], "intent": {"task": "inspect"}},
+      "expect": {"status": "direct", "terminal_authority": null, "owner_states.0.settled": true}
+    },
+    {
+      "id": "explicit-current-outcome-is-terminal",
+      "input": {
+        "intent": {"outcome": {"id": "ship", "owner": "planning", "claim": "complete"}},
+        "contributions": [{
+          "owner": "planning", "revision": "p2", "settled": true,
+          "claims": {"allowed": ["complete"]},
+          "outcome": {"id": "ship", "status": "complete", "claim": "complete", "evidence_revision": "p2"}
+        }]
+      },
+      "expect": {"status": "terminal", "terminal_authority.owner": "planning", "terminal_authority.revision": "p2"}
+    },
+    {
+      "id": "stale-outcome-evidence-is-not-terminal",
+      "input": {
+        "intent": {"outcome": {"id": "ship", "owner": "planning", "claim": "complete"}},
+        "contributions": [{
+          "owner": "planning", "revision": "p2", "settled": true,
+          "claims": {"allowed": ["complete"]},
+          "outcome": {"id": "ship", "status": "complete", "claim": "complete", "evidence_revision": "p1"}
+        }]
+      },
+      "expect": {"status": "direct", "terminal_authority": null}
+    },
+    {
+      "id": "claim-blocker-preserves-independent-action",
+      "input": {"intent": {"task": "edit"}, "contributions": [
+        {"owner": "verification", "revision": "v1", "blockers": [{"code": "proof-missing", "message": "release proof is missing", "recovery": "run verification.release", "affects": ["claim:release"]}], "claims": {"blocked": ["release"]}},
+        {"owner": "workspace", "revision": "w1", "actions": [{"operation_id": "workspace.edit", "arguments": {"path": "README.md"}, "effects": ["workspace-files"]}]}
+      ]},
+      "expect": {"status": "actionable", "primary_action.operation_id": "workspace.edit", "blockers.0.recovery": "run verification.release"}
+    },
+    {
+      "id": "exact-same-operation-action-scope",
+      "input": {"contributions": [{
+        "owner": "planning", "revision": "one",
+        "blockers": [{"code": "subject-blocked", "message": "only action a is blocked", "affects": ["action:planning:one:sha256:994d5986140e342326f094188d5f0e36af2ae2a10ed3ee092ef58906e228c57a"]}],
+        "actions": [
+          {"operation_id": "planning.advance", "arguments": {"item": "a"}, "effects": ["plan-a"]},
+          {"operation_id": "planning.advance", "arguments": {"item": "b"}, "effects": ["plan-b"]}
+        ]
+      }], "intent": {}},
+      "expect": {"status": "actionable", "primary_action.arguments.item": "b", "primary_action.effects.0": "plan-b", "pending_consequences.actions.0.arguments.item": "a", "pending_consequences.actions.1.arguments.item": "b"}
+    },
+    {
+      "id": "task-decision-is-current-and-bounded",
+      "input": {"contributions": [{"owner": "repository", "revision": "r2", "decisions": [{"id": "license", "question": "Choose a license", "response_operation_id": "repository.answer", "choices": [{"id": "mit", "label": "MIT"}], "affects": ["task"]}]}], "intent": {}},
+      "expect": {"status": "decision", "decision_request.owner": "repository", "decision_request.revision": "r2", "decision_request.choices.0.id": "mit"}
+    },
+    {
+      "id": "incomparable-actions-fail-closed-losslessly",
+      "input": {"contributions": [
+        {"owner": "zeta", "revision": "z1", "actions": [{"operation_id": "zeta.act", "arguments": {"value": "z"}}]},
+        {"owner": "alpha", "revision": "a1", "actions": [{"operation_id": "alpha.act", "arguments": {"value": "a"}}]}
+      ], "intent": {}},
+      "expect": {"status": "blocked", "blockers.0.code": "multiple-actions", "blockers.0.alternatives.0.source_owner": "alpha", "blockers.0.alternatives.1.source_owner": "zeta"}
+    }
+  ],
+  "error_cases": [
+    {
+      "id": "numeric-priority-is-rejected",
+      "input": {"contributions": [{"owner": "module", "revision": "one", "actions": [{"operation_id": "module.act", "priority": 1}]}], "intent": {}},
+      "error_contains": "priority is obsolete"
+    },
+    {
+      "id": "unscoped-blocker-is-rejected",
+      "input": {"contributions": [{"owner": "module", "revision": "one", "blockers": [{"code": "gap", "message": "gap"}]}], "intent": {}},
+      "error_contains": "must name at least one affected consequence"
+    }
+  ],
+  "equivalent_inputs": [
+    {
+      "id": "contribution-and-action-permutation",
+      "inputs": [
+        {"contributions": [
+          {"owner": "zeta", "revision": "z1", "actions": [{"operation_id": "same", "arguments": {"value": "b"}}, {"operation_id": "same", "arguments": {"value": "a"}}]},
+          {"owner": "alpha", "revision": "a1", "claims": {"allowed": ["progress"]}}
+        ], "intent": {}},
+        {"contributions": [
+          {"owner": "alpha", "revision": "a1", "claims": {"allowed": ["progress"]}},
+          {"owner": "zeta", "revision": "z1", "actions": [{"operation_id": "same", "arguments": {"value": "a"}}, {"operation_id": "same", "arguments": {"value": "b"}}]}
+        ], "intent": {}}
+      ]
+    }
+  ]
+}

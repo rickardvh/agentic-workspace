@@ -19,7 +19,6 @@ def _planning(state: dict[str, Any]) -> dict[str, Any]:
                 "operation_id": "planning.complete",
                 "arguments": {"item": "ship-v1"},
                 "effects": ["planning-state"],
-                "priority": 10,
             }
         )
     return {
@@ -27,13 +26,25 @@ def _planning(state: dict[str, Any]) -> dict[str, Any]:
         "revision": state["revision"],
         "facts": {"status": state["status"]},
         "actions": actions,
-        "claims": {"allowed": ["progress"], "blocked": [] if state["status"] == "complete" else ["complete"]},
-        "terminal": state["status"] == "complete",
+        "claims": {
+            "allowed": ["progress", "complete"] if state["status"] == "complete" else ["progress"],
+            "blocked": [] if state["status"] == "complete" else ["complete"],
+        },
+        "settled": state["status"] == "complete",
+        "outcome": (
+            {"id": "ship", "status": "complete", "claim": "complete", "evidence_revision": state["revision"]}
+            if state["status"] == "complete"
+            else None
+        ),
     }
 
 
-def test_same_source_state_has_one_answer_across_views() -> None:
-    decision = compile_source_decision([_planning({"status": "open", "revision": "p1"})], intent={"task": "ship"})
+def _ship_intent() -> dict[str, Any]:
+    return {"task": "ship", "outcome": {"id": "ship", "owner": "planning", "claim": "complete"}}
+
+
+def test_same_source_state_has_one_answer_across_views(shared_core_binary: object) -> None:
+    decision = compile_source_decision([_planning({"status": "open", "revision": "p1"})], intent=_ship_intent())
     cli = select_decision_detail(decision, ["status", "primary_action", "claim_boundary"])
     python = select_decision_detail(decision, ["primary_action", "status"])
 
@@ -42,19 +53,19 @@ def test_same_source_state_has_one_answer_across_views() -> None:
     assert cli["values"]["status"] == python["values"]["status"] == "actionable"
 
 
-def test_canonical_compiler_routes_source_contributions_without_consumer_semantics() -> None:
+def test_canonical_compiler_routes_source_contributions_without_consumer_semantics(shared_core_binary: object) -> None:
     contribution = _planning({"status": "open", "revision": "p1"})
-    cli = compile_operating_decision(inputs={"consumer": "cli", "task": "ship", "source_contributions": [contribution]})
-    python = compile_operating_decision(inputs={"consumer": "python", "task": "ship", "source_contributions": [contribution]})
+    cli = compile_operating_decision(inputs={"consumer": "cli", "source_contributions": [contribution], "intent": _ship_intent()})
+    python = compile_operating_decision(inputs={"consumer": "python", "source_contributions": [contribution], "intent": _ship_intent()})
     assert cli == python
 
 
-def test_result_reconciles_to_the_next_decision_without_polling() -> None:
+def test_result_reconciles_to_the_next_decision_without_polling(shared_core_binary: object) -> None:
     state = {"status": "open", "revision": "p1"}
     calls = 0
 
     def resolve() -> dict[str, Any]:
-        return compile_source_decision([_planning(state)], intent={"task": "ship"})
+        return compile_source_decision([_planning(state)], intent=_ship_intent())
 
     def complete(values: dict[str, Any]) -> dict[str, Any]:
         nonlocal calls
@@ -82,7 +93,7 @@ def test_result_reconciles_to_the_next_decision_without_polling() -> None:
 
     assert result["status"] == "applied"
     assert result["next_decision"]["status"] == "terminal"
-    assert result["next_decision"]["claim_boundary"] == {"allowed": ["progress"], "blocked": []}
+    assert result["next_decision"]["claim_boundary"] == {"allowed": ["complete", "progress"], "blocked": []}
     assert dispatcher.invoke(invocation, resolve_decision=resolve) == result
     assert calls == 1
 
@@ -98,7 +109,7 @@ def test_result_reconciles_to_the_next_decision_without_polling() -> None:
         )
 
 
-def test_stale_and_invalid_invocations_fail_closed() -> None:
+def test_stale_and_invalid_invocations_fail_closed(shared_core_binary: object) -> None:
     state = {"status": "open", "revision": "p1"}
     dispatcher = OperationDispatcher()
     dispatcher.register(
@@ -122,7 +133,7 @@ class _EntryPoint:
         return self.value
 
 
-def test_out_of_tree_module_uses_the_generic_contribution_and_operation_seam() -> None:
+def test_out_of_tree_module_uses_the_generic_contribution_and_operation_seam(shared_core_binary: object) -> None:
     state = {"revision": "ext1", "pending": True}
     external = Module(
         name="example.external",
@@ -130,7 +141,13 @@ def test_out_of_tree_module_uses_the_generic_contribution_and_operation_seam() -
             "revision": state["revision"],
             "relevant": context["task"] == "external",
             "actions": [{"operation_id": "example.finish", "arguments": {}, "effects": ["external-state"]}] if state["pending"] else [],
-            "terminal": not state["pending"],
+            "settled": not state["pending"],
+            "claims": {"allowed": ["complete"] if not state["pending"] else []},
+            "outcome": (
+                {"id": "external", "status": "complete", "claim": "complete", "evidence_revision": state["revision"]}
+                if not state["pending"]
+                else None
+            ),
         },
         operations=(
             Operation(
@@ -146,7 +163,7 @@ def test_out_of_tree_module_uses_the_generic_contribution_and_operation_seam() -
     register_module_operations(dispatcher, modules)
 
     def resolve() -> dict[str, Any]:
-        context = {"task": "external"}
+        context = {"task": "external", "outcome": {"id": "external", "owner": "example.external", "claim": "complete"}}
         return compile_source_decision(module_contributions(modules, context=context), intent=context)
 
     first = resolve()
@@ -155,7 +172,7 @@ def test_out_of_tree_module_uses_the_generic_contribution_and_operation_seam() -
     assert result["next_decision"]["status"] == "terminal"
 
 
-def test_irrelevant_modules_are_absent_from_the_decision() -> None:
+def test_irrelevant_modules_are_absent_from_the_decision(shared_core_binary: object) -> None:
     module = Module(
         name="example.external",
         contribute=lambda context: None if context["task"] != "external" else {"revision": "one"},

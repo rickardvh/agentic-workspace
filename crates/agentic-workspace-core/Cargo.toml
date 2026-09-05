@@ -1,0 +1,18 @@
+[package]
+name = "agentic-workspace-core"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "Shared deterministic semantic core for Agentic Workspace"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+
+[dev-dependencies]
+serde_json = "1"
+
+[[bin]]
+name = "agentic-workspace-core"
+path = "src/main.rs"

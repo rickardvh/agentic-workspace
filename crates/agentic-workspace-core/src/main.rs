@@ -1,0 +1,28 @@
+use std::io::{self, Read};
+
+fn main() {
+    let mut input = String::new();
+    if let Err(error) = io::stdin().read_to_string(&mut input) {
+        fail("transport-read", &error.to_string());
+    }
+    let request = match serde_json::from_str(&input) {
+        Ok(value) => value,
+        Err(error) => fail("invalid-json", &error.to_string()),
+    };
+    match agentic_workspace_core::compile_value(request) {
+        Ok(decision) => println!(
+            "{}",
+            serde_json::to_string(&decision).expect("decision is JSON serializable")
+        ),
+        Err(error) => fail("invalid-source-decision", &error.to_string()),
+    }
+}
+
+fn fail(code: &str, message: &str) -> ! {
+    let payload = serde_json::json!({"error": {"code": code, "message": message}});
+    eprintln!(
+        "{}",
+        serde_json::to_string(&payload).expect("error is JSON serializable")
+    );
+    std::process::exit(2);
+}
