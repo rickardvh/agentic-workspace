@@ -150,7 +150,8 @@ struct PublicRequestInput {
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct RequestResponseInput {
-    request_id: String,
+    request_identity: String,
+    consequence_ids: Vec<String>,
     status: String,
 }
 
@@ -328,7 +329,8 @@ struct NormalizedPublicRequest {
 
 #[derive(Debug, Clone, Serialize)]
 struct NormalizedRequestResponse {
-    request_id: String,
+    request_identity: String,
+    consequence_ids: Vec<String>,
     status: String,
 }
 
@@ -911,10 +913,12 @@ fn normalize_request_response(
     input: RequestResponseInput,
     owner: &str,
 ) -> Result<NormalizedRequestResponse, CoreError> {
-    let request_id = require_text(
-        &input.request_id,
-        &format!("{owner}.request_response.request_id"),
+    let request_identity = require_text(
+        &input.request_identity,
+        &format!("{owner}.request_response.request_identity"),
     )?;
+    let consequence_ids =
+        unique_strings(input.consequence_ids, "request_response.consequence_ids")?;
     if !matches!(
         input.status.as_str(),
         "action" | "decision" | "blocked" | "settled"
@@ -924,7 +928,8 @@ fn normalize_request_response(
         )));
     }
     Ok(NormalizedRequestResponse {
-        request_id,
+        request_identity,
+        consequence_ids,
         status: input.status,
     })
 }
@@ -1390,6 +1395,7 @@ fn normalize_public_request(
         "owner_revision": owner_revision,
         "source_revision": source_revision,
         "request_kind": request_kind,
+        "request_contract": request_shape,
         "capability_revision": capabilities.revision,
         "task_identity": current,
         "arguments": parsed.arguments,
@@ -1412,6 +1418,29 @@ fn normalize_public_request(
         serde_json::to_value(&normalized).expect("normalized public request serializes"),
     );
     Ok(Some(normalized))
+}
+
+/// Prepare public identity once in Rust before the responsible owner resolves it.
+pub fn prepare_request_value(value: Value) -> Result<Value, CoreError> {
+    #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct Prepare {
+        request: Value,
+        current_work: Value,
+        capability_contract: CapabilityContractInput,
+    }
+    let input: Prepare =
+        serde_json::from_value(value).map_err(|error| CoreError::new(error.to_string()))?;
+    let contract = normalize_capability_contract(input.capability_contract)?;
+    let mut intent = json!({"public_request": input.request, "current_work": input.current_work});
+    let normalized =
+        normalize_public_request(&mut intent, Some(&contract))?.expect("request is present");
+    let mut request = serde_json::to_value(&normalized).expect("request serializes");
+    request.as_object_mut().unwrap().remove("identity");
+    request.as_object_mut().unwrap().remove("result_kind");
+    Ok(
+        json!({"request": request, "identity": normalized.identity, "result_kind": normalized.result_kind}),
+    )
 }
 
 pub fn compile_value(value: Value) -> Result<Value, CoreError> {
@@ -1776,76 +1805,42 @@ fn resolve_public_request(
             request.owner
         )));
     }
-    if response.request_id != request.id {
+    if response.request_identity != request.identity {
         return Err(CoreError::new(format!(
             "public request response from {} references a different request",
             request.owner
         )));
     }
 
-    let consequence_ids = match response.status.as_str() {
-        "action" => {
-            if contribution.actions.len() != 1
-                || !contribution.decisions.is_empty()
-                || !contribution.blockers.is_empty()
-                || contribution.settled
-            {
-                return Err(CoreError::new(format!(
-                    "public request {} requires one exact returned action without a competing consequence",
-                    request.id
-                )));
-            }
-            vec![contribution.actions[0].consequence_id.clone()]
-        }
-        "decision" => {
-            if contribution.decisions.len() != 1
-                || !contribution.actions.is_empty()
-                || !contribution.blockers.is_empty()
-                || contribution.settled
-            {
-                return Err(CoreError::new(format!(
-                    "public request {} requires one exact returned decision without a competing consequence",
-                    request.id
-                )));
-            }
-            contribution
-                .decisions
-                .iter()
-                .map(|decision| decision.consequence_id.clone())
-                .collect()
-        }
-        "blocked" => {
-            if contribution.blockers.len() != 1
-                || !contribution.actions.is_empty()
-                || !contribution.decisions.is_empty()
-                || contribution.settled
-            {
-                return Err(CoreError::new(format!(
-                    "public request {} requires one exact returned blocker without a competing consequence",
-                    request.id
-                )));
-            }
-            contribution
-                .blockers
-                .iter()
-                .map(|blocker| blocker.consequence_id.clone())
-                .collect()
-        }
-        "settled" => {
-            if !contribution.settled
-                || !contribution.actions.is_empty()
-                || !contribution.decisions.is_empty()
-                || !contribution.blockers.is_empty()
-            {
-                return Err(CoreError::new(format!(
-                    "public request {} declared settled while owner work remains",
-                    request.id
-                )));
-            }
-            Vec::new()
-        }
+    let candidates = match response.status.as_str() {
+        "action" => contribution
+            .actions
+            .iter()
+            .map(|item| &item.consequence_id)
+            .collect::<BTreeSet<_>>(),
+        "decision" => contribution
+            .decisions
+            .iter()
+            .map(|item| &item.consequence_id)
+            .collect(),
+        "blocked" => contribution
+            .blockers
+            .iter()
+            .map(|item| &item.consequence_id)
+            .collect(),
+        "settled" => BTreeSet::new(),
         _ => unreachable!("response status was normalized"),
     };
+    if (response.status == "settled") != response.consequence_ids.is_empty()
+        || response
+            .consequence_ids
+            .iter()
+            .any(|id| !candidates.contains(id))
+    {
+        return Err(CoreError::new(
+            "request response must name its exact current owner consequences of the declared response kind",
+        ));
+    }
     Ok(Some(json!({
         "request_id": request.id,
         "request_identity": request.identity,
@@ -1855,7 +1850,7 @@ fn resolve_public_request(
         "request_kind": request.request_kind,
         "result_kind": request.result_kind,
         "status": response.status,
-        "consequence_ids": consequence_ids,
+        "consequence_ids": response.consequence_ids,
     })))
 }
 

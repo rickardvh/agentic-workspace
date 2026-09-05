@@ -14,6 +14,11 @@ fn main() {
         .is_some_and(|item| item.len() == 1 && item.contains_key("admission"))
     {
         agentic_workspace_core::admit_invocation_value(request["admission"].clone())
+    } else if request
+        .as_object()
+        .is_some_and(|item| item.len() == 1 && item.contains_key("prepare_request"))
+    {
+        agentic_workspace_core::prepare_request_value(request["prepare_request"].clone())
     } else {
         agentic_workspace_core::compile_value(request)
     };

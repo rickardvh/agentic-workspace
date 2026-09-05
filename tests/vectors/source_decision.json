@@ -2,6 +2,145 @@
   "schema_version": 1,
   "cases": [
     {
+      "id": "request-specific-response-with-unrelated-owner-action",
+      "input": {
+        "contributions": [
+          {
+            "owner": "example.external",
+            "revision": "ext1",
+            "actions": [
+              {
+                "dependency_revision": "ext1",
+                "operation_id": "example.finish",
+                "arguments": {
+                  "subject": "case-17"
+                },
+                "effects": [
+                  "external-state"
+                ]
+              },
+              {
+                "dependency_revision": "ext1",
+                "operation_id": "example.finish",
+                "arguments": {
+                  "subject": "unrelated"
+                },
+                "effects": [
+                  "external-state"
+                ]
+              }
+            ],
+            "request_response": {
+              "request_identity": "request:sha256:6bc874d685d02eff4be06a8cf21e632fff951bb3d67ebd2ed851ae4005a9c7f2",
+              "consequence_ids": [
+                "action:example.external:sha256:9b8db23f0a665a5e2d5f01436c5e663428f2a8bf045762170cd1b5d5ad038856"
+              ],
+              "status": "action"
+            }
+          }
+        ],
+        "intent": {
+          "current_work": {
+            "kind": "current-work",
+            "id": "work-17"
+          },
+          "public_request": {
+            "kind": "agentic-workspace/public-request/v1",
+            "id": "finish-17",
+            "owner": "example.external",
+            "owner_revision": "ext1",
+            "source_revision": "ext1",
+            "request_kind": "example/finish-request/v1",
+            "capability_revision": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "task_identity": {
+              "kind": "current-work",
+              "id": "work-17"
+            },
+            "arguments": {
+              "subject": {
+                "name": "case-17",
+                "mode": "finish"
+              }
+            }
+          }
+        }
+      },
+      "expect": {
+        "request_resolution.consequence_ids": [
+          "action:example.external:sha256:9b8db23f0a665a5e2d5f01436c5e663428f2a8bf045762170cd1b5d5ad038856"
+        ],
+        "pending_consequences.actions.1.operation_id": "example.finish"
+      }
+    },
+    {
+      "id": "request-settled-is-not-owner-quiescence",
+      "input": {
+        "contributions": [
+          {
+            "owner": "example.external",
+            "revision": "ext1",
+            "actions": [
+              {
+                "dependency_revision": "ext1",
+                "operation_id": "example.finish",
+                "arguments": {
+                  "subject": "case-17"
+                },
+                "effects": [
+                  "external-state"
+                ]
+              },
+              {
+                "dependency_revision": "ext1",
+                "operation_id": "example.finish",
+                "arguments": {
+                  "subject": "unrelated"
+                },
+                "effects": [
+                  "external-state"
+                ]
+              }
+            ],
+            "request_response": {
+              "request_identity": "request:sha256:6bc874d685d02eff4be06a8cf21e632fff951bb3d67ebd2ed851ae4005a9c7f2",
+              "consequence_ids": [],
+              "status": "settled"
+            }
+          }
+        ],
+        "intent": {
+          "current_work": {
+            "kind": "current-work",
+            "id": "work-17"
+          },
+          "public_request": {
+            "kind": "agentic-workspace/public-request/v1",
+            "id": "finish-17",
+            "owner": "example.external",
+            "owner_revision": "ext1",
+            "source_revision": "ext1",
+            "request_kind": "example/finish-request/v1",
+            "capability_revision": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "task_identity": {
+              "kind": "current-work",
+              "id": "work-17"
+            },
+            "arguments": {
+              "subject": {
+                "name": "case-17",
+                "mode": "finish"
+              }
+            }
+          }
+        }
+      },
+      "expect": {
+        "request_resolution.status": "settled",
+        "request_resolution.consequence_ids": [],
+        "owner_states.0.settled": false
+      }
+    },
+    {
       "id": "complete-outcome-with-optional-action",
       "input": {
         "intent": {
@@ -1021,7 +1160,7 @@
           "owner": "example.external",
           "revision": "ext1",
           "actions": [{"dependency_revision": "ext1", "operation_id": "example.finish", "arguments": {"subject": "case-17"}, "effects": ["external-state"]}],
-          "request_response": {"request_id": "finish-17", "status": "action"}
+          "request_response": {"request_identity":"request:sha256:6bc874d685d02eff4be06a8cf21e632fff951bb3d67ebd2ed851ae4005a9c7f2","consequence_ids":["action:example.external:sha256:9b8db23f0a665a5e2d5f01436c5e663428f2a8bf045762170cd1b5d5ad038856"],"status":"action"}
         }],
         "intent": {
           "current_work": {"kind": "current-work", "id": "work-17"},
@@ -1132,6 +1271,204 @@
     }
   ],
   "error_cases": [
+    {
+      "id": "same-request-id-changed-valid-arguments-rejects-old-response",
+      "input": {
+        "contributions": [
+          {
+            "owner": "example.external",
+            "revision": "ext1",
+            "actions": [
+              {
+                "dependency_revision": "ext1",
+                "operation_id": "example.finish",
+                "arguments": {
+                  "subject": "case-17"
+                },
+                "effects": [
+                  "external-state"
+                ]
+              },
+              {
+                "dependency_revision": "ext1",
+                "operation_id": "example.finish",
+                "arguments": {
+                  "subject": "unrelated"
+                },
+                "effects": [
+                  "external-state"
+                ]
+              }
+            ],
+            "request_response": {
+              "request_identity": "request:sha256:6bc874d685d02eff4be06a8cf21e632fff951bb3d67ebd2ed851ae4005a9c7f2",
+              "consequence_ids": [
+                "action:example.external:sha256:9b8db23f0a665a5e2d5f01436c5e663428f2a8bf045762170cd1b5d5ad038856"
+              ],
+              "status": "action"
+            }
+          }
+        ],
+        "intent": {
+          "current_work": {
+            "kind": "current-work",
+            "id": "work-17"
+          },
+          "public_request": {
+            "kind": "agentic-workspace/public-request/v1",
+            "id": "finish-17",
+            "owner": "example.external",
+            "owner_revision": "ext1",
+            "source_revision": "ext1",
+            "request_kind": "example/finish-request/v1",
+            "capability_revision": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "task_identity": {
+              "kind": "current-work",
+              "id": "work-17"
+            },
+            "arguments": {
+              "subject": {
+                "name": "other-valid-subject",
+                "mode": "finish"
+              }
+            }
+          }
+        }
+      },
+      "error_contains": "references a different request"
+    },
+    {
+      "id": "response-cannot-name-an-absent-consequence",
+      "input": {
+        "contributions": [
+          {
+            "owner": "example.external",
+            "revision": "ext1",
+            "actions": [
+              {
+                "dependency_revision": "ext1",
+                "operation_id": "example.finish",
+                "arguments": {
+                  "subject": "case-17"
+                },
+                "effects": [
+                  "external-state"
+                ]
+              },
+              {
+                "dependency_revision": "ext1",
+                "operation_id": "example.finish",
+                "arguments": {
+                  "subject": "unrelated"
+                },
+                "effects": [
+                  "external-state"
+                ]
+              }
+            ],
+            "request_response": {
+              "request_identity": "request:sha256:6bc874d685d02eff4be06a8cf21e632fff951bb3d67ebd2ed851ae4005a9c7f2",
+              "consequence_ids": [
+                "action:absent"
+              ],
+              "status": "action"
+            }
+          }
+        ],
+        "intent": {
+          "current_work": {
+            "kind": "current-work",
+            "id": "work-17"
+          },
+          "public_request": {
+            "kind": "agentic-workspace/public-request/v1",
+            "id": "finish-17",
+            "owner": "example.external",
+            "owner_revision": "ext1",
+            "source_revision": "ext1",
+            "request_kind": "example/finish-request/v1",
+            "capability_revision": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "task_identity": {
+              "kind": "current-work",
+              "id": "work-17"
+            },
+            "arguments": {
+              "subject": {
+                "name": "case-17",
+                "mode": "finish"
+              }
+            }
+          }
+        }
+      },
+      "error_contains": "exact current owner consequences"
+    },
+    {
+      "id": "response-kind-must-match-selected-consequence",
+      "input": {
+        "contributions": [
+          {
+            "owner": "example.external",
+            "revision": "ext1",
+            "actions": [
+              {
+                "dependency_revision": "ext1",
+                "operation_id": "example.finish",
+                "arguments": {
+                  "subject": "case-17"
+                },
+                "effects": [
+                  "external-state"
+                ]
+              },
+              {
+                "dependency_revision": "ext1",
+                "operation_id": "example.finish",
+                "arguments": {
+                  "subject": "unrelated"
+                },
+                "effects": [
+                  "external-state"
+                ]
+              }
+            ],
+            "request_response": {
+              "request_identity": "request:sha256:6bc874d685d02eff4be06a8cf21e632fff951bb3d67ebd2ed851ae4005a9c7f2",
+              "consequence_ids": [
+                "action:example.external:sha256:9b8db23f0a665a5e2d5f01436c5e663428f2a8bf045762170cd1b5d5ad038856"
+              ],
+              "status": "blocked"
+            }
+          }
+        ],
+        "intent": {
+          "current_work": {
+            "kind": "current-work",
+            "id": "work-17"
+          },
+          "public_request": {
+            "kind": "agentic-workspace/public-request/v1",
+            "id": "finish-17",
+            "owner": "example.external",
+            "owner_revision": "ext1",
+            "source_revision": "ext1",
+            "request_kind": "example/finish-request/v1",
+            "capability_revision": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "task_identity": {
+              "kind": "current-work",
+              "id": "work-17"
+            },
+            "arguments": {
+              "subject": {
+                "name": "case-17",
+                "mode": "finish"
+              }
+            }
+          }
+        }
+      },
+      "error_contains": "exact current owner consequences"
+    },
     {
       "id": "ungranted-known-claim-veto",
       "input": {
@@ -1715,16 +2052,16 @@
       },
       "error_contains": "restriction authority names unknown owner"
     },
-    {"id":"owner-schema-cannot-widen-public-envelope","input":{"contributions":[{"owner":"example.external","revision":"ext1","actions":[{"dependency_revision": "ext1", "operation_id":"example.finish","arguments":{"subject":"case-17"},"effects":["external-state"]}],"request_response":{"request_id":"finish-17","status":"action"}}],"intent":{"current_work":{"kind":"current-work","id":"work-17"},"public_request":{"kind":"agentic-workspace/public-request/v1","id":"finish-17","owner":"example.external","owner_revision":"ext1","source_revision":"ext1","request_kind":"example/finish-request/v1","capability_revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","task_identity":{"kind":"current-work","id":"work-17"},"arguments":17}},"capability_contract":{"kind":"agentic-workspace/capability-contract/v1","revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","owners":[{"owner":"example.external","revision":"ext1","requests":[{"kind":"example/finish-request/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"integer"},"result_kind":"example/finish-result/v1"}]}]}},"error_contains":"arguments must be an object"},
+    {"id":"owner-schema-cannot-widen-public-envelope","input":{"contributions":[{"owner":"example.external","revision":"ext1","actions":[{"dependency_revision": "ext1", "operation_id":"example.finish","arguments":{"subject":"case-17"},"effects":["external-state"]}],"request_response":{"request_identity":"unbound","consequence_ids":["unresolved-consequence"],"status":"action"}}],"intent":{"current_work":{"kind":"current-work","id":"work-17"},"public_request":{"kind":"agentic-workspace/public-request/v1","id":"finish-17","owner":"example.external","owner_revision":"ext1","source_revision":"ext1","request_kind":"example/finish-request/v1","capability_revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","task_identity":{"kind":"current-work","id":"work-17"},"arguments":17}},"capability_contract":{"kind":"agentic-workspace/capability-contract/v1","revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","owners":[{"owner":"example.external","revision":"ext1","requests":[{"kind":"example/finish-request/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"integer"},"result_kind":"example/finish-result/v1"}]}]}},"error_contains":"arguments must be an object"},
     {"id":"invalid-json-schema-is-rejected","input":{"contributions":[],"intent":{},"capability_contract":{"kind":"agentic-workspace/capability-contract/v1","revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","owners":[{"owner":"example.external","revision":"ext1","requests":[{"kind":"example/request/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"not-a-json-schema-type"},"result_kind":"example/result/v1"}]}]}},"error_contains":"input_schema is invalid"},
     {"id":"external-schema-reference-is-rejected","input":{"contributions":[],"intent":{},"capability_contract":{"kind":"agentic-workspace/capability-contract/v1","revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","owners":[{"owner":"example.external","revision":"ext1","requests":[{"kind":"example/request/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","$ref":"https://example.invalid/hidden-schema.json"},"result_kind":"example/result/v1"}]}]}},"error_contains":"input_schema is invalid"},
     {"id":"file-schema-reference-is-rejected","input":{"contributions":[],"intent":{},"capability_contract":{"kind":"agentic-workspace/capability-contract/v1","revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","owners":[{"owner":"example.external","revision":"ext1","requests":[{"kind":"example/request/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","$ref":"file:///unavailable-schema.json"},"result_kind":"example/result/v1"}]}]}},"error_contains":"input_schema is invalid"},
     {"id":"wrong-schema-dialect-is-rejected","input":{"contributions":[],"intent":{},"capability_contract":{"kind":"agentic-workspace/capability-contract/v1","revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","owners":[{"owner":"example.external","revision":"ext1","requests":[{"kind":"example/request/v1","input_schema":{"$schema":"http://json-schema.org/draft-07/schema#","type":"object"},"result_kind":"example/result/v1"}]}]}},"error_contains":"must declare JSON Schema Draft 2020-12"},
-    {"id":"nested-hidden-command-is-rejected","input":{"contributions":[{"owner":"example.external","revision":"ext1","actions":[{"dependency_revision": "ext1", "operation_id":"example.finish","arguments":{"subject":"case-17"},"effects":["external-state"]}],"request_response":{"request_id":"finish-17","status":"action"}}],"intent":{"current_work":{"kind":"current-work","id":"work-17"},"public_request":{"kind":"agentic-workspace/public-request/v1","id":"finish-17","owner":"example.external","owner_revision":"ext1","source_revision":"ext1","request_kind":"example/finish-request/v1","capability_revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","task_identity":{"kind":"current-work","id":"work-17"},"arguments":{"subject":{"name":"case-17","mode":"finish","command":"delete"}}}}},"error_contains":"violate input_schema"},
-    {"id":"nested-enum-is-enforced","input":{"contributions":[{"owner":"example.external","revision":"ext1","actions":[{"dependency_revision": "ext1", "operation_id":"example.finish","arguments":{"subject":"case-17"},"effects":["external-state"]}],"request_response":{"request_id":"finish-17","status":"action"}}],"intent":{"current_work":{"kind":"current-work","id":"work-17"},"public_request":{"kind":"agentic-workspace/public-request/v1","id":"finish-17","owner":"example.external","owner_revision":"ext1","source_revision":"ext1","request_kind":"example/finish-request/v1","capability_revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","task_identity":{"kind":"current-work","id":"work-17"},"arguments":{"subject":{"name":"case-17","mode":"execute-private-command"}}}}},"error_contains":"violate input_schema"},
-    {"id":"caller-operation-selection-is-rejected","input":{"contributions":[{"owner":"example.external","revision":"ext1","actions":[{"dependency_revision": "ext1", "operation_id":"example.finish","arguments":{"subject":"case-17"},"effects":["external-state"]}],"request_response":{"request_id":"finish-17","status":"action"}}],"intent":{"current_work":{"kind":"current-work","id":"work-17"},"public_request":{"kind":"agentic-workspace/public-request/v1","id":"finish-17","owner":"example.external","owner_revision":"ext1","source_revision":"ext1","request_kind":"example/finish-request/v1","capability_revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","task_identity":{"kind":"current-work","id":"work-17"},"arguments":{"subject":{"name":"case-17","mode":"finish"}},"operation_id":"example.finish"}}},"error_contains":"unknown field `operation_id`"},
-    {"id":"owner-derived-action-schema-is-enforced","input":{"contributions":[{"owner":"example.external","revision":"ext1","actions":[{"dependency_revision": "ext1", "operation_id":"example.finish","arguments":{"subject":{"command":"delete"}},"effects":["external-state"]}],"request_response":{"request_id":"finish-17","status":"action"}}],"intent":{"current_work":{"kind":"current-work","id":"work-17"},"public_request":{"kind":"agentic-workspace/public-request/v1","id":"finish-17","owner":"example.external","owner_revision":"ext1","source_revision":"ext1","request_kind":"example/finish-request/v1","capability_revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","task_identity":{"kind":"current-work","id":"work-17"},"arguments":{"subject":{"name":"case-17","mode":"finish"}}}}},"error_contains":"violate input_schema"},
-    {"id":"owner-cannot-derive-undeclared-operation","input":{"contributions":[{"owner":"example.external","revision":"ext1","actions":[{"dependency_revision": "ext1", "operation_id":"workspace.edit","arguments":{"subject":"case-17"},"effects":["external-state"]}],"request_response":{"request_id":"finish-17","status":"action"}}],"intent":{"current_work":{"kind":"current-work","id":"work-17"},"public_request":{"kind":"agentic-workspace/public-request/v1","id":"finish-17","owner":"example.external","owner_revision":"ext1","source_revision":"ext1","request_kind":"example/finish-request/v1","capability_revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","task_identity":{"kind":"current-work","id":"work-17"},"arguments":{"subject":{"name":"case-17","mode":"finish"}}}}},"error_contains":"not declared by its capability owner"},
+    {"id":"nested-hidden-command-is-rejected","input":{"contributions":[{"owner":"example.external","revision":"ext1","actions":[{"dependency_revision": "ext1", "operation_id":"example.finish","arguments":{"subject":"case-17"},"effects":["external-state"]}],"request_response":{"request_identity":"unbound","consequence_ids":["action:example.external:sha256:9b8db23f0a665a5e2d5f01436c5e663428f2a8bf045762170cd1b5d5ad038856"],"status":"action"}}],"intent":{"current_work":{"kind":"current-work","id":"work-17"},"public_request":{"kind":"agentic-workspace/public-request/v1","id":"finish-17","owner":"example.external","owner_revision":"ext1","source_revision":"ext1","request_kind":"example/finish-request/v1","capability_revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","task_identity":{"kind":"current-work","id":"work-17"},"arguments":{"subject":{"name":"case-17","mode":"finish","command":"delete"}}}}},"error_contains":"violate input_schema"},
+    {"id":"nested-enum-is-enforced","input":{"contributions":[{"owner":"example.external","revision":"ext1","actions":[{"dependency_revision": "ext1", "operation_id":"example.finish","arguments":{"subject":"case-17"},"effects":["external-state"]}],"request_response":{"request_identity":"unbound","consequence_ids":["action:example.external:sha256:9b8db23f0a665a5e2d5f01436c5e663428f2a8bf045762170cd1b5d5ad038856"],"status":"action"}}],"intent":{"current_work":{"kind":"current-work","id":"work-17"},"public_request":{"kind":"agentic-workspace/public-request/v1","id":"finish-17","owner":"example.external","owner_revision":"ext1","source_revision":"ext1","request_kind":"example/finish-request/v1","capability_revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","task_identity":{"kind":"current-work","id":"work-17"},"arguments":{"subject":{"name":"case-17","mode":"execute-private-command"}}}}},"error_contains":"violate input_schema"},
+    {"id":"caller-operation-selection-is-rejected","input":{"contributions":[{"owner":"example.external","revision":"ext1","actions":[{"dependency_revision": "ext1", "operation_id":"example.finish","arguments":{"subject":"case-17"},"effects":["external-state"]}],"request_response":{"request_identity":"unbound","consequence_ids":["action:example.external:sha256:9b8db23f0a665a5e2d5f01436c5e663428f2a8bf045762170cd1b5d5ad038856"],"status":"action"}}],"intent":{"current_work":{"kind":"current-work","id":"work-17"},"public_request":{"kind":"agentic-workspace/public-request/v1","id":"finish-17","owner":"example.external","owner_revision":"ext1","source_revision":"ext1","request_kind":"example/finish-request/v1","capability_revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","task_identity":{"kind":"current-work","id":"work-17"},"arguments":{"subject":{"name":"case-17","mode":"finish"}},"operation_id":"example.finish"}}},"error_contains":"unknown field `operation_id`"},
+    {"id":"owner-derived-action-schema-is-enforced","input":{"contributions":[{"owner":"example.external","revision":"ext1","actions":[{"dependency_revision": "ext1", "operation_id":"example.finish","arguments":{"subject":{"command":"delete"}},"effects":["external-state"]}],"request_response":{"request_identity":"request:sha256:6bc874d685d02eff4be06a8cf21e632fff951bb3d67ebd2ed851ae4005a9c7f2","consequence_ids":["unresolved-consequence"],"status":"action"}}],"intent":{"current_work":{"kind":"current-work","id":"work-17"},"public_request":{"kind":"agentic-workspace/public-request/v1","id":"finish-17","owner":"example.external","owner_revision":"ext1","source_revision":"ext1","request_kind":"example/finish-request/v1","capability_revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","task_identity":{"kind":"current-work","id":"work-17"},"arguments":{"subject":{"name":"case-17","mode":"finish"}}}}},"error_contains":"violate input_schema"},
+    {"id":"owner-cannot-derive-undeclared-operation","input":{"contributions":[{"owner":"example.external","revision":"ext1","actions":[{"dependency_revision": "ext1", "operation_id":"workspace.edit","arguments":{"subject":"case-17"},"effects":["external-state"]}],"request_response":{"request_identity":"request:sha256:6bc874d685d02eff4be06a8cf21e632fff951bb3d67ebd2ed851ae4005a9c7f2","consequence_ids":["unresolved-consequence"],"status":"action"}}],"intent":{"current_work":{"kind":"current-work","id":"work-17"},"public_request":{"kind":"agentic-workspace/public-request/v1","id":"finish-17","owner":"example.external","owner_revision":"ext1","source_revision":"ext1","request_kind":"example/finish-request/v1","capability_revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","task_identity":{"kind":"current-work","id":"work-17"},"arguments":{"subject":{"name":"case-17","mode":"finish"}}}}},"error_contains":"not declared by its capability owner"},
     {
       "id": "hidden-owner-intent-union-is-rejected",
       "input": {"contributions": [], "intent": {"planning": {"operation": "complete"}}},
@@ -1743,7 +2080,7 @@
     {
       "id": "unknown-public-request-kind-is-rejected",
       "input": {
-        "contributions": [{"owner": "example.external", "revision": "ext1", "request_response": {"request_id": "finish-17", "status": "settled"}, "settled": true}],
+        "contributions": [{"owner": "example.external", "revision": "ext1", "request_response": {"request_identity":"unbound","consequence_ids":[],"status":"settled"}, "settled": true}],
         "intent": {
           "current_work": {"kind": "current-work", "id": "work-17"},
           "public_request": {

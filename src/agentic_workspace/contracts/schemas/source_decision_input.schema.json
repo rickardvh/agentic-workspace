@@ -370,10 +370,11 @@
         "request_response": {
           "type": "object",
           "properties": {
-            "request_id": {"type": "string", "minLength": 1, "description": "Public request correlation identity being answered."},
+            "request_identity": {"type": "string", "minLength": 1, "description": "Complete normalized identity returned by the shared request preparation boundary."},
+            "consequence_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}, "description": "Exact current owner consequences answering this request only; empty for a settled response."},
             "status": {"enum": ["action", "decision", "blocked", "settled"], "description": "Kind of exact owner response present in this contribution."}
           },
-          "required": ["request_id", "status"],
+          "required": ["request_identity", "consequence_ids", "status"],
           "additionalProperties": false
         }
       },

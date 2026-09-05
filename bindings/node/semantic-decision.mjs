@@ -27,6 +27,10 @@ export function admitInvocation(decision, invocation, previousInvocation = null)
   return request({admission: {decision, invocation, previous_invocation: previousInvocation}});
 }
 
+export function prepareRequest(publicRequest, currentWork, capabilityContract) {
+  return request({prepare_request: {request: publicRequest, current_work: currentWork, capability_contract: capabilityContract}});
+}
+
 function request(payload) {
   const result = spawnSync(coreBinary(), [], {
     input: JSON.stringify(payload),
