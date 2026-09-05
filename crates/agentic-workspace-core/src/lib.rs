@@ -1183,6 +1183,11 @@ fn validate_operation_arguments(
     schema: &Value,
     field: &str,
 ) -> Result<(), CoreError> {
+    if !value.is_object() {
+        return Err(CoreError::new(format!(
+            "{field}.arguments must be an object"
+        )));
+    }
     schema_validator(schema, field)?
         .validate(value)
         .map_err(|error| CoreError::new(format!("{field}.arguments violate input_schema: {error}")))
