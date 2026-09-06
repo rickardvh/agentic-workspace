@@ -2038,13 +2038,17 @@ def test_instruction_source_admission_cross_surface_and_authority_separation(sha
     assert not any(key in admitted for key in ("operations", "claims", "evidence", "custody"))
 
 
-@pytest.mark.parametrize("change", ["no-admission", "source-changed", "observed-changed", "lookalike", "conflicting", "self-grant"])
+@pytest.mark.parametrize(
+    "change", ["no-admission", "unavailable-snapshot", "source-changed", "observed-changed", "lookalike", "conflicting", "self-grant"]
+)
 def test_instruction_source_cannot_mint_or_reuse_hard_authority(shared_core_binary: Path, tmp_path: Path, change: str) -> None:
     from agentic_workspace.decision import instruction_source_admission
 
     host, source = _instruction_host(tmp_path, "---\nchecks:\n  - run: pytest -q\nprotect:\n  - generated/**\n---\n# Rule\n")
     if change == "no-admission":
         host["admitted_revision"] = None
+    elif change == "unavailable-snapshot":
+        host["admitted_revision"] = "0" * 40
     elif change == "source-changed":
         source.write_text(source.read_text().replace("generated/**", "**"), encoding="utf-8")
     elif change == "observed-changed":
@@ -2062,7 +2066,7 @@ def test_instruction_source_cannot_mint_or_reuse_hard_authority(shared_core_bina
             instruction_source_admission(host)
         return
     result = instruction_source_admission(host)["sources"][0]
-    assert result["status"] in {"stale", "unadmitted"}
+    assert result["status"] in {"stale", "unadmitted", "unavailable"}
     assert result["checks"] == result["protect"] == result["authority"]["effects"] == []
 
 

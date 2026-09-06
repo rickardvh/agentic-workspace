@@ -108,19 +108,17 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
         ));
     }
     let mut results = vec![];
-    if !revision.is_empty() {
+    let snapshot_available = if !revision.is_empty() {
         let object = Command::new("git")
             .arg("-C")
             .arg(&input.target)
             .args(["cat-file", "-t", &revision])
             .output()
             .map_err(|e| CoreError::new(e.to_string()))?;
-        if !object.status.success() || object.stdout != b"commit\n" {
-            return Err(CoreError::new(
-                "instruction admission snapshot must resolve to a commit",
-            ));
-        }
-    }
+        object.status.success() && object.stdout == b"commit\n"
+    } else {
+        false
+    };
     let mut seen = BTreeSet::new();
     for observed in input.sources {
         let source = observed.reference;
@@ -139,7 +137,10 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
             ));
         }
         let mut row = json!({"source":{"reference":source}, "status":"unadmitted", "checks":[], "protect":[], "authority":{"effects":[],"target_patterns":[]}});
-        if !revision.is_empty() {
+        if !revision.is_empty() && !snapshot_available {
+            row["status"] = json!("unavailable");
+        }
+        if snapshot_available {
             let snapshot = Command::new("git")
                 .arg("-C")
                 .arg(&input.target)
