@@ -1707,10 +1707,12 @@ def test_known_agent_decision_survives_memory_to_native_ordinary_journey(shared_
             capture_output=True,
             check=True,
         )
-        return json.loads(result.stdout)["decision_packet"]["decision_context"]
+        return json.loads(result.stdout)["decision_packet"]
 
     configure()
-    fallback = start()
+    fallback_packet = start()
+    fallback = fallback_packet["decision_context"]
+    assert start()["identity"] == fallback_packet["identity"]
     assert fallback["reconciliation"][0]["status"] == "fallback"
     assert fallback["consequences"][0]["authority"]["actor"]["kind"] == "agent"
     native_source = tmp_path / "docs/decisions/source-admission.md"
@@ -1718,11 +1720,20 @@ def test_known_agent_decision_survives_memory_to_native_ordinary_journey(shared_
     with native_source.open("xb") as output:
         output.write(original)
     configure('decision_record_target = "docs/decisions"\ndecision_record_revision = "' + revision + '"\n')
-    assert start()["reconciliation"][0]["status"] == "pending"
+    pending_packet = start()
+    assert pending_packet["decision_context"]["reconciliation"][0]["status"] == "pending"
+    assert pending_packet["identity"] != fallback_packet["identity"]
     admitted_native = _commit_native(tmp_path)
     configure('decision_record_target = "docs/decisions"\ndecision_record_revision = "' + admitted_native + '"\n')
-    promoted = start()
+    promoted_packet = start()
+    promoted = promoted_packet["decision_context"]
+    assert promoted_packet["identity"] != pending_packet["identity"]
+    assert start()["identity"] == promoted_packet["identity"]
     assert promoted["reconciliation"][0]["status"] == "repo-native"
     assert promoted["consequences"][0]["material_revision"] == fallback["consequences"][0]["material_revision"]
     assert promoted["consequences"][0]["source"]["reference"] == "docs/decisions/source-admission.md"
+    native_source.write_text("unadmitted replacement", encoding="utf-8")
+    lost_packet = start()
+    assert lost_packet["decision_context"]["reconciliation"][0]["status"] == "pending"
+    assert lost_packet["identity"] != promoted_packet["identity"]
     assert source.read_bytes() == original
