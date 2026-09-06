@@ -1,6 +1,30 @@
 {
   "entries": [
     {
+      "checked_in_justification": "Temporary reconstruction disposition preserves the accepted salvage boundaries until corrected owners admit retained semantics.",
+      "editable_by_agents": true,
+      "format": "toml",
+      "generated": false,
+      "notes": "Syntax validation only; this disposition map does not grant domain authority or destructive readiness.",
+      "owner": "workspace-reconstruction",
+      "pattern": ".agentic-workspace/reconstruction/authority-and-salvage.toml",
+      "schema_or_validator": "parser: Python tomllib",
+      "status": "typed-validator-backed",
+      "storage_class": "diagnostic-fixture"
+    },
+    {
+      "checked_in_justification": "Shared Planning contract fixture proves source-current semantic admission across core bindings.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "notes": "Fixture data is conformance evidence, never live Planning authority.",
+      "owner": "workspace-runtime",
+      "pattern": "tests/vectors/planning_execplan.json",
+      "schema_or_validator": "validator: uv run pytest tests/test_shared_core.py -q",
+      "status": "typed-validator-backed",
+      "storage_class": "diagnostic-fixture"
+    },
+    {
       "checked_in_justification": "Bounded maintainer evidence retains the exact public release locator, resolver graph, and second-process result required for distribution closure review.",
       "editable_by_agents": true,
       "format": "json",
@@ -2550,7 +2574,7 @@
     {
       "checked_in_justification": "Generated TypeScript command-package resources are kept as files so executable adapter source stays thin and does not embed large JSON blocks.",
       "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
-      "max_bytes": 430000,
+      "max_bytes": 440000,
       "named_consumer": "generated TypeScript command-package resource loader",
       "ordinary_agent_route": "generated-surface drill-down only: agentic-workspace defaults --section root_cli_authority --format json",
       "pattern": "generated/*/typescript/resources/command_package.json",

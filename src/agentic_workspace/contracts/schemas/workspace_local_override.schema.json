@@ -543,8 +543,10 @@
                 "properties": {
                   "kind": {
                     "type": "string",
-                    "enum": ["internal", "process", "api", "manual"]
+                    "enum": ["internal", "process", "api", "manual", "native"]
                   },
+                  "adapter": {"type": "string", "minLength": 1},
+                  "parameters": {"type": "object", "additionalProperties": true},
                   "command": {
                     "type": "array",
                     "minItems": 1,
@@ -563,6 +565,11 @@
                 },
                 "additionalProperties": false,
                 "allOf": [
+                  {
+                    "if": {"properties": {"kind": {"const": "native"}}},
+                    "then": {"required": ["adapter", "parameters"], "not": {"anyOf": [{"required": ["command"]}, {"required": ["output_mode"]}]}},
+                    "else": {"not": {"anyOf": [{"required": ["adapter"]}, {"required": ["parameters"]}]}}
+                  },
                   {
                     "if": {"properties": {"kind": {"enum": ["process", "api"]}}},
                     "then": {"required": ["command"]}

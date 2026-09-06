@@ -44849,6 +44849,9 @@ def _assignment_implementation_gate_payload(
     selected_adapter_configured = (
         internal_transport_configured if selected_automatic_transport == "internal" else bool(configured_dispatch_command)
     )
+    selected_configuration = _as_dict(assignment_decision.get("selected_execution_configuration"))
+    if selected_configuration:
+        selected_adapter_configured = selected_configuration.get("constructible") is True
     automatic_transport_authorized = bool(
         selected_transport != "manual"
         and selected_automatic_transport
