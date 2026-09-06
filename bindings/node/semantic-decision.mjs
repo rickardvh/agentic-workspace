@@ -40,6 +40,10 @@ export function prepareRequest(publicRequest, currentWork, capabilityContract) {
   return request({prepare_request: {request: publicRequest, current_work: currentWork, capability_contract: capabilityContract}});
 }
 
+export function semanticRouteView(context) {
+  return request({semantic_route_view: context});
+}
+
 export function answerDecision(decision, consequenceId, answer, capabilityContract) {
   return request({answer_decision: {decision, question: consequenceId, answer, capability_contract: capabilityContract}});
 }

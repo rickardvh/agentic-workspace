@@ -227,6 +227,22 @@ Installed transports use their packaged native binary. In an editable source che
 
 ## Memory fallback and admitted native promotion
 
+The shared `semantic_route_view` host API accepts independently supplied current
+work and route declarations. It returns complete `public-request/v1` templates
+for branch discovery and agent selection. Public arguments contain only a branch
+and continuation cursor, or a posture and at most 16 exact leaf identities.
+Discovery returns at most 16 children per page; it does not rank or schedule them.
+The existing request validator binds the complete request, including work, source
+revision and arguments. A reused caller ID cannot reuse another request's answer.
+This owner declares no operations, effects, claims or custody authority.
+
+The repository source adapter can consume that same host context and public
+request through `semantic_routes`. Exact source scope still wins. Only current
+selected leaves can supply additional applicability; missing or stale selection
+does not invalidate exact applicability. This API is stateless and does not adopt
+the former local route-selection file. Ordinary startup transport and the
+remaining legacy route consumers require their own migration slices.
+
 The same source adapter accepts an independently admitted Memory snapshot via the trusted host's optional `[assurance.decision_record_fallback]` table (`archive`, `admitted_revision`). This is explicit source-owner admission, including Memory custody/provenance, not discovery or an owner label supplied by the note. No default directory, caller-selected owner, or new public request fields are added. A host without native admission can retain and selectively surface this typed source under Memory's fallback role.
 
 With a native owner configured, Rust feeds both independently read snapshots into the existing #3043 reconciliation contract. A current destination must contain the same stable identity and material revision before the consequence points to it. Missing/unadmitted/changed/different-value native sources leave the admitted fallback contribution visible with pending reconciliation. Later destination loss reopens that route. Physical copying, retirement, custody transfer and write operations are not performed by this reader.

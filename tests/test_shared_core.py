@@ -1776,3 +1776,115 @@ def test_decision_semantic_applicability_is_scoped(shared_core_binary: Path, sel
         assert projected["consequences"] == []
     else:
         assert projected == {}
+
+
+def _route_host() -> dict[str, Any]:
+    return {
+        "current_work": {"kind": "current-work", "id": "work-1"},
+        "source": {"revision": "sha256:" + "a" * 64, "routes": ["architecture/authority", "docs/style"]},
+    }
+
+
+def test_public_semantic_route_roundtrip_is_cross_surface(shared_core_binary: Path) -> None:
+    from agentic_workspace.decision import semantic_route_view
+
+    host = _route_host()
+    discovery = semantic_route_view(host)
+    request = deepcopy(discovery["requests"][1])
+    request["arguments"] = {"posture": "selected", "routes": ["architecture/authority"]}
+    host["request"] = request
+    selected = semantic_route_view(host)
+    assert selected == json.loads(_direct(shared_core_binary, {"semantic_route_view": host}).stdout)
+    node = subprocess.run(
+        [
+            "node",
+            "--input-type=module",
+            "-e",
+            "import {semanticRouteView} from './bindings/node/semantic-decision.mjs'; console.log(JSON.stringify(semanticRouteView(JSON.parse(process.argv[1]))));",
+            json.dumps(host),
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    assert json.loads(node.stdout) == selected
+    assert selected["decision"]["semantic_task_routes"]["routes"] == ["architecture/authority"]
+    assert selected["decision"]["blockers"] == []
+    assert selected["decision"]["claim_boundary"] == compile_source_decision([])["claim_boundary"]
+    request["arguments"] = {"posture": "none", "routes": []}
+    declined = semantic_route_view(host)
+    assert declined["request_identity"] != selected["request_identity"]
+    assert declined["decision"]["semantic_task_routes"]["posture"] == "none"
+
+
+@pytest.mark.parametrize("change", ["work", "source", "removed"])
+def test_public_semantic_route_staleness_is_scoped(shared_core_binary: Path, change: str) -> None:
+    from agentic_workspace.decision import semantic_route_view
+
+    host = _route_host()
+    request = semantic_route_view(host)["requests"][1]
+    request["arguments"] = {"posture": "selected", "routes": ["architecture/authority"]}
+    host["request"] = request
+    if change == "work":
+        host["current_work"]["id"] = "work-2"
+    elif change == "source":
+        host["source"]["revision"] = "sha256:" + "b" * 64
+    else:
+        host["source"]["routes"] = ["docs/style"]
+    result = semantic_route_view(host)
+    assert result["status"] == "stale"
+    assert result["decision"]["semantic_task_routes"]["status"] == "stale"
+    assert result["decision"]["semantic_task_routes"]["routes"] == []
+    assert result["decision"]["blockers"] == []
+
+
+@pytest.mark.parametrize("field", ["owner", "effects", "claims", "proof", "custody", "actor", "authority_effect"])
+def test_public_semantic_route_cannot_supply_authority(shared_core_binary: Path, field: str) -> None:
+    from agentic_workspace.decision import semantic_route_view
+
+    host = _route_host()
+    request = semantic_route_view(host)["requests"][1]
+    request["arguments"][field] = "human-authorized"
+    with pytest.raises(DecisionContractError):
+        semantic_route_view({**host, "request": request})
+
+
+def test_public_semantic_route_discovery_is_bounded_and_complete(shared_core_binary: Path) -> None:
+    from agentic_workspace.decision import semantic_route_view
+
+    host = _route_host()
+    host["source"]["routes"] = [f"work/choice-{index:02}" for index in range(35)]
+    result = semantic_route_view(host)
+    assert result["discovery"]["children"] == [{"id": "work", "leaf": False}]
+    request = result["requests"][0]
+    request["arguments"] = {"parent": "work"}
+    seen = []
+    while True:
+        page = semantic_route_view({**host, "request": request})["discovery"]
+        assert len(page["children"]) <= 16
+        seen.extend(child["id"] for child in page["children"])
+        if page["next_after"] is None:
+            break
+        request["arguments"]["after"] = page["next_after"]
+    assert seen == host["source"]["routes"]
+
+
+def test_repo_decision_consumes_public_route_without_path_match(shared_core_binary: Path, tmp_path: Path) -> None:
+    from agentic_workspace.decision import repository_decision_view, semantic_route_view
+
+    context, record = _native_archive(tmp_path)
+    record["semantic_routes"] = ["architecture/authority"]
+    _write_native(tmp_path / "design/choice.md", record)
+    context["admitted_revision"] = _commit_native(tmp_path)
+    context["applicable_scope"] = []
+    host = _route_host()
+    request = semantic_route_view(host)["requests"][1]
+    request["arguments"] = {"posture": "selected", "routes": ["architecture/authority"]}
+    host["request"] = request
+    result = repository_decision_view(**context, semantic_routes=host)
+    assert result["decision_context"]["consequences"][0]["id"] == record["id"]
+    host["current_work"]["id"] = "changed-work"
+    assert "decision_context" not in repository_decision_view(**context, semantic_routes=host)
+    context["applicable_scope"] = ["path:src/core.rs"]
+    assert repository_decision_view(**context, semantic_routes=host)["decision_context"]["consequences"]

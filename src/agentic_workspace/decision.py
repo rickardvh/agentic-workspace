@@ -1,5 +1,3 @@
-"""Thin Python transport to the shared Agentic Workspace semantic core."""
-
 from __future__ import annotations
 
 import json
@@ -106,11 +104,16 @@ def planning_view(context: Mapping[str, Any]) -> dict[str, Any]:
     return _request({"planning_view": context})
 
 
+def semantic_route_view(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"semantic_route_view": context})
+
+
 def reconcile_planning(context: Mapping[str, Any]) -> dict[str, Any]:
     return _request({"reconcile_planning": context})
 
 
 __all__ = [
+    "semantic_route_view",
     "normalize_decision_record",
     "DecisionContractError",
     "compile_source_decision",
@@ -133,7 +136,13 @@ def normalize_decision_record(record: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def repository_decision_view(
-    *, target: str, archive: str = "", admitted_revision: str = "", applicable_scope: list[str], fallback: Mapping[str, Any] | None = None
+    *,
+    target: str,
+    archive: str = "",
+    admitted_revision: str = "",
+    applicable_scope: list[str],
+    fallback: Mapping[str, Any] | None = None,
+    semantic_routes: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Trusted repository host/source-owner input, never public request fields."""
     return _request(
@@ -144,6 +153,7 @@ def repository_decision_view(
                 "admitted_revision": admitted_revision,
                 "applicable_scope": applicable_scope,
                 "fallback": dict(fallback) if fallback is not None else None,
+                "semantic_routes": semantic_routes,
             }
         }
     )

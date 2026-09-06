@@ -11,6 +11,11 @@ fn main() {
     };
     let result = if request
         .as_object()
+        .is_some_and(|v| v.len() == 1 && v.contains_key("semantic_route_view"))
+    {
+        agentic_workspace_core::semantic_routes::view(request["semantic_route_view"].clone())
+    } else if request
+        .as_object()
         .is_some_and(|item| item.len() == 1 && item.contains_key("repository_decision_view"))
     {
         agentic_workspace_core::decision_source::view(request["repository_decision_view"].clone())
