@@ -28,7 +28,7 @@ const direct = (input) => {
 test("Node binding executes the exact shared core", () => {
   for (const vector of vectors.cases) {
     const contract = vector.input.capability_contract ?? (authorityBearing(vector.input) ? capabilityContract : null);
-    assert.deepEqual(compileSourceDecision(vector.input.contributions, vector.input.intent, contract), direct({...vector.input, ...(contract && {capability_contract: contract})}), vector.id);
+    assert.deepEqual(compileSourceDecision(vector.input.contributions, vector.input.intent, contract, vector.input.decision_context ?? null), direct({...vector.input, ...(contract && {capability_contract: contract})}), vector.id);
   }
 });
 
