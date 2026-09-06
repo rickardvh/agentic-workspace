@@ -63,6 +63,7 @@ Repo-owned Agentic Workspace configuration stored in .agentic-workspace/config.t
 | `assurance.decision_record_fallback` | object | no |  | Independent Memory source-owner admission of a bounded decision archive snapshot and its semantic provenance; never a public request argument. |  |  |
 | `assurance.decision_record_fallback.archive` | string | yes |  | Exact repository-relative Memory source archive admitted by its host owner. |  |  |
 | `assurance.decision_record_fallback.admitted_revision` | string | yes |  | Immutable Git commit explicitly admitting this Memory snapshot and semantic provenance. |  |  |
+| `assurance.instruction_revision` | string | no |  | Trusted repository-owner admission of binding checks/protect in the exact scoped Markdown snapshot. Never inferred from HEAD, tracking, or instruction contents. |  |  |
 | `assurance.decision_record_revision` | string | no |  | Trusted source-owner admission of this exact archive Git commit, including semantic provenance. Never infer from HEAD, tracking or record actor strings. |  |  |
 | `assurance.decision_record_format` | string | no |  | Host-declared file format for durable decision records. | `"markdown"` |  |
 | `assurance.decision_record_template` | string | no |  | Optional host template id or repo-relative template path for decision scaffolds. | `"adr-lite"` |  |

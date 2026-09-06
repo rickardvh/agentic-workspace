@@ -442,6 +442,21 @@
       "type": "string",
       "pattern": "^[a-z0-9][a-z0-9-]*(/[a-z0-9][a-z0-9-]*)+$"
     },
+    "instruction_source_admission": {
+      "type": "object",
+      "description": "Trusted repository host input. The exact admitted snapshot supplies binding scopes; public callers cannot supply it as intention.",
+      "properties": {
+        "target": {"type": "string"},
+        "admitted_revision": {"type": ["string", "null"], "pattern": "^[0-9a-f]{40}$"},
+        "sources": {"type": "array", "maxItems": 64, "items": {
+          "type": "object", "properties": {
+            "reference": {"type": "string"},
+            "revision": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+          }, "required": ["reference", "revision"], "additionalProperties": false
+        }}
+      },
+      "required": ["target", "sources"], "additionalProperties": false
+    },
     "semantic_route_discovery": {
       "type": "object",
       "properties": {

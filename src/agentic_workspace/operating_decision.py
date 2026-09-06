@@ -3728,6 +3728,9 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
             changed_paths=[str(path) for path in _as_list(inputs.get("changed_paths"))],
             include_ir=True,
             evidence={str(key): bool(value) for key, value in _as_dict(inputs.get("instruction_evidence")).items()},
+            semantic_route_fact=_as_dict(_as_dict(inputs["semantic_route_result"].get("decision")).get("semantic_task_routes"))
+            if "semantic_route_result" in inputs
+            else None,
         )
         scoped_program = _as_dict(scoped_instruction_projection.pop("instruction_program", {}))
         instruction_program = {

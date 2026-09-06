@@ -11,6 +11,13 @@ fn main() {
     };
     let result = if request
         .as_object()
+        .is_some_and(|v| v.len() == 1 && v.contains_key("instruction_source_admission"))
+    {
+        agentic_workspace_core::instruction_source::view(
+            request["instruction_source_admission"].clone(),
+        )
+    } else if request
+        .as_object()
         .is_some_and(|v| v.len() == 1 && v.contains_key("semantic_route_view"))
     {
         agentic_workspace_core::semantic_routes::view(request["semantic_route_view"].clone())

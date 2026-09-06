@@ -621,6 +621,7 @@ class AssuranceConfig:
     test_data_policy: dict[str, Any]
     decision_record_target: str | None
     decision_record_revision: str | None
+    instruction_revision: str | None
     decision_record_fallback: dict[str, Any] | None
     decision_record_format: str | None
     decision_record_template: str | None
@@ -1695,6 +1696,7 @@ def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[As
         "test_data_policy",
         "decision_record_target",
         "decision_record_revision",
+        "instruction_revision",
         "decision_record_fallback",
         "decision_record_format",
         "decision_record_template",
@@ -1804,6 +1806,7 @@ def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[As
             closeout_postures=closeout_postures,
             test_data_policy={str(key): value for key, value in raw_test_data_policy.items()},
             decision_record_fallback=dict(raw_decision_fallback) if raw_decision_fallback is not None else None,
+            instruction_revision=str(raw_assurance["instruction_revision"]).strip() if raw_assurance.get("instruction_revision") else None,
             decision_record_revision=str(raw_assurance["decision_record_revision"]).strip()
             if raw_assurance.get("decision_record_revision")
             else None,

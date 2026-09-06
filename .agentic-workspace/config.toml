@@ -23,6 +23,9 @@ advanced_features = ["review_artifacts", "external_adapters"]
 cli_invoke = "uv run --frozen --active --no-sync python scripts/run_agentic_workspace.py"
 
 [assurance]
+# Repository-owner admission of binding checks/protect in this exact scoped
+# instruction snapshot. This grants obligations/restrictions, never proof success.
+instruction_revision = "a6ee404328744515ee004d526c0d58980daf517c"
 # Source-owner admission of this exact archive snapshot and its provenance.
 # Never advance automatically from HEAD or an ordinary client request.
 decision_record_target = "docs/decisions"

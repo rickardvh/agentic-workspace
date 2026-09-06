@@ -36,7 +36,7 @@ fn empty_context(scope: &[String]) -> Value {
 fn error(value: impl ToString) -> CoreError {
     CoreError::new(value.to_string())
 }
-fn relative(path: &str) -> Result<(), CoreError> {
+pub(crate) fn relative(path: &str) -> Result<(), CoreError> {
     if path.is_empty()
         || path.contains(['\\', ':', '\0', '\n'])
         || path
@@ -64,7 +64,7 @@ fn git(input: &Input, arguments: &[String]) -> Result<Vec<u8>, CoreError> {
     }
     Ok(output.stdout)
 }
-fn hash(bytes: &[u8]) -> String {
+pub(crate) fn hash(bytes: &[u8]) -> String {
     format!(
         "sha256:{:x}",
         Sha256::digest(
@@ -74,7 +74,7 @@ fn hash(bytes: &[u8]) -> String {
         )
     )
 }
-fn read(root: &Dir, path: &str) -> Result<Vec<u8>, CoreError> {
+pub(crate) fn read(root: &Dir, path: &str) -> Result<Vec<u8>, CoreError> {
     relative(path)?;
     let mut bytes = Vec::new();
     root.open(path)
