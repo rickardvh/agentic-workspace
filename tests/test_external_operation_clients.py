@@ -70,6 +70,96 @@ from agentic_workspace.workspace_runtime_proof import (
 ROOT = Path(__file__).resolve().parents[1]
 
 
+@pytest.mark.parametrize("runtime", ["python", "typescript"])
+def test_ordinary_configuration_choice_persists_and_source_change_blocks(tmp_path: Path, runtime: str) -> None:
+    from agentic_workspace.config import load_workspace_config
+    from agentic_workspace.workspace_runtime_core import _execution_posture_payload
+
+    _, invocation, _ = _prepare_shared_worktree_assignment(tmp_path, run_id="unrelated")
+    source = tmp_path / ".agentic-workspace/config.local.toml"
+    source.write_text("""schema_version = 1
+[delegation]
+assignment_policy = "required-best-fit"
+current_target = "orchestrator"
+transport_authority = "manual"
+[delegation_targets.orchestrator]
+target_id = "host:orchestrator"
+target_revision = "1"
+strength = "strong"
+location = "local"
+transports = [{kind = "internal"}]
+[delegation_targets.worker]
+target_id = "host:worker"
+target_revision = "1"
+strength = "strong"
+location = "external"
+transports = [{kind = "manual"}]
+""")
+    task = "Repair the bounded feature calculation."
+    from repo_planning_bootstrap import installer as planning_installer
+
+    plan = planning_installer._build_execplan_record_from_todo_item(
+        title=task,
+        item_id="feature",
+        status="in-progress",
+        why_now=task,
+        next_action="repair the calculation",
+        done_when="calculation is correct with proof",
+    )
+    plan_path = tmp_path / ".agentic-workspace/planning/execplans/feature.plan.json"
+    plan_path.parent.mkdir(parents=True)
+    plan_path.write_text(json.dumps(plan))
+    (tmp_path / ".agentic-workspace/planning/state.toml").write_text(
+        '[todo]\nactive_items = [{id = "feature", status = "in-progress", surface = ".agentic-workspace/planning/execplans/feature.plan.json"}]\nqueued_items = []\n'
+    )
+
+    def ordinary():
+        return _execution_posture_payload(
+            config=load_workspace_config(target_root=tmp_path), target_root=tmp_path, task_text=task, changed_paths=["src/feature.py"]
+        )
+
+    offers = ordinary()["assignment_decision"]["execution_configurations"]
+    chosen = next(row["configuration"] for row in offers["candidates"] if row["configuration"]["target"] == "worker")
+    values = {
+        "task": task,
+        "changed": ["src/feature.py"],
+        "transport": "manual",
+        "configuration_revision": offers["revision"],
+        "configuration_id": chosen["id"],
+    }
+
+    def export(arguments):
+        return (
+            _run_typescript_assignment(tmp_path, "export", arguments)
+            if runtime == "typescript"
+            else assignment_export(arguments, target=tmp_path, invocation=invocation)
+        )
+
+    before_dry_run = {p: p.read_bytes() for p in (tmp_path / ".agentic-workspace").rglob("*") if p.is_file()}
+    dry = export({**values, "dry_run": True})
+    assert dry["mutation_applied"] is False
+    assert before_dry_run == {p: p.read_bytes() for p in (tmp_path / ".agentic-workspace").rglob("*") if p.is_file()}
+    exported = export(values)
+    assert exported["status"] == "handoff-prepared", json.dumps(exported.get("failures"))
+    packet_ref = next(ref for ref in exported["artifact_refs"] if str(ref).endswith("packet.json"))
+    packet = json.loads((tmp_path / packet_ref).read_text())
+    assert packet["assignment_identity"]["dispatch_adapter"]["execution_configuration"] == chosen
+    assert ordinary()["assignment_decision"]["selected_execution_configuration"] == chosen
+    source.write_text(source.read_text().replace('target_revision = "1"', 'target_revision = "2"'))
+    before = {p: p.read_bytes() for p in (tmp_path / ".agentic-workspace/local/assignment-runs").rglob("*") if p.is_file()}
+    blocked = export(
+        {
+            "assignment_id": packet["assignment_id"],
+            "assignment_revision": packet["assignment_revision"],
+            "run_id": packet["run_id"],
+            "transport": "manual",
+        },
+    )
+    assert blocked["status"] == "blocked", blocked
+    assert any(item["reason"] == "assignment-configuration-source-stale" for item in blocked["failures"])
+    assert before == {p: p.read_bytes() for p in (tmp_path / ".agentic-workspace/local/assignment-runs").rglob("*") if p.is_file()}
+
+
 def test_assignment_status_is_exact_read_only_and_reports_current_stale_missing_and_cleaned_up_runs(tmp_path: Path) -> None:
     workspace = tmp_path / ".agentic-workspace"
     assignment_dir = workspace / "planning" / "assignments"
@@ -1995,6 +2085,14 @@ def _prepare_shared_worktree_assignment(
 def _run_typescript_assignment(target: Path, transition: str, values: dict[str, object]) -> dict[str, object]:
     arguments: list[str] = []
     for name, value in values.items():
+        if name == "dry_run":
+            if value:
+                arguments.append("--dry-run")
+            continue
+        if name == "changed" and isinstance(value, list):
+            for path in value:
+                arguments.extend(["--changed", str(path)])
+            continue
         arguments.extend([f"--{name.replace('_', '-')}", json.dumps(value) if isinstance(value, (dict, list)) else str(value)])
     completed = subprocess.run(
         [

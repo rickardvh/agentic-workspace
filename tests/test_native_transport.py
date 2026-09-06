@@ -162,7 +162,7 @@ def test_configured_process_and_native_remain_distinct_peer_options(tmp_path):
     profile = asdict(profiles[0])
     assert profile["execution_methods"] == ("cli",)
     profile["execution_configurations"] = [
-        {"eligible": True, "configuration": {"id": kind, "transport": "cli", "execution": {"adapter": transport}}}
+        {"eligible": True, "configuration": {"id": kind, "target": "worker", "transport": "cli", "execution": {"adapter": transport}}}
         for kind, transport in zip(("process", "native"), profile["transports"], strict=True)
     ]
     decision = assignment_decision_from_policy(
@@ -171,6 +171,89 @@ def test_configured_process_and_native_remain_distinct_peer_options(tmp_path):
     candidate = decision["candidate_scores"][0]
     assert [row["execution_configuration"]["id"] for row in candidate["transport_options"]] == ["process", "native"]
     assert candidate["selected_execution_configuration"]["id"] == "process"
+    policy = {"assignment_policy": {"value": "required-best-fit"}, "binding": {"enforceable": True}}
+    chosen = profile["execution_configurations"][1]["configuration"]
+    selected = assignment_decision_from_policy(
+        assignment_policy=policy,
+        runtime_resolution={"profile_recommendations": [profile], "capability_context": {"task_class": "implementation"}},
+        target_evidence={},
+        execution_choice=chosen,
+    )
+    assert selected["selected_execution_configuration"] == chosen
+    assert selected["assignment_decision_revision"] != decision["assignment_decision_revision"]
+    profile["proof_requirements"] = ["required-proof-missing"]
+    with pytest.raises(ValueError, match="owner-ineligible"):
+        assignment_decision_from_policy(
+            assignment_policy=policy, runtime_resolution={"profile_recommendations": [profile]}, target_evidence={}, execution_choice=chosen
+        )
+
+
+@pytest.mark.parametrize("prohibition", ["safety", "authority", "capability", "proof", "human-control"])
+def test_hard_ineligible_native_route_does_not_probe_provider(tmp_path, monkeypatch, prohibition):
+    from agentic_workspace.assignment_source import current_route_configurations
+
+    def unexpected(*args, **kwargs):
+        pytest.fail("hard-ineligible route must not invoke native discovery")
+
+    monkeypatch.setattr(native, "configuration_offers", unexpected)
+    policy = SimpleNamespace(
+        current_target="local", manual_transport_policy="allowed", transport_authority="automatic", safe_to_auto_run_commands=True
+    )
+    profile = {"name": "worker", "transports": [{"kind": "native", "method": "cli"}]}
+    if prohibition == "safety":
+        policy.safe_to_auto_run_commands = False
+    elif prohibition == "authority":
+        policy.transport_authority = "manual-only"
+    elif prohibition == "capability":
+        profile["capability_mismatch"] = True
+    elif prohibition == "proof":
+        profile["proof_requirements"] = ["required-proof-missing"]
+    else:
+        profile["human_control_modes"] = ["off"]
+    offers = current_route_configurations(tmp_path, [profile], policy, {"id": "work", "revision": "1"})
+    assert [row["configuration"]["transport"] for row in offers["candidates"]] == ["manual"]
+
+
+def test_configuration_authority_tracks_relevant_source_and_executable(tmp_path):
+    import sys
+    from dataclasses import asdict
+
+    from agentic_workspace.assignment_source import current_route_configurations, validate_current_configuration
+    from agentic_workspace.config import load_workspace_config
+
+    source = tmp_path / ".agentic-workspace/config.local.toml"
+    source.parent.mkdir()
+    original = """schema_version = 1
+[safety]
+safe_to_auto_run_commands = true
+[delegation]
+transport_authority = "automatic"
+assignment_policy = "required-best-fit"
+[delegation_targets.worker]
+target_id = "host:worker"
+target_revision = "1"
+strength = "strong"
+location = "external"
+transports = [{kind = "process", command = [EXE]}]
+""".replace("EXE", json.dumps(sys.executable))
+    source.write_text(original)
+    config = load_workspace_config(target_root=tmp_path)
+    profiles = [asdict(p) for p in config.local_override.delegation_targets]
+    work = {"id": "work", "revision": "1"}
+    offers = current_route_configurations(tmp_path, profiles, config.local_override, work)
+    configuration = offers["candidates"][0]["configuration"]
+    choice = {"revision": offers["revision"], "candidate": configuration["id"]}
+    assert current_route_configurations(tmp_path, profiles, config.local_override, work, choice)["selected"] == configuration
+    validate_current_configuration(tmp_path, configuration)
+    source.write_text(original + '\n[workspace]\ncli_invoke = "unrelated-launcher"\n')
+    validate_current_configuration(tmp_path, configuration)
+    source.write_text(original.replace('target_revision = "1"', 'target_revision = "2"'))
+    with pytest.raises(ValueError, match="source-stale"):
+        validate_current_configuration(tmp_path, configuration)
+    assert (
+        current_route_configurations(tmp_path, profiles, config.local_override, work, choice)["reason_code"]
+        == "assignment-configuration-choice-stale"
+    )
 
 
 def test_continuation_residue_cannot_invalidate_its_own_admission(tmp_path, monkeypatch, snapshot):

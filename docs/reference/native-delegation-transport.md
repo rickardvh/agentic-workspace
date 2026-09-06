@@ -109,3 +109,22 @@ not provider references or transcript content.
 `AW_NATIVE_TRANSPORT_HOST_MODES=fresh` runs only the unresolved fresh/cleanup
 boundary when previously collected resume/fork/restart proof remains applicable.
 Deterministic tests do not start provider processes or conversations.
+
+The ordinary assignment decision exposes `execution_configurations`, including
+the current offer revision and eligible configuration IDs. The acting orchestrator
+can pair `--configuration-revision` and `--configuration-id` on `assignment export`
+or `assignment dispatch` when materializing a bounded assignment. The supplied
+transport must agree with that configuration. The choice selects within human
+policy and owner eligibility; it cannot waive proof, change an existing assignment,
+or turn advisory policy into execution authority. It is retained on the existing
+Planning assignment, scoped to the same human intent and paths.
+
+New source-resolved configurations bind relevant local delegation, safety and
+selected-target facts. Admission rechecks those facts; process adapters also
+recheck executable identity. Stale choices block instead of selecting a different
+route. Unrelated workspace launcher settings do not change this source binding
+(the native adapter still has its additional conservative source fingerprint).
+The Python and generated TypeScript public clients accept the paired fields;
+TypeScript requires the repository source host for source-owned admission and
+fails closed when that host is unavailable. A dry-run does not materialize a
+Planning assignment. Hard-ineligible native routes skip provider discovery.

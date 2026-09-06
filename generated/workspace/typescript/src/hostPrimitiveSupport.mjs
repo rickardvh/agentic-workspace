@@ -2449,6 +2449,7 @@ function assignmentLifecycleApply(values, operationId) {
   const replacementRoot = resolve(String(values.target_root ?? values.target ?? '.'));
   let replacementId = assignmentText(values.assignment_id);
   let hasReplacement = false;
+  let hasConfigurationAuthority = false;
   const replacementRun = assignmentText(values.run_id);
   if (/^[a-zA-Z0-9_-]+$/.test(replacementRun)) {
     try {
@@ -2458,22 +2459,30 @@ function assignmentLifecycleApply(values, operationId) {
     } catch {}
   }
   if (replacementId && /^[a-zA-Z0-9_-]+$/.test(replacementId)) {
-    try { hasReplacement ||= Boolean(readJson(join(replacementRoot, '.agentic-workspace/planning/assignments', `${replacementId}.assignment.json`)).replacement_packet); } catch {}
+    try {
+      const assignment = readJson(join(replacementRoot, '.agentic-workspace/planning/assignments', `${replacementId}.assignment.json`));
+      hasReplacement ||= Boolean(assignment.replacement_packet);
+      hasConfigurationAuthority = Boolean(assignment.assignment_gate?.dispatch_adapter?.execution_configuration?.execution?.authority_revision);
+    } catch {}
   }
-  if (operationId === 'assignment.reassign' || hasReplacement) {
+  const hasConfigurationChoice = values.configuration_revision !== undefined || values.configuration_id !== undefined;
+  if (operationId === 'assignment.reassign' || hasReplacement || hasConfigurationChoice || hasConfigurationAuthority) {
     const sourceHost = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../scripts/run_agentic_workspace.py');
     const sourceRoot = resolve(dirname(sourceHost), '..');
     const python = join(sourceRoot, '.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
     if (existsSync(sourceHost) && existsSync(python)) {
       const args = [sourceHost, 'assignment', operationId.split('.').at(-1), '--target', replacementRoot, '--format', 'json'];
-      for (const key of ['assignment_id','assignment_revision','run_id','target_name','transport','reason','scope','expires_at','return_json','return_id','artifact_ref','task_proof_receipt_ref']) {
+      for (const key of ['assignment_id','assignment_revision','run_id','target_name','transport','reason','scope','expires_at','return_json','return_id','artifact_ref','task_proof_receipt_ref','configuration_revision','configuration_id','task']) {
         if (values[key] !== undefined && values[key] !== null && values[key] !== '') args.push(`--${key.replaceAll('_','-')}`, typeof values[key] === 'object' ? JSON.stringify(values[key]) : String(values[key]));
       }
+      const changedPaths = values.changed_paths ?? values.changed ?? [];
+      for (const changed of Array.isArray(changedPaths) ? changedPaths : [changedPaths]) args.push('--changed', String(changed));
       if (values.dry_run) args.push('--dry-run');
       const result = spawnSync(python, args, { cwd: sourceRoot, encoding:'utf8', windowsHide:true });
       if (result.status !== 0) throw new RuntimeError(result.stderr || 'Replacement source host unavailable');
       return JSON.parse(result.stdout);
     }
+    if (hasConfigurationChoice || hasConfigurationAuthority) throw new RuntimeError('configuration-choice-source-host-unavailable');
     if (hasReplacement) return { kind:'agentic-workspace/assignment-lifecycle-result/v1',operation_id:operationId,transition:operationId.split('.').at(-1),status:'blocked',outcome:'blocked',mutation_applied:false,artifact_refs:[],actions:[],reason_code:'replacement-source-host-unavailable',failures:[{reason:'replacement-source-host-unavailable',field:'host',recovery:'Use the configured source-owner host; do not fall back to the former target.'}] };
   }
   const transition = assignmentText(values.assignment_command) || String(operationId).split('.').at(-1);
