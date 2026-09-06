@@ -2113,7 +2113,7 @@ def load_delegation_target_profiles(
                 transport_payload: dict[str, Any] = {str(key): value for key, value in raw_transport.items()}
                 unknown_transport = sorted(set(transport_payload) - {"kind", "command", "output_mode", "timeout_seconds"})
                 if unknown_transport:
-                    warnings.append(f"{transport_path.as_posix()} contains unsupported field(s): {', '.join(unknown_transport)}.")
+                    raise WorkspaceUsageError(f"{transport_path.as_posix()} contains unsupported field(s): {', '.join(unknown_transport)}.")
                 kind = require_required_enum(
                     payload=transport_payload,
                     key="kind",

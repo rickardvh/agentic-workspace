@@ -703,6 +703,9 @@ def assignment_decision_from_policy(
         required_action = str(profile.get("required_action") or "")
         location = str(profile.get("location") or "")
         execution_methods = [str(item) for item in profile.get("execution_methods", []) if str(item).strip()]
+        route_rows = profile.get("execution_configurations")
+        if isinstance(route_rows, list):
+            execution_methods = [row["configuration"]["transport"] for row in route_rows if row["eligible"]]
         human_control_modes = [str(item) for item in profile.get("human_control_modes", []) if str(item).strip()]
         proof_requirements = [str(item) for item in profile.get("proof_requirements", []) if str(item).strip()]
         hard_rejection_reasons: list[str] = []
@@ -758,6 +761,10 @@ def assignment_decision_from_policy(
                 "record_count": sum(int(cost.get("record_count") or 0) for cost in matching_transport_costs),
                 "configured_order": method_index,
             }
+            if isinstance(route_rows, list):
+                transport_option["execution_configuration"] = next(
+                    row["configuration"] for row in route_rows if row["eligible"] and row["configuration"]["transport"] == method
+                )
             observed_fields = {field for cost in matching_transport_costs for field in _as_dict(cost.get("observed_context_cost"))}
             observed_context_cost = {}
             for field in sorted(observed_fields):
@@ -852,7 +859,9 @@ def assignment_decision_from_policy(
                 "ranking_reasons": [current_economic_reason],
                 "latency_class": latency_class,
                 "selected_transport": selected_transport or None,
+                "selected_execution_configuration": selected_transport_option.get("execution_configuration"),
                 "transport_options": transport_options,
+                "configuration_rejections": [row for row in (route_rows or []) if not row["eligible"]],
                 "required_action": required_action or "none",
                 "continuation": continuation,
                 "permitted_continuation": continuation,
@@ -1064,6 +1073,7 @@ def assignment_decision_from_policy(
         "selected_target_identity_ref": selected_candidate.get("target_identity_ref"),
         "selected_target_revision": selected_candidate.get("target_revision"),
         "selected_transport": selected_candidate.get("selected_transport"),
+        "selected_execution_configuration": selected_candidate.get("selected_execution_configuration"),
         "candidate_scores": candidate_scores,
         "human_intent": " ".join(human_intent.split()),
     }
@@ -1083,6 +1093,7 @@ def assignment_decision_from_policy(
         "selected_target_identity_ref": selected_candidate.get("target_identity_ref"),
         "selected_target_revision": selected_candidate.get("target_revision"),
         "selected_transport": selected_candidate.get("selected_transport"),
+        "selected_execution_configuration": selected_candidate.get("selected_execution_configuration"),
         "assignment_decision_revision": assignment_decision_revision,
         "task_class": requested_task_class or None,
         "scope_class": requested_scope_class or None,

@@ -110,3 +110,7 @@ export function repositoryDecisionView(context) {
 export function admitAssignmentPacket(context) {
   return request({admit_assignment_packet: context});
 }
+
+export function executionConfigurations(context) {
+  return request({execution_configurations: context});
+}

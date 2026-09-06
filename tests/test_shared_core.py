@@ -32,6 +32,104 @@ CAPABILITY_CONTRACT = json.loads((ROOT / "tests/vectors/capability_contract.json
 SCHEMA = json.loads((ROOT / "src/agentic_workspace/contracts/schemas/source_decision_input.schema.json").read_text(encoding="utf-8"))
 
 
+def test_configuration_choice_binds_every_material_fact(shared_core_binary: Path) -> None:
+    from agentic_workspace.decision import execution_configurations
+
+    candidate = {
+        "id": "worker:resume",
+        "target": "worker",
+        "transport": "process",
+        "capability_revision": "adapter-snapshot-1",
+        "current": True,
+        "authorized": True,
+        "safe": True,
+        "constructible": True,
+        "result_classes": ["text-patch"],
+        "proof_classes": ["worker-check"],
+        "independent_context": False,
+        "concurrency_available": True,
+        "execution": {"parameters": {"vendor-knob": "value"}, "continuity": {"mode": "resume", "reference": "opaque"}},
+    }
+    context = {
+        "work": {"id": "repair", "revision": "1"},
+        "required_result_classes": ["text-patch"],
+        "required_proof_classes": ["worker-check"],
+        "independent_context": False,
+        "candidates": [candidate],
+        "selection": None,
+    }
+    result = execution_configurations(context)
+    assert result["candidates"][0]["eligible"]
+    direct = _direct(shared_core_binary, {"execution_configurations": context})
+    assert json.loads(direct.stdout) == result
+    script = f"import {{executionConfigurations}} from {json.dumps((ROOT / 'bindings/node/semantic-decision.mjs').as_uri())}; console.log(JSON.stringify(executionConfigurations(JSON.parse(process.argv[1]))));"
+    node = subprocess.run(["node", "--input-type=module", "-e", script, json.dumps(context)], capture_output=True, text=True, check=False)
+    assert node.returncode == 0, node.stderr
+    assert json.loads(node.stdout) == result
+    context["selection"] = {"revision": result["revision"], "candidate": candidate["id"]}
+    assert execution_configurations(context)["selected"] == candidate
+    for field in ("current", "authorized", "safe", "constructible", "concurrency_available"):
+        changed = deepcopy(context)
+        changed["candidates"][0][field] = False
+        assert execution_configurations(changed)["reason_code"] == "assignment-configuration-choice-stale"
+        changed["selection"] = None
+        assert not execution_configurations(changed)["candidates"][0]["eligible"]
+    for field, value in (("capability_revision", "new"), ("execution", {"continuity": {"mode": "fork", "reference": "opaque"}})):
+        changed = deepcopy(context)
+        changed["candidates"][0][field] = value
+        assert execution_configurations(changed)["status"] == "blocked"
+    for field, value in (
+        ("work", {"id": "other", "revision": "1"}),
+        ("independent_context", True),
+        ("required_result_classes", ["binary"]),
+        ("required_proof_classes", ["independent-review"]),
+    ):
+        assert execution_configurations({**context, field: value})["status"] == "blocked"
+    with pytest.raises(DecisionContractError, match="unknown field"):
+        execution_configurations({**context, "policy_bypass": True})
+
+
+def test_ordinary_route_feasibility_keeps_manual_peer_and_safety_independent(tmp_path: Path) -> None:
+    from types import SimpleNamespace
+
+    from agentic_workspace.assignment_source import current_route_configurations
+    from agentic_workspace.target_evidence import assignment_decision_from_policy
+
+    profiles = [
+        {
+            "name": "worker",
+            "target_revision": "1",
+            "location": "external",
+            "score": 99,
+            "execution_methods": ["cli"],
+            "transports": [{"kind": "process", "method": "cli", "command": ["missing-aw-test-executable"]}],
+        }
+    ]
+    policy = SimpleNamespace(
+        current_target="orchestrator", manual_transport_policy="allowed", transport_authority="automatic", safe_to_auto_run_commands=False
+    )
+    routes = current_route_configurations(tmp_path, profiles, policy, {"id": "work", "revision": "1"})
+    assert routes["candidates"][0]["eligible"] is False
+    assert "independent-safety-ceiling" in routes["candidates"][0]["reasons"]
+    assert routes["candidates"][1]["eligible"] is True
+    profiles[0]["execution_configurations"] = routes["candidates"]
+    decision = assignment_decision_from_policy(
+        assignment_policy={"assignment_policy": {"value": "required-best-fit"}, "binding": {"enforceable": True}},
+        runtime_resolution={"profile_recommendations": profiles, "capability_context": {"task_class": "implementation"}},
+        target_evidence={},
+        human_intent="Fix a bounded parser defect",
+    )
+    assert decision["selected_target"] == "worker"
+    assert decision["selected_transport"] == "manual"
+    policy.manual_transport_policy = "disabled"
+    unavailable = current_route_configurations(tmp_path, profiles, policy, {"id": "work", "revision": "1"})
+    profiles[0]["execution_configurations"] = unavailable["candidates"]
+    blocked = assignment_decision_from_policy(
+        assignment_policy={}, runtime_resolution={"profile_recommendations": profiles}, target_evidence={}
+    )
+    assert not blocked["candidate_scores"][0]["eligible"]
+
+
 def _select(value: object, path: str) -> object:
     current = value
     for part in path.split("."):

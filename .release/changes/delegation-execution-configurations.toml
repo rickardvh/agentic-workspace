@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Bind execution configurations to current work and filter transport feasibility before assignment ranking."
