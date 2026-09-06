@@ -9201,7 +9201,7 @@ def _proof_selection_for_changed_paths(
                 for check in _list_payload(instruction.get("checks"))
                 if isinstance(check, dict) and check.get("kind") == "inline" and str(check.get("command") or "").strip()
             ]
-            if not instruction.get("applies") or not instruction.get("valid") or not commands:
+            if not instruction.get("applies") or not commands:
                 continue
             selected_lanes.append(
                 {

@@ -454,11 +454,12 @@ def test_protection_and_check_requirements_affect_the_existing_operating_decisio
     assert decision["status"] == "blocked"
 
 
-def test_inline_check_enters_the_existing_trusted_proof_route(tmp_path: Path) -> None:
+@pytest.mark.parametrize("recommendation", ["", "use:\n  - absent-recommendation\n"])
+def test_inline_check_enters_the_existing_trusted_proof_route(tmp_path: Path, recommendation: str) -> None:
     _write(
         tmp_path,
         "source-tests",
-        "---\npaths:\n  - src/**\nchecks:\n  - run: uv run pytest -q\n---\n\n# Source tests\n",
+        "---\npaths:\n  - src/**\nchecks:\n  - run: uv run pytest -q\n" + recommendation + "---\n\n# Source tests\n",
     )
 
     _admit(tmp_path)
