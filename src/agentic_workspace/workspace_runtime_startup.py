@@ -31,6 +31,8 @@ from agentic_workspace.operating_decision import (
 from agentic_workspace.orchestration import assignment_bound_entry
 from agentic_workspace.projection_reuse import (
     ProjectionProgress,
+    _operating_decision_revisions,
+    admitted_projection_revisions,
     enforce_projection_serialization_budget,
     lookup_projection_reuse,
     prepare_projection_reuse,
@@ -3593,14 +3595,18 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
     ):
         _emit_payload(payload=fast_selected, format_name=args.format)
         return 0
-    native: dict[str, Any] = {}
-    if config.assurance.decision_record_revision and config.assurance.decision_record_target and changed_paths:
-        native = repository_decision_view(
-            target=str(target_root),
-            archive=config.assurance.decision_record_target,
-            admitted_revision=config.assurance.decision_record_revision,
-            applicable_scope=[f"path:{path}" for path in _normalize_changed_paths(changed_paths)],
-        )
+
+    def read_decision_source() -> dict[str, Any]:
+        if config.assurance.decision_record_revision and config.assurance.decision_record_target and changed_paths:
+            return repository_decision_view(
+                target=str(target_root),
+                archive=config.assurance.decision_record_target,
+                admitted_revision=config.assurance.decision_record_revision,
+                applicable_scope=[f"path:{path}" for path in _normalize_changed_paths(changed_paths)],
+            )
+        return {}
+
+    native = read_decision_source()
     effective_profile = _start_profile_for_select(requested_profile=start_profile, select=selected_fields)
     reuse_query = {
         "profile": effective_profile,
@@ -3616,6 +3622,34 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
     }
     if "decision_context" in native:
         reuse_query["decision_context_revision"] = native["input_revision"]
+
+    def decision_revisions(query: dict[str, Any]) -> dict[str, Any]:
+        revisions = prepare_projection_reuse(root=target_root, operation="start", query=query, force_refresh=True).get(
+            "decision_input_revisions", {}
+        )
+        if "decision_context_revision" in query and not revisions:
+            # Cache-disabled surfaces still admit the complete decision input.
+            inputs, _, _ = admitted_projection_revisions(root=target_root, operation="start", query=query)
+            revisions = _operating_decision_revisions(inputs)
+        return revisions
+
+    def current_decision_revisions() -> dict[str, Any]:
+        query = dict(reuse_query)
+        query.pop("decision_context_revision", None)
+        current = read_decision_source() if "decision_context" in native else {}
+        if "decision_context" in current:
+            query["decision_context_revision"] = current["input_revision"]
+        query["setup_capability_freshness_revision"] = _setup_capability_freshness_revision(
+            target_root=target_root, selected_modules=list(config.enabled_modules)
+        )
+        return decision_revisions(query)
+
+    material_inputs = {
+        "task": str(task_text or ""),
+        "changed": changed_paths,
+        "target_root": str(target_root),
+        **({"decision_context": native["decision_context"]} if "decision_context" in native else {}),
+    }
     reuse_context: dict[str, Any] | None = None
     admitted_input: dict[str, Any] = {}
     payload: dict[str, Any]
@@ -3628,7 +3662,7 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
         admitted_input = admit_projection_surface_decision_input(
             input_revisions=reuse_context.get("decision_input_revisions", {}),
             consumer="start",
-            material_inputs={"task": str(task_text or ""), "changed": changed_paths, "target_root": str(target_root)},
+            material_inputs=material_inputs,
         )
         reused, reuse_context = lookup_projection_reuse(
             root=target_root,
@@ -3641,6 +3675,12 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
         if reused is not None:
             _emit_payload(payload=reused, format_name=args.format)
             return 0
+    if "decision_context" in native and not admitted_input:
+        admitted_input = admit_projection_surface_decision_input(
+            input_revisions=decision_revisions(reuse_query),
+            consumer="start",
+            material_inputs=material_inputs,
+        )
     with ProjectionProgress(root=target_root, operation="start") as progress:
 
         def build_start_projection(decision_input: dict[str, Any]) -> dict[str, Any]:
@@ -3665,18 +3705,7 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
                 builder=build_start_projection,
                 admitted_input=admitted_input,
                 consumer="start",
-                revalidate_input_revisions=lambda: prepare_projection_reuse(
-                    root=target_root,
-                    operation="start",
-                    query={
-                        **reuse_query,
-                        "setup_capability_freshness_revision": _setup_capability_freshness_revision(
-                            target_root=target_root,
-                            selected_modules=list(config.enabled_modules),
-                        ),
-                    },
-                    force_refresh=True,
-                ).get("decision_input_revisions", {}),
+                revalidate_input_revisions=current_decision_revisions,
             ),
             stage="build-start-projection",
         )
@@ -3706,11 +3735,6 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
     payload, operating_decision = finalize_projection_surface_operating_decision(
         payload=payload, admitted_input=admitted_input, consumer="start"
     )
-    if "decision_context" in native:
-        operating_decision["decision_context"] = native["decision_context"]
-        if isinstance(payload.get("decision_packet"), dict):
-            payload["decision_packet"]["decision_context"] = native["decision_context"]
-            payload["decision_packet"].setdefault("identity", {})["decision_context_revision"] = native["input_revision"]
     if payload.get("context") == {}:
         payload.pop("context")
     if _selector_requests(selected_fields, "source_guidance"):

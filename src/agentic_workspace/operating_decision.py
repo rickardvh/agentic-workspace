@@ -2749,6 +2749,7 @@ def compile_projection_surface_operating_decision(
         inputs={
             "consumer": consumer,
             "task": str(material_inputs.get("task") or ""),
+            **({"decision_context": material_inputs["decision_context"]} if "decision_context" in material_inputs else {}),
             "changed_paths": [str(path) for path in _as_list(material_inputs.get("changed"))],
             "target_root": str(material_inputs.get("target_root") or "") or None,
             "revisions": {
@@ -2886,6 +2887,13 @@ def bind_projection_surface_operating_decision(
     }
     if valid:
         _bind_instruction_claim_effects_to_projection(payload=payload, decision=operating_decision)
+        if "decision_context" in operating_decision and isinstance(payload.get("decision_packet"), dict):
+            payload["decision_packet"]["decision_context"] = operating_decision["decision_context"]
+            payload["decision_packet"]["identity"] = {
+                "revision": admitted_revision,
+                "decision_id": operating_decision["decision_id"],
+                "source_selector": "context.projection_decision_authority",
+            }
     if _as_dict(payload.get("decision_packet")).get("kind") == "agentic-workspace/ordinary-start-decision/v1":
         payload.pop("task_posture_packet", None)
     return payload
@@ -4092,6 +4100,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         "status": status,
         "input_revisions": input_revisions,
         "canonical_decision_input_revision": invocation_current_revision,
+        **({"decision_context": inputs["decision_context"]} if "decision_context" in inputs else {}),
         "context_authority_coverage": coverage,
         "context_authority_projection": context_authority_projection,
         "context_consequences": context_consequences,
