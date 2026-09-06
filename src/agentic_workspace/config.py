@@ -620,6 +620,7 @@ class AssuranceConfig:
     closeout_postures: tuple[AssuranceCloseoutPosture, ...]
     test_data_policy: dict[str, Any]
     decision_record_target: str | None
+    decision_record_revision: str | None
     decision_record_format: str | None
     decision_record_template: str | None
     decision_record_statuses: tuple[str, ...]
@@ -1692,6 +1693,7 @@ def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[As
         "closeout_postures",
         "test_data_policy",
         "decision_record_target",
+        "decision_record_revision",
         "decision_record_format",
         "decision_record_template",
         "decision_record_statuses",
@@ -1796,6 +1798,9 @@ def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[As
             domain_proof_lanes=domain_proof_lanes,
             closeout_postures=closeout_postures,
             test_data_policy={str(key): value for key, value in raw_test_data_policy.items()},
+            decision_record_revision=str(raw_assurance["decision_record_revision"]).strip()
+            if raw_assurance.get("decision_record_revision")
+            else None,
             decision_record_target=str(decision_record_target).strip() if decision_record_target is not None else None,
             decision_record_format=str(decision_record_format).strip() if decision_record_format is not None else None,
             decision_record_template=str(decision_record_template).strip() if decision_record_template is not None else None,

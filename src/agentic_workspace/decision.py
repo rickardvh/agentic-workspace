@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import json
-import os
 import subprocess
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
+
+from agentic_workspace.native_core import core_binary as native_core_binary
 
 
 class DecisionContractError(ValueError):
@@ -15,18 +16,10 @@ class DecisionContractError(ValueError):
 
 
 def _core_binary() -> Path:
-    configured = os.environ.get("AGENTIC_WORKSPACE_CORE_BINARY")
-    if configured:
-        path = Path(configured)
-    else:
-        name = "agentic-workspace-core.exe" if os.name == "nt" else "agentic-workspace-core"
-        path = Path(__file__).with_name("_native") / name
-    if not path.is_file():
-        raise DecisionContractError(
-            "shared Agentic Workspace core is unavailable; install a supported native package "
-            "or set AGENTIC_WORKSPACE_CORE_BINARY to the admitted core binary"
-        )
-    return path
+    try:
+        return native_core_binary()
+    except (OSError, RuntimeError) as error:
+        raise DecisionContractError(str(error)) from error
 
 
 def _request(payload: Mapping[str, Any]) -> dict[str, Any]:
@@ -137,3 +130,17 @@ __all__ = [
 
 def normalize_decision_record(record: Mapping[str, Any]) -> dict[str, Any]:
     return _request({"normalize_decision_record": record})
+
+
+def repository_decision_view(*, target: str, archive: str, admitted_revision: str, applicable_scope: list[str]) -> dict[str, Any]:
+    """Trusted repository host/source-owner input, never public request fields."""
+    return _request(
+        {
+            "repository_decision_view": {
+                "target": target,
+                "archive": archive,
+                "admitted_revision": admitted_revision,
+                "applicable_scope": applicable_scope,
+            }
+        }
+    )

@@ -190,7 +190,11 @@ def test_node_binding_executes_the_same_core(shared_core_binary: Path) -> None:
 
 def test_target_bindings_cannot_hide_reducer_semantics() -> None:
     forbidden = ("terminal", "settled", "blockers", "affects", "operation_id", "priority", "consequence_id")
-    for path in (ROOT / "src/agentic_workspace/decision.py", ROOT / "bindings/node/semantic-decision.mjs"):
+    for path in (
+        ROOT / "src/agentic_workspace/decision.py",
+        ROOT / "src/agentic_workspace/native_core.py",
+        ROOT / "bindings/node/semantic-decision.mjs",
+    ):
         source = path.read_text(encoding="utf-8")
         assert len(source.splitlines()) <= 160
         assert not any(token in source for token in forbidden)
@@ -1318,3 +1322,289 @@ def test_full_supersession_satisfies_known_decision_residue(shared_core_binary: 
     value = _compile({"contributions": [], "decision_context": context})["decision_context"]
     assert value["reconciliation"][0]["status"] == "superseded"
     assert [item["id"] for item in value["consequences"]] == [new["id"]]
+
+
+def _native_archive(tmp_path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
+    import hashlib
+
+    subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
+    (tmp_path / "authority.md").write_text("Human owner admits this bounded decision.\n", encoding="utf-8", newline="\n")
+    record = _material_decision()
+    record.pop("source")
+    record.pop("rationale_reference")
+    record["scope"] = ["path:src/core.rs"]
+    record["authority"]["basis"] = [
+        {
+            "owner": "repository",
+            "reference": "authority.md",
+            "revision": "sha256:" + hashlib.sha256((tmp_path / "authority.md").read_bytes()).hexdigest(),
+        }
+    ]
+    record["dependencies"] = []
+    record["context"] = []
+    (tmp_path / "design").mkdir()
+    _write_native(tmp_path / "design/choice.md", record)
+    revision = _commit_native(tmp_path)
+    return {"target": str(tmp_path), "archive": "design", "admitted_revision": revision, "applicable_scope": ["path:src/core.rs"]}, record
+
+
+def _write_native(path: Path, record: dict[str, Any]) -> None:
+    path.write_text(
+        "# Decision\n\n```aw-decision\n" + json.dumps(record, indent=2) + "\n```\n\nRationale stays in the repository.\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+
+
+def _commit_native(root: Path) -> str:
+    subprocess.run(["git", "add", "."], cwd=root, check=True, capture_output=True)
+    subprocess.run(
+        [
+            "git",
+            "-c",
+            "user.name=Test source owner",
+            "-c",
+            "user.email=owner@example.test",
+            "-c",
+            "commit.gpgsign=false",
+            "commit",
+            "-m",
+            "Admit decision source",
+        ],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+    return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
+
+
+def test_repo_native_source_is_current_relevant_and_transport_equivalent(shared_core_binary: Path, tmp_path: Path) -> None:
+    from agentic_workspace.decision import repository_decision_view
+
+    context, _ = _native_archive(tmp_path)
+    actual = repository_decision_view(**context)
+    assert actual == json.loads(_direct(shared_core_binary, {"repository_decision_view": context}).stdout)
+    node = subprocess.run(
+        [
+            "node",
+            "--input-type=module",
+            "-e",
+            "import { repositoryDecisionView } from './bindings/node/semantic-decision.mjs'; console.log(JSON.stringify(repositoryDecisionView(JSON.parse(process.argv[1]))));",
+            json.dumps(context),
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    assert json.loads(node.stdout) == actual
+    assert actual["decision_context"]["states"][0]["status"] == "current"
+    assert actual["decision_context"]["consequences"][0]["summary"] == "Python and Node transport owner facts to the shared reducer"
+    assert actual["status"] == "direct"
+    assert actual["claim_boundary"] == compile_source_decision([])["claim_boundary"]
+    context["applicable_scope"] = ["path:unrelated.txt"]
+    assert "decision_context" not in repository_decision_view(**context)
+    context["target"] = str(tmp_path / "does-not-exist")
+    context["applicable_scope"] = []
+    assert "decision_context" not in repository_decision_view(**context)
+
+
+@pytest.mark.parametrize("change", ["source", "authority", "forged-actor", "unadmitted-commit", "self-source", "effect-authority"])
+def test_native_source_never_self_admits_or_replays_stale_authority(shared_core_binary: Path, tmp_path: Path, change: str) -> None:
+    from agentic_workspace.decision import repository_decision_view
+
+    context, record = _native_archive(tmp_path)
+    if change == "authority":
+        (tmp_path / "authority.md").write_text("Changed authority", encoding="utf-8")
+        answer = repository_decision_view(**context)["decision_context"]
+        assert answer["states"][0]["status"] == "stale"
+        assert answer["consequences"] == []
+        return
+    if change == "source":
+        (tmp_path / "design/choice.md").write_text("Unreviewed replacement", encoding="utf-8")
+    elif change == "unadmitted-commit":
+        context["admitted_revision"] = "HEAD"
+    elif change == "forged-actor":
+        record["authority"]["actor"] = {"kind": "human", "id": "invented-human"}
+        _write_native(tmp_path / "design/choice.md", record)
+        _commit_native(tmp_path)  # A new commit alone never advances host admission.
+    else:
+        record["source" if change == "self-source" else "claims"] = {"allowed": ["complete"]}
+        _write_native(tmp_path / "design/choice.md", record)
+        context["admitted_revision"] = _commit_native(tmp_path)
+    with pytest.raises(DecisionContractError):
+        repository_decision_view(**context)
+
+
+@pytest.mark.parametrize("selected_scope", ["path:src/core.rs", "path:api.rs"])
+def test_native_supersession_uses_existing_contract_and_keeps_rationale(
+    shared_core_binary: Path, tmp_path: Path, selected_scope: str
+) -> None:
+    from agentic_workspace.decision import repository_decision_view
+
+    context, record = _native_archive(tmp_path)
+    old = repository_decision_view(**context)["decision_context"]["states"][0]
+    successor = deepcopy(record)
+    successor["id"] = "architecture/successor"
+    successor["scope"] = [*record["scope"], "path:api.rs"]
+    successor["consequence"] = "Use the replacement consequence"
+    successor["supersedes"] = [{"id": record["id"], "material_revision": old["material_revision"], "scope": record["scope"]}]
+    _write_native(tmp_path / "design/successor.md", successor)
+    context["admitted_revision"] = _commit_native(tmp_path)
+    context["applicable_scope"] = [selected_scope]
+    output = repository_decision_view(**context)["decision_context"]
+    assert [c["id"] for c in output["consequences"]] == [successor["id"]]
+    if selected_scope == "path:src/core.rs":
+        assert next(s for s in output["states"] if s["id"] == record["id"])["status"] == "superseded"
+    assert (tmp_path / "design/choice.md").is_file()
+
+
+@pytest.mark.parametrize("external_freshness", [False, True])
+def test_ordinary_start_uses_native_decision_and_rechecks_before_cache(
+    shared_core_binary: Path, tmp_path: Path, external_freshness: bool
+) -> None:
+    import sys
+
+    context, _ = _native_archive(tmp_path)
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.parent.mkdir()
+    config.write_text(
+        'schema_version = 1\n[modules]\nenabled = []\n[assurance]\ndecision_record_target = "design"\ndecision_record_revision = "'
+        + context["admitted_revision"]
+        + '"\n',
+        encoding="utf-8",
+    )
+
+    def start(path: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "from agentic_workspace.cli import main; raise SystemExit(main())",
+                "start",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                path,
+                "--task",
+                "bounded edit",
+                "--format",
+                "json",
+            ],
+            env={
+                **{key: value for key, value in os.environ.items() if key != "AGENTIC_WORKSPACE_CORE_BINARY"},
+                "AW_PROJECTION_EXTERNAL_STATE": "1" if external_freshness else "0",
+            },
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+    first = start("src/core.rs")
+    assert first.returncode == 0, first.stdout + first.stderr
+    packet = json.loads(first.stdout)["decision_packet"]
+    authority = packet["identity"]
+    assert authority["decision_id"].startswith("operating-decision:")
+    assert packet["decision_context"]["consequences"][0]["id"] == "architecture/shared-authority"
+    again = start("src/core.rs")
+    assert json.loads(again.stdout)["decision_packet"]["decision_context"] == packet["decision_context"]
+    assert json.loads(again.stdout)["decision_packet"]["identity"] == authority
+    quiet = start("unrelated.txt")
+    assert "decision_context" not in json.loads(quiet.stdout)["decision_packet"]
+    (tmp_path / "authority.md").write_text("Changed decisive authority", encoding="utf-8")
+    changed = start("src/core.rs")
+    changed_payload = json.loads(changed.stdout)
+    assert changed_payload["decision_packet"]["decision_context"]["states"][0]["status"] == "stale"
+    changed_authority = changed_payload["decision_packet"]["identity"]
+    assert changed_authority["decision_id"] != authority["decision_id"]
+    assert changed_authority["revision"] != authority["revision"]
+    (tmp_path / "design/choice.md").write_text("Unadmitted replacement", encoding="utf-8")
+    stale = start("src/core.rs")
+    assert stale.returncode != 0
+    assert "stale decision source" in stale.stdout + stale.stderr
+
+
+def test_native_exact_scope_does_not_depend_on_json_escaping(shared_core_binary: Path, tmp_path: Path) -> None:
+    from agentic_workspace.decision import repository_decision_view
+
+    context, _ = _native_archive(tmp_path)
+    path = tmp_path / "design/choice.md"
+    path.write_text(path.read_text(encoding="utf-8").replace("src/core.rs", "src\\/core.rs"), encoding="utf-8", newline="\n")
+    context["admitted_revision"] = _commit_native(tmp_path)
+    assert repository_decision_view(**context)["decision_context"]["states"][0]["status"] == "current"
+
+
+def test_source_node_transport_builds_current_core_without_binary_override(shared_core_binary: Path) -> None:
+    result = subprocess.run(
+        [
+            "node",
+            "--input-type=module",
+            "-e",
+            "import { compileSourceDecision } from './bindings/node/semantic-decision.mjs'; console.log(JSON.stringify(compileSourceDecision([])));",
+        ],
+        cwd=ROOT,
+        env={key: value for key, value in os.environ.items() if key != "AGENTIC_WORKSPACE_CORE_BINARY"},
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    assert json.loads(result.stdout) == compile_source_decision([])
+
+
+def test_source_context_is_bound_before_finalization(shared_core_binary: Path, tmp_path: Path) -> None:
+    """#2909: isolate source currentness from aggregate worktree/cache churn."""
+    from agentic_workspace.decision import repository_decision_view
+    from agentic_workspace.operating_decision import (
+        admit_projection_surface_decision_input,
+        consume_projection_surface_decision_input,
+        finalize_projection_surface_operating_decision,
+        revalidate_projection_surface_decision_input,
+    )
+    from agentic_workspace.projection_reuse import _operating_decision_revisions, admitted_projection_revisions
+
+    source, _ = _native_archive(tmp_path)
+    baseline, _, _ = admitted_projection_revisions(root=tmp_path, operation="start", query={"task": "edit"})
+
+    def admit(view: dict[str, Any]) -> dict[str, Any]:
+        revisions = dict(baseline)
+        material: dict[str, Any] = {"task": "edit"}
+        if "decision_context" in view:
+            revisions["decision_context_revision"] = view["input_revision"]
+            material["decision_context"] = view["decision_context"]
+        return admit_projection_surface_decision_input(
+            input_revisions=_operating_decision_revisions(revisions), consumer="start", material_inputs=material
+        )
+
+    def finish(admission: dict[str, Any], current: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+        payload = consume_projection_surface_decision_input(
+            payload={"decision_packet": {"kind": "agentic-workspace/ordinary-start-decision/v1"}},
+            admitted_input=admission,
+            consumer="start",
+        )
+        payload = revalidate_projection_surface_decision_input(
+            payload=payload, admitted_input=admission, current_input_revisions=current["input_revisions"], consumer="start"
+        )
+        return finalize_projection_surface_operating_decision(payload=payload, admitted_input=admission, consumer="start")
+
+    view = repository_decision_view(**source)
+    admitted = admit(view)
+    payload, decision = finish(admitted, admitted)
+    assert decision["decision_context"] == view["decision_context"]
+    assert payload["decision_packet"]["identity"]["decision_id"] == decision["decision_id"]
+    assert decision["admitted_input_revision"] == admitted["admitted_input_revision"]
+    (tmp_path / "unrelated.txt").write_text("unrelated source churn", encoding="utf-8")
+    unchanged = admit(repository_decision_view(**source))
+    assert finish(unchanged, unchanged)[1]["decision_id"] == decision["decision_id"]
+    quiet = admit(repository_decision_view(**{**source, "applicable_scope": ["path:unrelated.txt"]}))
+    assert quiet == admit({})
+    assert "decision_context" not in finish(quiet, quiet)[1]
+    (tmp_path / "authority.md").write_text("changed authority basis", encoding="utf-8")
+    stale = admit(repository_decision_view(**source))
+    stale_decision = finish(stale, stale)[1]
+    assert stale_decision["decision_id"] != decision["decision_id"]
+    assert stale_decision["decision_context"]["consequences"] == []
+    # A dependency change during materialization cannot finalize the old input.
+    rejected_payload, rejected = finish(admitted, stale)
+    assert rejected == {}
+    assert "decision_context" not in rejected_payload["decision_packet"]

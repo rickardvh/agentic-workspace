@@ -260,6 +260,11 @@
             "docs/decisions/"
           ]
         },
+        "decision_record_revision": {
+          "description": "Trusted source-owner admission of this exact archive Git commit, including semantic provenance. Never infer from HEAD, tracking or record actor strings.",
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{40}$"
+        },
         "decision_record_format": {
           "description": "Host-declared file format for durable decision records.",
           "type": "string",
