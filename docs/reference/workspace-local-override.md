@@ -37,6 +37,15 @@ Machine-local override schema for invocation preferences, delegation capabilitie
 | `delegation.down_routing_behavior` | enum `"never"`, `"bounded-mechanical-work"`, `"when-cheaper-safe-target-exists"` | no | `"never"` | Deprecated compatibility behavior scheduled for removal by 1.0.0. It derives from delegation.assignment_policy. |  |  |
 | `delegation.human_override_policy` | enum `"explicit-only"`, `"allowed-with-recorded-reason"`, `"disallowed"` | no | `"explicit-only"` | When a human override may replace the selected assignment and what provenance is required. |  |  |
 | `delegation.manual_transport_policy` | enum `"disabled"`, `"allowed"`, `"required-when-no-automatic-method"` | no | `"allowed"` | Deprecated compatibility policy scheduled for removal by 1.0.0. Manual fallback derives from delegation.transport_authority. |  |  |
+| `delegation.replacement` | object | no |  | One explicit human-owned answer for an exact current assignment and replacement execution configuration; never populated from ordinary command arguments. |  |  |
+| `delegation.replacement.assignment_id` | string | yes |  | Exact canonical assignment selected by this one source-owner answer. |  |  |
+| `delegation.replacement.assignment_revision` | string | yes |  | Exact current assignment revision; never a durable target preference. |  |  |
+| `delegation.replacement.work_id` | string | yes |  | Current work identity carried by the canonical assignment. |  |  |
+| `delegation.replacement.work_revision` | string | yes |  | Current material work revision carried by its responsible owner. |  |  |
+| `delegation.replacement.target` | string | yes |  | Exact configured execution target named in the returned unadmitted proposal. |  |  |
+| `delegation.replacement.transport` | string | yes |  | Exact constructible transport in the proposed execution configuration. |  |  |
+| `delegation.replacement.execution_revision` | string | yes |  | Digest of the exact host-enforceable execution configuration in the returned proposal. |  |  |
+| `delegation.replacement.packet_integrity` | string | yes |  | Exact predecessor packet seal, binding inherited scope, constraints, and return authority. |  |  |
 | `clarification` | object | no |  | Machine-local clarification control for when agents should stop for human input instead of guessing or widening scope. |  |  |
 | `clarification.mode` | enum `"ask-first"`, `"suggest"`, `"auto-continue"` | no | `"suggest"` | Local control mode for clarification: stop and ask before proceeding when intent is unclear, surface the ask-human option without forcing it, or continue with the best bounded interpretation unless a hard blocker is present. |  |  |
 | `setup` | object | no |  | Machine-local setup prompt preference and compact revision-bound continuation identity; canonical applied policy remains with its owning surface. |  |  |

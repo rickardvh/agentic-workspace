@@ -479,6 +479,7 @@ class MixedAgentLocalOverride:
     local_overlay: dict[str, Any]
     high_risk_overlay: dict[str, Any]
     field_sources: dict[str, str]
+    assignment_replacement: dict[str, str] | None = None
 
 
 @dataclass(frozen=True)
@@ -3227,6 +3228,25 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
             f"{', '.join(legacy_delegation_fields)} are deprecated and scheduled for removal by "
             f"{DELEGATION_LEGACY_COMPATIBILITY_REMOVAL_VERSION}; migrate to canonical assignment/transport/override fields."
         )
+    replacement = raw_delegation.get("replacement")
+    if replacement is not None:
+        fields = {
+            "assignment_id",
+            "assignment_revision",
+            "work_id",
+            "work_revision",
+            "target",
+            "transport",
+            "execution_revision",
+            "packet_integrity",
+        }
+        if (
+            not isinstance(replacement, dict)
+            or set(replacement) != fields
+            or any(not isinstance(v, str) or not v for v in replacement.values())
+            or any(c not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_" for c in replacement["assignment_id"])
+        ):
+            raise WorkspaceUsageError("delegation.replacement must be one exact revision-bound source-owner answer")
     unknown_delegation = sorted(
         set(raw_delegation)
         - {
@@ -3239,6 +3259,7 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
             "underfit_behavior",
             "down_routing_behavior",
             "human_override_policy",
+            "replacement",
             "manual_transport_policy",
         }
     )
@@ -3483,6 +3504,7 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
         underfit_behavior=underfit_behavior,
         down_routing_behavior=down_routing_behavior,
         human_override_policy=human_override_policy,
+        assignment_replacement=replacement,
         manual_transport_policy=manual_transport_policy,
         clarification_mode=clarification_mode,
         setup_prompt_disposition=setup_prompt_disposition,

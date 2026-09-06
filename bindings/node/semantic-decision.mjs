@@ -48,6 +48,10 @@ export function instructionSourceAdmission(context) {
   return request({instruction_source_admission: context});
 }
 
+export function replaceAssignment(context) {
+  return request({replace_assignment: context});
+}
+
 export function answerDecision(decision, consequenceId, answer, capabilityContract) {
   return request({answer_decision: {decision, question: consequenceId, answer, capability_contract: capabilityContract}});
 }
@@ -101,4 +105,8 @@ export function normalizeDecisionRecord(record) {
 // Trusted host/source-owner context, never caller-authored public request fields.
 export function repositoryDecisionView(context) {
   return request({repository_decision_view: context});
+}
+
+export function admitAssignmentPacket(context) {
+  return request({admit_assignment_packet: context});
 }

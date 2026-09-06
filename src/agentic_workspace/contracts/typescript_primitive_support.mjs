@@ -2420,6 +2420,39 @@ function assignmentResultContinuation(result) {
 }
 
 function assignmentLifecycleApply(values, operationId) {
+  // Replacement source admission belongs to the configured repository host.
+  // This generated adapter transports public intention only; it cannot rebuild
+  // host/source authority or duplicate the Rust replacement implementation.
+  const replacementRoot = resolve(String(values.target_root ?? values.target ?? '.'));
+  let replacementId = assignmentText(values.assignment_id);
+  let hasReplacement = false;
+  const replacementRun = assignmentText(values.run_id);
+  if (/^[a-zA-Z0-9_-]+$/.test(replacementRun)) {
+    try {
+      const state = readJson(join(replacementRoot, '.agentic-workspace/local/assignment-runs', replacementRun, 'state.json'));
+      replacementId ||= assignmentText(state.assignment_id);
+      hasReplacement = Boolean(state.assignment?.replacement);
+    } catch {}
+  }
+  if (replacementId && /^[a-zA-Z0-9_-]+$/.test(replacementId)) {
+    try { hasReplacement ||= Boolean(readJson(join(replacementRoot, '.agentic-workspace/planning/assignments', `${replacementId}.assignment.json`)).replacement_packet); } catch {}
+  }
+  if (operationId === 'assignment.reassign' || hasReplacement) {
+    const sourceHost = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../scripts/run_agentic_workspace.py');
+    const sourceRoot = resolve(dirname(sourceHost), '..');
+    const python = join(sourceRoot, '.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
+    if (existsSync(sourceHost) && existsSync(python)) {
+      const args = [sourceHost, 'assignment', operationId.split('.').at(-1), '--target', replacementRoot, '--format', 'json'];
+      for (const key of ['assignment_id','assignment_revision','run_id','target_name','transport','reason','scope','expires_at','return_json','return_id','artifact_ref','task_proof_receipt_ref']) {
+        if (values[key] !== undefined && values[key] !== null && values[key] !== '') args.push(`--${key.replaceAll('_','-')}`, typeof values[key] === 'object' ? JSON.stringify(values[key]) : String(values[key]));
+      }
+      if (values.dry_run) args.push('--dry-run');
+      const result = spawnSync(python, args, { cwd: sourceRoot, encoding:'utf8', windowsHide:true });
+      if (result.status !== 0) throw new RuntimeError(result.stderr || 'Replacement source host unavailable');
+      return JSON.parse(result.stdout);
+    }
+    if (hasReplacement) return { kind:'agentic-workspace/assignment-lifecycle-result/v1',operation_id:operationId,transition:operationId.split('.').at(-1),status:'blocked',outcome:'blocked',mutation_applied:false,artifact_refs:[],actions:[],reason_code:'replacement-source-host-unavailable',failures:[{reason:'replacement-source-host-unavailable',field:'host',recovery:'Use the configured source-owner host; do not fall back to the former target.'}] };
+  }
   const transition = assignmentText(values.assignment_command) || String(operationId).split('.').at(-1);
   const targetRoot = resolve(String(values.target_root ?? values.target ?? '.'));
   const assignmentId = assignmentText(values.assignment_id);

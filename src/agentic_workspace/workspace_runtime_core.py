@@ -45288,6 +45288,7 @@ def _assignment_primary_action_payload(
     cli_invoke: str,
     task_text: str = "",
     changed_paths: list[str] | None = None,
+    canonical_assignment: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Compile canonical assignment state into one revision-bound ordinary action."""
 
@@ -45309,7 +45310,7 @@ def _assignment_primary_action_payload(
         "implementation_allowed": assignment_gate.get("implementation_allowed"),
         "rule": "Canonical assignment is consumed once; post-assignment actors execute this action without reranking the target.",
     }
-    if execution_role != "orchestrator" or policy_value != "required-best-fit":
+    if not canonical_assignment and (execution_role != "orchestrator" or policy_value != "required-best-fit"):
         return base
     if gate_status == "assigned-current-target":
         return {
@@ -45355,7 +45356,7 @@ def _assignment_primary_action_payload(
     if gate_status not in {"dispatch-required", "handoff-required"} or target_root is None:
         return base
 
-    assignment = _current_assignment_lifecycle_record(target_root=target_root)
+    assignment = canonical_assignment or _current_assignment_lifecycle_record(target_root=target_root)
     live_plan_binding = _live_assignment_plan_binding(
         target_root=target_root,
         task_text=task_text,
@@ -45705,6 +45706,48 @@ def _execution_posture_payload(
         selected_target=target,
         delegation_control=delegation_control,
     )
+    # A source-admitted replacement is already an assignment-owner consequence.
+    # Ranking projections must not silently turn it back into the previous target.
+    current_assignment = (
+        _current_assignment_lifecycle_record(target_root=target_root, task_text=str(task_text or ""), changed_paths=changed_paths)
+        if target_root is not None
+        else {}
+    )
+    replacement = _as_dict(current_assignment.get("replacement_packet"))
+    replacement_identity = _as_dict(replacement.get("assignment_identity"))
+    if (
+        target_root is not None
+        and replacement
+        and " ".join(str(replacement_identity.get("human_intent") or "").split()) == " ".join(str(task_text or "").split())
+        and sorted(replacement_identity.get("allowed_paths") or []) == sorted(changed_paths)
+    ):
+        from agentic_workspace.assignment_source import current_replacement
+
+        materialize_assignment = False
+        assignment_gate = dict(current_assignment["assignment_gate"])
+        target = next(
+            (row for row in runtime_resolution.get("profile_recommendations", []) if row.get("name") == replacement["target"]),
+            {"name": replacement["target"]},
+        )
+        assignment_decision = {
+            **assignment_decision,
+            "selected_target": replacement["target"],
+            "selected_target_identity_ref": replacement_identity["target_identity_ref"],
+            "assignment_decision_revision": replacement["assignment_revision"],
+            "decision": "assign-best-fit",
+        }
+        try:
+            current_replacement(
+                target_root, replacement, {"id": replacement_identity["slice_id"], "revision": replacement_identity["plan_revision"]}
+            )
+        except (ValueError, OSError, KeyError) as error:
+            assignment_gate = {
+                **assignment_gate,
+                "status": "blocked",
+                "implementation_allowed": False,
+                "required_next_action": str(error),
+                "silent_local_fallback_allowed": False,
+            }
     recommendation = runtime_resolution["recommendation"]
     if recommendation == "stay-local":
         quality_tradeoff = "Stay direct when delegation overhead is not justified or local bounded execution is sufficient."
@@ -45949,6 +45992,7 @@ def _execution_posture_payload(
         cli_invoke=config.cli_invoke,
         task_text=str(task_text or ""),
         changed_paths=changed_paths,
+        canonical_assignment=current_assignment if replacement and not materialize_assignment else None,
     )
     task_assignment_disposition = _task_assignment_disposition_payload(
         assignment_decision=assignment_decision,
@@ -45957,6 +46001,7 @@ def _execution_posture_payload(
         effective_orchestration=effective_orchestration,
         decomposition_delegation=decomposition_delegation,
         delegation_decision=delegation_decision,
+        binding_replacement=bool(replacement),
     )
     return {
         "kind": "agentic-workspace/execution-posture/v1",
@@ -46044,6 +46089,7 @@ def _task_assignment_disposition_payload(
     effective_orchestration: dict[str, Any],
     decomposition_delegation: dict[str, Any] | None = None,
     delegation_decision: dict[str, Any] | None = None,
+    binding_replacement: bool = False,
 ) -> dict[str, Any]:
     orchestration_assignment = _as_dict(effective_orchestration.get("assignment"))
     binding_orchestrator = (
@@ -46066,6 +46112,9 @@ def _task_assignment_disposition_payload(
     elif action_status == "direct-current-target":
         outcome = "execute-here"
         evaluated_state = "evaluated-local"
+    elif binding_replacement:
+        outcome = "delegate-bounded-slice" if action_status in {"ready", "reconciliation-required"} else "blocked-unavailable"
+        evaluated_state = "delegated" if outcome == "delegate-bounded-slice" else "transport-blocked"
     elif not binding_orchestrator and orchestration_assignment.get("policy") == "local-preferred":
         # The absence of a configured assignment target is the ordinary quiet
         # local case, not an unavailable child transport. Mandatory child
@@ -66252,7 +66301,9 @@ def _final_response_terminal_contract(*, closeout_trust: dict[str, Any], residue
     )
 
 
-def _current_assignment_lifecycle_record(*, target_root: Path) -> dict[str, Any]:
+def _current_assignment_lifecycle_record(
+    *, target_root: Path, task_text: str | None = None, changed_paths: list[str] | None = None
+) -> dict[str, Any]:
     assignment_root = target_root / ".agentic-workspace" / "planning" / "assignments"
     if not assignment_root.exists():
         return {}
@@ -66264,6 +66315,14 @@ def _current_assignment_lifecycle_record(*, target_root: Path) -> dict[str, Any]
             continue
         if not isinstance(payload, dict):
             continue
+        if task_text is not None:
+            identity = _as_dict(_as_dict(payload.get("replacement_packet")).get("assignment_identity"))
+            if (
+                payload.get("status") != "current"
+                or " ".join(str(identity.get("human_intent") or "").split()) != " ".join(task_text.split())
+                or sorted(identity.get("allowed_paths") or []) != sorted(changed_paths or [])
+            ):
+                continue
         attempt = _as_dict(payload.get("current_attempt"))
         observed = str(attempt.get("updated_at") or payload.get("updated_at") or payload.get("created_at") or "").strip()
         status_rank = "1" if str(payload.get("status") or "").strip() == "current" else "0"
