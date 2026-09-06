@@ -11,6 +11,16 @@ fn main() {
     };
     let result = if request
         .as_object()
+        .is_some_and(|v| v.len() == 1 && v.contains_key("replace_assignment"))
+    {
+        agentic_workspace_core::assignment::replace(request["replace_assignment"].clone())
+    } else if request
+        .as_object()
+        .is_some_and(|v| v.len() == 1 && v.contains_key("admit_assignment_packet"))
+    {
+        agentic_workspace_core::assignment::admit(request["admit_assignment_packet"].clone())
+    } else if request
+        .as_object()
         .is_some_and(|v| v.len() == 1 && v.contains_key("instruction_source_admission"))
     {
         agentic_workspace_core::instruction_source::view(

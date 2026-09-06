@@ -197,6 +197,63 @@
           "deprecated": true,
           "x-removal-version": "1.0.0",
           "description": "Deprecated compatibility policy scheduled for removal by 1.0.0. Manual fallback derives from delegation.transport_authority."
+        },
+        "replacement": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "assignment_id",
+            "assignment_revision",
+            "work_id",
+            "work_revision",
+            "target",
+            "transport",
+            "execution_revision",
+            "packet_integrity"
+          ],
+          "properties": {
+            "assignment_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Exact canonical assignment selected by this one source-owner answer."
+            },
+            "assignment_revision": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Exact current assignment revision; never a durable target preference."
+            },
+            "work_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Current work identity carried by the canonical assignment."
+            },
+            "work_revision": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Current material work revision carried by its responsible owner."
+            },
+            "target": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Exact configured execution target named in the returned unadmitted proposal."
+            },
+            "transport": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Exact constructible transport in the proposed execution configuration."
+            },
+            "execution_revision": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Digest of the exact host-enforceable execution configuration in the returned proposal."
+            },
+            "packet_integrity": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Exact predecessor packet seal, binding inherited scope, constraints, and return authority."
+            }
+          },
+          "description": "One explicit human-owned answer for an exact current assignment and replacement execution configuration; never populated from ordinary command arguments."
         }
       },
       "additionalProperties": false,

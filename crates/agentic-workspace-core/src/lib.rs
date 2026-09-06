@@ -1,3 +1,4 @@
+pub mod assignment;
 pub mod attempt;
 pub mod attempt_store;
 pub mod continuity;

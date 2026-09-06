@@ -108,6 +108,11 @@ def instruction_source_admission(context: Mapping[str, Any]) -> dict[str, Any]:
     return _request({"instruction_source_admission": context})
 
 
+def replace_assignment(context: Mapping[str, Any]) -> dict[str, Any]:
+    """Trusted host API; ordinary commands cannot supply admitted source facts."""
+    return _request({"replace_assignment": context})
+
+
 def reconcile_planning(context: Mapping[str, Any]) -> dict[str, Any]:
     return _request({"reconcile_planning": context})
 
@@ -157,3 +162,7 @@ def repository_decision_view(
             }
         }
     )
+
+
+def admit_assignment_packet(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"admit_assignment_packet": context})

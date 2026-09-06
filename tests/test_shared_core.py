@@ -194,7 +194,7 @@ def test_target_bindings_cannot_hide_reducer_semantics() -> None:
         ROOT / "bindings/node/semantic-decision.mjs",
     ):
         source = path.read_text(encoding="utf-8")
-        assert len(source.splitlines()) <= 160
+        assert len(source.splitlines()) <= 180  # Bounded thin projections, including assignment admission.
         assert not any(token in source for token in forbidden)
 
 
@@ -2147,3 +2147,120 @@ def test_generated_node_instruction_declarations_are_not_binding(tmp_path: Path)
     row = json.loads(result.stdout)["instructions"][0]
     assert row["checks"] == row["protect"] == []
     assert row["binding_admission"]["status"] == "unavailable-in-generated-typescript-host"
+
+
+@pytest.mark.parametrize("transport", ["manual", "internal"])
+def test_assignment_replacement_authority_and_cross_surface_currentness(tmp_path: Path, shared_core_binary: Path, transport: str) -> None:
+    """#2909: source-owner inputs are distinct from public request intention."""
+    from tests.test_external_operation_clients import _prepare_shared_worktree_assignment
+
+    from agentic_workspace.decision import admit_assignment_packet, replace_assignment
+
+    _prepare_shared_worktree_assignment(tmp_path, run_id="original-run")
+    packet = json.loads((tmp_path / ".agentic-workspace/local/assignment-runs/original-run/export/packet.json").read_text())
+    source = {"reference": "configured-human-source", "revision": "source-1"}
+    work = {"id": "slice-1", "revision": "plan-rev-1"}
+    execution = {
+        "target": "codex_sol",
+        "target_identity_ref": "user-local:codex-sol",
+        "target_revision": "gpt-5.6-sol",
+        "transport": transport,
+        "adapter": {"kind": transport, "execution_methods": [transport], "host_parameter": "exact host-enforced value"},
+    }
+    admission = {
+        "assignment_id": packet["assignment_id"],
+        "assignment_revision": packet["assignment_revision"],
+        "packet_integrity": packet["packet_integrity"],
+        "work": work,
+        "source": source,
+        "execution": execution,
+    }
+    context = {
+        "current": packet,
+        "work": work,
+        "source": source,
+        "execution": execution,
+        "admission": admission,
+        "request": {"assignment_revision": packet["assignment_revision"], "target": "codex_sol", "transport": transport},
+    }
+    context["eligibility"] = {
+        "owner": "assignment",
+        "eligible": True,
+        "work": work,
+        "execution": execution,
+        "packet_integrity": packet["packet_integrity"],
+    }
+    original = deepcopy(packet)
+    result = replace_assignment(context)
+    direct = _direct(shared_core_binary, {"replace_assignment": context})
+    assert direct.returncode == 0, direct.stderr
+    assert json.loads(direct.stdout) == result
+    script = f"import {{replaceAssignment}} from {json.dumps((ROOT / 'bindings/node/semantic-decision.mjs').as_uri())}; console.log(JSON.stringify(replaceAssignment(JSON.parse(process.argv[1]))));"
+    node = subprocess.run(["node", "--input-type=module", "-e", script, json.dumps(context)], capture_output=True, text=True, check=False)
+    assert node.returncode == 0, node.stderr
+    assert json.loads(node.stdout) == result
+    assert result["status"] == "replaced"
+    replacement = result["packet"]
+    assert packet == original
+    assert replacement["target"] == "codex_sol"
+    assert replacement["packet_integrity"] != packet["packet_integrity"]
+    current = {"packet": replacement, "canonical": replacement, "work": work, "source": source, "execution": execution}
+    assert admit_assignment_packet(current)["status"] == "current"
+    assert admit_assignment_packet({**current, "packet": packet})["status"] == "blocked"
+    for path in [("work", "revision"), ("source", "revision"), ("execution", "target_revision"), ("request", "assignment_revision")]:
+        stale = deepcopy(context)
+        stale[path[0]] = {**stale[path[0]], path[1]: "changed"}
+        assert replace_assignment(stale)["status"] == "blocked", path
+    missing = {**context, "admission": None}
+    assert replace_assignment(missing)["reason_code"] == "assignment-override-authority-unavailable"
+    forged = deepcopy(context)
+    forged["current"]["assignment_identity"]["allowed_paths"] = ["**"]
+    assert replace_assignment(forged)["status"] == "blocked"
+    later = {**context, "current": replacement}
+    assert replace_assignment(later)["status"] == "blocked"
+    widened = deepcopy(current)
+    widened["packet"]["scope"] = ["**"]
+    assert admit_assignment_packet(widened)["status"] == "blocked"
+
+    malformed = deepcopy(current)
+    malformed["packet"]["return_contract"] = "not a return contract"
+    assert admit_assignment_packet(malformed)["status"] == "blocked"
+
+    for key, value in (("eligible", False), ("work", {"id": "other", "revision": "new"}), ("execution", {"target": "other"})):
+        rejected = {**context, "eligibility": {**context["eligibility"], key: value}}
+        assert replace_assignment(rejected)["status"] == "blocked"
+    assert replace_assignment({**context, "eligibility": None})["reason_code"] == "assignment-replacement-eligibility-unavailable"
+
+
+@pytest.mark.parametrize("constraint", ["capability", "proof", "human-control", "continuation"])
+def test_replacement_consumes_full_assignment_owner_eligibility(constraint: str) -> None:
+    """#2909: a constructible target is still subject to every owner hard gate."""
+    from agentic_workspace.target_evidence import assignment_decision_from_policy, replacement_eligibility
+
+    profile = {"name": "worker", "target_id": "host:worker", "target_revision": "v1", "location": "local", "execution_methods": ["cli"]}
+    if constraint == "capability":
+        profile["capability_mismatch"] = True
+    if constraint == "proof":
+        profile["proof_requirements"] = ["required-proof-missing"]
+    if constraint == "human-control":
+        profile["human_control_modes"] = ["off"]
+    decision = assignment_decision_from_policy(
+        assignment_policy={}, runtime_resolution={"profile_recommendations": [profile]}, target_evidence={}
+    )
+    if constraint == "continuation":
+        decision["candidate_scores"][0]["permitted_continuation"] = "unsupported-result-class"
+    execution = {"target": "worker", "target_identity_ref": "host:worker", "target_revision": "v1", "transport": "cli"}
+    admission = replacement_eligibility(
+        decision=decision, work={"id": "work", "revision": "v1"}, execution=execution, packet_integrity="seal"
+    )
+    assert admission["eligible"] is False
+    assert admission["candidate"]["eligibility"] == decision["candidate_scores"][0]["eligibility"]
+
+    changed_ranking = deepcopy(decision)
+    changed_ranking["candidate_scores"][0]["score"] = 100000
+    assert (
+        replacement_eligibility(
+            decision=changed_ranking, work={"id": "work", "revision": "v1"}, execution=execution, packet_integrity="seal"
+        )
+        == admission
+    )
