@@ -1450,7 +1450,9 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
                     {
                         "reason": result["reason_code"],
                         "field": "host.assignment_override_admission",
-                        "recovery": "Resolve the current local-config owner replacement answer; command fields cannot supply authority.",
+                        "recovery": "Resolve the current assignment owner's eligibility requirements; a source answer cannot waive them."
+                        if result["reason_code"] in {"assignment-replacement-ineligible", "assignment-replacement-eligibility-unavailable"}
+                        else "Resolve the current local-config owner replacement answer; command fields cannot supply authority.",
                     }
                 )
             else:
@@ -1500,8 +1502,7 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
                 }
                 canonical["current_attempt"] = {"run_id": packet["run_id"], "owner": packet["target"], "status": "selected"}
                 proof_path = _resolve_inside(target_root, authorities["proof_receipt_ref"])
-                proof = dict(authorities["structural_proof_receipt"])
-                proof["assignment_revision"] = packet["assignment_revision"]
+                proof = _assignment_mapping(result.get("structural_proof_receipt"))
                 # Existing owner paths only. The old packet and run stay intact.
                 writes = {proof_path: proof, canonical_path: canonical}
                 artifact_paths.extend(writes)
@@ -1698,7 +1699,7 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
     from agentic_workspace.orchestration import reconcile_action_result
 
     result["next_current_continuation"] = reconcile_action_result(result=result)
-    if transition == "reassign" and failures and prior:
+    if transition == "reassign" and failures and prior and failures[0]["reason"] == "assignment-override-authority-unavailable":
         from agentic_workspace.assignment_source import replacement_offer
 
         try:

@@ -11126,7 +11126,7 @@ def _minimal_module_footprint_report(
             "when the compact summary is insufficient.\n\n"
             "## Meaning Boundary\n\n"
             "`planning_record` is the canonical active planning record and machine-readable state. Compact prose answers "
-            "questions such as ‘What should I do next?’; raw execplan detail is the fallback for maintenance or omitted "
+            "questions such as â€˜What should I do next?â€™; raw execplan detail is the fallback for maintenance or omitted "
             "evidence. Preserve the `resumable_contract` identity across summary, handoff, and closeout.\n",
             "create the bounded-owner Planning anchor without a repository-global state aggregate",
         )
@@ -20728,13 +20728,13 @@ def _operating_loop_text_lines(packet: dict[str, Any] | None) -> list[str]:
     required_text = ",".join((str(item) for item in required)) or "none"
     return [
         "loop: "
-        f"Memory {memory.get('state', 'not_applicable')} · "
-        f"Planning {planning.get('state', 'none')} · "
+        f"Memory {memory.get('state', 'not_applicable')} Â· "
+        f"Planning {planning.get('state', 'none')} Â· "
         f"Verification {verification.get('state', 'proof_not_required')}",
         "closeout: "
-        f"{loop.get('closeout_state')} · "
-        f"claim {loop.get('safe_claim')} · "
-        f"owner {loop.get('residue_owner')} · "
+        f"{loop.get('closeout_state')} Â· "
+        f"claim {loop.get('safe_claim')} Â· "
+        f"owner {loop.get('residue_owner')} Â· "
         f"required {required_text}",
     ]
 
@@ -20751,7 +20751,7 @@ def _emit_implement_text(payload: dict[str, Any]) -> None:
         effects = _as_dict(decision.get("effects"))
         print(
             "effects: "
-            f"implementation_allowed={str(bool(effects.get('implementation_allowed'))).lower()} · "
+            f"implementation_allowed={str(bool(effects.get('implementation_allowed'))).lower()} Â· "
             f"outside_scope={effects.get('outside_working_set', 'requires-explicit-authority')}"
         )
         proof = _as_dict(decision.get("proof"))
@@ -45570,24 +45570,19 @@ def _assignment_primary_action_payload(
     }
 
 
-def _execution_posture_payload(
-    *,
-    config: WorkspaceConfig,
-    changed_paths: list[str],
-    task_text: str | None,
-    target_root: Path | None = None,
-    materialize_assignment: bool = False,
-) -> dict[str, Any]:
+def _current_assignment_selection(
+    *, config: WorkspaceConfig, changed_paths: list[str], task_text: str | None, work_identity: dict[str, Any] | None = None
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
+    """One current owner evaluation for ordinary selection and replacement admission."""
     posture = _capability_posture_for_implementation(changed_paths=changed_paths, task_text=task_text)
+    if work_identity is not None:
+        # Existing canonical work classes outrank fresh text-based discovery.
+        posture = {
+            **posture,
+            "posture": {**posture["posture"], "execution class": work_identity["task_class"], "scope class": work_identity["scope_class"]},
+        }
     runtime_resolution = _runtime_resolution_payload(config=config, capability_posture=posture["posture"])
-    delegation_control = _delegation_control_payload(config.local_override)
     assignment_policy = _assignment_policy_payload(config.local_override, list(runtime_resolution.get("profile_recommendations", [])))
-    effective_orchestration = _effective_orchestration_posture_payload(
-        assignment_policy=assignment_policy,
-        delegation_control=delegation_control,
-        profile_payloads=list(runtime_resolution.get("profile_recommendations", [])),
-        cli_invoke=config.cli_invoke,
-    )
     outcome_records: tuple[DelegationOutcomeRecord, ...] = ()
     if config.target_root is not None:
         _, _, outcome_records = config_lib.load_delegation_outcomes(target_root=config.target_root)
@@ -45601,6 +45596,27 @@ def _execution_posture_payload(
         runtime_resolution=runtime_resolution,
         target_evidence=target_evidence,
         human_intent=str(task_text or ""),
+    )
+    return posture, runtime_resolution, assignment_policy, target_evidence, assignment_decision
+
+
+def _execution_posture_payload(
+    *,
+    config: WorkspaceConfig,
+    changed_paths: list[str],
+    task_text: str | None,
+    target_root: Path | None = None,
+    materialize_assignment: bool = False,
+) -> dict[str, Any]:
+    posture, runtime_resolution, assignment_policy, target_evidence, assignment_decision = _current_assignment_selection(
+        config=config, changed_paths=changed_paths, task_text=task_text
+    )
+    delegation_control = _delegation_control_payload(config.local_override)
+    effective_orchestration = _effective_orchestration_posture_payload(
+        assignment_policy=assignment_policy,
+        delegation_control=delegation_control,
+        profile_payloads=list(runtime_resolution.get("profile_recommendations", [])),
+        cli_invoke=config.cli_invoke,
     )
     decomposition_delegation = (
         _active_decomposition_delegation_payload(target_root=target_root)

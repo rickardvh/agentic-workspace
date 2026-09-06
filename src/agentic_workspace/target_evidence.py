@@ -1137,3 +1137,45 @@ def assignment_decision_from_policy(
         "claim_boundary": assignment_policy.get("binding", {}).get("claim_boundary", "assignment policy unresolved"),
         "rule": "Assignment decisions preserve policy, contextual target evidence, and runtime suitability as separate inputs; learned evidence cannot override hard policy or capability prohibitions.",
     }
+
+
+def replacement_eligibility(
+    *, decision: dict[str, Any], work: dict[str, Any], execution: dict[str, Any], packet_integrity: str
+) -> dict[str, Any]:
+    """Project hard eligibility from the same owner result used before ordinary ranking.
+
+    A source answer replaces selection only. Scores and a different preferred
+    candidate cannot reject an otherwise eligible exact replacement.
+    """
+    candidates = [row for row in decision.get("candidate_scores", []) if row.get("target") == execution["target"]]
+    candidate = candidates[0] if len(candidates) == 1 else {}
+    facts = {
+        key: candidate.get(key)
+        for key in (
+            "target",
+            "target_identity_ref",
+            "target_revision",
+            "eligible",
+            "hard_rejection_reasons",
+            "eligibility",
+            "required_action",
+            "permitted_continuation",
+        )
+    }
+    transports = [row.get("transport") for row in candidate.get("transport_options", [])]
+    eligible = (
+        candidate.get("eligible") is True
+        and not candidate.get("hard_rejection_reasons")
+        and candidate.get("target_identity_ref") == execution["target_identity_ref"]
+        and candidate.get("target_revision") == execution["target_revision"]
+        and execution["transport"] in transports
+        and candidate.get("permitted_continuation") in {"manual-handoff", "delegated-validation", "delegated-implementation"}
+    )
+    return {
+        "owner": "assignment",
+        "eligible": eligible,
+        "work": work,
+        "execution": execution,
+        "packet_integrity": packet_integrity,
+        "candidate": facts,
+    }

@@ -13,6 +13,7 @@ struct Input {
     work: Value,
     source: Value,
     admission: Option<Value>,
+    eligibility: Option<Value>,
     execution: Value,
     request: Request,
 }
@@ -125,8 +126,19 @@ pub fn replace(value: Value) -> Result<Value, CoreError> {
     {
         return Ok(blocked("assignment-replacement-intention-mismatch"));
     }
+    let Some(eligibility) = input.eligibility else {
+        return Ok(blocked("assignment-replacement-eligibility-unavailable"));
+    };
+    if eligibility["owner"] != "assignment"
+        || eligibility["eligible"] != true
+        || eligibility["work"] != input.work
+        || eligibility["execution"] != input.execution
+        || eligibility["packet_integrity"] != current["packet_integrity"]
+    {
+        return Ok(blocked("assignment-replacement-ineligible"));
+    }
     let revision = hash(
-        &json!({"previous":current["assignment_revision"],"work":input.work,"source":input.source,"execution":input.execution}),
+        &json!({"previous":current["assignment_revision"],"work":input.work,"source":input.source,"execution":input.execution,"eligibility":eligibility}),
     );
     let run = format!("replacement-{}", revision.trim_start_matches("sha256:"));
     // Preserve only the assignment's bounded semantic subject. Execution and
@@ -182,15 +194,24 @@ pub fn replace(value: Value) -> Result<Value, CoreError> {
         "assignment_revision":revision, "run_id":run, "target":input.execution["target"], "transport":input.execution["transport"],
         "scope":identity["allowed_paths"], "assignment_identity":identity, "return_contract":contract,
         "authority_refs":current["authority_refs"],
-        "replacement":{"previous_run_id":current["run_id"],"previous_revision":current["assignment_revision"],"work":input.work,"source":input.source,"execution":input.execution},
+        "replacement":{"previous_run_id":current["run_id"],"previous_revision":current["assignment_revision"],"work":input.work,"source":input.source,"execution":input.execution,"eligibility":eligibility},
         "dispatch_contract":{"transport":input.execution["transport"],"adapter_authority":"execution-only","semantic_authority":"assignment_identity","dispatch_input":"this exact packet","silent_local_fallback_allowed":false},
         "packet_integrity":""
     });
     let seal = hash(&packet);
     packet["packet_integrity"] = json!(seal);
     packet["return_contract"]["required_identity"]["packet_integrity"] = json!(seal);
+    let proof = json!({
+        "kind":"agentic-workspace/assignment-structural-proof-receipt/v1",
+        "result":"passed", "verified_by":"aw", "assignment_id":packet["assignment_id"],
+        "assignment_revision":revision,"assignment_decision_revision":revision,
+        "mutation_baseline":packet["assignment_identity"]["mutation_baseline"],
+        "packet_integrity":seal,"execution_configuration":input.execution,
+        "eligibility_revision":hash(&eligibility),
+        "claim_boundary":"current assignment identity, source admission and hard eligibility only; task proof and completion remain unproved"
+    });
     Ok(
-        json!({"status":"replaced","packet":packet,"implementation_allowed":false,"silent_local_fallback_allowed":false}),
+        json!({"status":"replaced","packet":packet,"structural_proof_receipt":proof,"implementation_allowed":false,"silent_local_fallback_allowed":false}),
     )
 }
 

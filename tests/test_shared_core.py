@@ -2183,6 +2183,13 @@ def test_assignment_replacement_authority_and_cross_surface_currentness(tmp_path
         "admission": admission,
         "request": {"assignment_revision": packet["assignment_revision"], "target": "codex_sol", "transport": transport},
     }
+    context["eligibility"] = {
+        "owner": "assignment",
+        "eligible": True,
+        "work": work,
+        "execution": execution,
+        "packet_integrity": packet["packet_integrity"],
+    }
     original = deepcopy(packet)
     result = replace_assignment(context)
     direct = _direct(shared_core_binary, {"replace_assignment": context})
@@ -2218,3 +2225,42 @@ def test_assignment_replacement_authority_and_cross_surface_currentness(tmp_path
     malformed = deepcopy(current)
     malformed["packet"]["return_contract"] = "not a return contract"
     assert admit_assignment_packet(malformed)["status"] == "blocked"
+
+    for key, value in (("eligible", False), ("work", {"id": "other", "revision": "new"}), ("execution", {"target": "other"})):
+        rejected = {**context, "eligibility": {**context["eligibility"], key: value}}
+        assert replace_assignment(rejected)["status"] == "blocked"
+    assert replace_assignment({**context, "eligibility": None})["reason_code"] == "assignment-replacement-eligibility-unavailable"
+
+
+@pytest.mark.parametrize("constraint", ["capability", "proof", "human-control", "continuation"])
+def test_replacement_consumes_full_assignment_owner_eligibility(constraint: str) -> None:
+    """#2909: a constructible target is still subject to every owner hard gate."""
+    from agentic_workspace.target_evidence import assignment_decision_from_policy, replacement_eligibility
+
+    profile = {"name": "worker", "target_id": "host:worker", "target_revision": "v1", "location": "local", "execution_methods": ["cli"]}
+    if constraint == "capability":
+        profile["capability_mismatch"] = True
+    if constraint == "proof":
+        profile["proof_requirements"] = ["required-proof-missing"]
+    if constraint == "human-control":
+        profile["human_control_modes"] = ["off"]
+    decision = assignment_decision_from_policy(
+        assignment_policy={}, runtime_resolution={"profile_recommendations": [profile]}, target_evidence={}
+    )
+    if constraint == "continuation":
+        decision["candidate_scores"][0]["permitted_continuation"] = "unsupported-result-class"
+    execution = {"target": "worker", "target_identity_ref": "host:worker", "target_revision": "v1", "transport": "cli"}
+    admission = replacement_eligibility(
+        decision=decision, work={"id": "work", "revision": "v1"}, execution=execution, packet_integrity="seal"
+    )
+    assert admission["eligible"] is False
+    assert admission["candidate"]["eligibility"] == decision["candidate_scores"][0]["eligibility"]
+
+    changed_ranking = deepcopy(decision)
+    changed_ranking["candidate_scores"][0]["score"] = 100000
+    assert (
+        replacement_eligibility(
+            decision=changed_ranking, work={"id": "work", "revision": "v1"}, execution=execution, packet_integrity="seal"
+        )
+        == admission
+    )

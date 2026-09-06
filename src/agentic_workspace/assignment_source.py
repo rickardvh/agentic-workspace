@@ -143,15 +143,26 @@ def replace_from_source(root: Path, packet: dict[str, Any], work: dict[str, Any]
     current_plan = json.loads(plan_path.read_text(encoding="utf-8-sig"))
     if not isinstance(current_plan, dict) or current_plan.get("revision") != work.get("revision"):
         raise ValueError("assignment-override-stale-work")
-    target = next(
-        profile
-        for profile in load_workspace_config(target_root=root).local_override.delegation_targets
-        if profile.name == execution["target"]
+    from agentic_workspace.target_evidence import replacement_eligibility
+    from agentic_workspace.workspace_runtime_core import _current_assignment_selection
+
+    *_, decision = _current_assignment_selection(
+        config=load_workspace_config(target_root=root),
+        changed_paths=identity["allowed_paths"],
+        task_text=identity["human_intent"],
+        work_identity=identity,
     )
-    if packet.get("assignment_identity", {}).get("task_class") in target.forbidden_task_classes:
-        raise ValueError("replacement-target-ineligible-for-work")
+    eligibility = replacement_eligibility(decision=decision, work=work, execution=execution, packet_integrity=packet["packet_integrity"])
     return replace_assignment(
-        {"current": packet, "work": work, "source": admission["source"], "admission": admission, "execution": execution, "request": request}
+        {
+            "current": packet,
+            "work": work,
+            "source": admission["source"],
+            "admission": admission,
+            "execution": execution,
+            "request": request,
+            "eligibility": eligibility,
+        }
     )
 
 

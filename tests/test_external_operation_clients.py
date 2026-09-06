@@ -1871,7 +1871,13 @@ def test_assignment_dispatch_public_operation_rejects_missing_current_authority(
 
 
 def _prepare_shared_worktree_assignment(
-    target: Path, *, run_id: str, dispatch_runtime: str = "python", allowed_paths: list[str] | None = None, target_name: str = "worker"
+    target: Path,
+    *,
+    run_id: str,
+    dispatch_runtime: str = "python",
+    allowed_paths: list[str] | None = None,
+    target_name: str = "worker",
+    task_class: str = "implementation",
 ) -> tuple[dict[str, object], list[str], dict[str, object]]:
     from agentic_workspace import workspace_runtime_core
 
@@ -1895,7 +1901,7 @@ def _prepare_shared_worktree_assignment(
         "selected_target": target_name,
         "required_next_action": "dispatch-assigned-target",
         "target_identity_ref": f"target:{target_name}",
-        "task_class": "implementation",
+        "task_class": task_class,
         "scope_class": "narrow-code-change",
         "plan_ref": ".agentic-workspace/planning/execplans/plan.plan.json",
         "plan_revision": "plan-rev-1",
@@ -4218,11 +4224,14 @@ def test_assignment_override_intent_cannot_mint_authority(tmp_path: Path, runtim
 
 
 @pytest.mark.parametrize("runtime", ["python", "typescript"])
-def test_source_owned_replacement_manual_packet_is_current_and_exact(tmp_path: Path, runtime: str) -> None:
+@pytest.mark.parametrize("ineligible", ["", "capability", "forbidden"])
+def test_source_owned_replacement_manual_packet_is_current_and_exact(tmp_path: Path, runtime: str, ineligible: str) -> None:
     """#2909: local owner answer, Rust replacement, canonical public export."""
     from agentic_workspace.assignment_source import revision
 
-    identity, invocation, _ = _prepare_shared_worktree_assignment(tmp_path, run_id="old-run", target_name="codex_terra")
+    identity, invocation, _ = _prepare_shared_worktree_assignment(
+        tmp_path, run_id="old-run", target_name="codex_terra", task_class="boundary-shaping"
+    )
     plan_path = tmp_path / ".agentic-workspace/planning/execplans/plan.plan.json"
     plan_path.parent.mkdir(parents=True)
     plan_path.write_text(json.dumps({"revision": "plan-rev-1"}))
@@ -4259,6 +4268,18 @@ transports = [{{kind = "manual"}}]
 ''',
         encoding="utf-8",
     )
+    config_path = tmp_path / ".agentic-workspace/config.local.toml"
+    if ineligible == "capability":
+        config_path.write_text(config_path.read_text().replace('strength = "strong"', 'strength = "weak"'))
+    if ineligible == "forbidden":
+        config_path.write_text(
+            config_path.read_text().replace('strength = "strong"', 'strength = "strong"\nforbidden_task_classes = ["boundary-shaping"]')
+        )
+    proof_path = tmp_path / ".agentic-workspace/proof/receipts/proof-feature.json"
+    predecessor_proof = json.loads(proof_path.read_text())
+    predecessor_proof["predecessor_target_evidence"] = "codex_terra-only"
+    proof_path.write_text(json.dumps(predecessor_proof))
+    before = {p.relative_to(tmp_path).as_posix(): p.read_bytes() for p in (tmp_path / ".agentic-workspace").rglob("*") if p.is_file()}
     values = {
         "assignment_id": "assign-shared",
         "assignment_revision": identity["revision"],
@@ -4272,6 +4293,21 @@ transports = [{{kind = "manual"}}]
         if runtime == "typescript"
         else assignment_reassign(values, target=tmp_path, invocation=invocation)
     )
+    if ineligible:
+        assert result["status"] == "blocked", result
+        assert result["reason_code"] == "assignment-replacement-ineligible", result
+        assert "required_source_answer" not in result
+        assert result["mutation_applied"] is False
+        assert result["artifact_refs"] == []
+        assert before == {
+            p.relative_to(tmp_path).as_posix(): p.read_bytes() for p in (tmp_path / ".agentic-workspace").rglob("*") if p.is_file()
+        }
+        return
+    fresh_proof = json.loads(proof_path.read_text())
+    assert "predecessor_target_evidence" not in fresh_proof
+    assert fresh_proof["execution_configuration"] == execution
+    assert fresh_proof["packet_integrity"] == result["replacement_packet"]["packet_integrity"]
+    assert fresh_proof["assignment_decision_revision"] == result["replacement_packet"]["assignment_revision"]
     assert result["status"] == "replaced", result
     packet = result["replacement_packet"]
     assert packet["target"] == "codex_sol"
@@ -4315,6 +4351,17 @@ transports = [{{kind = "manual"}}]
     )
     assert stale["status"] == "blocked"
 
+    current_config = config_path.read_text()
+    config_path.write_text(current_config.replace('strength = "strong"', 'strength = "weak"'))
+    stale_before = {p.relative_to(tmp_path).as_posix(): p.read_bytes() for p in (tmp_path / ".agentic-workspace").rglob("*") if p.is_file()}
+    stale_eligibility = assignment_export(args, target=tmp_path, invocation=invocation)
+    assert stale_eligibility["status"] == "blocked", stale_eligibility
+    assert stale_eligibility["mutation_applied"] is False
+    assert stale_before == {
+        p.relative_to(tmp_path).as_posix(): p.read_bytes() for p in (tmp_path / ".agentic-workspace").rglob("*") if p.is_file()
+    }
+    assert json.loads(fresh.read_text()) == packet
+    config_path.write_text(current_config)
     plan_path.write_text(json.dumps({"revision": "plan-rev-2"}))
     stale_work = assignment_export(args, target=tmp_path, invocation=invocation)
     assert stale_work["status"] == "blocked", stale_work
