@@ -1608,3 +1608,132 @@ def test_source_context_is_bound_before_finalization(shared_core_binary: Path, t
     rejected_payload, rejected = finish(admitted, stale)
     assert rejected == {}
     assert "decision_context" not in rejected_payload["decision_packet"]
+
+
+@pytest.mark.parametrize("destination", ["absent", "unadmitted", "different-value", "current", "changed-after-promotion"])
+def test_memory_decision_fallback_promotes_only_to_exact_current_native_source(
+    shared_core_binary: Path, tmp_path: Path, destination: str
+) -> None:
+    from agentic_workspace.decision import repository_decision_view
+
+    context, record = _native_archive(tmp_path)
+    # Test host admits the exact known agent-authored source to Memory. The
+    # archive/path/actor alone do not create this source-owner admission.
+    fallback = {"archive": context["archive"], "admitted_revision": context["admitted_revision"]}
+    context.update(archive="", admitted_revision="", fallback=fallback)
+    retained = repository_decision_view(**context)["decision_context"]
+    assert retained["reconciliation"][0]["status"] == "fallback"
+    assert retained["consequences"][0]["source"]["owner"] == "memory"
+    original = (tmp_path / "design/choice.md").read_bytes()
+    if destination != "absent":
+        (tmp_path / "repo-decisions").mkdir()
+        native = deepcopy(record)
+        if destination == "different-value":
+            native["consequence"] = "A different material value is not promotion"
+        _write_native(tmp_path / "repo-decisions/choice.md", native)
+        revision = _commit_native(tmp_path)
+        context.update(
+            archive="repo-decisions", admitted_revision=revision if destination != "unadmitted" else fallback["admitted_revision"]
+        )
+    if destination == "changed-after-promotion":
+        assert repository_decision_view(**context)["decision_context"]["reconciliation"][0]["status"] == "repo-native"
+        (tmp_path / "repo-decisions/choice.md").write_text("Destination disappeared", encoding="utf-8")
+    output = repository_decision_view(**context)
+    expected = "repo-native" if destination == "current" else "fallback" if destination == "absent" else "pending"
+    assert output["decision_context"]["reconciliation"][0]["status"] == expected
+    consequence = output["decision_context"]["consequences"][0]
+    assert consequence["summary"] == record["consequence"]
+    assert consequence["source"]["owner"] == ("repository" if destination == "current" else "memory")
+    assert consequence["material_revision"] == retained["consequences"][0]["material_revision"]
+    assert (tmp_path / "design/choice.md").read_bytes() == original
+    assert json.loads(_direct(shared_core_binary, {"repository_decision_view": context}).stdout) == output
+    context["applicable_scope"] = ["path:unrelated.txt"]
+    assert "decision_context" not in repository_decision_view(**context)
+
+
+def test_fallback_source_cannot_choose_its_owner_or_widen_admission(shared_core_binary: Path, tmp_path: Path) -> None:
+    from agentic_workspace.decision import repository_decision_view
+
+    context, _ = _native_archive(tmp_path)
+    context["fallback"] = {"archive": "design", "admitted_revision": context["admitted_revision"], "owner": "human"}
+    with pytest.raises(DecisionContractError, match="unknown field"):
+        repository_decision_view(**context)
+
+
+def test_known_agent_decision_survives_memory_to_native_ordinary_journey(shared_core_binary: Path, tmp_path: Path) -> None:
+    import sys
+
+    subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
+    (tmp_path / "SYSTEM_INTENT.md").write_bytes((ROOT / "SYSTEM_INTENT.md").read_bytes())
+    archive = ".agentic-workspace/memory/repo/decisions"
+    source = tmp_path / archive / "source-admission.md"
+    source.parent.mkdir(parents=True)
+    with source.open("xb") as output:
+        output.write((ROOT / "tests/fixtures/decision_fallback.md").read_bytes())
+    original = source.read_bytes()
+    revision = _commit_native(tmp_path)
+    config = tmp_path / ".agentic-workspace/config.toml"
+
+    def configure(native: str = "") -> None:
+        config.write_text(
+            "schema_version = 1\n[modules]\nenabled = []\n[assurance]\n"
+            + native
+            + '\n[assurance.decision_record_fallback]\narchive = "'
+            + archive
+            + '"\nadmitted_revision = "'
+            + revision
+            + '"\n',
+            encoding="utf-8",
+        )
+
+    def start() -> dict[str, Any]:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "from agentic_workspace.cli import main; raise SystemExit(main())",
+                "start",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "crates/agentic-workspace-core/src/decision_source.rs",
+                "--task",
+                "bounded edit",
+                "--format",
+                "json",
+            ],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+        return json.loads(result.stdout)["decision_packet"]
+
+    configure()
+    fallback_packet = start()
+    fallback = fallback_packet["decision_context"]
+    assert start()["identity"] == fallback_packet["identity"]
+    assert fallback["reconciliation"][0]["status"] == "fallback"
+    assert fallback["consequences"][0]["authority"]["actor"]["kind"] == "agent"
+    native_source = tmp_path / "docs/decisions/source-admission.md"
+    native_source.parent.mkdir(parents=True)
+    with native_source.open("xb") as output:
+        output.write(original)
+    configure('decision_record_target = "docs/decisions"\ndecision_record_revision = "' + revision + '"\n')
+    pending_packet = start()
+    assert pending_packet["decision_context"]["reconciliation"][0]["status"] == "pending"
+    assert pending_packet["identity"] != fallback_packet["identity"]
+    admitted_native = _commit_native(tmp_path)
+    configure('decision_record_target = "docs/decisions"\ndecision_record_revision = "' + admitted_native + '"\n')
+    promoted_packet = start()
+    promoted = promoted_packet["decision_context"]
+    assert promoted_packet["identity"] != pending_packet["identity"]
+    assert start()["identity"] == promoted_packet["identity"]
+    assert promoted["reconciliation"][0]["status"] == "repo-native"
+    assert promoted["consequences"][0]["material_revision"] == fallback["consequences"][0]["material_revision"]
+    assert promoted["consequences"][0]["source"]["reference"] == "docs/decisions/source-admission.md"
+    native_source.write_text("unadmitted replacement", encoding="utf-8")
+    lost_packet = start()
+    assert lost_packet["decision_context"]["reconciliation"][0]["status"] == "pending"
+    assert lost_packet["identity"] != promoted_packet["identity"]
+    assert source.read_bytes() == original

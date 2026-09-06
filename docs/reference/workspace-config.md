@@ -60,6 +60,9 @@ Repo-owned Agentic Workspace configuration stored in .agentic-workspace/config.t
 | `assurance.classification_owner` | enum `"config-native"`, `"repository-owned"` | no | `"config-native"` | Exclusive owner of assurance applicability classification: config-native forbids classification_source, while repository-owned requires exactly one classification_source. |  |  |
 | `assurance.classification_source` | string | no |  | Repo-relative source or operation ref for the repository-owned classifier; forbidden for config-native ownership. |  |  |
 | `assurance.decision_record_target` | string | no |  | Path for durable decision records when work requires one; explicit config wins, but conventional ADR directories may be discovered when this is unset. | `"docs/decisions/"` |  |
+| `assurance.decision_record_fallback` | object | no |  | Independent Memory source-owner admission of a bounded decision archive snapshot and its semantic provenance; never a public request argument. |  |  |
+| `assurance.decision_record_fallback.archive` | string | yes |  | Exact repository-relative Memory source archive admitted by its host owner. |  |  |
+| `assurance.decision_record_fallback.admitted_revision` | string | yes |  | Immutable Git commit explicitly admitting this Memory snapshot and semantic provenance. |  |  |
 | `assurance.decision_record_revision` | string | no |  | Trusted source-owner admission of this exact archive Git commit, including semantic provenance. Never infer from HEAD, tracking or record actor strings. |  |  |
 | `assurance.decision_record_format` | string | no |  | Host-declared file format for durable decision records. | `"markdown"` |  |
 | `assurance.decision_record_template` | string | no |  | Optional host template id or repo-relative template path for decision scaffolds. | `"adr-lite"` |  |

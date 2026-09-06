@@ -621,6 +621,7 @@ class AssuranceConfig:
     test_data_policy: dict[str, Any]
     decision_record_target: str | None
     decision_record_revision: str | None
+    decision_record_fallback: dict[str, Any] | None
     decision_record_format: str | None
     decision_record_template: str | None
     decision_record_statuses: tuple[str, ...]
@@ -1694,6 +1695,7 @@ def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[As
         "test_data_policy",
         "decision_record_target",
         "decision_record_revision",
+        "decision_record_fallback",
         "decision_record_format",
         "decision_record_template",
         "decision_record_statuses",
@@ -1758,6 +1760,9 @@ def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[As
         raw_test_data_policy = {}
     if not isinstance(raw_test_data_policy, dict):
         raise WorkspaceUsageError(f"{config_path.as_posix()} [assurance.test_data_policy] section must be a table.")
+    raw_decision_fallback = raw_assurance.get("decision_record_fallback")
+    if raw_decision_fallback is not None and not isinstance(raw_decision_fallback, dict):
+        raise WorkspaceUsageError(f"{config_path.as_posix()} [assurance.decision_record_fallback] must be a table.")
     decision_record_target = raw_assurance.get("decision_record_target")
     decision_record_format = raw_assurance.get("decision_record_format")
     decision_record_template = raw_assurance.get("decision_record_template")
@@ -1798,6 +1803,7 @@ def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[As
             domain_proof_lanes=domain_proof_lanes,
             closeout_postures=closeout_postures,
             test_data_policy={str(key): value for key, value in raw_test_data_policy.items()},
+            decision_record_fallback=dict(raw_decision_fallback) if raw_decision_fallback is not None else None,
             decision_record_revision=str(raw_assurance["decision_record_revision"]).strip()
             if raw_assurance.get("decision_record_revision")
             else None,

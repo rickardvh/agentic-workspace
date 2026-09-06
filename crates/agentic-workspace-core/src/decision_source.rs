@@ -16,9 +16,21 @@ use std::{
 #[serde(deny_unknown_fields)]
 struct Input {
     target: String,
+    #[serde(default)]
     archive: String,
+    #[serde(default)]
     admitted_revision: String,
     applicable_scope: Vec<String>,
+    fallback: Option<Snapshot>,
+}
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Snapshot {
+    archive: String,
+    admitted_revision: String,
+}
+fn empty_context(scope: &[String]) -> Value {
+    json!({"records":[], "admissions":[], "current_dependencies":[], "applicable_scope":scope})
 }
 fn error(value: impl ToString) -> CoreError {
     CoreError::new(value.to_string())
@@ -75,7 +87,7 @@ fn read(root: &Dir, path: &str) -> Result<Vec<u8>, CoreError> {
     std::str::from_utf8(&bytes).map_err(error)?;
     Ok(bytes)
 }
-fn record(bytes: &[u8], path: &str) -> Result<Value, CoreError> {
+fn record(bytes: &[u8], path: &str, owner: &str) -> Result<Value, CoreError> {
     let text = std::str::from_utf8(bytes).map_err(error)?;
     let marker = "```aw-decision\n";
     let text = text.replace("\r\n", "\n");
@@ -92,18 +104,12 @@ fn record(bytes: &[u8], path: &str) -> Result<Value, CoreError> {
     if value.get("source").is_some() || value.get("rationale_reference").is_some() {
         return Err(error("source identity belongs to the repository adapter"));
     }
-    value["source"] = json!({"owner":"repository", "reference":path, "revision":hash(bytes)});
+    value["source"] = json!({"owner":owner, "reference":path, "revision":hash(bytes)});
     value["rationale_reference"] = json!(path);
     continuity::normalize(value)
 }
 
-/// Trusted host API, never an ordinary client request or operation argument.
-/// One optional Markdown encoding is supported; no archive location is assumed.
-pub fn view(value: Value) -> Result<Value, CoreError> {
-    let input: Input = serde_json::from_value(value).map_err(error)?;
-    if input.applicable_scope.is_empty() {
-        return compile_value(json!({"contributions":[], "intent":{}}));
-    }
+fn load(input: &Input, owner: &str) -> Result<Value, CoreError> {
     relative(input.archive.trim_end_matches('/'))?;
     if input.admitted_revision.len() != 40
         || !input
@@ -138,7 +144,7 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
         .output()
         .map_err(error)?;
     if found.status.code() == Some(1) {
-        return compile_value(json!({"contributions":[], "intent":{}}));
+        return Ok(empty_context(&input.applicable_scope));
     }
     if !found.status.success() {
         return Err(error(
@@ -165,11 +171,11 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
             .split_once(':')
             .ok_or_else(|| error("invalid decision source identity"))?;
         relative(path)?;
-        let bytes = git(&input, &["show".into(), spec.into()])?;
+        let bytes = git(input, &["show".into(), spec.into()])?;
         if bytes.len() > 262144 {
             return Err(error("decision source exceeds bounded read"));
         }
-        let normalized = record(&bytes, path)?;
+        let normalized = record(&bytes, path, owner)?;
         let id = normalized["id"].as_str().unwrap().to_owned();
         if available
             .insert(id, (normalized, bytes, path.to_owned()))
@@ -234,11 +240,94 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
             }
         }
         admissions.push(json!({"id":normalized["id"], "material_revision":normalized["material_revision"], "source":normalized["source"], "rationale_reference":path}));
+        dependencies.insert(format!("{owner}:{path}"), normalized["source"].clone());
         records.push(normalized);
     }
-    compile_value(json!({"contributions":[], "intent":{}, "decision_context":{
-        "records":records, "admissions":admissions,
+    Ok(json!({"records":records, "admissions":admissions,
         "current_dependencies":dependencies.into_values().collect::<Vec<_>>(),
         "applicable_scope":input.applicable_scope
-    }}))
+    }))
+}
+
+/// Trusted source-owner input. Native and fallback admissions are independent;
+/// a record cannot choose its owner or assert that another owner has its value.
+pub fn view(value: Value) -> Result<Value, CoreError> {
+    let input: Input = serde_json::from_value(value).map_err(error)?;
+    if input.applicable_scope.is_empty() {
+        return compile_value(json!({"contributions":[], "intent":{}}));
+    }
+    let mut fallback = if let Some(source) = &input.fallback {
+        load(
+            &Input {
+                target: input.target.clone(),
+                archive: source.archive.clone(),
+                admitted_revision: source.admitted_revision.clone(),
+                applicable_scope: input.applicable_scope.clone(),
+                fallback: None,
+            },
+            "memory",
+        )?
+    } else {
+        empty_context(&input.applicable_scope)
+    };
+    let has_residue = !fallback["records"].as_array().unwrap().is_empty();
+    let native_configured = !input.archive.is_empty();
+    let native = if native_configured {
+        match load(&input, "repository") {
+            Ok(context) => context,
+            // A failed destination cannot hide already admitted useful fallback.
+            // The existing reconciliation contract exposes the pending owner.
+            Err(_) if has_residue => empty_context(&input.applicable_scope),
+            Err(e) => return Err(e),
+        }
+    } else {
+        empty_context(&input.applicable_scope)
+    };
+    if !has_residue {
+        return compile_value(json!({"contributions":[], "intent":{}, "decision_context":native}));
+    }
+    let residue: Vec<_> = fallback["records"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|r| r["id"].clone())
+        .collect();
+    let destinations = if native_configured {
+        native["admissions"].clone()
+    } else {
+        fallback["admissions"].clone()
+    };
+    // Keep the fallback semantic value until the preferred owner admits that
+    // exact value. A same-ID/different-revision destination is not promotion.
+    for key in ["records", "admissions"] {
+        let rows = fallback[key].as_array_mut().unwrap();
+        for row in native[key].as_array().unwrap() {
+            if !rows.iter().any(|existing| existing["id"] == row["id"]) {
+                rows.push(row.clone());
+            }
+        }
+    }
+    let mut current = BTreeMap::new();
+    for row in fallback["current_dependencies"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .chain(native["current_dependencies"].as_array().unwrap())
+    {
+        let key = (
+            row["owner"].as_str().unwrap().to_owned(),
+            row["reference"].as_str().unwrap().to_owned(),
+        );
+        if current
+            .insert(key, row.clone())
+            .is_some_and(|prior| prior != *row)
+        {
+            return Err(error(
+                "source dependency changed during owner reconciliation",
+            ));
+        }
+    }
+    fallback["current_dependencies"] = json!(current.into_values().collect::<Vec<_>>());
+    fallback["reconciliation"] = json!({"residue":residue, "native_owner":if native_configured {Some("repository")} else {None}, "fallback_owner":"memory", "destinations":destinations, "dismissals":[]});
+    compile_value(json!({"contributions":[], "intent":{}, "decision_context":fallback}))
 }

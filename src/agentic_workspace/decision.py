@@ -132,7 +132,9 @@ def normalize_decision_record(record: Mapping[str, Any]) -> dict[str, Any]:
     return _request({"normalize_decision_record": record})
 
 
-def repository_decision_view(*, target: str, archive: str, admitted_revision: str, applicable_scope: list[str]) -> dict[str, Any]:
+def repository_decision_view(
+    *, target: str, archive: str = "", admitted_revision: str = "", applicable_scope: list[str], fallback: Mapping[str, Any] | None = None
+) -> dict[str, Any]:
     """Trusted repository host/source-owner input, never public request fields."""
     return _request(
         {
@@ -141,6 +143,7 @@ def repository_decision_view(*, target: str, archive: str, admitted_revision: st
                 "archive": archive,
                 "admitted_revision": admitted_revision,
                 "applicable_scope": applicable_scope,
+                "fallback": dict(fallback) if fallback is not None else None,
             }
         }
     )

@@ -223,3 +223,12 @@ The existing #2909 shared-core surface proves relevant/no-signal, source and aut
 
 
 Installed transports use their packaged native binary. In an editable source checkout without that artifact, the Python/Node transport asks Cargo to validate/build the current shared core on demand; it does not require an ordinary client to supply an executable path or silently reuse an unvalidated old binary. No-signal startup does not invoke the core and does not build it. Explicit binary overrides remain available to trusted hosts and conformance tools.
+
+
+## Memory fallback and admitted native promotion
+
+The same source adapter accepts an independently admitted Memory snapshot via the trusted host's optional `[assurance.decision_record_fallback]` table (`archive`, `admitted_revision`). This is explicit source-owner admission, including Memory custody/provenance, not discovery or an owner label supplied by the note. No default directory, caller-selected owner, or new public request fields are added. A host without native admission can retain and selectively surface this typed source under Memory's fallback role.
+
+With a native owner configured, Rust feeds both independently read snapshots into the existing #3043 reconciliation contract. A current destination must contain the same stable identity and material revision before the consequence points to it. Missing/unadmitted/changed/different-value native sources leave the admitted fallback contribution visible with pending reconciliation. Later destination loss reopens that route. Physical copying, retirement, custody transfer and write operations are not performed by this reader.
+
+The owning #2909 cases exercise Memory retention, native failure/success/loss, authority negatives, unchanged material identity and no-signal. `tests/fixtures/decision_fallback.md` preserves the known agent-authored source-admission decision from #3044; a fresh fixture repository atomically creates it under Memory, independently admits it, then proves ordinary startup before and after native promotion. This is a new known-provenance decision, not a claim to have migrated the April note or established custody from a familiar path. The former source remains byte-for-byte intact.
