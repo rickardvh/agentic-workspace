@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 import tomllib
 from pathlib import Path
 from typing import Any
@@ -16,6 +17,70 @@ from agentic_workspace.config import DelegationTargetProfile, load_workspace_con
 from agentic_workspace.decision import replace_assignment
 
 SOURCE = ".agentic-workspace/config.local.toml"
+
+
+def current_route_configurations(root: Path, profiles: list[dict[str, Any]], policy: Any, work: dict[str, Any]) -> dict[str, Any]:
+    """Host facts for existing process/manual routes, without probing providers.
+
+    Executable presence proves only the generic argv transport. It never proves
+    a remote model, vendor parameter, or native continuation is available.
+    """
+    from agentic_workspace.decision import execution_configurations
+
+    candidates = []
+    for profile in profiles:
+        name = profile["name"]
+        current = bool(policy.current_target) and policy.current_target in {name, profile.get("target_id"), *profile.get("aliases", [])}
+        transports = list(profile.get("transports", []))
+        if current:
+            transports = [{"method": "internal", "kind": "current-host"}]
+        elif policy.manual_transport_policy != "disabled" and not any(t.get("method") == "manual" for t in transports):
+            # The established manual owner can export any bounded target packet.
+            transports.append({"method": "manual", "kind": "manual"})
+        for transport in transports:
+            method = transport["method"]
+            command = transport.get("command", [])
+            executable = shutil.which(command[0]) if command else None
+            if command and not executable:
+                local = root / command[0]
+                executable = str(local.resolve()) if local.is_file() else None
+            manual = method == "manual"
+            constructible = current or manual or bool(executable and method in {"cli", "api"})
+            executable_stat = Path(executable).stat() if executable else None
+            facts = {
+                "transport": transport,
+                "executable": executable,
+                "executable_fingerprint": [executable_stat.st_size, executable_stat.st_mtime_ns] if executable_stat else None,
+                "target_revision": profile.get("target_revision"),
+            }
+            candidates.append(
+                {
+                    "id": f"{name}:{method}",
+                    "target": name,
+                    "transport": method,
+                    "capability_revision": revision(facts),
+                    "current": True,
+                    "authorized": current
+                    or (policy.manual_transport_policy != "disabled" if manual else policy.transport_authority == "automatic"),
+                    "safe": current or manual or policy.safe_to_auto_run_commands is True,
+                    "constructible": constructible,
+                    "result_classes": ["read-only", "unapplied-patch"],
+                    "proof_classes": [],
+                    "independent_context": False,
+                    "concurrency_available": True,
+                    "execution": {"adapter": transport, "context_strategy": "bounded", "continuity": {"mode": "adapter-owned-unknown"}},
+                }
+            )
+    return execution_configurations(
+        {
+            "work": work,
+            "required_result_classes": [],
+            "required_proof_classes": [],
+            "independent_context": False,
+            "candidates": candidates,
+            "selection": None,
+        }
+    )
 
 
 def revision(value: Any) -> str:
