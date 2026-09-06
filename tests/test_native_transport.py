@@ -214,7 +214,7 @@ def test_hard_ineligible_native_route_does_not_probe_provider(tmp_path, monkeypa
     assert [row["configuration"]["transport"] for row in offers["candidates"]] == ["manual"]
 
 
-def test_configuration_authority_tracks_relevant_source_and_executable(tmp_path):
+def test_configuration_authority_tracks_relevant_source_and_executable(tmp_path, monkeypatch):
     import sys
     from dataclasses import asdict
 
@@ -254,6 +254,32 @@ transports = [{kind = "process", command = [EXE]}]
         current_route_configurations(tmp_path, profiles, config.local_override, work, choice)["reason_code"]
         == "assignment-configuration-choice-stale"
     )
+    source.write_text(original)
+    from agentic_workspace import workspace_runtime_core as runtime
+
+    kwargs = {"config": config, "changed_paths": ["feature.py"], "task_text": "Repair the calculation."}
+    baseline = runtime._current_assignment_selection(**kwargs)[4]
+    offer = baseline["execution_configurations"]
+    monkeypatch.setattr(
+        runtime,
+        "target_evidence_posture",
+        lambda **_: {
+            "suitability": [
+                {
+                    "target": "worker",
+                    "context_key": baseline["context_key"],
+                    "route_effect": "strong-review-required",
+                    "record_count": 1,
+                    "supporting_record_ids": ["admitted-contextual-observation"],
+                }
+            ]
+        },
+    )
+    current = runtime._current_assignment_selection(**kwargs)[4]["execution_configurations"]
+    assert current["feasibility_revision"] == offer["feasibility_revision"]
+    assert current["revision"] != offer["revision"]
+    with pytest.raises(ValueError, match="configuration-choice-stale"):
+        runtime._current_assignment_selection(**kwargs, execution_choice={"revision": offer["revision"], "candidate": configuration["id"]})
 
 
 def test_continuation_residue_cannot_invalidate_its_own_admission(tmp_path, monkeypatch, snapshot):

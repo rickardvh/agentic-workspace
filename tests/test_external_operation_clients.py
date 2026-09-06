@@ -145,6 +145,10 @@ transports = [{kind = "manual"}]
     packet = json.loads((tmp_path / packet_ref).read_text())
     assert packet["assignment_identity"]["dispatch_adapter"]["execution_configuration"] == chosen
     assert ordinary()["assignment_decision"]["selected_execution_configuration"] == chosen
+    resumed = _execution_posture_payload(
+        config=load_workspace_config(target_root=tmp_path), target_root=tmp_path, task_text=None, changed_paths=[]
+    )
+    assert resumed["assignment_decision"]["selected_execution_configuration"] == chosen
     source.write_text(source.read_text().replace('target_revision = "1"', 'target_revision = "2"'))
     before = {p: p.read_bytes() for p in (tmp_path / ".agentic-workspace/local/assignment-runs").rglob("*") if p.is_file()}
     blocked = export(

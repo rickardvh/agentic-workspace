@@ -1820,6 +1820,17 @@ def _assignment_current_authorities_from_store(
 
         try:
             validate_current_configuration(target_root, configuration)
+            choice = planning_assignment.get("execution_choice")
+            if isinstance(choice, dict) and choice:
+                from agentic_workspace.config import load_workspace_config
+                from agentic_workspace.workspace_runtime_core import _current_assignment_selection
+
+                _current_assignment_selection(
+                    config=load_workspace_config(target_root=target_root),
+                    changed_paths=_assignment_list(identity.get("allowed_paths")),
+                    task_text=_optional_text(identity.get("human_intent")),
+                    execution_choice=choice,
+                )
         except (ValueError, OSError, KeyError) as error:
             failures.append(
                 {

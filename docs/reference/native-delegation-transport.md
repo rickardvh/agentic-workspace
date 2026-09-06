@@ -118,6 +118,10 @@ transport must agree with that configuration. The choice selects within human
 policy and owner eligibility; it cannot waive proof, change an existing assignment,
 or turn advisory policy into execution authority. It is retained on the existing
 Planning assignment, scoped to the same human intent and paths.
+The offer revision includes the current contextual decision evidence as well as
+transport feasibility. A unique current assignment owned by the selected Planning
+revision can resume using its canonical intent and paths when task text is absent;
+ambiguous sibling assignments require explicit subject selection.
 
 New source-resolved configurations bind relevant local delegation, safety and
 selected-target facts. Admission rechecks those facts; process adapters also
