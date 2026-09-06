@@ -24,6 +24,13 @@ The structured authority basis binds the current repository intent document. The
 
 Exact initial applicability: `path:crates/agentic-workspace-core/src/lib.rs`, `path:src/agentic_workspace/decision.py`, `path:bindings/node/semantic-decision.mjs`. This bounded selection does not claim all future semantic applicability; broader relevance remains agent/owner judgment.
 
+An agent-selected `workspace/ownership/audit` route also makes this boundary
+relevant: an ownership audit must keep deterministic custody/admission semantics
+in the shared core. The route expresses applicability only; it supplies no
+ownership or deciding authority. This mapping is an agent-authored applicability
+choice, admitted with this repository source, rather than a change of semantic
+authorship to AW.
+
 Authority/evidence: [#2987](https://github.com/rickardvh/agentic-workspace/issues/2987); [#3020](https://github.com/rickardvh/agentic-workspace/issues/3020); [System intent](../../SYSTEM_INTENT.md).
 
 Accepted implementation evidence: [PR #3042](https://github.com/rickardvh/agentic-workspace/pull/3042); [shared-core architecture](../architecture/shared-rust-core.md); existing #2909 shared-core and v1 conformance tests.
@@ -66,6 +73,7 @@ No prior decision identity is fabricated. The rejected mechanisms above are alte
     "path:bindings/node/semantic-decision.mjs"
   ],
   "dependencies": [],
+  "semantic_routes": ["workspace/ownership/audit"],
   "context": [],
   "supersedes": []
 }
