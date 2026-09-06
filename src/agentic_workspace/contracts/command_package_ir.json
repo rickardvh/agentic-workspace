@@ -7138,6 +7138,11 @@
             "name": "start",
             "options": [
               {
+                "flags": ["--request"],
+                "help": "Complete returned public request JSON. Discover semantic route requests with --select semantic_route_result; edit only the declared arguments.",
+                "name": "request"
+              },
+              {
                 "flags": [
                   "--target"
                 ],

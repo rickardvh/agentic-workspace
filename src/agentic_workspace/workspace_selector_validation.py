@@ -17,6 +17,7 @@ _SELECTOR_SUGGESTION_LIMIT = 1
 
 _SELECTOR_DESCRIPTORS_BY_COMMAND: dict[str, tuple[str, ...]] = {
     "start": (
+        "semantic_route_result",
         "action_signals",
         "next_safe_action",
         "decision_packet",

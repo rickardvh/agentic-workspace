@@ -26,7 +26,7 @@ cli_invoke = "uv run --frozen --active --no-sync python scripts/run_agentic_work
 # Source-owner admission of this exact archive snapshot and its provenance.
 # Never advance automatically from HEAD or an ordinary client request.
 decision_record_target = "docs/decisions"
-decision_record_revision = "d01b89dae7bc815516f03eee338442472da455cd"
+decision_record_revision = "ce9d6402c74f326120713e613f97578e1023feec"
 default_level = "medium"
 agent_may_escalate = true
 agent_may_deescalate = false

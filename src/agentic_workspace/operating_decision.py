@@ -2750,6 +2750,7 @@ def compile_projection_surface_operating_decision(
             "consumer": consumer,
             "task": str(material_inputs.get("task") or ""),
             **({"decision_context": material_inputs["decision_context"]} if "decision_context" in material_inputs else {}),
+            **({"semantic_route_result": material_inputs["semantic_route_result"]} if "semantic_route_result" in material_inputs else {}),
             "changed_paths": [str(path) for path in _as_list(material_inputs.get("changed"))],
             "target_root": str(material_inputs.get("target_root") or "") or None,
             "revisions": {
@@ -2887,8 +2888,12 @@ def bind_projection_surface_operating_decision(
     }
     if valid:
         _bind_instruction_claim_effects_to_projection(payload=payload, decision=operating_decision)
-        if "decision_context" in operating_decision and isinstance(payload.get("decision_packet"), dict):
-            payload["decision_packet"]["decision_context"] = operating_decision["decision_context"]
+        if any(field in operating_decision for field in ("decision_context", "semantic_route_result")) and isinstance(
+            payload.get("decision_packet"), dict
+        ):
+            for field in ("decision_context", "semantic_route_result"):
+                if field in operating_decision:
+                    payload["decision_packet"][field] = operating_decision[field]
             payload["decision_packet"]["identity"] = {
                 "revision": admitted_revision,
                 "decision_id": operating_decision["decision_id"],
@@ -4101,6 +4106,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         "input_revisions": input_revisions,
         "canonical_decision_input_revision": invocation_current_revision,
         **({"decision_context": inputs["decision_context"]} if "decision_context" in inputs else {}),
+        **({"semantic_route_result": inputs["semantic_route_result"]} if "semantic_route_result" in inputs else {}),
         "context_authority_coverage": coverage,
         "context_authority_projection": context_authority_projection,
         "context_consequences": context_consequences,

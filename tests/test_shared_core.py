@@ -1870,7 +1870,8 @@ def test_public_semantic_route_discovery_is_bounded_and_complete(shared_core_bin
     assert seen == host["source"]["routes"]
 
 
-def test_repo_decision_consumes_public_route_without_path_match(shared_core_binary: Path, tmp_path: Path) -> None:
+@pytest.mark.parametrize("source_owner", ["repository", "memory"])
+def test_repo_decision_consumes_public_route_without_path_match(shared_core_binary: Path, tmp_path: Path, source_owner: str) -> None:
     from agentic_workspace.decision import repository_decision_view, semantic_route_view
 
     context, record = _native_archive(tmp_path)
@@ -1878,13 +1879,116 @@ def test_repo_decision_consumes_public_route_without_path_match(shared_core_bina
     _write_native(tmp_path / "design/choice.md", record)
     context["admitted_revision"] = _commit_native(tmp_path)
     context["applicable_scope"] = []
+    if source_owner == "memory":
+        fallback = {"archive": context["archive"], "admitted_revision": context["admitted_revision"]}
+        context.update(archive="", admitted_revision="", fallback=fallback)
     host = _route_host()
     request = semantic_route_view(host)["requests"][1]
     request["arguments"] = {"posture": "selected", "routes": ["architecture/authority"]}
     host["request"] = request
     result = repository_decision_view(**context, semantic_routes=host)
     assert result["decision_context"]["consequences"][0]["id"] == record["id"]
+    assert result["decision_context"]["consequences"][0]["source"]["owner"] == source_owner
     host["current_work"]["id"] = "changed-work"
     assert "decision_context" not in repository_decision_view(**context, semantic_routes=host)
     context["applicable_scope"] = ["path:src/core.rs"]
     assert repository_decision_view(**context, semantic_routes=host)["decision_context"]["consequences"]
+
+
+def test_ordinary_start_public_route_is_current_scoped_and_quiet(shared_core_binary: Path, tmp_path: Path) -> None:
+    import sys
+
+    context, record = _native_archive(tmp_path)
+    record["semantic_routes"] = ["architecture/authority"]
+    _write_native(tmp_path / "design/choice.md", record)
+    registry = tmp_path / "tools/skills/REGISTRY.json"
+    registry.parent.mkdir(parents=True)
+    registry.write_text(json.dumps({"skills": [{"id": "architecture", "semantic_routes": ["architecture/authority"]}]}), encoding="utf-8")
+    revision = _commit_native(tmp_path)
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.parent.mkdir()
+    config.write_text(
+        'schema_version = 1\n[modules]\nenabled = []\n[assurance]\ndecision_record_target = "design"\ndecision_record_revision = "'
+        + revision
+        + '"\n',
+        encoding="utf-8",
+    )
+
+    def start(*extra: str, task: str = "consider design") -> dict[str, Any]:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "from agentic_workspace.cli import main; raise SystemExit(main())",
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                task,
+                "--format",
+                "json",
+                *extra,
+            ],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+        )
+        assert result.returncode == 0, result.stdout + result.stderr
+        return json.loads(result.stdout)
+
+    quiet = start(task="architecture authority design")
+    assert "decision_context" not in quiet["decision_packet"]
+    assert "semantic_route_result" not in quiet["decision_packet"]
+    discovered = start("--select", "semantic_route_result")["values"]["semantic_route_result"]
+    request = discovered["requests"][1]
+    request["arguments"] = {"posture": "selected", "routes": ["architecture/authority"]}
+    selected = start("--request", json.dumps(request))["decision_packet"]
+    assert selected["decision_context"]["consequences"][0]["id"] == record["id"]
+    assert selected["identity"]["decision_id"].startswith("operating-decision:")
+    assert start("--request", json.dumps(request))["decision_packet"]["identity"] == selected["identity"]
+    (tmp_path / "unrelated.md").write_text("Editorial churn", encoding="utf-8")
+    _commit_native(tmp_path)
+    churned = start("--request", json.dumps(request))["decision_packet"]
+    assert churned["semantic_route_result"]["status"] == "current"
+    assert churned["decision_context"]["consequences"] == selected["decision_context"]["consequences"]
+    switched = start("--request", json.dumps(request), task="a different task")["decision_packet"]
+    assert switched["semantic_route_result"]["status"] == "stale"
+    assert "decision_context" not in switched
+    registry.write_text(registry.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+    stale = start("--request", json.dumps(request))["decision_packet"]
+    assert stale["semantic_route_result"]["status"] == "stale"
+    assert "decision_context" not in stale
+    exact = start("--request", json.dumps(request), "--changed", "src/core.rs")["decision_packet"]
+    assert exact["decision_context"]["consequences"][0]["id"] == record["id"]
+    assert not (tmp_path / ".agentic-workspace/local/current-task-routes.json").exists()
+    for request_json in ("null", '{"decision_context":{},"source":{"revision":"caller"}}'):
+        invalid = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "from agentic_workspace.cli import main; raise SystemExit(main())",
+                "start",
+                "--target",
+                str(tmp_path),
+                "--request",
+                request_json,
+                "--format",
+                "json",
+            ],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+        )
+        assert invalid.returncode != 0
+
+
+def test_generated_node_start_does_not_fake_host_route_admission(shared_core_binary: Path, tmp_path: Path) -> None:
+    for arguments in (["--select", "semantic_route_result"], ["--request", "{}"]):
+        result = subprocess.run(
+            ["node", "generated/workspace/typescript/src/cli.mjs", "start", "--target", str(tmp_path), "--format", "json", *arguments],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+        )
+        assert result.returncode == 2, result.stdout + result.stderr
+        assert json.loads(result.stdout)["status"] == "unavailable-in-generated-typescript-host"
