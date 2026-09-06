@@ -49,6 +49,7 @@ from agentic_workspace.generated_operations import (
     assignment_import,
     assignment_integrate,
     assignment_override,
+    assignment_reassign,
     assignment_status,
     config_report,
     correction_event_prune_compact,
@@ -2767,11 +2768,11 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
     closed_assignment = json.loads((assignment_dir / "assign-1.assignment.json").read_text(encoding="utf-8"))
     assert closed_assignment["status"] == "closed"
     assert closed_assignment["current_attempt"]["status"] == "closed"
-    assert override["status"] == "override-recorded"
+    assert override["status"] == "blocked"
+    assert override["reason_code"] == "assignment-override-authority-unavailable"
+    assert override["mutation_applied"] is False
+    assert override["artifact_refs"] == []
     assert (tmp_path / ".agentic-workspace/local/assignment-runs/run-1/received/awaiting-admission").is_dir()
-    override_ref = next(ref for ref in override["artifact_refs"] if ref.endswith("override/override.json"))
-    override_receipt = json.loads((tmp_path / override_ref).read_text())
-    assert override_receipt["claim_effect"] == "downgrade-until-revalidated"
     packet_ref = next(ref for ref in export["artifact_refs"] if ref.endswith("export/packet.json"))
     packet = json.loads((tmp_path / packet_ref).read_text())
     assert packet["authority_refs"]["planning_assignment"] == ".agentic-workspace/planning/assignments/assign-1.assignment.json"
@@ -4181,3 +4182,36 @@ try {{ invokeOperation('delegation-outcome.append', {json.dumps(values)}, {{ tar
     assert python_error.value.kind == "malformed"
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == "malformed"
+
+
+@pytest.mark.parametrize("runtime", ["python", "typescript"])
+@pytest.mark.parametrize("transition", ["reassign", "override"])
+@pytest.mark.parametrize("revision", ["current", "stale"])
+def test_assignment_override_intent_cannot_mint_authority(tmp_path: Path, runtime: str, transition: str, revision: str) -> None:
+    """#2909: public intent never creates source-owner override authority."""
+    if runtime == "typescript" and shutil.which("node") is None:
+        pytest.skip("Node is required for the generated host parity case")
+    identity, invocation, _ = _prepare_shared_worktree_assignment(tmp_path, run_id="override-negative")
+    owned = tmp_path / ".agentic-workspace"
+    before = {path.relative_to(owned).as_posix(): path.read_bytes() for path in owned.rglob("*") if path.is_file()}
+    values = {
+        "assignment_id": "assign-shared",
+        "assignment_revision": identity["revision"] if revision == "current" else "stale-revision",
+        "run_id": "override-negative",
+        "target_name": "codex_sol",
+        "transport": "internal",
+        "reason": "human-authorized replacement",  # A label is not admission.
+        "scope": "src/feature.py",
+        "expires_at": "2099-01-01T00:00:00Z",
+    }
+    result = (
+        _run_typescript_assignment(tmp_path, transition, values)
+        if runtime == "typescript"
+        else (assignment_reassign if transition == "reassign" else assignment_override)(values, target=tmp_path, invocation=invocation)
+    )
+    assert result["status"] == "blocked"
+    assert result["reason_code"] == "assignment-override-authority-unavailable"
+    assert result["mutation_applied"] is False
+    assert result["artifact_refs"] == []
+    after = {path.relative_to(owned).as_posix(): path.read_bytes() for path in owned.rglob("*") if path.is_file()}
+    assert after == before

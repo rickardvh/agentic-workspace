@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Reject assignment reassignment and override where the host cannot independently admit revision-bound override authority, preserving existing assignment state."
+issues = [2916, 2210, 2947, 2817, 2909]
