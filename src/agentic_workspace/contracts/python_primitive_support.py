@@ -1356,42 +1356,19 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
         artifact_paths.append(receipt_path)
         state.update({"current_state": receipt["status"]})
         writes = {receipt_path: receipt}
-    elif transition == "reassign":
-        require("run_id")
-        target_name = require("target_name")
-        reason = require("reason")
-        receipt_path = artifact("reassignment/reassign.json")
-        receipt = {
-            "kind": "agentic-workspace/assignment-reassignment-receipt/v1",
-            "run_id": run_id,
-            "status": "superseded",
-            "new_target": target_name,
-            "reason": reason,
-        }
-        artifact_paths.append(receipt_path)
-        state.update({"current_state": "superseded", "reassigned_to": target_name})
-        writes = {receipt_path: receipt}
-    elif transition == "override":
-        assignment_id = require("assignment_id")
-        reason = require("reason")
-        scope = require("scope")
-        expires_at = require("expires_at")
-        receipt_path = artifact("override/override.json")
-        receipt = {
-            "kind": "agentic-workspace/assignment-human-override-receipt/v1",
-            "assignment_id": assignment_id,
-            "run_id": run_id,
-            "status": "override-recorded",
-            "scope": scope,
-            "reason": reason,
-            "expires_at": expires_at,
-            "revalidation_required": True,
-            "claim_effect": "downgrade-until-revalidated",
-            "proof_effect": "explicit override receipt required in proof boundary",
-        }
-        artifact_paths.append(receipt_path)
-        state.update({"current_state": "override-recorded", "override": receipt})
-        writes = {receipt_path: receipt}
+    elif transition in {"reassign", "override"}:
+        # These public arguments express an intention, not an independently
+        # admitted human/repository override. This host has no producer for the
+        # revision-bound override authority required to replace an assignment.
+        # Preserve both canonical assignment and attempt until that owner can
+        # supply the exact admitted replacement; never fabricate a receipt.
+        failures.append(
+            {
+                "reason": "assignment-override-authority-unavailable",
+                "field": "host.assignment_override_admission",
+                "recovery": "The source owner must admit an override bound to the current assignment/work revision and exact replacement execution configuration. Caller target, reason, scope, expiry, or authority labels cannot supply that evidence; do not resume locally or redispatch the previous target.",
+            }
+        )
     else:
         require("run_id")
         prior_state = _optional_text(state.get("current_state"))

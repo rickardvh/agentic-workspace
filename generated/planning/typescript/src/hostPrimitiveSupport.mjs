@@ -2654,15 +2654,10 @@ function assignmentLifecycleApply(values, operationId) {
       writes.set(resolveInside(targetRoot, planningRef), planning);
       Object.assign(state, { current_state: 'closed' });
     } else Object.assign(state, { current_state: priorState });
-  } else if (transition === 'override') {
-    requireField('assignment_id');
-    requireField('reason');
-    requireField('scope');
-    requireField('expires_at');
-    const receiptPath = artifact('override/override.json');
-    artifactPaths.push(receiptPath);
-    writes.set(receiptPath, { kind: 'agentic-workspace/assignment-human-override-receipt/v1', assignment_id: assignmentId, run_id: runId, status: 'override-recorded', scope: assignmentText(values.scope), reason: assignmentText(values.reason), expires_at: assignmentText(values.expires_at), revalidation_required: true, claim_effect: 'downgrade-until-revalidated', proof_effect: 'explicit override receipt required in proof boundary' });
-    Object.assign(state, { current_state: 'override-recorded' });
+  } else if (transition === 'reassign' || transition === 'override') {
+    // This host cannot independently admit revision-bound override authority.
+    // Public intent fields must not become a replacement or override receipt.
+    failures.push({ reason: 'assignment-override-authority-unavailable', field: 'host.assignment_override_admission', recovery: 'The source owner must admit an override bound to the current assignment/work revision and exact replacement execution configuration. Caller target, reason, scope, expiry, or authority labels cannot supply that evidence; do not resume locally or redispatch the previous target.' });
   } else {
     requireField('run_id');
     const receiptPath = artifact(`closeout/${transition}.json`);
