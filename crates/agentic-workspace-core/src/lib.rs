@@ -3,6 +3,7 @@ pub mod attempt_store;
 pub mod continuity;
 pub mod decision_source;
 pub mod planning;
+pub mod semantic_routes;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};

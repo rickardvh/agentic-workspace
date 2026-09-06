@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Expose bounded public semantic route requests through Rust and let independently admitted decision sources consume current selections."
+issues = [2930, 3040, 2909]

@@ -22,6 +22,7 @@ struct Input {
     admitted_revision: String,
     applicable_scope: Vec<String>,
     fallback: Option<Snapshot>,
+    semantic_routes: Option<Value>,
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -109,7 +110,7 @@ fn record(bytes: &[u8], path: &str, owner: &str) -> Result<Value, CoreError> {
     continuity::normalize(value)
 }
 
-fn load(input: &Input, owner: &str) -> Result<Value, CoreError> {
+fn load(input: &Input, owner: &str, routes: &[Value]) -> Result<Value, CoreError> {
     relative(input.archive.trim_end_matches('/'))?;
     if input.admitted_revision.len() != 40
         || !input
@@ -193,6 +194,9 @@ fn load(input: &Input, owner: &str) -> Result<Value, CoreError> {
                 .unwrap()
                 .iter()
                 .any(|s| input.applicable_scope.iter().any(|v| s == v))
+                || record["semantic_routes"]
+                    .as_array()
+                    .is_some_and(|declared| declared.iter().any(|id| routes.contains(id)))
         })
         .map(|(id, _)| id.clone())
         .collect();
@@ -253,8 +257,30 @@ fn load(input: &Input, owner: &str) -> Result<Value, CoreError> {
 /// a record cannot choose its owner or assert that another owner has its value.
 pub fn view(value: Value) -> Result<Value, CoreError> {
     let input: Input = serde_json::from_value(value).map_err(error)?;
-    if input.applicable_scope.is_empty() {
-        return compile_value(json!({"contributions":[], "intent":{}}));
+    let (route_view, intent) = if let Some(routes) = &input.semantic_routes {
+        let (view, intent) = crate::semantic_routes::resolve(routes.clone())?;
+        (Some(view), intent)
+    } else {
+        (None, json!({}))
+    };
+    let selected = route_view
+        .as_ref()
+        .and_then(|v| v["decision"]["semantic_task_routes"]["routes"].as_array())
+        .cloned()
+        .unwrap_or_default();
+    let finish = |context: Option<Value>| -> Result<Value, CoreError> {
+        let mut value = json!({"contributions":[], "intent":intent});
+        if let Some(context) = context {
+            value["decision_context"] = context;
+        }
+        let mut result = compile_value(value)?;
+        if let Some(view) = &route_view {
+            result["semantic_route_result"] = view.clone();
+        }
+        Ok(result)
+    };
+    if input.applicable_scope.is_empty() && selected.is_empty() {
+        return finish(None);
     }
     let mut fallback = if let Some(source) = &input.fallback {
         load(
@@ -264,8 +290,10 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
                 admitted_revision: source.admitted_revision.clone(),
                 applicable_scope: input.applicable_scope.clone(),
                 fallback: None,
+                semantic_routes: None,
             },
             "memory",
+            &selected,
         )?
     } else {
         empty_context(&input.applicable_scope)
@@ -273,7 +301,7 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
     let has_residue = !fallback["records"].as_array().unwrap().is_empty();
     let native_configured = !input.archive.is_empty();
     let native = if native_configured {
-        match load(&input, "repository") {
+        match load(&input, "repository", &selected) {
             Ok(context) => context,
             // A failed destination cannot hide already admitted useful fallback.
             // The existing reconciliation contract exposes the pending owner.
@@ -284,7 +312,7 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
         empty_context(&input.applicable_scope)
     };
     if !has_residue {
-        return compile_value(json!({"contributions":[], "intent":{}, "decision_context":native}));
+        return finish(Some(native));
     }
     let residue: Vec<_> = fallback["records"]
         .as_array()
@@ -329,5 +357,5 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
     }
     fallback["current_dependencies"] = json!(current.into_values().collect::<Vec<_>>());
     fallback["reconciliation"] = json!({"residue":residue, "native_owner":if native_configured {Some("repository")} else {None}, "fallback_owner":"memory", "destinations":destinations, "dismissals":[]});
-    compile_value(json!({"contributions":[], "intent":{}, "decision_context":fallback}))
+    finish(Some(fallback))
 }

@@ -442,6 +442,23 @@
       "type": "string",
       "pattern": "^[a-z0-9][a-z0-9-]*(/[a-z0-9][a-z0-9-]*)+$"
     },
+    "semantic_route_discovery": {
+      "type": "object",
+      "properties": {
+        "parent": {"type": "string", "pattern": "^([a-z0-9][a-z0-9-]*(/[a-z0-9][a-z0-9-]*)*)?$", "description": "Exact branch identity; empty selects roots."},
+        "after": {"type": "string", "description": "Returned next_after child identity for continuing this same branch."}
+      },
+      "required": ["parent"], "additionalProperties": false
+    },
+    "semantic_route_choice": {
+      "type": "object",
+      "properties": {
+        "posture": {"enum": ["selected", "none", "unresolved"], "description": "Acting-agent semantic judgment."},
+        "routes": {"type": "array", "items": {"$ref": "#/$defs/route_id"}, "maxItems": 16, "uniqueItems": true, "description": "Exact shared leaf identities; no authority-bearing fields."}
+      },
+      "required": ["posture", "routes"], "additionalProperties": false,
+      "allOf": [{"if": {"properties": {"posture": {"const": "selected"}}}, "then": {"properties": {"routes": {"minItems": 1}}}, "else": {"properties": {"routes": {"maxItems": 0}}}}]
+    },
     "semantic_route_source": {
       "type": "object",
       "properties": {
