@@ -1,7 +1,7 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:ccbb5f33f476b2928adf1c148d7d798cf905e1a02e57edf0caa4be787f6d7bf2",
+  "profile_fingerprint": "sha256:2b43c5c5f1eea1a75f043ce86e77e2f4b59005eaead2e27c3266f2d4518269e8",
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",
@@ -5468,8 +5468,8 @@
     "assignment.admit": {
       "identity": "assignment.admit",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:b8ad6f94a881bf54f35ea3fd18348cc811163013c5f7f84b2e607db6a055df6f",
-      "compatibility_fingerprint": "sha256:e847b7f42e6e0ddbbe316e3ba884190cfc3673c824f1a22fbddba73a62ba6212",
+      "fingerprint": "sha256:65534662804a06bf642fc5a3e0428a087c32a11b80c215473a56718f15f84361",
+      "compatibility_fingerprint": "sha256:afd5a0b7b404d7f433b84c252468c34792900f15f079adc6fa3fefbce161cbcc",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -5907,6 +5907,14 @@
               "$schema": "https://json-schema.org/draft/2020-12/schema",
               "additionalProperties": false,
               "properties": {
+                "configuration_revision": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "configuration_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
                 "admission_status": {
                   "enum": [
                     "admitted",
@@ -6199,8 +6207,8 @@
     "assignment.cleanup": {
       "identity": "assignment.cleanup",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:a14b2640dec78bd073592e4c9e510b2ba3bf44574a7b7c1fc7998620f600f86d",
-      "compatibility_fingerprint": "sha256:905b80c78b3894db6bc46564b66b675446ae135de37ee355f629fb5c323cbdb6",
+      "fingerprint": "sha256:8723c8bb6733f1625976badf7afabb7cd331c1a1606b2b05bfa6bd49e1cd9b70",
+      "compatibility_fingerprint": "sha256:b00d09d2af5eb12c9ccd08647dc7877b65896b05ed1bc6c554eed3bdd5db419e",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -6580,6 +6588,14 @@
               "$schema": "https://json-schema.org/draft/2020-12/schema",
               "additionalProperties": false,
               "properties": {
+                "configuration_revision": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "configuration_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
                 "admission_status": {
                   "enum": [
                     "admitted",
@@ -6872,8 +6888,8 @@
     "assignment.close": {
       "identity": "assignment.close",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:bdc6019c411d6422c457e8ed8afbc0d609619b1f0b6a8d1e6ecbeed9e2672753",
-      "compatibility_fingerprint": "sha256:4f8cfdbcda4def82006f7263d97b516ac42d817418f5703bb272a82b6ce2dc2b",
+      "fingerprint": "sha256:ed1133087875f93386c9d6f4ff44dfa5fe4e7221049c392dcc4cd791237aa2b5",
+      "compatibility_fingerprint": "sha256:f6df5f8dddd7f71f37192ee87a4dfe930a04c4bad2aab686a0cdd78bdd004cb1",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -7269,6 +7285,14 @@
               "$schema": "https://json-schema.org/draft/2020-12/schema",
               "additionalProperties": false,
               "properties": {
+                "configuration_revision": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "configuration_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
                 "admission_status": {
                   "enum": [
                     "admitted",
@@ -7561,8 +7585,8 @@
     "assignment.dispatch": {
       "identity": "assignment.dispatch",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:ec3fb1aa48df768039035b5deee7cc8bdf8dd87e9c7e9fddaacf0d46e8ee317a",
-      "compatibility_fingerprint": "sha256:0a92e6e753f39cb10a71a36190669859c7afaa42dab2bd7a1f54dd4812e629cc",
+      "fingerprint": "sha256:45f7c29af4364b8e4b024c4c422ade745e92f18fd28b9972c388045a0ae2ce8f",
+      "compatibility_fingerprint": "sha256:42b423df451743b63b2d3a6ddaffbe5e98f5ae6f0d3b85e191cd0e64d18afd2a",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -7584,6 +7608,16 @@
         ],
         "id": "assignment.dispatch",
         "inputs": [
+          {
+            "name": "configuration_revision",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "configuration_id",
+            "required": false,
+            "source": "cli-option"
+          },
           {
             "name": "target",
             "required": false,
@@ -7817,6 +7851,16 @@
           "classification": "lifecycle-mutation",
           "inputs": [
             {
+              "name": "configuration_revision",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "configuration_id",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
               "name": "target",
               "required": false,
               "source": "cli-option"
@@ -7890,6 +7934,14 @@
               "$schema": "https://json-schema.org/draft/2020-12/schema",
               "additionalProperties": false,
               "properties": {
+                "configuration_revision": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "configuration_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
                 "admission_status": {
                   "enum": [
                     "admitted",
@@ -8182,8 +8234,8 @@
     "assignment.export": {
       "identity": "assignment.export",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:72f95b0a9e9eaeca7b467f0f54f2b72256417f62a84590010fb82c99ad40d02e",
-      "compatibility_fingerprint": "sha256:4d5f17ffec72c5c49c3774762f5f50454c5cdbef215292b3d87f74fb3b1dc49d",
+      "fingerprint": "sha256:30669d28cf582236995bd54c9c0a0e2ca1cf3ac105a64d1bf96ac70c4aa37e72",
+      "compatibility_fingerprint": "sha256:0852963c5d49f4c39dafef6bae66ac12ffd7428f46d0088c74630e10fb7606ae",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -8206,6 +8258,16 @@
         ],
         "id": "assignment.export",
         "inputs": [
+          {
+            "name": "configuration_revision",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "configuration_id",
+            "required": false,
+            "source": "cli-option"
+          },
           {
             "name": "target",
             "required": false,
@@ -8480,6 +8542,16 @@
           "classification": "lifecycle-mutation",
           "inputs": [
             {
+              "name": "configuration_revision",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "configuration_id",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
               "name": "target",
               "required": false,
               "source": "cli-option"
@@ -8589,6 +8661,14 @@
               "$schema": "https://json-schema.org/draft/2020-12/schema",
               "additionalProperties": false,
               "properties": {
+                "configuration_revision": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "configuration_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
                 "admission_status": {
                   "enum": [
                     "admitted",
@@ -8881,8 +8961,8 @@
     "assignment.import": {
       "identity": "assignment.import",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:ff8bbf81544c1f42c96fc79a988513891610cdf2767149c764540af29468f96b",
-      "compatibility_fingerprint": "sha256:8529a48513b8173cf35cb0d4676d4068e9b271f11b773c962234aa2d0d4f7d06",
+      "fingerprint": "sha256:18694ad512ca3ec2d16dbc0aac8fb030f583c2271fc1a5fbdc5e800f39a1a74f",
+      "compatibility_fingerprint": "sha256:0657d5c11aa5d9dbd0e5cbd35f5dabcfa70fb966bfe20fd2431415fcc91725ce",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -9272,6 +9352,14 @@
               "$schema": "https://json-schema.org/draft/2020-12/schema",
               "additionalProperties": false,
               "properties": {
+                "configuration_revision": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "configuration_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
                 "admission_status": {
                   "enum": [
                     "admitted",
@@ -9564,8 +9652,8 @@
     "assignment.integrate": {
       "identity": "assignment.integrate",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:51448e71495bccbe3cd50b66b1d0a35477064ef0232939fa7dfe27d5af1e5438",
-      "compatibility_fingerprint": "sha256:45dbde662d45c3fdd9e98da322f1bc77ccf6361e6436992b4ef53b7cad29e6c2",
+      "fingerprint": "sha256:88a55f4f2d4e2d60a8582d34fc22ba1408ab6b87988478d3eb154cf89a1ae712",
+      "compatibility_fingerprint": "sha256:bf8503464a939b421ea90c43be9348f2a8fed8d6851bf8fb8c177af98a98d238",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -9945,6 +10033,14 @@
               "$schema": "https://json-schema.org/draft/2020-12/schema",
               "additionalProperties": false,
               "properties": {
+                "configuration_revision": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "configuration_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
                 "admission_status": {
                   "enum": [
                     "admitted",
@@ -10237,8 +10333,8 @@
     "assignment.override": {
       "identity": "assignment.override",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:3b181874a1a43e993b87b43acb6d3609c1a345ec64673eb36557fc4e9adc860d",
-      "compatibility_fingerprint": "sha256:72963cdb69f29d37d314858c88e7acd013c6ffc88d91645b3763a532df02c121",
+      "fingerprint": "sha256:eb5c4dab41640f87a1d87fc41292b563944fc61f9b2f2795ffab383a773f2560",
+      "compatibility_fingerprint": "sha256:5ac43905e2639042c5c97530b6f5f82caf4a2818c5923edaac667ef1abe0617f",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -10618,6 +10714,14 @@
               "$schema": "https://json-schema.org/draft/2020-12/schema",
               "additionalProperties": false,
               "properties": {
+                "configuration_revision": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "configuration_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
                 "admission_status": {
                   "enum": [
                     "admitted",
@@ -10910,8 +11014,8 @@
     "assignment.reassign": {
       "identity": "assignment.reassign",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:3a86f79194e621ee2d97fe18c906be49d831a78790ec769457f0410c3f71bfdd",
-      "compatibility_fingerprint": "sha256:269821e5a0c375360d8456ad79e2ccaf85a332b7c04ce46849b3250a7e7488bf",
+      "fingerprint": "sha256:2af32a303f0c9073dd8bdaee70ae507f1b64b9d1b453086086e2ff9d0d88f8fd",
+      "compatibility_fingerprint": "sha256:bcf2067a05456daa7f7185a0ce16b1d97170ab04a67901de050986569d7503b2",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -11291,6 +11395,14 @@
               "$schema": "https://json-schema.org/draft/2020-12/schema",
               "additionalProperties": false,
               "properties": {
+                "configuration_revision": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "configuration_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
                 "admission_status": {
                   "enum": [
                     "admitted",
@@ -11583,8 +11695,8 @@
     "assignment.reject": {
       "identity": "assignment.reject",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:7412c75df59ea169745b350ebc0becf07b3212a8bd5e2ec173e77fca5bc688bf",
-      "compatibility_fingerprint": "sha256:3256f807d27e6ad7fb829f6b0ceb53fab5b410044494ddebd4a3e498068910a0",
+      "fingerprint": "sha256:49d89ac4140a4356124c6b1fec5fd9e08377db0591dd2bc49a2f751ad519ad53",
+      "compatibility_fingerprint": "sha256:3cb962670eaab2a58a088b6afbad4eaf251018049955f7a9bb687093ff81517e",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -11964,6 +12076,14 @@
               "$schema": "https://json-schema.org/draft/2020-12/schema",
               "additionalProperties": false,
               "properties": {
+                "configuration_revision": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "configuration_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
                 "admission_status": {
                   "enum": [
                     "admitted",
@@ -12256,8 +12376,8 @@
     "assignment.repair": {
       "identity": "assignment.repair",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:6e839252fdba0fff83f30509dbd5aefc3ad7ea24e45cf551444788b54fca1641",
-      "compatibility_fingerprint": "sha256:9426a10abe1bc4b740d05149214bae17e2d6239b587522d56e2910daf2be4ab0",
+      "fingerprint": "sha256:b4d63471e0cb2bf5f01cd25a5e5896c2c8458105b37ef3288fb08fec271c6a5c",
+      "compatibility_fingerprint": "sha256:fb253f5c682b7831f4d8fc2c6ef8cd3feb950c68e841b1e58e41666a3eb555f5",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -12637,6 +12757,14 @@
               "$schema": "https://json-schema.org/draft/2020-12/schema",
               "additionalProperties": false,
               "properties": {
+                "configuration_revision": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "configuration_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
                 "admission_status": {
                   "enum": [
                     "admitted",
@@ -12929,8 +13057,8 @@
     "assignment.status": {
       "identity": "assignment.status",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:ee1643ebf59491e8d77476f2aef21a67c13872bccd9292c17e129fd300331515",
-      "compatibility_fingerprint": "sha256:9eebac8cec7cfee93dcc713748547138fa006c4523b7cb69e94fcb8d0c6b2450",
+      "fingerprint": "sha256:0806ff70d9ce8d89dc6a259a89d51331c01dec8c47a23c929af1c0a4a6bda0d2",
+      "compatibility_fingerprint": "sha256:f11caaca145490c06ec77ec0092a919bff476806a9a95f80edb2aef3f41475e5",
       "contract": {
         "classification": "read-only-report",
         "command_surface": {
@@ -13194,6 +13322,14 @@
               "$schema": "https://json-schema.org/draft/2020-12/schema",
               "additionalProperties": false,
               "properties": {
+                "configuration_revision": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "configuration_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
                 "admission_status": {
                   "enum": [
                     "admitted",
@@ -25719,6 +25855,16 @@
         "additionalProperties": false,
         "description": "Input accepted by public assignment lifecycle operations that prepare handoff packets, import returns, admit or reject results, integrate admitted work, and record lifecycle maintenance actions.",
         "properties": {
+          "configuration_revision": {
+            "description": "Current source-resolved execution configuration offer revision. Only an intention to select, never authority to replace an existing assignment.",
+            "type": "string",
+            "minLength": 1
+          },
+          "configuration_id": {
+            "description": "One eligible configuration from the paired revision; target, transport and adapter-owned topology stay bound together.",
+            "type": "string",
+            "minLength": 1
+          },
           "admission_status": {
             "description": "Reviewer decision recorded for an imported assignment return.",
             "enum": [

@@ -669,6 +669,13 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
 
     assignment_id = _optional_text(values.get("assignment_id"))
     assignment_revision = _optional_text(values.get("assignment_revision"))
+    choice_revision = _optional_text(values.get("configuration_revision"))
+    choice_id = _optional_text(values.get("configuration_id"))
+    execution_choice = None
+    if choice_revision or choice_id:
+        if not choice_revision or not choice_id or transition not in {"dispatch", "export"} or assignment_id:
+            raise PrimitiveExecutionError("configuration-choice-requires-both-fields-and-new-assignment")
+        execution_choice = {"revision": choice_revision, "candidate": choice_id}
     if transition in {"dispatch", "export"} and not assignment_id:
         from agentic_workspace import config as config_lib
         from agentic_workspace.workspace_runtime_core import _execution_posture_payload
@@ -680,7 +687,9 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             changed_paths=changed_paths,
             task_text=_optional_text(values.get("task")),
             target_root=target_root,
-            materialize_assignment=True,
+            materialize_assignment=not dry_run,
+            execution_choice=execution_choice,
+            requested_transport=_optional_text(values.get("transport")),
         )
         materialization = _assignment_mapping(posture.get("assignment_materialization"))
         assignment_id = _optional_text(materialization.get("assignment_id"))
@@ -1803,6 +1812,31 @@ def _assignment_current_authorities_from_store(
                     "reason": str(error),
                     "field": "assignment.replacement",
                     "recovery": "Reconcile current source-owner admission before continuation; no previous-target fallback.",
+                }
+            )
+    configuration = _assignment_mapping(_assignment_mapping(identity.get("dispatch_adapter")).get("execution_configuration"))
+    if configuration and not replacing:
+        from agentic_workspace.assignment_source import validate_current_configuration
+
+        try:
+            validate_current_configuration(target_root, configuration)
+            choice = planning_assignment.get("execution_choice")
+            if isinstance(choice, dict) and choice:
+                from agentic_workspace.config import load_workspace_config
+                from agentic_workspace.workspace_runtime_core import _current_assignment_selection
+
+                _current_assignment_selection(
+                    config=load_workspace_config(target_root=target_root),
+                    changed_paths=_assignment_list(identity.get("allowed_paths")),
+                    task_text=_optional_text(identity.get("human_intent")),
+                    execution_choice=choice,
+                )
+        except (ValueError, OSError, KeyError) as error:
+            failures.append(
+                {
+                    "reason": str(error),
+                    "field": "assignment.execution_configuration",
+                    "recovery": "Reconcile the current source and capability before using this sealed assignment.",
                 }
             )
     current_revision = _optional_text(planning_assignment.get("current_revision") or identity.get("revision"))

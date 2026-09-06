@@ -19,7 +19,9 @@ from agentic_workspace.decision import replace_assignment
 SOURCE = ".agentic-workspace/config.local.toml"
 
 
-def current_route_configurations(root: Path, profiles: list[dict[str, Any]], policy: Any, work: dict[str, Any]) -> dict[str, Any]:
+def current_route_configurations(
+    root: Path, profiles: list[dict[str, Any]], policy: Any, work: dict[str, Any], selection: dict[str, str] | None = None
+) -> dict[str, Any]:
     """Host facts for existing process/manual routes, without probing providers.
 
     Executable presence proves only the generic argv transport. It never proves
@@ -27,7 +29,7 @@ def current_route_configurations(root: Path, profiles: list[dict[str, Any]], pol
     """
     from agentic_workspace.decision import execution_configurations
 
-    candidates = []
+    candidates: list[dict[str, Any]] = []
     for profile in profiles:
         name = profile["name"]
         current = bool(policy.current_target) and policy.current_target in {name, profile.get("target_id"), *profile.get("aliases", [])}
@@ -40,6 +42,16 @@ def current_route_configurations(root: Path, profiles: list[dict[str, Any]], pol
         for transport in transports:
             method = transport["method"]
             if transport.get("kind") == "native":
+                # A hard-ineligible route cannot benefit from remote discovery.
+                if (
+                    policy.transport_authority != "automatic"
+                    or policy.safe_to_auto_run_commands is not True
+                    or profile.get("capability_mismatch")
+                    or profile.get("required_action") == "escalate-before-execution"
+                    or "off" in profile.get("human_control_modes", [])
+                    or "required-proof-missing" in profile.get("proof_requirements", [])
+                ):
+                    continue
                 from agentic_workspace.native_transport import configuration_offers
 
                 candidates.extend(configuration_offers(root, profile, transport, policy, work))
@@ -76,6 +88,8 @@ def current_route_configurations(root: Path, profiles: list[dict[str, Any]], pol
                     "execution": {"adapter": transport, "context_strategy": "bounded", "continuity": {"mode": "adapter-owned-unknown"}},
                 }
             )
+    for candidate in candidates:
+        candidate["execution"]["authority_revision"] = configuration_authority_revision(root, candidate["target"])
     return execution_configurations(
         {
             "work": work,
@@ -83,13 +97,54 @@ def current_route_configurations(root: Path, profiles: list[dict[str, Any]], pol
             "required_proof_classes": [],
             "independent_context": False,
             "candidates": candidates,
-            "selection": None,
+            "selection": selection,
         }
     )
 
 
 def revision(value: Any) -> str:
     return "sha256:" + hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
+
+
+def configuration_authority_revision(root: Path, target: str) -> str:
+    """Bind relevant human-owned source facts, excluding unrelated local settings."""
+    path = root / SOURCE
+    if path.is_symlink() or not path.resolve().is_relative_to(root.resolve()):
+        raise ValueError("configuration-source-outside-owner-root")
+    raw = tomllib.loads(path.read_text(encoding="utf-8-sig")) if path.exists() else {}
+    return revision(
+        {"delegation": raw.get("delegation", {}), "safety": raw.get("safety", {}), "target": raw.get("delegation_targets", {}).get(target)}
+    )
+
+
+def validate_current_configuration(root: Path, configuration: dict[str, Any]) -> None:
+    execution = configuration.get("execution", {})
+    expected = execution.get("authority_revision")
+    # Legacy/imported assignments have their established admission contract.
+    # Every newly source-resolved configuration carries the explicit binding.
+    if expected is None:
+        return
+    target = configuration["target"]
+    if expected != configuration_authority_revision(root, target):
+        raise ValueError("assignment-configuration-source-stale")
+    adapter = execution.get("adapter", {})
+    if adapter.get("kind") == "process":
+        command = adapter.get("command", [])
+        executable = shutil.which(command[0]) if command else None
+        if command and not executable:
+            local = root / command[0]
+            executable = str(local.resolve()) if local.is_file() else None
+        stat = Path(executable).stat() if executable else None
+        config = load_workspace_config(target_root=root)
+        profile = next((p for p in config.local_override.delegation_targets if p.name == target), None)
+        facts = {
+            "transport": adapter,
+            "executable": executable,
+            "executable_fingerprint": [stat.st_size, stat.st_mtime_ns] if stat else None,
+            "target_revision": profile.target_revision if profile else None,
+        }
+        if revision(facts) != configuration.get("capability_revision"):
+            raise ValueError("assignment-configuration-capability-stale")
 
 
 def source_facts(root: Path) -> tuple[dict[str, Any], dict[str, Any]]:
