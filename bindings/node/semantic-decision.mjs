@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const packagedBinary = () => join(
@@ -10,7 +10,15 @@ const packagedBinary = () => join(
 );
 
 const coreBinary = () => {
-  const candidate = process.env.AGENTIC_WORKSPACE_CORE_BINARY || packagedBinary();
+  let candidate = process.env.AGENTIC_WORKSPACE_CORE_BINARY || packagedBinary();
+  const sourceRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+  if (!process.env.AGENTIC_WORKSPACE_CORE_BINARY && !existsSync(candidate) && existsSync(join(sourceRoot, "crates/agentic-workspace-core/Cargo.toml"))) {
+    const built = spawnSync("cargo", ["build", "--quiet", "--locked", "--manifest-path", join(sourceRoot, "Cargo.toml"), "--message-format=json", "-p", "agentic-workspace-core"], { cwd: sourceRoot, encoding: "utf8", windowsHide: true });
+    if (built.status !== 0) throw new Error(`source checkout core build failed: ${built.error?.message || built.stderr.trim()}`);
+    const artifact = built.stdout.split(/\r?\n/).filter(Boolean).map(line => JSON.parse(line)).find(row => row.reason === "compiler-artifact" && row.target?.name === "agentic-workspace-core" && row.executable);
+    if (!artifact) throw new Error("Cargo did not return a current shared-core executable");
+    candidate = artifact.executable;
+  }
   if (!existsSync(candidate)) {
     throw new Error("shared Agentic Workspace core is unavailable; install a supported native package or set AGENTIC_WORKSPACE_CORE_BINARY");
   }

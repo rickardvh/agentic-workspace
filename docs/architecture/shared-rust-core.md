@@ -220,3 +220,6 @@ Changed source bytes fail closed for reconciliation; current material dependenci
 The ordinary decision packet carries the compact current consequences and currentness states, with a separate decision-context revision. These facts grant no action, effect, proof, claim, custody or human authority. Full prose is neither copied to Memory nor returned at startup. Owner/operation-based and semantic applicability, automatic capture, fallback storage and promotion remain separate work.
 
 The existing #2909 shared-core surface proves relevant/no-signal, source and authority staleness, forged actor and effect-authority negatives, retained superseded rationale, Python/Node/JSON equivalence, and actual ordinary startup with fresh validation before cache reuse. The real repository trace uses `docs/decisions/identity-lifetimes.md`.
+
+
+Installed transports use their packaged native binary. In an editable source checkout without that artifact, the Python/Node transport asks Cargo to validate/build the current shared core on demand; it does not require an ordinary client to supply an executable path or silently reuse an unvalidated old binary. No-signal startup does not invoke the core and does not build it. Explicit binary overrides remain available to trusted hosts and conformance tools.

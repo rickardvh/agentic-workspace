@@ -190,7 +190,11 @@ def test_node_binding_executes_the_same_core(shared_core_binary: Path) -> None:
 
 def test_target_bindings_cannot_hide_reducer_semantics() -> None:
     forbidden = ("terminal", "settled", "blockers", "affects", "operation_id", "priority", "consequence_id")
-    for path in (ROOT / "src/agentic_workspace/decision.py", ROOT / "bindings/node/semantic-decision.mjs"):
+    for path in (
+        ROOT / "src/agentic_workspace/decision.py",
+        ROOT / "src/agentic_workspace/native_core.py",
+        ROOT / "bindings/node/semantic-decision.mjs",
+    ):
         source = path.read_text(encoding="utf-8")
         assert len(source.splitlines()) <= 160
         assert not any(token in source for token in forbidden)
@@ -1484,6 +1488,7 @@ def test_ordinary_start_uses_native_decision_and_rechecks_before_cache(shared_co
                 "--format",
                 "json",
             ],
+            env={key: value for key, value in os.environ.items() if key != "AGENTIC_WORKSPACE_CORE_BINARY"},
             cwd=ROOT,
             text=True,
             capture_output=True,
@@ -1512,3 +1517,20 @@ def test_native_exact_scope_does_not_depend_on_json_escaping(shared_core_binary:
     path.write_text(path.read_text(encoding="utf-8").replace("src/core.rs", "src\\/core.rs"), encoding="utf-8", newline="\n")
     context["admitted_revision"] = _commit_native(tmp_path)
     assert repository_decision_view(**context)["decision_context"]["states"][0]["status"] == "current"
+
+
+def test_source_node_transport_builds_current_core_without_binary_override(shared_core_binary: Path) -> None:
+    result = subprocess.run(
+        [
+            "node",
+            "--input-type=module",
+            "-e",
+            "import { compileSourceDecision } from './bindings/node/semantic-decision.mjs'; console.log(JSON.stringify(compileSourceDecision([])));",
+        ],
+        cwd=ROOT,
+        env={key: value for key, value in os.environ.items() if key != "AGENTIC_WORKSPACE_CORE_BINARY"},
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    assert json.loads(result.stdout) == compile_source_decision([])
