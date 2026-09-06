@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Carry agent-selected public semantic routes through ordinary startup and project current repository decision consequences without lexical activation."
+issues = [2930, 3040, 3041, 2909]

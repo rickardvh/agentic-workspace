@@ -18,6 +18,23 @@ def _digest(value: str) -> str:
     return "sha256:" + hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
+def semantic_route_host_context(root: Path, *, task: str, request: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Read host work/source facts for Rust; public callers supply only the request."""
+    work = resolve_current_work_context(root=root, task=task)
+    catalogue = semantic_route_catalogue(root)
+    # Work ownership may survive a task switch. Bind the exact supplied task as
+    # well, without interpreting its words or tying selection to aggregate HEAD.
+    identity = _digest(json.dumps([work["id"], task], separators=(",", ":")))
+    return {
+        "current_work": {"kind": "current-work", "id": identity},
+        "source": {
+            "revision": catalogue["source_revision"],
+            "routes": [route["id"] for route in catalogue["routes"]] if catalogue["status"] == "current" else [],
+        },
+        "request": request,
+    }
+
+
 def _registry_paths(root: Path) -> list[Path]:
     candidates = [root / "tools/skills/REGISTRY.json"]
     workspace = root / ".agentic-workspace"

@@ -3531,7 +3531,14 @@ function executeTypescriptDomainOperation(operationId, values) {
     const payload = { kind: 'planning-summary/v1', profile: values.verbose ? 'full' : 'tiny', machine_first_planning: { status: 'no-active-execplan' }, target_root: target };
     return selectWorkspacePayload(payload, values, 'summary');
   }
-  if (operationId === 'start.context') return { kind: 'startup-context/v1', target_root: target, drill_down: { rule: 'Compact default omits selector inventory/schemas; use --select or --verbose for detail.' }, context: { proof: { kind: 'proof-selection/v1' } } };
+  if (operationId === 'start.context') {
+    if (values.request !== undefined || String(values.select ?? '').split(',').includes('semantic_route_result')) {
+      return { kind: 'agentic-workspace/config-projection-unavailable/v1', status: 'unavailable-in-generated-typescript-host',
+        selector: 'semantic_route_result', exit_status: 2,
+        rule: 'This host cannot independently supply current-work and repository source admission. Use the configured Python host; the shared Node semantic API requires trusted host inputs.' };
+    }
+    return { kind: 'startup-context/v1', target_root: target, drill_down: { rule: 'Compact default omits selector inventory/schemas; use --select or --verbose for detail.' }, context: { proof: { kind: 'proof-selection/v1' } } };
+  }
   if (operationId === 'implement.context') return { kind: 'implementer-context-tiny/v1', target_root: target, proof: { kind: 'proof-selection/v1' } };
   if (operationId === 'proof.report') {
     const prevalidationError = workspaceSelectorPrevalidationError(values.select, 'proof');

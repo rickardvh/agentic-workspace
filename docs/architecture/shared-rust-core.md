@@ -240,8 +240,30 @@ The repository source adapter can consume that same host context and public
 request through `semantic_routes`. Exact source scope still wins. Only current
 selected leaves can supply additional applicability; missing or stale selection
 does not invalidate exact applicability. This API is stateless and does not adopt
-the former local route-selection file. Ordinary startup transport and the
-remaining legacy route consumers require their own migration slices.
+the former local route-selection file. Remaining legacy route consumers require
+their own migration slices.
+
+Ordinary `start --select semantic_route_result --task "<current task>" --format
+json` returns those templates. Send a completed template through `start --request
+'<public request JSON>' --task "<same current task>" --format json`. The host
+derives work identity from the existing current-work binding plus the exact task,
+and derives source revision/leaf identities from current repository declarations.
+Clients cannot override either host input. Task text is hashed for identity, never
+classified for applicability. Route selection does not depend on unrelated HEAD
+changes. Invalid declarations provide no selectable leaves.
+
+The source's consequence and route response enter admitted projection inputs
+before ordinary decision compilation and cache lookup. Revalidation rereads the
+host facts. An unchanged request remains reusable; task/source changes invalidate
+semantic selection, while exact path applicability survives. No request/selector
+means no new route discovery, native call or state write. The shared-authority ADR
+is the real ownership-audit route example; no ADR prose is copied into Memory.
+
+The standalone generated TypeScript CLI lacks this repository host evidence
+adapter and reports explicit unavailability for the selector/request. It must not
+silently accept and ignore a public request. The configured Python host supplies
+the ordinary path; Python/Node/JSON shared semantic APIs remain equivalent with
+trusted host inputs. No caller JSON is promoted to substitute host admission.
 
 The same source adapter accepts an independently admitted Memory snapshot via the trusted host's optional `[assurance.decision_record_fallback]` table (`archive`, `admitted_revision`). This is explicit source-owner admission, including Memory custody/provenance, not discovery or an owner label supplied by the note. No default directory, caller-selected owner, or new public request fields are added. A host without native admission can retain and selectively surface this typed source under Memory's fallback role.
 
