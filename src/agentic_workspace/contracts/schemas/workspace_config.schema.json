@@ -260,6 +260,16 @@
             "docs/decisions/"
           ]
         },
+        "decision_record_fallback": {
+          "description": "Independent Memory source-owner admission of a bounded decision archive snapshot and its semantic provenance; never a public request argument.",
+          "type": "object",
+          "required": ["archive", "admitted_revision"],
+          "additionalProperties": false,
+          "properties": {
+            "archive": {"description": "Exact repository-relative Memory source archive admitted by its host owner.", "type": "string", "minLength": 1},
+            "admitted_revision": {"description": "Immutable Git commit explicitly admitting this Memory snapshot and semantic provenance.", "type": "string", "pattern": "^[0-9a-fA-F]{40}$"}
+          }
+        },
         "decision_record_revision": {
           "description": "Trusted source-owner admission of this exact archive Git commit, including semantic provenance. Never infer from HEAD, tracking or record actor strings.",
           "type": "string",

@@ -3597,11 +3597,15 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
         return 0
 
     def read_decision_source() -> dict[str, Any]:
-        if config.assurance.decision_record_revision and config.assurance.decision_record_target and changed_paths:
+        if changed_paths and (
+            (config.assurance.decision_record_revision and config.assurance.decision_record_target)
+            or config.assurance.decision_record_fallback
+        ):
             return repository_decision_view(
                 target=str(target_root),
-                archive=config.assurance.decision_record_target,
-                admitted_revision=config.assurance.decision_record_revision,
+                archive=config.assurance.decision_record_target or "",
+                admitted_revision=config.assurance.decision_record_revision or "",
+                fallback=config.assurance.decision_record_fallback,
                 applicable_scope=[f"path:{path}" for path in _normalize_changed_paths(changed_paths)],
             )
         return {}

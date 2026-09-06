@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Retain admitted Memory decision consequences until a current native owner admits the exact material value."
+issues = [3040, 2570, 2909]
