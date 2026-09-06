@@ -81,3 +81,8 @@ export function reconcilePlanning(context) {
 export function normalizeDecisionRecord(record) {
   return request({normalize_decision_record: record});
 }
+
+// Trusted host/source-owner context, never caller-authored public request fields.
+export function repositoryDecisionView(context) {
+  return request({repository_decision_view: context});
+}

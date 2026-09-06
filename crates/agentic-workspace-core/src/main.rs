@@ -11,6 +11,11 @@ fn main() {
     };
     let result = if request
         .as_object()
+        .is_some_and(|item| item.len() == 1 && item.contains_key("repository_decision_view"))
+    {
+        agentic_workspace_core::decision_source::view(request["repository_decision_view"].clone())
+    } else if request
+        .as_object()
         .is_some_and(|item| item.len() == 1 && item.contains_key("admission"))
     {
         agentic_workspace_core::admit_invocation_value(request["admission"].clone())

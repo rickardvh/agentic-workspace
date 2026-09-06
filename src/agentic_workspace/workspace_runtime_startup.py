@@ -17,6 +17,7 @@ from typing import Any
 
 from agentic_workspace.config import DEFAULT_CLI_INVOKE, WORKSPACE_CONFIG_PATH, WORKSPACE_LOCAL_CONFIG_PATH, WorkspaceConfig
 from agentic_workspace.current_work_context import startup_route_identity
+from agentic_workspace.decision import repository_decision_view
 from agentic_workspace.operating_decision import (
     admit_projection_surface_decision_input,
     attach_projection_surface_decision_input_consumption,
@@ -3592,6 +3593,14 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
     ):
         _emit_payload(payload=fast_selected, format_name=args.format)
         return 0
+    native: dict[str, Any] = {}
+    if config.assurance.decision_record_revision and config.assurance.decision_record_target and changed_paths:
+        native = repository_decision_view(
+            target=str(target_root),
+            archive=config.assurance.decision_record_target,
+            admitted_revision=config.assurance.decision_record_revision,
+            applicable_scope=[f"path:{path}" for path in _normalize_changed_paths(changed_paths)],
+        )
     effective_profile = _start_profile_for_select(requested_profile=start_profile, select=selected_fields)
     reuse_query = {
         "profile": effective_profile,
@@ -3605,6 +3614,8 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
             selected_modules=list(config.enabled_modules),
         ),
     }
+    if "decision_context" in native:
+        reuse_query["decision_context_revision"] = native["input_revision"]
     reuse_context: dict[str, Any] | None = None
     admitted_input: dict[str, Any] = {}
     payload: dict[str, Any]
@@ -3695,6 +3706,11 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
     payload, operating_decision = finalize_projection_surface_operating_decision(
         payload=payload, admitted_input=admitted_input, consumer="start"
     )
+    if "decision_context" in native:
+        operating_decision["decision_context"] = native["decision_context"]
+        if isinstance(payload.get("decision_packet"), dict):
+            payload["decision_packet"]["decision_context"] = native["decision_context"]
+            payload["decision_packet"].setdefault("identity", {})["decision_context_revision"] = native["input_revision"]
     if payload.get("context") == {}:
         payload.pop("context")
     if _selector_requests(selected_fields, "source_guidance"):

@@ -137,3 +137,17 @@ __all__ = [
 
 def normalize_decision_record(record: Mapping[str, Any]) -> dict[str, Any]:
     return _request({"normalize_decision_record": record})
+
+
+def repository_decision_view(*, target: str, archive: str, admitted_revision: str, applicable_scope: list[str]) -> dict[str, Any]:
+    """Trusted repository host/source-owner input, never public request fields."""
+    return _request(
+        {
+            "repository_decision_view": {
+                "target": target,
+                "archive": archive,
+                "admitted_revision": admitted_revision,
+                "applicable_scope": applicable_scope,
+            }
+        }
+    )
