@@ -1317,7 +1317,183 @@
         {"owner": "alpha", "revision": "a1", "actions": [{"dependency_revision": "a1", "operation_id": "alpha.act", "arguments": {"value": "a"}}]}
       ], "intent": {}},
       "expect": {"status": "blocked", "blockers.0.code": "multiple-actions", "blockers.0.alternatives.0.source_owner": "alpha", "blockers.0.alternatives.1.source_owner": "zeta"}
+    },
+    {
+      "id": "stale-agent-route-task-is-scoped",
+      "input": {
+        "contributions": [],
+        "intent": {
+          "current_work": {"kind": "current-work", "id": "work-current"},
+          "semantic_route_source": {"revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "routes": ["github/issues/create"]},
+          "semantic_task_routes": {
+            "posture": "selected", "routes": ["github/issues/create"],
+            "task_identity": {"kind": "current-work", "id": "work-stale"},
+            "source_revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "provenance": "agent-selected", "authority_effect": "applicability-only"
+          }
+        }
+      },
+      "expect": {"semantic_task_routes.status": "stale", "semantic_task_routes.routes": [], "blockers": []}
+    },
+    {
+      "id": "stale-agent-route-source-is-scoped",
+      "input": {
+        "contributions": [],
+        "intent": {
+          "current_work": {"kind": "current-work", "id": "work-current"},
+          "semantic_route_source": {"revision": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "routes": ["github/issues/create"]},
+          "semantic_task_routes": {
+            "posture": "selected", "routes": ["github/issues/create"],
+            "task_identity": {"kind": "current-work", "id": "work-current"},
+            "source_revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "provenance": "agent-selected", "authority_effect": "applicability-only"
+          }
+        }
+      },
+      "expect": {"semantic_task_routes.status": "stale", "semantic_task_routes.routes": [], "blockers": []}
+    },
+    {
+      "id": "unknown-agent-route-is-scoped",
+      "input": {
+        "contributions": [],
+        "intent": {
+          "current_work": {"kind": "current-work", "id": "work-current"},
+          "semantic_route_source": {"revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "routes": ["github/issues/create"]},
+          "semantic_task_routes": {
+            "posture": "selected", "routes": ["github/pulls/review"],
+            "task_identity": {"kind": "current-work", "id": "work-current"},
+            "source_revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "provenance": "agent-selected", "authority_effect": "applicability-only"
+          }
+        }
+      },
+      "expect": {"semantic_task_routes.status": "stale", "semantic_task_routes.routes": [], "blockers": []}
+    },
+{
+  "id": "semantic-route-contributes-current-decision",
+  "input": {
+    "contributions": [],
+    "intent": {
+      "current_work": {
+        "kind": "current-work",
+        "id": "work-1"
+      },
+      "semantic_route_source": {
+        "revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "routes": [
+          "architecture/authority"
+        ]
+      },
+      "semantic_task_routes": {
+        "posture": "selected",
+        "routes": [
+          "architecture/authority"
+        ],
+        "task_identity": {
+          "kind": "current-work",
+          "id": "work-1"
+        },
+        "source_revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "provenance": "agent-selected",
+        "authority_effect": "applicability-only"
+      }
+    },
+    "decision_context": {
+      "records": [
+        {
+          "authority": {
+            "actor": {
+              "id": "implementer",
+              "kind": "agent"
+            },
+            "basis": [
+              {
+                "owner": "assignment",
+                "reference": "bounded-implementation",
+                "revision": "authority-1"
+              }
+            ]
+          },
+          "authors": [
+            {
+              "id": "implementer",
+              "kind": "agent"
+            }
+          ],
+          "consequence": "Python and Node transport owner facts to the shared reducer",
+          "context": [
+            {
+              "owner": "memory",
+              "reference": "prior-cost-evidence",
+              "revision": "evidence-1"
+            }
+          ],
+          "contributors": [],
+          "decision": "Use one Rust executable semantic authority",
+          "dependencies": [
+            {
+              "owner": "repository",
+              "reference": "SYSTEM_INTENT",
+              "revision": "intent-1"
+            }
+          ],
+          "id": "architecture/shared-authority",
+          "material_revision": "sha256:fbeae994b739cb1b68a2198479c33129df41f063f9b9927e6d8319273c6f0411",
+          "rationale_reference": "decisions/shared-authority#rationale-and-alternatives",
+          "scope": [
+            "contract:operation-result",
+            "owner:planning"
+          ],
+          "semantic_routes": [
+            "architecture/authority"
+          ],
+          "source": {
+            "owner": "repository",
+            "reference": "decisions/shared-authority",
+            "revision": "source-1"
+          },
+          "supersedes": []
+        }
+      ],
+      "admissions": [
+        {
+          "id": "architecture/shared-authority",
+          "material_revision": "sha256:fbeae994b739cb1b68a2198479c33129df41f063f9b9927e6d8319273c6f0411",
+          "source": {
+            "owner": "repository",
+            "reference": "decisions/shared-authority",
+            "revision": "source-1"
+          },
+          "rationale_reference": "decisions/shared-authority#rationale-and-alternatives"
+        }
+      ],
+      "current_dependencies": [
+        {
+          "owner": "assignment",
+          "reference": "bounded-implementation",
+          "revision": "authority-1"
+        },
+        {
+          "owner": "repository",
+          "reference": "SYSTEM_INTENT",
+          "revision": "intent-1"
+        },
+        {
+          "owner": "memory",
+          "reference": "prior-cost-evidence",
+          "revision": "evidence-1"
+        }
+      ],
+      "applicable_scope": []
     }
+  },
+  "expect": {
+    "decision_context.consequences.0.id": "architecture/shared-authority",
+    "decision_context.states.0.status": "current",
+    "blockers": [],
+    "claim_boundary.allowed": []
+  }
+}
   ],
   "error_cases": [
 {
@@ -2308,58 +2484,8 @@
       "id": "unscoped-blocker-is-rejected",
       "input": {"contributions": [{"owner": "module", "revision": "one", "blockers": [{"code": "gap", "message": "gap"}]}], "intent": {}},
       "error_contains": "must name at least one affected consequence"
-    },
-    {
-      "id": "stale-agent-route-task-is-rejected",
-      "input": {
-        "contributions": [],
-        "intent": {
-          "current_work": {"kind": "current-work", "id": "work-current"},
-          "semantic_route_source": {"revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "routes": ["github/issues/create"]},
-          "semantic_task_routes": {
-            "posture": "selected", "routes": ["github/issues/create"],
-            "task_identity": {"kind": "current-work", "id": "work-stale"},
-            "source_revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-            "provenance": "agent-selected", "authority_effect": "applicability-only"
-          }
-        }
-      },
-      "error_contains": "stale for the current task identity"
-    },
-    {
-      "id": "stale-agent-route-source-is-rejected",
-      "input": {
-        "contributions": [],
-        "intent": {
-          "current_work": {"kind": "current-work", "id": "work-current"},
-          "semantic_route_source": {"revision": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "routes": ["github/issues/create"]},
-          "semantic_task_routes": {
-            "posture": "selected", "routes": ["github/issues/create"],
-            "task_identity": {"kind": "current-work", "id": "work-current"},
-            "source_revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-            "provenance": "agent-selected", "authority_effect": "applicability-only"
-          }
-        }
-      },
-      "error_contains": "stale for the current route-source revision"
-    },
-    {
-      "id": "unknown-agent-route-is-rejected",
-      "input": {
-        "contributions": [],
-        "intent": {
-          "current_work": {"kind": "current-work", "id": "work-current"},
-          "semantic_route_source": {"revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "routes": ["github/issues/create"]},
-          "semantic_task_routes": {
-            "posture": "selected", "routes": ["github/pulls/review"],
-            "task_identity": {"kind": "current-work", "id": "work-current"},
-            "source_revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-            "provenance": "agent-selected", "authority_effect": "applicability-only"
-          }
-        }
-      },
-      "error_contains": "route absent from the current source"
     }
+
   ],
   "equivalent_inputs": [
     {

@@ -89,9 +89,7 @@ def test_python_and_json_execute_the_same_success_vectors(shared_core_binary: Pa
         direct = _direct(shared_core_binary, payload)
         assert direct.returncode == 0, vector["id"]
         expected = json.loads(direct.stdout)
-        actual = compile_source_decision(
-            payload["contributions"], intent=payload["intent"], capability_contract=payload.get("capability_contract")
-        )
+        actual = _compile(payload)
         assert actual == expected
         for path, value in vector["expect"].items():
             assert _select(actual, path) == value, f"{vector['id']}: {path}"
@@ -1737,3 +1735,44 @@ def test_known_agent_decision_survives_memory_to_native_ordinary_journey(shared_
     assert lost_packet["decision_context"]["reconciliation"][0]["status"] == "pending"
     assert lost_packet["identity"] != promoted_packet["identity"]
     assert source.read_bytes() == original
+
+
+@pytest.mark.parametrize("selection_state", ["selected", "none", "missing", "stale-work", "stale-source", "other-route"])
+@pytest.mark.parametrize("exact", [False, True])
+def test_decision_semantic_applicability_is_scoped(shared_core_binary: Path, selection_state: str, exact: bool) -> None:
+    record = _material_decision()
+    record["semantic_routes"] = ["architecture/authority"]
+    context = _admitted_decisions([record])
+    context["applicable_scope"] = ["owner:planning"] if exact else ["path:unrelated.py"]
+    work = {"kind": "current-work", "id": "work-1"}
+    source = {"revision": "sha256:" + "a" * 64, "routes": ["architecture/authority", "docs/style"]}
+    intent: dict[str, Any] = {"current_work": work, "semantic_route_source": source}
+    if selection_state != "missing":
+        intent["semantic_task_routes"] = {
+            "posture": "none" if selection_state == "none" else "selected",
+            "routes": [] if selection_state == "none" else ["docs/style" if selection_state == "other-route" else "architecture/authority"],
+            "task_identity": {**work, "id": "old-work"} if selection_state == "stale-work" else work,
+            "source_revision": "sha256:" + "b" * 64 if selection_state == "stale-source" else source["revision"],
+            "provenance": "agent-selected",
+            "authority_effect": "applicability-only",
+        }
+    action = {
+        "owner": "workspace",
+        "revision": "w1",
+        "actions": [{"dependency_revision": "w1", "operation_id": "workspace.inspect", "effects": ["workspace-read"]}],
+    }
+    baseline = compile_source_decision([action], capability_contract=CAPABILITY_CONTRACT)
+    value = {"contributions": [action], "intent": intent, "decision_context": context, "capability_contract": CAPABILITY_CONTRACT}
+    result = _compile(value)
+    assert result == json.loads(_direct(shared_core_binary, value).stdout)
+    assert result["primary_action"] == baseline["primary_action"]
+    assert result["claim_boundary"] == baseline["claim_boundary"]
+    assert result["blockers"] == []
+    projected = result.get("decision_context", {})
+    if exact or selection_state == "selected":
+        assert projected["consequences"][0]["id"] == record["id"]
+    elif selection_state in {"missing", "stale-work", "stale-source"}:
+        assert projected["states"][0]["status"] == "applicability-unresolved"
+        assert projected["consequences"] == []
+    else:
+        assert projected == {}

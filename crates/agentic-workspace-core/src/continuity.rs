@@ -49,6 +49,8 @@ struct Record {
     contributors: Vec<Actor>,
     authority: Authority,
     scope: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    semantic_routes: Vec<String>,
     #[serde(default)]
     dependencies: Vec<Reference>,
     #[serde(default)]
@@ -224,6 +226,7 @@ fn scopes(values: &mut Vec<String>) -> Result<(), CoreError> {
     Ok(())
 }
 fn normalized(mut record: Record) -> Result<Record, CoreError> {
+    record.semantic_routes = crate::route_ids(record.semantic_routes, "decision semantic routes")?;
     for (name, text) in [
         ("identity", &record.id),
         ("decision", &record.decision),
@@ -318,7 +321,10 @@ pub fn normalize(value: Value) -> Result<Value, CoreError> {
     serde_json::to_value(normalized(record)?).map_err(|e| error(e.to_string()))
 }
 
-pub(crate) fn project(mut context: Context) -> Result<Option<Value>, CoreError> {
+pub(crate) fn project(
+    mut context: Context,
+    routes: Option<&Value>,
+) -> Result<Option<Value>, CoreError> {
     if context.records.len() > 64 {
         return Err(error(
             "decision context must be a bounded selection (at most 64 records)",
@@ -440,12 +446,32 @@ pub(crate) fn project(mut context: Context) -> Result<Option<Value>, CoreError> 
     let mut consequences = Vec::new();
     let mut states = Vec::new();
     for record in records.values() {
-        let selected: Vec<_> = record
+        let mut selected: Vec<_> = record
             .scope
             .iter()
             .filter(|s| context.applicable_scope.contains(s))
             .cloned()
             .collect();
+        if selected.is_empty() && !record.semantic_routes.is_empty() {
+            let current = routes.filter(|r| r["status"] == "current");
+            let matches = current.is_some_and(|r| {
+                r["routes"].as_array().is_some_and(|ids| {
+                    record
+                        .semantic_routes
+                        .iter()
+                        .any(|id| ids.contains(&json!(id)))
+                })
+            });
+            if matches {
+                selected = record.scope.clone();
+            } else if current.is_none_or(|r| r["posture"] == "unresolved") {
+                states.push(
+                    json!({"id":record.id, "material_revision":record.material_revision,
+                    "status":"applicability-unresolved", "current_scope":[], "source":record.source,
+                    "rationale_reference":record.rationale_reference}),
+                );
+            }
+        }
         if selected.is_empty() {
             continue;
         }

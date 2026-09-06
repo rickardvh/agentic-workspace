@@ -40,7 +40,7 @@
         }
       },
       "dependentRequired": {
-        "semantic_route_source": ["current_work", "semantic_task_routes"],
+        "semantic_route_source": ["current_work"],
         "semantic_task_routes": ["current_work", "semantic_route_source"],
         "public_request": ["current_work"]
       },
@@ -299,6 +299,12 @@
         "authority": {
           "$ref": "#/$defs/decision_authority",
           "description": "Exact decisive authority/provenance."
+        },
+        "semantic_routes": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/route_id"},
+          "uniqueItems": true,
+          "description": "Shared route identities used only when exact structured scope does not establish relevance. Empty means no semantic fallback."
         },
         "scope": {
           "$ref": "#/$defs/decision_scope",

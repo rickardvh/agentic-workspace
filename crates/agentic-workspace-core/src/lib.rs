@@ -1245,9 +1245,9 @@ fn normalize_semantic_routes(intent: &mut Value) -> Result<Option<Value>, CoreEr
     if source.is_none() && selection.is_none() {
         return Ok(None);
     }
-    if current.is_none() || source.is_none() || selection.is_none() {
+    if current.is_none() || source.is_none() {
         return Err(CoreError::new(
-            "current_work, semantic_route_source, and semantic_task_routes must be supplied together",
+            "semantic routes require current_work and an admitted semantic_route_source",
         ));
     }
     let mut current: CurrentWorkIdentity =
@@ -1273,8 +1273,11 @@ fn normalize_semantic_routes(intent: &mut Value) -> Result<Option<Value>, CoreEr
     }
     source.routes = route_ids(source.routes, "intent.semantic_route_source.routes")?;
 
+    let missing = selection.is_none();
+    let absent = json!({"posture":"unresolved", "routes":[], "task_identity":current,
+        "source_revision":source.revision, "provenance":"agent-selected", "authority_effect":"applicability-only"});
     let mut selection: SemanticRouteSelection =
-        serde_json::from_value(selection.expect("present").clone()).map_err(|error| {
+        serde_json::from_value(selection.unwrap_or(&absent).clone()).map_err(|error| {
             CoreError::new(format!("intent.semantic_task_routes is invalid: {error}"))
         })?;
     selection.routes = route_ids(selection.routes, "intent.semantic_task_routes.routes")?;
@@ -1291,21 +1294,16 @@ fn normalize_semantic_routes(intent: &mut Value) -> Result<Option<Value>, CoreEr
             "selected semantic-route posture requires routes; none and unresolved require no routes",
         ));
     }
+    let mut stale_reasons = Vec::new();
     if selection.task_identity.kind != current.kind || selection.task_identity.id != current.id {
-        return Err(CoreError::new(
-            "semantic route selection is stale for the current task identity",
-        ));
+        stale_reasons.push("current-work-changed");
     }
     if selection.source_revision != source.revision {
-        return Err(CoreError::new(
-            "semantic route selection is stale for the current route-source revision",
-        ));
+        stale_reasons.push("route-source-changed");
     }
     let known = source.routes.iter().collect::<HashSet<_>>();
     if selection.routes.iter().any(|route| !known.contains(route)) {
-        return Err(CoreError::new(
-            "semantic route selection contains a route absent from the current source",
-        ));
+        stale_reasons.push("route-removed");
     }
     if selection.provenance != "agent-selected"
         || selection.authority_effect != "applicability-only"
@@ -1315,6 +1313,17 @@ fn normalize_semantic_routes(intent: &mut Value) -> Result<Option<Value>, CoreEr
         ));
     }
 
+    let status = if missing {
+        "missing"
+    } else if stale_reasons.is_empty() {
+        "current"
+    } else {
+        "stale"
+    };
+    if status != "current" {
+        selection.posture = "unresolved".to_owned();
+        selection.routes.clear();
+    }
     let normalized = json!({
         "posture": selection.posture,
         "routes": selection.routes,
@@ -1332,7 +1341,10 @@ fn normalize_semantic_routes(intent: &mut Value) -> Result<Option<Value>, CoreEr
         json!({"revision": normalized["source_revision"], "routes": source.routes}),
     );
     object.insert("semantic_task_routes".to_owned(), normalized.clone());
-    Ok(Some(normalized))
+    let mut fact = normalized;
+    fact["status"] = json!(status);
+    fact["stale_reasons"] = json!(stale_reasons);
+    Ok(Some(fact))
 }
 
 fn current_work(intent: &Value) -> Result<Option<CurrentWorkIdentity>, CoreError> {
@@ -1649,11 +1661,6 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
     if !input.intent.is_object() {
         return Err(CoreError::new("intent must be an object"));
     }
-    let decision_context = input
-        .decision_context
-        .map(continuity::project)
-        .transpose()?
-        .flatten();
     let capabilities = input
         .capability_contract
         .map(normalize_capability_contract)
@@ -1677,6 +1684,11 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
         )));
     }
     let semantic_task_routes = normalize_semantic_routes(&mut intent)?;
+    let decision_context = input
+        .decision_context
+        .map(|context| continuity::project(context, semantic_task_routes.as_ref()))
+        .transpose()?
+        .flatten();
     let public_request = normalize_public_request(&mut intent, capabilities.as_ref())?;
     let intended = intended_outcome(&intent)?;
     if let (Some(intended), Some(capabilities)) = (intended.as_ref(), capabilities.as_ref())
