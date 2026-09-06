@@ -962,7 +962,7 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             packet["worker_context"] = _assignment_worker_context(packet)
         transport = _optional_text(values.get("transport")) or "manual"
         dispatch_configuration = _assignment_dispatch_configuration(identity=identity, transport=transport)
-        if not canonical_packet and dispatch_configuration["kind"] == "host-native" and not dispatch_configuration["command"]:
+        if not canonical_packet and dispatch_configuration.get("kind") in {"host-native", "native"}:
             packet = _assignment_seal_host_native_packet(packet)
         packet_path = artifact("export/packet.json")
         prompt_path = artifact("export/prompt.md")
@@ -2593,10 +2593,17 @@ def _assignment_dispatch_configuration(*, identity: Mapping[str, Any], transport
     adapter = _assignment_mapping(identity.get("dispatch_adapter"))
     variants = [item for item in adapter.get("transports", []) if isinstance(item, Mapping)]
     selected = next((item for item in variants if _optional_text(item.get("method")) == transport), None)
+    configuration = _assignment_mapping(adapter.get("execution_configuration"))
+    if configuration.get("transport") == transport:
+        configured_adapter = _assignment_mapping(_assignment_mapping(configuration.get("execution")).get("adapter"))
+        if configured_adapter:
+            selected = configured_adapter
     selected_mapping = _assignment_mapping(selected)
     variant_kind = _optional_text(selected_mapping.get("kind"))
     kind = (
-        "process"
+        "native"
+        if variant_kind == "native"
+        else "process"
         if variant_kind in {"process", "api"}
         else "host-native"
         if variant_kind == "internal"
@@ -2659,6 +2666,10 @@ def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, targe
 
     identity = _assignment_mapping(packet.get("assignment_identity"))
     configuration = _assignment_dispatch_configuration(identity=identity, transport=transport)
+    if configuration.get("kind") == "native":
+        from agentic_workspace.native_transport import dispatch_packet
+
+        return dispatch_packet(target_root, packet, prompt)
     adapter = _assignment_mapping(configuration.get("adapter"))
     adapter_kind = _optional_text(configuration.get("kind"))
     command_template = _assignment_list(configuration.get("command"))

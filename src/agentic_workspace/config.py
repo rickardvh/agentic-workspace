@@ -2111,24 +2111,36 @@ def load_delegation_target_profiles(
                 if not isinstance(raw_transport, dict):
                     raise WorkspaceUsageError(f"{transport_path.as_posix()} must be a table.")
                 transport_payload: dict[str, Any] = {str(key): value for key, value in raw_transport.items()}
-                unknown_transport = sorted(set(transport_payload) - {"kind", "command", "output_mode", "timeout_seconds"})
+                transport_fields = {"kind", "command", "output_mode", "timeout_seconds"}
+                if transport_payload.get("kind") == "native":
+                    transport_fields = {"kind", "adapter", "parameters", "timeout_seconds"}
+                unknown_transport = sorted(set(transport_payload) - transport_fields)
                 if unknown_transport:
                     raise WorkspaceUsageError(f"{transport_path.as_posix()} contains unsupported field(s): {', '.join(unknown_transport)}.")
                 kind = require_required_enum(
                     payload=transport_payload,
                     key="kind",
                     config_path=transport_path,
-                    allowed=("internal", "process", "api", "manual"),
+                    allowed=("internal", "process", "api", "manual", "native"),
                 )
-                method = {"internal": "internal", "process": "cli", "api": "api", "manual": "manual"}[kind]
-                if method in seen_methods:
+                method = {"internal": "internal", "process": "cli", "api": "api", "manual": "manual", "native": "cli"}[kind]
+                transport_key = f"native:{transport_payload.get('adapter')}" if kind == "native" else method
+                if transport_key in seen_methods:
                     raise WorkspaceUsageError(f"{target_path.as_posix()} transports may configure method {method!r} only once.")
-                seen_methods.add(method)
+                seen_methods.add(transport_key)
                 command = require_optional_string_list(payload=transport_payload, key="command", config_path=transport_path)
                 if kind in {"process", "api"} and not command:
                     raise WorkspaceUsageError(f"{transport_path.as_posix()} command is required for {kind} transport.")
                 if kind in {"internal", "manual"} and command:
                     raise WorkspaceUsageError(f"{transport_path.as_posix()} command is not allowed for {kind} transport.")
+                if kind == "native" and (
+                    not isinstance(transport_payload.get("adapter"), str)
+                    or not transport_payload["adapter"]
+                    or not isinstance(transport_payload.get("parameters"), dict)
+                ):
+                    raise WorkspaceUsageError(
+                        f"{transport_path.as_posix()} native transport requires adapter identity and parameter object."
+                    )
                 output_mode = require_optional_enum(
                     payload=transport_payload,
                     key="output_mode",
@@ -2148,6 +2160,11 @@ def load_delegation_target_profiles(
                         "timeout_seconds": raw_timeout,
                         "readiness": "runtime-required" if kind == "internal" else "configured",
                         "source": "canonical-transports",
+                        **(
+                            {"adapter": transport_payload["adapter"], "parameters": transport_payload["parameters"]}
+                            if kind == "native"
+                            else {}
+                        ),
                     }
                 )
         else:
@@ -2173,7 +2190,7 @@ def load_delegation_target_profiles(
                         "source": "legacy-compatibility-decoder",
                     }
                 )
-        execution_methods = tuple(str(item["method"]) for item in transports)
+        execution_methods = tuple(dict.fromkeys(str(item["method"]) for item in transports))
         configured_adapter = next(
             (item for item in transports if item["method"] in {"cli", "api"} and item["readiness"] == "configured"),
             None,

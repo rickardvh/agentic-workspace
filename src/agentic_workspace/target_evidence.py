@@ -762,9 +762,7 @@ def assignment_decision_from_policy(
                 "configured_order": method_index,
             }
             if isinstance(route_rows, list):
-                transport_option["execution_configuration"] = next(
-                    row["configuration"] for row in route_rows if row["eligible"] and row["configuration"]["transport"] == method
-                )
+                transport_option["execution_configuration"] = [row["configuration"] for row in route_rows if row["eligible"]][method_index]
             observed_fields = {field for cost in matching_transport_costs for field in _as_dict(cost.get("observed_context_cost"))}
             observed_context_cost = {}
             for field in sorted(observed_fields):
