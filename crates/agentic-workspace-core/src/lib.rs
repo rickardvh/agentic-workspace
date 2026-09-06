@@ -2,6 +2,7 @@ pub mod attempt;
 pub mod attempt_store;
 pub mod continuity;
 pub mod decision_source;
+pub mod instruction_source;
 pub mod planning;
 pub mod semantic_routes;
 use serde::{Deserialize, Serialize};

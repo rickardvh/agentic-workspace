@@ -44,6 +44,10 @@ export function semanticRouteView(context) {
   return request({semantic_route_view: context});
 }
 
+export function instructionSourceAdmission(context) {
+  return request({instruction_source_admission: context});
+}
+
 export function answerDecision(decision, consequenceId, answer, capabilityContract) {
   return request({answer_decision: {decision, question: consequenceId, answer, capability_contract: capabilityContract}});
 }

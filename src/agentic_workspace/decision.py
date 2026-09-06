@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import subprocess
 from collections.abc import Iterable, Mapping
-from pathlib import Path
 from typing import Any
 
 from agentic_workspace.native_core import core_binary as native_core_binary
@@ -13,16 +12,13 @@ class DecisionContractError(ValueError):
     """Raised when the shared core rejects a source-decision request."""
 
 
-def _core_binary() -> Path:
+def _request(payload: Mapping[str, Any]) -> dict[str, Any]:
     try:
-        return native_core_binary()
+        binary = native_core_binary()
     except (OSError, RuntimeError) as error:
         raise DecisionContractError(str(error)) from error
-
-
-def _request(payload: Mapping[str, Any]) -> dict[str, Any]:
     completed = subprocess.run(
-        [str(_core_binary())],
+        [str(binary)],
         input=json.dumps(payload, separators=(",", ":")),
         text=True,
         capture_output=True,
@@ -106,6 +102,10 @@ def planning_view(context: Mapping[str, Any]) -> dict[str, Any]:
 
 def semantic_route_view(context: Mapping[str, Any]) -> dict[str, Any]:
     return _request({"semantic_route_view": context})
+
+
+def instruction_source_admission(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"instruction_source_admission": context})
 
 
 def reconcile_planning(context: Mapping[str, Any]) -> dict[str, Any]:

@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
+
+import pytest
 
 from agentic_workspace.cli import main as run_cli
 from agentic_workspace.operating_decision import CONTEXT_AUTHORITY_REGISTRY, _resolve_context_authority_source, compile_operating_decision
@@ -24,6 +27,114 @@ def _write(root: Path, name: str, text: str) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
     return path
+
+
+def _admit(root: Path) -> str:
+    subprocess.run(["git", "init", "-q", str(root)], check=True, capture_output=True)
+    subprocess.run(["git", "add", "."], cwd=root, check=True, capture_output=True)
+    subprocess.run(
+        [
+            "git",
+            "-c",
+            "user.name=Source owner",
+            "-c",
+            "user.email=owner@example.test",
+            "-c",
+            "commit.gpgsign=false",
+            "commit",
+            "-qm",
+            "Admit exact instruction snapshot",
+        ],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+    revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
+    (root / ".agentic-workspace/config.toml").write_text(
+        f'schema_version = 1\n[assurance]\ninstruction_revision = "{revision}"\n', encoding="utf-8"
+    )
+    return revision
+
+
+def test_instruction_change_during_applicability_cannot_reuse_grant(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentic_workspace import scoped_instructions as instructions
+
+    source = _write(tmp_path, "race", "---\npaths: [src/**]\nprotect: [generated/**]\n---\nRule\n")
+    _admit(tmp_path)
+    original = instructions.read_instruction
+
+    def read(path: Path, *, root: Path, load_body: bool = False):
+        if load_body:
+            source.write_text(source.read_text().replace("src/**", "other/**"), encoding="utf-8")
+        return original(path, root=root, load_body=load_body)
+
+    monkeypatch.setattr(instructions, "read_instruction", read)
+    result = instructions.inspect_instructions(tmp_path, changed_paths=["src/a.py"], include_ir=True)
+    assert result["instruction_program"]["clauses"] == []
+    assert result["diagnostics"][0]["code"] == "stale-source"
+
+
+def test_instruction_hard_bindings_require_current_shared_admission(tmp_path: Path) -> None:
+    source = _write(
+        tmp_path,
+        "binding",
+        "---\npaths:\n  - src/**\nchecks:\n  - run: pytest -q\nprotect:\n  - generated/**\nuse:\n  - absent-recommendation\n---\n# Rule\n",
+    )
+
+    def inspect() -> dict:
+        return inspect_instructions(tmp_path, changed_paths=["src/a.py"], include_ir=True)
+
+    assert inspect()["instruction_program"]["capabilities"] == []
+    _admit(tmp_path)
+    admitted = inspect()
+    assert {effect["kind"] for clause in admitted["instruction_program"]["clauses"] for effect in clause["effects"]} >= {
+        "require",
+        "restrict",
+    }
+    assert admitted["instruction_program"]["source_diagnostics"] == []
+    assert admitted["instruction_program"]["capabilities"][0]["current"] is False
+    # A recommendation's disappearance neither grants nor cancels hard authority.
+    assert admitted["diagnostics"][0]["code"] == "missing-reference"
+    source.with_name("lookalike.md").write_bytes(source.read_bytes())
+    lookalike = next(row for row in inspect()["instructions"] if row["id"] == "lookalike")
+    assert lookalike["binding_admission"]["status"] == "unadmitted"
+    assert lookalike["checks"] == lookalike["protect"] == []
+    shared = tmp_path / ".agentic-workspace/config.toml"
+    (shared.parent / "config.local.toml").write_bytes(shared.read_bytes())
+    shared.write_text("schema_version = 1\n", encoding="utf-8")
+    assert inspect()["instruction_program"]["capabilities"] == []
+    _admit(tmp_path)
+    source.write_text(source.read_text() + "Changed source\n", encoding="utf-8")
+    stale = next(row for row in inspect()["instructions"] if row["id"] == "binding")
+    assert stale["binding_admission"]["status"] == "stale"
+    assert stale["checks"] == stale["protect"] == []
+
+
+def test_shared_semantic_route_only_activates_independently_admitted_instruction(tmp_path: Path) -> None:
+    from agentic_workspace.decision import semantic_route_view
+    from agentic_workspace.semantic_task_routes import semantic_route_host_context
+
+    _route_skill_registry(tmp_path)
+    source = _write(
+        tmp_path,
+        "route-binding",
+        "---\nroutes:\n  - workspace/ownership/audit\nprotect:\n  - generated/**\n---\n# Binding\n",
+    )
+    host = semantic_route_host_context(tmp_path, task="Neutral work")
+    request = semantic_route_view(host)["requests"][1]
+    request["arguments"] = {"posture": "selected", "routes": ["workspace/ownership/audit"]}
+    route = semantic_route_view({**host, "request": request})["decision"]["semantic_task_routes"]
+    assert inspect_instructions(tmp_path, semantic_route_fact=route)["instructions"][0]["protect"] == []
+    _admit(tmp_path)
+    assert inspect_instructions(tmp_path, semantic_route_fact=route)["instructions"][0]["protect"] == ["generated/**"]
+    host["source"]["revision"] = "sha256:" + "0" * 64
+    stale = semantic_route_view({**host, "request": request})["decision"]["semantic_task_routes"]
+    assert inspect_instructions(tmp_path, semantic_route_fact=stale)["instructions"][0]["protect"] == []
+    source.write_text("---\npaths:\n  - src/**\nprotect:\n  - generated/**\n---\n# Path binding\n", encoding="utf-8")
+    _admit(tmp_path)
+    exact = inspect_instructions(tmp_path, changed_paths=["src/a.py"], semantic_route_fact=stale, include_ir=True)
+    assert exact["instructions"][0]["protect"] == ["generated/**"]
+    assert exact["instruction_program"]["facts"][0]["source"]["current"] is True
 
 
 def _skill(root: Path, name: str) -> None:
@@ -156,7 +267,7 @@ def test_semantic_routes_are_progressive_current_work_bound_and_instruction_cons
     assert current_semantic_task_route_fact(tmp_path)["stale_reasons"] == ["route-source-changed"]
 
 
-def test_selected_route_with_unavailable_procedure_blocks_ordinary_decision(tmp_path: Path) -> None:
+def test_selected_route_with_unavailable_recommended_procedure_is_non_binding(tmp_path: Path) -> None:
     registry = _route_skill_registry(tmp_path)
     _write(
         tmp_path,
@@ -176,9 +287,8 @@ def test_selected_route_with_unavailable_procedure_blocks_ordinary_decision(tmp_
         inputs={"target_root": str(tmp_path), "task": "neutral wording", "requested_claim_classes": ["complete"]}
     )
 
-    assert decision["status"] == "blocked"
-    assert decision["instruction_clause_projection"]["status"] == "invalid"
-    assert any(item["reason_code"] == "missing-authority" for item in decision["instruction_clause_projection"]["blockers"])
+    assert decision["status"] != "blocked"
+    assert decision["instruction_clause_projection"]["blockers"] == []
     assert registry.is_file()
 
 
@@ -255,6 +365,7 @@ Preserve token compatibility.
 """,
     )
 
+    _admit(tmp_path)
     program = instruction_program_for_operating_decision(root=tmp_path, task="Update auth", changed_paths=["src/auth/token.py"])
     effects = program["clauses"][0]["effects"]
 
@@ -272,12 +383,14 @@ Preserve token compatibility.
 
 def test_inline_check_identity_is_stable_and_changes_with_command(tmp_path: Path) -> None:
     path = _write(tmp_path, "tests", "---\nchecks:\n  - run: pytest -q\n---\n\n# Tests\n")
+    _admit(tmp_path)
     first = instruction_program_for_operating_decision(root=tmp_path, task="", changed_paths=[])
     second = instruction_program_for_operating_decision(root=tmp_path, task="", changed_paths=[])
     first_id = first["capabilities"][0]["id"]
     assert second["capabilities"][0]["id"] == first_id
 
     path.write_text("---\nchecks:\n  - run: pytest tests/unit -q\n---\n\n# Tests\n", encoding="utf-8")
+    _admit(tmp_path)
     changed = instruction_program_for_operating_decision(root=tmp_path, task="", changed_paths=[])
     assert changed["capabilities"][0]["id"] != first_id
 
@@ -300,8 +413,7 @@ def test_static_check_reports_missing_ambiguous_and_invalid_hard_references_with
     assert {item["code"] for item in result["diagnostics"]} >= {"invalid-repo-pattern", "missing-reference"}
     assert not sentinel.exists()
     decision = compile_operating_decision(inputs={"target_root": str(tmp_path), "requested_claim_classes": ["complete"]})
-    assert decision["instruction_clause_projection"]["status"] == "invalid"
-    assert any(item["reason_code"] == "missing-authority" for item in decision["instruction_clause_projection"]["blockers"])
+    assert decision["instruction_clause_projection"]["blockers"] == []
 
 
 def test_qualified_reference_is_deterministic_and_short_ambiguity_is_actionable(tmp_path: Path, monkeypatch) -> None:
@@ -326,6 +438,7 @@ def test_protection_and_check_requirements_affect_the_existing_operating_decisio
         "generated",
         "---\npaths:\n  - src/**\nchecks:\n  - run: pytest -q\nprotect:\n  - generated/**\n---\n\n# Generated\n",
     )
+    _admit(tmp_path)
     decision = compile_operating_decision(
         inputs={
             "target_root": str(tmp_path),
@@ -348,6 +461,7 @@ def test_inline_check_enters_the_existing_trusted_proof_route(tmp_path: Path) ->
         "---\npaths:\n  - src/**\nchecks:\n  - run: uv run pytest -q\n---\n\n# Source tests\n",
     )
 
+    _admit(tmp_path)
     selection = _proof_selection_for_changed_paths(
         changed_paths=["src/example.py"],
         target_root=tmp_path,

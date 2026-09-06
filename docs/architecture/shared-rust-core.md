@@ -271,6 +271,38 @@ With a native owner configured, Rust feeds both independently read snapshots int
 
 The owning #2909 cases exercise Memory retention, native failure/success/loss, authority negatives, unchanged material identity and no-signal. `tests/fixtures/decision_fallback.md` preserves the known agent-authored source-admission decision from #3044; a fresh fixture repository atomically creates it under Memory, independently admits it, then proves ordinary startup before and after native promotion. This is a new known-provenance decision, not a claim to have migrated the April note or established custody from a familiar path. The former source remains byte-for-byte intact.
 
+### Independent instruction admission (#2613/#2606)
+
+Markdown `checks` and `protect` declare proposed hard scopes. The shared repository
+owner separately admits an exact immutable instruction snapshot through
+`[assurance] instruction_revision`. This follows the existing source-admission
+boundary: it is a trusted shared-config input, never an ordinary request argument,
+local preference, Git author identity, or value inferred from current HEAD.
+
+Rust independently reads the exact repository-relative source in that snapshot
+and compares its text revision with both current filesystem bytes and the
+adapter's observed revision. Only a current match returns binding checks,
+protected targets and clause authority. A stale, missing, conflicting, malformed
+or lookalike source returns no hard grant. Current `checks` create obligations,
+not passing evidence or claim-grant authority. `protect` grants no mutation or
+custody authority. `requirement:` references still defer to their existing owner;
+guidance and recommended `use` procedures remain non-binding.
+
+The Python clause adapter consumes these returned scopes; it no longer builds
+hard authority from its own emitted effects. Existing path/route applicability
+is preserved, including conjunctive declarations. A shared current semantic route
+can select a source but cannot admit it. Unrelated sources require no Rust call.
+The real workspace-operating instruction preserves the unresolved Planning source
+without acquiring its custody or rewriting it. Lower-authority local config cannot
+admit additional restrictions. Source admission itself performs no file writes.
+
+The shared Python/Node/JSON API and existing #2909 tests cover independent scopes,
+staleness, lookalikes, conflicting identities, recommendation failures, route
+selection and ordinary proof routing. This does not close configuration/source
+reconciliation, proof-result admission or external effect enforcement.
+
+The standalone generated TypeScript host cannot independently admit this source snapshot. It exposes hard bindings as unavailable rather than echoing declarations as grants; the Node shared-core API accepts the same trusted host inputs as Python and JSON.
+
 ### Scoped semantic applicability (#2930)
 
 Material decisions may reference shared `semantic_routes` identities. An exact path/source/owner/contract/operation scope match remains sufficient; only when there is no exact match can a current acting-agent route select the decision's governed scope. This does not create a new route vocabulary or confer authority.

@@ -3183,7 +3183,10 @@ function inspectInstructionsNative(targetRoot, values, operationId) {
       matched_paths: matched, matched_routes: matchedRoutes, route_selectors: routeSelectors, body_loaded: document.body_loaded,
       features: [['guidance', document.has_guidance], ['read', document.metadata.read.length], ['use', document.metadata.use.length], ['checks', document.metadata.checks.length], ['protect', document.metadata.protect.length]].filter(([, present]) => present).map(([name]) => name),
       guidance: document.guidance, read: applies ? document.metadata.read : [], use: applies ? document.metadata.use : [],
-      checks: applies ? document.metadata.checks : [], protect: applies ? document.metadata.protect : [], diagnostics: itemDiagnostics,
+      checks: applies ? document.metadata.checks.filter((check) => typeof check === 'string' && check.startsWith('requirement:')) : [],
+      protect: [], diagnostics: itemDiagnostics,
+      ...(applies && (document.metadata.protect.length || document.metadata.checks.some((check) => typeof check !== 'string' || !check.startsWith('requirement:')))
+        ? { binding_admission: { status: 'unavailable-in-generated-typescript-host', rule: 'Binding scopes require the shared Rust source-admission API with trusted repository host inputs; declarations alone are not grants.' } } : {}),
     });
   }
   const payload = {

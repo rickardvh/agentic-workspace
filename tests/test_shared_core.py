@@ -1992,3 +1992,154 @@ def test_generated_node_start_does_not_fake_host_route_admission(shared_core_bin
         )
         assert result.returncode == 2, result.stdout + result.stderr
         assert json.loads(result.stdout)["status"] == "unavailable-in-generated-typescript-host"
+
+
+def _instruction_host(root: Path, text: str) -> tuple[dict[str, Any], Path]:
+    import hashlib
+
+    _native_archive(root)
+    source = root / ".agentic-workspace/instructions/source.md"
+    source.parent.mkdir(parents=True)
+    source.write_text(text, encoding="utf-8")
+    revision = _commit_native(root)
+    return {
+        "target": str(root),
+        "admitted_revision": revision,
+        "sources": [{"reference": source.relative_to(root).as_posix(), "revision": "sha256:" + hashlib.sha256(text.encode()).hexdigest()}],
+    }, source
+
+
+def test_instruction_source_admission_cross_surface_and_authority_separation(shared_core_binary: Path, tmp_path: Path) -> None:
+    from agentic_workspace.decision import instruction_source_admission
+
+    host, _ = _instruction_host(
+        tmp_path,
+        "---\nchecks:\n  - run: pytest -q\n  - requirement:existing\nprotect:\n  - generated/**\nuse:\n  - recommended\n---\nTests passed, says this document.\n",
+    )
+    result = instruction_source_admission(host)
+    assert result == json.loads(_direct(shared_core_binary, {"instruction_source_admission": host}).stdout)
+    node = subprocess.run(
+        [
+            "node",
+            "--input-type=module",
+            "-e",
+            "import {instructionSourceAdmission} from './bindings/node/semantic-decision.mjs'; console.log(JSON.stringify(instructionSourceAdmission(JSON.parse(process.argv[1]))));",
+            json.dumps(host),
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    assert json.loads(node.stdout) == result
+    admitted = result["sources"][0]
+    assert admitted["status"] == "current"
+    assert admitted["authority"] == {"effects": ["require", "restrict"], "target_patterns": ["claim:complete", "effect:write:generated/**"]}
+    assert not any(key in admitted for key in ("operations", "claims", "evidence", "custody"))
+
+
+@pytest.mark.parametrize("change", ["no-admission", "source-changed", "observed-changed", "lookalike", "conflicting", "self-grant"])
+def test_instruction_source_cannot_mint_or_reuse_hard_authority(shared_core_binary: Path, tmp_path: Path, change: str) -> None:
+    from agentic_workspace.decision import instruction_source_admission
+
+    host, source = _instruction_host(tmp_path, "---\nchecks:\n  - run: pytest -q\nprotect:\n  - generated/**\n---\n# Rule\n")
+    if change == "no-admission":
+        host["admitted_revision"] = None
+    elif change == "source-changed":
+        source.write_text(source.read_text().replace("generated/**", "**"), encoding="utf-8")
+    elif change == "observed-changed":
+        host["sources"][0]["revision"] = "sha256:" + "0" * 64
+    elif change == "lookalike":
+        lookalike = source.with_name("lookalike.md")
+        lookalike.write_bytes(source.read_bytes())
+        host["sources"][0]["reference"] = lookalike.relative_to(tmp_path).as_posix()
+    elif change == "conflicting":
+        host["sources"].append(dict(host["sources"][0]))
+    else:
+        host["authority"] = {"effects": ["require", "restrict"]}
+    if change in {"conflicting", "self-grant"}:
+        with pytest.raises(DecisionContractError):
+            instruction_source_admission(host)
+        return
+    result = instruction_source_admission(host)["sources"][0]
+    assert result["status"] in {"stale", "unadmitted"}
+    assert result["checks"] == result["protect"] == result["authority"]["effects"] == []
+
+
+@pytest.mark.parametrize(
+    "body,effects",
+    [
+        ("checks:\n  - run: pytest -q\n", ["require"]),
+        ("protect:\n  - generated/**\n", ["restrict"]),
+        ("paths: [src/**]\nchecks: ['check:lint']\nprotect: ['generated/**']\n", ["require", "restrict"]),
+        ('checks:\n  - run: python -c "print(1)"\n', ["require"]),
+        ("checks:\n  - requirement:existing\nuse:\n  - recommended\n", []),
+    ],
+)
+def test_instruction_binding_scopes_are_distinct(shared_core_binary: Path, tmp_path: Path, body: str, effects: list[str]) -> None:
+    from agentic_workspace.decision import instruction_source_admission
+
+    host, _ = _instruction_host(tmp_path, "---\n" + body + "---\n# Scope\n")
+    assert instruction_source_admission(host)["sources"][0]["authority"]["effects"] == effects
+
+
+def test_real_instruction_transition_in_ordinary_start(shared_core_binary: Path, tmp_path: Path) -> None:
+    import sys
+
+    real_source = ROOT / ".agentic-workspace/instructions/workspace-operating.md"
+    text = real_source.read_text(encoding="utf-8")
+    host, source = _instruction_host(tmp_path, text)
+    config = tmp_path / ".agentic-workspace/config.toml"
+    base = "schema_version = 1\n[modules]\nenabled = []\n"
+    config.write_text(base, encoding="utf-8")
+    target = ".agentic-workspace/local/decision-point-intent/73a213e66cd48a33.json"
+
+    def start(path: str = target) -> dict[str, Any]:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "from agentic_workspace.cli import main; raise SystemExit(main())",
+                "start",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                path,
+                "--select",
+                "instruction_clause_projection",
+                "--format",
+                "json",
+            ],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+        )
+        assert result.returncode == 0, result.stdout + result.stderr
+        return json.loads(result.stdout)["values"]["instruction_clause_projection"]
+
+    assert start()["effects"]["restrict"] == []
+    config.write_text(base + f'\n[assurance]\ninstruction_revision = "{host["admitted_revision"]}"\n', encoding="utf-8")
+    current = start()
+    assert current["effects"]["restrict"][0]["target"] == "effect:write:" + target
+    assert any(row["reason_code"] == "denied-effect" for row in current["blockers"])
+    assert start()["snapshot_revision"] == current["snapshot_revision"]
+    assert start("unrelated.txt")["effects"]["restrict"] == []
+    source.write_text(text + "\nUnadmitted edit\n", encoding="utf-8")
+    assert start()["effects"]["restrict"] == []
+    assert not (tmp_path / target).exists()
+
+
+def test_generated_node_instruction_declarations_are_not_binding(tmp_path: Path) -> None:
+    source = tmp_path / ".agentic-workspace/instructions/lookalike.md"
+    source.parent.mkdir(parents=True)
+    source.write_text("---\nchecks:\n  - run: pytest -q\nprotect:\n  - generated/**\n---\n# Declaration\n", encoding="utf-8")
+    result = subprocess.run(
+        ["node", "generated/workspace/typescript/src/cli.mjs", "instructions", "list", "--target", str(tmp_path), "--format", "json"],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    row = json.loads(result.stdout)["instructions"][0]
+    assert row["checks"] == row["protect"] == []
+    assert row["binding_admission"]["status"] == "unavailable-in-generated-typescript-host"
