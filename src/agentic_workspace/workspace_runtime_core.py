@@ -45579,7 +45579,7 @@ def _current_assignment_selection(
     changed_paths: list[str],
     task_text: str | None,
     work_identity: dict[str, Any] | None = None,
-    execution_choice: dict[str, str] | None = None,
+    execution_choice: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
     """One current owner evaluation for ordinary selection and replacement admission."""
     posture = _capability_posture_for_implementation(changed_paths=changed_paths, task_text=task_text)
@@ -45661,6 +45661,32 @@ def _current_assignment_selection(
             )
             if not selected.get("selected"):
                 raise ValueError(str(selected.get("reason_code") or "assignment-configuration-choice-unavailable"))
+            if "parameters" in execution_choice:
+                from agentic_workspace.assignment_source import parameterize_configuration
+
+                assert config.target_root is not None
+                variant = parameterize_configuration(config.target_root, selected["selected"], execution_choice["parameters"])
+                # Re-enter the shared eligibility and configuration-context owner
+                # with adapter-constructed facts, never caller eligibility JSON.
+                variant_context = {
+                    "work": work,
+                    "required_result_classes": [],
+                    "required_proof_classes": [],
+                    "independent_context": False,
+                    "candidates": [variant],
+                }
+                variant_offer = execution_configurations(variant_context)
+                selected = execution_configurations(
+                    {**variant_context, "selection": {"revision": variant_offer["revision"], "candidate": variant["id"]}}
+                )
+                if not selected.get("selected"):
+                    raise ValueError(str(selected.get("reason_code") or "assignment-configuration-choice-unavailable"))
+                variant_row = next(row for row in selected["candidates"] if row["configuration"] == selected["selected"])
+                if variant_row not in configurations["candidates"]:
+                    configurations["candidates"].append(variant_row)
+                for profile in runtime_resolution["profile_recommendations"]:
+                    if profile["name"] == selected["selected"]["target"] and variant_row not in profile["execution_configurations"]:
+                        profile["execution_configurations"].append(variant_row)
             configurations["selected"] = selected["selected"]
             assignment_decision = assignment_decision_from_policy(
                 assignment_policy=assignment_policy,
@@ -45682,7 +45708,7 @@ def _execution_posture_payload(
     task_text: str | None,
     target_root: Path | None = None,
     materialize_assignment: bool = False,
-    execution_choice: dict[str, str] | None = None,
+    execution_choice: dict[str, Any] | None = None,
     requested_transport: str | None = None,
 ) -> dict[str, Any]:
     if target_root is not None:

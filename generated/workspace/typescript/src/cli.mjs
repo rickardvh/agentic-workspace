@@ -8752,6 +8752,13 @@ const commandDefinitions = [
           "options": [
             {
               "flags": [
+                "--configuration-parameters-json"
+              ],
+              "help": "Adapter-owned JSON parameter choices for the paired current configuration offer.",
+              "name": "configuration_parameters_json"
+            },
+            {
+              "flags": [
                 "--configuration-revision"
               ],
               "help": "Current execution configuration offer revision; pair with configuration-id before materializing an assignment.",
@@ -8857,6 +8864,13 @@ const commandDefinitions = [
             "path": "operations/assignment.export.json"
           },
           "options": [
+            {
+              "flags": [
+                "--configuration-parameters-json"
+              ],
+              "help": "Adapter-owned JSON parameter choices for the paired current configuration offer.",
+              "name": "configuration_parameters_json"
+            },
             {
               "flags": [
                 "--configuration-revision"

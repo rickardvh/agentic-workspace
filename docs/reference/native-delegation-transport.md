@@ -194,3 +194,32 @@ budget when full legacy detail was included. Both gaps were corrected, with publ
 Python/TypeScript choice coverage and more than eight candidates. The verbose
 fallback was 2046293 bytes; complete selected output was 21584 bytes. These are AW
 serialization measurements, not token-price or credit-saving estimates.
+
+## Adapter parameter choices and usage scope
+
+The ordinary configuration selector carries adapter-owned `parameter_options`.
+Assignment export/dispatch accept `configuration_parameters_json` alongside the
+current `configuration_revision` and `configuration_id`. For example,
+`{"reasoning_effort":"low","timeout_seconds":90}` is constructible only when that
+exact adapter offer permits it. The source host validates the base revision and
+adapter parameters, then re-enters shared eligibility and configuration fingerprinting.
+The choice is local to the semantic assignment; it neither edits standing policy nor
+changes the selected target, history guarantee, or continuity topology. Generic
+process/manual routes do not pretend to support native parameterization.
+
+Codex discovers supported efforts and suggested defaults from its installed model
+catalog, and resolves effective provider settings for the target working directory.
+The selected effort is explicit in the sealed configuration and provider turn.
+Unknown effective settings require an explicit configured effort or exclude that
+implicit native route. Parameter choices do not produce a Cartesian offer list.
+The timeout bounds the model turn, with separately bounded setup and process cleanup;
+it cannot exceed the configured adapter timeout or this adapter's 1800-second ceiling.
+
+Codex `last` usage describes the latest model response; `total` accumulates responses
+([matching provider source](https://github.com/openai/codex/blob/rust-v0.153.4/codex-rs/protocol/src/protocol.rs)).
+Fresh native dispatch records cumulative counters for its exact turn. Resume, fork
+and restart lack a proven pre-turn baseline here, so their whole-worker token counts
+remain unknown. Duplicate updates do not add cumulative counters again. Neither
+scope is a monetary estimate. A metadata-only query of the installed account usage
+endpoint for the exact interrupted worker returned no thread usage; that does not
+mean zero cost and does not justify reading unrelated account activity.

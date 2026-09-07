@@ -2450,21 +2450,25 @@ function assignmentLifecycleApply(values, operationId) {
       hasConfigurationAuthority = Boolean(assignment.assignment_gate?.dispatch_adapter?.execution_configuration?.execution?.authority_revision);
     } catch {}
   }
-  const hasConfigurationChoice = values.configuration_revision !== undefined || values.configuration_id !== undefined;
+  const hasConfigurationChoice = values.configuration_revision !== undefined || values.configuration_id !== undefined || values.configuration_parameters_json !== undefined;
   if (operationId === 'assignment.reassign' || hasReplacement || hasConfigurationChoice || hasConfigurationAuthority) {
     const sourceHost = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../scripts/run_agentic_workspace.py');
     const sourceRoot = resolve(dirname(sourceHost), '..');
     const python = join(sourceRoot, '.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
     if (existsSync(sourceHost) && existsSync(python)) {
       const args = [sourceHost, 'assignment', operationId.split('.').at(-1), '--target', replacementRoot, '--format', 'json'];
-      for (const key of ['assignment_id','assignment_revision','run_id','target_name','transport','reason','scope','expires_at','return_json','return_id','artifact_ref','task_proof_receipt_ref','configuration_revision','configuration_id','task']) {
+      for (const key of ['assignment_id','assignment_revision','run_id','target_name','transport','reason','scope','expires_at','return_json','return_id','artifact_ref','task_proof_receipt_ref','configuration_revision','configuration_id','configuration_parameters_json','task']) {
         if (values[key] !== undefined && values[key] !== null && values[key] !== '') args.push(`--${key.replaceAll('_','-')}`, typeof values[key] === 'object' ? JSON.stringify(values[key]) : String(values[key]));
       }
       const changedPaths = values.changed_paths ?? values.changed ?? [];
       for (const changed of Array.isArray(changedPaths) ? changedPaths : [changedPaths]) args.push('--changed', String(changed));
       if (values.dry_run) args.push('--dry-run');
       const result = spawnSync(python, args, { cwd: sourceRoot, encoding:'utf8', windowsHide:true });
-      if (result.status !== 0) throw new RuntimeError(result.stderr || 'Replacement source host unavailable');
+      if (result.status !== 0) {
+        let reason = result.stderr || 'Replacement source host unavailable';
+        try { const failure = JSON.parse(result.stdout); reason = failure.message || failure.reason_code || reason; } catch {}
+        throw new RuntimeError(reason);
+      }
       return JSON.parse(result.stdout);
     }
     if (hasConfigurationChoice || hasConfigurationAuthority) throw new RuntimeError('configuration-choice-source-host-unavailable');

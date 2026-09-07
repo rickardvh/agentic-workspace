@@ -11,6 +11,7 @@ Input accepted by public assignment lifecycle operations that prepare handoff pa
 | Field | Type | Required | Default | Description | Examples | Annotations |
 | --- | --- | --- | --- | --- | --- | --- |
 | (root) | object | yes |  | Input accepted by public assignment lifecycle operations that prepare handoff packets, import returns, admit or reject results, integrate admitted work, and record lifecycle maintenance actions. |  | x-agentic-workspace-doc-role: "contract-reference" |
+| `configuration_parameters_json` | string | no |  | Bounded JSON object of adapter-owned parameter choices for the paired current configuration offer. Not source authority or standing policy. |  |  |
 | `configuration_revision` | string | no |  | Current source-resolved execution configuration offer revision. Only an intention to select, never authority to replace an existing assignment. |  |  |
 | `configuration_id` | string | no |  | One eligible configuration from the paired revision; target, transport and adapter-owned topology stay bound together. |  |  |
 | `admission_status` | enum `"admitted"`, `"rejected"`, `"repair-requested"` | no |  | Reviewer decision recorded for an imported assignment return. |  |  |

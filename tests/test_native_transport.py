@@ -19,11 +19,12 @@ def snapshot():
     return {
         "revision": "cap-v1",
         "identity": "adapter-v1",
+        "effective_settings_known": True,
         "executable": "fixture",
         "expires_at": time.time() + 900,
         "modes": ["fresh", "resume", "fork", "restart"],
-        "parameters": ["model", "reasoning_effort"],
-        "models": [{"model": "fixture-model", "reasoning_efforts": ["low"]}],
+        "parameters": ["model", "reasoning_effort", "timeout_seconds"],
+        "models": [{"model": "fixture-model", "reasoning_efforts": ["low"], "default_reasoning_effort": "low"}],
     }
 
 
@@ -46,6 +47,10 @@ def selection(snapshot, **changes):
         ({"parameters": {"model": "retired"}}, "model-unavailable"),
         ({"parameters": {"model": "fixture-model", "reasoning_effort": "ultra"}}, "parameter-unsupported"),
         ({"parameters": {"model": "fixture-model", "unsafe_flag": True}}, "parameter-unsupported"),
+        ({"parameters": {"model": "fixture-model", "reasoning_effort": ""}}, "parameter-unsupported"),
+        ({"parameters": {"model": "fixture-model", "timeout_seconds": True}}, "parameter-unsupported"),
+        ({"parameters": {"model": "fixture-model", "timeout_seconds": 0}}, "parameter-unsupported"),
+        ({"parameters": {"model": "fixture-model", "timeout_seconds": 1801}}, "parameter-unsupported"),
     ],
 )
 def test_selection_fails_closed(snapshot, changes, reason):
@@ -117,6 +122,37 @@ def test_native_source_binding_ignores_unrelated_local_preferences(tmp_path):
     assert native._source_revision(tmp_path, "worker") == before
     source.write_text('[delegation]\ntransport_authority = "manual"\n[editor]\ncolor = "blue"\n')
     assert native._source_revision(tmp_path, "worker") != before
+
+
+def test_parameter_choice_preserves_route_authority_and_configured_bounds(tmp_path, monkeypatch, snapshot):
+    snapshot["models"][0]["reasoning_efforts"].append("medium")
+    snapshot["effective_reasoning_effort"] = "medium"
+    monkeypatch.setattr(native, "discover", lambda root: snapshot)
+    profile = {"name": "worker"}
+    transport = {
+        "kind": "native",
+        "method": "cli",
+        "adapter": "codex-app-server/v1",
+        "parameters": {"model": "fixture-model"},
+        "timeout_seconds": 60,
+    }
+    policy = SimpleNamespace(transport_authority="automatic", safe_to_auto_run_commands=True)
+    offer = native.configuration_offers(tmp_path, profile, transport, policy, {"id": "work", "revision": "1"})[0]
+    original = copy.deepcopy(offer)
+    assert offer["execution"]["continuity"]["parameters"]["reasoning_effort"] == "medium"
+    variant = native.parameterize_configuration(tmp_path, offer, {"reasoning_effort": "low", "timeout_seconds": 30})
+    assert offer == original
+    assert variant["id"] != offer["id"]
+    for key in ("target", "transport", "authorized", "safe", "capability_revision", "independent_context"):
+        assert variant[key] == offer[key]
+    assert variant["execution"]["history"] == offer["execution"]["history"]
+    for invalid in ({"model": "other"}, {"ephemeral": True}, {"timeout_seconds": 90}, {"reasoning_effort": ""}):
+        with pytest.raises(native.ProviderError, match="native-parameter"):
+            native.parameterize_configuration(tmp_path, offer, invalid)
+    snapshot["effective_settings_known"] = False
+    assert native.configuration_offers(tmp_path, profile, transport, policy, {"id": "work", "revision": "1"}) == []
+    explicit = {**transport, "parameters": {"model": "fixture-model", "reasoning_effort": "low"}}
+    assert native.configuration_offers(tmp_path, profile, explicit, policy, {"id": "work", "revision": "1"})
 
 
 def test_partial_startup_captures_cleanup_custody_before_turn_failure(tmp_path, monkeypatch, snapshot):
@@ -505,7 +541,8 @@ def test_continuation_residue_cannot_invalidate_its_own_admission(tmp_path, monk
         ("fork", "thread/fork", "new"),
     ],
 )
-def test_native_topology_uses_metadata_only_and_returns_counters(tmp_path, monkeypatch, snapshot, mode, method, new_id):
+@pytest.mark.parametrize("counter_reset", [False, True])
+def test_native_topology_uses_metadata_only_and_returns_counters(tmp_path, monkeypatch, snapshot, mode, method, new_id, counter_reset):
     calls = []
     environments = []
 
@@ -517,12 +554,26 @@ def test_native_topology_uses_metadata_only_and_returns_counters(tmp_path, monke
                     "method": "thread/tokenUsage/updated",
                     "params": {
                         "threadId": new_id,
-                        "tokenUsage": {"last": {"inputTokens": 120, "cachedInputTokens": 80, "outputTokens": 9}},
+                        "turnId": "turn",
+                        "tokenUsage": {
+                            "last": {"inputTokens": 120, "cachedInputTokens": 80, "outputTokens": 9},
+                            "total": {"inputTokens": 300, "cachedInputTokens": 160, "outputTokens": 25},
+                        },
                     },
                 },
                 {"method": "item/completed", "params": {"threadId": new_id, "turnId": "turn", "item": {"text": '{"ok":true}'}}},
                 {"method": "turn/completed", "params": {"threadId": new_id, "turn": {"id": "turn", "status": "completed"}}},
             ]
+            self.events.insert(1, copy.deepcopy(self.events[0]))
+            foreign = copy.deepcopy(self.events[0])
+            foreign["params"]["turnId"] = "foreign-turn"
+            foreign["params"]["tokenUsage"]["total"]["inputTokens"] = 999
+            self.events.insert(2, foreign)
+            if counter_reset:
+                reset = copy.deepcopy(self.events[0])
+                reset["params"]["tokenUsage"]["total"] = {"inputTokens": 0, "cachedInputTokens": 0, "outputTokens": 0}
+                self.events.insert(3, reset)
+                self.events.insert(4, copy.deepcopy(self.events[0]))
 
         def call(self, name, params):
             calls.append((name, params))
@@ -539,7 +590,9 @@ def test_native_topology_uses_metadata_only_and_returns_counters(tmp_path, monke
     assert calls[0][0] == method
     assert calls[0][1].get("excludeTurns") is (True if mode != "fresh" else None)
     assert calls[0][1]["sandbox"] == "read-only"
-    assert result["metrics"]["cached_input_tokens"] == 80
+    assert result["metrics"].get("cached_input_tokens") == (160 if mode == "fresh" and not counter_reset else None)
+    assert result["metrics"].get("effective_input_tokens") == (300 if mode == "fresh" and not counter_reset else None)
+    assert result["metrics"].get("output_tokens") == (25 if mode == "fresh" and not counter_reset else None)
     assert "retry_count" not in result["metrics"]
     assert result["raw_transcript_stored"] is False
     assert calls[-1][0] == "closed"

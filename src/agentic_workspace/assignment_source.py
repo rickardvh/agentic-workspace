@@ -22,7 +22,17 @@ SOURCE = ".agentic-workspace/config.local.toml"
 def current_route_configurations(
     root: Path, profiles: list[dict[str, Any]], policy: Any, work: dict[str, Any], selection: dict[str, str] | None = None
 ) -> dict[str, Any]:
-    """Host facts for existing process/manual routes, without probing providers.
+    """One bounded capability evaluation across eligible transport peers."""
+    from agentic_workspace.native_transport import discovery_scope
+
+    with discovery_scope():
+        return _current_route_configurations(root, profiles, policy, work, selection)
+
+
+def _current_route_configurations(
+    root: Path, profiles: list[dict[str, Any]], policy: Any, work: dict[str, Any], selection: dict[str, str] | None = None
+) -> dict[str, Any]:
+    """Host facts for process/manual routes and discovered native peers.
 
     Executable presence proves only the generic argv transport. It never proves
     a remote model, vendor parameter, or native continuation is available.
@@ -112,6 +122,15 @@ def current_route_configurations(
 
 def revision(value: Any) -> str:
     return "sha256:" + hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
+
+
+def parameterize_configuration(root: Path, configuration: dict[str, Any], parameters: dict[str, Any]) -> dict[str, Any]:
+    """Delegate parameter constructibility to the selected transport owner."""
+    if configuration.get("execution", {}).get("adapter", {}).get("kind") == "native":
+        from agentic_workspace import native_transport
+
+        return native_transport.parameterize_configuration(root, configuration, parameters)
+    raise ValueError("configuration-parameterization-unavailable")
 
 
 def configuration_authority_revision(root: Path, target: str) -> str:
