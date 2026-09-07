@@ -25123,6 +25123,14 @@ def _report_closeout_trust_payload(
         return {
             "kind": "agentic-workspace/current-task-proof-state/v1",
             "status": proof_execution_evidence["status"],
+            "task_claim_judgment": _current_task_claim_judgment(
+                target_root=target_root,
+                task_text=str(task_text or ""),
+                changed_paths=normalized_changed_paths,
+                manual_verification=manual_verification,
+                separation_of_duty=_as_dict(_as_dict(proof_selection.get("proof_decision")).get("separation_of_duty")),
+                cli_invoke=cli_invoke,
+            ),
             "manual_verification": manual_verification,
             "proof_execution_evidence": proof_execution_evidence,
             "receipt_bridge": {
@@ -53001,6 +53009,16 @@ def _proof_receipt_publication_transaction(*, target_root: Path, producer_receip
         raise
 
 
+def _proof_publication_identity(receipt: dict[str, Any]) -> dict[str, Any]:
+    identity = {key: receipt.get(key) for key in ("command", "result", "changed_paths", "proof_subject", "target_context")}
+    identity["target_context"] = receipt.get("target_context", {})
+    identity["proof_commands"] = receipt.get("proof_commands", [])
+    for field in ("task_claim_judgment", "assignment_proof_obligation", "assignment_proof_binding", "assignment_closeout_lineage"):
+        if field in receipt:
+            identity[field] = receipt[field]
+    return identity
+
+
 def _existing_proof_publication_receipt(
     *,
     target_root: Path,
@@ -53038,6 +53056,7 @@ def _existing_proof_publication_receipt(
         "assignment_proof_obligation",
         "assignment_proof_binding",
         "assignment_closeout_lineage",
+        "task_claim_judgment",
     ):
         if existing.get(field) != receipt.get(field):
             raise WorkspaceUsageError("Prior proof publication identity collides with different receipt semantics.")
@@ -53513,6 +53532,16 @@ def _record_proof_receipt_payload(
         changed_paths=receipt["changed_paths"],
         command=command,
     )
+    if str(task_text or "").strip() and receipt_claim_sufficiency == "sufficient":
+        work = _live_assignment_plan_binding(target_root=target_root, task_text=str(task_text), changed_paths=receipt["changed_paths"])
+        receipt["task_claim_judgment"] = {
+            "work_ref": work.get("plan_ref", ""),
+            "work_revision": work.get("plan_revision", ""),
+            "proof_subject_fingerprint": receipt["proof_subject"]["fingerprint"],
+            "claim_class": "slice_complete",
+            "status": "sufficient",
+            "authority": "acting-agent-task-judgment",
+        }
     receipt["producer_class"] = "aw-proof"
     receipt["authority"] = "aw-proof"
     assignment_obligation = _integrated_assignment_proof_obligation(
@@ -53623,19 +53652,7 @@ def _record_proof_receipt_payload(
         }
         receipt["assignment_closeout_lineage"] = closeout_lineage
     receipt = _proof_receipt_redact_sensitive_data(receipt)
-    publication_identity = {
-        "command": command,
-        "result": result,
-        "changed_paths": receipt["changed_paths"],
-        "proof_subject": receipt.get("proof_subject", {}),
-        "target_context": target_context,
-        "proof_commands": aggregate_commands,
-    }
-    if "assignment_proof_obligation" in receipt:
-        publication_identity["assignment_proof_obligation"] = receipt["assignment_proof_obligation"]
-        publication_identity["assignment_proof_binding"] = receipt.get("assignment_proof_binding")
-    if "assignment_closeout_lineage" in receipt:
-        publication_identity["assignment_closeout_lineage"] = receipt["assignment_closeout_lineage"]
+    publication_identity = _proof_publication_identity(receipt)
     producer_receipt_id = hashlib.sha256(json.dumps(publication_identity, sort_keys=True, ensure_ascii=True).encode("utf-8")).hexdigest()[
         :16
     ]
@@ -66466,6 +66483,87 @@ def _final_response_closeout_trust_for_admission(
 _DIRECT_CLOSEOUT_RESIDUE_KINDS = {"issue", "planning", "memory", "docs", "review", "none"}
 
 
+def _current_task_claim_judgment(
+    *,
+    target_root: Path,
+    task_text: str,
+    changed_paths: list[str],
+    manual_verification: dict[str, Any],
+    separation_of_duty: dict[str, Any],
+    cli_invoke: str,
+) -> dict[str, Any]:
+    """Keep reusable execution evidence separate from current semantic acceptance."""
+    from agentic_workspace.assignment_lifecycle import load_indexed_assignment_task_proof
+    from agentic_workspace.workspace_runtime_proof import _read_proof_receipt_records, _receipt_subject_freshness
+
+    work = _live_assignment_plan_binding(target_root=target_root, task_text=task_text, changed_paths=changed_paths)
+    records, _, _, _ = _read_proof_receipt_records(target_root)
+    current = []
+    for receipt in records or []:
+        publication_id = str(receipt.get("publication_id") or "")
+        indexed = load_indexed_assignment_task_proof(target_root=target_root, receipt_ref=f"proof://receipts/{publication_id}")
+        expected_id = hashlib.sha256(
+            json.dumps(_proof_publication_identity(receipt), sort_keys=True, ensure_ascii=True).encode("utf-8")
+        ).hexdigest()[:16]
+        judgment = _as_dict(receipt.get("task_claim_judgment"))
+        if (
+            task_text.strip()
+            and publication_id == expected_id
+            and indexed.get("task_claim_judgment") == judgment
+            and work.get("plan_revision")
+            and judgment.get("work_ref") == work.get("plan_ref")
+            and judgment.get("work_revision") == work.get("plan_revision")
+            and judgment.get("claim_class") == "slice_complete"
+            and judgment.get("status") == "sufficient"
+            and judgment.get("proof_subject_fingerprint") == _as_dict(receipt.get("proof_subject")).get("fingerprint")
+            and proof_receipt_admission(receipt)["proof_sufficient"]
+            and _receipt_subject_freshness(
+                target_root=target_root, receipt=receipt, changed_paths=changed_paths, command=str(receipt.get("command") or "")
+            ).get("status")
+            == "reusable"
+        ):
+            current.append(receipt)
+    manual_missing = manual_verification.get("expected") is True and manual_verification.get("status") not in {
+        "passed",
+        "accepted",
+        "satisfied",
+        "not-required",
+    }
+    independent_missing = bool(separation_of_duty) and separation_of_duty.get("status") not in {"not-applicable", "satisfied"}
+    status = (
+        "independent-review-required"
+        if independent_missing
+        else "manual-evidence-required"
+        if manual_missing
+        else "accepted"
+        if current
+        else "task-judgment-required"
+    )
+    request = {
+        "task": task_text,
+        "changed_paths": changed_paths,
+        "work_ref": work.get("plan_ref", ""),
+        "work_revision": work.get("plan_revision", ""),
+        "acceptance_source": {"source": "current-task", "requested_outcome": task_text},
+        "judgment_required": "Does the current changed scope and admitted evidence satisfy this exact requested outcome?",
+        "manual_verification": manual_verification if manual_missing else {},
+        "independent_review": separation_of_duty if independent_missing else {},
+        "owner_route": f"{cli_invoke} proof --target . --task {json.dumps(task_text)} --changed "
+        + " ".join(json.dumps(path) for path in changed_paths)
+        + " --format json",
+        "judgment_ingress": "Use the existing proof --record-receipt --task with --receipt-claim-sufficiency sufficient only after judging this exact task against its evidence. Required independent or manual evidence must enter its selected owner first.",
+    }
+    return {
+        "status": status,
+        "claim_class": "slice_complete",
+        "work_ref": work.get("plan_ref", ""),
+        "work_revision": work.get("plan_revision", ""),
+        "current_judgment_count": len(current),
+        "unresolved_judgment": request if status != "accepted" else {},
+        "rule": "Command success remains reusable validation; only current scoped semantic judgment can support a task completion claim, and it cannot replace required independent or manual evidence.",
+    }
+
+
 def _direct_task_terminal_outcome_contract(*, closeout_trust: dict[str, Any], residue_kind: str, residue_owner: str) -> dict[str, Any]:
     current_task_closeout = _as_dict(closeout_trust.get("current_task_closeout"))
     scope = _as_dict(current_task_closeout.get("scope"))
@@ -66484,6 +66582,7 @@ def _direct_task_terminal_outcome_contract(*, closeout_trust: dict[str, Any], re
         current_task_closeout.get("status") != "active"
         or scope.get("relationship") != "bounded-current-task"
         or proof_state.get("status") != "recorded-and-accepted"
+        or _as_dict(proof_state.get("task_claim_judgment")).get("status") != "accepted"
         or receipt_reconciliation.get("status") != "accepted"
         or normalized_residue_kind not in _DIRECT_CLOSEOUT_RESIDUE_KINDS
         or normalized_residue_kind == "none"
@@ -66544,6 +66643,7 @@ def _direct_task_terminal_outcome_contract(*, closeout_trust: dict[str, Any], re
         authorization["source"] = "current_task_closeout.proof_state+final_response.structured_residue"
         authorization["proof_authority"] = {
             "status": proof_state.get("status"),
+            "task_claim_judgment": proof_state.get("task_claim_judgment", {}),
             "receipt_reconciliation": receipt_reconciliation,
             "changed_paths": changed_paths,
         }
