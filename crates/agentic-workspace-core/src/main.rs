@@ -23,6 +23,11 @@ fn main() {
         agentic_workspace_core::proof_receipt::view(request["proof_receipt"].clone())
     } else if request
         .as_object()
+        .is_some_and(|v| v.len() == 1 && v.contains_key("task_judgment"))
+    {
+        agentic_workspace_core::task_judgment::view(request["task_judgment"].clone())
+    } else if request
+        .as_object()
         .is_some_and(|v| v.len() == 1 && v.contains_key("proof_subject"))
     {
         agentic_workspace_core::proof_subject::view(request["proof_subject"].clone())

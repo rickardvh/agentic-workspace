@@ -27,6 +27,10 @@ def direct_task_subject(task: str, paths: list[str]) -> dict[str, Any]:
     return _request({"direct_task_subject": {"task": task, "paths": paths}})
 
 
+def task_judgment(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"task_judgment": context})
+
+
 def proof_subject(context: Mapping[str, Any]) -> dict[str, Any]:
     """Compute shared proof identity; runtime observations grant no authority."""
     return _request({"proof_subject": context})

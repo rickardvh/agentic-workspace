@@ -879,6 +879,140 @@
       },
       "required": ["owner", "revision"],
       "not": {"required": ["terminal"]}
+    },
+    "task_judgment_input": {
+      "description": "Internal current owner observations for exact task judgment; no public source or producer authority ingress.",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "action": {"const": "summarize"},
+            "batches": {
+              "type": "array", "minItems": 1, "maxItems": 128,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "status": {"type": "string"},
+                  "current_judgment_count": {"type": "integer", "minimum": 0, "maximum": 128},
+                  "matched_judgment_count": {"type": "integer", "minimum": 0, "maximum": 128},
+                  "classifications": {"type": "array", "maxItems": 128, "items": {"type": "object"}},
+                  "manual_missing": {"type": "boolean"},
+                  "independent_missing": {"type": "boolean"}
+                },
+                "required": ["status", "current_judgment_count", "matched_judgment_count", "classifications", "manual_missing", "independent_missing"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": ["action", "batches"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "action": {
+              "const": "candidates"
+            },
+            "task": {
+              "type": "string"
+            },
+            "changed_paths": {"type": "array", "items": {"type": "string"}},
+            "work_ref": {
+              "type": "string"
+            },
+            "work_revision": {
+              "type": "string"
+            },
+            "receipts": {
+              "type": "array",
+              "maxItems": 128,
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "action",
+            "task",
+            "changed_paths",
+            "work_ref",
+            "work_revision",
+            "receipts"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "action": {
+              "const": "classify"
+            },
+            "task": {
+              "type": "string"
+            },
+            "changed_paths": {"type": "array", "items": {"type": "string"}},
+            "work_ref": {
+              "type": "string"
+            },
+            "work_revision": {
+              "type": "string"
+            },
+            "observations": {
+              "type": "array",
+              "maxItems": 128,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "receipt": {
+                    "type": "object"
+                  },
+                  "publication_current": {
+                    "type": "boolean"
+                  },
+                  "proof_sufficient": {
+                    "type": "boolean"
+                  },
+                  "evidence_freshness": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "receipt",
+                  "publication_current",
+                  "proof_sufficient",
+                  "evidence_freshness"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "manual_required": {
+              "type": "boolean"
+            },
+            "manual_status": {
+              "type": "string"
+            },
+            "independent_required": {
+              "type": "boolean"
+            },
+            "independent_status": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "action",
+            "task",
+            "changed_paths",
+            "work_ref",
+            "work_revision",
+            "observations",
+            "manual_required",
+            "manual_status",
+            "independent_required",
+            "independent_status"
+          ],
+          "additionalProperties": false
+        }
+      ]
     }
   }
 }

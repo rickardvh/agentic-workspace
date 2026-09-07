@@ -209,7 +209,14 @@ fn publication_admission(root: &Dir, id: &str, receipt: &Value) -> Value {
     json!({"status":"admitted","reason":"current-indexed-owner-publication","authority_effect":"publication-only"})
 }
 
-fn receipt_view(root: &Dir, reference: &str, work_ref: &Value, work_revision: &Value) -> Value {
+fn receipt_view(
+    root: &Dir,
+    reference: &str,
+    task: &str,
+    changed: &[String],
+    work_ref: &Value,
+    work_revision: &Value,
+) -> Value {
     let mut gaps = Vec::<String>::new();
     let id = reference.strip_prefix("proof://receipts/").unwrap_or("");
     if id.is_empty()
@@ -259,22 +266,27 @@ fn receipt_view(root: &Dir, reference: &str, work_ref: &Value, work_revision: &V
     if receipt["kind"] != "agentic-workspace/proof-receipt/v1" {
         gaps.push("receipt-contract-invalid".into());
     }
-    let judgment = &receipt["task_claim_judgment"];
-    if judgment["work_ref"] != *work_ref || judgment["work_revision"] != *work_revision {
-        gaps.push("task-subject-mismatch-or-legacy-identity-compatibility-unproven".into());
-    }
-    if judgment["claim_class"] != "slice_complete" || judgment["status"] != "sufficient" {
-        gaps.push("exact-task-claim-judgment-missing".into());
-    }
+    let judgment = crate::task_judgment::view(json!({
+        "action":"classify", "task":task, "changed_paths":changed, "work_ref":work_ref, "work_revision":work_revision,
+        "observations":[{"receipt":receipt, "publication_current":publication["status"] == "admitted",
+            "proof_sufficient":admission["proof_sufficient"] == true, "evidence_freshness":"unproven"}],
+        "manual_required":false,"manual_status":"", "independent_required":false,"independent_status":""
+    }));
+    let judgment = match judgment {
+        Ok(value) => value,
+        Err(error) => {
+            json!({"status":"unresolved", "classifications":[{"reasons":[error.to_string()]}]})
+        }
+    };
+    gaps.extend(
+        judgment["classifications"][0]["reasons"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_str)
+            .map(str::to_owned),
+    );
     let subject = &receipt["proof_subject"];
-    if judgment["proof_subject_fingerprint"]
-        .as_str()
-        .filter(|s| !s.is_empty())
-        .is_none()
-        || judgment["proof_subject_fingerprint"] != subject["fingerprint"]
-    {
-        gaps.push("task-judgment-proof-subject-binding-mismatch".into());
-    }
     if subject["kind"] != "agentic-workspace/proof-subject/v1"
         || subject["identity_complete"] != true
     {
@@ -305,7 +317,7 @@ fn receipt_view(root: &Dir, reference: &str, work_ref: &Value, work_revision: &V
         .map(str::to_owned),
     );
     json!({"reference":reference,"status":"unadmitted","publication_admission":publication,"receipt_admission":admission,
-        "evidence_freshness":"unproven","strategy_coverage":"unproven","task_judgment":"unadmitted","independent_review":"not-established-by-publication",
+        "task_judgment":judgment,"evidence_freshness":"unproven","strategy_coverage":"unproven","independent_review":"not-established-by-publication",
         "proof_subject":subject["id"],"gaps":gaps})
 }
 
@@ -434,7 +446,7 @@ pub fn view(
             evidence.extend(
                 refs.iter()
                     .filter_map(Value::as_str)
-                    .map(|r| receipt_view(&root, r, &work_ref, &work_revision)),
+                    .map(|r| receipt_view(&root, r, task, changed, &work_ref, &work_revision)),
             );
         }
     }
@@ -447,7 +459,7 @@ pub fn view(
         }
     }
     let packet = applicable.then(|| json!({"task":task,"changed_paths":changed,"claim_class":"slice_complete",
-        "task_identity":current_work,"work_ref":work_ref,"work_revision":work_revision,"planning_subject":planning_subject,
+        "task_identity":current_work,"task_claim_identity":direct_subject,"work_ref":work_ref,"work_revision":work_revision,"planning_subject":planning_subject,
         "acceptance_source":{"source":"current-task","requested_outcome":task},
         "strategy":strategy,"strategy_revision":strategy_revision,
         "judgment_required":"Does this exact requested outcome and changed scope satisfy the current claim and applicable strategy?",
@@ -602,9 +614,7 @@ mod tests {
         request["arguments"]["evidence_refs"] = json!(["proof://receipts/example"]);
         let current = get(&repo, &["a.txt"], Some(request.clone()));
         let gaps = current["evidence"][0]["gaps"].as_array().unwrap();
-        assert!(gaps.contains(&json!(
-            "task-subject-mismatch-or-legacy-identity-compatibility-unproven"
-        )));
+        assert!(gaps.contains(&json!("task-claim-mismatch-or-missing-identity")));
         assert!(gaps.contains(&json!("publication-index-unavailable-or-invalid")));
         assert!(!gaps.contains(&json!("proof-semantic-input-stale-or-unavailable")));
         repo.write("a.txt", "two");
@@ -682,27 +692,38 @@ mod tests {
         let result = receipt_view(
             &root,
             &reference,
+            "Current fixture task",
+            &["a.txt".into()],
             &json!("planning:current"),
             &json!("semantic-one"),
         );
         assert_eq!(result["publication_admission"]["status"], "admitted");
         assert_eq!(result["status"], "unadmitted");
         assert_eq!(result["evidence_freshness"], "unproven");
+        assert_eq!(result["task_judgment"]["matched_judgment_count"], 0); // Former Planning judgment has no exact task binding.
+        assert_eq!(result["task_judgment"]["current_judgment_count"], 0);
         assert_eq!(result["strategy_coverage"], "unproven");
         let unrelated = receipt_view(
             &root,
             &reference,
+            "Current fixture task",
+            &["a.txt".into()],
             &json!("other-task"),
             &json!("semantic-one"),
         );
         assert_eq!(unrelated["publication_admission"]["status"], "admitted");
-        assert!(unrelated["gaps"].as_array().unwrap().contains(&json!(
-            "task-subject-mismatch-or-legacy-identity-compatibility-unproven"
-        )));
+        assert!(
+            unrelated["gaps"]
+                .as_array()
+                .unwrap()
+                .contains(&json!("task-claim-mismatch-or-missing-identity"))
+        );
         repo.write("a.txt", "changed");
         let stale = receipt_view(
             &root,
             &reference,
+            "Current fixture task",
+            &["a.txt".into()],
             &json!("planning:current"),
             &json!("semantic-one"),
         );
