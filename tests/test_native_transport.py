@@ -58,6 +58,35 @@ def test_unchanged_version_does_not_make_expired_catalog_current(snapshot):
         native.validate_selection(snapshot, selection(snapshot), now=snapshot["expires_at"])
 
 
+def test_discovered_peer_preserves_policy_and_separates_current_host_safety(tmp_path, monkeypatch, snapshot):
+    import sys
+
+    from agentic_workspace.assignment_source import current_route_configurations
+
+    source = tmp_path / ".agentic-workspace/config.local.toml"
+    source.parent.mkdir()
+    source.write_text("# synthetic authority\n")
+    monkeypatch.setattr(native, "discover", lambda root: snapshot)
+    profile = {
+        "name": "worker",
+        "provider": "openai",
+        "model_family": "fixture-model",
+        "transports": [{"kind": "internal", "method": "internal"}, {"kind": "process", "method": "cli", "command": [sys.executable]}],
+    }
+    policy = SimpleNamespace(
+        current_target="worker", manual_transport_policy="allowed", transport_authority="automatic", safe_to_auto_run_commands=True
+    )
+    original_policy = vars(policy).copy()
+    result = current_route_configurations(tmp_path, [profile], policy, {"id": "work", "revision": "1"})
+    assert [row["configuration"]["execution"]["adapter"]["kind"] for row in result["candidates"]] == ["current-host", "process", "native"]
+    assert all(row["eligible"] for row in result["candidates"])
+    assert vars(policy) == original_policy
+    policy.safe_to_auto_run_commands = False
+    monkeypatch.setattr(native, "discover", lambda root: pytest.fail("unsafe peers must not probe"))
+    result = current_route_configurations(tmp_path, [profile], policy, {"id": "work", "revision": "1"})
+    assert [row["eligible"] for row in result["candidates"]] == [True, False]
+
+
 def test_ephemeral_is_mode_specific_and_not_restartable(snapshot):
     snapshot["parameters"].append("ephemeral")
     snapshot["ephemeral_modes"] = ["fresh", "fork"]
@@ -69,8 +98,30 @@ def test_ephemeral_is_mode_specific_and_not_restartable(snapshot):
         native.validate_selection(snapshot, {**fresh, "parameters": {"model": "fixture-model", "ephemeral": "true"}})
 
 
+def test_discovery_offers_disposable_and_persistent_peers(tmp_path, monkeypatch, snapshot):
+    snapshot["parameters"].append("ephemeral")
+    snapshot["ephemeral_modes"] = ["fresh", "fork"]
+    monkeypatch.setattr(native, "discover", lambda root: snapshot)
+    profile = {"provider": "openai", "model_family": "fixture-model"}
+    offers = native.discovered_transports(tmp_path, profile)
+    assert [row["parameters"].get("ephemeral") for row in offers] == [None, True]
+    assert profile == {"provider": "openai", "model_family": "fixture-model"}
+
+
+def test_native_source_binding_ignores_unrelated_local_preferences(tmp_path):
+    source = tmp_path / ".agentic-workspace/config.local.toml"
+    source.parent.mkdir()
+    source.write_text('[delegation]\ntransport_authority = "automatic"\n')
+    before = native._source_revision(tmp_path, "worker")
+    source.write_text('[delegation]\ntransport_authority = "automatic"\n[editor]\ncolor = "blue"\n')
+    assert native._source_revision(tmp_path, "worker") == before
+    source.write_text('[delegation]\ntransport_authority = "manual"\n[editor]\ncolor = "blue"\n')
+    assert native._source_revision(tmp_path, "worker") != before
+
+
 def test_partial_startup_captures_cleanup_custody_before_turn_failure(tmp_path, monkeypatch, snapshot):
     closed = []
+    history = []
 
     class Connection:
         def __init__(self, executable):
@@ -78,7 +129,7 @@ def test_partial_startup_captures_cleanup_custody_before_turn_failure(tmp_path, 
 
         def call(self, method, params):
             if method == "thread/start":
-                return {"thread": {"id": "owned-probe"}}
+                return {"thread": {"id": "owned-probe", "ephemeral": False}}
             raise native.ProviderError("fixture-turn-rejected")
 
         def close(self):
@@ -87,9 +138,10 @@ def test_partial_startup_captures_cleanup_custody_before_turn_failure(tmp_path, 
     monkeypatch.setattr(native, "CodexConnection", Connection)
     owned = set()
     with pytest.raises(native.ProviderError, match="fixture-turn-rejected"):
-        native.execute(tmp_path, snapshot, selection(snapshot), "unused", {}, on_thread=owned.add)
+        native.execute(tmp_path, snapshot, selection(snapshot), "unused", {}, on_thread=owned.add, on_history=history.append)
     assert owned == {"owned-probe"}
     assert closed == [True]
+    assert history == [False]
 
 
 def test_archive_failure_does_not_delete_or_claim_success(monkeypatch, snapshot):
@@ -123,6 +175,141 @@ def test_exclusive_lineage_is_not_a_ttl_lease():
                 pytest.fail("a parallel writer was admitted")
     with native.exclusive_lineage("fixture-exclusive-test"):
         pass
+
+
+@pytest.mark.parametrize("change", [{"live": True}, {"packet_integrity": "foreign"}, {"run_id": "other"}])
+def test_cleanup_requires_exact_released_custody(tmp_path, monkeypatch, change):
+    path = native._custody_path(tmp_path, "owned")
+    custody = {
+        "kind": "agentic-workspace/native-transport-custody/v1",
+        "run_id": "owned",
+        "adapter": "codex-app-server/v1",
+        "packet_integrity": "sealed",
+        "live": False,
+        "reference": "opaque",
+    }
+    native._write(path, {**custody, **change})
+    native._write(
+        path.with_name("state.json"), {"run_id": "owned", "current_state": "closed", "assignment": {"packet_integrity": "sealed"}}
+    )
+    monkeypatch.setattr(native, "discover", lambda root: pytest.fail("unowned cleanup must not reach provider"))
+    assert native.cleanup_owned_run(tmp_path, "owned")["status"] == "deferred"
+    assert native.cleanup_owned_run(tmp_path, "../foreign")["status"] == "deferred"
+
+
+def test_cleanup_archives_once_without_deleting_assignment(tmp_path, monkeypatch, snapshot):
+    path = native._custody_path(tmp_path, "owned")
+    native._write(
+        path,
+        {
+            "kind": "agentic-workspace/native-transport-custody/v1",
+            "run_id": "owned",
+            "adapter": "codex-app-server/v1",
+            "packet_integrity": "sealed",
+            "live": False,
+            "reference": "opaque",
+        },
+    )
+    native._write(
+        path.with_name("state.json"), {"run_id": "owned", "current_state": "dispatch-failed", "assignment": {"packet_integrity": "sealed"}}
+    )
+    before = path.with_name("state.json").read_bytes()
+    lineage = tmp_path / ".agentic-workspace/local/transport-continuations/current.json"
+    native._write(lineage, {"reference": "opaque", "semantic_scope": "slice"})
+    calls = []
+    monkeypatch.setattr(native, "discover", lambda root: snapshot)
+    monkeypatch.setattr(native, "archive_reference", lambda facts, ref: calls.append(ref) or "archived")
+    assert native.cleanup_owned_run(tmp_path, "owned")["status"] == "archived"
+    assert native.cleanup_owned_run(tmp_path, "owned")["reused"] is True
+    assert calls == ["opaque"]
+    assert path.with_name("state.json").read_bytes() == before
+    assert json.loads(lineage.read_text()) == {"reference": "", "semantic_scope": "slice", "unavailable": "archived"}
+
+
+def test_cleanup_protects_released_sibling_awaiting_admission(tmp_path, monkeypatch):
+    for run, state in (("owned", "closed"), ("sibling", "awaiting-admission")):
+        path = native._custody_path(tmp_path, run)
+        native._write(
+            path,
+            {
+                "kind": "agentic-workspace/native-transport-custody/v1",
+                "run_id": run,
+                "adapter": "codex-app-server/v1",
+                "packet_integrity": "sealed",
+                "live": False,
+                "reference": "shared",
+            },
+        )
+        native._write(path.with_name("state.json"), {"run_id": run, "current_state": state, "assignment": {"packet_integrity": "sealed"}})
+    monkeypatch.setattr(native, "discover", lambda root: pytest.fail("conversation still needed"))
+    assert native.cleanup_owned_run(tmp_path, "owned")["reason"] == "native-cleanup-conversation-still-needed"
+
+
+@pytest.mark.parametrize("ephemeral", [False, True])
+def test_dispatch_failure_retains_owned_reference_and_prevents_repeat(tmp_path, monkeypatch, snapshot, ephemeral):
+    source = tmp_path / ".agentic-workspace/config.local.toml"
+    source.parent.mkdir()
+    source.write_text("# authority")
+    monkeypatch.setattr(native, "discover", lambda root: snapshot)
+    snapshot["parameters"].append("ephemeral")
+    snapshot["ephemeral_modes"] = ["fresh"]
+    execution = {
+        "source_revision": native._source_revision(tmp_path),
+        "adapter": {"adapter": "codex-app-server/v1", "parameters": {"model": "fixture-model"}},
+        "continuity": selection(snapshot, parameters={"model": "fixture-model", "ephemeral": ephemeral}),
+        "target_identity": "worker",
+        "semantic_scope": "slice",
+        "semantic_revision": "r1",
+    }
+    configuration = {
+        "execution": execution,
+        "target": "worker",
+        "transport": "cli",
+        **dict.fromkeys(("authorized", "safe", "constructible", "current", "concurrency_available"), True),
+    }
+    packet = _assignment_seal_host_native_packet(
+        {
+            "assignment_id": "a",
+            "assignment_revision": "r",
+            "run_id": "owned",
+            "target": "worker",
+            "transport": "cli",
+            "assignment_identity": {"dispatch_adapter": {"execution_configuration": configuration}},
+            "return_contract": {"required_identity": {}},
+        }
+    )
+    calls = []
+
+    def fail(*args, **kwargs):
+        calls.append(True)
+        assert json.loads(kwargs["worker_environment"]["AGENTIC_WORKSPACE_DELEGATED_WORKER_KERNEL"])["assignment"]["assignment_id"] == "a"
+        kwargs["on_thread"]("owned-provider-reference")
+        kwargs["on_history"](ephemeral)
+        kwargs["on_closed"]()
+        raise native.ProviderError(
+            "provider-turn-failed", metrics={"kind": "agentic-workspace/assignment-transport-metrics/v1", "effective_input_tokens": 13}
+        )
+
+    monkeypatch.setattr(native, "execute", fail)
+    result = native.dispatch_packet(tmp_path, packet, "not retained")
+    assert result["status"] == "blocked"
+    assert result["context_cost"]["effective_input_tokens"] == 13
+    custody = json.loads(native._custody_path(tmp_path, "owned").read_text())
+    assert custody["reference"] == (None if ephemeral else "owned-provider-reference") and custody["live"] is False
+    assert "not retained" not in json.dumps(custody)
+    assert native.dispatch_packet(tmp_path, packet, "not retained")["reason"] == "native-run-already-attempted"
+    assert calls == [True]
+    if ephemeral:
+        native._write(
+            native._custody_path(tmp_path, "owned").with_name("state.json"),
+            {
+                "run_id": "owned",
+                "current_state": "dispatch-failed",
+                "assignment": {"packet_integrity": packet["packet_integrity"]},
+            },
+        )
+        monkeypatch.setattr(native, "discover", lambda root: pytest.fail("proved ephemeral failure needs no archive call"))
+        assert native.cleanup_owned_run(tmp_path, "owned")["status"] == "not-stored"
 
 
 def test_packet_chooses_exact_peer_adapter():
@@ -320,9 +507,11 @@ def test_continuation_residue_cannot_invalidate_its_own_admission(tmp_path, monk
 )
 def test_native_topology_uses_metadata_only_and_returns_counters(tmp_path, monkeypatch, snapshot, mode, method, new_id):
     calls = []
+    environments = []
 
     class Connection:
-        def __init__(self, executable):
+        def __init__(self, executable, *, environment=None):
+            environments.append(environment)
             self.events = [
                 {
                     "method": "thread/tokenUsage/updated",
@@ -344,7 +533,9 @@ def test_native_topology_uses_metadata_only_and_returns_counters(tmp_path, monke
 
     monkeypatch.setattr(native, "CodexConnection", Connection)
     choice = selection(snapshot, mode=mode, **({"reference": "opaque"} if mode != "fresh" else {}))
-    result = native.execute(tmp_path, snapshot, choice, "bounded input", {"type": "object"})
+    worker_environment = {"AGENTIC_WORKSPACE_DELEGATED_WORKER_KERNEL": '{"assignment":{"assignment_id":"worker"}}'}
+    result = native.execute(tmp_path, snapshot, choice, "bounded input", {"type": "object"}, worker_environment=worker_environment)
+    assert environments == [worker_environment]
     assert calls[0][0] == method
     assert calls[0][1].get("excludeTurns") is (True if mode != "fresh" else None)
     assert calls[0][1]["sandbox"] == "read-only"

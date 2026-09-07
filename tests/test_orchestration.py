@@ -75,6 +75,30 @@ def test_generic_start_collapses_to_assignment_entry(monkeypatch, tmp_path) -> N
     assert emitted[0]["broad_startup_constructed"] is False
 
 
+def test_worker_entry_resolves_exact_assignment_instead_of_latest_sibling(tmp_path) -> None:
+    from agentic_workspace.workspace_runtime_core import _delegated_worker_kernel_payload
+
+    assignment_root = tmp_path / ".agentic-workspace/planning/assignments"
+    assignment_root.mkdir(parents=True)
+    for name, updated in (("worker-a", "2026-01-01"), ("worker-b", "2026-01-02")):
+        (assignment_root / f"{name}.assignment.json").write_text(
+            json.dumps(
+                {
+                    "assignment_id": name,
+                    "status": "current",
+                    "current_revision": "rev-1",
+                    "current_attempt": {"run_id": name + "-run", "owner": name, "status": "selected", "updated_at": updated},
+                    "assignment_gate": {"allowed_paths": [name + ".py"]},
+                }
+            )
+        )
+    exact = _delegated_worker_kernel_payload(target_root=tmp_path, assignment_id="worker-a")
+    assert exact["assignment"]["assignment_id"] == "worker-a"
+    assert exact["scope"]["allowed_paths"] == ["worker-a.py"]
+    assert _delegated_worker_kernel_payload(target_root=tmp_path, assignment_id="../worker-a")["status"] == "direct-compatible"
+    assert _delegated_worker_kernel_payload(target_root=tmp_path, assignment_id="missing")["status"] == "direct-compatible"
+
+
 def test_frontier_is_derived_and_separates_semantic_slice_from_attempt() -> None:
     result = derive_orchestration_frontier(
         planning_slices=[

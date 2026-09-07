@@ -35,22 +35,30 @@ def current_route_configurations(
         current = bool(policy.current_target) and policy.current_target in {name, profile.get("target_id"), *profile.get("aliases", [])}
         transports = list(profile.get("transports", []))
         if current:
-            transports = [{"method": "internal", "kind": "current-host"}]
+            transports = [{"method": "internal", "kind": "current-host"}] + [
+                item for item in transports if item.get("kind") not in {"internal", "current-host"}
+            ]
         elif policy.manual_transport_policy != "disabled" and not any(t.get("method") == "manual" for t in transports):
             # The established manual owner can export any bounded target packet.
             transports.append({"method": "manual", "kind": "manual"})
+        native_allowed = (
+            policy.transport_authority == "automatic"
+            and policy.safe_to_auto_run_commands is True
+            and not profile.get("capability_mismatch")
+            and profile.get("required_action") != "escalate-before-execution"
+            and "off" not in profile.get("human_control_modes", [])
+            and "required-proof-missing" not in profile.get("proof_requirements", [])
+        )
+        if native_allowed:
+            from agentic_workspace.native_transport import discovered_transports
+
+            transports.extend(discovered_transports(root, profile))
         for transport in transports:
             method = transport["method"]
+            retained = current and transport.get("kind") == "current-host"
             if transport.get("kind") == "native":
                 # A hard-ineligible route cannot benefit from remote discovery.
-                if (
-                    policy.transport_authority != "automatic"
-                    or policy.safe_to_auto_run_commands is not True
-                    or profile.get("capability_mismatch")
-                    or profile.get("required_action") == "escalate-before-execution"
-                    or "off" in profile.get("human_control_modes", [])
-                    or "required-proof-missing" in profile.get("proof_requirements", [])
-                ):
+                if not native_allowed:
                     continue
                 from agentic_workspace.native_transport import configuration_offers
 
@@ -62,7 +70,7 @@ def current_route_configurations(
                 local = root / command[0]
                 executable = str(local.resolve()) if local.is_file() else None
             manual = method == "manual"
-            constructible = current or manual or bool(executable and method in {"cli", "api"})
+            constructible = retained or manual or bool(executable and method in {"cli", "api"})
             executable_stat = Path(executable).stat() if executable else None
             facts = {
                 "transport": transport,
@@ -77,9 +85,9 @@ def current_route_configurations(
                     "transport": method,
                     "capability_revision": revision(facts),
                     "current": True,
-                    "authorized": current
+                    "authorized": retained
                     or (policy.manual_transport_policy != "disabled" if manual else policy.transport_authority == "automatic"),
-                    "safe": current or manual or policy.safe_to_auto_run_commands is True,
+                    "safe": retained or manual or policy.safe_to_auto_run_commands is True,
                     "constructible": constructible,
                     "result_classes": ["read-only", "unapplied-patch"],
                     "proof_classes": [],

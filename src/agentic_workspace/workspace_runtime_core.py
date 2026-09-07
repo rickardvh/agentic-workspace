@@ -45620,6 +45620,9 @@ def _current_assignment_selection(
             profile["execution_configurations"] = [
                 row for row in configurations.get("candidates", []) if row["configuration"]["target"] == profile["name"]
             ]
+            eligible_configurations = [row["configuration"] for row in profile["execution_configurations"] if row["eligible"]]
+            profile["execution_methods"] = list(dict.fromkeys(row["transport"] for row in eligible_configurations))
+            profile["transports"] = [row["execution"]["adapter"] for row in eligible_configurations]
     assignment_policy = _assignment_policy_payload(config.local_override, list(runtime_resolution.get("profile_recommendations", [])))
     if execution_choice is not None and not configurations:
         raise ValueError("assignment-configuration-source-unavailable")
@@ -45690,7 +45693,11 @@ def _execution_posture_payload(
                 gate = _as_dict(resumed.get("assignment_gate"))
                 task_text = str(gate.get("human_intent") or "")
                 changed_paths = changed_paths or [str(path) for path in _list_payload(gate.get("allowed_paths"))]
-        retained = _current_assignment_lifecycle_record(target_root=target_root, task_text=task_text, changed_paths=changed_paths)
+        # A taskless lookup may resume only through the Planning match above.
+        # None means an unfiltered custody lookup, not an empty semantic subject.
+        retained = _current_assignment_lifecycle_record(
+            target_root=target_root, task_text=str(task_text or ""), changed_paths=changed_paths
+        )
         retained_choice = retained.get("execution_choice")
         if isinstance(retained_choice, dict) and retained_choice:
             if execution_choice is not None and execution_choice != retained_choice:
@@ -66396,17 +66403,27 @@ def _current_assignment_lifecycle_record(
     task_text: str | None = None,
     changed_paths: list[str] | None = None,
     planning_binding: dict[str, Any] | None = None,
+    assignment_id: str | None = None,
 ) -> dict[str, Any]:
     assignment_root = target_root / ".agentic-workspace" / "planning" / "assignments"
     if not assignment_root.exists():
         return {}
     candidates: list[tuple[str, str, str, dict[str, Any]]] = []
-    for path in sorted(assignment_root.glob("*.assignment.json")):
+    if assignment_id is not None and not re.fullmatch(r"[A-Za-z0-9_-]+", assignment_id):
+        return {}
+    paths = (
+        [assignment_root / f"{assignment_id}.assignment.json"]
+        if assignment_id is not None
+        else sorted(assignment_root.glob("*.assignment.json"))
+    )
+    for path in paths:
         try:
             payload = json.loads(path.read_text(encoding="utf-8-sig"))
         except (OSError, json.JSONDecodeError):
             continue
         if not isinstance(payload, dict):
+            continue
+        if assignment_id is not None and payload.get("assignment_id") != assignment_id:
             continue
         if planning_binding is not None:
             gate = _as_dict(payload.get("assignment_gate"))
@@ -66445,8 +66462,8 @@ def _current_assignment_lifecycle_record(
     return sorted(candidates, key=lambda item: (item[0], item[1], item[2]))[-1][3]
 
 
-def _delegated_worker_kernel_payload(*, target_root: Path) -> dict[str, Any]:
-    assignment = _current_assignment_lifecycle_record(target_root=target_root)
+def _delegated_worker_kernel_payload(*, target_root: Path, assignment_id: str | None = None) -> dict[str, Any]:
+    assignment = _current_assignment_lifecycle_record(target_root=target_root, assignment_id=assignment_id)
     if not assignment:
         return {
             "kind": "agentic-workspace/delegated-worker-kernel/v1",

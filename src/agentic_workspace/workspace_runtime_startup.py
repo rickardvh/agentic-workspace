@@ -3574,7 +3574,10 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
             launched_worker_payload = {"assignment": {}, "status": "invalid-launch-identity"}
         bounded_entry = assignment_bound_entry(
             launched=_as_dict(launched_worker_payload),
-            current=_delegated_worker_kernel_payload(target_root=target_root),
+            current=_delegated_worker_kernel_payload(
+                target_root=target_root,
+                assignment_id=str(_as_dict(_as_dict(launched_worker_payload).get("assignment")).get("assignment_id") or ""),
+            ),
         )
         _emit_payload(payload=bounded_entry, format_name=args.format)
         return 0
