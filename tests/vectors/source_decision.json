@@ -2,6 +2,62 @@
   "schema_version": 1,
   "cases": [
 {
+  "id": "restriction-survives-unavailable-target-grant-owner",
+  "input": {
+    "intent": {},
+    "capability_contract": {
+      "kind": "agentic-workspace/capability-contract/v1",
+      "revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "owners": [
+        {
+          "owner": "policy",
+          "revision": "p1",
+          "domains": [
+            "repository-policy"
+          ]
+        }
+      ],
+      "restriction_authorities": [
+        {
+          "owner": "policy",
+          "affects": [
+            "claim:release-complete",
+            "effect:external-publish"
+          ]
+        }
+      ]
+    },
+    "contributions": [
+      {
+        "owner": "policy",
+        "revision": "p1",
+        "claims": {
+          "blocked": [
+            "release-complete"
+          ]
+        },
+        "blockers": [
+          {
+            "code": "review-required",
+            "message": "Independent review is still required.",
+            "affects": [
+              "effect:external-publish"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "expect": {
+    "claim_boundary.allowed": [],
+    "claim_boundary.blocked": [
+      "release-complete"
+    ],
+    "primary_action": null,
+    "ready_actions": []
+  }
+},
+{
   "id": "open-answer-returns-owner-request-and-schema",
   "input": {
     "contributions": [
@@ -1496,6 +1552,145 @@
 }
   ],
   "error_cases": [
+{
+  "id": "restriction-does-not-grant-unavailable-claim",
+  "input": {
+    "intent": {},
+    "capability_contract": {
+      "kind": "agentic-workspace/capability-contract/v1",
+      "revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "owners": [
+        {
+          "owner": "policy",
+          "revision": "p1",
+          "domains": [
+            "repository-policy"
+          ]
+        }
+      ],
+      "restriction_authorities": [
+        {
+          "owner": "policy",
+          "affects": [
+            "claim:release-complete",
+            "effect:external-publish"
+          ]
+        }
+      ]
+    },
+    "contributions": [
+      {
+        "owner": "policy",
+        "revision": "p1",
+        "claims": {
+          "allowed": [
+            "release-complete"
+          ]
+        },
+        "blockers": [
+          {
+            "code": "review-required",
+            "message": "Independent review is still required.",
+            "affects": [
+              "effect:external-publish"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "error_contains": "without exclusive claim authority"
+},
+{
+  "id": "restriction-does-not-widen-to-another-claim",
+  "input": {
+    "intent": {},
+    "capability_contract": {
+      "kind": "agentic-workspace/capability-contract/v1",
+      "revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "owners": [
+        {
+          "owner": "policy",
+          "revision": "p1",
+          "domains": [
+            "repository-policy"
+          ]
+        }
+      ],
+      "restriction_authorities": [
+        {
+          "owner": "policy",
+          "affects": [
+            "claim:release-complete",
+            "effect:external-publish"
+          ]
+        }
+      ]
+    },
+    "contributions": [
+      {
+        "owner": "policy",
+        "revision": "p1",
+        "claims": {
+          "blocked": [
+            "other-claim"
+          ]
+        },
+        "blockers": [
+          {
+            "code": "review-required",
+            "message": "Independent review is still required.",
+            "affects": [
+              "effect:external-publish"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "error_contains": "without admitted restriction authority"
+},
+{
+  "id": "unavailable-target-still-requires-restriction-admission",
+  "input": {
+    "intent": {},
+    "capability_contract": {
+      "kind": "agentic-workspace/capability-contract/v1",
+      "revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "owners": [
+        {
+          "owner": "policy",
+          "revision": "p1",
+          "domains": [
+            "repository-policy"
+          ]
+        }
+      ],
+      "restriction_authorities": []
+    },
+    "contributions": [
+      {
+        "owner": "policy",
+        "revision": "p1",
+        "claims": {
+          "blocked": [
+            "release-complete"
+          ]
+        },
+        "blockers": [
+          {
+            "code": "review-required",
+            "message": "Independent review is still required.",
+            "affects": [
+              "effect:external-publish"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "error_contains": "without admitted restriction authority"
+},
 {
   "id": "answer-cannot-prefill-human-choice",
   "input": {

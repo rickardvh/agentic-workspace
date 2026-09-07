@@ -589,6 +589,22 @@ route_role = "behavior"
 precedence = "85"
 allowed_composition = ["maintenance", "evidence", "broad"]
 
+[assurance.domain_proof_lanes.shared_kernel_contract]
+purpose = "Exact shared Rust authority, selective consequences, and independent language/JSON consumers."
+applies_to_paths = ["crates/agentic-workspace-core/src/lib.rs", "crates/agentic-workspace-core/tests/vectors.rs", "tests/vectors/source_decision.json", "tests/vectors/capability_contract.json"]
+commands = ["cargo test --locked -p agentic-workspace-core --test vectors", "uv run pytest tests/test_shared_core.py -k 'vectors or fail_closed_errors or node_binding_executes_the_same_core or ready_set' -q"]
+review_aids = ["Check explicit owner admission, restriction versus grant authority, exact work/currentness, and selected-outcome terminality. Vector agreement does not establish native stateful owner integration."]
+evidence_concepts = ["generated-adapter-conformance", "regression_prevention"]
+proof_profiles = ["workspace_behavior"]
+authority_refs = ["crates/agentic-workspace-core/src/lib.rs", "tests/vectors/source_decision.json"]
+escalation = ["a change affects a source-owning operation or stateful recovery not exercised by shared vectors"]
+escalation_conditions = ["focused-route-insufficient"]
+claim_boundary = "shared-kernel-contract-proof-is-not-owner-lifecycle-completion-or-independent-acceptance"
+owner = "workspace-cli-runtime"
+route_role = "behavior"
+precedence = "85"
+allowed_composition = ["maintenance", "evidence", "broad"]
+
 [assurance.domain_proof_lanes.delegation_outcome_attribution]
 purpose = "Conservative shared-core responsibility, configuration-scoped burden and assignment-derived evidence."
 applies_to_paths = ["bindings/node/semantic-decision.mjs", "crates/agentic-workspace-core/src/assignment.rs", "crates/agentic-workspace-core/src/main.rs", "src/agentic_workspace/decision.py", "src/agentic_workspace/orchestration.py", "tests/test_orchestration.py", "src/agentic_workspace/contracts/schemas/assignment_context_cost.schema.json", "src/agentic_workspace/contracts/schemas/delegation_outcomes.schema.json", "src/agentic_workspace/contracts/schemas/delegation_outcome_append_input.schema.json", "docs/reference/assignment-context-cost.md", "docs/reference/delegation-outcomes.md", "docs/reference/delegation-outcome-append-input.md"]

@@ -702,22 +702,9 @@ fn normalize_capability_contract(
             )));
         }
         let scopes = affects(grant.affects, "restriction authority.affects")?;
-        for scope in &scopes {
-            if let Some(claim) = scope.strip_prefix("claim:")
-                && !claim_authorities.contains_key(claim)
-            {
-                return Err(CoreError::new(format!(
-                    "restriction authority names unknown claim {claim}"
-                )));
-            }
-            if let Some(effect) = scope.strip_prefix("effect:")
-                && !owned_effects.contains_key(effect)
-            {
-                return Err(CoreError::new(format!(
-                    "restriction authority names unknown effect {effect}"
-                )));
-            }
-        }
+        // A current restriction grant is independent of a target capability's
+        // availability. Do not invent a claim/effect grant merely to retain a
+        // policy veto after that capability disappears.
         if restriction_authorities
             .insert(owner.clone(), scopes.into_iter().collect())
             .is_some()
@@ -839,13 +826,6 @@ fn normalize_contribution(
         true,
     )?;
     if let Some(contract) = capabilities {
-        for claim in &blocked {
-            if !contract.claim_authorities.contains_key(claim) {
-                return Err(CoreError::new(format!(
-                    "{owner} blocks unknown claim {claim}"
-                )));
-            }
-        }
         for claim in &allowed {
             if contract.claim_authorities.get(claim) != Some(&owner) {
                 return Err(CoreError::new(format!(
