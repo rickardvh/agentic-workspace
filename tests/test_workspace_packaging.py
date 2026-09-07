@@ -241,6 +241,28 @@ def test_workspace_artifacts_ship_generated_cli_package_import_dependency(worksp
     assert not any(name.endswith("/src/agentic_workspace/generated_cli_package/__init__.py") for name in sdist_inventory)
 
 
+def test_root_native_artifact_and_sdist_rebuild_inputs(workspace_wheel: Path, workspace_sdist: Path) -> None:
+    executable = "agentic-workspace-core.exe" if os.name == "nt" else "agentic-workspace-core"
+    with ZipFile(workspace_wheel) as wheel:
+        assert f"agentic_workspace/_native/{executable}" in wheel.namelist()
+        metadata = wheel.read(next(name for name in wheel.namelist() if name.endswith(".dist-info/WHEEL"))).decode()
+        assert "Root-Is-Purelib: false" in metadata
+        assert "Tag: py3-none-" in metadata
+        assert "none-any" not in metadata
+        assert "manylinux" not in metadata
+    inventory = _raw_sdist_inventory(workspace_sdist)
+    for path in (
+        "hatch_build.py",
+        "Cargo.toml",
+        "Cargo.lock",
+        "crates/agentic-workspace-core/src/main.rs",
+        "crates/agentic-workspace-cli/Cargo.toml",
+        "src/agentic_workspace/contracts/schemas/separation_of_duty.schema.json",
+        "generated/workspace/python/external_contract_bundle.json",
+    ):
+        assert any(name.endswith(f"/{path}") for name in inventory), path
+
+
 def test_root_wheel_ships_generated_cli_package_import_dependency(workspace_wheel: Path) -> None:
     inventory = _raw_wheel_inventory(workspace_wheel)
 
@@ -292,7 +314,7 @@ def test_installed_workspace_wheel_imports_cli_module(workspace_wheel: Path, tmp
         check=False,
     )
 
-    assert result.returncode == 0, result.stderr
+    assert result.returncode == 0, f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
 
 
 def test_installed_workspace_wheel_exposes_public_external_client(workspace_wheel: Path, tmp_path: Path) -> None:
