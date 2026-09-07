@@ -2445,7 +2445,8 @@ function assignmentLifecycleApply(values, operationId) {
     } catch {}
   }
   const hasConfigurationChoice = values.configuration_revision !== undefined || values.configuration_id !== undefined || values.configuration_parameters_json !== undefined;
-  if (operationId === 'assignment.reassign' || hasReplacement || hasConfigurationChoice || hasConfigurationAuthority) {
+  const requiresProofOwner = operationId === 'assignment.close';
+  if (requiresProofOwner || operationId === 'assignment.reassign' || hasReplacement || hasConfigurationChoice || hasConfigurationAuthority) {
     const sourceHost = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../scripts/run_agentic_workspace.py');
     const sourceRoot = resolve(dirname(sourceHost), '..');
     const python = join(sourceRoot, '.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
@@ -2465,6 +2466,7 @@ function assignmentLifecycleApply(values, operationId) {
       }
       return JSON.parse(result.stdout);
     }
+    if (requiresProofOwner) return { kind:'agentic-workspace/assignment-lifecycle-result/v1',operation_id:operationId,transition:'close',status:'blocked',outcome:'blocked',mutation_applied:false,artifact_refs:[],actions:[],reason_code:'proof-currentness-owner-unavailable',failures:[{reason:'proof-currentness-owner-unavailable',field:'host',recovery:'Use the configured proof-owner host to resolve complete subject currentness before assignment close.'}] };
     if (hasConfigurationChoice || hasConfigurationAuthority) throw new RuntimeError('configuration-choice-source-host-unavailable');
     if (hasReplacement) return { kind:'agentic-workspace/assignment-lifecycle-result/v1',operation_id:operationId,transition:operationId.split('.').at(-1),status:'blocked',outcome:'blocked',mutation_applied:false,artifact_refs:[],actions:[],reason_code:'replacement-source-host-unavailable',failures:[{reason:'replacement-source-host-unavailable',field:'host',recovery:'Use the configured source-owner host; do not fall back to the former target.'}] };
   }

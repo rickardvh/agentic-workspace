@@ -3235,6 +3235,83 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
         invocation=invocation,
     )
     assert wrong_proof_close["status"] == "blocked"
+    # An indexed passed receipt cannot close files changed since that proof.
+    integrated_file = tmp_path / "src/feature.py"
+    proved_bytes = integrated_file.read_bytes()
+    integrated_file.write_bytes(proved_bytes + b"\n# material change after proof\n")
+    stale_proof_close = assignment_close(
+        {"run_id": "run-1", "task_proof_receipt_ref": task_proof_ref},
+        target=tmp_path,
+        invocation=invocation,
+    )
+    assert stale_proof_close["status"] == "blocked"
+    assert stale_proof_close["reason_code"] == "assignment-task-proof-not-current"
+    typescript_stale_close = subprocess.run(
+        [
+            "node",
+            str(ROOT / "generated/workspace/typescript/src/cli.mjs"),
+            "assignment",
+            "close",
+            "--target",
+            str(tmp_path),
+            "--run-id",
+            "run-1",
+            "--task-proof-receipt-ref",
+            task_proof_ref,
+            "--format",
+            "json",
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert typescript_stale_close.returncode == 0, typescript_stale_close.stderr
+    typescript_stale_payload = json.loads(typescript_stale_close.stdout)
+    assert typescript_stale_payload["status"] == "blocked"
+    assert typescript_stale_payload["reason_code"] == "assignment-task-proof-not-current"
+    integrated_file.write_bytes(proved_bytes)
+    # The same host owner also rejects an otherwise current receipt produced
+    # under a different runtime; TypeScript must not reduce this to file hashes.
+    from unittest.mock import patch
+
+    with patch("agentic_workspace.proof_subject.platform.python_version", return_value="0.0.0"):
+        old_runtime_proof = workspace_runtime_core._record_proof_receipt_payload(
+            target_root=tmp_path,
+            command=proof_command,
+            result="passed",
+            changed_paths=["src/feature.py"],
+            task_text="Implement the bounded feature change",
+        )
+    old_runtime_ref = old_runtime_proof["trusted_producer_receipt_ref"]
+    old_runtime_close = assignment_close(
+        {"run_id": "run-1", "task_proof_receipt_ref": old_runtime_ref},
+        target=tmp_path,
+        invocation=invocation,
+    )
+    assert old_runtime_close["reason_code"] == "assignment-task-proof-not-current"
+    typescript_old_runtime = subprocess.run(
+        [
+            "node",
+            str(ROOT / "generated/workspace/typescript/src/cli.mjs"),
+            "assignment",
+            "close",
+            "--target",
+            str(tmp_path),
+            "--run-id",
+            "run-1",
+            "--task-proof-receipt-ref",
+            old_runtime_ref,
+            "--format",
+            "json",
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert typescript_old_runtime.returncode == 0, typescript_old_runtime.stderr
+    assert json.loads(typescript_old_runtime.stdout)["reason_code"] == "assignment-task-proof-not-current"
     from agentic_workspace.config import load_delegation_outcomes
 
     evidence_path, _, _ = load_delegation_outcomes(target_root=tmp_path)

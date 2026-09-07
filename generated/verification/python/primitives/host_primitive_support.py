@@ -1743,6 +1743,22 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             expected_paths = set(_assignment_list(_assignment_mapping(planning_assignment.get("assignment_gate")).get("allowed_paths")))
             proved_paths = set(_assignment_list(task_proof.get("changed_paths")))
             proof_subject = _assignment_mapping(task_proof.get("proof_subject"))
+            from agentic_workspace.proof_subject import classify_proof_subject
+
+            proof_currentness = classify_proof_subject(
+                target_root=target_root,
+                receipt=task_proof,
+                changed_paths=sorted(proved_paths),
+                command=str(task_proof.get("command") or ""),
+            )
+            if proof_currentness.get("status") != "reusable":
+                failures.append(
+                    {
+                        "reason": "assignment-task-proof-not-current",
+                        "field": "task_proof_receipt_ref.proof_subject",
+                        "recovery": "Run proof again against the current integrated files before closing the assignment.",
+                    }
+                )
             try:
                 integration_receipt = _assignment_mapping(json.loads(artifact("integration/integration.json").read_text(encoding="utf-8")))
             except (OSError, json.JSONDecodeError):
