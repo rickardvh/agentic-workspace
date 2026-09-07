@@ -141,6 +141,8 @@ Deterministic tests do not start provider processes or conversations.
 
 The ordinary assignment decision exposes `execution_configurations`, including
 the current offer revision and eligible configuration IDs. The acting orchestrator
+can acquire these through `implement --changed <paths> --task <task> --select
+context.delegation_decision --format json`, without expanding full context. It
 can pair `--configuration-revision` and `--configuration-id` on `assignment export`
 or `assignment dispatch` when materializing a bounded assignment. The supplied
 transport must agree with that configuration. The choice selects within human

@@ -71,7 +71,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 @pytest.mark.parametrize("runtime", ["python", "typescript"])
-def test_ordinary_configuration_choice_persists_and_source_change_blocks(tmp_path: Path, runtime: str) -> None:
+def test_ordinary_configuration_choice_persists_and_source_change_blocks(tmp_path: Path, runtime: str, capsys) -> None:
     from agentic_workspace.config import load_workspace_config
     from agentic_workspace.workspace_runtime_core import _execution_posture_payload
 
@@ -118,7 +118,28 @@ transports = [{kind = "manual"}]
             config=load_workspace_config(target_root=tmp_path), target_root=tmp_path, task_text=task, changed_paths=["src/feature.py"]
         )
 
-    offers = ordinary()["assignment_decision"]["execution_configurations"]
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/feature.py",
+                "--task",
+                task,
+                "--select",
+                "context.delegation_decision",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    public_selection = json.loads(capsys.readouterr().out)
+    assert not public_selection.get("missing")
+    offers = public_selection["values"]["context.delegation_decision"]["execution_configurations"]
+    assert offers["revision"] == ordinary()["assignment_decision"]["execution_configurations"]["revision"]
     chosen = next(row["configuration"] for row in offers["candidates"] if row["configuration"]["target"] == "worker")
     values = {
         "task": task,

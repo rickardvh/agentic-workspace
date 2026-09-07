@@ -391,6 +391,12 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
         if plan_delegation_packet_selected:
             payload["plan_delegation_packet"] = full_payload["plan_delegation_packet"]
             payload.setdefault("context", {})["plan_delegation_packet"] = full_payload["plan_delegation_packet"]
+        if _selector_requests(selected_fields, "context.delegation_decision"):
+            assignment = _as_dict(_as_dict(full_payload.get("execution_posture")).get("assignment_decision"))
+            payload.setdefault("context", {})["delegation_decision"] = {
+                **_as_dict(full_payload.get("delegation_decision")),
+                "execution_configurations": copy.deepcopy(_as_dict(assignment.get("execution_configurations"))),
+            }
         if test_strategy_check_selected:
             payload["test_strategy_check"] = full_payload["test_strategy_check"]
         if _selector_requests(getattr(args, "select", None), "planning_safety_gate"):
