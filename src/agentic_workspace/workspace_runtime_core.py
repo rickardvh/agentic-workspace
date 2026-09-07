@@ -45614,6 +45614,7 @@ def _current_assignment_selection(
     task_text: str | None,
     work_identity: dict[str, Any] | None = None,
     execution_choice: dict[str, Any] | None = None,
+    completed_packet: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
     """One current owner evaluation for ordinary selection and replacement admission."""
     posture = _capability_posture_for_implementation(changed_paths=changed_paths, task_text=task_text)
@@ -45648,7 +45649,11 @@ def _current_assignment_selection(
             }
         )
         configurations = current_route_configurations(
-            config.target_root, runtime_resolution["profile_recommendations"], config.local_override, work
+            config.target_root,
+            runtime_resolution["profile_recommendations"],
+            config.local_override,
+            work,
+            completed_packet=completed_packet,
         )
         for profile in runtime_resolution["profile_recommendations"]:
             profile["execution_configurations"] = [

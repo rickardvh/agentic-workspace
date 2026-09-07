@@ -30,17 +30,29 @@ def configuration_requirements(policy: Any) -> dict[str, Any]:
 
 
 def current_route_configurations(
-    root: Path, profiles: list[dict[str, Any]], policy: Any, work: dict[str, Any], selection: dict[str, str] | None = None
+    root: Path,
+    profiles: list[dict[str, Any]],
+    policy: Any,
+    work: dict[str, Any],
+    selection: dict[str, str] | None = None,
+    *,
+    completed_packet: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """One bounded capability evaluation across eligible transport peers."""
     from agentic_workspace.native_transport import discovery_scope
 
     with discovery_scope():
-        return _current_route_configurations(root, profiles, policy, work, selection)
+        return _current_route_configurations(root, profiles, policy, work, selection, completed_packet=completed_packet)
 
 
 def _current_route_configurations(
-    root: Path, profiles: list[dict[str, Any]], policy: Any, work: dict[str, Any], selection: dict[str, str] | None = None
+    root: Path,
+    profiles: list[dict[str, Any]],
+    policy: Any,
+    work: dict[str, Any],
+    selection: dict[str, str] | None = None,
+    *,
+    completed_packet: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Host facts for process/manual routes and discovered native peers.
 
@@ -82,7 +94,7 @@ def _current_route_configurations(
                     continue
                 from agentic_workspace.native_transport import configuration_offers
 
-                candidates.extend(configuration_offers(root, profile, transport, policy, work))
+                candidates.extend(configuration_offers(root, profile, transport, policy, work, completed_packet=completed_packet))
                 continue
             command = transport.get("command", [])
             executable = shutil.which(command[0]) if command else None

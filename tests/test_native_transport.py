@@ -599,6 +599,97 @@ def test_continuation_residue_cannot_invalidate_its_own_admission(tmp_path, monk
     assert "opaque" not in json.dumps(offers)
 
 
+@pytest.mark.parametrize("mode", ["fresh", "resume", "fork", "restart"])
+def test_completed_publication_preserves_only_exact_attempt_admission(tmp_path, monkeypatch, snapshot, mode):
+    from agentic_workspace.decision import execution_configurations
+
+    monkeypatch.setattr(native, "discover", lambda root: snapshot)
+    source = tmp_path / ".agentic-workspace/config.local.toml"
+    source.parent.mkdir()
+    source.write_text("# synthetic authority\n", encoding="utf-8")
+    profile = {"name": "worker", "target_id": "worker-v1", "target_revision": "v1"}
+    adapter = {"kind": "native", "method": "cli", "adapter": "codex-app-server/v1", "parameters": {"model": "fixture-model"}}
+    policy = SimpleNamespace(transport_authority="automatic", safe_to_auto_run_commands=True)
+    work = {"id": "slice", "revision": "r1"}
+    lineage_path = native._lineage_path(tmp_path, profile, adapter)
+    native._write(
+        lineage_path,
+        {
+            "reference": "opaque",
+            "target_revision": "v1",
+            "semantic_scope": "slice",
+            "semantic_revision": "r1",
+            "capability_revision": snapshot["revision"],
+            "origin_run_id": "old",
+        },
+    )
+    native._write(tmp_path / ".agentic-workspace/local/assignment-runs/old/state.json", {"current_state": "closed"})
+    before = native.configuration_offers(tmp_path, profile, adapter, policy, work)
+    selected = next(row for row in before if row["execution"]["continuity"]["mode"] == mode)
+    packet = _assignment_seal_host_native_packet(
+        {
+            "assignment_id": "a",
+            "assignment_revision": "r",
+            "run_id": "new",
+            "target": "worker",
+            "transport": "cli",
+            "assignment_identity": {"dispatch_adapter": {"execution_configuration": selected}},
+            "return_contract": {"required_identity": {}},
+        }
+    )
+
+    def execute(*args, **kwargs):
+        kwargs["on_thread"]("new-reference" if mode in {"fresh", "fork"} else "opaque")
+        kwargs["on_history"](False)
+        kwargs["on_closed"]()
+        return {
+            "continuation": {"reference": "new-reference" if mode in {"fresh", "fork"} else "opaque", "ephemeral": False},
+            "returned_work": {},
+            "metrics": {},
+        }
+
+    monkeypatch.setattr(native, "execute", execute)
+    assert native.dispatch_packet(tmp_path, packet, "never retain this prompt")["status"] == "returned"
+    custody_path = native._custody_path(tmp_path, "new")
+    state_path = custody_path.with_name("state.json")
+    state = {"current_state": "awaiting-admission", "assignment": packet}
+    native._write(state_path, state)
+    context = {"work": work, "required_result_classes": [], "required_proof_classes": [], "independent_context": False}
+    original = execution_configurations({**context, "candidates": before})
+
+    def recheck(completed=packet):
+        offers = native.configuration_offers(tmp_path, profile, adapter, policy, work, completed_packet=completed)
+        return execution_configurations(
+            {**context, "candidates": offers, "selection": {"revision": original["revision"], "candidate": selected["id"]}}
+        )
+
+    assert recheck()["selected"]["id"] == selected["id"]
+    assert recheck(None)["reason_code"] == "assignment-configuration-choice-stale"
+    policy.safe_to_auto_run_commands = False
+    assert recheck()["reason_code"] == "assignment-configuration-choice-stale"
+    policy.safe_to_auto_run_commands = True
+    with native.exclusive_lineage("opaque"):
+        assert recheck()["reason_code"] == "assignment-configuration-choice-stale"
+    assert native.dispatch_packet(tmp_path, packet, "must not run again")["status"] == "blocked"
+    assert "never retain this prompt" not in custody_path.read_text(encoding="utf-8")
+    custody = json.loads(custody_path.read_text(encoding="utf-8"))
+    for field, value in [("live", True), ("packet_integrity", "other"), ("published_lineage_revision", "other"), ("run_id", "other")]:
+        native._write(custody_path, {**custody, field: value})
+        assert recheck()["reason_code"] == "assignment-configuration-choice-stale"
+    native._write(custody_path, custody)
+    native._write(state_path, {**state, "current_state": "awaiting-host-execution"})
+    assert recheck()["reason_code"] == "assignment-configuration-choice-stale"
+    native._write(state_path, state)
+    original_revision = snapshot["revision"]
+    snapshot["revision"] = "changed-capability"
+    assert recheck()["reason_code"] == "assignment-configuration-choice-stale"
+    snapshot["revision"] = original_revision
+    assert recheck()["selected"]["id"] == selected["id"]
+    published = json.loads(lineage_path.read_text(encoding="utf-8"))
+    native._write(lineage_path, {**published, "reference": "foreign-publication"})
+    assert recheck()["reason_code"] == "assignment-configuration-choice-stale"
+
+
 @pytest.mark.parametrize(
     "mode,method,new_id",
     [

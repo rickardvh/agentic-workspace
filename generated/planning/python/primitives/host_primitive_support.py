@@ -1966,6 +1966,7 @@ def _assignment_current_authorities_from_store(
                     changed_paths=_assignment_list(identity.get("allowed_paths")),
                     task_text=_optional_text(identity.get("human_intent")),
                     execution_choice=choice,
+                    completed_packet=dict(_assignment_mapping(state.get("assignment"))),
                 )
         except (ValueError, OSError, KeyError) as error:
             failures.append(

@@ -241,6 +241,10 @@ proof of worker release. An unconfirmed forced release leaves custody pending.
 The Windows launcher/child termination fixture uses owned non-provider processes.
 It is not a live-provider interrupt/steer proof.
 
+## Completed native attempt admission
+
+Native return admission uses the exact completed attempt's consumed lineage view. A successful persisted dispatch publishes its new continuation, but that publication cannot by itself invalidate the configuration which produced the return. The existing local run custody retains the bounded input-lineage metadata and resulting publication digest; no prompt, transcript or provider database is copied. Only the owner-held sealed packet, matching local run state, confirmed process release and unchanged publication admit that view. Current policy, safety, capability and evidence checks still apply. New selections do not get this admission view and cannot reuse a lineage whose producing return is awaiting admission. Missing custody, another run, changed publication or an unconfirmed live process fails closed.
+
 ## Hard execution guarantees
 
 The human/repository configuration owner can require provider-neutral execution facts before best-fit comparison:
