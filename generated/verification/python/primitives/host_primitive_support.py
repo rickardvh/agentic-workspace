@@ -865,6 +865,10 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
         from agentic_workspace.orchestration import reconcile_action_result
 
         result["next_current_continuation"] = reconcile_action_result(result=result)
+        if currentness == "current" and planning_assignment.get("replacement_packet"):
+            from agentic_workspace.assignment_burden import assignment_attempt_burden
+
+            result["attempt_burden"] = assignment_attempt_burden(target_root, planning_assignment["replacement_packet"])
         return result
 
     def require(field: str) -> str:
@@ -1069,6 +1073,7 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
                 target_root=target_root,
                 transport=transport,
             )
+            dispatch.update({key: packet[key] for key in ("assignment_id", "assignment_revision", "run_id", "packet_integrity")})
             dispatch_path = artifact("dispatch/receipt.json")
             artifact_paths.append(dispatch_path)
             writes[dispatch_path] = dispatch
@@ -1887,6 +1892,10 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
 
     result["next_current_continuation"] = reconcile_action_result(result=result)
     if transition == "close" and outcome == "applied":
+        if planning_assignment.get("replacement_packet"):
+            from agentic_workspace.assignment_burden import assignment_attempt_burden
+
+            result["attempt_burden"] = assignment_attempt_burden(target_root, planning_assignment["replacement_packet"])
         # Close has already admitted the exact producer-owned proof, current
         # integrated paths, return and assignment/run identity above. Nominate
         # through the existing evidence owner, never from worker success text.

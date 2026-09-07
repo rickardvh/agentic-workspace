@@ -344,7 +344,7 @@ transports = [{kind = "manual"}]
             return (
                 _run_typescript_assignment(tmp_path, transition, arguments)
                 if runtime == "typescript"
-                else {"repair": assignment_repair, "reassign": assignment_reassign}[transition](
+                else {"repair": assignment_repair, "reassign": assignment_reassign, "status": assignment_status}[transition](
                     arguments, target=tmp_path, invocation=invocation
                 )
             )
@@ -484,6 +484,13 @@ transports = [{kind = "manual"}]
         assert {key: packet["assignment_identity"][key] for key in prior_work} == prior_work
         assert packet["assignment_identity"]["dispatch_adapter"]["execution_configuration"]["execution"]["continuity"]["mode"] == "resume"
         assert plan_path.read_bytes() == previous_plan
+        burden_status = lifecycle("status", {key: packet[key] for key in ("assignment_id", "assignment_revision", "run_id")})
+        burden = burden_status["attempt_burden"]
+        assert burden["observed_attempt_count"] == 3, burden
+        assert burden["admitted_repair_count"] == 2
+        assert burden["metric_totals"] is None
+        assert burden["attempts"][0]["continuity_mode"] == "resume"
+        assert not any(item["target_quality_evidence_allowed"] for item in burden["attempts"])
     source.write_text(source.read_text().replace('target_revision = "1"', 'target_revision = "2"'))
     before = {p: p.read_bytes() for p in (tmp_path / ".agentic-workspace/local/assignment-runs").rglob("*") if p.is_file()}
     blocked = export(
