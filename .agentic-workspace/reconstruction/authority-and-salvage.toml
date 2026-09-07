@@ -117,10 +117,26 @@ destructive_ready = false
 rationale = "Policy belongs with assignment/delegation owners, not as duplicated ambient workspace posture."
 
 [[baseline]]
+id = "shared-config-improvement-initiative"
+area = "shared-config"
+paths = [".agentic-workspace/config.toml"]
+selector = "workspace.improvement_latitude human/domain choice about bounded repo-improvement initiative"
+source_class = "shared_repo_authority"
+authority = "primary"
+semantic_owner = "workspace-config"
+disposition = "transfer"
+destination = "smallest corrected human initiative control consumed by repo-improvement owners; preserve meaning rather than historical spelling or enum"
+owner_issues = ["#2648", "#2613"]
+evidence = "baseline-git-plus-human-owner-correction-2026-09-06-issue-3012"
+current_checkout_required = false
+destructive_ready = false
+rationale = "The human initiative decision has independent behavioral value and may not be retired with adjacent posture machinery. Its corrected owner must admit that meaning before representation removal."
+
+[[baseline]]
 id = "shared-config-posture-compatibility"
 area = "shared-config"
 paths = [".agentic-workspace/config.toml"]
-selector = "improvement-latitude, optimization-bias, advanced-feature, legacy compatibility and alias posture"
+selector = "optimization-bias, advanced-feature, legacy compatibility and alias posture; excludes the separately owned human initiative decision"
 source_class = "shared_repo_authority"
 authority = "primary"
 semantic_owner = "workspace-config"
@@ -130,7 +146,7 @@ owner_issues = ["#2613", "#2997"]
 evidence = "baseline-git"
 current_checkout_required = false
 destructive_ready = false
-rationale = "Do not preserve a growing posture model merely because the prototype consumed it."
+rationale = "Retire duplicate/framework posture unless another owner independently demonstrates current behavioral value; do not rebuild the matrix to preserve the separately transferred human initiative choice."
 
 [[baseline]]
 id = "local-config-overrides"
@@ -630,6 +646,17 @@ owner_issues = ["#2986", "#2606", "#2987"]
 reuse = "small start/invoke-style front door, one generic module seam, consumer parity expectations"
 corrected_source_dependency = true
 independent_reason = "Surface compression is useful, but the exact command/request shape must follow reconstructed semantics rather than define them."
+
+[[salvage]]
+id = "human-improvement-initiative"
+origin_prs = [2992]
+component_level = true
+disposition = "ADAPT"
+current_owner = "human initiative and repo-improvement control"
+owner_issues = ["#2648", "#2613"]
+reuse = "human/domain choice about bounded repo-improvement initiative, independently of the removed posture/config framework"
+corrected_source_dependency = true
+independent_reason = "The later human-owner correction in #3013 preserves the initiative meaning while retaining subtraction of duplicate posture machinery. Do not PORT the old field/enum or DROP its authority with the surrounding framework."
 
 [[salvage]]
 id = "wholesale-v1-contraction"

@@ -92,6 +92,12 @@ Natural-language or keyword matching may help discovery, but it cannot decide ge
 
 Reduce rereads, rediscovery, clarification loops, route reversals, retries, proof reruns, repair cycles, handoff reconstruction, and unnecessary user roundtrips.
 
+This horizon spans the repository's lifetime. An agent owns reasoning within its current thread; AW makes later work cheaper by preserving useful conclusions, decisions, evidence, context, and improvements through their existing owners. Bounded present effort is justified when the expected future benefit outweighs capture, maintenance, and currentness cost. Retire accumulated structure when it no longer pays back.
+
+Make settled project knowledge directly usable through its strongest appropriate existing owner, so agents spend reasoning on unresolved judgment. Binding requirements and recommended methods retain their different authority; methods may improve, and open judgment must remain open. Mechanical work may become directly executable, while retained conclusions remain scope- and currentness-bound and near-match work may be reconsidered. Stronger agents may need less scaffolding without losing durable requirements.
+
+Repeated correct but expensive rediscovery can justify improvement even without a failure or correction. One-off or weakly evidenced reasoning does not become durable doctrine. AW does not archive hidden reasoning, prescribe a generic reasoning algorithm, or compete with model-level reasoning research.
+
 Prompt size, token count, latency, command count, and file count are useful only when they improve the total path to a correct result. A local optimization that makes another stage heavier is not a product improvement.
 
 Delegation follows the same measure: bounded self-sufficient worker context and observable expected total successful-completion burden, not declared price alone. A host or shared-worktree transport must carry a complete public assignment and return contract; hidden orchestrator relay is not semantic completion.

@@ -95,6 +95,14 @@ def test_baseline_map_keeps_known_primary_sources_out_of_the_retirement_bucket()
 
     assert by_id["system-intent-source"]["disposition"] == "retain"
     assert by_id["shared-config-core"]["disposition"] == "retain"
+    initiative = by_id["shared-config-improvement-initiative"]
+    assert initiative["disposition"] == "transfer"
+    assert initiative["authority"] == "primary"
+    assert initiative["owner_issues"] == ["#2648", "#2613"]
+    assert initiative["destructive_ready"] is False
+    retired_posture = by_id["shared-config-posture-compatibility"]
+    assert retired_posture["disposition"] == "retire"
+    assert "improvement-latitude" not in retired_posture["selector"]
     assert by_id["verification-protocols"]["disposition"] == "retain"
     assert by_id["ownership-custody-ledger"]["disposition"] == "transfer"
     assert by_id["planning-history"]["disposition"] == "retire"
@@ -170,6 +178,9 @@ def test_salvage_false_positives_are_not_direct_ports() -> None:
     assert by_id["assignment-total-cost-and-bounded-return"]["disposition"] == "ADAPT"
     assert by_id["lexical-runtime-task-applicability"]["disposition"] == "DROP"
     assert by_id["wholesale-v1-contraction"]["disposition"] == "DROP"
+    assert by_id["human-improvement-initiative"]["disposition"] == "ADAPT"
+    assert by_id["human-improvement-initiative"]["owner_issues"] == ["#2648", "#2613"]
+    assert by_id["human-improvement-initiative"]["corrected_source_dependency"] is True
     assert by_id["windows-lock-test-quarantine"]["disposition"] == "DROP"
     assert by_id["durability-portability-failure"]["disposition"] == "EVIDENCE"
     assert by_id["trusted-human-correction-ingress"]["disposition"] == "ADAPT"
