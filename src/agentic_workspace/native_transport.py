@@ -327,7 +327,10 @@ def dispatch_packet(root: Path, packet: Any, prompt: str) -> dict[str, Any]:
                 "changed_paths": {"type": "array", "items": {"type": "string"}},
                 "summary": {"type": "string"},
                 "stop_conditions_hit": {"type": "array", "items": {"type": "string"}},
-                "patch": {"type": "string"},
+                "patch": {
+                    "type": "string",
+                    "description": 'Return "" when changed_paths is empty, including read-only, no-change, or stopped work. Otherwise return a complete git-compatible unified diff; never invent a diff.',
+                },
                 "result_delivery": {
                     "type": "object",
                     "properties": {"mode": {"type": "string", "const": "unapplied-patch"}, "mutation_baseline": {"type": "string"}},

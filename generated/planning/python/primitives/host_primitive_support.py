@@ -2802,7 +2802,7 @@ def _assignment_export_prompt(packet: Any) -> str:
     delivery_instruction = (
         "The selected result delivery mode is `already-materialized`: edit only the assigned shared worktree paths, and return the exact baseline-relative unified diff plus its sealed mutation baseline."
         if delivery_mode == "already-materialized"
-        else "The selected result delivery mode is `unapplied-patch`: do not edit the target checkout; return the proposed unified diff in a `patch` field."
+        else "The selected result delivery mode is `unapplied-patch`: do not edit the target checkout; return any proposed changes as a unified diff in a `patch` field."
     )
     required_identity = _assignment_mapping(_assignment_mapping(worker_context.get("return_contract")).get("required_identity"))
     identity_instruction = (
@@ -2818,7 +2818,8 @@ def _assignment_export_prompt(packet: Any) -> str:
             "Return a structured result for `agentic-workspace assignment import`; do not claim AW proof or integration.",
             delivery_instruction,
             identity_instruction,
-            "The patch must be a complete git-compatible unified diff beginning with `diff --git`; generate or verify it with diff tooling so hunk counts are exact, and never use apply_patch markers, ellipses, placeholder `@@` markers, or omitted context.",
+            'When no changes are returned, set `changed_paths` to [] and `patch` to "". For read-only, no-change, or stopped work, report findings or blockers in `summary` and `stop_conditions_hit`; never invent a diff.',
+            "When changes are returned, the patch must be a complete git-compatible unified diff beginning with `diff --git`; generate or verify it with diff tooling so hunk counts are exact, and never use apply_patch markers, ellipses, placeholder `@@` markers, or omitted context.",
             "",
             "```json",
             json.dumps(worker_context, indent=2, sort_keys=True, default=str),
