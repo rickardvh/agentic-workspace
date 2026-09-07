@@ -11,6 +11,8 @@ Input accepted by public assignment lifecycle operations that prepare handoff pa
 | Field | Type | Required | Default | Description | Examples | Annotations |
 | --- | --- | --- | --- | --- | --- | --- |
 | (root) | object | yes |  | Input accepted by public assignment lifecycle operations that prepare handoff packets, import returns, admit or reject results, integrate admitted work, and record lifecycle maintenance actions. |  | x-agentic-workspace-doc-role: "contract-reference" |
+| `configuration_revision` | string | no |  | Current source-resolved execution configuration offer revision. Only an intention to select, never authority to replace an existing assignment. |  |  |
+| `configuration_id` | string | no |  | One eligible configuration from the paired revision; target, transport and adapter-owned topology stay bound together. |  |  |
 | `admission_status` | enum `"admitted"`, `"rejected"`, `"repair-requested"` | no |  | Reviewer decision recorded for an imported assignment return. |  |  |
 | `artifact_ref` | string | no |  | Path or durable reference to a lifecycle artifact, such as an export packet or imported return record. |  |  |
 | `assignment_id` | string | no |  | Stable Planning assignment identifier for the delegated run. |  |  |

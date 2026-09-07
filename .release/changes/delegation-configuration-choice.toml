@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Allow source-current acting-orchestrator configuration choice through ordinary assignment operations."

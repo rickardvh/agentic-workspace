@@ -8750,6 +8750,20 @@ const commandDefinitions = [
           },
           "options": [
             {
+              "flags": [
+                "--configuration-revision"
+              ],
+              "help": "Current execution configuration offer revision; pair with configuration-id before materializing an assignment.",
+              "name": "configuration_revision"
+            },
+            {
+              "flags": [
+                "--configuration-id"
+              ],
+              "help": "Acting orchestrator choice of one eligible execution configuration; cannot replace an existing assignment.",
+              "name": "configuration_id"
+            },
+            {
               "choices": [
                 "text",
                 "json"
@@ -8842,6 +8856,20 @@ const commandDefinitions = [
             "path": "operations/assignment.export.json"
           },
           "options": [
+            {
+              "flags": [
+                "--configuration-revision"
+              ],
+              "help": "Current execution configuration offer revision; pair with configuration-id before materializing an assignment.",
+              "name": "configuration_revision"
+            },
+            {
+              "flags": [
+                "--configuration-id"
+              ],
+              "help": "Acting orchestrator choice of one eligible execution configuration; cannot replace an existing assignment.",
+              "name": "configuration_id"
+            },
             {
               "choices": [
                 "text",

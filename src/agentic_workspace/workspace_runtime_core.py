@@ -45574,7 +45574,12 @@ def _assignment_primary_action_payload(
 
 
 def _current_assignment_selection(
-    *, config: WorkspaceConfig, changed_paths: list[str], task_text: str | None, work_identity: dict[str, Any] | None = None
+    *,
+    config: WorkspaceConfig,
+    changed_paths: list[str],
+    task_text: str | None,
+    work_identity: dict[str, Any] | None = None,
+    execution_choice: dict[str, str] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
     """One current owner evaluation for ordinary selection and replacement admission."""
     posture = _capability_posture_for_implementation(changed_paths=changed_paths, task_text=task_text)
@@ -45585,16 +45590,26 @@ def _current_assignment_selection(
             "posture": {**posture["posture"], "execution class": work_identity["task_class"], "scope class": work_identity["scope_class"]},
         }
     runtime_resolution = _runtime_resolution_payload(config=config, capability_posture=posture["posture"])
+    configurations: dict[str, Any] = {}
+    work: dict[str, Any] = {}
     if config.target_root is not None and config.local_override.delegation_targets:
         from agentic_workspace.assignment_source import current_route_configurations
 
+        live_binding = (
+            _live_assignment_plan_binding(target_root=config.target_root, task_text=str(task_text or ""), changed_paths=changed_paths)
+            if work_identity is None
+            else {}
+        )
         work = (
             {"id": work_identity["slice_id"], "revision": str(work_identity["plan_revision"])}
             if work_identity is not None
             else {
-                "id": "direct-task",
+                "id": live_binding.get("plan_ref") or "direct-task",
                 "revision": hashlib.sha256(
-                    json.dumps({"task": task_text, "paths": sorted(changed_paths)}, sort_keys=True).encode()
+                    json.dumps(
+                        {"task": task_text, "paths": sorted(changed_paths), "plan_revision": live_binding.get("plan_revision")},
+                        sort_keys=True,
+                    ).encode()
                 ).hexdigest(),
             }
         )
@@ -45606,6 +45621,8 @@ def _current_assignment_selection(
                 row for row in configurations.get("candidates", []) if row["configuration"]["target"] == profile["name"]
             ]
     assignment_policy = _assignment_policy_payload(config.local_override, list(runtime_resolution.get("profile_recommendations", [])))
+    if execution_choice is not None and not configurations:
+        raise ValueError("assignment-configuration-source-unavailable")
     outcome_records: tuple[DelegationOutcomeRecord, ...] = ()
     if config.target_root is not None:
         _, _, outcome_records = config_lib.load_delegation_outcomes(target_root=config.target_root)
@@ -45620,6 +45637,38 @@ def _current_assignment_selection(
         target_evidence=target_evidence,
         human_intent=str(task_text or ""),
     )
+    if configurations:
+        from agentic_workspace.assignment_source import revision
+        from agentic_workspace.decision import execution_configurations
+
+        feasibility_revision = configurations["revision"]
+        offer_revision = revision({"feasibility": feasibility_revision, "decision": assignment_decision["assignment_decision_revision"]})
+        if execution_choice is not None:
+            if execution_choice.get("revision") != offer_revision:
+                raise ValueError("assignment-configuration-choice-stale")
+            selected = execution_configurations(
+                {
+                    "work": work,
+                    "required_result_classes": [],
+                    "required_proof_classes": [],
+                    "independent_context": False,
+                    "candidates": [row["configuration"] for row in configurations["candidates"]],
+                    "selection": {"revision": feasibility_revision, "candidate": execution_choice.get("candidate")},
+                }
+            )
+            if not selected.get("selected"):
+                raise ValueError(str(selected.get("reason_code") or "assignment-configuration-choice-unavailable"))
+            configurations["selected"] = selected["selected"]
+            assignment_decision = assignment_decision_from_policy(
+                assignment_policy=assignment_policy,
+                runtime_resolution=runtime_resolution,
+                target_evidence=target_evidence,
+                human_intent=str(task_text or ""),
+                execution_choice=selected["selected"],
+            )
+        configurations["revision"] = offer_revision
+        configurations["feasibility_revision"] = feasibility_revision
+    assignment_decision["execution_configurations"] = configurations
     return posture, runtime_resolution, assignment_policy, target_evidence, assignment_decision
 
 
@@ -45630,10 +45679,28 @@ def _execution_posture_payload(
     task_text: str | None,
     target_root: Path | None = None,
     materialize_assignment: bool = False,
+    execution_choice: dict[str, str] | None = None,
+    requested_transport: str | None = None,
 ) -> dict[str, Any]:
+    if target_root is not None:
+        if not str(task_text or "").strip():
+            live = _live_assignment_plan_binding(target_root=target_root, task_text="", changed_paths=changed_paths)
+            resumed = _current_assignment_lifecycle_record(target_root=target_root, changed_paths=changed_paths, planning_binding=live)
+            if resumed.get("execution_choice"):
+                gate = _as_dict(resumed.get("assignment_gate"))
+                task_text = str(gate.get("human_intent") or "")
+                changed_paths = changed_paths or [str(path) for path in _list_payload(gate.get("allowed_paths"))]
+        retained = _current_assignment_lifecycle_record(target_root=target_root, task_text=task_text, changed_paths=changed_paths)
+        retained_choice = retained.get("execution_choice")
+        if isinstance(retained_choice, dict) and retained_choice:
+            if execution_choice is not None and execution_choice != retained_choice:
+                raise ValueError("configuration-choice-cannot-replace-current-assignment")
+            execution_choice = retained_choice
     posture, runtime_resolution, assignment_policy, target_evidence, assignment_decision = _current_assignment_selection(
-        config=config, changed_paths=changed_paths, task_text=task_text
+        config=config, changed_paths=changed_paths, task_text=task_text, execution_choice=execution_choice
     )
+    if execution_choice is not None and requested_transport and assignment_decision.get("selected_transport") != requested_transport:
+        raise ValueError("configuration-choice-transport-mismatch")
     delegation_control = _delegation_control_payload(config.local_override)
     effective_orchestration = _effective_orchestration_posture_payload(
         assignment_policy=assignment_policy,
@@ -45663,6 +45730,8 @@ def _execution_posture_payload(
         and current_target_name
     )
     if parent_orchestration_scope:
+        if execution_choice is not None:
+            raise ValueError("configuration-choice-requires-bounded-child")
         whole_task_candidate = {
             "selected_target": assignment_decision.get("selected_target"),
             "selected_target_identity_ref": assignment_decision.get("selected_target_identity_ref"),
@@ -45983,6 +46052,7 @@ def _execution_posture_payload(
                     "target_name": enhanced_gate.get("selected_target"),
                     "assignment_gate": enhanced_gate,
                     "assignment_policy": assignment_policy,
+                    **({"execution_choice": execution_choice} if execution_choice is not None else {}),
                     "delegation_decision": enhanced_delegation,
                     "structural_proof_receipt_ref": proof_ref,
                     "current_attempt": {
@@ -66342,7 +66412,11 @@ def _final_response_terminal_contract(*, closeout_trust: dict[str, Any], residue
 
 
 def _current_assignment_lifecycle_record(
-    *, target_root: Path, task_text: str | None = None, changed_paths: list[str] | None = None
+    *,
+    target_root: Path,
+    task_text: str | None = None,
+    changed_paths: list[str] | None = None,
+    planning_binding: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     assignment_root = target_root / ".agentic-workspace" / "planning" / "assignments"
     if not assignment_root.exists():
@@ -66355,8 +66429,22 @@ def _current_assignment_lifecycle_record(
             continue
         if not isinstance(payload, dict):
             continue
+        if planning_binding is not None:
+            gate = _as_dict(payload.get("assignment_gate"))
+            if (
+                not planning_binding.get("plan_ref")
+                or not planning_binding.get("plan_revision")
+                or payload.get("status") != "current"
+                or not payload.get("execution_choice")
+                or gate.get("plan_ref") != planning_binding["plan_ref"]
+                or gate.get("plan_revision") != planning_binding["plan_revision"]
+                or (changed_paths and sorted(gate.get("allowed_paths") or []) != sorted(changed_paths))
+            ):
+                continue
         if task_text is not None:
             identity = _as_dict(_as_dict(payload.get("replacement_packet")).get("assignment_identity"))
+            if not identity and payload.get("execution_choice"):
+                identity = _as_dict(payload.get("assignment_gate"))
             if (
                 payload.get("status") != "current"
                 or " ".join(str(identity.get("human_intent") or "").split()) != " ".join(task_text.split())
@@ -66373,6 +66461,8 @@ def _current_assignment_lifecycle_record(
         candidates.append((status_rank, observed, source_path, {**payload, "_source_path": source_path}))
     if not candidates:
         return {}
+    if planning_binding is not None and len(candidates) > 1:
+        raise ValueError("configuration-choice-planning-subject-ambiguous")
     return sorted(candidates, key=lambda item: (item[0], item[1], item[2]))[-1][3]
 
 

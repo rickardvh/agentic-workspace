@@ -645,6 +645,7 @@ def assignment_decision_from_policy(
     runtime_resolution: dict[str, Any],
     target_evidence: dict[str, Any],
     human_intent: str = "",
+    execution_choice: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     policy_value = str(assignment_policy.get("assignment_policy", {}).get("value") or "local-preferred")
     current_target = str(assignment_policy.get("current_target", {}).get("value") or "")
@@ -783,6 +784,12 @@ def assignment_decision_from_policy(
             if transport_options
             else {}
         )
+        if execution_choice is not None and execution_choice.get("target") == target:
+            selected_transport_option = next(
+                (option for option in transport_options if option.get("execution_configuration") == execution_choice), {}
+            )
+            if not selected_transport_option:
+                raise ValueError("configuration-choice-ineligible")
         selected_transport = str(selected_transport_option.get("transport") or "")
         transport_burden_component = int(selected_transport_option.get("expected_burden") or 0)
         burden_component = transport_burden_component + target_cost_component + current_economic_component + target_latency_component
@@ -810,7 +817,7 @@ def assignment_decision_from_policy(
         }
         continuation = (
             "manual-handoff"
-            if required_action == "manual-handoff-required"
+            if required_action == "manual-handoff-required" or selected_transport == "manual"
             else "delegated-validation"
             if eligible and task_is_validation
             else "delegated-implementation"
@@ -979,6 +986,14 @@ def assignment_decision_from_policy(
     if downroute_required and downroute_candidates:
         eligible_candidates = downroute_candidates
         selected_target = eligible_candidates[0]["target"]
+    if execution_choice is not None:
+        chosen = next((item for item in eligible_candidates if item.get("selected_execution_configuration") == execution_choice), None)
+        if chosen is None:
+            raise ValueError("configuration-choice-owner-ineligible")
+        if policy_value == "local-preferred" and chosen is not current_candidate:
+            raise ValueError("configuration-choice-conflicts-with-local-policy")
+        eligible_candidates = [chosen] + [item for item in eligible_candidates if item is not chosen]
+        selected_target = chosen["target"]
     tied_candidates: list[dict[str, Any]] = []
     if eligible_candidates:
         top_score = int(eligible_candidates[0]["score"])
@@ -1020,7 +1035,7 @@ def assignment_decision_from_policy(
             canonical_outcome = "planning-review-escalation"
             selected_target = None
             next_action = "resolve local-preferred current_target eligibility before execution"
-    elif len(tied_candidates) > 1:
+    elif len(tied_candidates) > 1 and execution_choice is None:
         decision = "tie"
         canonical_outcome = "planning-review-escalation"
         selected_target = None
@@ -1073,6 +1088,7 @@ def assignment_decision_from_policy(
         "selected_transport": selected_candidate.get("selected_transport"),
         "selected_execution_configuration": selected_candidate.get("selected_execution_configuration"),
         "candidate_scores": candidate_scores,
+        "execution_choice": execution_choice,
         "human_intent": " ".join(human_intent.split()),
     }
     assignment_decision_revision = (
