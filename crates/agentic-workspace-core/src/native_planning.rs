@@ -10,6 +10,32 @@ const SELECTION: &str = ".agentic-workspace/local/planning/owner-selection.json"
 const THREADS: &str = ".agentic-workspace/local/work-threads/index.json";
 const STATE: &str = ".agentic-workspace/planning/state.toml";
 const RETAINED: &str = "reconciliation";
+/// Footprint of this owner's already normalized pending action. Patterned
+/// temporary names stay bounded to the exact selected-owner carrier directory.
+/// The public host uses these paths only to intersect current restrictions.
+pub(crate) fn write_scope(pending_action: &Value) -> Result<Vec<String>, CoreError> {
+    if pending_action["source_owner"] != "planning"
+        || pending_action["operation_id"] != "planning.reconcile"
+    {
+        return Err(error(
+            "write scope",
+            "requires the current normalized Planning reconciliation action",
+        ));
+    }
+    let effect = pending_action["logical_effect_id"]
+        .as_str()
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| error("write scope", "normalized logical effect identity missing"))?;
+    let mut paths = vec![
+        SELECTION.to_owned(),
+        ".agentic-workspace/local/planning/owner-selection.lock".to_owned(),
+        ".agentic-workspace/local/planning/owner-selection.*.*.tmp".to_owned(),
+    ];
+    paths.extend(crate::attempt_store::write_paths(
+        &json!({"idempotency_key":effect}),
+    )?);
+    Ok(paths)
+}
 fn validate_retained(value: &Value) -> Result<(), CoreError> {
     let schema: Value = serde_json::from_str(include_str!(
         "../../../src/agentic_workspace/contracts/schemas/planning_reconciliation.schema.json"
@@ -628,6 +654,41 @@ mod tests {
             json!({"id":"delegation-lane-sweep","ref":PLAN})
         );
         assert_eq!(selection[RETAINED]["custody"], result["custody"]);
+    }
+    #[test]
+    fn native_planning_write_scope_matches_actual_producer_custody() {
+        let target = Target::new();
+        target.plan();
+        target.select();
+        let view = continued(&target);
+        let contract = view["capability_contract"].clone();
+        let mut input = view["planning_input"].clone();
+        input["capability_contract"] = contract.clone();
+        let (input, _) = crate::planning::compose_input(input).unwrap();
+        let decision = crate::compile_value(input).unwrap();
+        let pending = &decision["pending_consequences"]["actions"][0];
+        let paths = write_scope(pending).unwrap();
+        assert_eq!(paths.len(), 5);
+        assert!(!target.0.join(".agentic-workspace/local/effects").exists());
+        let result = execute(&target.0, &work(), &decision["primary_action"], &contract).unwrap();
+        for field in ["attempt", "committed"] {
+            assert!(
+                paths
+                    .iter()
+                    .any(|path| result["custody"][field]["path"] == *path)
+            );
+        }
+        assert!(paths.contains(&SELECTION.to_owned()));
+        assert!(
+            paths.contains(&".agentic-workspace/local/planning/owner-selection.lock".to_owned())
+        );
+        assert!(
+            paths.contains(&".agentic-workspace/local/planning/owner-selection.*.*.tmp".to_owned())
+        );
+        let mut unrelated = pending.clone();
+        unrelated["source_owner"] = json!("other");
+        assert!(write_scope(&unrelated).is_err());
+        assert!(write_scope(&decision["primary_action"]).is_err());
     }
     #[test]
     fn native_planning_explicit_reworded_continuation_reuses_owner_custody() {

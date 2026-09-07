@@ -11,6 +11,13 @@ fn main() {
     };
     let result = if request
         .as_object()
+        .is_some_and(|v| v.len() == 1 && v.contains_key("instruction_applicability"))
+    {
+        agentic_workspace_core::instruction_applicability::view(
+            request["instruction_applicability"].clone(),
+        )
+    } else if request
+        .as_object()
         .is_some_and(|v| v.len() == 1 && v.contains_key("proof_receipt"))
     {
         agentic_workspace_core::proof_receipt::view(request["proof_receipt"].clone())

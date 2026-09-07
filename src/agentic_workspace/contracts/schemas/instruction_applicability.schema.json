@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentic-workspace.dev/schemas/instruction_applicability.schema.json",
+  "title": "Scoped instruction applicability",
+  "description": "Current path scope and agent-selected route applicability only; never binding or execution authority.",
+  "x-agentic-workspace-doc-role": "contract-reference",
+  "type": "object",
+  "properties": {
+    "paths": {"type": "array", "items": {"type": "string"}, "description": "Declared path selectors."},
+    "routes": {"type": "array", "items": {"type": "string"}, "description": "Declared exact or subtree route selectors."},
+    "changed_paths": {"type": "array", "items": {"type": "string"}, "description": "Current changed or target paths."},
+    "selected_routes": {"type": "array", "items": {"type": "string"}, "description": "Current agent-selected routes, validated before use."},
+    "route_posture": {"type": "string", "enum": ["selected", "none", "unresolved"], "description": "Current semantic route selection posture."}
+  },
+  "required": ["paths", "routes", "changed_paths", "selected_routes", "route_posture"],
+  "additionalProperties": false
+}

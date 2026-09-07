@@ -1,8 +1,8 @@
 //! Public native ingress. Callers express work and public requests; repository
 //! facts and owner admission are derived here, never accepted as debug inputs.
 use crate::{
-    CoreError, compile_value, decision_source, digest, native_config, native_planning,
-    native_routes, native_verification, planning,
+    CoreError, compile_value, decision_source, digest, native_config, native_instructions,
+    native_planning, native_routes, native_verification, planning,
 };
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -56,6 +56,24 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         "request":request_for("semantic-routes")
     });
     let configuration = native_config::view(target)?;
+    let admissions = &configuration["admissions"];
+    let (mut owner_input, routes) = decision_source::resolve(json!({
+        "target":target,
+        "archive":admissions["decision_record_target"].as_str().unwrap_or(""),
+        "admitted_revision":admissions["decision_record_revision"].as_str().unwrap_or(""),
+        "applicable_scope":input.changed.iter().map(|path| format!("path:{path}")).collect::<Vec<_>>(),
+        "semantic_routes":route_input
+    }))?;
+    let route_fact = routes
+        .as_ref()
+        .map(|value| value["decision"]["semantic_task_routes"].clone())
+        .unwrap_or(Value::Null);
+    let mut instructions = native_instructions::resolve(
+        target,
+        &input.changed,
+        &route_fact,
+        admissions["instruction_revision"].as_str().unwrap_or(""),
+    )?;
     let planning_probe = native_planning::resolve(target, &work, None)?;
     let verification_probe =
         native_verification::view(target, &input.task, &input.changed, &work, None, None)?;
@@ -63,6 +81,7 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         &configuration["capability_contract"],
         &planning_probe["capability_contract"],
         &verification_probe["capability_contract"],
+        &instructions["capability_contract"],
     ])?;
     let mut planning = if executing {
         native_planning::resolve_for_execution(target, &work, &contract)?
@@ -105,21 +124,44 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         request_for("verification").cloned(),
     )?;
     contributions.push(verification["contribution"].clone());
-    let admissions = &configuration["admissions"];
-    let (mut owner_input, routes) = decision_source::resolve(json!({
-        "target":target,
-        "archive":admissions["decision_record_target"].as_str().unwrap_or(""),
-        "admitted_revision":admissions["decision_record_revision"].as_str().unwrap_or(""),
-        "applicable_scope":input.changed.iter().map(|path| format!("path:{path}")).collect::<Vec<_>>(),
-        "semantic_routes":route_input
-    }))?;
+    contributions.push(instructions["contribution"].clone());
     owner_input["contributions"] = json!(contributions);
     owner_input["capability_contract"] = contract.clone();
+    if instructions["sources"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .any(|source| source["binding_admission"]["status"] != "not-required")
+        && owner_input["contributions"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .any(|owner| {
+                owner["actions"]
+                    .as_array()
+                    .is_some_and(|actions| !actions.is_empty())
+            })
+    {
+        let prepared = compile_value(owner_input.clone())?;
+        native_instructions::restrict_pending(
+            &mut instructions,
+            prepared["pending_consequences"]["actions"]
+                .as_array()
+                .map(Vec::as_slice)
+                .unwrap_or(&[]),
+            &route_fact,
+        )?;
+        *owner_input["contributions"]
+            .as_array_mut()
+            .unwrap()
+            .last_mut()
+            .unwrap() = instructions["contribution"].clone();
+    }
     let decision = compile_value(owner_input)?;
     planning.as_object_mut().unwrap().remove("planning_input");
     planning["current_owner"] = planning_detail;
     Ok(
-        json!({"decision_packet":decision, "capability_contract":contract, "current_work":work, "semantic_routes":routes, "configuration":configuration, "planning":planning, "verification":verification}),
+        json!({"decision_packet":decision, "capability_contract":contract, "current_work":work, "semantic_routes":routes, "configuration":configuration, "instructions":instructions,"planning":planning, "verification":verification}),
     )
 }
 

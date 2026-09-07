@@ -54,26 +54,9 @@ fn sha(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
 }
 
-// The existing manifest's path selectors use fnmatch semantics: '*' can span
-// separators. Character classes remain an explicit unsupported selector gap.
-fn matches(pattern: &str, path: &str) -> bool {
-    #[cfg(windows)]
-    let (pattern, path) = (pattern.to_lowercase(), path.to_lowercase());
-    let mut row = vec![false; path.chars().count() + 1];
-    row[0] = true;
-    for token in pattern.chars() {
-        let mut next = vec![false; row.len()];
-        next[0] = token == '*' && row[0];
-        for (i, ch) in path.chars().enumerate() {
-            next[i + 1] = if token == '*' {
-                next[i] || row[i + 1]
-            } else {
-                row[i] && (token == '?' || token == ch)
-            };
-        }
-        row = next;
-    }
-    *row.last().unwrap()
+// Verification and instruction sources consume the same path selector semantics.
+pub(crate) fn matches(pattern: &str, path: &str) -> bool {
+    crate::instruction_applicability::matches(pattern, path)
 }
 
 // Historical publication transport uses Python json.dumps(sort_keys=True,
@@ -372,16 +355,13 @@ pub fn view(
     if let Some(all) = manifest["protocols"].as_object() {
         for (id, protocol) in all {
             if let Some(patterns) = protocol["applies_to_paths"].as_array() {
-                if patterns.iter().any(|p| {
-                    p.as_str()
-                        .is_none_or(|s| s.contains('[') || s.contains(']'))
-                }) {
+                if patterns.iter().any(|p| p.as_str().is_none()) {
                     selector_gaps.push(format!("unsupported-path-selector:{id}"));
                 }
                 if patterns
                     .iter()
                     .filter_map(Value::as_str)
-                    .any(|p| !p.contains('[') && changed.iter().any(|path| matches(p, path)))
+                    .any(|p| changed.iter().any(|path| matches(p, path)))
                 {
                     protocols.insert(id.clone(), protocol.clone());
                 }
