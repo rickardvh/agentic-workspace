@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import ast
 import json
 import os
+import re
 import subprocess
 from copy import deepcopy
 from pathlib import Path
@@ -349,8 +351,41 @@ def test_target_bindings_cannot_hide_reducer_semantics() -> None:
         ROOT / "bindings/node/semantic-decision.mjs",
     ):
         source = path.read_text(encoding="utf-8")
-        assert len(source.splitlines()) <= 180  # Bounded thin projections, including assignment admission.
         assert not any(token in source for token in forbidden)
+        if path.name == "native_core.py":
+            assert len(source.splitlines()) <= 180  # Installation/build transport remains bounded.
+        elif path.suffix == ".py":
+            for function in (node for node in ast.parse(source).body if isinstance(node, ast.FunctionDef)):
+                if function.name in {"_request", "compile_source_decision", "select_decision_detail"}:
+                    assert function.end_lineno - function.lineno <= 35
+                    continue
+                body = function.body
+                if isinstance(body[0], ast.Expr) and isinstance(body[0].value, ast.Constant):
+                    body = body[1:]
+                assert len(body) == 1 and isinstance(body[0], ast.Return), function.name
+                call = body[0].value
+                assert isinstance(call, ast.Call) and isinstance(call.func, ast.Name) and call.func.id == "_request", function.name
+                assert all(
+                    isinstance(node.func, ast.Name) and node.func.id in {"_request", "dict", "list"}
+                    for node in ast.walk(call)
+                    if isinstance(node, ast.Call)
+                ), function.name
+        else:
+            exports = re.findall(r"export function (\w+)\([^)]*\) \{([\s\S]*?)\n\}", source)
+            assert exports
+            for name, body in exports:
+                if name == "compileSourceDecision":
+                    assert len(body.splitlines()) <= 8
+                    continue
+                assert re.fullmatch(r"\s*return request\([\s\S]*\);\s*", body), name
+                assert re.findall(r"\b(\w+)\(", body) == ["request"], name
+
+    # The public Rust executable may call only the admitted public owner ingress.
+    # Adding an adapter-owned semantic call fails even when the file stays short.
+    native = (ROOT / "crates/agentic-workspace-cli/src/main.rs").read_text(encoding="utf-8")
+    calls = set(re.findall(r"agentic_workspace_core::([A-Za-z_][A-Za-z_0-9:]*)", native))
+    assert calls == {"native_public::start", "native_public::invoke"}
+    assert not any(token in native for token in ("compile_value", "planning::", "assignment::", "proof_subject::", "decision_source::"))
 
 
 def test_authority_bearing_contributions_require_an_admitted_capability_owner(shared_core_binary: Path) -> None:
@@ -1872,6 +1907,7 @@ def test_fallback_source_cannot_choose_its_owner_or_widen_admission(shared_core_
 
 
 def test_known_agent_decision_survives_memory_to_native_ordinary_journey(shared_core_binary: Path, tmp_path: Path) -> None:
+    import hashlib
     import sys
 
     subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
@@ -1879,8 +1915,17 @@ def test_known_agent_decision_survives_memory_to_native_ordinary_journey(shared_
     archive = ".agentic-workspace/memory/repo/decisions"
     source = tmp_path / archive / "source-admission.md"
     source.parent.mkdir(parents=True)
+    # This test authors an isolated current-source instance. Reconcile its basis
+    # to the actual dependency copied above; do not advance any repository ADR
+    # admission or silently reuse the historical fixture's old intent hash.
+    fixture = (ROOT / "tests/fixtures/decision_fallback.md").read_text(encoding="utf-8")
+    prefix, body = fixture.split("```aw-decision\n", 1)
+    record_text, suffix = body.split("```", 1)
+    record = json.loads(record_text)
+    intent_bytes = (tmp_path / "SYSTEM_INTENT.md").read_bytes()
+    record["authority"]["basis"][0]["revision"] = "sha256:" + hashlib.sha256(intent_bytes.replace(b"\r\n", b"\n")).hexdigest()
     with source.open("xb") as output:
-        output.write((ROOT / "tests/fixtures/decision_fallback.md").read_bytes())
+        output.write((prefix + "```aw-decision\n" + json.dumps(record, indent=2) + "\n```" + suffix).encode())
     original = source.read_bytes()
     revision = _commit_native(tmp_path)
     config = tmp_path / ".agentic-workspace/config.toml"
@@ -1943,6 +1988,10 @@ def test_known_agent_decision_survives_memory_to_native_ordinary_journey(shared_
     assert promoted["reconciliation"][0]["status"] == "repo-native"
     assert promoted["consequences"][0]["material_revision"] == fallback["consequences"][0]["material_revision"]
     assert promoted["consequences"][0]["source"]["reference"] == "docs/decisions/source-admission.md"
+    (tmp_path / "SYSTEM_INTENT.md").write_bytes(intent_bytes + b"\nChanged current authority dependency.\n")
+    assert start()["decision_context"]["consequences"] == []
+    (tmp_path / "SYSTEM_INTENT.md").write_bytes(intent_bytes)
+    assert start()["decision_context"]["consequences"] == promoted["consequences"]
     native_source.write_text("unadmitted replacement", encoding="utf-8")
     lost_packet = start()
     assert lost_packet["decision_context"]["reconciliation"][0]["status"] == "pending"

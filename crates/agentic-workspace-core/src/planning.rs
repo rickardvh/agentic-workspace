@@ -364,7 +364,18 @@ pub(crate) fn reconcile_retaining_checked(
     }
     // Committed truth survives even when current source reconciliation fails.
     let continuation = reconciliation(&input)
-        .and_then(|current| decision(&input, &current, true))
+        .and_then(|current| {
+            let mut next = decision(&input, &current, true)?;
+            // The producer already holds the same validated committed record
+            // that a fresh view admits. Return its replay detail immediately,
+            // rather than requiring a follow-up view to recover that contract.
+            next["planning"]["committed_operation"] = json!({
+                "invocation":stored["record"]["invocation"],
+                "outcome":stored["record"]["outcome"],
+                "custody":stored["custody"]
+            });
+            Ok(next)
+        })
         .ok();
     let mut result = operation_result_value(
         json!({"invocation": stored["record"]["invocation"], "outcome": stored["record"]["outcome"], "decision": continuation}),
