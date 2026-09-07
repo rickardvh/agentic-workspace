@@ -68,3 +68,13 @@ proves factual freshness; unadmitted freshness and promotion stay explicit. Note
 bodies are omitted from initial discovery. Malformed advisory sources produce
 Memory diagnostics while direct work remains available; explicit stale or
 out-of-scope read requests fail closed.
+
+Configured assignment scope exposes `assignment/judge-task-requirements/v1`.
+Its typed answer supplies acting-agent result/proof requirements for one exact
+task and current Planning subject, with human execution guarantees preserved.
+The request binds current configuration and Verification strategy revisions;
+it creates no policy, assignment or persistent judgment record. An evaluator
+requires a current role-specific Verification obligation; the native owner does
+not yet supply that obligation and reports the gap. Source-bound requirements
+do not by themselves complete native capability discovery, best-fit choice or
+replace the older ordinary assignment adapter's generic defaults.

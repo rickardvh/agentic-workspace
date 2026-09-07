@@ -15,6 +15,79 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 
 
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_native_task_requirements_bind_current_judgment_and_preserve_owner_constraints(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
+) -> None:
+    context = {"target": str(tmp_path), "task": "Inspect the policy links", "changed": ["docs/policy.md"]}
+    quiet = consume(surface, shared_core_binary, native_cli, context)
+    assert quiet["task_requirements"]["requests"] == []
+    source = tmp_path / ".agentic-workspace/config.local.toml"
+    source.parent.mkdir()
+    source.write_text(
+        'schema_version = 1\n[delegation]\nrequired_execution_guarantees = ["history.non-persisted"]\n'
+        '[delegation_targets.worker]\ntarget_id = "host:worker"\ntarget_revision = "1"\n'
+        'strength = "weak"\nlocation = "external"\ntransports = [{kind="manual"}]\n'
+    )
+    offered = consume(surface, shared_core_binary, native_cli, context)
+    assert offered["task_requirements"]["result"]["requirements"] is None
+    request = offered["task_requirements"]["requests"][0]
+    request["arguments"]["required_result_classes"] = ["read-only"]
+    resolved = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
+    result = resolved["task_requirements"]["result"]
+    assert result["status"] == "resolved"
+    assert result["requirements"]["required_execution_guarantees"] == ["history.non-persisted"]
+    assert result["requirements"]["independent_context"] is False
+    assert any("effect:implementation" in blocker["affects"] for blocker in resolved["decision_packet"]["blockers"])
+    same = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
+    assert same["task_requirements"]["result"]["revision"] == result["revision"]
+    request["arguments"]["role"] = "evaluator"
+    evaluator = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
+    assert evaluator["task_requirements"]["result"]["requirements"] is None
+    assert "current-evaluator-obligation-required" in evaluator["task_requirements"]["result"]["gaps"]
+    request["arguments"]["role"] = "executor"
+    request["arguments"]["task_identity"]["revision"] = "different-request"
+    unbound = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
+    assert "task-judgment-identity-stale" in unbound["task_requirements"]["result"]["gaps"]
+    source.write_text(source.read_text().replace("history.non-persisted", "history.never-visible"))
+    with pytest.raises(AssertionError, match="source changed"):
+        consume(surface, shared_core_binary, native_cli, {**context, "request": request})
+    assert not (tmp_path / ".agentic-workspace/local").exists()
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_native_requirements_preserve_planning_subject_but_stale_material_scope(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
+) -> None:
+    plan_ref = Path(".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json")
+    plan = tmp_path / plan_ref
+    plan.parent.mkdir(parents=True)
+    plan.write_bytes((ROOT / plan_ref).read_bytes())
+    (tmp_path / ".agentic-workspace/planning/state.toml").write_text(
+        f'[[active.execplans]]\nid="delegation-lane-sweep"\npath="{plan_ref.as_posix()}"\nstatus="active"\n'
+    )
+    (tmp_path / ".agentic-workspace/config.local.toml").write_text(
+        'schema_version=1\n[delegation_targets.worker]\ntarget_id="host:worker"\ntarget_revision="1"\n'
+        'strength="weak"\nlocation="external"\ntransports=[{kind="manual"}]\n'
+    )
+    context = {"target": str(tmp_path), "task": "Inspect the current delegation contract", "changed": ["docs/policy.md"]}
+    initial = consume(surface, shared_core_binary, native_cli, context)
+    continuation = initial["decision_packet"]["decision_request"]["response_request"]
+    continuation["arguments"]["answer"] = "continue-selected"
+    continued = consume(surface, shared_core_binary, native_cli, {**context, "request": continuation})
+    request = continued["task_requirements"]["requests"][0]
+    request["arguments"]["required_result_classes"] = ["read-only"]
+    assert request["arguments"]["current_work"] != request["arguments"]["task_identity"]
+    resolved = consume(surface, shared_core_binary, native_cli, {**context, "request": [continuation, request]})
+    assert resolved["task_requirements"]["result"]["status"] == "resolved"
+    record = json.loads(plan.read_text())
+    record["intent"]["goal"] = "A materially different required outcome"
+    plan.write_text(json.dumps(record))
+    with pytest.raises(AssertionError, match="source changed"):
+        consume(surface, shared_core_binary, native_cli, {**context, "request": [continuation, request]})
+    assert not (tmp_path / ".agentic-workspace/local").exists()
+
+
 @pytest.fixture(scope="module")
 def native_cli(shared_core_binary: Path) -> Path:
     subprocess.run(["cargo", "build", "--locked", "-p", "agentic-workspace-cli"], cwd=ROOT, check=True)
