@@ -318,7 +318,7 @@ applies_to_task_markers = [
   "completion claim",
 ]
 assurance_requirement_refs = []
-proof_profiles = ["workspace_behavior"]
+proof_profiles = []
 scenario_refs = ["closeout_intent_satisfaction_review"]
 steps = [
   "Inspect closeout trust and intent-satisfaction surfaces.",
@@ -370,7 +370,7 @@ applies_to_task_markers = [
   "handoff",
 ]
 assurance_requirement_refs = []
-proof_profiles = ["workspace_behavior"]
+proof_profiles = []
 scenario_refs = ["requirement_grounding_delegation_review"]
 steps = [
   "Inspect requirement grounding and delegation report fields for the changed paths.",
@@ -557,7 +557,6 @@ assurance_requirement_refs = [
   "typed_cli_selector_contract",
   "proof_execution_integrity",
   "binding_automatic_assignment",
-  "config_orthogonality_constructibility",
   "direct_no_signal",
   "selected_planning_read_budget",
   "selected_planning_scaling_budget",
@@ -574,7 +573,6 @@ expected_evidence = [
   "typed_cli_selector_contract_fixture",
   "proof_execution_integrity_fixture",
   "binding_automatic_assignment_organic_dogfood",
-  "config_orthogonality_constructibility_fixture",
   "direct_no_signal_fixture",
   "selected_planning_read_cold_median",
   "selected_planning_read_history_ratio",
@@ -612,7 +610,6 @@ assurance_requirement_refs = [
   "typed_cli_selector_contract",
   "proof_execution_integrity",
   "binding_automatic_assignment",
-  "config_orthogonality_constructibility",
   "direct_no_signal",
   "selected_planning_read_budget",
   "selected_planning_scaling_budget",
@@ -629,3 +626,27 @@ review_aids = [
 ]
 proof_lane_hint = "repo-acceptance-policy"
 reason = "Repo-local policy changes need executable source-owner evidence without widening portable Workspace authority."
+
+[scenarios.config_orthogonality_constructibility]
+protocol_id = "config_orthogonality_constructibility"
+title = "Current configuration dimensions and authority layering"
+steps = ["Run the current configuration owner's orthogonality, alias, local override, and assignment-policy fixtures."]
+expected_observations = ["Independent legal dimensions compose; same-question aliases fail closed; local authority cannot silently weaken shared constraints."]
+pass_evidence_labels = ["config_orthogonality_constructibility_fixture"]
+fail_evidence_labels = ["repo_acceptance_evidence_stale"]
+manual_boundary = "Executable fixtures cover the declared configuration owner; they do not prove ordinary supported-host delegation or independent review."
+
+[protocols.config_orthogonality_constructibility]
+title = "Configuration orthogonality and constructibility"
+purpose = "Keep the activated configuration requirement's focused evidence mandatory without importing unrelated CLI, Planning, or session protocols."
+applies_to_paths = [".agentic-workspace/config.toml", ".agentic-workspace/verification/manifest.toml"]
+assurance_requirement_refs = ["config_orthogonality_constructibility"]
+scenario_refs = ["config_orthogonality_constructibility"]
+steps = ["Validate the existing configuration requirement against its owner fixtures."]
+expected_evidence = ["config_orthogonality_constructibility_fixture"]
+review_owner = "workspace-config"
+authority_refs = [".agentic-workspace/config.toml#assurance.requirements.config_orthogonality_constructibility", "docs/maintainer/repo-evidence-requirements.md#config-orthogonality-and-constructibility"]
+stale_when = ["src/agentic_workspace/config.py", "src/agentic_workspace/contracts/schemas/workspace_config.schema.json", "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json", "tests/test_workspace_config_cli.py"]
+retention = "retain-summary"
+non_goals = ["A configuration proof does not satisfy unrelated policy requirements or supported-host delegation evidence."]
+commands = ["uv run pytest tests/test_workspace_config_cli.py -k \"local_override or assignment_policy or config_orthogonality or overlapping_assurance_level_owners\" -q"]
