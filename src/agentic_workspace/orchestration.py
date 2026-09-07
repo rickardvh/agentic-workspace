@@ -290,6 +290,22 @@ def reconcile_action_result(*, result: Mapping[str, Any]) -> dict[str, Any]:
                 "action": action,
                 "operation_invocation": invocation,
             }
+        if status == "repair-requested":
+            arguments = {**args, "dry_run": True}
+            return {
+                "kind": "agentic-workspace/action-result-continuation/v1",
+                "status": "actionable",
+                "owner": "assignment-lifecycle",
+                "action": "inspect-current-repair-configurations",
+                "operation_invocation": operation_invocation(
+                    operation_id="assignment.reassign",
+                    arguments=arguments,
+                    effect_class="assignment-lifecycle",
+                    authority_class="canonical-assignment-and-planning-owner",
+                    expected_transition="selection-preview",
+                    owner_context_revision={"assignment_revision": arguments.get("assignment_revision"), "run_id": arguments.get("run_id")},
+                ),
+            }
         if status in {"closed", "archived"}:
             return {
                 "kind": "agentic-workspace/action-result-continuation/v1",

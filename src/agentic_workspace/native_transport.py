@@ -115,7 +115,21 @@ def configuration_offers(
         try:
             state = json.loads((root / ".agentic-workspace/local/assignment-runs" / origin / "state.json").read_text(encoding="utf-8"))
             terminal = state.get("current_state") in {"closed", "archived", "rejected"}
-        except (OSError, ValueError):
+            if state.get("current_state") in {"repair-requested", "superseded"}:
+                packet = state.get("assignment", {})
+                receipt_path = root / state.get("repair_admission_ref", "")
+                run_root = _custody_path(root, origin).parent
+                if receipt_path.resolve().is_relative_to(run_root) and not receipt_path.is_symlink():
+                    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+                    binding = {key: packet.get(key) for key in ("assignment_id", "assignment_revision", "run_id", "packet_integrity")}
+                    prepared = prepare_repair_continuation(root, packet)
+                    terminal = (
+                        receipt.get("repair_binding") == binding
+                        and receipt.get("status") == "repair-requested"
+                        and prepared is not None
+                        and prepared[1] == lineage
+                    )
+        except (OSError, ValueError, KeyError, TypeError, AttributeError, ProviderError):
             pass
     if (
         lineage.get("semantic_scope") == work.get("id")
@@ -233,7 +247,7 @@ def _completed_attempt_input_lineage(
         ):
             return lineage
         return custody["input_lineage"]
-    except (KeyError, OSError, ValueError, TypeError):
+    except (KeyError, OSError, ValueError, TypeError, AttributeError, ProviderError):
         return lineage
 
 
@@ -270,6 +284,9 @@ def dispatch_packet(root: Path, packet: Any, prompt: str) -> dict[str, Any]:
         "status": "blocked",
         "transport": packet.get("transport"),
         "adapter_kind": "native",
+        "run_id": packet.get("run_id"),
+        "packet_integrity": packet.get("packet_integrity"),
+        "worker_launch_attempted": False,
         "claim_boundary": "transport-only; return requires assignment admission, integration, proof and closeout",
     }
     try:
@@ -377,6 +394,7 @@ def dispatch_packet(root: Path, packet: Any, prompt: str) -> dict[str, Any]:
             _write(custody_path, custody)
 
         worker_kernel = {"assignment": {key: packet[key] for key in ("assignment_id", "assignment_revision", "run_id", "target")}}
+        receipt["worker_launch_attempted"] = True
         result = execute(
             root,
             snapshot,
@@ -446,6 +464,58 @@ def dispatch_packet(root: Path, packet: Any, prompt: str) -> dict[str, Any]:
     if custody:
         receipt["custody_ref"] = custody_path.relative_to(root.resolve()).as_posix()
     return receipt
+
+
+def prepare_repair_continuation(root: Path, packet: dict[str, Any]) -> tuple[Path, dict[str, Any]] | None:
+    """Prepare only bounded persistent custody for an owner-admitted repair."""
+    try:
+        configuration = packet["assignment_identity"]["dispatch_adapter"]["execution_configuration"]
+        execution = configuration["execution"]
+        if execution["adapter"].get("kind") != "native":
+            return None
+        custody = json.loads(_custody_path(root, packet["run_id"]).read_text(encoding="utf-8"))
+        if (
+            custody.get("packet_integrity") != packet["packet_integrity"]
+            or custody.get("live") is not False
+            or custody.get("ephemeral") is not False
+            or not isinstance(custody.get("reference"), str)
+            or not custody["reference"]
+        ):
+            return None
+        profile = {"name": configuration["target"], "target_id": execution["target_identity"]}
+        return _lineage_path(root, profile, execution["adapter"]), {
+            "reference": custody["reference"],
+            "capability_revision": configuration["capability_revision"],
+            "target_revision": execution["target_revision"],
+            "semantic_scope": execution["semantic_scope"],
+            "semantic_revision": execution["semantic_revision"],
+            "origin_run_id": packet["run_id"],
+            "live": False,
+            "exclusive": True,
+        }
+    except (OSError, ValueError, KeyError, TypeError, AttributeError, ProviderError):
+        return None
+
+
+def assignment_worker_released(root: Path, packet: dict[str, Any]) -> bool:
+    """Only exact adapter custody can prove release before another attempt."""
+    try:
+        custody = json.loads(_custody_path(root, packet["run_id"]).read_text(encoding="utf-8"))
+        return custody.get("packet_integrity") == packet["packet_integrity"] and custody.get("live") is False
+    except FileNotFoundError:
+        try:
+            receipt = json.loads((_custody_path(root, packet["run_id"]).parent / "dispatch/receipt.json").read_text(encoding="utf-8"))
+            return (
+                receipt.get("kind") == "agentic-workspace/assignment-dispatch-receipt/v1"
+                and receipt.get("adapter_kind") == "native"
+                and receipt.get("run_id") == packet["run_id"]
+                and receipt.get("packet_integrity") == packet["packet_integrity"]
+                and receipt.get("worker_launch_attempted") is False
+            )
+        except (OSError, ValueError, KeyError, TypeError, AttributeError, ProviderError):
+            return False
+    except (OSError, ValueError, KeyError, TypeError, AttributeError, ProviderError):
+        return False
 
 
 def _custody_path(root: Path, run_id: str) -> Path:

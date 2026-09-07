@@ -247,6 +247,16 @@ Native return admission uses the exact completed attempt's consumed lineage view
 
 An ordinary read of that exact retained assignment uses the same view, so it can reach admission without mistaking its own publication for source drift. It does not grant a new dispatch or a replacement assignment. A different task, materialization request or missing current attempt cannot use it.
 
+## Same-semantic repair and retry
+
+The existing assignment owner provides a bounded retry path. `assignment repair` records an exact repair admission for failed or unaccepted returned work. It can record that need when the former execution configuration has become stale; recording repair does not authorize another execution. `assignment reassign --dry-run` then exposes current eligible configurations. The acting orchestrator chooses a configuration revision/id and optional adapter parameters through `assignment reassign`. The owner checks the repair receipt, current semantic Planning source, current policy and eligibility, and native worker release before rebinding the existing assignment to a new attempt. No transcript or provider state is reconstructed.
+
+The semantic work, Planning file and assignment id remain unchanged. Execution revision, run id, return identity and structural receipt change together through the existing shared replacement contract. Prior packets, returned evidence and run artifacts remain intact. A chosen dry-run is only a preview; its next action applies reassignment, not export or dispatch. After application, the existing result supplies the exact next export action. Export itself does not execute a worker or satisfy Verification.
+
+When an admitted repair has exact released persistent native custody, the adapter can publish its opaque continuation into the existing bounded local continuation record. Current discovery may then offer resume/fork/restart alongside fresh. Repair or supersession alone is insufficient: the binding receipt, matching custody, current semantic scope/capability and exclusivity still have to hold. An ephemeral or unknown reference yields no reuse offer. The actor chooses among eligible configurations; reuse is not forced.
+
+Materially changed Planning, a stale choice, an altered repair receipt, an unconfirmed native worker release or an exact pending human source answer blocks automatic retry. A confirmed pre-launch refusal can prove that no worker was started; it cannot override existing live custody. Missing provider context can therefore lead to an explicitly selected fresh eligible attempt without losing semantic custody. There is no automatic topology preference or silent fallback. Already sealed legacy assignments without this owner-bound repair evidence retain their established source-answer path.
+
 ## Hard execution guarantees
 
 The human/repository configuration owner can require provider-neutral execution facts before best-fit comparison:

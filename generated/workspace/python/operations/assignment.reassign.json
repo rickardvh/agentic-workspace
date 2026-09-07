@@ -10,13 +10,14 @@
     "idempotent": true,
     "read_only": false,
     "requires_preflight_gate": false,
-    "writes_repo_state": false
+    "writes_repo_state": true
   },
   "guards": [
-    "Write only under .agentic-workspace/local/assignment-runs/.",
+    "Update only the exact current Planning assignment and its structural receipt plus local run artifacts, after source-owner or exact repair admission; preserve semantic work and prior execution artifacts.",
     "Import places returned work in received/awaiting-admission only; it does not prove, admit, integrate, or close.",
     "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
-    "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade."
+    "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade.",
+    "Repair-based reassignment requires an owner-bound repair receipt, unchanged semantic Planning source, confirmed native worker release and an explicit current eligible configuration. A dry-run after repair exposes offers without choosing or dispatching."
   ],
   "id": "assignment.reassign",
   "inputs": [
@@ -47,7 +48,7 @@
     },
     {
       "name": "target_name",
-      "required": true,
+      "required": false,
       "source": "cli-option"
     },
     {
@@ -77,7 +78,7 @@
     },
     {
       "name": "reason",
-      "required": true,
+      "required": false,
       "source": "cli-option"
     },
     {
@@ -92,6 +93,21 @@
     },
     {
       "name": "dry_run",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "configuration_revision",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "configuration_id",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "configuration_parameters_json",
       "required": false,
       "source": "cli-option"
     }
@@ -127,7 +143,7 @@
     ]
   },
   "locality": {
-    "network": "forbidden",
+    "network": "allowed",
     "outside_repo_writes": "forbidden",
     "requires_repo": true
   },
@@ -184,6 +200,18 @@
       "required": true,
       "surface": ".agentic-workspace/local/assignment-runs/<run-id>/",
       "when": "transition records local disposable assignment/run state"
+    },
+    {
+      "description": "exact current assignment owner binds a replacement attempt without changing semantic work",
+      "required": false,
+      "surface": ".agentic-workspace/planning/assignments/<assignment-id>.assignment.json",
+      "when": "source or repair admission succeeds"
+    },
+    {
+      "description": "referenced structural receipt rebound to the new exact attempt; no successful task proof is invented",
+      "required": false,
+      "surface": ".agentic-workspace/proof/receipts/<receipt-id>.json",
+      "when": "source or repair admission succeeds"
     }
   ]
 }

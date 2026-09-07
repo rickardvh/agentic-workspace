@@ -354,10 +354,96 @@ def replace_from_source(root: Path, packet: dict[str, Any], work: dict[str, Any]
     )
 
 
+def replace_after_repair(
+    root: Path, packet: dict[str, Any], choice: dict[str, Any] | None, *, completed_packet: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """The assignment owner admits a new eligible attempt, never new semantics."""
+    from agentic_workspace.target_evidence import replacement_eligibility
+    from agentic_workspace.workspace_runtime_core import _current_assignment_selection, _live_assignment_plan_binding
+
+    identity = packet["assignment_identity"]
+    work = {"id": identity["slice_id"], "revision": identity["plan_revision"]}
+    current = _live_assignment_plan_binding(target_root=root, task_text=identity["human_intent"], changed_paths=identity["allowed_paths"])
+    if current.get("plan_ref") != identity.get("plan_ref") or current.get("plan_revision") != work["revision"]:
+        raise ValueError("assignment-repair-semantic-source-stale")
+    run_id = packet["run_id"]
+    if not isinstance(run_id, str) or not run_id or any(not (c.isalnum() or c in "-_") for c in run_id):
+        raise ValueError("assignment-repair-run-invalid")
+    run_root = root / ".agentic-workspace/local/assignment-runs" / run_id
+    state = json.loads((run_root / "state.json").read_text(encoding="utf-8"))
+    receipt_ref = state.get("repair_admission_ref", "")
+    receipt_path = root / receipt_ref
+    if not receipt_ref or not receipt_path.resolve().is_relative_to(run_root.resolve()) or receipt_path.is_symlink():
+        raise ValueError("assignment-repair-admission-unavailable")
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    expected = {key: packet[key] for key in ("assignment_id", "assignment_revision", "run_id", "packet_integrity")}
+    if receipt.get("repair_binding") != expected or receipt.get("status") != "repair-requested":
+        raise ValueError("assignment-repair-admission-stale")
+    if state.get("current_state") != ("superseded" if completed_packet else "repair-requested"):
+        raise ValueError("assignment-repair-run-not-current")
+    native = identity.get("dispatch_adapter", {}).get("execution_configuration", {}).get("execution", {}).get("adapter", {})
+    if native.get("kind") == "native":
+        from agentic_workspace.native_transport import assignment_worker_released
+
+        if not assignment_worker_released(root, packet):
+            raise ValueError("assignment-repair-worker-release-unconfirmed")
+    config = load_workspace_config(target_root=root)
+    answer = config.local_override.assignment_replacement
+    if (
+        answer
+        and answer.get("assignment_id") == packet["assignment_id"]
+        and answer.get("assignment_revision") == packet["assignment_revision"]
+    ):
+        raise ValueError("assignment-repair-explicit-source-answer-pending")
+    *_, decision = _current_assignment_selection(
+        config=config,
+        changed_paths=identity["allowed_paths"],
+        task_text=identity["human_intent"],
+        execution_choice=choice,
+        completed_packet=completed_packet,
+    )
+    if choice is None:
+        return {"status": "repair-choice-required", "execution_configurations": decision["execution_configurations"], "work": work}
+    selected = decision["selected_execution_configuration"]
+    target = next(p for p in config.local_override.delegation_targets if p.name == selected["target"])
+    adapter = selected["execution"]["adapter"]
+    execution = {
+        "target": target.name,
+        "target_identity_ref": target.target_id,
+        "target_revision": target.target_revision,
+        "transport": selected["transport"],
+        "adapter": {
+            "kind": adapter["kind"],
+            "execution_configuration": selected,
+            "execution_methods": [selected["transport"]],
+            "transports": [adapter],
+            "model": target.model_family,
+        },
+    }
+    source = {
+        "kind": "assignment-repair-source/v1",
+        "reference": receipt_ref,
+        "revision": revision({"repair": receipt, "choice": choice, "authority": configuration_authority_revision(root, target.name)}),
+        "execution_choice": choice,
+    }
+    admission = {**expected, "work": work, "source": source, "execution": execution}
+    eligibility = replacement_eligibility(decision=decision, work=work, execution=execution, packet_integrity=packet["packet_integrity"])
+    return replace_assignment(
+        {
+            "current": packet,
+            "work": work,
+            "source": source,
+            "admission": admission,
+            "execution": execution,
+            "request": {"assignment_revision": packet["assignment_revision"], "target": target.name, "transport": selected["transport"]},
+            "eligibility": eligibility,
+        }
+    )
+
+
 def current_replacement(root: Path, packet: dict[str, Any], work: dict[str, Any]) -> dict[str, Any]:
     from agentic_workspace.decision import admit_assignment_packet
 
-    admission, execution = source_facts(root)
     previous_run = packet.get("replacement", {}).get("previous_run_id", "")
     if not previous_run or any(c not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_" for c in previous_run):
         raise ValueError("invalid previous assignment run")
@@ -365,6 +451,14 @@ def current_replacement(root: Path, packet: dict[str, Any], work: dict[str, Any]
     if old_path.is_symlink() or not old_path.resolve().is_relative_to(root.resolve()):
         raise ValueError("unowned previous packet path")
     old = json.loads(old_path.read_text(encoding="utf-8-sig"))
+    if packet.get("replacement", {}).get("source", {}).get("kind") == "assignment-repair-source/v1":
+        if work != packet["replacement"].get("work"):
+            raise ValueError("assignment-repair-semantic-source-stale")
+        expected = replace_after_repair(root, old, packet["replacement"]["source"]["execution_choice"], completed_packet=packet)
+        if expected.get("packet") != packet:
+            raise ValueError("assignment-repair-source-stale")
+        return {"status": "current"}
+    admission, execution = source_facts(root)
     expected = replace_from_source(
         root,
         old,

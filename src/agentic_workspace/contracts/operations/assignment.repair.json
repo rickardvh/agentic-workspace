@@ -13,7 +13,7 @@
     "writes_repo_state": false
   },
   "guards": [
-    "Write only under .agentic-workspace/local/assignment-runs/.",
+    "Write local assignment-run repair records and, when exact released persistent native custody permits it, bounded adapter-local transport-continuation metadata. No semantic assignment replacement or worker execution is authorized by recording repair.",
     "Import places returned work in received/awaiting-admission only; it does not prove, admit, integrate, or close.",
     "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
     "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade."
@@ -179,6 +179,12 @@
   ],
   "summary": "Request repair for a returned assignment result without admitting mutation.",
   "writes": [
+    {
+      "surface": ".agentic-workspace/local/transport-continuations/",
+      "description": "bounded adapter-owned persistent reference for an exact released repair attempt; no transcripts or session history",
+      "required": false,
+      "when": "a current repair receipt and released persistent native custody are present"
+    },
     {
       "description": "transition records local disposable assignment/run artifacts derived from checked-in Planning authority",
       "required": true,
