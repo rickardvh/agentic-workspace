@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Preserve consumed native execution offers for exact completed-attempt admission without making pending lineages available to new selections."
+issues = [2210, 2947, 2818, 2909]

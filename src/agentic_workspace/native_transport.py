@@ -72,7 +72,13 @@ def discovered_transports(root: Path, profile: dict[str, Any]) -> list[dict[str,
 
 
 def configuration_offers(
-    root: Path, profile: dict[str, Any], transport: dict[str, Any], policy: Any, work: dict[str, Any]
+    root: Path,
+    profile: dict[str, Any],
+    transport: dict[str, Any],
+    policy: Any,
+    work: dict[str, Any],
+    *,
+    completed_packet: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     """Offer this adapter beside argv/manual peers; no portable vendor taxonomy."""
     if transport.get("adapter") != "codex-app-server/v1":
@@ -100,6 +106,7 @@ def configuration_offers(
         lineage = json.loads(_lineage_path(root, profile, transport).read_text(encoding="utf-8"))
     except (OSError, ValueError):
         lineage = {}
+    lineage = _completed_attempt_input_lineage(root, lineage, profile, transport, completed_packet)
     # Publishing new candidates during admission would invalidate the originating
     # decision. Reuse becomes routable after that existing attempt is terminal.
     origin = lineage.get("origin_run_id", "")
@@ -191,6 +198,45 @@ def configuration_offers(
     return offers
 
 
+def _completed_attempt_input_lineage(
+    root: Path, lineage: dict[str, Any], profile: dict[str, Any], transport: dict[str, Any], packet: dict[str, Any] | None
+) -> dict[str, Any]:
+    """Revalidate a consumed offer against its own exact completed publication.
+
+    This is only an admission view. Ordinary selection still sees the new
+    lineage, which remains unavailable while its return awaits acceptance.
+    """
+    if not packet:
+        return lineage
+    from agentic_workspace.contracts.python_primitive_support import _assignment_packet_integrity
+
+    try:
+        configuration = packet["assignment_identity"]["dispatch_adapter"]["execution_configuration"]
+        if (
+            packet.get("packet_integrity") != _assignment_packet_integrity(packet)
+            or configuration["target"] != profile["name"]
+            or configuration["execution"]["adapter"] != transport
+            or lineage.get("origin_run_id") != packet["run_id"]
+        ):
+            return lineage
+        path = _custody_path(root, packet["run_id"])
+        custody = json.loads(path.read_text(encoding="utf-8"))
+        state = json.loads(path.with_name("state.json").read_text(encoding="utf-8"))
+        if (
+            custody.get("run_id") != packet["run_id"]
+            or custody.get("packet_integrity") != packet["packet_integrity"]
+            or custody.get("live") is not False
+            or custody.get("published_lineage_revision") != digest(lineage)
+            or state.get("assignment", {}).get("packet_integrity") != packet["packet_integrity"]
+            or state.get("current_state") not in {"awaiting-admission", "admitted", "integrated", "proof-recorded"}
+            or not isinstance(custody.get("input_lineage"), dict)
+        ):
+            return lineage
+        return custody["input_lineage"]
+    except (KeyError, OSError, ValueError, TypeError):
+        return lineage
+
+
 def parameterize_configuration(root: Path, configuration: dict[str, Any], parameters: dict[str, Any]) -> dict[str, Any]:
     """Validate an actor's bounded knob choice; never accept new source facts."""
     snapshot = discover(root)
@@ -250,11 +296,11 @@ def dispatch_packet(root: Path, packet: Any, prompt: str) -> dict[str, Any]:
             "target_revision": execution.get("target_revision"),
         }
         lineage_path = _lineage_path(root, profile, adapter)
+        try:
+            lineage = json.loads(lineage_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            lineage = {}
         if selection.get("mode") != "fresh":
-            try:
-                lineage = json.loads(lineage_path.read_text(encoding="utf-8"))
-            except (OSError, ValueError) as error:
-                raise ProviderError("native-lineage-not-current") from error
             if digest(lineage) != selection.get("lineage_revision"):
                 raise ProviderError("native-lineage-not-current")
             selection = {**selection, "reference": lineage["reference"]}
@@ -291,6 +337,23 @@ def dispatch_packet(root: Path, packet: Any, prompt: str) -> dict[str, Any]:
             "reference": None,
             "live": True,
             "ephemeral": None,
+            "input_lineage": {
+                key: value
+                for key, value in lineage.items()
+                if key
+                in {
+                    "reference",
+                    "capability_revision",
+                    "target_revision",
+                    "semantic_scope",
+                    "semantic_revision",
+                    "adapter_identity",
+                    "origin_run_id",
+                    "live",
+                    "exclusive",
+                    "unavailable",
+                }
+            },
         }
         try:
             with custody_path.open("x", encoding="utf-8") as handle:
@@ -334,20 +397,20 @@ def dispatch_packet(root: Path, packet: Any, prompt: str) -> dict[str, Any]:
             custody["reference"] = None
         _write(custody_path, custody)
         if not result["continuation"].get("ephemeral"):
-            _write(
-                lineage_path,
-                {
-                    "reference": result["continuation"]["reference"],
-                    "capability_revision": snapshot["revision"],
-                    "target_revision": execution.get("target_revision"),
-                    "semantic_scope": execution["semantic_scope"],
-                    "semantic_revision": execution["semantic_revision"],
-                    "adapter_identity": snapshot["identity"],
-                    "origin_run_id": packet["run_id"],
-                    "live": False,
-                    "exclusive": True,
-                },
-            )
+            published_lineage = {
+                "reference": result["continuation"]["reference"],
+                "capability_revision": snapshot["revision"],
+                "target_revision": execution.get("target_revision"),
+                "semantic_scope": execution["semantic_scope"],
+                "semantic_revision": execution["semantic_revision"],
+                "adapter_identity": snapshot["identity"],
+                "origin_run_id": packet["run_id"],
+                "live": False,
+                "exclusive": True,
+            }
+            _write(lineage_path, published_lineage)
+            custody["published_lineage_revision"] = digest(published_lineage)
+            _write(custody_path, custody)
         receipt.update(
             {
                 "status": "returned",

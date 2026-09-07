@@ -88,6 +88,7 @@ elif "generate-json-schema" in sys.argv:
     directory.mkdir(parents=True)
     fields = {
         "ThreadStartParams": ["cwd", "model", "sandbox", "approvalPolicy", "ephemeral"],
+        "ThreadResumeParams": ["cwd", "model", "sandbox", "approvalPolicy", "excludeTurns", "threadId"],
         "TurnStartParams": ["threadId", "input", "outputSchema", "model", "approvalPolicy", "effort"],
         "ConfigReadParams": ["cwd", "includeLayers"],
     }
@@ -246,6 +247,28 @@ transports = [{kind = "manual"}]
     assert all("configuration" in row for row in offers["candidates"])
     assert offers["revision"] == ordinary()["assignment_decision"]["execution_configurations"]["revision"]
     chosen = next(row["configuration"] for row in offers["candidates"] if row["configuration"]["target"] == "worker")
+    if native_parameters:
+        from agentic_workspace import native_transport as native
+
+        execution = chosen["execution"]
+        native._write(
+            native._lineage_path(tmp_path, {"name": "worker", "target_id": execution["target_identity"]}, execution["adapter"]),
+            {
+                "reference": "fixture-opaque",
+                "target_revision": execution["target_revision"],
+                "semantic_scope": execution["semantic_scope"],
+                "semantic_revision": execution["semantic_revision"],
+                "capability_revision": chosen["capability_revision"],
+                "origin_run_id": "prior-native",
+            },
+        )
+        native._write(tmp_path / ".agentic-workspace/local/assignment-runs/prior-native/state.json", {"current_state": "closed"})
+        offers = ordinary()["assignment_decision"]["execution_configurations"]
+        chosen = next(
+            row["configuration"]
+            for row in offers["candidates"]
+            if row["configuration"]["target"] == "worker" and row["configuration"]["execution"]["continuity"]["mode"] == "resume"
+        )
     values = {
         "task": task,
         "changed": ["src/feature.py"],
@@ -301,6 +324,20 @@ transports = [{kind = "manual"}]
         config=load_workspace_config(target_root=tmp_path), target_root=tmp_path, task_text=None, changed_paths=["src/other.py"]
     )
     assert unrelated["assignment_decision"]["selected_execution_configuration"]["target"] == "orchestrator"
+    if native_parameters:
+
+        def complete(*args, **kwargs):
+            kwargs["on_thread"]("fixture-opaque")
+            kwargs["on_history"](False)
+            kwargs["on_closed"]()
+            return {"continuation": {"reference": "fixture-opaque", "ephemeral": False}, "returned_work": {}, "metrics": {}}
+
+        monkeypatch.setattr(native, "execute", complete)
+        assert native.dispatch_packet(tmp_path, packet, "synthetic completed result")["status"] == "returned"
+        state_path = native._custody_path(tmp_path, packet["run_id"]).with_name("state.json")
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+        native._write(state_path, {**state, "current_state": "awaiting-admission"})
+        assert ordinary()["assignment_decision"]["selected_execution_configuration"] == selected
     source.write_text(source.read_text().replace('target_revision = "1"', 'target_revision = "2"'))
     before = {p: p.read_bytes() for p in (tmp_path / ".agentic-workspace/local/assignment-runs").rglob("*") if p.is_file()}
     blocked = export(

@@ -45607,6 +45607,27 @@ def _assignment_primary_action_payload(
     }
 
 
+def _completed_assignment_packet(target_root: Path, assignment: dict[str, Any]) -> dict[str, Any] | None:
+    """Read the exact retained attempt; adapters prove any consumed-offer view."""
+    run_id = str(_as_dict(assignment.get("current_attempt")).get("run_id") or "")
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", run_id):
+        return None
+    path = target_root / ".agentic-workspace/local/assignment-runs" / run_id / "state.json"
+    try:
+        state = json.loads(path.read_text(encoding="utf-8"))
+        packet = state["assignment"]
+        if (
+            packet.get("run_id") == run_id
+            and packet.get("assignment_id") == assignment.get("assignment_id")
+            and packet.get("assignment_revision") == assignment.get("current_revision")
+            and state.get("current_state") in {"awaiting-admission", "admitted", "integrated", "proof-recorded"}
+        ):
+            return packet
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        pass
+    return None
+
+
 def _current_assignment_selection(
     *,
     config: WorkspaceConfig,
@@ -45614,6 +45635,7 @@ def _current_assignment_selection(
     task_text: str | None,
     work_identity: dict[str, Any] | None = None,
     execution_choice: dict[str, Any] | None = None,
+    completed_packet: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
     """One current owner evaluation for ordinary selection and replacement admission."""
     posture = _capability_posture_for_implementation(changed_paths=changed_paths, task_text=task_text)
@@ -45648,7 +45670,11 @@ def _current_assignment_selection(
             }
         )
         configurations = current_route_configurations(
-            config.target_root, runtime_resolution["profile_recommendations"], config.local_override, work
+            config.target_root,
+            runtime_resolution["profile_recommendations"],
+            config.local_override,
+            work,
+            completed_packet=completed_packet,
         )
         for profile in runtime_resolution["profile_recommendations"]:
             profile["execution_configurations"] = [
@@ -45765,7 +45791,13 @@ def _execution_posture_payload(
             execution_choice = retained_choice
     try:
         posture, runtime_resolution, assignment_policy, target_evidence, assignment_decision = _current_assignment_selection(
-            config=config, changed_paths=changed_paths, task_text=task_text, execution_choice=execution_choice
+            config=config,
+            changed_paths=changed_paths,
+            task_text=task_text,
+            execution_choice=execution_choice,
+            completed_packet=_completed_assignment_packet(target_root, retained)
+            if target_root is not None and retained and not materialize_assignment
+            else None,
         )
     except ValueError as error:
         if (
