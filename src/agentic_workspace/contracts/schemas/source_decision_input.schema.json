@@ -880,6 +880,16 @@
       "required": ["owner", "revision"],
       "not": {"required": ["terminal"]}
     },
+    "memory_note_read_request": {
+      "type": "object",
+      "description": "Read one currently selected advisory Memory note; source identity grants no freshness, promotion or binding authority.",
+      "properties": {
+        "reference": {"type": "string", "minLength": 1},
+        "revision": {"type": "string", "minLength": 1}
+      },
+      "required": ["reference", "revision"],
+      "additionalProperties": false
+    },
     "task_judgment_input": {
       "description": "Internal current owner observations for exact task judgment; no public source or producer authority ingress.",
       "oneOf": [
