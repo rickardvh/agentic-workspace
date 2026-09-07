@@ -617,6 +617,10 @@ escalation = ["a changed owner is not exercised through native public ingress", 
 escalation_conditions = ["focused-route-insufficient", "missing-domain-authority"]
 claim_boundary = "native-public-owner-proof-is-not-full-native-cutover-or-independent-acceptance"
 owner = "workspace-cli-runtime"
+route_role = "behavior"
+precedence = "85"
+allowed_composition = ["maintenance", "evidence", "broad"]
+
 [assurance.domain_proof_lanes.proof_subject_owner]
 purpose = "Shared proof identity, receipt admission and bounded current-owner evidence reconciliation."
 applies_to_paths = ["crates/agentic-workspace-core/src/proof_subject.rs", "crates/agentic-workspace-core/src/proof_receipt.rs", "src/agentic_workspace/proof_subject.py", "src/agentic_workspace/proof_receipt_admission.py", "tests/test_proof_subject.py", "tests/test_proof_subject_batch.py", "tests/test_proof_receipt_owner.py"]
@@ -895,7 +899,7 @@ route_role = "behavior"
 [assurance.domain_proof_lanes.workspace_local_override_contract]
 purpose = "Focused workspace-local override documentation, schema, and configuration contract proof."
 applies_to_paths = ["docs/reference/workspace-local-override.md", "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json"]
-commands = ["uv run pytest tests/test_workspace_config_cli.py -k \"local_override or assignment_policy\" -q", "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success"]
+commands = ["uv run pytest tests/test_workspace_config_cli.py -k \"local_override or assignment_policy or config_orthogonality or overlapping_assurance_level_owners\" -q", "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success"]
 review_aids = ["Confirm local-only transport configuration remains schema-backed, source-attributed, non-portable, and separate from portable assignment semantics."]
 evidence_concepts = ["workspace-local-override-contract", "configuration-source-attribution"]
 proof_profiles = ["workspace_behavior"]
