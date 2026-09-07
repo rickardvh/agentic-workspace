@@ -1732,29 +1732,32 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
         if all(
             context.get(key) for key in ("delegation_target", "task_class", "scope_class", "assignment_id", "assignment_revision", "run_id")
         ):
-            nomination = _record_trusted_assignment_outcome_from_ordinary_boundary(
-                target_root=target_root,
-                producer_class="closeout-outcome",
-                outcome="success",
-                source_payload={"planning_assignment_ref": planning_ref, "task_proof_receipt_ref": task_proof_ref},
-                idempotency_key="assignment-close:" + hashlib.sha256(json.dumps(context, sort_keys=True).encode("utf-8")).hexdigest(),
-                assignment_context={
-                    "status": "current",
-                    "source_ref": planning_ref,
-                    "revision": planning_assignment["current_revision"],
-                    "target_context": context,
-                    "rule": "Current assignment close admitted the exact integrated return and producer-owned task proof; this is not PR review approval.",
-                },
-                responsibility_evidence={
-                    "target_executed": True,
-                    "worker_succeeded": True,
-                    "context_sufficient": True,
-                    "transport_sufficient": True,
-                },
-                context_cost=dispatch_observation.get("context_cost"),
-                review_burden="unknown",
-            )
-            result["outcome_evidence"] = {key: nomination[key] for key in ("status", "source_ref") if key in nomination}
+            try:
+                nomination = _record_trusted_assignment_outcome_from_ordinary_boundary(
+                    target_root=target_root,
+                    producer_class="closeout-outcome",
+                    outcome="success",
+                    source_payload={"planning_assignment_ref": planning_ref, "task_proof_receipt_ref": task_proof_ref},
+                    idempotency_key="assignment-close:" + hashlib.sha256(json.dumps(context, sort_keys=True).encode("utf-8")).hexdigest(),
+                    assignment_context={
+                        "status": "current",
+                        "source_ref": planning_ref,
+                        "revision": planning_assignment["current_revision"],
+                        "target_context": context,
+                        "rule": "Current assignment close admitted the exact integrated return and producer-owned task proof; this is not PR review approval.",
+                    },
+                    responsibility_evidence={
+                        "target_executed": True,
+                        "worker_succeeded": True,
+                        "context_sufficient": True,
+                        "transport_sufficient": True,
+                    },
+                    context_cost=dispatch_observation.get("context_cost"),
+                    review_burden="unknown",
+                )
+            except (ValueError, OSError):
+                nomination = {"status": "non-calibrating", "reason": "evidence-admission-unavailable"}
+            result["outcome_evidence"] = {key: nomination[key] for key in ("status", "source_ref", "reason") if key in nomination}
     if transition == "reassign" and failures and prior and failures[0]["reason"] == "assignment-override-authority-unavailable":
         from agentic_workspace.assignment_source import replacement_offer
 
@@ -3002,17 +3005,20 @@ def _assignment_context_cost(
         value = observed_mapping.get(field)
         metrics[field] = value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else None
     packet_text = json.dumps(packet, indent=2, sort_keys=True, default=str).rstrip() + "\n"
-    return {
-        "kind": "agentic-workspace/assignment-context-cost/v1",
-        "transport": transport,
-        "adapter_revision": adapter_revision,
-        "configuration_context": _assignment_mapping(
+    configuration_context = (
+        _assignment_mapping(
             _assignment_mapping(_assignment_mapping(packet.get("assignment_identity")).get("dispatch_adapter")).get(
                 "execution_configuration"
             )
         )
         .get("execution", {})
-        .get("comparison_context"),
+        .get("comparison_context")
+    )
+    return {
+        "kind": "agentic-workspace/assignment-context-cost/v1",
+        "transport": transport,
+        "adapter_revision": adapter_revision,
+        **({"configuration_context": configuration_context} if configuration_context is not None else {}),
         "assignment_packet_bytes": len(packet_text.encode("utf-8")),
         "rendered_prompt_bytes": len(prompt.encode("utf-8")),
         **metrics,

@@ -2513,7 +2513,8 @@ def test_assignment_import_large_return_file_through_session_logged_cli(tmp_path
     assert (tmp_path / ".agentic-workspace/local/logs").exists()
 
 
-def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_path: Path) -> None:
+@pytest.mark.parametrize("corrupt_evidence", [False, True])
+def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_path: Path, corrupt_evidence: bool) -> None:
     from agentic_workspace import workspace_runtime_core
     from agentic_workspace.contracts.python_primitive_support import _emit_output
 
@@ -2804,21 +2805,29 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
         invocation=invocation,
     )
     assert wrong_proof_close["status"] == "blocked"
+    from agentic_workspace.config import load_delegation_outcomes
+
+    evidence_path, _, _ = load_delegation_outcomes(target_root=tmp_path)
+    if corrupt_evidence:
+        evidence_path.parent.mkdir(parents=True, exist_ok=True)
+        evidence_path.write_text("{", encoding="utf-8")
     closed = assignment_close(
         {"run_id": "run-1", "task_proof_receipt_ref": task_proof_ref},
         target=tmp_path,
         invocation=invocation,
     )
     assert closed["status"] == "closed"
-    assert closed["outcome_evidence"]["status"] == "recorded"
-    from agentic_workspace.config import load_delegation_outcomes
-
-    _, _, learned = load_delegation_outcomes(target_root=tmp_path)
-    assert len(learned) == 1
-    assert learned[0].outcome == "success"
-    assert learned[0].review_burden == "unknown"
-    assert learned[0].producer_class == "closeout-outcome"
-    assert learned[0].context_cost is None  # Manual transport did not measure token use.
+    if corrupt_evidence:
+        assert closed["outcome_evidence"] == {"status": "non-calibrating", "reason": "evidence-admission-unavailable"}
+        assert evidence_path.read_text(encoding="utf-8") == "{"
+    else:
+        assert closed["outcome_evidence"]["status"] == "recorded"
+        _, _, learned = load_delegation_outcomes(target_root=tmp_path)
+        assert len(learned) == 1
+        assert learned[0].outcome == "success"
+        assert learned[0].review_burden == "unknown"
+        assert learned[0].producer_class == "closeout-outcome"
+        assert learned[0].context_cost is None  # Manual transport did not measure token use.
     closed_full_state = _assignment_full_state(tmp_path, closed)
     reopened_assignment = json.loads((assignment_dir / "assign-1.assignment.json").read_text(encoding="utf-8"))
     reopened_assignment["status"] = "current"
