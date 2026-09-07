@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Exclude invalidated observations from repeated-burden guidance and preserve sparse unknown costs during contextual aggregation."
+issues = [2209, 2818, 2909]

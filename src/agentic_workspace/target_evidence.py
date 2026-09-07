@@ -215,7 +215,22 @@ def _transport_cost_summaries(records: list[DelegationOutcomeRecord]) -> list[di
     summaries: list[dict[str, Any]] = []
     for transport, context in sorted(by_transport):
         costs = by_transport[(transport, context)]
-        penalties = [_context_cost_penalty(cost) for cost in costs]
+        burden_fields = (
+            "effective_input_tokens",
+            "output_tokens",
+            "elapsed_ms",
+            "orientation_command_count",
+            "retry_count",
+            "repair_loop_count",
+        )
+        burden_support = {}
+        for field in burden_fields:
+            values = [cost[field] for cost in costs if isinstance(cost.get(field), int) and not isinstance(cost.get(field), bool)]
+            if values:
+                burden_support[field] = {
+                    "record_count": len(values),
+                    "average_penalty": sum(_context_cost_penalty({field: value}) for value in values) / len(values),
+                }
         observed_context_cost = {
             field: round(
                 sum(int(cost[field]) for cost in costs if isinstance(cost.get(field), int) and not isinstance(cost.get(field), bool))
@@ -251,10 +266,22 @@ def _transport_cost_summaries(records: list[DelegationOutcomeRecord]) -> list[di
                 "transport": transport,
                 **({"configuration_context": context} if context else {}),
                 "record_count": len(costs),
-                "expected_burden_component": round(sum(penalties) / len(penalties)),
+                "expected_burden_component": round(sum(item["average_penalty"] for item in burden_support.values()))
+                if burden_support
+                else None,
+                "burden_metric_support": burden_support,
+                "burden_aggregation": "sum-of-observed-metric-means-not-a-measured-lifecycle-total",
                 "observed_context_cost": observed_context_cost,
+                "observed_metric_counts": {
+                    field: sum(isinstance(cost.get(field), int) and not isinstance(cost.get(field), bool) for cost in costs)
+                    for field in observed_context_cost
+                },
                 "observable_fields": observable_fields,
-                "unknown_metric_state": "partial-or-unobserved" if any(cost.get("unknown_fields") for cost in costs) else "observed",
+                "unknown_metric_state": "partial-or-unobserved"
+                if any(cost.get("unknown_fields") for cost in costs)
+                or any(item["record_count"] < len(costs) for item in burden_support.values())
+                or len(burden_support) < len(burden_fields)
+                else "observed",
                 "supporting_adapter_revisions": sorted(
                     {str(cost.get("adapter_revision") or "") for cost in costs if str(cost.get("adapter_revision") or "")}
                 ),
@@ -267,9 +294,7 @@ def _complexity_reduction_signal(records_by_target: dict[str, list[DelegationOut
     repeated_contexts: list[dict[str, Any]] = []
     for target_name in sorted(records_by_target):
         records_by_context: dict[str, list[tuple[int, DelegationOutcomeRecord, list[str]]]] = {}
-        for index, record in enumerate(records_by_target[target_name]):
-            if record.admission_state not in CURRENT_ADMISSION_STATES:
-                continue
+        for index, record in _currently_admitted_records(list(enumerate(records_by_target[target_name]))):
             reasons = _record_complexity_burden_reasons(record)
             if not reasons:
                 continue
@@ -758,14 +783,14 @@ def assignment_decision_from_policy(
                 and str(cost.get("transport") or "") == method
                 and (not configuration or (comparison_context and cost.get("configuration_context") == comparison_context))
             ]
+            known_burdens = [
+                cost["expected_burden_component"]
+                for cost in matching_transport_costs
+                if isinstance(cost.get("expected_burden_component"), int) and not isinstance(cost.get("expected_burden_component"), bool)
+            ]
             transport_option: dict[str, Any] = {
                 "transport": method,
-                "expected_burden": round(
-                    sum(int(cost.get("expected_burden_component") or 0) for cost in matching_transport_costs)
-                    / len(matching_transport_costs)
-                )
-                if matching_transport_costs
-                else None,
+                "expected_burden": round(sum(known_burdens) / len(known_burdens)) if known_burdens else None,
                 "evidence_state": "admitted-contextual" if matching_transport_costs else "unknown",
                 "record_count": sum(int(cost.get("record_count") or 0) for cost in matching_transport_costs),
                 "configured_order": method_index,
@@ -776,7 +801,10 @@ def assignment_decision_from_policy(
             observed_context_cost = {}
             for field in sorted(observed_fields):
                 weighted_values = [
-                    (int(_as_dict(cost.get("observed_context_cost"))[field]), max(1, int(cost.get("record_count") or 1)))
+                    (
+                        int(_as_dict(cost.get("observed_context_cost"))[field]),
+                        max(1, int(_as_dict(cost.get("observed_metric_counts")).get(field) or cost.get("record_count") or 1)),
+                    )
                     for cost in matching_transport_costs
                     if isinstance(_as_dict(cost.get("observed_context_cost")).get(field), int)
                 ]
