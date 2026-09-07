@@ -2196,15 +2196,28 @@ def test_ordinary_start_public_route_is_current_scoped_and_quiet(shared_core_bin
 
 
 def test_generated_node_start_does_not_fake_host_route_admission(shared_core_binary: Path, tmp_path: Path) -> None:
-    for arguments in (["--select", "semantic_route_result"], ["--request", "{}"]):
+    import os
+    import shutil
+
+    package = tmp_path / "isolated"
+    shutil.copytree(ROOT / "generated/workspace/typescript", package)
+    environment = {key: value for key, value in os.environ.items() if key not in {"VIRTUAL_ENV", "PYTHONPATH"}}
+    environment["PATH"] = ""
+    for command in ("start", "implement"):
         result = subprocess.run(
-            ["node", "generated/workspace/typescript/src/cli.mjs", "start", "--target", str(tmp_path), "--format", "json", *arguments],
-            cwd=ROOT,
+            [str(shutil.which("node")), str(package / "src/cli.mjs"), command, "--target", str(tmp_path), "--format", "json"],
+            cwd=tmp_path,
+            env=environment,
             text=True,
             capture_output=True,
         )
         assert result.returncode == 2, result.stdout + result.stderr
-        assert json.loads(result.stdout)["status"] == "unavailable-in-generated-typescript-host"
+        payload = json.loads(result.stdout)
+        assert payload["reason_code"] == "ordinary-owner-unavailable"
+        assert payload["completion_claim_allowed"] is False
+        assert payload["mutation_applied"] is False
+        assert "decision_packet" not in payload
+    assert not (tmp_path / ".agentic-workspace").exists()
 
 
 def _instruction_host(root: Path, text: str) -> tuple[dict[str, Any], Path]:
