@@ -39,6 +39,11 @@ def current_route_configurations(root: Path, profiles: list[dict[str, Any]], pol
             transports.append({"method": "manual", "kind": "manual"})
         for transport in transports:
             method = transport["method"]
+            if transport.get("kind") == "native":
+                from agentic_workspace.native_transport import configuration_offers
+
+                candidates.extend(configuration_offers(root, profile, transport, policy, work))
+                continue
             command = transport.get("command", [])
             executable = shutil.which(command[0]) if command else None
             if command and not executable:
@@ -143,7 +148,10 @@ def execution_configuration(root: Path, target_name: str, transport: str) -> dic
     if unsupported:
         raise ValueError("unsupported-replacement-parameters:" + ",".join(sorted(unsupported)))
     for item in raw_profile.get("transports", []):
-        if not isinstance(item, dict) or set(item) - {"kind", "command", "output_mode", "timeout_seconds"}:
+        fields = {"kind", "command", "output_mode", "timeout_seconds"}
+        if isinstance(item, dict) and item.get("kind") == "native":
+            fields = {"kind", "adapter", "parameters", "timeout_seconds"}
+        if not isinstance(item, dict) or set(item) - fields:
             raise ValueError("unsupported-replacement-transport-parameters")
     if transport not in target.execution_methods:
         raise ValueError("replacement-transport-unavailable")

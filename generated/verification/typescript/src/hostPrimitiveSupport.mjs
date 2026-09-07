@@ -2286,11 +2286,13 @@ function assignmentDispatchConfiguration(identity, transport) {
   const adapter = isObject(identity.dispatch_adapter) ? identity.dispatch_adapter : {};
   const methods = new Set(Array.isArray(adapter.execution_methods) ? adapter.execution_methods.map(String) : []);
   const variants = Array.isArray(adapter.transports) ? adapter.transports.filter(isObject) : [];
-  const selectedVariant = variants.find((item) => assignmentText(item.method) === transport);
+  const selectedConfiguration = isObject(adapter.execution_configuration) ? adapter.execution_configuration : {};
+  const selectedVariant = selectedConfiguration.transport === transport && isObject(selectedConfiguration.execution?.adapter)
+    ? selectedConfiguration.execution.adapter : variants.find((item) => assignmentText(item.method) === transport);
   const variantKind = assignmentText(selectedVariant?.kind);
   return {
     admitted: methods.has(transport),
-    kind: selectedVariant ? (['process', 'api'].includes(variantKind) ? 'process' : variantKind === 'internal' ? 'host-native' : '') : assignmentText(adapter.kind),
+    kind: selectedVariant ? (['process', 'api'].includes(variantKind) ? 'process' : variantKind === 'internal' ? 'host-native' : variantKind === 'native' ? 'native' : '') : assignmentText(adapter.kind),
     command: Array.isArray(selectedVariant?.command) ? selectedVariant.command.map(String) : Array.isArray(adapter.command) ? adapter.command.map(String) : [],
     outputMode: assignmentText(selectedVariant?.output_mode) || assignmentText(adapter.output_mode) || 'stdout',
     timeoutSeconds: Number(selectedVariant?.timeout_seconds ?? adapter.timeout_seconds ?? 1800),
