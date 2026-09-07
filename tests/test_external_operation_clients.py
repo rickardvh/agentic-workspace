@@ -4061,6 +4061,7 @@ def test_public_delegation_outcome_append_persists_validated_context_cost(tmp_pa
         "kind": "agentic-workspace/assignment-context-cost/v1",
         "transport": "cli",
         "adapter_revision": "sha256:adapter",
+        "configuration_context": "sha256:" + "e" * 64,
         "assignment_packet_bytes": 3662,
         "rendered_prompt_bytes": 3913,
         "effective_input_tokens": 81752,
@@ -4079,6 +4080,7 @@ def test_public_delegation_outcome_append_persists_validated_context_cost(tmp_pa
         "task_class": "implementation",
         "scope_class": "bounded",
         "outcome": "success",
+        "review_burden": "unknown",
         "context_cost_json": json.dumps(context_cost),
     }
 
@@ -4091,6 +4093,7 @@ def test_public_delegation_outcome_append_persists_validated_context_cost(tmp_pa
     )
 
     assert payload["recorded"]["context_cost"] == context_cost
+    assert payload["recorded"]["review_burden"] == "unknown"
     stored_path = tmp_path / ".agentic-workspace/delegation-outcomes.json"
     stored = json.loads(stored_path.read_text(encoding="utf-8"))
     assert stored["records"][0]["context_cost"] == context_cost

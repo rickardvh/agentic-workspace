@@ -6011,7 +6011,8 @@ const commandDefinitions = [
           "choices": [
             "light",
             "normal",
-            "high"
+            "high",
+            "unknown"
           ],
           "default": "normal",
           "flags": [
