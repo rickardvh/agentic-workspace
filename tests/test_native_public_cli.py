@@ -152,3 +152,29 @@ def test_unrelated_claim_request_keeps_planning_quiet_without_chat_state(
     assert result["verification"]["status"] == "unresolved"
     assert "current-task-claim-judgment-not-admitted" in result["verification"]["evidence_gaps"]
     assert before == {path.relative_to(tmp_path): path.read_bytes() for path in tmp_path.rglob("*") if path.is_file()}
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_published_passed_receipt_cannot_complete_unrelated_current_task(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
+) -> None:
+    fixture = json.loads((ROOT / "tests/fixtures/native_verification_publication.json").read_text())
+    receipts = tmp_path / ".agentic-workspace/proof/receipts"
+    receipts.mkdir(parents=True)
+    (receipts / "index.json").write_text(json.dumps(fixture["index"]))
+    (receipts / f"{fixture['publication_id']}.json").write_text(json.dumps(fixture["receipt"]))
+    (tmp_path / "a.txt").write_text("one")
+    context = {"target": str(tmp_path), "task": "Verify an unrelated document claim", "changed": ["a.txt"]}
+    first = consume(surface, shared_core_binary, native_cli, context)
+    request = first["verification"]["requests"][0]
+    request["arguments"]["evidence_refs"] = [fixture["receipt"]["source_ref"]]
+    result = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
+    evidence = result["verification"]["evidence"][0]
+    assert evidence["publication_admission"]["status"] == "admitted"
+    assert evidence["receipt_admission"]["admitted"] is True
+    assert evidence["status"] == "unadmitted"
+    assert "task-subject-mismatch-or-legacy-identity-compatibility-unproven" in evidence["gaps"]
+    assert result["decision_packet"]["status"] != "terminal"
+    (tmp_path / "a.txt").write_text("two")
+    stale = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
+    assert "proof-semantic-input-stale-or-unavailable" in stale["verification"]["evidence"][0]["gaps"]

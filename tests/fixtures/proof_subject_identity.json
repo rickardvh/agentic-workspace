@@ -1,0 +1,273 @@
+[
+  {
+    "files": {
+      "src/\u00e9.txt": "\u00c5\r\n",
+      "src/a.txt": "a"
+    },
+    "input": {
+      "changed_paths": [
+        "src/\u00e9.txt",
+        "src/a.txt",
+        "src/a.txt"
+      ],
+      "command": " check \ud83d\ude42 "
+    },
+    "runtime": {
+      "implementation": "CPython",
+      "version": "3.13.9"
+    },
+    "expected": {
+      "kind": "agentic-workspace/proof-subject/v1",
+      "id": "proof-subject:638b56d5c3c8d74ea538",
+      "fingerprint": "638b56d5c3c8d74ea5387b0638c0c531e2b1514862ceca67bad771354858d392",
+      "claim_classes": [
+        "executable-validation"
+      ],
+      "effect_scope": [
+        "src/a.txt",
+        "src/\u00e9.txt"
+      ],
+      "source_inputs": [
+        {
+          "path": "src/a.txt",
+          "sha256": "ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb"
+        },
+        {
+          "path": "src/\u00e9.txt",
+          "sha256": "62c4a621c2762c14634e2efc3f56c733cc2834adc126534cc647d05fa6f47a09"
+        }
+      ],
+      "command_sha256": "d064dd9700d79460441c1d85653156e157eab8f108cf14691f05abf87406ac12",
+      "runtime": {
+        "implementation": "CPython",
+        "version": "3.13.9"
+      },
+      "identity_complete": true,
+      "unavailable_inputs": [],
+      "dependency_roles": [
+        {
+          "path": "src/a.txt",
+          "owner": "claim",
+          "role": "semantic-input",
+          "reason": "declared-proof-subject-input"
+        },
+        {
+          "path": "src/\u00e9.txt",
+          "owner": "claim",
+          "role": "semantic-input",
+          "reason": "declared-proof-subject-input"
+        }
+      ],
+      "evidence_outputs": [],
+      "dependency_scope": "declared-path-and-command",
+      "fallback": "not-required",
+      "rule": "Only declared semantic inputs participate in proof freshness; proof-owned publication outputs are diagnostic unless this claim explicitly declares them as semantic inputs."
+    }
+  },
+  {
+    "files": {
+      "a.txt": "x"
+    },
+    "input": {
+      "changed_paths": [
+        "a.txt",
+        ".agentic-workspace/proof/receipts/result.json"
+      ],
+      "command": "check"
+    },
+    "runtime": {
+      "implementation": "CPython",
+      "version": "3.13.9"
+    },
+    "expected": {
+      "kind": "agentic-workspace/proof-subject/v1",
+      "id": "proof-subject:8aa57fea23a4296fb49f",
+      "fingerprint": "8aa57fea23a4296fb49fdb53fcda5f0daa39079c792131b2b0368e50185f06f5",
+      "claim_classes": [
+        "executable-validation"
+      ],
+      "effect_scope": [
+        "a.txt"
+      ],
+      "source_inputs": [
+        {
+          "path": "a.txt",
+          "sha256": "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881"
+        }
+      ],
+      "command_sha256": "20f65c28671b40937c5bf23acc7c6f37e5a5ec0622e347b57685725df5ba9e50",
+      "runtime": {
+        "implementation": "CPython",
+        "version": "3.13.9"
+      },
+      "identity_complete": true,
+      "unavailable_inputs": [],
+      "dependency_roles": [
+        {
+          "path": ".agentic-workspace/proof/receipts/result.json",
+          "owner": "canonical-proof-receipt-publication",
+          "role": "evidence-output",
+          "reason": "proof-owned-publication-output"
+        },
+        {
+          "path": "a.txt",
+          "owner": "claim",
+          "role": "semantic-input",
+          "reason": "declared-proof-subject-input"
+        }
+      ],
+      "evidence_outputs": [
+        {
+          "path": ".agentic-workspace/proof/receipts/result.json",
+          "owner": "canonical-proof-receipt-publication",
+          "role": "evidence-output",
+          "reason": "proof-owned-publication-output"
+        }
+      ],
+      "dependency_scope": "declared-path-and-command",
+      "fallback": "not-required",
+      "rule": "Only declared semantic inputs participate in proof freshness; proof-owned publication outputs are diagnostic unless this claim explicitly declares them as semantic inputs."
+    }
+  },
+  {
+    "files": {
+      ".agentic-workspace/proof/receipts/upstream.json": "{\"x\":1}"
+    },
+    "input": {
+      "changed_paths": [
+        ".agentic-workspace/proof/receipts/upstream.json"
+      ],
+      "command": "check",
+      "semantic_input_paths": [
+        ".agentic-workspace/proof/receipts/upstream.json"
+      ]
+    },
+    "runtime": {
+      "implementation": "CPython",
+      "version": "3.13.9"
+    },
+    "expected": {
+      "kind": "agentic-workspace/proof-subject/v1",
+      "id": "proof-subject:09d711c5bd67cfa23dda",
+      "fingerprint": "09d711c5bd67cfa23ddac476cec6892f9aed6321cf0dcdba35895f714d9aa684",
+      "claim_classes": [
+        "executable-validation"
+      ],
+      "effect_scope": [
+        ".agentic-workspace/proof/receipts/upstream.json"
+      ],
+      "source_inputs": [
+        {
+          "path": ".agentic-workspace/proof/receipts/upstream.json",
+          "sha256": "5041bf1f713df204784353e82f6a4a535931cb64f1f4b4a5aeaffcb720918b22"
+        }
+      ],
+      "command_sha256": "20f65c28671b40937c5bf23acc7c6f37e5a5ec0622e347b57685725df5ba9e50",
+      "runtime": {
+        "implementation": "CPython",
+        "version": "3.13.9"
+      },
+      "identity_complete": true,
+      "unavailable_inputs": [],
+      "dependency_roles": [
+        {
+          "path": ".agentic-workspace/proof/receipts/upstream.json",
+          "owner": "claim",
+          "role": "semantic-input",
+          "reason": "explicit-claim-dependency"
+        }
+      ],
+      "evidence_outputs": [],
+      "dependency_scope": "declared-path-and-command",
+      "fallback": "not-required",
+      "rule": "Only declared semantic inputs participate in proof freshness; proof-owned publication outputs are diagnostic unless this claim explicitly declares them as semantic inputs."
+    }
+  },
+  {
+    "files": {},
+    "input": {
+      "changed_paths": [
+        "missing"
+      ],
+      "command": "check"
+    },
+    "runtime": {
+      "implementation": "CPython",
+      "version": "3.13.9"
+    },
+    "expected": {
+      "kind": "agentic-workspace/proof-subject/v1",
+      "id": "proof-subject:93db42801d9812dfe862",
+      "fingerprint": "93db42801d9812dfe8622ac4b46371f869e9b282e56b40f232b282b0fc7ad008",
+      "claim_classes": [
+        "executable-validation"
+      ],
+      "effect_scope": [
+        "missing"
+      ],
+      "source_inputs": [],
+      "command_sha256": "20f65c28671b40937c5bf23acc7c6f37e5a5ec0622e347b57685725df5ba9e50",
+      "runtime": {
+        "implementation": "CPython",
+        "version": "3.13.9"
+      },
+      "identity_complete": false,
+      "unavailable_inputs": [
+        "missing"
+      ],
+      "dependency_roles": [
+        {
+          "path": "missing",
+          "owner": "claim",
+          "role": "semantic-input",
+          "reason": "declared-proof-subject-input"
+        }
+      ],
+      "evidence_outputs": [],
+      "dependency_scope": "declared-path-and-command",
+      "fallback": "whole-state-required",
+      "rule": "Only declared semantic inputs participate in proof freshness; proof-owned publication outputs are diagnostic unless this claim explicitly declares them as semantic inputs."
+    }
+  },
+  {
+    "files": {},
+    "input": {
+      "changed_paths": [],
+      "command": "review",
+      "claim_classes": [
+        "manual-review"
+      ],
+      "effect_scope": [
+        "domain:decision"
+      ]
+    },
+    "runtime": {
+      "implementation": "CPython",
+      "version": "3.13.9"
+    },
+    "expected": {
+      "kind": "agentic-workspace/proof-subject/v1",
+      "id": "proof-subject:ddf1cb4963d5b02be3e3",
+      "fingerprint": "ddf1cb4963d5b02be3e36da98c942057b7588ebb69d55f6dd3bbc5a383dc72e6",
+      "claim_classes": [
+        "manual-review"
+      ],
+      "effect_scope": [
+        "domain:decision"
+      ],
+      "source_inputs": [],
+      "command_sha256": "c97ace4c8fef2cee8fa0f3c9f52aab18dbd4f42438afe362ffb8f75ce4c04b84",
+      "runtime": {
+        "implementation": "CPython",
+        "version": "3.13.9"
+      },
+      "identity_complete": true,
+      "unavailable_inputs": [],
+      "dependency_roles": [],
+      "evidence_outputs": [],
+      "dependency_scope": "declared-path-and-command",
+      "fallback": "not-required",
+      "rule": "Only declared semantic inputs participate in proof freshness; proof-owned publication outputs are diagnostic unless this claim explicitly declares them as semantic inputs."
+    }
+  }
+]

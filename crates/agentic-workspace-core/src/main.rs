@@ -11,6 +11,16 @@ fn main() {
     };
     let result = if request
         .as_object()
+        .is_some_and(|v| v.len() == 1 && v.contains_key("proof_receipt"))
+    {
+        agentic_workspace_core::proof_receipt::view(request["proof_receipt"].clone())
+    } else if request
+        .as_object()
+        .is_some_and(|v| v.len() == 1 && v.contains_key("proof_subject"))
+    {
+        agentic_workspace_core::proof_subject::view(request["proof_subject"].clone())
+    } else if request
+        .as_object()
         .is_some_and(|v| v.len() == 1 && v.contains_key("direct_task_subject"))
     {
         agentic_workspace_core::direct_task::view(request["direct_task_subject"].clone())

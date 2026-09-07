@@ -11,6 +11,8 @@ pub mod native_public;
 mod native_routes;
 mod native_verification;
 pub mod planning;
+pub mod proof_receipt;
+pub mod proof_subject;
 pub mod semantic_routes;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};

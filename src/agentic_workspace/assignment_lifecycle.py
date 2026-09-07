@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -64,19 +63,9 @@ def load_indexed_assignment_task_proof(*, target_root: Path, receipt_ref: str) -
 
 def assignment_task_proof_binding(receipt: Mapping[str, Any]) -> str:
     """Bind an AW proof subject to one exact assignment obligation."""
+    from agentic_workspace.decision import proof_receipt
 
-    proof_subject = dict(receipt.get("proof_subject") or {}) if isinstance(receipt.get("proof_subject"), Mapping) else {}
-    payload = {
-        "assignment_proof_obligation": receipt.get("assignment_proof_obligation"),
-        "proof_subject_fingerprint": proof_subject.get("fingerprint"),
-        "command": receipt.get("command"),
-        "result": receipt.get("result"),
-        "changed_paths": sorted(str(path) for path in receipt.get("changed_paths", []) if str(path)),
-        "authority": receipt.get("authority"),
-        "producer_class": receipt.get("producer_class"),
-    }
-    rendered = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
-    return "sha256:" + hashlib.sha256(rendered).hexdigest()
+    return str(proof_receipt({"action": "binding", "receipt": dict(receipt)})["binding"])
 
 
 def materialize_canonical_assignment(
