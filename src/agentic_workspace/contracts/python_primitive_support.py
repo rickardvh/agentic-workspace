@@ -1542,6 +1542,7 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
                             "assignment_revision": assignment_revision,
                             "target": values.get("target_name"),
                             "transport": values.get("transport") or "manual",
+                            "reason": values.get("reason"),
                         },
                     )
                 )
