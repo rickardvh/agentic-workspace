@@ -311,7 +311,7 @@ def replacement_offer(root: Path, packet: dict[str, Any], target_name: str, tran
 def replace_from_source(root: Path, packet: dict[str, Any], work: dict[str, Any], request: dict[str, Any]) -> dict[str, Any]:
     admission, execution = source_facts(root)
     identity = packet.get("assignment_identity", {})
-    if str(work.get("revision") or "").startswith("planning-owner:"):
+    if str(work.get("revision") or "").startswith(("planning-owner:", "direct-task:")):
         from agentic_workspace.workspace_runtime_core import _live_assignment_plan_binding
 
         current = _live_assignment_plan_binding(

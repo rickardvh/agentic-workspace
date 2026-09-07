@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Bind direct assignments to their exact task and paths without borrowing unrelated Planning, and separate Planning semantic identity from attempt bookkeeping."
+issues = [2210, 2970, 2817, 2947, 2909]

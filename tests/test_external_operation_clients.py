@@ -412,7 +412,15 @@ transports = [{kind = "manual"}]
         source.write_bytes(source_bytes)
         previous_plan = plan_path.read_bytes()
         changed_plan = json.loads(previous_plan)
-        changed_plan["title"] = "Materially different work"
+        changed_plan["title"] = "Updated display title for the same work"
+        plan_path.write_text(json.dumps(changed_plan), encoding="utf-8")
+        from agentic_workspace.workspace_runtime_core import _live_assignment_plan_binding
+
+        assert (
+            _live_assignment_plan_binding(target_root=tmp_path, task_text=task, changed_paths=["src/feature.py"])["plan_revision"]
+            == prior_work["plan_revision"]
+        )
+        changed_plan["intent"]["outcome"] = "Materially different work"
         plan_path.write_text(json.dumps(changed_plan), encoding="utf-8")
         stale_repair = lifecycle("reassign", repair_choice)
         assert stale_repair["status"] == "blocked", stale_repair
@@ -5133,6 +5141,13 @@ def test_source_owned_replacement_rechecks_projected_planning_revision(tmp_path:
         "planning_revision": {"active_execplan": "planning://work", "active_execplan_hash": "one"},
     }
     monkeypatch.setattr(planning_owner, "planning_summary_query", lambda **_: {"status": "present", "payload": projected})
+    monkeypatch.setattr(
+        workspace_runtime_core,
+        "_planning_safety_gate_payload",
+        lambda **_: {
+            "route_decision": {"task_relation": "continues-selected-owner", "owner_posture": "current", "required_transition": "none"}
+        },
+    )
     bound = workspace_runtime_core._live_assignment_plan_binding(target_root=tmp_path, task_text="work", changed_paths=[])
     packet = {
         "assignment_identity": {"plan_ref": bound["plan_ref"], "human_intent": "work", "allowed_paths": bound["allowed_paths"]},
@@ -5146,9 +5161,11 @@ def test_source_owned_replacement_rechecks_projected_planning_revision(tmp_path:
     monkeypatch.setattr(assignment_source, "replace_assignment", lambda value: {"status": "checked", "work": value["work"]})
     assert assignment_source.replace_from_source(tmp_path, packet, work, {})["status"] == "checked"
     projected["planning_revision"]["active_execplan_hash"] = "changed-without-counter-bump"
+    assert assignment_source.replace_from_source(tmp_path, packet, work, {})["status"] == "checked"
+    projected["planning_record"]["proof_expectations"] = ["new material proof requirement"]
     with pytest.raises(ValueError, match="assignment-override-stale-work"):
         assignment_source.replace_from_source(tmp_path, packet, work, {})
-    projected["planning_revision"]["active_execplan_hash"] = "one"
+    projected["planning_record"].pop("proof_expectations")
     projected["planning_record"]["status"] = "unavailable"
     with pytest.raises(ValueError, match="assignment-override-stale-work"):
         assignment_source.replace_from_source(tmp_path, packet, work, {})
