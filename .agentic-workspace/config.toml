@@ -601,6 +601,10 @@ escalation = ["a change affects a source-owning operation or stateful recovery n
 escalation_conditions = ["focused-route-insufficient"]
 claim_boundary = "shared-kernel-contract-proof-is-not-owner-lifecycle-completion-or-independent-acceptance"
 owner = "workspace-cli-runtime"
+route_role = "behavior"
+precedence = "85"
+allowed_composition = ["maintenance", "evidence", "broad"]
+
 [assurance.domain_proof_lanes.native_public_owners]
 purpose = "Native transport and source-owning Planning/Verification ingress through four independent consumers."
 applies_to_paths = ["crates/agentic-workspace-cli/**", "crates/agentic-workspace-core/src/native_*.rs", "crates/agentic-workspace-core/src/direct_task.rs", "tests/test_native_public_cli.py", "tests/test_direct_task_identity.py"]
