@@ -53536,7 +53536,10 @@ def _record_proof_receipt_payload(
     )
     if str(task_text or "").strip() and receipt_claim_sufficiency == "sufficient":
         work = _live_assignment_plan_binding(target_root=target_root, task_text=str(task_text), changed_paths=receipt["changed_paths"])
+        from agentic_workspace.decision import direct_task_subject
+
         receipt["task_claim_judgment"] = {
+            "task_identity": direct_task_subject(str(task_text), receipt["changed_paths"]),
             "work_ref": work.get("plan_ref", ""),
             "work_revision": work.get("plan_revision", ""),
             "proof_subject_fingerprint": receipt["proof_subject"]["fingerprint"],
@@ -66485,6 +66488,18 @@ def _final_response_closeout_trust_for_admission(
 _DIRECT_CLOSEOUT_RESIDUE_KINDS = {"issue", "planning", "memory", "docs", "review", "none"}
 
 
+def _batch_task_judgment(context: dict[str, Any]) -> dict[str, Any]:
+    """Batch current owner observations without retaining a cache or authority."""
+    from agentic_workspace.decision import task_judgment
+
+    field = "receipts" if context.get("action") == "candidates" else "observations"
+    items = list(context.get(field, []))
+    results = [task_judgment({**context, field: items[offset : offset + 128]}) for offset in range(0, max(1, len(items)), 128)]
+    if field == "receipts":
+        return {"indices": [offset * 128 + index for offset, result in enumerate(results) for index in result["indices"]]}
+    return results[0] if len(results) == 1 else task_judgment({"action": "summarize", "batches": results})
+
+
 def _current_task_claim_judgment(
     *,
     target_root: Path,
@@ -66500,52 +66515,54 @@ def _current_task_claim_judgment(
 
     work = _live_assignment_plan_binding(target_root=target_root, task_text=task_text, changed_paths=changed_paths)
     records, _, _, _ = _read_proof_receipt_records(target_root)
-    current = []
-    for receipt in records or []:
+    context = {
+        "task": task_text,
+        "changed_paths": changed_paths,
+        "work_ref": str(work.get("plan_ref") or ""),
+        "work_revision": str(work.get("plan_revision") or ""),
+    }
+    records = records or []
+    candidates = _batch_task_judgment({"action": "candidates", **context, "receipts": records})["indices"]
+    observations = []
+    for index in candidates:
+        receipt = records[index]
         judgment = _as_dict(receipt.get("task_claim_judgment"))
-        # Candidate filtering grants no authority. Generic or unrelated history
-        # cannot support this claim and needs no trusted producer-store lookup.
-        if not (
-            task_text.strip()
-            and work.get("plan_revision")
-            and judgment.get("work_ref") == work.get("plan_ref")
-            and judgment.get("work_revision") == work.get("plan_revision")
-            and judgment.get("claim_class") == "slice_complete"
-            and judgment.get("status") == "sufficient"
-        ):
-            continue
         publication_id = str(receipt.get("publication_id") or "")
         indexed = load_indexed_assignment_task_proof(target_root=target_root, receipt_ref=f"proof://receipts/{publication_id}")
         expected_id = hashlib.sha256(
             json.dumps(_proof_publication_identity(receipt), sort_keys=True, ensure_ascii=True).encode("utf-8")
         ).hexdigest()[:16]
-        if (
-            publication_id == expected_id
-            and indexed.get("task_claim_judgment") == judgment
-            and judgment.get("proof_subject_fingerprint") == _as_dict(receipt.get("proof_subject")).get("fingerprint")
-            and proof_receipt_admission(receipt)["proof_sufficient"]
-            and _receipt_subject_freshness(
+        publication_current = publication_id == expected_id and indexed.get("task_claim_judgment") == judgment
+        sufficient = publication_current and proof_receipt_admission(receipt)["proof_sufficient"]
+        freshness = (
+            _receipt_subject_freshness(
                 target_root=target_root, receipt=receipt, changed_paths=changed_paths, command=str(receipt.get("command") or "")
-            ).get("status")
-            == "reusable"
-        ):
-            current.append(receipt)
-    manual_missing = manual_verification.get("expected") is True and manual_verification.get("status") not in {
-        "passed",
-        "accepted",
-        "satisfied",
-        "not-required",
-    }
-    independent_missing = bool(separation_of_duty) and separation_of_duty.get("status") not in {"not-applicable", "satisfied"}
-    status = (
-        "independent-review-required"
-        if independent_missing
-        else "manual-evidence-required"
-        if manual_missing
-        else "accepted"
-        if current
-        else "task-judgment-required"
+            ).get("status", "unverifiable")
+            if sufficient
+            else "unverifiable"
+        )
+        observations.append(
+            {
+                "receipt": receipt,
+                "publication_current": publication_current,
+                "proof_sufficient": bool(sufficient),
+                "evidence_freshness": freshness,
+            }
+        )
+    classified = _batch_task_judgment(
+        {
+            "action": "classify",
+            **context,
+            "observations": observations,
+            "manual_required": manual_verification.get("expected") is True,
+            "manual_status": str(manual_verification.get("status") or ""),
+            "independent_required": bool(separation_of_duty),
+            "independent_status": str(separation_of_duty.get("status") or ""),
+        }
     )
+    manual_missing = classified["manual_missing"]
+    independent_missing = classified["independent_missing"]
+    status = classified["status"]
     request = {
         "task": task_text,
         "changed_paths": changed_paths,
@@ -66565,7 +66582,7 @@ def _current_task_claim_judgment(
         "claim_class": "slice_complete",
         "work_ref": work.get("plan_ref", ""),
         "work_revision": work.get("plan_revision", ""),
-        "current_judgment_count": len(current),
+        "current_judgment_count": classified["current_judgment_count"],
         "unresolved_judgment": request if status != "accepted" else {},
         "rule": "Command success remains reusable validation; only current scoped semantic judgment can support a task completion claim, and it cannot replace required independent or manual evidence.",
     }

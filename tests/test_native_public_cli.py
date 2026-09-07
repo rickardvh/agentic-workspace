@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shutil
@@ -189,7 +190,7 @@ def test_published_passed_receipt_cannot_complete_unrelated_current_task(
     assert evidence["publication_admission"]["status"] == "admitted"
     assert evidence["receipt_admission"]["admitted"] is True
     assert evidence["status"] == "unadmitted"
-    assert "task-subject-mismatch-or-legacy-identity-compatibility-unproven" in evidence["gaps"]
+    assert "task-claim-mismatch-or-missing-identity" in evidence["gaps"]
     assert result["decision_packet"]["status"] != "terminal"
     (tmp_path / "a.txt").write_text("two")
     stale = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
@@ -295,3 +296,71 @@ def test_instruction_protection_reaches_actual_planning_writes(
     assert before == {
         path.relative_to(tmp_path): path.read_bytes() for path in (tmp_path / ".agentic-workspace").rglob("*") if path.is_file()
     }
+
+
+@pytest.mark.parametrize("planning", [False, True])
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_exact_published_judgment_is_recognized_without_manufacturing_evidence(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str, planning: bool
+) -> None:
+    # Deterministic producer fixture, not human/domain acceptance evidence.
+    from agentic_workspace.workspace_runtime_core import _proof_publication_identity, _write_trusted_producer_receipt
+
+    (tmp_path / "a.txt").write_text("one")
+    context = {"target": str(tmp_path), "task": "Establish the current document claim", "changed": ["a.txt"]}
+    if planning:
+        plan_ref = Path(".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json")
+        plan = tmp_path / plan_ref
+        plan.parent.mkdir(parents=True)
+        plan.write_bytes((ROOT / plan_ref).read_bytes())
+        (tmp_path / ".agentic-workspace/planning/state.toml").write_text(
+            f'[[active.execplans]]\nid="delegation-lane-sweep"\npath="{plan_ref.as_posix()}"\nstatus="active"\n'
+        )
+        discovered = consume(surface, shared_core_binary, native_cli, context)
+        continuation = discovered["decision_packet"]["decision_request"]["response_request"]
+        continuation["arguments"]["answer"] = "continue-selected"
+        continued = consume(surface, shared_core_binary, native_cli, {**context, "request": continuation})
+        consume(surface, shared_core_binary, native_cli, {**context, "invocation": continued["decision_packet"]["primary_action"]})
+    initial = consume(surface, shared_core_binary, native_cli, context)
+    request = initial["verification"]["requests"][0]
+    requested = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
+    subject = requested["verification"]["judgment_request"]
+    receipt = json.loads((ROOT / "tests/fixtures/native_verification_publication.json").read_text())["receipt"]
+    receipt["task_claim_judgment"].update(
+        work_ref=subject["work_ref"], work_revision=subject["work_revision"], task_identity=subject["task_claim_identity"]
+    )
+    publication_id = hashlib.sha256(
+        json.dumps(_proof_publication_identity(receipt), sort_keys=True, ensure_ascii=True).encode()
+    ).hexdigest()[:16]
+    receipt.update(publication_id=publication_id, receipt_id=publication_id)
+    reference = f"proof://receipts/{publication_id}"
+    _write_trusted_producer_receipt(
+        target_root=tmp_path, producer_class="aw-proof", receipt_id=publication_id, receipt=receipt, source_ref=reference
+    )
+    request["arguments"]["evidence_refs"] = [reference]
+    current = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
+    evidence = current["verification"]["evidence"][0]
+    assert evidence["task_judgment"]["matched_judgment_count"] == 1
+    assert evidence["task_judgment"]["current_judgment_count"] == 0
+    assert evidence["evidence_freshness"] == "unproven"
+    assert evidence["strategy_coverage"] == "unproven"
+    assert current["decision_packet"]["status"] != "terminal"
+    if planning:
+        other_context = {**context, "task": "Establish a different requested outcome in the same plan"}
+        discovered = consume(surface, shared_core_binary, native_cli, other_context)
+        continuation = discovered["decision_packet"]["decision_request"]["response_request"]
+        continuation["arguments"]["answer"] = "continue-selected"
+        continued = consume(surface, shared_core_binary, native_cli, {**other_context, "request": continuation})
+        other_request = continued["verification"]["requests"][0]
+        other_request["arguments"]["evidence_refs"] = [reference]
+        other = consume(surface, shared_core_binary, native_cli, {**other_context, "request": [continuation, other_request]})
+        assert other["verification"]["judgment_request"]["work_ref"] == subject["work_ref"]
+        assert other["verification"]["judgment_request"]["work_revision"] == subject["work_revision"]
+        assert other["verification"]["evidence"][0]["task_judgment"]["matched_judgment_count"] == 0
+        assert "exact-task-request-identity-mismatch" in other["verification"]["evidence"][0]["gaps"]
+    index_path = tmp_path / ".agentic-workspace/proof/receipts/index.json"
+    index = json.loads(index_path.read_text())
+    index["receipts"][publication_id]["status"] = "superseded"
+    index_path.write_text(json.dumps(index))
+    stale = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
+    assert stale["verification"]["evidence"][0]["task_judgment"]["matched_judgment_count"] == 0

@@ -16,6 +16,7 @@ pub mod planning;
 pub mod proof_receipt;
 pub mod proof_subject;
 pub mod semantic_routes;
+pub mod task_judgment;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
