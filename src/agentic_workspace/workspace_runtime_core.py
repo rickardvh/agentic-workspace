@@ -45187,26 +45187,56 @@ def _delegated_run_lifecycle_payload(
 def _live_assignment_plan_binding(*, target_root: Path, task_text: str, changed_paths: list[str]) -> dict[str, Any]:
     """Resolve the plan identity and scope that a fresh assignment must bind."""
 
-    current_work = resolve_current_work_context(root=target_root, task=task_text, relation_hint="plan-continuation")
-    plan_id = str(current_work.get("selected_plan_id") or current_work.get("plan_id") or "").strip()
-    plan_ref = f".agentic-workspace/planning/execplans/{plan_id}.plan.json" if plan_id else ""
-    if not plan_ref:
-        active_plan_ref, _active_plan = _active_execplan_record_payload(target_root=target_root)
-        plan_ref = str(active_plan_ref or "").strip()
-    plan_path = target_root / plan_ref if plan_ref else None
-    plan_record: dict[str, Any] = {}
-    if plan_path is not None:
-        try:
-            loaded_plan = json.loads(plan_path.read_text(encoding="utf-8-sig"))
-            plan_record = loaded_plan if isinstance(loaded_plan, dict) else {}
-        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
-            plan_record = {}
-    allowed_paths = _dedupe(list(changed_paths) or _plan_exact_list(plan_record, "canonical_core.touched_scope", "touched_paths"))
+    from repo_planning_bootstrap.installer import planning_summary_query
+
+    from agentic_workspace.assignment_source import revision
+
+    query = planning_summary_query(target=target_root, selectors=["planning_record", "planning_revision"])
+    payload = _as_dict(query.get("payload")) if query.get("status") == "present" else {}
+    plan_record = _as_dict(payload.get("planning_record"))
+    source = _as_dict(payload.get("planning_revision"))
+    plan_ref = str(_as_dict(plan_record.get("task")).get("surface") or "").strip()
+    source_hash = str(source.get("active_execplan_hash") or "").strip()
+    present = (
+        plan_record.get("status") == "present"
+        and plan_ref
+        and plan_ref == source.get("active_execplan")
+        and source_hash not in {"", "missing"}
+    )
+    # Bind the selected owner's content and semantic projection, not the
+    # composite Planning revision: admitting an integration receipt must not
+    # invalidate the assignment that produced it. No private plan reads here.
+    semantic_fields = (
+        "requested_outcome",
+        "hard_constraints",
+        "agent_may_decide",
+        "capability_posture",
+        "role_metadata",
+        "next_role_needed",
+        "touched_scope",
+        "proof_expectations",
+        "references",
+        "execution_bounds",
+        "stop_conditions",
+    )
+    plan_revision = (
+        "planning-owner:"
+        + revision(
+            {
+                "ref": plan_ref,
+                "source_hash": source_hash,
+                "contract": {key: plan_record.get(key) for key in semantic_fields},
+            }
+        )
+        if present
+        else ""
+    )
+    allowed_paths = _dedupe(list(changed_paths) or _list_payload(plan_record.get("touched_scope")))
     return {
         "plan_ref": plan_ref,
-        "plan_revision": str(plan_record.get("revision") or "").strip(),
+        "plan_revision": plan_revision,
         "allowed_paths": allowed_paths,
-        "plan_record": plan_record,
+        "plan_record": plan_record if present else {},
     }
 
 
@@ -45217,7 +45247,7 @@ def _assignment_plan_binding_matches(*, assignment: dict[str, Any], live_binding
     plan_revision = str(live_binding.get("plan_revision") or "").strip()
     allowed_paths = sorted({str(path) for path in _list_payload(live_binding.get("allowed_paths")) if str(path).strip()})
     if not plan_ref or not plan_revision:
-        return True
+        return not str(_as_dict(assignment.get("assignment_gate")).get("plan_revision") or "").startswith("planning-owner:")
     if not allowed_paths:
         return False
     gate = _as_dict(assignment.get("assignment_gate"))
@@ -46013,7 +46043,6 @@ def _execution_posture_payload(
                 for item in _list_payload(plan_record.get("references"))
                 if isinstance(item, dict) and str(item.get("target") or item.get("label") or "").strip()
             ]
-            + _plan_exact_list(plan_record, "context_budget.live working set")
         )
         enhanced_gate = {
             **assignment_gate,

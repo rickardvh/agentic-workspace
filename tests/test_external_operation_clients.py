@@ -4868,3 +4868,34 @@ packet_integrity = "{old["packet_integrity"]}"
     config_path.write_text(admitted_source)
     admitted = call("admit", {"run_id": args["run_id"]})
     assert admitted["status"] == "admitted", admitted
+
+
+def test_source_owned_replacement_rechecks_projected_planning_revision(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from repo_planning_bootstrap import installer as planning_owner
+
+    from agentic_workspace import assignment_source, target_evidence, workspace_runtime_core
+
+    projected = {
+        "planning_record": {"status": "present", "task": {"surface": "planning://work"}, "touched_scope": ["src/work.py"]},
+        "planning_revision": {"active_execplan": "planning://work", "active_execplan_hash": "one"},
+    }
+    monkeypatch.setattr(planning_owner, "planning_summary_query", lambda **_: {"status": "present", "payload": projected})
+    bound = workspace_runtime_core._live_assignment_plan_binding(target_root=tmp_path, task_text="work", changed_paths=[])
+    packet = {
+        "assignment_identity": {"plan_ref": bound["plan_ref"], "human_intent": "work", "allowed_paths": bound["allowed_paths"]},
+        "packet_integrity": "sealed",
+    }
+    work = {"revision": bound["plan_revision"]}
+    monkeypatch.setattr(assignment_source, "source_facts", lambda _: ({"source": {}}, {}))
+    monkeypatch.setattr(assignment_source, "load_workspace_config", lambda **_: {})
+    monkeypatch.setattr(workspace_runtime_core, "_current_assignment_selection", lambda **_: ({},))
+    monkeypatch.setattr(target_evidence, "replacement_eligibility", lambda **_: {})
+    monkeypatch.setattr(assignment_source, "replace_assignment", lambda value: {"status": "checked", "work": value["work"]})
+    assert assignment_source.replace_from_source(tmp_path, packet, work, {})["status"] == "checked"
+    projected["planning_revision"]["active_execplan_hash"] = "changed-without-counter-bump"
+    with pytest.raises(ValueError, match="assignment-override-stale-work"):
+        assignment_source.replace_from_source(tmp_path, packet, work, {})
+    projected["planning_revision"]["active_execplan_hash"] = "one"
+    projected["planning_record"]["status"] = "unavailable"
+    with pytest.raises(ValueError, match="assignment-override-stale-work"):
+        assignment_source.replace_from_source(tmp_path, packet, work, {})
