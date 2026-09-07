@@ -24,6 +24,52 @@ fn error(message: impl ToString) -> CoreError {
     CoreError::new(message.to_string())
 }
 
+fn semantic_subject(state: &Value) -> Value {
+    // Full source/state custody below still includes these observations. Only
+    // subject currentness excludes known attempt/evidence bookkeeping, at its
+    // exact owner paths. Unknown constraints and handoff facts remain material.
+    let mut subject = state.clone();
+    if let Some(frontier) = subject["frontier"].as_object_mut() {
+        frontier.remove("lifecycle");
+        frontier.remove("phase");
+    }
+    if let Some(proof) = subject["proof"]["declared"].as_object_mut() {
+        proof.remove("refs");
+    }
+    for (field, observations) in [
+        (
+            "assignment",
+            &[
+                "attempt",
+                "attempt_id",
+                "run_id",
+                "status",
+                "started_at",
+                "updated_at",
+            ][..],
+        ),
+        (
+            "returned",
+            &["result", "result_id", "status", "received_at", "updated_at"][..],
+        ),
+        (
+            "integration_pending",
+            &["result", "result_id", "status", "received_at", "updated_at"][..],
+        ),
+    ] {
+        let value = &mut subject["handoff"][field];
+        if value.is_null() {
+            *value = json!({});
+        }
+        if let Some(record) = value.as_object_mut() {
+            for key in observations {
+                record.remove(*key);
+            }
+        }
+    }
+    subject
+}
+
 fn reconciliation(input: &Input) -> Result<Value, CoreError> {
     let source = input
         .source
@@ -129,7 +175,7 @@ fn reconciliation(input: &Input) -> Result<Value, CoreError> {
     Ok(json!({
         "kind": "agentic-planning/reconciliation/v1", "owner": "planning",
         "former_source": source,
-        "subject": {"id": subject_id, "revision": digest(&material)?, "label": body["title"], "state": material},
+        "subject": {"id": subject_id, "revision": digest(&semantic_subject(&material))?, "label": body["title"], "state": material},
         "coverage": {"complete": ambiguity.is_empty(), "ambiguities": ambiguity, "omitted_history": omitted},
         "former_source_retained": true
     }))

@@ -1060,6 +1060,64 @@ def test_material_planning_source_change_reopens_but_keeps_subject(shared_core_b
         reconcile_planning({**refreshed, "invocation": operation})
 
 
+@pytest.mark.parametrize("transport", ["python", "node", "json"])
+def test_planning_attempt_and_return_custody_do_not_redefine_work(shared_core_binary: Path, tmp_path: Path, transport: str) -> None:
+    import hashlib
+
+    body = json.loads((ROOT / "tests/vectors/planning_execplan.json").read_text())
+    body["relationships"].update(
+        assignment={"subject": "same-work", "owner": "worker", "scope": ["src/bounded.py"], "attempt": 1, "status": "active"},
+        returned={"subject": "same-work"},
+        integration_pending={"subject": "same-work"},
+    )
+    context = _planning_context(tmp_path, body)
+
+    def current():
+        return _planning_call(shared_core_binary, "planning_view", context, transport)
+
+    def update_source():
+        raw = json.dumps(body).encode()
+        (tmp_path / context["source"]["path"]).write_bytes(raw)
+        context["source"]["revision"] = "sha256:" + hashlib.sha256(raw).hexdigest()
+
+    initial = current()["planning"]["reconciliation"]["subject"]
+    for phase in ["returned", "integration-pending"]:
+        body["phase"] = phase
+        body["relationships"]["assignment"].update(attempt=2, run_id="second-attempt", status=phase)
+        body["relationships"]["returned"].update(result="returned-evidence", status="awaiting-admission")
+        body["relationships"]["integration_pending"].update(result="returned-evidence", status=phase)
+        body["proof"]["refs"] = ["proof://new-observation"]
+        update_source()
+        decision = current()
+        operation = decision["primary_action"]
+        result = _planning_call(shared_core_binary, "reconcile_planning", {**context, "invocation": operation}, transport)
+        restored = _planning_call(shared_core_binary, "planning_view", {**context, "custody": result["custody"]}, transport)
+        subject = restored["planning"]["reconciliation"]["subject"]
+        assert (subject["id"], subject["revision"]) == (initial["id"], initial["revision"])
+        assert subject["state"]["frontier"]["phase"] == phase
+        assert subject["state"]["handoff"]["returned"]["result"] == "returned-evidence"
+        assert subject["state"]["handoff"]["assignment"]["attempt"] == 2
+        assert subject["state"]["proof"]["declared"]["refs"] == ["proof://new-observation"]
+        assert restored["planning"]["current"] is True
+    # Current custody, scope, stops and proof obligations stay semantic. Unknown
+    # handoff facts are conservatively material, never silently stripped.
+    for container, key, value in [
+        (body["relationships"]["assignment"], "owner", "different-worker"),
+        (body["relationships"]["assignment"], "scope", ["src/wider.py"]),
+        (body["relationships"]["assignment"], "unknown_constraint", "independent authority"),
+        (body["execution_bounds"], "stop before touching", "new protected boundary"),
+        (body["proof"], "requirements", ["new independent proof obligation"]),
+    ]:
+        previous = container.get(key)
+        container[key] = value
+        update_source()
+        assert current()["planning"]["reconciliation"]["subject"]["revision"] != initial["revision"]
+        if previous is None:
+            container.pop(key)
+        else:
+            container[key] = previous
+
+
 def test_direct_planning_view_is_quiet_and_interrupted_reconciliation_can_finish(shared_core_binary: Path, tmp_path: Path) -> None:
     direct = planning_view({"target": str(tmp_path), "relevant": False})
     assert direct["relevant_owners"] == []
