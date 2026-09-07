@@ -364,3 +364,62 @@ def test_exact_published_judgment_is_recognized_without_manufacturing_evidence(
     index_path.write_text(json.dumps(index))
     stale = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
     assert stale["verification"]["evidence"][0]["task_judgment"]["matched_judgment_count"] == 0
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_real_memory_note_is_selective_advisory_and_read_through_current_request(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
+) -> None:
+    manifest_ref = Path(".agentic-workspace/memory/repo/manifest.toml")
+    note_ref = Path(".agentic-workspace/memory/repo/domains/example-runtime-boundary.md")
+    manifest = tmp_path / manifest_ref
+    manifest.parent.mkdir(parents=True)
+    manifest.write_bytes((ROOT / manifest_ref).read_bytes())
+    note = tmp_path / note_ref
+    note.parent.mkdir(parents=True)
+    original = (ROOT / note_ref).read_bytes()
+    note.write_bytes(original)
+    quiet = consume(
+        surface, shared_core_binary, native_cli, {"target": str(tmp_path), "task": "Explain unrelated prose", "changed": ["notes.txt"]}
+    )
+    assert quiet["memory"]["selected_notes"] == []
+    assert quiet["memory"]["requests"] == []
+    assert quiet["decision_packet"]["status"] == "direct"
+    context = {"target": str(tmp_path), "task": "Inspect the runtime boundary", "changed": ["src/agentic_workspace/native_core.py"]}
+    selected = consume(surface, shared_core_binary, native_cli, context)
+    assert selected["decision_packet"]["status"] == "direct"
+    assert all("body" not in item for item in selected["memory"]["selected_notes"])
+    request = next(item for item in selected["memory"]["requests"] if item["arguments"]["reference"] == note_ref.as_posix())
+    detail = consume(surface, shared_core_binary, native_cli, {**context, "request": request})["memory"]["response"]
+    assert detail["status"] == "read"
+    assert detail["detail"]["body"].encode() == original
+    assert detail["detail"]["authority_effect"] == "advisory-only"
+    assert detail["detail"]["currentness"]["status"] == "review-required"
+    assert not (tmp_path / ".agentic-workspace/local").exists()
+    note.write_bytes(original + b"\nThe source changed.\n")
+    with pytest.raises(AssertionError, match="Memory request is stale"):
+        consume(surface, shared_core_binary, native_cli, {**context, "request": request})
+    other = {**context, "task": "Unrelated work", "changed": ["notes.txt"], "request": request}
+    with pytest.raises(AssertionError):
+        consume(surface, shared_core_binary, native_cli, other)
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_malformed_advisory_memory_cannot_veto_direct_work(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
+) -> None:
+    manifest = tmp_path / ".agentic-workspace/memory/repo/manifest.toml"
+    manifest.parent.mkdir(parents=True)
+    original = b"This is not TOML ["
+    manifest.write_bytes(original)
+    context = {"target": str(tmp_path), "task": "Explain an unrelated detail"}
+    quiet = consume(surface, shared_core_binary, native_cli, context)
+    assert quiet["memory"]["selected_notes"] == []
+    assert quiet["memory"]["diagnostics"] == []
+    observed = consume(surface, shared_core_binary, native_cli, {**context, "changed": ["notes.txt"]})
+    assert observed["memory"]["status"] == "reconciliation-required"
+    assert observed["memory"]["diagnostics"]
+    assert observed["decision_packet"]["status"] == "direct"
+    assert not observed["decision_packet"]["blockers"]
+    assert manifest.read_bytes() == original
+    assert not (tmp_path / ".agentic-workspace/local").exists()

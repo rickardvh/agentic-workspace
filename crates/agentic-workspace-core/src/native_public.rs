@@ -2,7 +2,7 @@
 //! facts and owner admission are derived here, never accepted as debug inputs.
 use crate::{
     CoreError, compile_value, decision_source, digest, native_config, native_instructions,
-    native_planning, native_routes, native_verification, planning,
+    native_memory, native_planning, native_routes, native_verification, planning,
 };
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -74,6 +74,8 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         &route_fact,
         admissions["instruction_revision"].as_str().unwrap_or(""),
     )?;
+    let mut memory =
+        native_memory::public_view(target, &input.changed, &route_fact, &work, None, None)?;
     let planning_probe = native_planning::resolve(target, &work, None)?;
     let verification_probe =
         native_verification::view(target, &input.task, &input.changed, &work, None, None)?;
@@ -82,7 +84,22 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         &planning_probe["capability_contract"],
         &verification_probe["capability_contract"],
         &instructions["capability_contract"],
+        &memory["capability_contract"],
     ])?;
+    if let Some(request) = request_for("memory") {
+        memory = native_memory::public_view(
+            target,
+            &input.changed,
+            &route_fact,
+            &work,
+            Some(request),
+            Some(&contract),
+        )?;
+    } else {
+        for request in memory["requests"].as_array_mut().unwrap() {
+            request["capability_revision"] = contract["revision"].clone();
+        }
+    }
     let mut planning = if executing {
         native_planning::resolve_for_execution(target, &work, &contract)?
     } else if request_for("planning").is_some() {
@@ -124,6 +141,7 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         request_for("verification").cloned(),
     )?;
     contributions.push(verification["contribution"].clone());
+    contributions.push(memory["contribution"].clone());
     contributions.push(instructions["contribution"].clone());
     owner_input["contributions"] = json!(contributions);
     owner_input["capability_contract"] = contract.clone();
@@ -161,7 +179,7 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
     planning.as_object_mut().unwrap().remove("planning_input");
     planning["current_owner"] = planning_detail;
     Ok(
-        json!({"decision_packet":decision, "capability_contract":contract, "current_work":work, "semantic_routes":routes, "configuration":configuration, "instructions":instructions,"planning":planning, "verification":verification}),
+        json!({"decision_packet":decision, "capability_contract":contract, "current_work":work, "semantic_routes":routes, "configuration":configuration, "instructions":instructions,"memory":memory,"planning":planning, "verification":verification}),
     )
 }
 
@@ -184,7 +202,10 @@ fn owner_requests(request: Option<&Value>) -> Result<Vec<Value>, CoreError> {
     let mut owners = std::collections::BTreeSet::new();
     for request in &requests {
         let owner = request["owner"].as_str().unwrap();
-        if !matches!(owner, "planning" | "semantic-routes" | "verification") {
+        if !matches!(
+            owner,
+            "planning" | "semantic-routes" | "verification" | "memory"
+        ) {
             return Err(CoreError::new("requested native owner is not available"));
         }
         if !owners.insert(owner) {

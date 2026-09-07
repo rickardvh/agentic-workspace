@@ -8,6 +8,7 @@ pub mod instruction_applicability;
 pub mod instruction_source;
 mod native_config;
 mod native_instructions;
+mod native_memory;
 mod native_planning;
 pub mod native_public;
 mod native_routes;

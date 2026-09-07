@@ -59,3 +59,12 @@ calculation. Planning derives current subject meaning from its stronger source
 owner and reuses only exactly admitted effect/attempt custody. A historical next
 decision is never retained as current authority. These choices do not complete
 #2981's remaining measured expensive-proof and negative-result reuse evidence.
+
+Memory discovery reads the existing manifest only for current path/semantic-route
+signals and returns bounded advisory source references. A returned
+`memory/read-current-note/v1` request retrieves one selected exact revision in a
+fresh process. Neither the manifest's canonical label nor a matching content hash
+proves factual freshness; unadmitted freshness and promotion stay explicit. Note
+bodies are omitted from initial discovery. Malformed advisory sources produce
+Memory diagnostics while direct work remains available; explicit stale or
+out-of-scope read requests fail closed.
