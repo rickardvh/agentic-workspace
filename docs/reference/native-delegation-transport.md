@@ -157,9 +157,40 @@ ambiguous sibling assignments require explicit subject selection.
 New source-resolved configurations bind relevant local delegation, safety and
 selected-target facts. Admission rechecks those facts; process adapters also
 recheck executable identity. Stale choices block instead of selecting a different
-route. Unrelated workspace launcher settings do not change this source binding
-(the native adapter still has its additional conservative source fingerprint).
+route. Unrelated workspace launcher settings do not change this source binding.
 The Python and generated TypeScript public clients accept the paired fields;
 TypeScript requires the repository source host for source-owned admission and
 fails closed when that host is unavailable. A dry-run does not materialize a
-Planning assignment. Hard-ineligible native routes skip provider discovery.
+Planning assignment. Its `selection-preview` result explicitly leaves the run
+identity empty and construction unperformed. Hard-ineligible native routes skip
+provider discovery.
+
+## Ordinary-work counterevidence
+
+On 2026-09-07 the unchanged human local policy was copied into the stack worktree.
+The public route retained the current target by default and exposed an eligible
+disposable Sol configuration for a two-file cleanup inspection. Public export
+created a canonical assignment and a bounded handoff without provider execution;
+public dispatch then launched that selected configuration without another permission.
+
+The inspection was interrupted by the orchestrator after 719347 ms to bound further
+cost. No structured task result was returned. The preserved adapter observation was
+56512 effective input tokens, 54784 cached input tokens and 1913 output tokens;
+the rendered input measured 4274 bytes and the semantic packet 11327 bytes. These
+observations are not a monetary total, a successful review, or target-failure
+evidence. Orientation, retries, repair and the cause of the long run remain unknown.
+Reasoning effort was left at the provider default; no claim is made about its value.
+
+After confirmed process release, ordinary exact cleanup completed with
+`already-absent`, preserving AW semantic state and deleting no provider history.
+This proves interrupted-dispatch observation and terminal cleanup behavior, not
+successful worker-shell entry or the full return/admission/proof lineage. No second
+inference run repeated this inspection. The adapter now retains a reported ephemeral
+guarantee before turn failure, so deterministic failed-ephemeral coverage requires
+no archive request; that refinement has no additional live-host claim.
+
+The ordinary selector initially omitted current offers and then exceeded its byte
+budget when full legacy detail was included. Both gaps were corrected, with public
+Python/TypeScript choice coverage and more than eight candidates. The verbose
+fallback was 2046293 bytes; complete selected output was 21584 bytes. These are AW
+serialization measurements, not token-price or credit-saving estimates.

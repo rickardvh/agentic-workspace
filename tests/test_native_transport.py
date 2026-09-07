@@ -121,6 +121,7 @@ def test_native_source_binding_ignores_unrelated_local_preferences(tmp_path):
 
 def test_partial_startup_captures_cleanup_custody_before_turn_failure(tmp_path, monkeypatch, snapshot):
     closed = []
+    history = []
 
     class Connection:
         def __init__(self, executable):
@@ -128,7 +129,7 @@ def test_partial_startup_captures_cleanup_custody_before_turn_failure(tmp_path, 
 
         def call(self, method, params):
             if method == "thread/start":
-                return {"thread": {"id": "owned-probe"}}
+                return {"thread": {"id": "owned-probe", "ephemeral": False}}
             raise native.ProviderError("fixture-turn-rejected")
 
         def close(self):
@@ -137,9 +138,10 @@ def test_partial_startup_captures_cleanup_custody_before_turn_failure(tmp_path, 
     monkeypatch.setattr(native, "CodexConnection", Connection)
     owned = set()
     with pytest.raises(native.ProviderError, match="fixture-turn-rejected"):
-        native.execute(tmp_path, snapshot, selection(snapshot), "unused", {}, on_thread=owned.add)
+        native.execute(tmp_path, snapshot, selection(snapshot), "unused", {}, on_thread=owned.add, on_history=history.append)
     assert owned == {"owned-probe"}
     assert closed == [True]
+    assert history == [False]
 
 
 def test_archive_failure_does_not_delete_or_claim_success(monkeypatch, snapshot):
@@ -243,15 +245,18 @@ def test_cleanup_protects_released_sibling_awaiting_admission(tmp_path, monkeypa
     assert native.cleanup_owned_run(tmp_path, "owned")["reason"] == "native-cleanup-conversation-still-needed"
 
 
-def test_dispatch_failure_retains_owned_reference_and_prevents_repeat(tmp_path, monkeypatch, snapshot):
+@pytest.mark.parametrize("ephemeral", [False, True])
+def test_dispatch_failure_retains_owned_reference_and_prevents_repeat(tmp_path, monkeypatch, snapshot, ephemeral):
     source = tmp_path / ".agentic-workspace/config.local.toml"
     source.parent.mkdir()
     source.write_text("# authority")
     monkeypatch.setattr(native, "discover", lambda root: snapshot)
+    snapshot["parameters"].append("ephemeral")
+    snapshot["ephemeral_modes"] = ["fresh"]
     execution = {
         "source_revision": native._source_revision(tmp_path),
         "adapter": {"adapter": "codex-app-server/v1", "parameters": {"model": "fixture-model"}},
-        "continuity": selection(snapshot),
+        "continuity": selection(snapshot, parameters={"model": "fixture-model", "ephemeral": ephemeral}),
         "target_identity": "worker",
         "semantic_scope": "slice",
         "semantic_revision": "r1",
@@ -279,6 +284,7 @@ def test_dispatch_failure_retains_owned_reference_and_prevents_repeat(tmp_path, 
         calls.append(True)
         assert json.loads(kwargs["worker_environment"]["AGENTIC_WORKSPACE_DELEGATED_WORKER_KERNEL"])["assignment"]["assignment_id"] == "a"
         kwargs["on_thread"]("owned-provider-reference")
+        kwargs["on_history"](ephemeral)
         kwargs["on_closed"]()
         raise native.ProviderError(
             "provider-turn-failed", metrics={"kind": "agentic-workspace/assignment-transport-metrics/v1", "effective_input_tokens": 13}
@@ -289,10 +295,21 @@ def test_dispatch_failure_retains_owned_reference_and_prevents_repeat(tmp_path, 
     assert result["status"] == "blocked"
     assert result["context_cost"]["effective_input_tokens"] == 13
     custody = json.loads(native._custody_path(tmp_path, "owned").read_text())
-    assert custody["reference"] == "owned-provider-reference" and custody["live"] is False
+    assert custody["reference"] == (None if ephemeral else "owned-provider-reference") and custody["live"] is False
     assert "not retained" not in json.dumps(custody)
     assert native.dispatch_packet(tmp_path, packet, "not retained")["reason"] == "native-run-already-attempted"
     assert calls == [True]
+    if ephemeral:
+        native._write(
+            native._custody_path(tmp_path, "owned").with_name("state.json"),
+            {
+                "run_id": "owned",
+                "current_state": "dispatch-failed",
+                "assignment": {"packet_integrity": packet["packet_integrity"]},
+            },
+        )
+        monkeypatch.setattr(native, "discover", lambda root: pytest.fail("proved ephemeral failure needs no archive call"))
+        assert native.cleanup_owned_run(tmp_path, "owned")["status"] == "not-stored"
 
 
 def test_packet_chooses_exact_peer_adapter():

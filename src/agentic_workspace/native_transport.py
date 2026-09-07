@@ -229,7 +229,7 @@ def dispatch_packet(root: Path, packet: Any, prompt: str) -> dict[str, Any]:
             "adapter": "codex-app-server/v1",
             "reference": None,
             "live": True,
-            "ephemeral": False,
+            "ephemeral": None,
         }
         try:
             with custody_path.open("x", encoding="utf-8") as handle:
@@ -246,6 +246,12 @@ def dispatch_packet(root: Path, packet: Any, prompt: str) -> dict[str, Any]:
             custody["live"] = False
             _write(custody_path, custody)
 
+        def history_observed(ephemeral: bool) -> None:
+            custody["ephemeral"] = ephemeral
+            if ephemeral:
+                custody["reference"] = None
+            _write(custody_path, custody)
+
         worker_kernel = {"assignment": {key: packet[key] for key in ("assignment_id", "assignment_revision", "run_id", "target")}}
         result = execute(
             root,
@@ -260,6 +266,7 @@ def dispatch_packet(root: Path, packet: Any, prompt: str) -> dict[str, Any]:
             },
             on_thread=capture_thread,
             on_closed=process_closed,
+            on_history=history_observed,
         )
         custody["ephemeral"] = result["continuation"].get("ephemeral") is True
         if custody["ephemeral"]:
@@ -667,6 +674,7 @@ def execute(
     on_thread: Callable[[str], None] | None = None,
     worker_environment: dict[str, str] | None = None,
     on_closed: Callable[[], None] | None = None,
+    on_history: Callable[[bool], None] | None = None,
 ) -> dict[str, Any]:
     """Run an exact native topology; missing provider state never becomes fresh."""
     validate_selection(snapshot, selection)
@@ -697,8 +705,12 @@ def execute(
                 raise ProviderError("provider-fork-lineage-not-independent")
             if on_thread is not None:
                 on_thread(actual)
+            if on_history is not None and isinstance(thread.get("ephemeral"), bool):
+                on_history(thread["ephemeral"])
             if ephemeral and thread.get("ephemeral") is not True:
                 raise ProviderError("provider-ephemeral-guarantee-not-enforced")
+            if not ephemeral and thread.get("ephemeral") is True:
+                raise ProviderError("provider-persistence-guarantee-not-enforced")
             turn_params = {
                 "threadId": actual,
                 "input": [{"type": "text", "text": prompt}],

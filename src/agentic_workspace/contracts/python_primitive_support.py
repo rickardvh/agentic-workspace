@@ -685,6 +685,32 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
         materialization = _assignment_mapping(posture.get("assignment_materialization"))
         assignment_id = _optional_text(materialization.get("assignment_id"))
         assignment_revision = _optional_text(materialization.get("assignment_revision"))
+        if dry_run and not assignment_id:
+            decision = _assignment_mapping(posture.get("assignment_decision"))
+            return {
+                "kind": "agentic-workspace/assignment-lifecycle-result/v1",
+                "operation_id": operation_id,
+                "transition": transition,
+                "status": "selection-preview",
+                "outcome": "noop",
+                "mutation_applied": False,
+                "assignment_id": None,
+                "assignment_revision": None,
+                "run_id": "",
+                "artifact_refs": [],
+                "state_ref": None,
+                "state": {
+                    "schema_version": "agentic-workspace/assignment-lifecycle-decision-state/v1",
+                    "current_state": "unmaterialized",
+                },
+                "failures": [],
+                "preview": {
+                    "selected_configuration": decision.get("selected_execution_configuration"),
+                    "assignment_gate": posture.get("assignment_gate"),
+                    "assignment_materialized": False,
+                },
+                "message": "Current selection only; assignment construction and transport execution have not occurred.",
+            }
         if assignment_id:
             values = {
                 **values,

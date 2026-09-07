@@ -166,6 +166,9 @@ transports = [{kind = "manual"}]
     before_dry_run = {p: p.read_bytes() for p in (tmp_path / ".agentic-workspace").rglob("*") if p.is_file()}
     dry = export({**values, "dry_run": True})
     assert dry["mutation_applied"] is False
+    assert dry["status"] == "selection-preview"
+    assert dry["preview"]["selected_configuration"] == chosen
+    assert dry["preview"]["assignment_materialized"] is False
     assert before_dry_run == {p: p.read_bytes() for p in (tmp_path / ".agentic-workspace").rglob("*") if p.is_file()}
     exported = export(values)
     assert exported["status"] == "handoff-prepared", json.dumps(exported.get("failures"))
