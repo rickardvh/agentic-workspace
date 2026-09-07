@@ -11,7 +11,7 @@
       "minLength": 2
     },
     "configuration_revision": {
-      "description": "Current source-resolved execution configuration offer revision. Only an intention to select, never authority to replace an existing assignment.",
+      "description": "Current source-resolved execution configuration offer revision. An intention only; replacing an assignment also requires exact source-owner or repair admission.",
       "type": "string",
       "minLength": 1
     },

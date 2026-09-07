@@ -280,6 +280,28 @@ def test_exclusive_lineage_is_not_a_ttl_lease():
         pass
 
 
+def test_repair_release_accepts_exact_no_launch_receipt_but_never_overrides_live_custody(tmp_path):
+    packet = {"run_id": "owned", "packet_integrity": "exact-seal"}
+    custody_path = native._custody_path(tmp_path, packet["run_id"])
+    receipt_path = custody_path.parent / "dispatch/receipt.json"
+    receipt = {
+        "kind": "agentic-workspace/assignment-dispatch-receipt/v1",
+        "adapter_kind": "native",
+        **packet,
+        "worker_launch_attempted": False,
+    }
+    assert not native.assignment_worker_released(tmp_path, packet)
+    native._write(receipt_path, receipt)
+    assert native.assignment_worker_released(tmp_path, packet)
+    native._write(receipt_path, {**receipt, "packet_integrity": "other"})
+    assert not native.assignment_worker_released(tmp_path, packet)
+    native._write(receipt_path, receipt)
+    native._write(custody_path, {**packet, "live": True})
+    assert not native.assignment_worker_released(tmp_path, packet)
+    native._write(custody_path, {**packet, "live": False})
+    assert native.assignment_worker_released(tmp_path, packet)
+
+
 @pytest.mark.parametrize("change", [{"live": True}, {"packet_integrity": "foreign"}, {"run_id": "other"}])
 def test_cleanup_requires_exact_released_custody(tmp_path, monkeypatch, change):
     path = native._custody_path(tmp_path, "owned")

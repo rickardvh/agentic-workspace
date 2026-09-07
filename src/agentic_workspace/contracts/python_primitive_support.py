@@ -665,7 +665,11 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
     choice_parameters = values.get("configuration_parameters_json")
     execution_choice: dict[str, Any] | None = None
     if choice_revision or choice_id or choice_parameters is not None:
-        if not choice_revision or not choice_id or transition not in {"dispatch", "export"} or assignment_id:
+        if (
+            not choice_revision
+            or not choice_id
+            or not ((transition in {"dispatch", "export"} and not assignment_id) or (transition == "reassign" and assignment_id))
+        ):
             raise PrimitiveExecutionError("configuration-choice-requires-both-fields-and-new-assignment")
         execution_choice = {"revision": choice_revision, "candidate": choice_id}
         if choice_parameters is not None:
@@ -964,19 +968,11 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
         }
         canonical_packet = current_authorities.get("replacement_packet")
         if canonical_packet:
-            from agentic_workspace.assignment_source import source_facts
-            from agentic_workspace.decision import admit_assignment_packet
+            from agentic_workspace.assignment_source import current_replacement
 
             try:
-                admission, execution = source_facts(target_root)
-                current = admit_assignment_packet(
-                    {
-                        "packet": canonical_packet,
-                        "canonical": canonical_packet,
-                        "source": admission["source"],
-                        "execution": execution,
-                        "work": {"id": identity["slice_id"], "revision": identity["plan_revision"]},
-                    }
+                current = current_replacement(
+                    target_root, canonical_packet, {"id": identity["slice_id"], "revision": identity["plan_revision"]}
                 )
                 if current["status"] != "current":
                     raise ValueError(current["reason_code"])
@@ -1283,6 +1279,7 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             state=state,
             values=values,
             failures=failures,
+            replacing=transition == "repair",
         )
         admission = (
             _assignment_admit_with_current_authority(current_authorities=current_authorities, returned_work=returned)
@@ -1316,6 +1313,25 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             "worker_reported_baseline_trusted": False,
             "rule": "Admission receipts are valid only after the host primitive re-resolves current Planning, proof, run, and mutation baseline authorities and strict return admission succeeds.",
         }
+        if transition == "repair" and state.get("current_state") in {
+            "dispatch-failed",
+            "awaiting-admission",
+            "rejected",
+            "repair-requested",
+        }:
+            prior = _assignment_mapping(state.get("assignment"))
+            if prior.get("assignment_identity") != _assignment_identity(current_authorities):
+                failures.append(
+                    {
+                        "reason": "assignment-repair-packet-not-current",
+                        "field": "state.assignment",
+                        "recovery": "Resolve the exact current semantic assignment before repair.",
+                    }
+                )
+            receipt["repair_binding"] = {
+                key: prior.get(key) for key in ("assignment_id", "assignment_revision", "run_id", "packet_integrity")
+            }
+            state["repair_admission_ref"] = _assignment_relative(receipt_path, root=target_root)
         artifact_paths.append(receipt_path)
         state.update(
             {
@@ -1327,6 +1343,14 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             }
         )
         writes = {receipt_path: receipt}
+        if transition == "repair" and receipt.get("repair_binding") and not failures:
+            from agentic_workspace.native_transport import prepare_repair_continuation
+
+            continuation = prepare_repair_continuation(target_root, _assignment_mapping(state.get("assignment")))
+            if continuation is not None:
+                continuation_path, continuation_record = continuation
+                writes[continuation_path] = continuation_record
+                artifact_paths.append(continuation_path)
     elif transition == "integrate":
         require("run_id")
         return_id = _optional_text(values.get("return_id")) or str(state.get("last_return_id") or "unidentified-return")
@@ -1461,10 +1485,16 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
         state.update({"current_state": receipt["status"]})
         writes = {receipt_path: receipt}
     elif transition == "reassign":
-        from agentic_workspace.assignment_source import replace_from_source, source_facts
+        from agentic_workspace.assignment_source import replace_after_repair, replace_from_source, source_facts
+
+        repair_preview = dry_run and execution_choice is None and state.get("current_state") == "repair-requested"
+        if execution_choice is None and not repair_preview:
+            require("reason")
+            require("target_name")
 
         try:
-            source_facts(target_root)
+            if execution_choice is None and not repair_preview:
+                source_facts(target_root)
         except (ValueError, OSError) as error:
             failures.append(
                 {
@@ -1496,14 +1526,46 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             )
         if not failures:
             try:
-                result = replace_from_source(
-                    target_root,
-                    prior,
-                    {"id": prior["assignment_identity"]["slice_id"], "revision": prior["assignment_identity"]["plan_revision"]},
-                    {"assignment_revision": assignment_revision, "target": values.get("target_name"), "transport": values.get("transport")},
+                result = (
+                    replace_after_repair(target_root, prior, execution_choice)
+                    if execution_choice is not None or repair_preview
+                    else replace_from_source(
+                        target_root,
+                        prior,
+                        {"id": prior["assignment_identity"]["slice_id"], "revision": prior["assignment_identity"]["plan_revision"]},
+                        {
+                            "assignment_revision": assignment_revision,
+                            "target": values.get("target_name"),
+                            "transport": values.get("transport") or "manual",
+                        },
+                    )
                 )
             except (ValueError, OSError, KeyError) as error:
                 result = {"status": "blocked", "reason_code": str(error)}
+            if result["status"] == "repair-choice-required":
+                return {
+                    "kind": "agentic-workspace/assignment-lifecycle-result/v1",
+                    "operation_id": operation_id,
+                    "transition": transition,
+                    "status": "selection-preview",
+                    "outcome": "noop",
+                    "mutation_applied": False,
+                    "assignment_id": assignment_id,
+                    "assignment_revision": assignment_revision,
+                    "run_id": run_id,
+                    "artifact_refs": [],
+                    "failures": [],
+                    "preview": result,
+                    "state": _assignment_lifecycle_decision_state(state),
+                    "next_current_continuation": {
+                        "kind": "agentic-workspace/action-result-continuation/v1",
+                        "status": "decision-required",
+                        "owner": "assignment",
+                        "decision": "Select a current eligible configuration for this same semantic work.",
+                        "operation_id": "assignment.reassign",
+                        "required_inputs": ["configuration_revision", "configuration_id"],
+                    },
+                }
             if result["status"] != "replaced":
                 failures.append(
                     {
@@ -1516,10 +1578,22 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
                 )
             else:
                 packet = _assignment_mapping(result.get("packet"))
+                if execution_choice is not None and (
+                    (values.get("target_name") and values["target_name"] != packet["target"])
+                    or (values.get("transport") and values["transport"] != packet["transport"])
+                ):
+                    failures.append(
+                        {
+                            "reason": "assignment-repair-intention-mismatch",
+                            "field": "target_name|transport",
+                            "recovery": "Select the configuration matching the requested target and transport.",
+                        }
+                    )
                 from agentic_workspace.assignment_source import current_replacement
 
                 try:
-                    current_replacement(target_root, packet, packet["replacement"]["work"])
+                    if execution_choice is None:
+                        current_replacement(target_root, packet, packet["replacement"]["work"])
                 except (ValueError, OSError) as error:
                     failures.append(
                         {
@@ -1539,6 +1613,8 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
                         }
                     )
                 canonical["replacement_packet"] = packet
+                if execution_choice is not None:
+                    canonical["execution_choice"] = execution_choice
                 canonical["current_revision"] = packet["assignment_revision"]
                 canonical["target_name"] = packet["target"]
                 canonical["assignment_gate"] = {
@@ -1862,6 +1938,27 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             "implementation_allowed": False,
             "silent_local_fallback_allowed": False,
         }
+        if dry_run and execution_choice is not None:
+            result["status"] = "selection-preview"
+            result["preview"] = {"assignment_materialized": False, "replacement_packet": packet}
+            result["next_current_continuation"] = {
+                "status": "actionable",
+                "owner": "assignment-lifecycle",
+                "action": "apply-current-repair-selection",
+                "operation_invocation": {
+                    "operation_id": "assignment.reassign",
+                    "arguments": {
+                        "assignment_id": assignment_id,
+                        "assignment_revision": assignment_revision,
+                        "run_id": run_id,
+                        "configuration_revision": choice_revision,
+                        "configuration_id": choice_id,
+                        **({"configuration_parameters_json": choice_parameters} if choice_parameters is not None else {}),
+                    },
+                },
+                "implementation_allowed": False,
+                "silent_local_fallback_allowed": False,
+            }
     return result
 
 

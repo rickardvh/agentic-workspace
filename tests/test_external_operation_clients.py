@@ -50,6 +50,7 @@ from agentic_workspace.generated_operations import (
     assignment_integrate,
     assignment_override,
     assignment_reassign,
+    assignment_repair,
     assignment_status,
     config_report,
     correction_event_prune_compact,
@@ -338,6 +339,143 @@ transports = [{kind = "manual"}]
         state = json.loads(state_path.read_text(encoding="utf-8"))
         native._write(state_path, {**state, "current_state": "awaiting-admission"})
         assert ordinary()["assignment_decision"]["selected_execution_configuration"] == selected
+
+        def lifecycle(transition, arguments):
+            return (
+                _run_typescript_assignment(tmp_path, transition, arguments)
+                if runtime == "typescript"
+                else {"repair": assignment_repair, "reassign": assignment_reassign}[transition](
+                    arguments, target=tmp_path, invocation=invocation
+                )
+            )
+
+        native._write(state_path, {**state, "current_state": "dispatch-failed"})
+        prior_identity = {key: packet[key] for key in ("assignment_id", "assignment_revision", "run_id")}
+        prior_work = {key: packet["assignment_identity"][key] for key in ("slice_id", "plan_revision", "human_intent", "allowed_paths")}
+        repaired = lifecycle("repair", {**prior_identity, "reason": "The same bounded work needs another attempt."})
+        assert repaired["status"] == "repair-requested", repaired
+        assert repaired["next_current_continuation"]["action"] == "inspect-current-repair-configurations"
+        preview = lifecycle("reassign", {**prior_identity, "dry_run": True})
+        assert preview["status"] == "selection-preview", preview
+        repair_offers = preview["preview"]["execution_configurations"]
+        assert any(
+            row["eligible"] and row["configuration"]["execution"]["continuity"].get("mode") == "resume"
+            for row in repair_offers["candidates"]
+        )
+        fresh = next(
+            row["configuration"]
+            for row in repair_offers["candidates"]
+            if row["eligible"]
+            and row["configuration"]["target"] == "worker"
+            and row["configuration"]["execution"]["continuity"].get("mode") == "fresh"
+        )
+        repair_choice = {
+            **prior_identity,
+            "configuration_revision": repair_offers["revision"],
+            "configuration_id": fresh["id"],
+            "transport": "cli",
+        }
+        stale_choice = lifecycle("reassign", {**repair_choice, "configuration_revision": "stale-choice"})
+        assert stale_choice["status"] == "blocked"
+        assert any(row["reason"] == "assignment-configuration-choice-stale" for row in stale_choice["failures"])
+        custody_path = native._custody_path(tmp_path, packet["run_id"])
+        custody_bytes = custody_path.read_bytes()
+        custody = json.loads(custody_bytes)
+        native._write(custody_path, {**custody, "live": True})
+        live = lifecycle("reassign", repair_choice)
+        assert any(row["reason"] == "assignment-repair-worker-release-unconfirmed" for row in live["failures"])
+        custody_path.write_bytes(custody_bytes)
+        repair_state = json.loads(state_path.read_text(encoding="utf-8"))
+        repair_receipt_path = tmp_path / repair_state["repair_admission_ref"]
+        receipt_bytes = repair_receipt_path.read_bytes()
+        repair_receipt = json.loads(receipt_bytes)
+        repair_receipt["repair_binding"]["packet_integrity"] = "other-packet"
+        native._write(repair_receipt_path, repair_receipt)
+        tampered = lifecycle("reassign", repair_choice)
+        assert any(row["reason"] == "assignment-repair-admission-stale" for row in tampered["failures"])
+        repair_receipt_path.write_bytes(receipt_bytes)
+        source_bytes = source.read_bytes()
+        answer = {
+            "assignment_id": packet["assignment_id"],
+            "assignment_revision": packet["assignment_revision"],
+            "work_id": prior_work["slice_id"],
+            "work_revision": prior_work["plan_revision"],
+            "target": "worker",
+            "transport": "cli",
+            "execution_revision": "explicit-source-answer",
+            "packet_integrity": packet["packet_integrity"],
+        }
+        with source.open("a", encoding="utf-8") as handle:
+            handle.write("\n[delegation.replacement]\n" + "\n".join(f"{key} = {json.dumps(value)}" for key, value in answer.items()) + "\n")
+        explicit_answer = lifecycle("reassign", repair_choice)
+        assert any(row["reason"] == "assignment-repair-explicit-source-answer-pending" for row in explicit_answer["failures"])
+        source.write_bytes(source_bytes)
+        previous_plan = plan_path.read_bytes()
+        changed_plan = json.loads(previous_plan)
+        changed_plan["title"] = "Materially different work"
+        plan_path.write_text(json.dumps(changed_plan), encoding="utf-8")
+        stale_repair = lifecycle("reassign", repair_choice)
+        assert stale_repair["status"] == "blocked", stale_repair
+        assert any(row["reason"] == "assignment-repair-semantic-source-stale" for row in stale_repair["failures"])
+        plan_path.write_bytes(previous_plan)
+        owner_files = list((tmp_path / ".agentic-workspace/planning/assignments").glob("*.json")) + [state_path]
+        before_preview = {path: path.read_bytes() for path in owner_files}
+        selected_preview = lifecycle("reassign", {**repair_choice, "dry_run": True})
+        assert selected_preview["status"] == "selection-preview"
+        assert selected_preview["next_current_continuation"]["action"] == "apply-current-repair-selection"
+        assert not selected_preview["mutation_applied"]
+        assert {path: path.read_bytes() for path in owner_files} == before_preview
+        reassigned = lifecycle("reassign", repair_choice)
+        assert reassigned["status"] == "replaced", reassigned
+        assert reassigned["next_current_continuation"]["action"] == "export-current-replacement"
+        replacement = reassigned["replacement_packet"]
+        assert replacement["assignment_id"] == packet["assignment_id"]
+        assert replacement["assignment_revision"] != packet["assignment_revision"]
+        assert replacement["run_id"] != packet["run_id"]
+        next_export = export({key: replacement[key] for key in ("assignment_id", "assignment_revision", "run_id", "transport")})
+        assert next_export["status"] == "handoff-prepared", next_export
+        packet = json.loads(
+            (tmp_path / next(ref for ref in next_export["artifact_refs"] if ref.endswith("packet.json"))).read_text(encoding="utf-8")
+        )
+        assert {key: packet["assignment_identity"][key] for key in prior_work} == prior_work
+        assert packet["replacement"]["source"]["kind"] == "assignment-repair-source/v1"
+        assert plan_path.read_bytes() == previous_plan
+        assert ordinary()["assignment_decision"]["selected_execution_configuration"]["id"] == fresh["id"]
+        # A refusal before launch also permits another exact attempt; the actor
+        # can now choose the still-current persisted lineage instead of fresh.
+        with monkeypatch.context() as prelaunch:
+            prelaunch.setattr(native, "_source_revision", lambda *args, **kwargs: "changed-before-launch")
+            refusal = native.dispatch_packet(tmp_path, packet, "must not launch")
+        assert refusal["status"] == "blocked" and refusal["worker_launch_attempted"] is False
+        second_state_path = native._custody_path(tmp_path, packet["run_id"]).with_name("state.json")
+        second_state = json.loads(second_state_path.read_text(encoding="utf-8"))
+        native._write(second_state_path.parent / "dispatch/receipt.json", refusal)
+        native._write(second_state_path, {**second_state, "current_state": "dispatch-failed"})
+        second_identity = {key: packet[key] for key in ("assignment_id", "assignment_revision", "run_id")}
+        assert (
+            lifecycle("repair", {**second_identity, "reason": "Retry the same work after a pre-launch refusal."})["status"]
+            == "repair-requested"
+        )
+        second_offers = lifecycle("reassign", {**second_identity, "dry_run": True})["preview"]["execution_configurations"]
+        resume = next(
+            row["configuration"]
+            for row in second_offers["candidates"]
+            if row["eligible"]
+            and row["configuration"]["target"] == "worker"
+            and row["configuration"]["execution"]["continuity"].get("mode") == "resume"
+        )
+        second_replacement = lifecycle(
+            "reassign",
+            {**second_identity, "configuration_revision": second_offers["revision"], "configuration_id": resume["id"], "transport": "cli"},
+        )
+        assert second_replacement["status"] == "replaced", second_replacement.get("failures")
+        replacement = second_replacement["replacement_packet"]
+        second_export = export({key: replacement[key] for key in ("assignment_id", "assignment_revision", "run_id", "transport")})
+        assert second_export["status"] == "handoff-prepared", second_export.get("failures")
+        packet = second_replacement["replacement_packet"]
+        assert {key: packet["assignment_identity"][key] for key in prior_work} == prior_work
+        assert packet["assignment_identity"]["dispatch_adapter"]["execution_configuration"]["execution"]["continuity"]["mode"] == "resume"
+        assert plan_path.read_bytes() == previous_plan
     source.write_text(source.read_text().replace('target_revision = "1"', 'target_revision = "2"'))
     before = {p: p.read_bytes() for p in (tmp_path / ".agentic-workspace/local/assignment-runs").rglob("*") if p.is_file()}
     blocked = export(
