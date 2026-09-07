@@ -1324,7 +1324,7 @@ candidates = []
     )
 
     compact = json.loads(capsys.readouterr().out)
-    assert set(compact) == {"kind", "target", "decision_packet"}
+    assert set(compact) == {"kind", "target", "decision_packet", "task_assignment_disposition"}
     assert compact["decision_packet"]["owner"]["identity"]["ref"] == plan_path
 
     assert (
@@ -1623,7 +1623,7 @@ def test_implement_compact_omits_routine_stay_local_delegation_noise(tmp_path: P
     )
 
     payload = json.loads(capsys.readouterr().out)
-    assert set(payload) == {"kind", "target", "decision_packet"}
+    assert set(payload) == {"kind", "target", "decision_packet", "task_assignment_disposition"}
     assert "delegation_decision" not in payload["decision_packet"]
     assert "context.delegation_decision" not in payload["decision_packet"]["detail_routes"]
 
@@ -3282,7 +3282,7 @@ def test_implement_readme_change_omits_generated_cli_freshness(tmp_path: Path, c
     )
 
     payload = json.loads(capsys.readouterr().out)
-    assert set(payload) == {"kind", "target", "decision_packet"}
+    assert set(payload) == {"kind", "target", "decision_packet", "task_assignment_disposition"}
     assert not any(item.get("signal") == "generated CLI freshness" for item in payload["decision_packet"].get("attention", []))
 
 
@@ -3569,7 +3569,7 @@ blocking_claims = ["claim-work-complete"]
 
         payload = json.loads(capsys.readouterr().out)
         assert payload["kind"] == "implementer-context-tiny/v1", field
-        assert set(payload) == {"kind", "target", "decision_packet"}, field
+        assert set(payload) == {"kind", "target", "decision_packet", "task_assignment_disposition"}, field
         assert field not in payload, field
         for selector in expected_selectors:
             assert payload["decision_packet"]["detail_routes"]["selector_inventory"], selector
@@ -3604,7 +3604,7 @@ def test_implement_default_stays_under_tiny_output_budget_for_docs_task(tmp_path
 
     _assert_json_payload_under(payload, 10_000, label="implement decision-sized docs-task payload", sort_keys=False)
     assert payload["kind"] == "implementer-context-tiny/v1"
-    assert set(payload) == {"kind", "target", "decision_packet"}
+    assert set(payload) == {"kind", "target", "decision_packet", "task_assignment_disposition"}
     decision = payload["decision_packet"]
     assert decision["action"]["summary"]
     assert decision["working_set"]["changed_paths"] == ["README.md"]
@@ -3641,7 +3641,7 @@ def test_implement_default_stays_under_tiny_output_budget_for_code_task(tmp_path
 
     _assert_json_payload_under(payload, 10_000, label="implement decision-sized code-task payload", sort_keys=False)
     assert payload["kind"] == "implementer-context-tiny/v1"
-    assert set(payload) == {"kind", "target", "decision_packet"}
+    assert set(payload) == {"kind", "target", "decision_packet", "task_assignment_disposition"}
     decision = payload["decision_packet"]
     assert decision["working_set"]["changed_paths"] == ["src/app.py"]
     assert decision["identity"]["mutation_baseline"]["baseline_id"]
@@ -3680,7 +3680,7 @@ def test_generated_ordinary_implement_guidance_is_executable_from_default_decisi
     )
     payload = json.loads(capsys.readouterr().out)
 
-    assert set(payload) == {"kind", "target", "decision_packet"}
+    assert set(payload) == {"kind", "target", "decision_packet", "task_assignment_disposition"}
     decision = payload["decision_packet"]
     assert decision["working_set"]["changed_paths"] == ["src/app.py"]
     assert decision["working_set"]["allowed_paths"] == ["src/app.py"]
@@ -3788,7 +3788,7 @@ def test_implement_broad_runtime_scope_returns_authoritative_deferred_decision(
     payload = json.loads(capsys.readouterr().out)
 
     assert payload["kind"] == "implementer-context-tiny/v1"
-    assert set(payload) == {"kind", "target", "decision_packet"}
+    assert set(payload) == {"kind", "target", "decision_packet", "task_assignment_disposition"}
     decision = payload["decision_packet"]
     assert decision["effects"]["implementation_allowed"] is True
     assert len(decision["working_set"]["changed_paths"]) == 4
@@ -4032,7 +4032,7 @@ def test_broad_deferred_implement_reuses_authoritative_observations_once(tmp_pat
 
     payload = _run_broad_implement_for_review_parity(tmp_path, capsys, task="Update runtime contracts")
 
-    assert set(payload) == {"kind", "target", "decision_packet"}
+    assert set(payload) == {"kind", "target", "decision_packet", "task_assignment_disposition"}
     assert len(payload["decision_packet"]["working_set"]["changed_paths"]) == 4
     assert planning_call_count <= 1
     assert all(count <= 1 for count in git_call_counts.values())
@@ -4162,7 +4162,7 @@ def test_implement_tiny_profile_defers_reuse_pressure_scan(tmp_path: Path, monke
     assert cli.main(["implement", "--target", str(tmp_path), "--changed", "README.md", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    assert set(payload) == {"kind", "target", "decision_packet"}
+    assert set(payload) == {"kind", "target", "decision_packet", "task_assignment_disposition"}
     assert payload["decision_packet"]["absence_states"]["diagnostics_and_assurance"] == "selector-routed"
 
 
@@ -4196,7 +4196,7 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     )
 
     payload = json.loads(capsys.readouterr().out)
-    assert set(payload) == {"kind", "target", "decision_packet"}
+    assert set(payload) == {"kind", "target", "decision_packet", "task_assignment_disposition"}
     decision = payload["decision_packet"]
     assert decision["kind"] == "agentic-workspace/ordinary-implement-decision/v1"
     assert decision["surface"] == "implement"
@@ -4494,7 +4494,7 @@ def test_implement_keeps_active_intent_packets_selector_only(tmp_path: Path, cap
     )
 
     payload = json.loads(capsys.readouterr().out)
-    assert set(payload) == {"kind", "target", "decision_packet"}
+    assert set(payload) == {"kind", "target", "decision_packet", "task_assignment_disposition"}
     assert "active_intent_contract" not in payload
     assert "intent_satisfaction_matrix" not in payload
     assert "--select" in payload["decision_packet"]["detail_routes"]["select"]
@@ -4905,6 +4905,8 @@ def test_implement_objective_drift_understands_replacement_and_removal_terms(tmp
                 "src/api.py",
                 "--task",
                 "Use `embed=children` instead of `include_children=true`. Remove `include_children`.",
+                "--select",
+                "context",
                 "--format",
                 "json",
             ]
@@ -4936,7 +4938,8 @@ def test_implement_objective_drift_warns_when_replacement_target_is_absent(tmp_p
                 "src/api.py",
                 "--task",
                 "Replace `include_children=true` with `embed=children`.",
-                "--verbose",
+                "--select",
+                "context",
                 "--format",
                 "json",
             ]
@@ -7436,7 +7439,7 @@ def test_implement_architecture_principle_uses_structured_path_not_task_keywords
     )
 
     tiny_payload = json.loads(capsys.readouterr().out)
-    assert set(tiny_payload) == {"kind", "target", "decision_packet"}
+    assert set(tiny_payload) == {"kind", "target", "decision_packet", "task_assignment_disposition"}
     assert not any(item["signal"] == "architecture principle applies" for item in tiny_payload["decision_packet"].get("attention", []))
 
 
@@ -8382,7 +8385,7 @@ def test_implement_tiny_omits_not_applicable_test_strategy_advisory(tmp_path: Pa
     )
 
     payload = json.loads(capsys.readouterr().out)
-    assert set(payload) == {"kind", "target", "decision_packet"}
+    assert set(payload) == {"kind", "target", "decision_packet", "task_assignment_disposition"}
     assert payload["decision_packet"]["absence_states"]["diagnostics_and_assurance"] == "selector-routed"
 
 
@@ -9269,7 +9272,22 @@ candidates = []
             "id": "delegated-config",
             "title": "Delegated config",
             "revision": 2,
+            "owner_level": "slice",
+            "lifecycle": "live",
+            "phase": "implementation",
+            "intent": {"outcome": "Update delegation config schema"},
+            "next_action": "Update delegation config schema",
+            "proof": {"claims": ["The delegated configuration update is independently verified."]},
             "touched_paths": ["src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json"],
+        },
+    )
+    _write_json(
+        tmp_path / ".agentic-workspace/local/planning/owner-selection.json",
+        {
+            "kind": "agentic-planning/owner-selection/v1",
+            "mode": "local",
+            "current_work_id": "fixture",
+            "selected_owner": {"id": "delegated-config", "ref": plan_ref},
         },
     )
     _write(
@@ -9324,7 +9342,7 @@ candidates = []
     posture = payload["execution_posture"]
     decision = payload["delegation_decision"]
     assert posture["assignment_policy"]["current_target_status"] == "known-profile"
-    assert posture["assignment_decision"]["decision"] == "assign-or-escalate"
+    assert posture["assignment_decision"]["decision"] == "manual-handoff"
     assert posture["assignment_gate"]["status"] == "handoff-required"
     assert posture["assignment_gate"]["implementation_allowed"] is False
     assert posture["assignment_gate"]["required_next_action"] == "prepare-assigned-handoff"
@@ -9348,10 +9366,14 @@ candidates = []
             [
                 "assignment",
                 "export",
+                "--transport",
+                "manual",
                 "--target",
                 str(tmp_path),
                 "--task",
                 "update delegation config schema",
+                "--changed",
+                "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
                 "--format",
                 "json",
             ]
@@ -9359,7 +9381,7 @@ candidates = []
         == 0
     )
     first_export = json.loads(capsys.readouterr().out)
-    assert first_export["status"] == "handoff-prepared"
+    assert first_export["status"] == "handoff-prepared", {k: first_export.get(k) for k in ("status", "reason_code", "failures")}
     assignment_files = list((tmp_path / ".agentic-workspace" / "planning" / "assignments").glob("*.assignment.json"))
     assert len(assignment_files) == 1
     first_assignment = json.loads(assignment_files[0].read_text(encoding="utf-8"))
@@ -9376,10 +9398,14 @@ candidates = []
             [
                 "assignment",
                 "export",
+                "--transport",
+                "manual",
                 "--target",
                 str(tmp_path),
                 "--task",
                 "update delegation config schema",
+                "--changed",
+                "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
                 "--format",
                 "json",
             ]
@@ -9396,6 +9422,8 @@ candidates = []
             [
                 "assignment",
                 "export",
+                "--transport",
+                "manual",
                 "--target",
                 str(tmp_path),
                 "--task",
@@ -9440,6 +9468,7 @@ def test_implement_required_best_fit_compiles_authorized_automatic_dispatch(tmp_
                 'assignment_policy = "required-best-fit"',
                 'current_target = "orchestrator"',
                 'mode = "auto"',
+                'transport_authority = "automatic"',
                 'manual_transport_policy = "disabled"',
                 "",
                 "[delegation_targets.orchestrator]",
@@ -9454,9 +9483,7 @@ def test_implement_required_best_fit_compiles_authorized_automatic_dispatch(tmp_
                 'provider = "codex"',
                 'capability_classes = ["boundary-shaping", "reasoning-heavy"]',
                 'execution_methods = ["cli"]',
-                'dispatch_adapter_kind = "process"',
-                'dispatch_command = ["worker-bridge", "--output", "{output_file}"]',
-                'dispatch_output_mode = "json-file"',
+                f'transports = [{{kind="process", command={json.dumps([__import__("sys").executable, "-c", "pass"])}}}]',
             ]
         ),
     )
@@ -11020,6 +11047,7 @@ def test_implement_auto_delegation_exposes_bounded_slice_handoff(tmp_path: Path,
                 "",
                 "[delegation]",
                 'mode = "auto"',
+                'transport_authority = "automatic"',
                 "",
                 "[runtime]",
                 "supports_internal_delegation = true",
@@ -11035,6 +11063,7 @@ def test_implement_auto_delegation_exposes_bounded_slice_handoff(tmp_path: Path,
                 'task_fit = ["bounded implementation", "validation"]',
                 'capability_classes = ["mixed", "mechanical-follow-through"]',
                 'execution_methods = ["cli"]',
+                f'transports = [{{kind="process", command={json.dumps([__import__("sys").executable, "-c", "pass"])}}}]',
             ]
         ),
     )
@@ -11076,7 +11105,7 @@ def test_implement_auto_delegation_exposes_bounded_slice_handoff(tmp_path: Path,
     assert decision["handoff_command"] == "agentic-workspace planning handoff --target . --format json"
     assert decision["delegation_next_step"]["status"] == "executable"
     assert decision["delegation_next_step"]["must_report_if_not_run"] is True
-    assert decision["delegation_next_step"]["execution_methods"] == ["cli"]
+    assert decision["delegation_next_step"]["execution_methods"] == ["cli", "manual"]
     assert "bounded work" in decision["reason"]
 
 
