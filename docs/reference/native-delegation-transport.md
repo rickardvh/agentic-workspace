@@ -194,3 +194,49 @@ budget when full legacy detail was included. Both gaps were corrected, with publ
 Python/TypeScript choice coverage and more than eight candidates. The verbose
 fallback was 2046293 bytes; complete selected output was 21584 bytes. These are AW
 serialization measurements, not token-price or credit-saving estimates.
+
+## Adapter parameter choices and usage scope
+
+The ordinary configuration selector carries adapter-owned `parameter_options`.
+Assignment export/dispatch accept `configuration_parameters_json` alongside the
+current `configuration_revision` and `configuration_id`. For example,
+`{"reasoning_effort":"low","timeout_seconds":90}` is constructible only when that
+exact adapter offer permits it. The source host validates the base revision and
+adapter parameters, then re-enters shared eligibility and configuration fingerprinting.
+The choice is local to the semantic assignment; it neither edits standing policy nor
+changes the selected target, history guarantee, or continuity topology. Generic
+process/manual routes do not pretend to support native parameterization.
+
+Codex discovers supported efforts and suggested defaults from its installed model
+catalog, and resolves effective provider settings for the target working directory.
+The selected effort is explicit in the sealed configuration and provider turn.
+Unknown effective settings require an explicit configured effort or exclude that
+implicit native route. Parameter choices do not produce a Cartesian offer list.
+The timeout bounds the model turn, with separately bounded setup and process cleanup;
+it cannot exceed the configured adapter timeout or this adapter's 1800-second ceiling.
+
+Codex `last` usage describes the latest model response; `total` accumulates responses
+([matching provider source](https://github.com/openai/codex/blob/rust-v0.153.4/codex-rs/protocol/src/protocol.rs)).
+Fresh native dispatch records cumulative counters for its exact turn. Resume, fork
+and restart lack a proven pre-turn baseline here, so their whole-worker token counts
+remain unknown. Duplicate updates do not add cumulative counters again. Neither
+scope is a monetary estimate. A metadata-only query of the installed account usage
+endpoint for the exact interrupted worker returned no thread usage; that does not
+mean zero cost and does not justify reading unrelated account activity.
+
+The parameterized ordinary host check on Codex 0.153.4 selected Sol, explicit low
+effort, ephemeral execution and a 90-second turn deadline through public export.
+It timed out without a structured return after 91347 ms. The fresh cumulative
+observations were 103262 input, 73088 cached input and 1522 output tokens. This is
+censored counterevidence, not successful delegation, target failure evidence or a
+savings comparison against the earlier last-response counters. Monetary cost and
+orientation/repair burden remain unknown. Exact cleanup reported `not-stored`,
+retained semantic assignment state, and deleted no provider state. No further
+provider inference was used to guess the cause.
+
+Active-turn expiry is now distinguished from initial control-plane response timeout.
+After a graceful close deadline, the native adapter terminates the owned Windows
+launcher tree or POSIX process group; it does not treat killing only a launcher as
+proof of worker release. An unconfirmed forced release leaves custody pending.
+The Windows launcher/child termination fixture uses owned non-provider processes.
+It is not a live-provider interrupt/steer proof.

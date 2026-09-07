@@ -673,11 +673,22 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
     assignment_revision = _optional_text(values.get("assignment_revision"))
     choice_revision = _optional_text(values.get("configuration_revision"))
     choice_id = _optional_text(values.get("configuration_id"))
-    execution_choice = None
-    if choice_revision or choice_id:
+    choice_parameters = values.get("configuration_parameters_json")
+    execution_choice: dict[str, Any] | None = None
+    if choice_revision or choice_id or choice_parameters is not None:
         if not choice_revision or not choice_id or transition not in {"dispatch", "export"} or assignment_id:
             raise PrimitiveExecutionError("configuration-choice-requires-both-fields-and-new-assignment")
         execution_choice = {"revision": choice_revision, "candidate": choice_id}
+        if choice_parameters is not None:
+            if not isinstance(choice_parameters, str) or len(choice_parameters) > 4096:
+                raise PrimitiveExecutionError("configuration-parameters-must-be-bounded-json-object")
+            try:
+                parameters = json.loads(choice_parameters)
+            except (TypeError, ValueError) as error:
+                raise PrimitiveExecutionError("configuration-parameters-must-be-json-object") from error
+            if not isinstance(parameters, dict):
+                raise PrimitiveExecutionError("configuration-parameters-must-be-json-object")
+            execution_choice["parameters"] = parameters
     if transition in {"dispatch", "export"} and not assignment_id:
         from agentic_workspace import config as config_lib
         from agentic_workspace.workspace_runtime_core import _execution_posture_payload

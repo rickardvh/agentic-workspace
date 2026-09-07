@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Bind adapter-owned parameter choices to current execution offers and avoid last-response usage masquerading as whole-worker cost."
+issues = [2210, 2818, 2947, 2767, 2909]

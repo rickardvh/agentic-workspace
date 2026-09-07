@@ -70,8 +70,94 @@ from agentic_workspace.workspace_runtime_proof import (
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _install_metadata_only_codex(root: Path, monkeypatch) -> Path:
+    """Cross-host synthetic CLI: discovery only, never a supported-host claim."""
+    directory = root / "fixture-bin"
+    directory.mkdir()
+    script = directory / "metadata_codex.py"
+    audit = directory / "methods.txt"
+    script.write_text(
+        """import json, sys
+from pathlib import Path
+if "--version" in sys.argv:
+    with Path(__file__).with_name("methods.txt").open("a") as log:
+        log.write("version\\n")
+    print("fixture-codex-1")
+elif "generate-json-schema" in sys.argv:
+    directory = Path(sys.argv[sys.argv.index("--out") + 1]) / "v2"
+    directory.mkdir(parents=True)
+    fields = {
+        "ThreadStartParams": ["cwd", "model", "sandbox", "approvalPolicy", "ephemeral"],
+        "TurnStartParams": ["threadId", "input", "outputSchema", "model", "approvalPolicy", "effort"],
+        "ConfigReadParams": ["cwd", "includeLayers"],
+    }
+    for name, keys in fields.items():
+        (directory / (name + ".json")).write_text(json.dumps({"properties": dict.fromkeys(keys, {})}))
+else:
+    for line in sys.stdin:
+        request = json.loads(line)
+        method = request["method"]
+        with Path(__file__).with_name("methods.txt").open("a") as log:
+            log.write(method + "\\n")
+        if "id" not in request:
+            continue
+        if method == "initialize":
+            result = {}
+        elif method == "model/list":
+            result = {"data": [{"model": "fixture-model", "defaultReasoningEffort": "low", "supportedReasoningEfforts": [{"reasoningEffort": "low"}, {"reasoningEffort": "medium"}]}]}
+        elif method == "config/read":
+            assert request["params"]["cwd"]
+            result = {"config": {"model_reasoning_effort": "medium", "unrelated_secret": "must-not-be-retained"}}
+        else:
+            raise RuntimeError("No worker execution in this fixture: " + method)
+        print(json.dumps({"id": request["id"], "result": result}), flush=True)
+""",
+        encoding="utf-8",
+    )
+    executable = directory / ("codex.cmd" if os.name == "nt" else "codex")
+    executable.write_text(
+        f'@"{sys.executable}" "{script}" %*\n' if os.name == "nt" else "#!/usr/bin/env python3\n" + script.read_text(),
+        encoding="utf-8",
+    )
+    executable.chmod(0o755)
+    monkeypatch.setenv("PATH", str(directory) + os.pathsep + os.environ.get("PATH", ""))
+    return audit
+
+
+def test_native_discovery_scope_reuses_metadata_but_rechecks_the_next_operation(tmp_path: Path, monkeypatch) -> None:
+    from agentic_workspace import native_transport as native
+
+    audit = _install_metadata_only_codex(tmp_path, monkeypatch)
+    with native.discovery_scope():
+        first = native.discover(tmp_path)
+        assert native.discover(tmp_path) == first
+    methods = audit.read_text().splitlines()
+    assert methods.count("version") == 1
+    assert methods.count("model/list") == 1
+    assert native.discover(tmp_path) == first
+    methods = audit.read_text().splitlines()
+    assert methods.count("version") == 2
+    assert methods.count("model/list") == 1
+    with native.discovery_scope():
+        refreshed = native.discover(tmp_path, refresh=True)
+        assert native.discover(tmp_path) == refreshed
+    methods = audit.read_text().splitlines()
+    assert methods.count("version") == 3
+    assert methods.count("model/list") == 2
+    for path in (audit.parent / "metadata_codex.py", audit.parent / "codex"):
+        if path.exists():
+            path.write_text(path.read_text().replace("fixture-codex-1", "fixture-codex-2"))
+    changed = native.discover(tmp_path)
+    assert changed["identity"] != first["identity"]
+    assert changed["revision"] != first["revision"]
+    assert audit.read_text().splitlines().count("version") == 4
+
+
 @pytest.mark.parametrize("runtime", ["python", "typescript"])
-def test_ordinary_configuration_choice_persists_and_source_change_blocks(tmp_path: Path, runtime: str, capsys) -> None:
+@pytest.mark.parametrize("native_parameters", [False, True])
+def test_ordinary_configuration_choice_persists_and_source_change_blocks(
+    tmp_path: Path, runtime: str, native_parameters: bool, capsys, monkeypatch
+) -> None:
     from agentic_workspace.config import load_workspace_config
     from agentic_workspace.workspace_runtime_core import _execution_posture_payload
 
@@ -95,6 +181,18 @@ strength = "strong"
 location = "external"
 transports = [{kind = "manual"}]
 """)
+    audit = None
+    if native_parameters:
+        audit = _install_metadata_only_codex(tmp_path, monkeypatch)
+        source.write_text(
+            source.read_text()
+            .replace('transport_authority = "manual"', 'transport_authority = "automatic"')
+            .replace(
+                'transports = [{kind = "manual"}]',
+                'provider = "openai"\nmodel_family = "fixture-model"\ntransports = [{kind = "native", adapter = "codex-app-server/v1", parameters = {model = "fixture-model"}}]',
+            )
+            + "\n[safety]\nsafe_to_auto_run_commands = true\n"
+        )
     with source.open("a") as handle:
         for index in range(8):
             handle.write(
@@ -151,35 +249,53 @@ transports = [{kind = "manual"}]
     values = {
         "task": task,
         "changed": ["src/feature.py"],
-        "transport": "manual",
+        "transport": "cli" if native_parameters else "manual",
         "configuration_revision": offers["revision"],
         "configuration_id": chosen["id"],
     }
+    if native_parameters:
+        assert chosen["execution"]["continuity"]["parameters"]["reasoning_effort"] == "medium"
+        values["configuration_parameters_json"] = json.dumps({"reasoning_effort": "low", "timeout_seconds": 90})
 
     def export(arguments):
-        return (
-            _run_typescript_assignment(tmp_path, "export", arguments)
-            if runtime == "typescript"
-            else assignment_export(arguments, target=tmp_path, invocation=invocation)
-        )
+        try:
+            return (
+                _run_typescript_assignment(tmp_path, "export", arguments)
+                if runtime == "typescript"
+                else assignment_export(arguments, target=tmp_path, invocation=invocation)
+            )
+        except AWClientError as error:
+            pytest.fail(json.dumps(error.details))
 
     before_dry_run = {p: p.read_bytes() for p in (tmp_path / ".agentic-workspace").rglob("*") if p.is_file()}
     dry = export({**values, "dry_run": True})
     assert dry["mutation_applied"] is False
     assert dry["status"] == "selection-preview"
-    assert dry["preview"]["selected_configuration"] == chosen
+    selected = dry["preview"]["selected_configuration"]
+    if native_parameters:
+        assert selected["id"] != chosen["id"]
+        assert selected["execution"]["comparison_context"] != chosen["execution"]["comparison_context"]
+        assert selected["execution"]["continuity"]["parameters"] == {
+            "model": "fixture-model",
+            "reasoning_effort": "low",
+            "timeout_seconds": 90,
+        }
+        assert selected["execution"]["history"] == chosen["execution"]["history"]
+        assert selected["target"] == chosen["target"]
+    else:
+        assert selected == chosen
     assert dry["preview"]["assignment_materialized"] is False
     assert before_dry_run == {p: p.read_bytes() for p in (tmp_path / ".agentic-workspace").rglob("*") if p.is_file()}
     exported = export(values)
     assert exported["status"] == "handoff-prepared", json.dumps(exported.get("failures"))
     packet_ref = next(ref for ref in exported["artifact_refs"] if str(ref).endswith("packet.json"))
     packet = json.loads((tmp_path / packet_ref).read_text())
-    assert packet["assignment_identity"]["dispatch_adapter"]["execution_configuration"] == chosen
-    assert ordinary()["assignment_decision"]["selected_execution_configuration"] == chosen
+    assert packet["assignment_identity"]["dispatch_adapter"]["execution_configuration"] == selected
+    assert ordinary()["assignment_decision"]["selected_execution_configuration"] == selected
     resumed = _execution_posture_payload(
         config=load_workspace_config(target_root=tmp_path), target_root=tmp_path, task_text=None, changed_paths=[]
     )
-    assert resumed["assignment_decision"]["selected_execution_configuration"] == chosen
+    assert resumed["assignment_decision"]["selected_execution_configuration"] == selected
     unrelated = _execution_posture_payload(
         config=load_workspace_config(target_root=tmp_path), target_root=tmp_path, task_text=None, changed_paths=["src/other.py"]
     )
@@ -191,12 +307,16 @@ transports = [{kind = "manual"}]
             "assignment_id": packet["assignment_id"],
             "assignment_revision": packet["assignment_revision"],
             "run_id": packet["run_id"],
-            "transport": "manual",
+            "transport": values["transport"],
         },
     )
     assert blocked["status"] == "blocked", blocked
     assert any(item["reason"] == "assignment-configuration-source-stale" for item in blocked["failures"])
     assert before == {p: p.read_bytes() for p in (tmp_path / ".agentic-workspace/local/assignment-runs").rglob("*") if p.is_file()}
+    if audit is not None:
+        assert set(audit.read_text().splitlines()) <= {"version", "initialize", "initialized", "model/list", "config/read"}
+        capabilities = tmp_path / ".agentic-workspace/local/transport-capabilities"
+        assert all("must-not-be-retained" not in path.read_text() for path in capabilities.glob("*.json"))
 
 
 def test_assignment_status_is_exact_read_only_and_reports_current_stale_missing_and_cleaned_up_runs(tmp_path: Path) -> None:
