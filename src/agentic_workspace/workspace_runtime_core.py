@@ -45582,6 +45582,26 @@ def _current_assignment_selection(
             "posture": {**posture["posture"], "execution class": work_identity["task_class"], "scope class": work_identity["scope_class"]},
         }
     runtime_resolution = _runtime_resolution_payload(config=config, capability_posture=posture["posture"])
+    if config.target_root is not None and config.local_override.delegation_targets:
+        from agentic_workspace.assignment_source import current_route_configurations
+
+        work = (
+            {"id": work_identity["slice_id"], "revision": str(work_identity["plan_revision"])}
+            if work_identity is not None
+            else {
+                "id": "direct-task",
+                "revision": hashlib.sha256(
+                    json.dumps({"task": task_text, "paths": sorted(changed_paths)}, sort_keys=True).encode()
+                ).hexdigest(),
+            }
+        )
+        configurations = current_route_configurations(
+            config.target_root, runtime_resolution["profile_recommendations"], config.local_override, work
+        )
+        for profile in runtime_resolution["profile_recommendations"]:
+            profile["execution_configurations"] = [
+                row for row in configurations.get("candidates", []) if row["configuration"]["target"] == profile["name"]
+            ]
     assignment_policy = _assignment_policy_payload(config.local_override, list(runtime_resolution.get("profile_recommendations", [])))
     outcome_records: tuple[DelegationOutcomeRecord, ...] = ()
     if config.target_root is not None:
@@ -45903,6 +45923,7 @@ def _execution_posture_payload(
             "allowed_effects": allowed_effects,
             "allowed_paths": assignment_paths,
             "dispatch_adapter": {
+                "execution_configuration": assignment_decision.get("selected_execution_configuration"),
                 "kind": str((target or {}).get("dispatch_adapter_kind") or ""),
                 "command": list((target or {}).get("dispatch_command") or []),
                 "output_mode": str((target or {}).get("dispatch_output_mode") or "stdout"),

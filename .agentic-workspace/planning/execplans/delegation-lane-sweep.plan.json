@@ -1,0 +1,109 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "delegation-lane-sweep",
+  "title": "Reconstruct delegation execution configurations, transport continuity and attributed completion evidence",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "implementation",
+  "revision": 3,
+  "intent": {
+    "outcome": "Create a bounded plan for Reconstruct delegation execution configurations, transport continuity and attributed completion evidence.",
+    "non_goals": [
+      "Leave adjacent backlog or follow-on work out of this plan."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "Create a bounded plan for Reconstruct delegation execution configurations, transport continuity and attributed completion evidence.",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "Fill in the concrete files before implementation starts."
+    ],
+    "effects": []
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected-local",
+      "owner": "delegation-lane-sweep"
+    },
+    "proof_posture": {
+      "state": "pending",
+      "refs": []
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    },
+    "delegation": {
+      "state": "recorded",
+      "route": "keep-local",
+      "reason": "Current host selects this orchestrator for cross-owner implementation; no configured independent execution candidate exists in this isolated worktree. Independent PR review remains pending; native provider dogfood will use canonical assignment transport.",
+      "scope": "active-plan-work-unit",
+      "parent_task_custody": "retained-current",
+      "bounded_child_authority": "separate-binding-decision"
+    }
+  },
+  "references": [],
+  "next_action": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Reconstruct delegation execution configurations, transport continuity and attributed completion evidence is implemented, validated, and closed out honestly."
+    ],
+    "requirements": [
+      "Fill in the narrowest command that proves the promoted work."
+    ],
+    "refs": []
+  },
+  "continuation": {
+    "owner": "none",
+    "residual_intent": "none"
+  },
+  "specialist_contracts": [
+    {
+      "kind": "planning-delegation/v1",
+      "target": "planning://delegation/keep-local",
+      "revision": 1
+    }
+  ],
+  "goal": [
+    "Exhaust coherent delegation lane through proved stacked PRs from reconstruct/foundation-contract: execution configurations, native continuity, bounded context, attributed lifecycle burden and conformance."
+  ],
+  "non_goals": [
+    "No merge, master modification, provider transcript store, session manager, global ranking or self-approval."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "Current source-owned best-fit delegation with constructible native continuity and attributed total-completion evidence.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "Existing issues #2916 #2210 #2817 #2947 #2818 #2209 #2967 #2767 #2970 #2334 #2909; stack closeout map"
+  },
+  "execution_bounds": {
+    "allowed paths": "crates/agentic-workspace-core, src/agentic_workspace, tests, packages/planning, packages/verification, generated, scripts, docs, .agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json",
+    "max changed files": "120 authored plus generated outputs across coherent layers",
+    "required validation commands": "AW selected proof per layer; Rust core tests; focused public Python/TypeScript parity; real installed Codex capability and execution evidence",
+    "ask-before-refactor threshold": "Unrelated owner redesign or genuinely unknowable human/domain semantics",
+    "stop before touching": "master, merges, human review approval, unrelated active Planning owners, provider transcripts"
+  },
+  "touched_paths": [
+    "crates/agentic-workspace-core",
+    "src/agentic_workspace",
+    "tests",
+    "generated",
+    "scripts",
+    "docs"
+  ],
+  "validation_commands": [
+    "cargo test --manifest-path crates/agentic-workspace-core/Cargo.toml",
+    "uv run --frozen --active --no-sync pytest tests/test_shared_core.py tests/test_external_operation_clients.py",
+    "AW selected proof for exact changed paths"
+  ],
+  "completion_criteria": [
+    "Each layer is independently reviewable with proof before stacking further.",
+    "Continuation capability and currentness fail closed; provider flags remain adapter owned.",
+    "Report exact merge order, partial versus closable issues, inherited failures and genuine blockers; independent PR review remains pending."
+  ]
+}

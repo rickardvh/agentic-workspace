@@ -6,6 +6,125 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
+/// Source-owned feasibility is checked before any economic comparison. The
+/// adapter owns parameter meanings; core binds their exact admitted identity.
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Configurations {
+    work: Value,
+    required_result_classes: Vec<String>,
+    required_proof_classes: Vec<String>,
+    independent_context: bool,
+    candidates: Vec<ExecutionCandidate>,
+    selection: Option<ConfigurationSelection>,
+}
+
+#[derive(Deserialize, serde::Serialize)]
+#[serde(deny_unknown_fields)]
+struct ExecutionCandidate {
+    id: String,
+    target: String,
+    transport: String,
+    capability_revision: String,
+    current: bool,
+    authorized: bool,
+    safe: bool,
+    constructible: bool,
+    result_classes: Vec<String>,
+    proof_classes: Vec<String>,
+    independent_context: bool,
+    concurrency_available: bool,
+    execution: Value,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ConfigurationSelection {
+    revision: String,
+    candidate: String,
+}
+
+pub fn configurations(value: Value) -> Result<Value, CoreError> {
+    let input: Configurations =
+        serde_json::from_value(value.clone()).map_err(|e| CoreError::new(e.to_string()))?;
+    if !nonempty(&input.work["id"]) || !nonempty(&input.work["revision"]) {
+        return Ok(blocked("assignment-work-identity-required"));
+    }
+    let mut seen = std::collections::BTreeSet::new();
+    let mut rows = Vec::new();
+    for candidate in input.candidates {
+        if candidate.id.is_empty()
+            || !seen.insert(candidate.id.clone())
+            || candidate.target.is_empty()
+            || candidate.transport.is_empty()
+            || candidate.capability_revision.is_empty()
+            || !candidate.execution.is_object()
+        {
+            return Ok(blocked("assignment-configuration-identity-invalid"));
+        }
+        let mut reasons = Vec::new();
+        for (allowed, reason) in [
+            (candidate.current, "capability-not-current"),
+            (candidate.authorized, "transport-not-authorized"),
+            (candidate.safe, "independent-safety-ceiling"),
+            (candidate.constructible, "execution-return-unconstructible"),
+            (
+                candidate.concurrency_available,
+                "exclusive-lineage-unavailable",
+            ),
+            (
+                !input.independent_context || candidate.independent_context,
+                "independent-context-required",
+            ),
+            (
+                input
+                    .required_result_classes
+                    .iter()
+                    .all(|v| candidate.result_classes.contains(v)),
+                "result-class-unavailable",
+            ),
+            (
+                input
+                    .required_proof_classes
+                    .iter()
+                    .all(|v| candidate.proof_classes.contains(v)),
+                "proof-class-unavailable",
+            ),
+        ] {
+            if !allowed {
+                reasons.push(reason);
+            }
+        }
+        rows.push(
+            json!({"configuration":candidate,"eligible":reasons.is_empty(),"reasons":reasons}),
+        );
+    }
+    // Selected topology, opaque parameters, readiness and semantic requirements
+    // all participate. A choice cannot survive a material change or another work.
+    let revision = hash(&json!({"work":input.work,"requirements":{
+        "results":input.required_result_classes,"proof":input.required_proof_classes,
+        "independent_context":input.independent_context},"candidates":rows}));
+    let selected = if let Some(selection) = input.selection {
+        if selection.revision != revision {
+            return Ok(blocked("assignment-configuration-choice-stale"));
+        }
+        let row = rows
+            .iter()
+            .find(|v| v["configuration"]["id"] == selection.candidate);
+        match row {
+            Some(row) if row["eligible"] == true => row["configuration"].clone(),
+            _ => return Ok(blocked("assignment-configuration-choice-ineligible")),
+        }
+    } else {
+        Value::Null
+    };
+    Ok(
+        json!({"kind":"agentic-workspace/execution-configurations/v1","revision":revision,
+        "candidates":rows,"selected":selected,"selection_authority":"acting-orchestrator",
+        "claim_boundary":"feasibility only; no launch, proof or completion authority"}),
+    )
+}
+
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Input {

@@ -113,6 +113,11 @@ def replace_assignment(context: Mapping[str, Any]) -> dict[str, Any]:
     return _request({"replace_assignment": context})
 
 
+def execution_configurations(context: Mapping[str, Any]) -> dict[str, Any]:
+    """Trusted adapter facts, shared eligibility and revision-bound agent choice."""
+    return _request({"execution_configurations": context})
+
+
 def reconcile_planning(context: Mapping[str, Any]) -> dict[str, Any]:
     return _request({"reconcile_planning": context})
 
