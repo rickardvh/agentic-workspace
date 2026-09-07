@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Share exact proof subject and receipt admission through Rust and scope proof routes to current owners."
+issues = [2334, 2987]
