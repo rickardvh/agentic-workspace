@@ -32,6 +32,39 @@ CAPABILITY_CONTRACT = json.loads((ROOT / "tests/vectors/capability_contract.json
 SCHEMA = json.loads((ROOT / "src/agentic_workspace/contracts/schemas/source_decision_input.schema.json").read_text(encoding="utf-8"))
 
 
+@pytest.mark.parametrize(
+    "evidence,responsibility",
+    [
+        ({"admitted": True, "target_executed": True}, "mixed-or-unknown"),
+        ({"admitted": True, "context_sufficient": False}, "context-selection"),
+        ({"admitted": True, "transport_sufficient": False}, "transport-context-inflation"),
+        ({"admitted": True, "target_executed": True, "context_sufficient": True, "transport_sufficient": True}, "mixed-or-unknown"),
+        (
+            {
+                "admitted": True,
+                "target_executed": True,
+                "context_sufficient": True,
+                "transport_sufficient": True,
+                "failure_stage": "target-execution",
+            },
+            "target-execution",
+        ),
+    ],
+)
+def test_attribution_has_one_typed_authority(shared_core_binary: Path, evidence: dict, responsibility: str) -> None:
+    from agentic_workspace.decision import attribute_assignment_outcome
+
+    result = attribute_assignment_outcome(evidence)
+    assert result["responsibility"] == responsibility
+    assert json.loads(_direct(shared_core_binary, {"attribute_assignment_outcome": evidence}).stdout) == result
+    script = f"import {{attributeAssignmentOutcome}} from {json.dumps((ROOT / 'bindings/node/semantic-decision.mjs').as_uri())}; console.log(JSON.stringify(attributeAssignmentOutcome(JSON.parse(process.argv[1]))));"
+    node = subprocess.run(["node", "--input-type=module", "-e", script, json.dumps(evidence)], capture_output=True, text=True, check=False)
+    assert node.returncode == 0, node.stderr
+    assert json.loads(node.stdout) == result
+    with pytest.raises(DecisionContractError):
+        attribute_assignment_outcome({**evidence, "admitted": "true"})
+
+
 def test_configuration_choice_binds_every_material_fact(shared_core_binary: Path) -> None:
     from agentic_workspace.decision import execution_configurations
 
@@ -67,7 +100,31 @@ def test_configuration_choice_binds_every_material_fact(shared_core_binary: Path
     assert node.returncode == 0, node.stderr
     assert json.loads(node.stdout) == result
     context["selection"] = {"revision": result["revision"], "candidate": candidate["id"]}
-    assert execution_configurations(context)["selected"] == candidate
+    selected = execution_configurations(context)["selected"]
+    comparison = selected["execution"].pop("comparison_context")
+    from agentic_workspace.config import normalize_delegation_context_cost
+    from agentic_workspace.contracts.python_primitive_support import _assignment_context_cost
+
+    packet = {"assignment_identity": {"dispatch_adapter": {"execution_configuration": {"execution": {"comparison_context": comparison}}}}}
+    measured = _assignment_context_cost(
+        packet=packet, prompt="bounded", transport="cli", adapter_revision="adapter-1", elapsed_ms=1, observed={}
+    )
+    cost_schema = json.loads((ROOT / "src/agentic_workspace/contracts/schemas/assignment_context_cost.schema.json").read_text())
+    Draft202012Validator(cost_schema).validate(measured)
+    assert normalize_delegation_context_cost(measured, surface_name="test")["configuration_context"] == comparison
+    assert selected == candidate
+    other_lineage = deepcopy(context)
+    other_lineage["selection"] = None
+    other_lineage["candidates"][0]["execution"]["continuity"]["reference"] = "other-opaque-reference"
+    other = execution_configurations(other_lineage)
+    assert other["candidates"][0]["configuration"]["execution"]["comparison_context"] == comparison
+    assert other["revision"] != result["revision"]
+    other_lineage["candidates"][0]["execution"]["parameters"] = {"vendor-knob": "different"}
+    assert execution_configurations(other_lineage)["candidates"][0]["configuration"]["execution"]["comparison_context"] != comparison
+    native_parameters = deepcopy(context)
+    native_parameters["selection"] = None
+    native_parameters["candidates"][0]["execution"]["continuity"]["parameters"] = {"adapter-owned": "value"}
+    assert execution_configurations(native_parameters)["candidates"][0]["configuration"]["execution"]["comparison_context"] != comparison
     for field in ("current", "authorized", "safe", "constructible", "concurrency_available"):
         changed = deepcopy(context)
         changed["candidates"][0][field] = False

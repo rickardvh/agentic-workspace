@@ -1697,6 +1697,53 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
     from agentic_workspace.orchestration import reconcile_action_result
 
     result["next_current_continuation"] = reconcile_action_result(result=result)
+    if transition == "close" and outcome == "applied":
+        # Close has already admitted the exact producer-owned proof, current
+        # integrated paths, return and assignment/run identity above. Nominate
+        # through the existing evidence owner, never from worker success text.
+        from agentic_workspace.workspace_runtime_core import _record_trusted_assignment_outcome_from_ordinary_boundary
+
+        gate = _assignment_mapping(planning_assignment.get("assignment_gate"))
+        try:
+            dispatch_observation = _assignment_mapping(json.loads(artifact("dispatch/receipt.json").read_text(encoding="utf-8")))
+        except (OSError, json.JSONDecodeError):
+            dispatch_observation = {}
+        context = {
+            "delegation_target": planning_assignment.get("target_name") or gate.get("selected_target"),
+            "task_class": gate.get("task_class"),
+            "scope_class": gate.get("scope_class"),
+            "assignment_id": planning_assignment.get("assignment_id"),
+            "assignment_revision": planning_assignment.get("current_revision"),
+            "run_id": run_id,
+            "slice_id": gate.get("slice_id"),
+            "semantic_revision": gate.get("slice_revision") or gate.get("plan_revision"),
+        }
+        if all(
+            context.get(key) for key in ("delegation_target", "task_class", "scope_class", "assignment_id", "assignment_revision", "run_id")
+        ):
+            nomination = _record_trusted_assignment_outcome_from_ordinary_boundary(
+                target_root=target_root,
+                producer_class="closeout-outcome",
+                outcome="success",
+                source_payload={"planning_assignment_ref": planning_ref, "task_proof_receipt_ref": task_proof_ref},
+                idempotency_key="assignment-close:" + hashlib.sha256(json.dumps(context, sort_keys=True).encode("utf-8")).hexdigest(),
+                assignment_context={
+                    "status": "current",
+                    "source_ref": planning_ref,
+                    "revision": planning_assignment["current_revision"],
+                    "target_context": context,
+                    "rule": "Current assignment close admitted the exact integrated return and producer-owned task proof; this is not PR review approval.",
+                },
+                responsibility_evidence={
+                    "target_executed": True,
+                    "worker_succeeded": True,
+                    "context_sufficient": True,
+                    "transport_sufficient": True,
+                },
+                context_cost=dispatch_observation.get("context_cost"),
+                review_burden="unknown",
+            )
+            result["outcome_evidence"] = {key: nomination[key] for key in ("status", "source_ref") if key in nomination}
     if transition == "reassign" and failures and prior and failures[0]["reason"] == "assignment-override-authority-unavailable":
         from agentic_workspace.assignment_source import replacement_offer
 
@@ -2948,6 +2995,13 @@ def _assignment_context_cost(
         "kind": "agentic-workspace/assignment-context-cost/v1",
         "transport": transport,
         "adapter_revision": adapter_revision,
+        "configuration_context": _assignment_mapping(
+            _assignment_mapping(_assignment_mapping(packet.get("assignment_identity")).get("dispatch_adapter")).get(
+                "execution_configuration"
+            )
+        )
+        .get("execution", {})
+        .get("comparison_context"),
         "assignment_packet_bytes": len(packet_text.encode("utf-8")),
         "rendered_prompt_bytes": len(prompt.encode("utf-8")),
         **metrics,

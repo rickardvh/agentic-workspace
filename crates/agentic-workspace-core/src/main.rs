@@ -11,6 +11,13 @@ fn main() {
     };
     let result = if request
         .as_object()
+        .is_some_and(|v| v.len() == 1 && v.contains_key("attribute_assignment_outcome"))
+    {
+        agentic_workspace_core::assignment::attribute_outcome(
+            request["attribute_assignment_outcome"].clone(),
+        )
+    } else if request
+        .as_object()
         .is_some_and(|v| v.len() == 1 && v.contains_key("execution_configurations"))
     {
         agentic_workspace_core::assignment::configurations(

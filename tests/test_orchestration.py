@@ -134,6 +134,7 @@ def test_attribution_only_routes_equivalent_target_execution_to_target_evidence(
             "target_executed": True,
             "context_sufficient": True,
             "transport_sufficient": True,
+            "failure_stage": "target-execution",
             "slice_id": "slice-1",
             "semantic_revision": "sem-1",
             "assignment_revision": "attempt-2",

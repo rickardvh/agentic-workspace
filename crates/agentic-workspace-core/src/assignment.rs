@@ -6,6 +6,99 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct OutcomeEvidence {
+    admitted: Option<bool>,
+    target_executed: Option<bool>,
+    context_sufficient: Option<bool>,
+    transport_sufficient: Option<bool>,
+    worker_succeeded: Option<bool>,
+    changed_intent: Option<bool>,
+    mixed: Option<bool>,
+    censored: Option<bool>,
+    repo_owned: Option<bool>,
+    failure_stage: Option<String>,
+    stage: Option<String>,
+    slice_id: Option<String>,
+    semantic_revision: Option<String>,
+    task_class: Option<String>,
+    assignment_id: Option<String>,
+    assignment_revision: Option<String>,
+    run_id: Option<String>,
+    target: Option<String>,
+    source_owner: Option<String>,
+}
+
+/// Admitted owner facts, never inferred from a worker's success text or token count.
+/// Unknown is distinct from an observed insufficiency and grants no ranking effect.
+pub fn attribute_outcome(value: Value) -> Result<Value, CoreError> {
+    let item: OutcomeEvidence = serde_json::from_value(value)
+        .map_err(|error| CoreError::new(format!("invalid-outcome-evidence: {error}")))?;
+    let stage = item
+        .failure_stage
+        .as_deref()
+        .filter(|s| !s.is_empty())
+        .or(item.stage.as_deref())
+        .unwrap_or("");
+    let responsibility = if item.admitted != Some(true) {
+        "censored"
+    } else if item.mixed == Some(true) || item.censored == Some(true) {
+        "mixed-or-unknown"
+    } else if item.changed_intent == Some(true) {
+        "changed-human-intent"
+    } else if matches!(stage, "planning" | "decomposition" | "task-specification") {
+        "planning-decomposition"
+    } else if item.context_sufficient == Some(false)
+        || matches!(stage, "context" | "context-selection")
+    {
+        "context-selection"
+    } else if item.transport_sufficient == Some(false)
+        || matches!(stage, "transport" | "context-inflation")
+    {
+        "transport-context-inflation"
+    } else if item.worker_succeeded == Some(true)
+        && matches!(stage, "return" | "admission" | "integration")
+    {
+        "return-admission-integration"
+    } else if item.worker_succeeded == Some(true)
+        && matches!(stage, "proof" | "validation" | "review")
+    {
+        "proof-validation-review"
+    } else if matches!(stage, "environment" | "tooling") {
+        "environment-tooling"
+    } else if item.target_executed == Some(true)
+        && item.context_sufficient == Some(true)
+        && item.transport_sufficient == Some(true)
+        && (matches!(stage, "target" | "target-execution" | "execution")
+            || (stage.is_empty() && item.worker_succeeded == Some(true)))
+    {
+        "target-execution"
+    } else {
+        "mixed-or-unknown"
+    };
+    let target_authoritative = responsibility == "target-execution";
+    let repo_friction = item.repo_owned == Some(true)
+        && matches!(
+            responsibility,
+            "context-selection" | "proof-validation-review" | "planning-decomposition"
+        );
+    Ok(json!({
+        "kind":"agentic-workspace/orchestration-outcome-attribution/v1",
+        "status":if matches!(responsibility, "mixed-or-unknown" | "censored") {"non-authoritative"} else {"attributed"},
+        "responsibility":responsibility,
+        "semantic_identity":{"slice_id":item.slice_id,"semantic_revision":item.semantic_revision,"task_class":item.task_class},
+        "attempt_identity":{"assignment_id":item.assignment_id,"assignment_revision":item.assignment_revision,"run_id":item.run_id,"target":item.target},
+        "routing_effect":{
+            "target_evidence_allowed":target_authoritative,
+            "target_evidence_owner":if target_authoritative {Some("target-outcome-evidence")} else {None},
+            "source_owner_adaptation_pressure":repo_friction,
+            "source_owner":if repo_friction {item.source_owner} else {None},
+        },
+        "hard_gates_remain_prior":true,"raw_trajectory_retained":false,
+    }))
+}
+
 /// Source-owned feasibility is checked before any economic comparison. The
 /// adapter owns parameter meanings; core binds their exact admitted identity.
 #[derive(Deserialize)]
@@ -52,7 +145,7 @@ pub fn configurations(value: Value) -> Result<Value, CoreError> {
     }
     let mut seen = std::collections::BTreeSet::new();
     let mut rows = Vec::new();
-    for candidate in input.candidates {
+    for mut candidate in input.candidates {
         if candidate.id.is_empty()
             || !seen.insert(candidate.id.clone())
             || candidate.target.is_empty()
@@ -62,6 +155,29 @@ pub fn configurations(value: Value) -> Result<Value, CoreError> {
         {
             return Ok(blocked("assignment-configuration-identity-invalid"));
         }
+        // Comparable configuration facts exclude work/attempt and opaque lineage
+        // references. Adapter parameters stay opaque and are only fingerprinted.
+        let mut comparable_execution = candidate.execution.clone();
+        let fields = comparable_execution.as_object_mut().unwrap();
+        for key in [
+            "comparison_context",
+            "semantic_work",
+            "source_revision",
+            "authority_revision",
+        ] {
+            fields.remove(key);
+        }
+        if let Some(continuity) = fields.get_mut("continuity").and_then(Value::as_object_mut) {
+            for key in ["reference", "semantic_scope", "lineage_revision"] {
+                continuity.remove(key);
+            }
+        }
+        let comparison = hash(&json!({
+            "target":candidate.target,"transport":candidate.transport,
+            "capability_revision":candidate.capability_revision,
+            "execution":comparable_execution,
+        }));
+        candidate.execution["comparison_context"] = json!(comparison);
         let mut reasons = Vec::new();
         for (allowed, reason) in [
             (candidate.current, "capability-not-current"),

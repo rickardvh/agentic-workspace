@@ -168,67 +168,10 @@ def derive_orchestration_frontier(
 
 
 def attribute_orchestration_outcome(*, evidence: Mapping[str, Any]) -> dict[str, Any]:
-    """Conservatively route an admitted outcome to an existing responsibility owner."""
+    """Project admitted owner facts through the shared executable authority."""
+    from agentic_workspace.decision import attribute_assignment_outcome
 
-    item = _mapping(evidence)
-    admitted = item.get("admitted") is True
-    stage = _text(item.get("failure_stage") or item.get("stage"))
-    changed_intent = item.get("changed_intent") is True
-    context_sufficient = item.get("context_sufficient") is True
-    transport_sufficient = item.get("transport_sufficient") is True
-    target_executed = item.get("target_executed") is True
-    worker_succeeded = item.get("worker_succeeded") is True
-    ambiguous = item.get("mixed") is True or item.get("censored") is True
-    if not admitted:
-        responsibility = "censored"
-    elif ambiguous:
-        responsibility = "mixed-or-unknown"
-    elif changed_intent:
-        responsibility = "changed-human-intent"
-    elif stage in {"planning", "decomposition", "task-specification"}:
-        responsibility = "planning-decomposition"
-    elif not context_sufficient or stage in {"context", "context-selection"}:
-        responsibility = "context-selection"
-    elif not transport_sufficient or stage in {"transport", "context-inflation"}:
-        responsibility = "transport-context-inflation"
-    elif worker_succeeded and stage in {"return", "admission", "integration"}:
-        responsibility = "return-admission-integration"
-    elif worker_succeeded and stage in {"proof", "validation", "review"}:
-        responsibility = "proof-validation-review"
-    elif stage in {"environment", "tooling"}:
-        responsibility = "environment-tooling"
-    elif target_executed and context_sufficient and transport_sufficient:
-        responsibility = "target-execution"
-    else:
-        responsibility = "mixed-or-unknown"
-    target_authoritative = responsibility == "target-execution"
-    repo_friction = (
-        responsibility in {"context-selection", "proof-validation-review", "planning-decomposition"} and item.get("repo_owned") is True
-    )
-    return {
-        "kind": "agentic-workspace/orchestration-outcome-attribution/v1",
-        "status": "attributed" if responsibility not in {"mixed-or-unknown", "censored"} else "non-authoritative",
-        "responsibility": responsibility,
-        "semantic_identity": {
-            "slice_id": item.get("slice_id"),
-            "semantic_revision": item.get("semantic_revision"),
-            "task_class": item.get("task_class"),
-        },
-        "attempt_identity": {
-            "assignment_id": item.get("assignment_id"),
-            "assignment_revision": item.get("assignment_revision"),
-            "run_id": item.get("run_id"),
-            "target": item.get("target"),
-        },
-        "routing_effect": {
-            "target_evidence_allowed": target_authoritative,
-            "target_evidence_owner": "target-outcome-evidence" if target_authoritative else None,
-            "source_owner_adaptation_pressure": repo_friction,
-            "source_owner": item.get("source_owner") if repo_friction else None,
-        },
-        "hard_gates_remain_prior": True,
-        "raw_trajectory_retained": False,
-    }
+    return attribute_assignment_outcome(evidence)
 
 
 def evaluate_external_orchestration_candidate(

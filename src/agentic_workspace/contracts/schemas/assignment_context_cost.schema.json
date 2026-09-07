@@ -7,6 +7,7 @@
     "kind": {"const": "agentic-workspace/assignment-context-cost/v1", "description": "Versioned context-cost discriminator."},
     "transport": {"type": "string", "minLength": 1, "description": "Configured transport method used for execution."},
     "adapter_revision": {"type": "string", "description": "Revision digest of the adapter configuration that produced the observation."},
+    "configuration_context": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$", "description": "Shared-core digest of comparable execution settings and continuity mode, excluding individual lineage references. Missing context does not authorize pooling with a current configuration."},
     "assignment_packet_bytes": {"type": "integer", "minimum": 0, "description": "Exact UTF-8 byte size of the canonical assignment export packet."},
     "rendered_prompt_bytes": {"type": "integer", "minimum": 0, "description": "Exact UTF-8 byte size transmitted as the worker prompt."},
     "effective_input_tokens": {"type": ["integer", "null"], "minimum": 0, "description": "Effective worker input tokens when exposed by the adapter or host."},

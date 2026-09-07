@@ -2810,6 +2810,15 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
         invocation=invocation,
     )
     assert closed["status"] == "closed"
+    assert closed["outcome_evidence"]["status"] == "recorded"
+    from agentic_workspace.config import load_delegation_outcomes
+
+    _, _, learned = load_delegation_outcomes(target_root=tmp_path)
+    assert len(learned) == 1
+    assert learned[0].outcome == "success"
+    assert learned[0].review_burden == "unknown"
+    assert learned[0].producer_class == "closeout-outcome"
+    assert learned[0].context_cost is None  # Manual transport did not measure token use.
     closed_full_state = _assignment_full_state(tmp_path, closed)
     reopened_assignment = json.loads((assignment_dir / "assign-1.assignment.json").read_text(encoding="utf-8"))
     reopened_assignment["status"] = "current"

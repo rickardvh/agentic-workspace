@@ -321,6 +321,7 @@ SUPPORTED_REVIEW_BURDENS = (
     "light",
     "normal",
     "high",
+    "unknown",
 )
 SUPPORTED_CLI_COMPATIBILITY_ENFORCEMENT = (
     "off",
@@ -2328,10 +2329,16 @@ def normalize_delegation_context_cost(raw: Any, *, surface_name: str) -> dict[st
     unknown_fields = raw.get("unknown_fields", [])
     if not isinstance(unknown_fields, list) or any(not isinstance(item, str) for item in unknown_fields):
         raise WorkspaceUsageError(f"{surface_name} record context_cost unknown_fields must be a string list.")
+    configuration_context = raw.get("configuration_context")
+    if configuration_context is not None and (
+        not isinstance(configuration_context, str) or not re.fullmatch(r"sha256:[0-9a-f]{64}", configuration_context)
+    ):
+        raise WorkspaceUsageError(f"{surface_name} record context_cost configuration_context must be a SHA256 identity or null.")
     return {
         "kind": "agentic-workspace/assignment-context-cost/v1",
         "transport": transport.strip(),
         "adapter_revision": str(raw.get("adapter_revision") or "").strip(),
+        **({"configuration_context": configuration_context} if configuration_context is not None else {}),
         **{field_name: raw[field_name] for field_name in required_integer_fields},
         **{field_name: raw.get(field_name) for field_name in optional_integer_fields},
         "unknown_fields": list(dict.fromkeys(unknown_fields)),

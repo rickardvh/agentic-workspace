@@ -114,3 +114,7 @@ export function admitAssignmentPacket(context) {
 export function executionConfigurations(context) {
   return request({execution_configurations: context});
 }
+
+export function attributeAssignmentOutcome(evidence) {
+  return request({attribute_assignment_outcome: evidence});
+}
