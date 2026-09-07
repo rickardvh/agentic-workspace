@@ -91,7 +91,8 @@ def _canonical_target_key(profile: DelegationTargetProfile | None, fallback: str
 def _delegation_signal_score(record: DelegationOutcomeRecord) -> float:
     outcome_score = {"success": 1.0, "mixed": 0.0, "failed": -1.0}[record.outcome]
     handoff_score = {"sufficient": 0.25, "borderline": 0.0, "insufficient": -0.25}[record.handoff_sufficiency]
-    review_score = {"light": 0.25, "normal": 0.0, "high": -0.25}[record.review_burden]
+    # Unknown review burden gives no quality adjustment; it is not a measured zero cost.
+    review_score = {"light": 0.25, "normal": 0.0, "high": -0.25, "unknown": 0.0}[record.review_burden]
     escalation_score = -0.5 if record.escalation_required else 0.0
     return outcome_score + handoff_score + review_score + escalation_score
 
@@ -205,15 +206,15 @@ def _context_cost_penalty(context_cost: dict[str, Any]) -> int:
 
 
 def _transport_cost_summaries(records: list[DelegationOutcomeRecord]) -> list[dict[str, Any]]:
-    by_transport: dict[str, list[dict[str, Any]]] = {}
+    by_transport: dict[tuple[str, str], list[dict[str, Any]]] = {}
     for record in records:
         context_cost = record.context_cost if isinstance(record.context_cost, dict) else {}
         transport = str(context_cost.get("transport") or "").strip()
         if transport:
-            by_transport.setdefault(transport, []).append(context_cost)
+            by_transport.setdefault((transport, str(context_cost.get("configuration_context") or "")), []).append(context_cost)
     summaries: list[dict[str, Any]] = []
-    for transport in sorted(by_transport):
-        costs = by_transport[transport]
+    for transport, context in sorted(by_transport):
+        costs = by_transport[(transport, context)]
         penalties = [_context_cost_penalty(cost) for cost in costs]
         observed_context_cost = {
             field: round(
@@ -248,6 +249,7 @@ def _transport_cost_summaries(records: list[DelegationOutcomeRecord]) -> list[di
         summaries.append(
             {
                 "transport": transport,
+                **({"configuration_context": context} if context else {}),
                 "record_count": len(costs),
                 "expected_burden_component": round(sum(penalties) / len(penalties)),
                 "observed_context_cost": observed_context_cost,
@@ -744,11 +746,17 @@ def assignment_decision_from_policy(
         current_target_component = 5 if current_target_matches_profile else 0
         transport_options: list[dict[str, Any]] = []
         for method_index, method in enumerate(execution_methods):
+            configuration = (
+                [row["configuration"] for row in route_rows if row["eligible"]][method_index] if isinstance(route_rows, list) else {}
+            )
+            comparison_context = _as_dict(configuration.get("execution")).get("comparison_context")
             matching_transport_costs = [
                 cost
                 for evidence in matching_evidence
                 for cost in evidence.get("transport_costs", [])
-                if isinstance(cost, dict) and str(cost.get("transport") or "") == method
+                if isinstance(cost, dict)
+                and str(cost.get("transport") or "") == method
+                and (not configuration or (comparison_context and cost.get("configuration_context") == comparison_context))
             ]
             transport_option: dict[str, Any] = {
                 "transport": method,
@@ -757,13 +765,13 @@ def assignment_decision_from_policy(
                     / len(matching_transport_costs)
                 )
                 if matching_transport_costs
-                else 0,
+                else None,
                 "evidence_state": "admitted-contextual" if matching_transport_costs else "unknown",
                 "record_count": sum(int(cost.get("record_count") or 0) for cost in matching_transport_costs),
                 "configured_order": method_index,
             }
             if isinstance(route_rows, list):
-                transport_option["execution_configuration"] = [row["configuration"] for row in route_rows if row["eligible"]][method_index]
+                transport_option["execution_configuration"] = configuration
             observed_fields = {field for cost in matching_transport_costs for field in _as_dict(cost.get("observed_context_cost"))}
             observed_context_cost = {}
             for field in sorted(observed_fields):
@@ -781,6 +789,8 @@ def assignment_decision_from_policy(
             transport_options.append(transport_option)
         selected_transport_option = (
             max(transport_options, key=lambda item: (int(item["expected_burden"]), -int(item["configured_order"])))
+            if transport_options and all(item["expected_burden"] is not None for item in transport_options)
+            else transport_options[0]
             if transport_options
             else {}
         )
@@ -800,7 +810,8 @@ def assignment_decision_from_policy(
                 burden_component += 2
         matching_uncertainty = uncertainty_by_target.get(target_identity_ref, []) or uncertainty_by_target.get(target, [])
         uncertainty_component = -5 * len(matching_uncertainty)
-        probe_value_component = 5 if not matching_evidence and eligible else 0
+        # Absence of observations is not an economic exploration reward.
+        probe_value_component = 0
         score = (
             declared_fit_score
             + recommendation_component

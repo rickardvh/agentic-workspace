@@ -12,6 +12,10 @@ class DecisionContractError(ValueError):
     """Raised when the shared core rejects a source-decision request."""
 
 
+def attribute_assignment_outcome(evidence: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"attribute_assignment_outcome": evidence})
+
+
 def _request(payload: Mapping[str, Any]) -> dict[str, Any]:
     try:
         binary = native_core_binary()

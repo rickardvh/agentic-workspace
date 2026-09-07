@@ -53504,35 +53504,12 @@ def _record_proof_receipt_payload(
                     },
                 )
             if target_context and publish_trusted_producer:
-                proof_outcome = "success" if admission.get("proof_sufficient") else "failed"
-                try:
-                    calibration = {
-                        "status": "recorded",
-                        "record": _record_aw_proof_delegation_outcome(
-                            target_root=target_root,
-                            delegation_target=target_context["delegation_target"],
-                            task_class=target_context["task_class"],
-                            scope_class=target_context["scope_class"],
-                            outcome=proof_outcome,
-                            proof_receipt_ref=producer_receipt_ref,
-                            idempotency_key=producer_receipt_id,
-                            review_burden="light" if proof_outcome == "success" else "high",
-                            handoff_sufficiency="sufficient" if proof_outcome == "success" else "insufficient",
-                            escalation_required=proof_outcome != "success",
-                        )["recorded"],
-                        "target_context": target_context,
-                        "source_ref": producer_receipt_ref,
-                        "rule": "Ordinary proof receipts feed delegation evidence only after producer-store resolution and target-context matching.",
-                    }
-                except WorkspaceUsageError as exc:
-                    if "duplicate evidence" not in str(exc):
-                        raise
-                    calibration = {
-                        "status": "already-recorded",
-                        "target_context": target_context,
-                        "source_ref": producer_receipt_ref,
-                        "rule": "Duplicate proof calibration is idempotent for the same target/task/scope/provenance key.",
-                    }
+                calibration = {
+                    "status": "non-calibrating",
+                    "reason": "proof-result-does-not-establish-target-responsibility",
+                    "source_ref": producer_receipt_ref,
+                    "rule": "Assignment/result owners may nominate attributed evidence after integration and bound proof; proof publication alone cannot establish target quality or handoff/review burden.",
+                }
             elif publish_trusted_producer:
                 calibration = assignment_context
             else:
@@ -61840,28 +61817,28 @@ def _record_trusted_assignment_outcome_from_ordinary_boundary(
     review_burden: str = "normal",
     escalation_required: bool = False,
     responsibility_evidence: dict[str, Any] | None = None,
+    assignment_context: dict[str, Any] | None = None,
+    context_cost: dict[str, Any] | None = None,
     dry_run: bool = False,
 ) -> dict[str, Any]:
     from agentic_workspace.orchestration import attribute_orchestration_outcome
 
-    assignment_context = _trusted_producer_assignment_context(target_root=target_root)
+    assignment_context = assignment_context or _trusted_producer_assignment_context(target_root=target_root)
     target_context = _as_dict(assignment_context.get("target_context"))
     if not target_context:
         return assignment_context
     if producer_class not in _TRUSTED_PRODUCER_RECEIPT_KIND_BY_CLASS:
         raise WorkspaceUsageError("trusted producer receipt producer is not authorized for ordinary assignment calibration.")
     attribution_input = {
+        **dict(responsibility_evidence or {}),
         "admitted": True,
-        "target_executed": True,
-        "context_sufficient": True,
-        "transport_sufficient": True,
-        "worker_succeeded": outcome == "success",
         "assignment_id": target_context.get("assignment_id"),
         "assignment_revision": target_context.get("assignment_revision"),
         "run_id": target_context.get("run_id"),
         "target": target_context.get("delegation_target"),
         "task_class": target_context.get("task_class"),
-        **dict(responsibility_evidence or {}),
+        "slice_id": target_context.get("slice_id"),
+        "semantic_revision": target_context.get("semantic_revision"),
     }
     attribution = attribute_orchestration_outcome(evidence=attribution_input)
     if not _as_dict(attribution.get("routing_effect")).get("target_evidence_allowed"):
@@ -61922,6 +61899,7 @@ def _record_trusted_assignment_outcome_from_ordinary_boundary(
             },
             "source_payload": source_payload,
             "responsibility_attribution": attribution,
+            "context_cost": context_cost,
             "idempotency_key": stable_key,
         },
     )
@@ -61948,6 +61926,7 @@ def _record_trusted_assignment_outcome_from_ordinary_boundary(
             confidence="low",
             idempotency_key=stable_key,
             trusted_producer_receipt=receipt,
+            context_cost=context_cost,
         )
     except WorkspaceUsageError as exc:
         if "duplicate evidence" not in str(exc):

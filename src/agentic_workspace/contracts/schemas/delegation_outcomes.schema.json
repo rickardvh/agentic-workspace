@@ -198,7 +198,8 @@
             "enum": [
               "light",
               "normal",
-              "high"
+              "high",
+              "unknown"
             ],
             "description": "Allowed review burden value for routing or validation."
           },

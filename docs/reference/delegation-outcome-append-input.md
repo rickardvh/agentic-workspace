@@ -38,5 +38,5 @@ External client input contract for delegation-outcome.append.
 | `idempotency_key` | string | no |  | Stable idempotency key supplied by the producer. |  |  |
 | `outcome` | enum `"success"`, `"mixed"`, `"failed"` | yes |  | Observed delegation outcome. |  |  |
 | `handoff_sufficiency` | enum `"sufficient"`, `"borderline"`, `"insufficient"` | no |  | Handoff sufficiency classification. |  |  |
-| `review_burden` | enum `"light"`, `"normal"`, `"high"` | no |  | Review burden classification. |  |  |
+| `review_burden` | enum `"light"`, `"normal"`, `"high"`, `"unknown"` | no |  | Observed review burden classification, or unknown when review burden was not measured. |  |  |
 | `escalation_required` | boolean | no |  | Whether execution required escalation. |  |  |
