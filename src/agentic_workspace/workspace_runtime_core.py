@@ -35242,7 +35242,8 @@ def _start_tiny_payload_fast(
     if assignment_action_status not in {"", "not-applicable"}:
         payload["assignment_action"] = assignment_action
     if (
-        assignment_action_status in {"ready", "reconciliation-required"}
+        assignment_action_status in {"ready", "reconciliation-required", "requirements-required"}
+        and (assignment_action_status != "requirements-required" or planning_safety_gate.get("workflow_sufficient") is True)
         and not normalized_paths
         and not _is_config_posture_task(task_text)
         and closeout_inspection.get("status") != "required"
@@ -43874,6 +43875,9 @@ def _assignment_identity_payload(
             "completion": "orchestrator-owned",
         },
     }
+    if assignment_gate.get("task_judgment") is not None:
+        identity["task_judgment"] = assignment_gate["task_judgment"]
+        identity["task_requirements_revision"] = assignment_gate.get("task_requirements_revision")
     required_fields = [
         "target",
         "target_identity_ref",
@@ -44241,7 +44245,7 @@ def _delegation_next_action_decision(
             required_next_action = "execute-when-safe"
     if assignment_gate.get("status") == "blocked":
         decision = "blocked-assignment-policy"
-        required_next_action = "resolve-current-target-profile"
+        required_next_action = str(assignment_decision.get("required_action") or "resolve-current-target-profile")
         target_name = str(assignment_gate.get("selected_target") or "") or None
         reasons = [str(assignment_gate.get("claim_boundary") or "required-best-fit assignment policy is not enforceable")]
         handoff_command = None
@@ -45393,6 +45397,23 @@ def _assignment_primary_action_payload(
         "implementation_allowed": assignment_gate.get("implementation_allowed"),
         "rule": "Canonical assignment is consumed once; post-assignment actors execute this action without reranking the target.",
     }
+    requirements = _as_dict(assignment_decision.get("task_requirements"))
+    if requirements.get("status") == "unresolved":
+        return {
+            **base,
+            "status": "requirements-required",
+            "action": "resolve-current-task-requirements",
+            "implementation_allowed": False,
+            "task_requirements": requirements,
+            "operation_invocation": operation_invocation(
+                operation_id="assignment.export",
+                arguments={"task": task_text, "changed": changed_paths or [], "dry_run": True},
+                effect_class="read-only-planning",
+                expected_transition="current-task-judgment-requested",
+                owner_context_revision={"task_requirements_revision": requirements.get("revision")},
+                mutation_boundary={"writes_repo_state": False, "implementation_allowed": False},
+            ),
+        }
     if not canonical_assignment and (execution_role != "orchestrator" or policy_value != "required-best-fit"):
         return base
     if gate_status == "assigned-current-target":
@@ -45680,6 +45701,7 @@ def _current_assignment_selection(
     changed_paths: list[str],
     task_text: str | None,
     work_identity: dict[str, Any] | None = None,
+    task_judgment: dict[str, Any] | None = None,
     execution_choice: dict[str, Any] | None = None,
     completed_packet: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
@@ -45725,8 +45747,10 @@ def _current_assignment_selection(
     runtime_resolution = _runtime_resolution_payload(config=config, capability_posture=posture["posture"])
     configurations: dict[str, Any] = {}
     work: dict[str, Any] = {}
+    task_requirements: dict[str, Any] = {}
     if config.target_root is not None and config.local_override.delegation_targets:
-        from agentic_workspace.assignment_source import current_route_configurations
+        from agentic_workspace.assignment_source import configuration_requirements, current_route_configurations
+        from agentic_workspace.decision import direct_task_subject
 
         work = (
             {"id": work_identity["slice_id"], "revision": str(work_identity["plan_revision"])}
@@ -45741,13 +45765,30 @@ def _current_assignment_selection(
                 ).hexdigest(),
             }
         )
-        configurations = current_route_configurations(
-            config.target_root,
-            runtime_resolution["profile_recommendations"],
+        task_requirements = configuration_requirements(
             config.local_override,
-            work,
-            completed_packet=completed_packet,
+            task_identity=direct_task_subject(str(task_text or ""), changed_paths),
+            work={"id": str(live_binding.get("plan_ref") or "absent"), "revision": str(live_binding.get("plan_revision") or "absent")},
+            judgment=task_judgment,
         )
+        if not live_binding.get("plan_ref") or not live_binding.get("plan_revision"):
+            task_requirements = {
+                **task_requirements,
+                "status": "unresolved",
+                "requirements": None,
+                "revision": None,
+                "gaps": [*task_requirements.get("gaps", []), "current-work-owner-unresolved"],
+                "judgment_request": None,
+            }
+        if task_requirements["status"] == "resolved":
+            configurations = current_route_configurations(
+                config.target_root,
+                runtime_resolution["profile_recommendations"],
+                config.local_override,
+                work,
+                completed_packet=completed_packet,
+                requirements=task_requirements["requirements"],
+            )
         for profile in runtime_resolution["profile_recommendations"]:
             profile["execution_configurations"] = [
                 row for row in configurations.get("candidates", []) if row["configuration"]["target"] == profile["name"]
@@ -45756,7 +45797,7 @@ def _current_assignment_selection(
             profile["execution_methods"] = list(dict.fromkeys(row["transport"] for row in eligible_configurations))
             profile["transports"] = [row["execution"]["adapter"] for row in eligible_configurations]
     assignment_policy = _assignment_policy_payload(config.local_override, list(runtime_resolution.get("profile_recommendations", [])))
-    if execution_choice is not None and not configurations:
+    if execution_choice is not None and not configurations and not task_requirements:
         raise ValueError("assignment-configuration-source-unavailable")
     outcome_records: tuple[DelegationOutcomeRecord, ...] = ()
     if config.target_root is not None:
@@ -45773,7 +45814,7 @@ def _current_assignment_selection(
         human_intent=str(task_text or ""),
     )
     if configurations:
-        from agentic_workspace.assignment_source import configuration_requirements, revision
+        from agentic_workspace.assignment_source import revision
         from agentic_workspace.decision import execution_configurations
 
         feasibility_revision = configurations["revision"]
@@ -45784,7 +45825,7 @@ def _current_assignment_selection(
             selected = execution_configurations(
                 {
                     "work": work,
-                    **configuration_requirements(config.local_override),
+                    **_as_dict(task_requirements["requirements"]),
                     "candidates": [row["configuration"] for row in configurations["candidates"]],
                     "selection": {"revision": feasibility_revision, "candidate": execution_choice.get("candidate")},
                 }
@@ -45800,7 +45841,7 @@ def _current_assignment_selection(
                 # with adapter-constructed facts, never caller eligibility JSON.
                 variant_context = {
                     "work": work,
-                    **configuration_requirements(config.local_override),
+                    **_as_dict(task_requirements["requirements"]),
                     "candidates": [variant],
                 }
                 variant_offer = execution_configurations(variant_context)
@@ -45825,6 +45866,18 @@ def _current_assignment_selection(
             )
         configurations["revision"] = offer_revision
         configurations["feasibility_revision"] = feasibility_revision
+    if task_requirements:
+        assignment_decision["task_requirements"] = task_requirements
+        assignment_decision["task_judgment"] = task_judgment
+        if task_requirements["status"] != "resolved":
+            assignment_decision.update(
+                {
+                    "decision": "blocked",
+                    "selected_target": None,
+                    "required_action": "resolve-current-task-requirements",
+                    "next_action": "resolve-current-task-requirements",
+                }
+            )
     assignment_decision["execution_configurations"] = configurations
     return posture, runtime_resolution, assignment_policy, target_evidence, assignment_decision
 
@@ -45837,6 +45890,7 @@ def _execution_posture_payload(
     target_root: Path | None = None,
     materialize_assignment: bool = False,
     execution_choice: dict[str, Any] | None = None,
+    task_judgment: dict[str, Any] | None = None,
     requested_transport: str | None = None,
 ) -> dict[str, Any]:
     caller_choice = execution_choice
@@ -45856,6 +45910,11 @@ def _execution_posture_payload(
         retained = _current_assignment_lifecycle_record(
             target_root=target_root, task_text=str(task_text or ""), changed_paths=changed_paths
         )
+        retained_judgment = _as_dict(retained.get("assignment_gate")).get("task_judgment")
+        if retained and task_judgment is not None and task_judgment != retained_judgment:
+            raise ValueError("task-judgment-cannot-replace-current-assignment")
+        if retained:
+            task_judgment = retained_judgment
         retained_choice = retained.get("execution_choice")
         if isinstance(retained_choice, dict) and retained_choice:
             if execution_choice is not None and execution_choice != retained_choice:
@@ -45866,6 +45925,7 @@ def _execution_posture_payload(
             config=config,
             changed_paths=changed_paths,
             task_text=task_text,
+            task_judgment=task_judgment,
             execution_choice=execution_choice,
             completed_packet=_completed_assignment_packet(target_root, retained)
             if target_root is not None and retained and not materialize_assignment
@@ -45887,6 +45947,7 @@ def _execution_posture_payload(
             config=config,
             changed_paths=changed_paths,
             task_text=task_text,
+            task_judgment=task_judgment,
         )
         assignment_decision = {
             **assignment_decision,
@@ -46062,6 +46123,15 @@ def _execution_posture_payload(
                 "required_next_action": str(error),
                 "silent_local_fallback_allowed": False,
             }
+    if _as_dict(assignment_decision.get("task_requirements")).get("status") == "unresolved":
+        materialize_assignment = False
+        assignment_gate = {
+            **assignment_gate,
+            "status": "blocked",
+            "implementation_allowed": False,
+            "required_next_action": "resolve-current-task-requirements",
+            "silent_local_fallback_allowed": False,
+        }
     recommendation = runtime_resolution["recommendation"]
     if recommendation == "stay-local":
         quality_tradeoff = "Stay direct when delegation overhead is not justified or local bounded execution is sufficient."
@@ -46234,6 +46304,8 @@ def _execution_posture_payload(
             "return_schema": "delegated-return/v1",
         }
         enhanced_delegation = {**delegation_decision, "delegation_next_step": next_step}
+        enhanced_gate["task_judgment"] = task_judgment
+        enhanced_gate["task_requirements_revision"] = _as_dict(assignment_decision.get("task_requirements")).get("revision")
         identity = _assignment_identity_payload(
             assignment_gate=enhanced_gate,
             assignment_policy=assignment_policy,

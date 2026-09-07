@@ -149,13 +149,35 @@ def test_discovered_peer_preserves_policy_and_separates_current_host_safety(tmp_
         current_target="worker", manual_transport_policy="allowed", transport_authority="automatic", safe_to_auto_run_commands=True
     )
     original_policy = vars(policy).copy()
-    result = current_route_configurations(tmp_path, [profile], policy, {"id": "work", "revision": "1"})
+    result = current_route_configurations(
+        tmp_path,
+        [profile],
+        policy,
+        {"id": "work", "revision": "1"},
+        requirements={
+            "required_result_classes": [],
+            "required_proof_classes": [],
+            "independent_context": False,
+            "required_execution_guarantees": [],
+        },
+    )
     assert [row["configuration"]["execution"]["adapter"]["kind"] for row in result["candidates"]] == ["current-host", "process", "native"]
     assert all(row["eligible"] for row in result["candidates"])
     assert vars(policy) == original_policy
     policy.safe_to_auto_run_commands = False
     monkeypatch.setattr(native, "discover", lambda root: pytest.fail("unsafe peers must not probe"))
-    result = current_route_configurations(tmp_path, [profile], policy, {"id": "work", "revision": "1"})
+    result = current_route_configurations(
+        tmp_path,
+        [profile],
+        policy,
+        {"id": "work", "revision": "1"},
+        requirements={
+            "required_result_classes": [],
+            "required_proof_classes": [],
+            "independent_context": False,
+            "required_execution_guarantees": [],
+        },
+    )
     assert [row["eligible"] for row in result["candidates"]] == [True, False]
 
 
@@ -526,7 +548,18 @@ def test_hard_ineligible_native_route_does_not_probe_provider(tmp_path, monkeypa
         profile["proof_requirements"] = ["required-proof-missing"]
     else:
         profile["human_control_modes"] = ["off"]
-    offers = current_route_configurations(tmp_path, [profile], policy, {"id": "work", "revision": "1"})
+    offers = current_route_configurations(
+        tmp_path,
+        [profile],
+        policy,
+        {"id": "work", "revision": "1"},
+        requirements={
+            "required_result_classes": [],
+            "required_proof_classes": [],
+            "independent_context": False,
+            "required_execution_guarantees": [],
+        },
+    )
     assert [row["configuration"]["transport"] for row in offers["candidates"]] == ["manual"]
 
 
@@ -556,10 +589,36 @@ transports = [{kind = "process", command = [EXE]}]
     config = load_workspace_config(target_root=tmp_path)
     profiles = [asdict(p) for p in config.local_override.delegation_targets]
     work = {"id": "work", "revision": "1"}
-    offers = current_route_configurations(tmp_path, profiles, config.local_override, work)
+    offers = current_route_configurations(
+        tmp_path,
+        profiles,
+        config.local_override,
+        work,
+        requirements={
+            "required_result_classes": [],
+            "required_proof_classes": [],
+            "independent_context": False,
+            "required_execution_guarantees": [],
+        },
+    )
     configuration = offers["candidates"][0]["configuration"]
     choice = {"revision": offers["revision"], "candidate": configuration["id"]}
-    assert current_route_configurations(tmp_path, profiles, config.local_override, work, choice)["selected"] == configuration
+    assert (
+        current_route_configurations(
+            tmp_path,
+            profiles,
+            config.local_override,
+            work,
+            choice,
+            requirements={
+                "required_result_classes": [],
+                "required_proof_classes": [],
+                "independent_context": False,
+                "required_execution_guarantees": [],
+            },
+        )["selected"]
+        == configuration
+    )
     validate_current_configuration(tmp_path, configuration)
     source.write_text(original + '\n[workspace]\ncli_invoke = "unrelated-launcher"\n')
     validate_current_configuration(tmp_path, configuration)
@@ -567,13 +626,29 @@ transports = [{kind = "process", command = [EXE]}]
     with pytest.raises(ValueError, match="source-stale"):
         validate_current_configuration(tmp_path, configuration)
     assert (
-        current_route_configurations(tmp_path, profiles, config.local_override, work, choice)["reason_code"]
+        current_route_configurations(
+            tmp_path,
+            profiles,
+            config.local_override,
+            work,
+            choice,
+            requirements={
+                "required_result_classes": [],
+                "required_proof_classes": [],
+                "independent_context": False,
+                "required_execution_guarantees": [],
+            },
+        )["reason_code"]
         == "assignment-configuration-choice-stale"
     )
     source.write_text(original)
     from agentic_workspace import workspace_runtime_core as runtime
 
     kwargs = {"config": config, "changed_paths": ["feature.py"], "task_text": "Repair the calculation."}
+    missing = runtime._current_assignment_selection(**kwargs)[4]
+    judgment = missing["task_requirements"]["judgment_request"]["arguments"]
+    judgment["required_result_classes"] = ["unapplied-patch"]
+    kwargs["task_judgment"] = judgment
     baseline = runtime._current_assignment_selection(**kwargs)[4]
     offer = baseline["execution_configurations"]
     monkeypatch.setattr(

@@ -398,6 +398,7 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
                     _as_dict(full_payload.get("delegation_decision")), include_manual_handoff_detail=False
                 ),
                 "execution_configurations": copy.deepcopy(_as_dict(assignment.get("execution_configurations"))),
+                "task_requirements": copy.deepcopy(_as_dict(assignment.get("task_requirements"))),
             }
         if test_strategy_check_selected:
             payload["test_strategy_check"] = full_payload["test_strategy_check"]

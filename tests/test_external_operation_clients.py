@@ -218,9 +218,15 @@ transports = [{kind = "manual"}]
         '[todo]\nactive_items = [{id = "feature", status = "in-progress", surface = ".agentic-workspace/planning/execplans/feature.plan.json"}]\nqueued_items = []\n'
     )
 
+    judgment = None
+
     def ordinary():
         return _execution_posture_payload(
-            config=load_workspace_config(target_root=tmp_path), target_root=tmp_path, task_text=task, changed_paths=["src/feature.py"]
+            config=load_workspace_config(target_root=tmp_path),
+            target_root=tmp_path,
+            task_text=task,
+            changed_paths=["src/feature.py"],
+            task_judgment=judgment,
         )
 
     assert (
@@ -243,7 +249,11 @@ transports = [{kind = "manual"}]
     )
     public_selection = json.loads(capsys.readouterr().out)
     assert not public_selection.get("missing")
-    offers = public_selection["values"]["context.delegation_decision"]["execution_configurations"]
+    unresolved = public_selection["values"]["context.delegation_decision"]["task_requirements"]
+    assert unresolved["status"] == "unresolved"
+    judgment = unresolved["judgment_request"]["arguments"]
+    judgment["required_result_classes"] = ["unapplied-patch"]
+    offers = ordinary()["assignment_decision"]["execution_configurations"]
     assert any(row["configuration"]["target"] == "peer_7" for row in offers["candidates"])
     assert all("configuration" in row for row in offers["candidates"])
     assert offers["revision"] == ordinary()["assignment_decision"]["execution_configurations"]["revision"]
@@ -271,6 +281,7 @@ transports = [{kind = "manual"}]
             if row["configuration"]["target"] == "worker" and row["configuration"]["execution"]["continuity"]["mode"] == "resume"
         )
     values = {
+        "task_judgment_json": json.dumps(judgment),
         "task": task,
         "changed": ["src/feature.py"],
         "transport": "cli" if native_parameters else "manual",
@@ -324,7 +335,8 @@ transports = [{kind = "manual"}]
     unrelated = _execution_posture_payload(
         config=load_workspace_config(target_root=tmp_path), target_root=tmp_path, task_text=None, changed_paths=["src/other.py"]
     )
-    assert unrelated["assignment_decision"]["selected_execution_configuration"]["target"] == "orchestrator"
+    assert unrelated["assignment_decision"]["task_requirements"]["status"] == "unresolved"
+    assert not unrelated["implementation_allowed"]
     if native_parameters:
 
         def complete(*args, **kwargs):

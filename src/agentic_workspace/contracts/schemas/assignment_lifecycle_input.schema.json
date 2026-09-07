@@ -155,6 +155,12 @@
         "api"
       ],
       "type": "string"
+    },
+    "task_judgment_json": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 16384,
+      "description": "JSON transport for the canonical typed task judgment; not Verification or policy authority."
     }
   },
   "title": "Assignment lifecycle operation input",
