@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Ratchet residual delegation owners with current public conformance, focused proof coverage and an honest acceptance and cost audit."
+issues = [2909, 2916, 2210, 2767, 2817, 2947, 2970, 2334, 2818, 2209]

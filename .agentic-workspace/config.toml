@@ -621,6 +621,22 @@ route_role = "behavior"
 precedence = "85"
 allowed_composition = ["maintenance", "evidence", "broad"]
 
+[assurance.domain_proof_lanes.delegation_owner_conformance]
+purpose = "Focused ratchet for current Planning custody, task-bound Verification, and sparse assignment observations."
+applies_to_paths = ["crates/agentic-workspace-core/src/planning.rs", "src/agentic_workspace/assignment_burden.py", "tests/test_assignment_burden.py", "tests/test_assignment_no_change_prompt.py", "tests/test_assignment_override_policy.py", "tests/test_assignment_planning_requirements.py", "tests/test_ordinary_public_owner.py", "tests/test_task_judgment_candidates.py", "tests/test_verification_public_owner.py"]
+commands = ["uv run pytest tests/test_assignment_burden.py tests/test_assignment_no_change_prompt.py tests/test_assignment_override_policy.py tests/test_assignment_planning_requirements.py tests/test_ordinary_public_owner.py tests/test_task_judgment_candidates.py tests/test_verification_public_owner.py -q", "uv run pytest tests/test_shared_core.py -k planning -q", "uv run pytest tests/test_workspace_cli.py -k \"upgrade_replay_preserves_context_through_proof_and_bounded_closeout or direct_task_claim_does_not_reuse_unrelated_or_unbound_judgment\" -q", "make lint-workspace", "make typecheck"]
+review_aids = ["Keep semantic authority in the existing owners. Distinguish public deterministic currentness proof from supported-host lifecycle evidence and independent acceptance."]
+evidence_concepts = ["real-source-custody", "task-claim-currentness", "public-language-parity", "lifecycle-observation"]
+proof_profiles = ["workspace_behavior"]
+authority_refs = ["tests/vectors/planning_execplan.json", "tests/test_verification_public_owner.py", "tests/test_assignment_burden.py"]
+escalation = ["an owner outcome remains false despite the regression", "a claim needs unavailable supported-host or independent judgment evidence"]
+escalation_conditions = ["focused-route-insufficient", "missing-domain-authority"]
+claim_boundary = "owner-conformance-does-not-grant-supported-host-success-or-independent-acceptance"
+owner = "verification"
+route_role = "evidence"
+precedence = "85"
+allowed_composition = ["behavior", "maintenance", "broad"]
+
 [assurance.domain_proof_lanes.evaluation_operation_runtime]
 purpose = "Focused Evaluation operation runtime, contract, projection, and behavior proof."
 applies_to_paths = ["src/agentic_workspace/evaluation.py", "src/agentic_workspace/contracts/operations/evaluation.*.json", "src/agentic_workspace/contracts/schemas/evaluation_summary.schema.json", "generated/workspace/python/operations/evaluation.*.json", "generated/workspace/typescript/resources/operations/evaluation.*.json", "tests/test_workspace_evaluation.py"]
