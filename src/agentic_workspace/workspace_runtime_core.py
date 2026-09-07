@@ -45693,7 +45693,11 @@ def _execution_posture_payload(
                 gate = _as_dict(resumed.get("assignment_gate"))
                 task_text = str(gate.get("human_intent") or "")
                 changed_paths = changed_paths or [str(path) for path in _list_payload(gate.get("allowed_paths"))]
-        retained = _current_assignment_lifecycle_record(target_root=target_root, task_text=task_text, changed_paths=changed_paths)
+        # A taskless lookup may resume only through the Planning match above.
+        # None means an unfiltered custody lookup, not an empty semantic subject.
+        retained = _current_assignment_lifecycle_record(
+            target_root=target_root, task_text=str(task_text or ""), changed_paths=changed_paths
+        )
         retained_choice = retained.get("execution_choice")
         if isinstance(retained_choice, dict) and retained_choice:
             if execution_choice is not None and execution_choice != retained_choice:
