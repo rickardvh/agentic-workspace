@@ -66500,21 +66500,26 @@ def _current_task_claim_judgment(
     records, _, _, _ = _read_proof_receipt_records(target_root)
     current = []
     for receipt in records or []:
-        publication_id = str(receipt.get("publication_id") or "")
-        indexed = load_indexed_assignment_task_proof(target_root=target_root, receipt_ref=f"proof://receipts/{publication_id}")
-        expected_id = hashlib.sha256(
-            json.dumps(_proof_publication_identity(receipt), sort_keys=True, ensure_ascii=True).encode("utf-8")
-        ).hexdigest()[:16]
         judgment = _as_dict(receipt.get("task_claim_judgment"))
-        if (
+        # Candidate filtering grants no authority. Generic or unrelated history
+        # cannot support this claim and needs no trusted producer-store lookup.
+        if not (
             task_text.strip()
-            and publication_id == expected_id
-            and indexed.get("task_claim_judgment") == judgment
             and work.get("plan_revision")
             and judgment.get("work_ref") == work.get("plan_ref")
             and judgment.get("work_revision") == work.get("plan_revision")
             and judgment.get("claim_class") == "slice_complete"
             and judgment.get("status") == "sufficient"
+        ):
+            continue
+        publication_id = str(receipt.get("publication_id") or "")
+        indexed = load_indexed_assignment_task_proof(target_root=target_root, receipt_ref=f"proof://receipts/{publication_id}")
+        expected_id = hashlib.sha256(
+            json.dumps(_proof_publication_identity(receipt), sort_keys=True, ensure_ascii=True).encode("utf-8")
+        ).hexdigest()[:16]
+        if (
+            publication_id == expected_id
+            and indexed.get("task_claim_judgment") == judgment
             and judgment.get("proof_subject_fingerprint") == _as_dict(receipt.get("proof_subject")).get("fingerprint")
             and proof_receipt_admission(receipt)["proof_sufficient"]
             and _receipt_subject_freshness(
