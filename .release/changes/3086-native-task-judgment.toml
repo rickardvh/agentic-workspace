@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Bind Verification judgments to exact task identity independently of Planning semantics."
+issues = [2334, 2987]
