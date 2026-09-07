@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Enforce source-owned execution guarantees before best-fit comparison and bind provider-history constraints through parameterized selection."
+issues = [2210, 2947, 2767, 2818, 2909]

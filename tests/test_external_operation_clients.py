@@ -277,6 +277,7 @@ transports = [{kind = "manual"}]
         assert selected["execution"]["comparison_context"] != chosen["execution"]["comparison_context"]
         assert selected["execution"]["continuity"]["parameters"] == {
             "model": "fixture-model",
+            "ephemeral": False,
             "reasoning_effort": "low",
             "timeout_seconds": 90,
         }

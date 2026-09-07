@@ -198,7 +198,18 @@
           "x-removal-version": "1.0.0",
           "description": "Deprecated compatibility policy scheduled for removal by 1.0.0. Manual fallback derives from delegation.transport_authority."
         },
-        "replacement": {
+        "required_execution_guarantees": {
+        "type": "array",
+        "maxItems": 32,
+        "uniqueItems": true,
+        "items": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9._:-]{0,127}$"
+        },
+        "default": [],
+        "description": "Hard execution constraints checked before best-fit comparison. Only source-current adapter guarantees satisfy them; unknown names or unsupported guarantees leave a route ineligible. Names are extensible and do not select a provider or continuity mode."
+      },
+      "replacement": {
           "type": "object",
           "additionalProperties": false,
           "required": [

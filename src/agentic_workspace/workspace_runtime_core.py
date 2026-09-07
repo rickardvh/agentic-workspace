@@ -43514,6 +43514,10 @@ def _assignment_policy_payload(local_override: MixedAgentLocalOverride, profile_
             if local_override.assignment_policy is not None
             else "default",
         ),
+        "required_execution_guarantees": _sourced_value(
+            list(local_override.required_execution_guarantees),
+            source=local_override.field_sources.get("delegation.required_execution_guarantees", "default"),
+        ),
         "selection_objective": _sourced_value(
             "safe minimum expected total successful-completion cost with quality and proof before price",
             source="derived:best-fit-ranking",
@@ -45671,7 +45675,7 @@ def _current_assignment_selection(
         human_intent=str(task_text or ""),
     )
     if configurations:
-        from agentic_workspace.assignment_source import revision
+        from agentic_workspace.assignment_source import configuration_requirements, revision
         from agentic_workspace.decision import execution_configurations
 
         feasibility_revision = configurations["revision"]
@@ -45682,9 +45686,7 @@ def _current_assignment_selection(
             selected = execution_configurations(
                 {
                     "work": work,
-                    "required_result_classes": [],
-                    "required_proof_classes": [],
-                    "independent_context": False,
+                    **configuration_requirements(config.local_override),
                     "candidates": [row["configuration"] for row in configurations["candidates"]],
                     "selection": {"revision": feasibility_revision, "candidate": execution_choice.get("candidate")},
                 }
@@ -45700,9 +45702,7 @@ def _current_assignment_selection(
                 # with adapter-constructed facts, never caller eligibility JSON.
                 variant_context = {
                     "work": work,
-                    "required_result_classes": [],
-                    "required_proof_classes": [],
-                    "independent_context": False,
+                    **configuration_requirements(config.local_override),
                     "candidates": [variant],
                 }
                 variant_offer = execution_configurations(variant_context)
@@ -45741,6 +45741,10 @@ def _execution_posture_payload(
     execution_choice: dict[str, Any] | None = None,
     requested_transport: str | None = None,
 ) -> dict[str, Any]:
+    caller_choice = execution_choice
+    retained: dict[str, Any] = {}
+    stale_retained_choice = ""
+
     if target_root is not None:
         if not str(task_text or "").strip():
             live = _live_assignment_plan_binding(target_root=target_root, task_text="", changed_paths=changed_paths)
@@ -45759,9 +45763,35 @@ def _execution_posture_payload(
             if execution_choice is not None and execution_choice != retained_choice:
                 raise ValueError("configuration-choice-cannot-replace-current-assignment")
             execution_choice = retained_choice
-    posture, runtime_resolution, assignment_policy, target_evidence, assignment_decision = _current_assignment_selection(
-        config=config, changed_paths=changed_paths, task_text=task_text, execution_choice=execution_choice
-    )
+    try:
+        posture, runtime_resolution, assignment_policy, target_evidence, assignment_decision = _current_assignment_selection(
+            config=config, changed_paths=changed_paths, task_text=task_text, execution_choice=execution_choice
+        )
+    except ValueError as error:
+        if (
+            str(error) != "assignment-configuration-choice-stale"
+            or not retained.get("execution_choice")
+            or caller_choice is not None
+            or materialize_assignment
+        ):
+            raise
+        # A read must expose current offers and the exact retained blocker,
+        # not crash or silently transfer the old assignment to another target.
+        stale_retained_choice = str(error)
+        execution_choice = None
+        posture, runtime_resolution, assignment_policy, target_evidence, assignment_decision = _current_assignment_selection(
+            config=config,
+            changed_paths=changed_paths,
+            task_text=task_text,
+        )
+        assignment_decision = {
+            **assignment_decision,
+            "decision": "blocked",
+            "selected_target": retained.get("target_name"),
+            "selected_execution_configuration": {},
+            "selected_transport": None,
+            "reason_code": stale_retained_choice,
+        }
     if execution_choice is not None and requested_transport and assignment_decision.get("selected_transport") != requested_transport:
         raise ValueError("configuration-choice-transport-mismatch")
     delegation_control = _delegation_control_payload(config.local_override)
@@ -45877,6 +45907,15 @@ def _execution_posture_payload(
         selected_target=target,
         delegation_control=delegation_control,
     )
+    if stale_retained_choice:
+        assignment_gate = {
+            **assignment_gate,
+            "status": "blocked",
+            "implementation_allowed": False,
+            "reason_code": stale_retained_choice,
+            "required_next_action": "reconcile-stale-execution-configuration",
+            "silent_local_fallback_allowed": False,
+        }
     # A source-admitted replacement is already an assignment-owner consequence.
     # Ranking projections must not silently turn it back into the previous target.
     current_assignment = (
