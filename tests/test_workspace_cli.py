@@ -17220,30 +17220,12 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
     assert correction["phase_after"] == "review-proof"
     admissions = correction["calibration_admissions"]
     assert [item["producer_class"] for item in admissions] == ["human-review", "retry-outcome"]
-    assert [item["status"] for item in admissions] == ["recorded", "recorded"]
-    human_review_ref = admissions[0]["source_ref"]
-    retry_ref = admissions[1]["source_ref"]
-    human_review_receipt_id = human_review_ref.rsplit("/", 1)[-1]
-    retry_receipt_id = retry_ref.rsplit("/", 1)[-1]
-    human_review_receipt = json.loads(
-        (tmp_path / ".agentic-workspace" / "reviews" / "receipts" / f"{human_review_receipt_id}.json").read_text(encoding="utf-8")
-    )
-    retry_receipt = json.loads(
-        (tmp_path / ".agentic-workspace" / "local" / "retry-receipts" / f"{retry_receipt_id}.json").read_text(encoding="utf-8")
-    )
-    assert (
-        human_review_receipt["target_context"]
-        == retry_receipt["target_context"]
-        == {
-            "delegation_target": "fast_worker",
-            "task_class": "mechanical-follow-through",
-            "scope_class": "narrow-code-change",
-        }
-    )
-    assert human_review_receipt["authority"] == "human-review"
-    assert human_review_receipt["result"] == "changes-requested"
-    assert retry_receipt["authority"] == "local-outcome-ledger"
-    assert retry_receipt["result"] == "passed"
+    # A review comment and the resulting repair transition do not establish
+    # worker responsibility, successful retry, or observed review burden.
+    assert [item["status"] for item in admissions] == ["routed-to-responsible-owner", "routed-to-responsible-owner"]
+    assert all("source_ref" not in item for item in admissions)
+    assert not list((tmp_path / ".agentic-workspace/reviews/receipts").glob("*.json"))
+    assert not list((tmp_path / ".agentic-workspace/local/retry-receipts").glob("*.json"))
 
     assert (
         cli.main(
