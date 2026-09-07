@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Preserve independently admitted restrictions when capabilities disappear."
+issues = [2606, 2987]
