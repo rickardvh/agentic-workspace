@@ -3487,7 +3487,66 @@ export function executeHostPrimitive(primitive, values, args, operationId) {
   return domainPrimitive(primitive, values, args, operationId);
 }
 
+function workspaceProofOwnerOperation(operationId, values) {
+  // Restrict this transport to the proof/claim owner lane. Serialize only the
+  // generated public interface: source host retains mutation and authority gates.
+  const allowed = new Set(['proof.report', 'report.combined', 'final-response.admit']);
+  if (!allowed.has(operationId)) throw new RuntimeError('unsupported proof-owner operation');
+  const findInterface = (iface, inheritedId, path = [], options = []) => {
+    const currentPath = [...path, iface.name];
+    const currentOptions = [...options, ...(iface.options ?? [])];
+    const id = iface.operation_ref?.id ?? inheritedId;
+    if (id === operationId && !(iface.subcommands?.length)) return { path: currentPath, options: currentOptions };
+    for (const child of iface.subcommands ?? []) {
+      const found = findInterface(child, id, currentPath, currentOptions);
+      if (found) return found;
+    }
+    return null;
+  };
+  let declaration = null;
+  for (const command of loadJsonResource('command_package.json').commands ?? []) {
+    declaration = findInterface(command.interface, command.operation_ref?.id);
+    if (declaration) break;
+  }
+  if (!declaration) throw new RuntimeError('proof-owner public interface unavailable');
+  const argv = [...declaration.path, `--target=${resolve(String(values.target ?? '.'))}`];
+  for (const option of declaration.options) {
+    if (option.name === 'format' || option.name === 'target') continue;
+    const value = values[option.name];
+    if (value === undefined || value === null || value === '') continue;
+    const flag = option.flags?.find((item) => item.startsWith('--'));
+    if (!flag) throw new RuntimeError('proof-owner option has no public flag');
+    if (option.action === 'store_true') { if (value === true) argv.push(flag); }
+    else if (option.action === 'store_false') { if (value === false) argv.push(flag); }
+    else if (option.nargs === '*' || option.action === 'extend') { if (Array.isArray(value) && value.length) argv.push(flag, ...value.map(String)); }
+    else if (option.action === 'append') { for (const item of Array.isArray(value) ? value : [value]) argv.push(`${flag}=${String(item)}`); }
+    else argv.push(`${flag}=${typeof value === 'object' ? JSON.stringify(value) : String(value)}`);
+  }
+  argv.push('--format=json');
+  const sourceRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../../..');
+  const sourceHost = join(sourceRoot, 'scripts/run_agentic_workspace.py');
+  const environmentPython = process.env.VIRTUAL_ENV ? join(process.env.VIRTUAL_ENV, process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python') : '';
+  const checkoutPython = join(sourceRoot, '.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
+  const python = environmentPython && existsSync(environmentPython) ? environmentPython : existsSync(sourceHost) && existsSync(checkoutPython) ? checkoutPython : 'python';
+  const hostArgs = existsSync(sourceHost) ? [sourceHost, ...argv] : ['-c', 'import sys; from agentic_workspace.cli import main; raise SystemExit(main(sys.argv[1:]))', ...argv];
+  // Selected execution owns its per-command budget/cancellation/resume contract;
+  // an adapter timeout must not cut off a live proof mutation transaction.
+  const launchOptions = { cwd: existsSync(sourceHost) ? sourceRoot : resolve(String(values.target ?? '.')), encoding: 'utf8', windowsHide: true, maxBuffer: 10 * 1024 * 1024 };
+  let result = spawnSync(python, hostArgs, launchOptions);
+  // Some supported hosts expose only python3. Retry discovery only when the
+  // generic interpreter never started; owner rejection must never run twice.
+  if (python === 'python' && result.error?.code === 'ENOENT') result = spawnSync('python3', hostArgs, launchOptions);
+  if (result.stdout) {
+    try {
+      const payload = JSON.parse(result.stdout);
+      if (isObject(payload)) return result.status === 0 ? payload : { ...payload, exit_status: Number.isInteger(result.status) ? result.status : 2 };
+    } catch {}
+  }
+  return { kind: 'agentic-workspace/proof-owner-operation-error/v1', operation_id: operationId, status: 'unavailable', diagnostic: String(result.stderr || result.error?.message || '').trim().slice(0, 2000), reason_code: result.error ? 'proof-owner-unavailable' : 'proof-owner-operation-rejected', mutation_applied: result.error?.code === 'ENOENT' ? false : null, completion_claim_allowed: false, exit_status: 2, recovery: 'Use the installed authoritative workspace host with these exact public arguments; do not replace proof or claim admission with an empty adapter result. If execution started without a result, reconcile its current receipts before retrying.' };
+}
+
 function executeTypescriptDomainOperation(operationId, values) {
+  if (['proof.report', 'report.combined', 'final-response.admit'].includes(operationId)) return workspaceProofOwnerOperation(operationId, values);
   const target = resolve(String(values.target ?? '.'));
   if (operationId === 'external-evidence.submit' || operationId === 'external-evidence.query') {
     return {
@@ -3496,25 +3555,6 @@ function executeTypescriptDomainOperation(operationId, values) {
       message: 'External evidence admission requires the package-trusted runtime-backed host boundary.',
       command: operationId === 'external-evidence.submit' ? 'external-evidence-submit' : 'external-evidence-query',
       exit_status: 2,
-    };
-  }
-  if (operationId === 'final-response.admit') {
-    const checkpointRef = '.agentic-workspace/local/chat-checkpoint.json';
-    const checkpointPath = resolveInside(target, checkpointRef);
-    const checkpoint = {
-      kind: 'agentic-workspace/local-chat-checkpoint/v1',
-      source: values.source ?? 'generated-typescript-final-response',
-      after_compaction: Boolean(values.after_compaction),
-      attempt: values.attempt ?? '',
-      local_only: true,
-    };
-    mkdirSync(dirname(checkpointPath), { recursive: true });
-    writeFileSync(checkpointPath, `${JSON.stringify(checkpoint, null, 2)}\n`, 'utf8');
-    return {
-      kind: 'agentic-workspace/final-response-admission-result/v1',
-      status: 'recorded',
-      checkpoint_write: { path: checkpointRef, local_only: true },
-      target_root: target,
     };
   }
   if (operationId === 'autopilot.run') return {
@@ -3611,15 +3651,9 @@ function executeTypescriptDomainOperation(operationId, values) {
     return { kind: 'startup-context/v1', target_root: target, drill_down: { rule: 'Compact default omits selector inventory/schemas; use --select or --verbose for detail.' }, context: { proof: { kind: 'proof-selection/v1' } } };
   }
   if (operationId === 'implement.context') return { kind: 'implementer-context-tiny/v1', target_root: target, proof: { kind: 'proof-selection/v1' } };
-  if (operationId === 'proof.report') {
-    const prevalidationError = workspaceSelectorPrevalidationError(values.select, 'proof');
-    if (prevalidationError) return prevalidationError;
-    return { kind: 'proof-next-decision/v1', next: { action: 'manual-verification' }, detail_command: 'agentic-workspace proof --verbose --changed <paths> --format json' };
-  }
   if (operationId === 'setup.guidance') return { kind: 'workspace-setup/v1', command: 'setup', target_root: target };
   if (operationId === 'ownership.report') return { profile: 'compact-contract-answer/v1', surface: 'ownership', matched: false, target_root: target };
   if (operationId === 'skills.report') return { task: values.task ?? '', target_root: target, skills: [] };
-  if (operationId === 'report.combined') return { kind: 'workspace-report-router/v1', command: 'report', target_root: target };
   if (operationId === 'reconcile.report') return { kind: 'planning-reconcile/v1', status: 'clean', target_root: target };
   if (operationId === 'preflight.report') return { kind: 'preflight-response/v1', mode: values.active_only ? 'active-state-only' : 'full', target_root: target };
   if (operationId === 'checkpoint.write') return {

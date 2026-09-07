@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Route public TypeScript proof, report and final claim operations through their authoritative current host owner instead of placeholder results."
+issues = [2334, 2909]
