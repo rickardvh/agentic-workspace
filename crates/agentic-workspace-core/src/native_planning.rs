@@ -299,7 +299,7 @@ pub(crate) fn resolve_with_contract(
     let declaration = json!({"kind":"planning/continuation/v1","result_kind":"agentic-workspace/planning-continuation-result/v1","input_schema":shape});
     let owner_revision = digest(&declaration)?;
     let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[{"owner":"planning","revision":owner_revision,"requests":[declaration]}],"restriction_authorities":[{"owner":"planning","affects":["task"]}]});
-    if selected["selection_source"] == SELECTION {
+    if !selected.is_null() {
         contract["owners"][0]["effects"] = json!([{"id":"planning-state","domain":"planning"}]);
         contract["owners"][0]["domains"] = json!(["planning"]);
         let mut arguments = schema["$defs"]["operation_arguments"].clone();
@@ -352,14 +352,25 @@ pub(crate) fn resolve_with_contract(
             }
         }
     }
+    let custody_required =
+        status == "current" && selected["selection_source"] == SELECTION && retained.is_null();
+    if custody_required {
+        status = "custody-required";
+        planning_input = Value::Null;
+    }
+    let blockers = if custody_required {
+        json!([{"code":"planning-selection-custody-required", "message":"The existing local Planning selection is readable source evidence, but has no retained producer custody for mutation. Preserve it and obtain authority-correct ownership transfer through its current owner; native transfer is not yet available.", "affects":["task"]}])
+    } else {
+        json!([])
+    };
     let decisions = if matches!(status, "unresolved" | "stale") {
         json!([{"id":"planning-continuation","question":"Does the current task continue the selected Planning owner?","response_request":{"request_kind":"planning/continuation/v1","arguments":{}},"choices":[{"id":"continue-selected","label":"Continue the selected Planning owner"},{"id":"unrelated-direct","label":"Unrelated bounded direct work"}],"affects":["task"]}])
     } else {
         json!([])
     };
-    let contribution = json!({"owner":"planning","revision":revision,"facts":{"continuation":status,"selected_owner":selected},"decisions":decisions,"settled":status=="direct"});
+    let contribution = json!({"owner":"planning","revision":revision,"facts":{"continuation":status,"selected_owner":selected},"decisions":decisions,"blockers":blockers,"settled":status=="direct"});
     Ok(
-        json!({"status":status,"source_revision":revision,"selected_owner":selected,"requests":if selected.is_null(){json!([])}else{json!([template])},"capability_contract":contract,"contribution":contribution,"planning_input":planning_input,"custody_status":"not-admitted"}),
+        json!({"status":status,"source_revision":revision,"current_work_id":work_id,"selected_owner":selected,"requests":if selected.is_null(){json!([])}else{json!([template])},"capability_contract":contract,"contribution":contribution,"planning_input":planning_input,"custody_status":"not-admitted"}),
     )
 }
 
@@ -373,10 +384,10 @@ pub(crate) fn resolve_for_execution(
     current_full_contract: &Value,
 ) -> Result<Value, CoreError> {
     let mut view = resolve_with_contract(target, current_work, None, Some(current_full_contract))?;
-    if view["selected_owner"]["selection_source"] != SELECTION {
+    if view["selected_owner"].is_null() {
         return Err(error(
             SELECTION,
-            "current local owner selection required for reconciliation execution",
+            "current source-selected owner required for reconciliation execution",
         ));
     }
     if view["planning_input"].is_null() {
@@ -385,11 +396,10 @@ pub(crate) fn resolve_for_execution(
     let target = std::fs::canonicalize(target).map_err(|e| error("target", e))?;
     let root =
         Dir::open_ambient_dir(&target, ambient_authority()).map_err(|e| error("target", e))?;
-    let selection = parsed(
-        SELECTION,
-        &read(&root, SELECTION)?.ok_or_else(|| error(SELECTION, "selected source disappeared"))?,
-    )?;
-    if let Some(retained) = selection.get(RETAINED) {
+    let selection = read(&root, SELECTION)?
+        .map(|bytes| parsed(SELECTION, &bytes))
+        .transpose()?;
+    if let Some(retained) = selection.as_ref().and_then(|value| value.get(RETAINED)) {
         validate_retained(retained)?;
         if retained["source"] == view["selected_owner"]["source"] {
             view["planning_input"]["custody"] = retained["custody"].clone();
@@ -469,14 +479,27 @@ fn execute_checked(
     let target = std::fs::canonicalize(target).map_err(|e| error("target", e))?;
     let root =
         Dir::open_ambient_dir(&target, ambient_authority()).map_err(|e| error("target", e))?;
-    // Existing local selection is the bounded custody carrier. Do not create
-    // owner selection merely because a shared plan happens to be readable.
-    let mut expected = read(&root, SELECTION)?.ok_or_else(|| {
-        error(
-            SELECTION,
-            "select the shared owner locally before retaining execution custody",
-        )
-    })?;
+    // Exact continuation/invocation permits acquiring the absent local carrier.
+    // Read-only discovery never creates it, and recognizable content cannot be
+    // acquired through this absent-only path.
+    let mut expected = read(&root, SELECTION)?;
+    if let Some(bytes) = &expected {
+        let value = parsed(SELECTION, bytes)?;
+        let retained = value.get(RETAINED).ok_or_else(|| {
+            error(
+                SELECTION,
+                "existing local selection requires producer custody before mutation; preserved",
+            )
+        })?;
+        validate_retained(retained)?;
+    }
+
+    root.create_dir_all(".agentic-workspace/local/planning")
+        .map_err(|e| error(SELECTION, e))?;
+    // Recheck confinement and absence after creating the bounded parents.
+    if read(&root, SELECTION)? != expected {
+        return Err(error(SELECTION, "selection changed before lock admission"));
+    }
     let lock_path = ".agentic-workspace/local/planning/owner-selection.lock";
     if let Ok(metadata) = root.symlink_metadata(lock_path) {
         #[cfg(windows)]
@@ -502,13 +525,15 @@ fn execute_checked(
     }
     lock.try_lock()
         .map_err(|e| error(lock_path, format!("selected owner is busy: {e}")))?;
-    if read(&root, SELECTION)?.as_ref() != Some(&expected) {
+    if read(&root, SELECTION)? != expected {
         return Err(error(SELECTION, "selection changed before lock admission"));
     }
     let view = resolve_for_execution(&target, current_work, current_full_contract)?;
-    if view["selected_owner"]["selection_source"] != SELECTION {
-        return Err(error(SELECTION, "current local owner selection required"));
-    }
+    let initial_selection = json!({
+        "kind":"agentic-planning/owner-selection/v1", "mode":"local",
+        "current_work_id":view["current_work_id"],
+        "selected_owner":{"id":view["selected_owner"]["id"],"ref":view["selected_owner"]["ref"]}
+    });
     let source = view["selected_owner"]["source"].clone();
     let mut input = json!({"target":target,"relevant":true,"source":source,"intent":{"current_work":current_work},"capability_contract":current_full_contract,"invocation":invocation});
     if !view["planning_input"]["custody"].is_null() {
@@ -519,7 +544,7 @@ fn execute_checked(
         |custody| {
             // Re-read both the exact selection and its selected semantic source
             // before each bounded write. Preserve unfamiliar state on any drift.
-            if read(&root, SELECTION)?.as_ref() != Some(&expected) {
+            if read(&root, SELECTION)? != expected {
                 return Err(error(
                     SELECTION,
                     "selection changed during reconciliation; retained files preserved",
@@ -533,12 +558,34 @@ fn execute_checked(
                     "selected semantic source changed during reconciliation",
                 ));
             }
-            let mut selection = parsed(SELECTION, &expected)?;
+            let mut selection = expected
+                .as_ref()
+                .map(|bytes| parsed(SELECTION, bytes))
+                .transpose()?
+                .unwrap_or_else(|| initial_selection.clone());
             let retained = json!({"kind":"agentic-planning/reconciliation-custody/v1","current_work":current_work,"source":source,"invocation":invocation,"custody":custody});
             validate_retained(&retained)?;
             selection[RETAINED] = retained;
             let bytes = serde_json::to_vec_pretty(&selection).map_err(|e| error(SELECTION, e))?;
-            if bytes != expected {
+            if expected.as_ref() != Some(&bytes) {
+                if expected.is_none() {
+                    // Persist returned attempt custody in the newly acquired
+                    // carrier before any committed outcome can be produced.
+                    let mut file = root
+                        .open_with(SELECTION, OpenOptions::new().write(true).create_new(true))
+                        .map_err(|e| {
+                            error(
+                                SELECTION,
+                                format!(
+                                    "selection acquisition failed; existing content preserved: {e}"
+                                ),
+                            )
+                        })?;
+                    file.write_all(&bytes).map_err(|e| error(SELECTION, e))?;
+                    file.sync_all().map_err(|e| error(SELECTION, e))?;
+                    expected = Some(bytes);
+                    return after_retention(custody);
+                }
                 let nonce = std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .map_err(|e| error(SELECTION, e))?
@@ -553,7 +600,7 @@ fn execute_checked(
                 file.write_all(&bytes).map_err(|e| error(&temporary, e))?;
                 file.sync_all().map_err(|e| error(&temporary, e))?;
                 drop(file);
-                if read(&root, SELECTION)?.as_ref() != Some(&expected) {
+                if read(&root, SELECTION)? != expected {
                     return Err(error(
                         SELECTION,
                         "selection changed before atomic replacement; temporary preserved",
@@ -561,7 +608,7 @@ fn execute_checked(
                 }
                 root.rename(&temporary, &root, SELECTION)
                     .map_err(|e| error(SELECTION, e))?;
-                expected = bytes;
+                expected = Some(bytes);
             }
             after_retention(custody)
         },
@@ -604,6 +651,9 @@ mod tests {
             self.write(PLAN, &value.to_string());
             value
         }
+        fn share(&self) {
+            self.write(STATE, &format!("[[active.execplans]]\nid = \"delegation-lane-sweep\"\nsurface = \"{PLAN}\"\nstatus = \"active\"\n"));
+        }
         fn select(&self) {
             self.write(SELECTION,&json!({"kind":"agentic-planning/owner-selection/v1","mode":"local","current_work_id":"default","selected_owner":{"id":"delegation-lane-sweep","ref":PLAN}}).to_string());
         }
@@ -635,18 +685,114 @@ mod tests {
         input["capability_contract"] = view["capability_contract"].clone();
         crate::planning::compose_input(input).unwrap().1["current"] == true
     }
+    fn shared_target() -> Target {
+        let target = Target::new();
+        target.plan();
+        target.write(STATE, &format!("[[active.execplans]]\nid = \"delegation-lane-sweep\"\nsurface = \"{PLAN}\"\nstatus = \"active\"\n"));
+        target
+    }
+    #[test]
+    fn native_planning_shared_continuation_acquires_selection_in_one_reconciliation() {
+        let target = shared_target();
+        let original = fs::read(target.0.join(PLAN)).unwrap();
+        let initial = resolve(&target.0, &work(), None).unwrap();
+        assert_eq!(initial["status"], "unresolved");
+        assert!(!target.0.join(".agentic-workspace/local").exists());
+        let mut unrelated = initial["requests"][0].clone();
+        unrelated["arguments"]["answer"] = json!("unrelated-direct");
+        assert_eq!(
+            resolve(&target.0, &work(), Some(&unrelated)).unwrap()["status"],
+            "direct"
+        );
+        assert!(!target.0.join(".agentic-workspace/local").exists());
+        let (invocation, contract) = action(&target);
+        assert_eq!(invocation["operation_id"], "planning.reconcile");
+        let outcome = execute(&target.0, &work(), &invocation, &contract).unwrap();
+        assert!(fresh_current(&target));
+        let selection: Value =
+            serde_json::from_slice(&fs::read(target.0.join(SELECTION)).unwrap()).unwrap();
+        assert_eq!(selection["selected_owner"]["ref"], PLAN);
+        assert_eq!(selection[RETAINED]["custody"], outcome["custody"]);
+        let before = fs::read(target.0.join(SELECTION)).unwrap();
+        let replay = execute(&target.0, &work(), &invocation, &contract).unwrap();
+        assert_eq!(replay["value"], outcome["value"]);
+        assert_eq!(fs::read(target.0.join(SELECTION)).unwrap(), before);
+        assert_eq!(fs::read(target.0.join(PLAN)).unwrap(), original);
+    }
+    #[test]
+    fn native_planning_shared_acquisition_retains_attempt_before_interruption() {
+        let target = shared_target();
+        let (invocation, contract) = action(&target);
+        let failed = execute_observing(&target.0, &work(), &invocation, &contract, |_| {
+            Err(error(
+                "test",
+                "injected stop after absent carrier acquisition",
+            ))
+        });
+        assert!(failed.is_err());
+        let selection: Value =
+            serde_json::from_slice(&fs::read(target.0.join(SELECTION)).unwrap()).unwrap();
+        assert!(selection[RETAINED]["custody"]["committed"].is_null());
+        let result = execute(&target.0, &work(), &invocation, &contract).unwrap();
+        assert_eq!(
+            result["custody"]["attempt"],
+            selection[RETAINED]["custody"]["attempt"]
+        );
+        assert!(fresh_current(&target));
+    }
+    #[test]
+    fn native_planning_recognized_unowned_selection_is_source_only() {
+        let target = shared_target();
+        let (invocation, contract) = action(&target);
+        target.select();
+        let original = fs::read(target.0.join(SELECTION)).unwrap();
+        let view = continued(&target);
+        assert_eq!(view["status"], "custody-required");
+        assert!(view["planning_input"].is_null());
+        assert_eq!(
+            view["contribution"]["blockers"][0]["code"],
+            "planning-selection-custody-required"
+        );
+        assert!(
+            execute(&target.0, &work(), &invocation, &contract)
+                .unwrap_err()
+                .to_string()
+                .contains("requires producer custody")
+        );
+        assert_eq!(fs::read(target.0.join(SELECTION)).unwrap(), original);
+        assert!(!target.0.join(".agentic-workspace/local/effects").exists());
+        assert!(
+            !target
+                .0
+                .join(".agentic-workspace/local/planning/owner-selection.lock")
+                .exists()
+        );
+    }
+    #[test]
+    fn native_planning_shared_acquisition_preserves_intervening_unknown_selection() {
+        let target = shared_target();
+        let (invocation, contract) = action(&target);
+        target.write(SELECTION, "{\"kind\":\"unknown\"}");
+        let before = fs::read(target.0.join(SELECTION)).unwrap();
+        assert!(execute(&target.0, &work(), &invocation, &contract).is_err());
+        assert_eq!(fs::read(target.0.join(SELECTION)).unwrap(), before);
+        assert!(!target.0.join(".agentic-workspace/local/effects").exists());
+    }
     #[test]
     fn native_planning_retains_current_custody_across_fresh_reads() {
         let target = Target::new();
         target.plan();
-        target.select();
+        target.share();
         let before = resolve(&target.0, &work(), None).unwrap();
         let (invocation, contract) = action(&target);
         let result = execute(&target.0, &work(), &invocation, &contract).unwrap();
         assert!(!result["custody"]["committed"].is_null());
         assert!(fresh_current(&target));
         let after = resolve(&target.0, &work(), None).unwrap();
-        assert_eq!(before["source_revision"], after["source_revision"]);
+        assert_eq!(
+            before["selected_owner"]["source"],
+            after["selected_owner"]["source"]
+        );
         let selection: Value =
             serde_json::from_slice(&fs::read(target.0.join(SELECTION)).unwrap()).unwrap();
         assert_eq!(
@@ -659,7 +805,7 @@ mod tests {
     fn native_planning_write_scope_matches_actual_producer_custody() {
         let target = Target::new();
         target.plan();
-        target.select();
+        target.share();
         let view = continued(&target);
         let contract = view["capability_contract"].clone();
         let mut input = view["planning_input"].clone();
@@ -694,7 +840,7 @@ mod tests {
     fn native_planning_explicit_reworded_continuation_reuses_owner_custody() {
         let target = Target::new();
         target.plan();
-        target.select();
+        target.share();
         let (invocation, contract) = action(&target);
         let result = execute(&target.0, &work(), &invocation, &contract).unwrap();
         let reworded = json!({"kind":"current-work","id":"same-owner-reworded-task"});
@@ -727,7 +873,7 @@ mod tests {
     fn native_planning_interrupted_admission_resumes_exact_attempt() {
         let target = Target::new();
         target.plan();
-        target.select();
+        target.share();
         let (invocation, contract) = action(&target);
         let failed = execute_observing(&target.0, &work(), &invocation, &contract, |_| {
             Err(error("test", "interrupt after retained admission"))
@@ -748,7 +894,7 @@ mod tests {
     fn native_planning_commit_revalidates_global_sources_without_recursive_lock() {
         let target = Target::new();
         target.plan();
-        target.select();
+        target.share();
         let (invocation, contract) = action(&target);
         let failure = execute_checked(
             &target.0,
@@ -821,7 +967,7 @@ mod tests {
     fn native_planning_unretained_result_and_unknown_temp_are_preserved() {
         let target = Target::new();
         target.plan();
-        target.select();
+        target.share();
         let (invocation, contract) = action(&target);
         let result = execute(&target.0, &work(), &invocation, &contract).unwrap();
         let result_path = result["custody"]["committed"]["path"].as_str().unwrap();
@@ -853,7 +999,7 @@ mod tests {
     fn native_planning_concurrent_writer_and_material_drift_fail_closed() {
         let target = Target::new();
         let mut body = target.plan();
-        target.select();
+        target.share();
         let (invocation, contract) = action(&target);
         let (entered_tx, entered_rx) = std::sync::mpsc::channel();
         let (release_tx, release_rx) = std::sync::mpsc::channel();
@@ -892,7 +1038,7 @@ mod tests {
     fn native_planning_real_owner_requires_explicit_current_continuation() {
         let target = Target::new();
         let body = target.plan();
-        target.select();
+        target.share();
         let initial = resolve(&target.0, &work(), None).unwrap();
         assert_eq!(initial["status"], "unresolved");
         assert!(initial["planning_input"].is_null());
@@ -918,7 +1064,7 @@ mod tests {
     fn native_planning_bounded_answer_uses_actual_composed_contract() {
         let target = Target::new();
         target.plan();
-        target.select();
+        target.share();
         let initial = resolve(&target.0, &work(), None).unwrap();
         let mut contract = initial["capability_contract"].clone();
         contract["owners"]
@@ -950,7 +1096,7 @@ mod tests {
     fn native_planning_source_and_work_drift_cannot_reuse_intention() {
         let target = Target::new();
         let mut body = target.plan();
-        target.select();
+        target.share();
         let initial = resolve(&target.0, &work(), None).unwrap();
         body["canonical_core"]["hard_constraints"] = json!("Require independent domain review");
         target.write(PLAN, &body.to_string());
@@ -994,7 +1140,7 @@ mod tests {
     fn native_planning_identity_and_unsupported_authority_fail_at_source() {
         let target = Target::new();
         let mut body = target.plan();
-        target.select();
+        target.share();
         body["id"] = json!("different-owner");
         target.write(PLAN, &body.to_string());
         assert!(
@@ -1024,7 +1170,7 @@ mod tests {
     fn native_planning_same_semantic_attempts_preserve_subject_but_constraints_stale() {
         let target = Target::new();
         let mut body = target.plan();
-        target.select();
+        target.share();
         let subject = |target: &Target| {
             crate::planning::pending_input(continued(target)["planning_input"].clone()).unwrap()["contributions"][0]["facts"]["reconciliation"]["subject"].clone()
         };
