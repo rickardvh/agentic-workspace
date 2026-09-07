@@ -407,6 +407,10 @@ def test_dispatch_failure_retains_owned_reference_and_prevents_repeat(tmp_path, 
 
     def fail(*args, **kwargs):
         calls.append(True)
+        patch_schema = args[4]["properties"]["patch"]
+        assert patch_schema["type"] == "string"
+        assert 'Return "" when changed_paths is empty' in patch_schema["description"]
+        assert "stopped work" in patch_schema["description"]
         assert json.loads(kwargs["worker_environment"]["AGENTIC_WORKSPACE_DELEGATED_WORKER_KERNEL"])["assignment"]["assignment_id"] == "a"
         kwargs["on_thread"]("owned-provider-reference")
         kwargs["on_history"](ephemeral)

@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Clarify empty-patch returns for unchanged, read-only and stopped worker results across process and native transports without weakening admission."
+issues = [2947, 2817, 2909]
