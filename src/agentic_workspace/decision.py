@@ -137,6 +137,10 @@ def instruction_source_admission(context: Mapping[str, Any]) -> dict[str, Any]:
     return _request({"instruction_source_admission": context})
 
 
+def instruction_applicability(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"instruction_applicability": context})
+
+
 def replace_assignment(context: Mapping[str, Any]) -> dict[str, Any]:
     """Trusted host API; ordinary commands cannot supply admitted source facts."""
     return _request({"replace_assignment": context})

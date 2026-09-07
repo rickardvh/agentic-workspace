@@ -146,6 +146,7 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
                                 field.as_str(),
                                 "assurance.decision_record_target"
                                     | "assurance.decision_record_revision"
+                                    | "assurance.instruction_revision"
                             ))
                         || (source == LOCAL
                             && matches!(
@@ -298,7 +299,7 @@ mod tests {
     }
 
     #[test]
-    fn decision_admission_is_consumed_but_unwired_instruction_is_residual() {
+    fn native_source_admission_selectors_are_consumed() {
         let repo = Repo::new();
         let revision = "a".repeat(40);
         repo.write(SHARED, &format!("schema_version=1\n[assurance]\ndecision_record_target='docs/decisions'\ndecision_record_revision='{revision}'\ninstruction_revision='{revision}'\n"));
@@ -309,8 +310,8 @@ mod tests {
         );
         assert_eq!(result["admissions"]["decision_record_revision"], revision);
         let residuals = result["residuals"].as_array().unwrap();
-        assert_eq!(residuals.len(), 1);
-        assert_eq!(residuals[0]["field"], "assurance.instruction_revision");
+        assert!(residuals.is_empty());
+        assert_eq!(result["admissions"]["instruction_revision"], revision);
     }
 
     #[test]

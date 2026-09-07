@@ -195,6 +195,13 @@ fn names(invocation: &Value) -> Result<(String, String), CoreError> {
     ))
 }
 
+/// Pure write footprint of this store's existing effect identity. This grants
+/// no custody and neither reads nor creates either result path.
+pub(crate) fn write_paths(invocation: &Value) -> Result<Vec<String>, CoreError> {
+    let (attempt, result) = names(invocation)?;
+    Ok(vec![attempt, result])
+}
+
 /// New evidence is atomically acquired only while absent. The caller may start
 /// the effect only after receiving execute and retaining the returned custody.
 pub fn admit(value: Value) -> Result<Value, CoreError> {

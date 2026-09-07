@@ -36,3 +36,11 @@ native owner tests. Fresh processes exercise all four consumers, including the n
 binary with an empty executable search path, a real former Planning source, exact
 replay and unrelated claim-sensitive work. Passing these checks does not grant
 independent review, supported-provider success or first-stable admission.
+
+Native scoped instructions use the same Rust applicability owner as Python:
+path scope and current semantic route scope are both required. Current guidance,
+read references and preferred procedures grant no execution or proof authority.
+Hard checks/protection retain immutable source admission. Planning reconciliation
+also checks its actual bounded write set (including custody and temporary files),
+so omitted task paths cannot bypass protection. Character classes share the same
+path matcher with native Verification. Discovery creates no state.

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import fnmatch
 import hashlib
 import io
 import json
@@ -10,13 +9,12 @@ import re
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
-from agentic_workspace.decision import instruction_source_admission
+from agentic_workspace.decision import instruction_applicability, instruction_source_admission
 from agentic_workspace.semantic_task_routes import (
     current_semantic_task_route_fact,
     discover_semantic_routes,
-    route_selector_matches,
     select_semantic_task_routes,
 )
 
@@ -214,11 +212,6 @@ def instruction_documents(root: Path, *, load_bodies: bool = False) -> list[Inst
     return [read_instruction(path, root=root, load_body=load_bodies) for path in sorted(directory.glob("*.md")) if path.is_file()]
 
 
-def _matched_paths(patterns: list[str], changed_paths: Iterable[str]) -> list[str]:
-    normalized = [str(path).replace("\\", "/") for path in changed_paths]
-    return sorted({path for path in normalized for pattern in patterns if fnmatch.fnmatch(path, pattern)})
-
-
 def instruction_applies(
     document: InstructionDocument,
     *,
@@ -226,32 +219,16 @@ def instruction_applies(
     selected_routes: list[str] | None = None,
     route_posture: str = "unresolved",
 ) -> tuple[bool, str, list[str]]:
-    patterns = [str(item) for item in document.metadata["paths"]]
-    matched = _matched_paths(patterns, changed_paths)
-    path_applies = not patterns or bool(matched)
-    route_selectors = [str(item) for item in document.metadata["routes"]]
-    route_applies = not route_selectors or (
-        route_posture == "selected" and any(route_selector_matches(selector, selected_routes or []) for selector in route_selectors)
+    result = instruction_applicability(
+        {
+            "paths": [str(item) for item in document.metadata["paths"]],
+            "routes": [str(item) for item in document.metadata["routes"]],
+            "changed_paths": changed_paths,
+            "selected_routes": selected_routes or [],
+            "route_posture": route_posture,
+        }
     )
-    if path_applies and route_applies:
-        reasons: list[str] = []
-        if patterns:
-            reasons.append(f"{matched[0]} matches {next(pattern for pattern in patterns if fnmatch.fnmatch(matched[0], pattern))}")
-        else:
-            reasons.append("global path scope")
-        if route_selectors:
-            reasons.append("selected semantic route matches " + ", ".join(route_selectors))
-        return True, "; ".join(reasons), matched
-    reasons = []
-    if not path_applies:
-        reasons.append("no changed or target path matches " + ", ".join(patterns))
-    if not route_applies:
-        reasons.append(
-            "semantic route selection is " + route_posture
-            if route_posture != "selected"
-            else "no selected semantic route matches " + ", ".join(route_selectors)
-        )
-    return False, "; ".join(reasons), matched
+    return bool(result["applies"]), str(result["reason"]), list(result["matched_paths"])
 
 
 def _capability_candidates(root: Path) -> dict[str, list[str]]:

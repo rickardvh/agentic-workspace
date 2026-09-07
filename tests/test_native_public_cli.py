@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -19,7 +20,7 @@ def native_cli(shared_core_binary: Path) -> Path:
     return shared_core_binary.with_name("agentic-workspace.exe" if os.name == "nt" else "agentic-workspace")
 
 
-def consume(surface: str, binary: Path, native: Path, context: dict) -> dict:
+def consume(surface: str, binary: Path, native: Path, context: dict, *, host_path: str = "") -> dict:
     encoded = json.dumps(context)
     verb = "invoke" if "invocation" in context else "start"
     if surface == "native":
@@ -49,7 +50,7 @@ def consume(surface: str, binary: Path, native: Path, context: dict) -> dict:
             encoded,
         ]
         stdin = None
-    environment = {**os.environ, "PATH": ""} if surface == "native" else None
+    environment = {**os.environ, "PATH": host_path} if surface == "native" else None
     result = subprocess.run(command, input=stdin, text=True, capture_output=True, cwd=ROOT, check=False, env=environment)
     assert result.returncode == 0, result.stderr
     return json.loads(result.stdout)
@@ -178,3 +179,113 @@ def test_published_passed_receipt_cannot_complete_unrelated_current_task(
     (tmp_path / "a.txt").write_text("two")
     stale = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
     assert "proof-semantic-input-stale-or-unavailable" in stale["verification"]["evidence"][0]["gaps"]
+
+
+def pin_instructions(target: Path) -> str:
+    subprocess.run(["git", "init", "-q", str(target)], check=True)
+    subprocess.run(["git", "-C", str(target), "add", ".agentic-workspace/instructions"], check=True)
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(target),
+            "-c",
+            "user.name=Fixture",
+            "-c",
+            "user.email=fixture@example.invalid",
+            "commit",
+            "-qm",
+            "Own current fixture instructions",
+        ],
+        check=True,
+    )
+    pin = subprocess.check_output(["git", "-C", str(target), "rev-parse", "HEAD"], text=True).strip()
+    (target / ".agentic-workspace/config.toml").write_text(f"schema_version=1\n[assurance]\ninstruction_revision='{pin}'\n")
+    return pin
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_real_instruction_protection_and_source_drift(surface: str, tmp_path: Path, shared_core_binary: Path, native_cli: Path) -> None:
+    source = ".agentic-workspace/instructions/workspace-operating.md"
+    instruction = tmp_path / source
+    instruction.parent.mkdir(parents=True)
+    instruction.write_bytes((ROOT / source).read_bytes())
+    pin_instructions(tmp_path)
+    protected = ".agentic-workspace/local/decision-point-intent/73a213e66cd48a33.json"
+    context = {"target": str(tmp_path), "task": "Preserve the current source-owned decision", "changed": [protected]}
+    host_path = str(Path(shutil.which("git")).parent)
+    current = consume(surface, shared_core_binary, native_cli, context, host_path=host_path)
+    row = current["instructions"]["sources"][0]
+    assert row["binding_admission"]["status"] == "current"
+    assert row["guidance"]
+    assert any(f"effect:write:{protected}" in item["affects"] for item in current["decision_packet"]["blockers"])
+    assert not current["configuration"]["residuals"]
+    instruction.write_bytes(instruction.read_bytes() + b"\nSource revision changed.\n")
+    stale = consume(surface, shared_core_binary, native_cli, context, host_path=host_path)
+    assert stale["instructions"]["sources"][0]["binding_admission"]["status"] == "stale"
+    assert any("binding-unadmitted" in item["code"] for item in stale["decision_packet"]["blockers"])
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_instruction_procedure_requires_current_route_not_task_words(
+    surface: str, tmp_path: Path, shared_core_binary: Path, native_cli: Path
+) -> None:
+    source = ".agentic-workspace/instructions/github-issue-creation.md"
+    instruction = tmp_path / source
+    instruction.parent.mkdir(parents=True)
+    instruction.write_bytes((ROOT / source).read_bytes())
+    registry = tmp_path / "tools/skills/REGISTRY.json"
+    registry.parent.mkdir(parents=True)
+    registry.write_text(json.dumps({"skills": [{"id": "issue", "semantic_routes": ["github/issues/create"]}]}))
+    context = {"target": str(tmp_path), "task": "Explain the words GitHub issue creation"}
+    quiet = consume(surface, shared_core_binary, native_cli, context)
+    assert not quiet["instructions"]["sources"][0]["guidance"]
+    request = next(item for item in quiet["semantic_routes"]["requests"] if item["request_kind"] == "semantic-routes/select/v1")
+    request["arguments"] = {"posture": "selected", "routes": ["github/issues/create"]}
+    selected = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
+    row = selected["instructions"]["sources"][0]
+    assert row["preferred_procedures"] == ["github-issue-shaping", "github-issue-creation"]
+    assert row["binding_admission"]["status"] == "not-required"
+    assert not selected["decision_packet"]["ready_actions"]
+    assert not selected["decision_packet"]["blockers"]
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_instruction_protection_reaches_actual_planning_writes(
+    surface: str, tmp_path: Path, shared_core_binary: Path, native_cli: Path
+) -> None:
+    plan_ref = Path(".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json")
+    plan = tmp_path / plan_ref
+    plan.parent.mkdir(parents=True)
+    plan.write_bytes((ROOT / plan_ref).read_bytes())
+    selection_ref = ".agentic-workspace/local/planning/owner-selection.json"
+    selection = tmp_path / selection_ref
+    selection.parent.mkdir(parents=True)
+    selection.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-planning/owner-selection/v1",
+                "mode": "local",
+                "current_work_id": "default",
+                "selected_owner": {"id": "delegation-lane-sweep", "ref": plan_ref.as_posix()},
+            }
+        )
+    )
+    context = {"target": str(tmp_path), "task": "Continue the selected documentation outcome", "changed": ["docs/notes.md"]}
+    first = consume(surface, shared_core_binary, native_cli, context)
+    request = first["decision_packet"]["decision_request"]["response_request"]
+    request["arguments"]["answer"] = "continue-selected"
+    before_policy = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
+    action = before_policy["decision_packet"]["primary_action"]
+    assert action["operation_id"] == "planning.reconcile"
+    instruction = tmp_path / ".agentic-workspace/instructions/custody.md"
+    instruction.parent.mkdir(parents=True)
+    instruction.write_text(f"---\npaths: [.agentic-workspace/**]\nprotect: [{selection_ref}]\n---\nPreserve current custody.\n")
+    pin_instructions(tmp_path)
+    host_path = str(Path(shutil.which("git")).parent)
+    before = {path.relative_to(tmp_path): path.read_bytes() for path in (tmp_path / ".agentic-workspace").rglob("*") if path.is_file()}
+    with pytest.raises(AssertionError, match="invocation is stale"):
+        consume(surface, shared_core_binary, native_cli, {**context, "invocation": action}, host_path=host_path)
+    assert before == {
+        path.relative_to(tmp_path): path.read_bytes() for path in (tmp_path / ".agentic-workspace").rglob("*") if path.is_file()
+    }
