@@ -291,13 +291,26 @@ def replacement_offer(root: Path, packet: dict[str, Any], target_name: str, tran
 def replace_from_source(root: Path, packet: dict[str, Any], work: dict[str, Any], request: dict[str, Any]) -> dict[str, Any]:
     admission, execution = source_facts(root)
     identity = packet.get("assignment_identity", {})
-    plan_ref = identity.get("plan_ref", "")
-    plan_path = (root / plan_ref).resolve()
-    if not plan_ref or not plan_path.is_relative_to(root.resolve()) or (root / plan_ref).is_symlink():
-        raise ValueError("replacement-work-source-unavailable")
-    current_plan = json.loads(plan_path.read_text(encoding="utf-8-sig"))
-    if not isinstance(current_plan, dict) or current_plan.get("revision") != work.get("revision"):
-        raise ValueError("assignment-override-stale-work")
+    if str(work.get("revision") or "").startswith("planning-owner:"):
+        from agentic_workspace.workspace_runtime_core import _live_assignment_plan_binding
+
+        current = _live_assignment_plan_binding(
+            target_root=root,
+            task_text=identity.get("human_intent", ""),
+            changed_paths=identity.get("allowed_paths", []),
+        )
+        if current.get("plan_ref") != identity.get("plan_ref") or current.get("plan_revision") != work.get("revision"):
+            raise ValueError("assignment-override-stale-work")
+    else:
+        # Compatibility for already sealed pre-owner-projection assignments.
+        # New ordinary assignments always take the source-current path above.
+        plan_ref = identity.get("plan_ref", "")
+        plan_path = (root / plan_ref).resolve()
+        if not plan_ref or not plan_path.is_relative_to(root.resolve()) or (root / plan_ref).is_symlink():
+            raise ValueError("replacement-work-source-unavailable")
+        current_plan = json.loads(plan_path.read_text(encoding="utf-8-sig"))
+        if not isinstance(current_plan, dict) or current_plan.get("revision") != work.get("revision"):
+            raise ValueError("assignment-override-stale-work")
     from agentic_workspace.target_evidence import replacement_eligibility
     from agentic_workspace.workspace_runtime_core import _current_assignment_selection
 

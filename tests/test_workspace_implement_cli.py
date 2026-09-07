@@ -10301,11 +10301,24 @@ def test_plan_binding_drift_supersedes_assignment_before_rematerialization(tmp_p
             "touched_paths": ["src/current.py"],
         },
     )
+    from repo_planning_bootstrap import installer as planning_owner
+
     monkeypatch.setattr(
-        workspace_runtime_core,
-        "resolve_current_work_context",
-        lambda **_: {"selected_plan_id": "owner"},
+        planning_owner,
+        "planning_summary_query",
+        lambda **_: {
+            "status": "present",
+            "payload": {
+                "planning_record": {"status": "present", "task": {"surface": plan_ref}, "touched_scope": ["src/current.py"]},
+                "planning_revision": {"active_execplan": plan_ref, "active_execplan_hash": "content-2"},
+            },
+        },
     )
+    owner_revision = workspace_runtime_core._live_assignment_plan_binding(
+        target_root=tmp_path,
+        task_text="implement current owner",
+        changed_paths=[],
+    )["plan_revision"]
     stale_ref = ".agentic-workspace/planning/assignments/assign-stale.assignment.json"
     _write_json(
         tmp_path / stale_ref,
@@ -10352,7 +10365,7 @@ def test_plan_binding_drift_supersedes_assignment_before_rematerialization(tmp_p
     assert action["stale_assignment_binding"] == {
         "status": "stale-plan-binding",
         "plan_ref": plan_ref,
-        "plan_revision": "2",
+        "plan_revision": owner_revision,
         "allowed_paths": ["src/current.py"],
         "rule": "A plan revision or allowed-path change supersedes the old assignment before any redispatch.",
     }
@@ -10374,7 +10387,7 @@ def test_plan_binding_drift_supersedes_assignment_before_rematerialization(tmp_p
         "assignment_id": "assign-current",
         "reason": "plan-binding-changed",
         "plan_ref": plan_ref,
-        "plan_revision": "2",
+        "plan_revision": owner_revision,
         "allowed_paths": ["src/current.py"],
     }
 
@@ -11842,3 +11855,49 @@ def test_implement_selector_reports_available_fields_for_missing_selector(tmp_pa
     assert len(inventory["sample"]) <= 8
     assert inventory["inventory_command"] == "agentic-workspace implement --target . --select selector_inventory --format json"
     assert "available_selectors" not in payload
+
+
+def test_assignment_plan_binding_consumes_owner_projection_and_ignores_receipt_churn(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from repo_planning_bootstrap import installer as planning_owner
+
+    owner = {
+        "planning_record": {
+            "status": "present",
+            "task": {"surface": "planning://selected-work"},
+            "requested_outcome": "repair the bounded slice",
+            "touched_scope": ["src/work.py"],
+            "role_metadata": {"review_role": "independent-verification"},
+            "references": [{"target": "src/work.py"}],
+        },
+        "planning_revision": {
+            "revision_id": "composite-1",
+            "active_execplan": "planning://selected-work",
+            "active_execplan_hash": "content-1",
+        },
+    }
+    monkeypatch.setattr(planning_owner, "planning_summary_query", lambda **_: {"status": "present", "payload": owner})
+
+    def binding():
+        return workspace_runtime_core._live_assignment_plan_binding(target_root=tmp_path, task_text="repair", changed_paths=[])
+
+    first = binding()
+    assert first["plan_ref"] == "planning://selected-work"
+    assert first["allowed_paths"] == ["src/work.py"]
+    assert first["plan_revision"].startswith("planning-owner:sha256:")
+    assert not list(tmp_path.iterdir())  # No conventional private plan file is required by this consumer.
+    owner["planning_revision"]["revision_id"] = "receipt-updated"
+    assert binding()["plan_revision"] == first["plan_revision"]
+    owner["planning_record"]["role_metadata"] = {"review_role": "human-review"}
+    assert binding()["plan_revision"] != first["plan_revision"]
+    owner["planning_record"]["role_metadata"] = {"review_role": "independent-verification"}
+    owner["planning_revision"]["active_execplan_hash"] = "content-changed-without-revision-bump"
+    assert binding()["plan_revision"] != first["plan_revision"]
+    owner["planning_record"]["status"] = "unavailable"
+    missing = binding()
+    assert not missing["plan_revision"]
+    assert not workspace_runtime_core._assignment_plan_binding_matches(
+        assignment={"assignment_gate": first},
+        live_binding=missing,
+    )
