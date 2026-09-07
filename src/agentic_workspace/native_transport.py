@@ -81,6 +81,8 @@ def configuration_offers(
         snapshot = discover(root)
         source_revision = _source_revision(root, profile["name"])
         parameters = dict(transport["parameters"])
+        if "ephemeral" in snapshot["parameters"]:
+            parameters.setdefault("ephemeral", False)
         model = next((row for row in snapshot["models"] if row["model"] == parameters.get("model")), {})
         if "reasoning_effort" in snapshot["parameters"] and "reasoning_effort" not in parameters:
             if not snapshot.get("effective_settings_known"):
@@ -154,6 +156,11 @@ def configuration_offers(
                 "proof_classes": [],
                 "independent_context": selection["mode"] == "fresh",
                 "concurrency_available": available,
+                "execution_guarantees": [
+                    "history.non-persisted" if selection["parameters"].get("ephemeral") else "history.provider-persisted",
+                ]
+                if "ephemeral" in selection["parameters"]
+                else [],
                 "execution": {
                     "source_revision": source_revision,
                     "adapter": transport,
@@ -816,6 +823,8 @@ def execute(
                 raise ProviderError("provider-ephemeral-guarantee-not-enforced")
             if not ephemeral and thread.get("ephemeral") is True:
                 raise ProviderError("provider-persistence-guarantee-not-enforced")
+            if "ephemeral" in selection["parameters"] and thread.get("ephemeral") is not ephemeral:
+                raise ProviderError("provider-history-guarantee-unconfirmed")
             turn_params = {
                 "threadId": actual,
                 "input": [{"type": "text", "text": prompt}],

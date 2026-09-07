@@ -19,6 +19,16 @@ from agentic_workspace.decision import replace_assignment
 SOURCE = ".agentic-workspace/config.local.toml"
 
 
+def configuration_requirements(policy: Any) -> dict[str, Any]:
+    """Project current human constraints into the shared feasibility contract."""
+    return {
+        "required_result_classes": [],
+        "required_proof_classes": [],
+        "independent_context": False,
+        "required_execution_guarantees": list(getattr(policy, "required_execution_guarantees", ())),
+    }
+
+
 def current_route_configurations(
     root: Path, profiles: list[dict[str, Any]], policy: Any, work: dict[str, Any], selection: dict[str, str] | None = None
 ) -> dict[str, Any]:
@@ -111,9 +121,7 @@ def _current_route_configurations(
     return execution_configurations(
         {
             "work": work,
-            "required_result_classes": [],
-            "required_proof_classes": [],
-            "independent_context": False,
+            **configuration_requirements(policy),
             "candidates": candidates,
             "selection": selection,
         }

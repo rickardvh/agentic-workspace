@@ -481,6 +481,7 @@ class MixedAgentLocalOverride:
     high_risk_overlay: dict[str, Any]
     field_sources: dict[str, str]
     assignment_replacement: dict[str, str] | None = None
+    required_execution_guarantees: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -3284,6 +3285,7 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
             "down_routing_behavior",
             "human_override_policy",
             "replacement",
+            "required_execution_guarantees",
             "manual_transport_policy",
         }
     )
@@ -3353,6 +3355,25 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
         config_path=WORKSPACE_LOCAL_CONFIG_PATH,
         allowed=SUPPORTED_MANUAL_TRANSPORT_POLICIES,
     )
+
+    required_execution_guarantees = raw_delegation.get("required_execution_guarantees", [])
+    if (
+        not isinstance(required_execution_guarantees, list)
+        or len(required_execution_guarantees) > 32
+        or any(
+            not isinstance(value, str) or re.fullmatch(r"[a-z][a-z0-9._:-]{0,127}", value) is None
+            for value in required_execution_guarantees
+        )
+        or len(set(required_execution_guarantees)) != len(required_execution_guarantees)
+    ):
+        raise WorkspaceUsageError("delegation.required_execution_guarantees must be at most 32 unique bounded guarantee names")
+    if "required_execution_guarantees" in raw_delegation:
+        field_sources["delegation.required_execution_guarantees"] = _local_config_field_source(
+            local_payload=local_payload,
+            shared_payload=shared_payload,
+            table="delegation",
+            key="required_execution_guarantees",
+        )
 
     raw_clarification = payload.get("clarification", {})
     if raw_clarification is None:
@@ -3529,6 +3550,7 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
         down_routing_behavior=down_routing_behavior,
         human_override_policy=human_override_policy,
         assignment_replacement=replacement,
+        required_execution_guarantees=tuple(sorted(required_execution_guarantees)),
         manual_transport_policy=manual_transport_policy,
         clarification_mode=clarification_mode,
         setup_prompt_disposition=setup_prompt_disposition,

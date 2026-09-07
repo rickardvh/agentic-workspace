@@ -240,3 +240,18 @@ launcher tree or POSIX process group; it does not treat killing only a launcher 
 proof of worker release. An unconfirmed forced release leaves custody pending.
 The Windows launcher/child termination fixture uses owned non-provider processes.
 It is not a live-provider interrupt/steer proof.
+
+## Hard execution guarantees
+
+The human/repository configuration owner can require provider-neutral execution facts before best-fit comparison:
+
+```toml
+[delegation]
+required_execution_guarantees = ["history.non-persisted"]
+```
+
+This optional list is a hard constraint, not a provider preference or an execution-authority grant. Shared Rust checks that every required name is present in the current adapter facts, alongside safety, independence, result/proof constructibility and exclusivity. Unknown facts do not satisfy a requirement. Names are extensible; accepting a name in configuration does not establish its availability. The public policy projection carries source provenance. Configuration choice and parameterized variants use the same requirements, and changing policy invalidates incompatible sealed packets.
+
+The current Codex adapter establishes `history.non-persisted` for its supported ephemeral route and `history.provider-persisted` when it can explicitly request persistence. It requires the provider to confirm the selected guarantee before starting a turn; missing confirmation fails closed. These describe provider conversation history. They do not erase AW semantic assignment/proof state, establish general service retention, promise an unexpired conversation, or prove that a live worker is never visible. A required `history.never-visible` guarantee currently leaves these routes ineligible. Archive capability remains a separate fact; archive-after-completion cannot satisfy never-stored or never-visible intent. Resume/fork/recovery still require their independently discovered and current continuation capabilities.
+
+The generic process, retained host and manual transports do not invent history guarantees. With no required guarantees their established portability behavior is unchanged. A hard requirement can therefore leave no eligible route; economics cannot override it. For a softer quiet-list preference, the acting orchestrator can compare the disclosed current facts without converting that preference into a universal transport ordering.

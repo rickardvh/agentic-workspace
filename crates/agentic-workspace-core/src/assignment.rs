@@ -108,6 +108,8 @@ struct Configurations {
     required_result_classes: Vec<String>,
     required_proof_classes: Vec<String>,
     independent_context: bool,
+    #[serde(default)]
+    required_execution_guarantees: Vec<String>,
     candidates: Vec<ExecutionCandidate>,
     selection: Option<ConfigurationSelection>,
 }
@@ -127,6 +129,8 @@ struct ExecutionCandidate {
     proof_classes: Vec<String>,
     independent_context: bool,
     concurrency_available: bool,
+    #[serde(default)]
+    execution_guarantees: Vec<String>,
     execution: Value,
 }
 
@@ -143,6 +147,14 @@ pub fn configurations(value: Value) -> Result<Value, CoreError> {
     if !nonempty(&input.work["id"]) || !nonempty(&input.work["revision"]) {
         return Ok(blocked("assignment-work-identity-required"));
     }
+    if input.required_execution_guarantees.len() > 32
+        || input
+            .required_execution_guarantees
+            .iter()
+            .any(|value| value.is_empty() || value.len() > 128)
+    {
+        return Ok(blocked("assignment-execution-guarantees-invalid"));
+    }
     let mut seen = std::collections::BTreeSet::new();
     let mut rows = Vec::new();
     for mut candidate in input.candidates {
@@ -151,6 +163,11 @@ pub fn configurations(value: Value) -> Result<Value, CoreError> {
             || candidate.target.is_empty()
             || candidate.transport.is_empty()
             || candidate.capability_revision.is_empty()
+            || candidate.execution_guarantees.len() > 32
+            || candidate
+                .execution_guarantees
+                .iter()
+                .any(|value| value.is_empty() || value.len() > 128)
             || !candidate.execution.is_object()
         {
             return Ok(blocked("assignment-configuration-identity-invalid"));
@@ -181,6 +198,13 @@ pub fn configurations(value: Value) -> Result<Value, CoreError> {
         let mut reasons = Vec::new();
         for (allowed, reason) in [
             (candidate.current, "capability-not-current"),
+            (
+                input
+                    .required_execution_guarantees
+                    .iter()
+                    .all(|value| candidate.execution_guarantees.contains(value)),
+                "required-execution-guarantee-unavailable",
+            ),
             (candidate.authorized, "transport-not-authorized"),
             (candidate.safe, "independent-safety-ceiling"),
             (candidate.constructible, "execution-return-unconstructible"),
@@ -219,7 +243,8 @@ pub fn configurations(value: Value) -> Result<Value, CoreError> {
     // all participate. A choice cannot survive a material change or another work.
     let revision = hash(&json!({"work":input.work,"requirements":{
         "results":input.required_result_classes,"proof":input.required_proof_classes,
-        "independent_context":input.independent_context},"candidates":rows}));
+        "independent_context":input.independent_context,
+        "execution_guarantees":input.required_execution_guarantees},"candidates":rows}));
     let selected = if let Some(selection) = input.selection {
         if selection.revision != revision {
             return Ok(blocked("assignment-configuration-choice-stale"));

@@ -112,7 +112,7 @@ def test_configuration_choice_binds_every_material_fact(shared_core_binary: Path
     cost_schema = json.loads((ROOT / "src/agentic_workspace/contracts/schemas/assignment_context_cost.schema.json").read_text())
     Draft202012Validator(cost_schema).validate(measured)
     assert normalize_delegation_context_cost(measured, surface_name="test")["configuration_context"] == comparison
-    assert selected == candidate
+    assert selected == {**candidate, "execution_guarantees": []}
     other_lineage = deepcopy(context)
     other_lineage["selection"] = None
     other_lineage["candidates"][0]["execution"]["continuity"]["reference"] = "other-opaque-reference"
