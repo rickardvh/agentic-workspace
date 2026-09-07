@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Expose bounded current Memory source reads without promoting advisory text."
+issues = [2570, 2986]
