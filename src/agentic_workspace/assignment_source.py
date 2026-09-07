@@ -202,7 +202,8 @@ def source_facts(root: Path) -> tuple[dict[str, Any], dict[str, Any]]:
     raw = tomllib.loads(path.read_text(encoding="utf-8-sig"))
     delegation = raw.get("delegation", {})
     answer = delegation.get("replacement")
-    if not isinstance(answer, dict) or delegation.get("human_override_policy") != "explicit-only":
+    effective_policy = load_workspace_config(target_root=root).local_override.human_override_policy or "explicit-only"
+    if not isinstance(answer, dict) or effective_policy not in {"explicit-only", "allowed-with-recorded-reason"}:
         raise ValueError("assignment-override-authority-unavailable")
     required = {
         "assignment_id",
@@ -221,7 +222,16 @@ def source_facts(root: Path) -> tuple[dict[str, Any], dict[str, Any]]:
         raise ValueError("replacement-configuration-stale")
     source = {
         "reference": SOURCE,
-        "revision": revision({"answer": answer, "execution": execution, "policy": delegation, "safety": raw.get("safety", {})}),
+        "revision": revision(
+            {
+                "answer": answer,
+                "execution": execution,
+                "policy": delegation,
+                "effective_human_override_policy": effective_policy,
+                "safety": raw.get("safety", {}),
+            }
+        ),
+        "human_override_policy": effective_policy,
     }
     admission = {
         "packet_integrity": answer["packet_integrity"],
@@ -310,6 +320,15 @@ def replacement_offer(root: Path, packet: dict[str, Any], target_name: str, tran
 
 def replace_from_source(root: Path, packet: dict[str, Any], work: dict[str, Any], request: dict[str, Any]) -> dict[str, Any]:
     admission, execution = source_facts(root)
+    if admission["source"].get("human_override_policy") == "allowed-with-recorded-reason":
+        reason = request.get("reason")
+        if not isinstance(reason, str) or not reason.strip():
+            raise ValueError("assignment-override-reason-required")
+        # Reason is recorded provenance only. The independently resolved exact
+        # source answer above remains the sole replacement authorization.
+        source = {**admission["source"], "recorded_reason": reason.strip()}
+        source["revision"] = revision(source)
+        admission = {**admission, "source": source}
     identity = packet.get("assignment_identity", {})
     if str(work.get("revision") or "").startswith(("planning-owner:", "direct-task:")):
         from agentic_workspace.workspace_runtime_core import _live_assignment_plan_binding
@@ -348,7 +367,7 @@ def replace_from_source(root: Path, packet: dict[str, Any], work: dict[str, Any]
             "source": admission["source"],
             "admission": admission,
             "execution": execution,
-            "request": request,
+            "request": {key: value for key, value in request.items() if key != "reason"},
             "eligibility": eligibility,
         }
     )
@@ -463,12 +482,23 @@ def current_replacement(root: Path, packet: dict[str, Any], work: dict[str, Any]
         root,
         old,
         work,
-        {"assignment_revision": admission["assignment_revision"], "target": execution["target"], "transport": execution["transport"]},
+        {
+            "assignment_revision": admission["assignment_revision"],
+            "target": execution["target"],
+            "transport": execution["transport"],
+            "reason": packet["replacement"]["source"].get("recorded_reason"),
+        },
     )
     if expected["status"] != "replaced":
         raise ValueError(expected["reason_code"])
     result = admit_assignment_packet(
-        {"packet": packet, "canonical": expected["packet"], "source": admission["source"], "execution": execution, "work": work}
+        {
+            "packet": packet,
+            "canonical": expected["packet"],
+            "source": expected["packet"]["replacement"]["source"],
+            "execution": execution,
+            "work": work,
+        }
     )
     if result["status"] != "current":
         raise ValueError(result["reason_code"])
