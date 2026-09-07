@@ -44,6 +44,15 @@ export function semanticRouteView(context) {
   return request({semantic_route_view: context});
 }
 
+// Trusted producer/codec inputs. These helpers do not publish or grant claims.
+export function proofSubject(context) {
+  return request({proof_subject: context});
+}
+
+export function proofReceipt(context) {
+  return request({proof_receipt: context});
+}
+
 export function instructionSourceAdmission(context) {
   return request({instruction_source_admission: context});
 }

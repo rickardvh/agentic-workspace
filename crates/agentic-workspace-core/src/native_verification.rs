@@ -247,6 +247,24 @@ fn receipt_view(root: &Dir, reference: &str, work_ref: &Value, work_revision: &V
         return json!({"reference":reference,"status":"unadmitted","gaps":["receipt-unavailable-or-invalid"]});
     };
     let publication = publication_admission(root, id, &receipt);
+    let timestamp_valid = receipt["recorded_at"]
+        .as_str()
+        .and_then(|value| value.parse::<toml::value::Datetime>().ok())
+        .is_some_and(|value| {
+            value.date.is_some() && value.time.is_some() && value.offset.is_some()
+        });
+    let binding = crate::proof_receipt::assignment_binding(&receipt).ok();
+    let admission = crate::proof_receipt::admit(&receipt, timestamp_valid, binding.as_deref());
+    if admission["admitted"] != true {
+        gaps.push(
+            admission["reason"]
+                .as_str()
+                .unwrap_or("receipt-shape-unadmitted")
+                .into(),
+        );
+    } else if admission["proof_sufficient"] != true {
+        gaps.push("receipt-result-does-not-satisfy-proof".into());
+    }
     if publication["status"] != "admitted" {
         gaps.push(
             publication["reason"]
@@ -303,7 +321,7 @@ fn receipt_view(root: &Dir, reference: &str, work_ref: &Value, work_revision: &V
         ]
         .map(str::to_owned),
     );
-    json!({"reference":reference,"status":"unadmitted","publication_admission":publication,
+    json!({"reference":reference,"status":"unadmitted","publication_admission":publication,"receipt_admission":admission,
         "evidence_freshness":"unproven","strategy_coverage":"unproven","task_judgment":"unadmitted","independent_review":"not-established-by-publication",
         "proof_subject":subject["id"],"gaps":gaps})
 }

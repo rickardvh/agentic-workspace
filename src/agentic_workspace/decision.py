@@ -27,6 +27,16 @@ def direct_task_subject(task: str, paths: list[str]) -> dict[str, Any]:
     return _request({"direct_task_subject": {"task": task, "paths": paths}})
 
 
+def proof_subject(context: Mapping[str, Any]) -> dict[str, Any]:
+    """Compute shared proof identity; runtime observations grant no authority."""
+    return _request({"proof_subject": context})
+
+
+def proof_receipt(context: Mapping[str, Any]) -> dict[str, Any]:
+    """Shared shape admission; host codec observations grant no evidence authority."""
+    return _request({"proof_receipt": context})
+
+
 def attribute_assignment_outcome(evidence: Mapping[str, Any]) -> dict[str, Any]:
     return _request({"attribute_assignment_outcome": evidence})
 

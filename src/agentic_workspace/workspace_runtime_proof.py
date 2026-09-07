@@ -48,8 +48,9 @@ from agentic_workspace.proof_receipt_admission import (
     PROOF_RECEIPT_RESULT_OPTIONS,
     proof_command_admission,
     proof_receipt_admission,
+    proof_receipt_admissions,
 )
-from agentic_workspace.proof_subject import classify_proof_subject
+from agentic_workspace.proof_subject import classify_proof_subject, classify_proof_subjects
 from agentic_workspace.runtime_source_review import (
     GENERATED_CLI_RUNTIME_SOURCE_EDIT_PATHS,
     runtime_source_edit_review_for_changed_paths,
@@ -975,8 +976,6 @@ def _read_proof_receipt_records(
     def add_record(receipt: Any) -> None:
         if not isinstance(receipt, dict):
             return
-        if not proof_receipt_admission(receipt)["admitted"]:
-            return
         identity = _proof_receipt_identity(receipt)
         if identity in seen:
             return
@@ -1020,6 +1019,7 @@ def _read_proof_receipt_records(
             lines = history_path.read_text(encoding="utf-8").splitlines()
         except OSError as exc:
             return None, latest_receipt, rejected_latest, f"receipt history could not be read: {exc}"
+        history_candidates: list[dict[str, Any]] = []
         for index, line in enumerate(lines, start=1):
             if not line.strip():
                 continue
@@ -1029,7 +1029,10 @@ def _read_proof_receipt_records(
                 return None, latest_receipt, rejected_latest, f"receipt history line {index} could not be read as JSON: {exc}"
             if not isinstance(loaded, dict):
                 return None, latest_receipt, rejected_latest, f"receipt history line {index} is not a JSON object"
-            add_record(loaded)
+            history_candidates.append(loaded)
+        for receipt, admission in zip(history_candidates, proof_receipt_admissions(history_candidates), strict=True):
+            if admission["admitted"]:
+                add_record(receipt)
 
     records.sort(key=lambda item: str(item.get("recorded_at") or ""), reverse=True)
     latest_receipt = records[0] if records else {}
@@ -1676,10 +1679,28 @@ def _proof_receipt_reconciliation_payload(
             payload["rejected_latest_receipt"] = rejected_latest
         return payload
     selected_by_text = {str(command.get("command", "")): command for command in selected_commands or [] if isinstance(command, dict)}
+    # One current evaluation transports each candidate once. These maps expire
+    # with this call and cannot become evidence across a source/runtime change.
+    admissions_by_id = dict(zip(map(id, receipt_records), proof_receipt_admissions(receipt_records), strict=True))
+    sufficient_receipts = [receipt for receipt in receipt_records if admissions_by_id[id(receipt)]["proof_sufficient"]]
+    freshness_by_id = dict(
+        zip(
+            map(id, sufficient_receipts),
+            classify_proof_subjects(target_root=target_root, receipts=sufficient_receipts, changed_paths=changed_paths),
+            strict=True,
+        )
+    )
+
+    def current_freshness(receipt: dict[str, Any], command: str) -> dict[str, Any]:
+        freshness = dict(freshness_by_id[id(receipt)])
+        if freshness.get("status") != "reusable":
+            freshness["minimum_rerun_command"] = command
+        return freshness
+
     aggregate_receipts = [
         receipt
         for receipt in receipt_records
-        if proof_receipt_admission(receipt)["proof_sufficient"]
+        if admissions_by_id[id(receipt)]["proof_sufficient"]
         and _proof_receipt_aggregate_matches(receipt=receipt, required_commands=blocking_commands)[0]
     ]
     for command in blocking_commands:
@@ -1717,20 +1738,15 @@ def _proof_receipt_reconciliation_payload(
             if receipt not in template_matched_receipts
             or any(candidate is receipt and decision["status"] == "accepted" for candidate, decision in template_binding_decisions)
         ]
-        admissions = [(receipt, proof_receipt_admission(receipt)) for receipt in eligible_command_receipts]
+        admissions = [(receipt, admissions_by_id[id(receipt)]) for receipt in eligible_command_receipts]
         subject_decisions = [
-            (receipt, _receipt_subject_freshness(target_root=target_root, receipt=receipt, changed_paths=changed_paths, command=command))
-            for receipt, admission in admissions
-            if admission["proof_sufficient"]
+            (receipt, current_freshness(receipt, command)) for receipt, admission in admissions if admission["proof_sufficient"]
         ]
         accepted_receipt = next(
             (receipt for receipt, freshness in subject_decisions if freshness["status"] == "reusable"),
             None,
         )
-        aggregate_decisions = [
-            (receipt, _receipt_subject_freshness(target_root=target_root, receipt=receipt, changed_paths=changed_paths, command=command))
-            for receipt in aggregate_receipts
-        ]
+        aggregate_decisions = [(receipt, current_freshness(receipt, command)) for receipt in aggregate_receipts]
         aggregate_receipt = next((receipt for receipt, freshness in aggregate_decisions if freshness["status"] == "reusable"), None)
         aggregate_match_reason = (
             _proof_receipt_aggregate_matches(receipt=aggregate_receipt, required_commands=blocking_commands)[1]
@@ -1747,9 +1763,7 @@ def _proof_receipt_reconciliation_payload(
             None,
         )
         if accepted_receipt is not None:
-            subject_freshness = _receipt_subject_freshness(
-                target_root=target_root, receipt=accepted_receipt, changed_paths=changed_paths, command=command
-            )
+            subject_freshness = current_freshness(accepted_receipt, command)
             state = {
                 "command": command,
                 "evidence_state": "accepted",
@@ -1775,9 +1789,7 @@ def _proof_receipt_reconciliation_payload(
                     "freshness": binding["binding"].get("freshness", {}),
                 }
         elif aggregate_receipt is not None:
-            subject_freshness = _receipt_subject_freshness(
-                target_root=target_root, receipt=aggregate_receipt, changed_paths=changed_paths, command=command
-            )
+            subject_freshness = current_freshness(aggregate_receipt, command)
             state = {
                 "command": command,
                 "evidence_state": "accepted",

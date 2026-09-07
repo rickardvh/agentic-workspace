@@ -6982,8 +6982,16 @@ owner = "workspace-proof-runtime"
     )
     payload = json.loads(capsys.readouterr().out)
     answer = payload.get("values", payload.get("answer", payload))
-    assert answer["proof_closeout_summary"]["receipt_bridge"]["status"] == "complete"
-    assert answer["proof_closeout_summary"]["status"] == "sufficient-recorded"
+    # This fixture records the instantiated owner template only. The separate
+    # package fallback remains required on the baseline and must not be granted.
+    summary = answer["proof_closeout_summary"]
+    assert summary["receipt_bridge"]["status"] == "action-required"
+    assert summary["status"] == "not-yet-sufficient"
+    assert next(item for item in summary["proof_results"] if item["command"] == template_command)["receipt_state"] == "accepted"
+    assert (
+        next(item for item in summary["proof_results"] if item["command"] == "uv run pytest tests/test_workspace_proof_cli.py -q")["result"]
+        == "missing"
+    )
     receipt_tiers = [item for tier in answer["proof_command_tiers"]["tiers"] for item in tier["commands"]]
     assert next(item for item in receipt_tiers if item["command"] == template_command)["posture"] == "already-satisfied"
 
@@ -7038,7 +7046,7 @@ owner = "workspace-proof-runtime"
         required_commands=selected["required_commands"],
         selected_commands=selected["selected_commands"],
     )
-    stale_state = reconciliation["commands"][0]
+    stale_state = next(item for item in reconciliation["commands"] if item["command"] == template_command)
     assert stale_state["evidence_state"] == "template-binding-rejected"
     assert stale_state["diagnostic"] == "stale-lane_revision-template-binding"
     assert stale_state["minimum_rerun_command"] == template_command
