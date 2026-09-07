@@ -3487,10 +3487,10 @@ export function executeHostPrimitive(primitive, values, args, operationId) {
   return domainPrimitive(primitive, values, args, operationId);
 }
 
-function workspaceProofOwnerOperation(operationId, values) {
-  // Restrict this transport to the proof/claim owner lane. Serialize only the
+function workspaceAuthoritativeOwnerOperation(operationId, values) {
+  // Restrict this transport to ordinary ingress and proof/claim owners. Serialize only the
   // generated public interface: source host retains mutation and authority gates.
-  const allowed = new Set(['proof.report', 'report.combined', 'final-response.admit']);
+  const allowed = new Set(['proof.report', 'report.combined', 'final-response.admit', 'start.context', 'implement.context']);
   if (!allowed.has(operationId)) throw new RuntimeError('unsupported proof-owner operation');
   const findInterface = (iface, inheritedId, path = [], options = []) => {
     const currentPath = [...path, iface.name];
@@ -3542,11 +3542,12 @@ function workspaceProofOwnerOperation(operationId, values) {
       if (isObject(payload)) return result.status === 0 ? payload : { ...payload, exit_status: Number.isInteger(result.status) ? result.status : 2 };
     } catch {}
   }
-  return { kind: 'agentic-workspace/proof-owner-operation-error/v1', operation_id: operationId, status: 'unavailable', diagnostic: String(result.stderr || result.error?.message || '').trim().slice(0, 2000), reason_code: result.error ? 'proof-owner-unavailable' : 'proof-owner-operation-rejected', mutation_applied: result.error?.code === 'ENOENT' ? false : null, completion_claim_allowed: false, exit_status: 2, recovery: 'Use the installed authoritative workspace host with these exact public arguments; do not replace proof or claim admission with an empty adapter result. If execution started without a result, reconcile its current receipts before retrying.' };
+  const owner = ['start.context', 'implement.context'].includes(operationId) ? 'ordinary-owner' : 'proof-owner';
+  return { kind: `agentic-workspace/${owner}-operation-error/v1`, operation_id: operationId, status: result.error ? 'unavailable' : 'rejected', diagnostic: String(result.stderr || result.error?.message || '').trim().slice(0, 2000), reason_code: result.error ? `${owner}-unavailable` : `${owner}-operation-rejected`, mutation_applied: result.error?.code === 'ENOENT' ? false : null, completion_claim_allowed: false, exit_status: 2, recovery: 'Use the installed authoritative workspace host with these exact public arguments; do not replace current owner decisions or proof admission with an empty adapter result. If execution started without a result, reconcile its current receipts before retrying.' };
 }
 
 function executeTypescriptDomainOperation(operationId, values) {
-  if (['proof.report', 'report.combined', 'final-response.admit'].includes(operationId)) return workspaceProofOwnerOperation(operationId, values);
+  if (['proof.report', 'report.combined', 'final-response.admit', 'start.context', 'implement.context'].includes(operationId)) return workspaceAuthoritativeOwnerOperation(operationId, values);
   const target = resolve(String(values.target ?? '.'));
   if (operationId === 'external-evidence.submit' || operationId === 'external-evidence.query') {
     return {
@@ -3642,15 +3643,6 @@ function executeTypescriptDomainOperation(operationId, values) {
     const payload = { kind: 'planning-summary/v1', profile: values.verbose ? 'full' : 'tiny', machine_first_planning: { status: 'no-active-execplan' }, target_root: target };
     return selectWorkspacePayload(payload, values, 'summary');
   }
-  if (operationId === 'start.context') {
-    if (values.request !== undefined || String(values.select ?? '').split(',').includes('semantic_route_result')) {
-      return { kind: 'agentic-workspace/config-projection-unavailable/v1', status: 'unavailable-in-generated-typescript-host',
-        selector: 'semantic_route_result', exit_status: 2,
-        rule: 'This host cannot independently supply current-work and repository source admission. Use the configured Python host; the shared Node semantic API requires trusted host inputs.' };
-    }
-    return { kind: 'startup-context/v1', target_root: target, drill_down: { rule: 'Compact default omits selector inventory/schemas; use --select or --verbose for detail.' }, context: { proof: { kind: 'proof-selection/v1' } } };
-  }
-  if (operationId === 'implement.context') return { kind: 'implementer-context-tiny/v1', target_root: target, proof: { kind: 'proof-selection/v1' } };
   if (operationId === 'setup.guidance') return { kind: 'workspace-setup/v1', command: 'setup', target_root: target };
   if (operationId === 'ownership.report') return { profile: 'compact-contract-answer/v1', surface: 'ownership', matched: false, target_root: target };
   if (operationId === 'skills.report') return { task: values.task ?? '', target_root: target, skills: [] };
