@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Bind task-role requirement judgments to current source constraints."
+issues = [2210, 2987]
