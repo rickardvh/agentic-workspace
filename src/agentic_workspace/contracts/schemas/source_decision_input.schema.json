@@ -1023,6 +1023,173 @@
           "additionalProperties": false
         }
       ]
+    },
+    "task_requirements_identity": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "revision": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id",
+        "revision"
+      ],
+      "additionalProperties": false
+    },
+    "task_requirements_judgment": {
+      "type": "object",
+      "description": "Acting agent task judgment, not policy or Verification authority.",
+      "properties": {
+        "task_identity": {
+          "$ref": "#/$defs/task_requirements_identity"
+        },
+        "current_work": {
+          "$ref": "#/$defs/task_requirements_identity"
+        },
+        "role": {
+          "enum": [
+            "executor",
+            "evaluator"
+          ]
+        },
+        "required_result_classes": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required_proof_classes": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "verification_identity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/task_requirements_identity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "task_identity",
+        "current_work",
+        "role",
+        "required_result_classes",
+        "required_proof_classes",
+        "verification_identity"
+      ],
+      "additionalProperties": false
+    },
+    "task_requirements_input": {
+      "type": "object",
+      "description": "Internal current task, Verification and human-constraint observations; never public authority fields.",
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/task-requirements-input/v1"
+        },
+        "task_identity": {
+          "$ref": "#/$defs/task_requirements_identity"
+        },
+        "current_work": {
+          "$ref": "#/$defs/task_requirements_identity"
+        },
+        "judgment": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/task_requirements_judgment"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "verification": {
+          "anyOf": [
+            {
+              "type": "object",
+              "description": "Internal current role-specific Verification owner contribution.",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "revision": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "current": {
+                  "type": "boolean"
+                },
+                "role": {
+                  "enum": [
+                    "executor",
+                    "evaluator"
+                  ]
+                },
+                "independence_mode": {
+                  "type": "string"
+                },
+                "required_proof_classes": {
+                  "type": "array",
+                  "maxItems": 32,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "revision",
+                "current",
+                "role",
+                "independence_mode",
+                "required_proof_classes"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "required_execution_guarantees": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        }
+      },
+      "required": [
+        "kind",
+        "task_identity",
+        "current_work",
+        "judgment",
+        "verification",
+        "required_execution_guarantees"
+      ],
+      "additionalProperties": false
     }
   }
 }

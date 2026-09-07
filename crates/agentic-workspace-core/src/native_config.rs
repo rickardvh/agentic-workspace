@@ -207,6 +207,8 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
         "sources":sources,"residuals":residuals,"enabled":enabled,"cli_invoke":cli_invoke,
         "capability_contract":capability_contract,
         "modules":shared["modules"]["enabled"],
+        "assignment_requirements":{"configured":local["delegation_targets"].as_object().is_some_and(|targets|!targets.is_empty()),
+            "required_execution_guarantees":local["delegation"]["required_execution_guarantees"].as_array().cloned().unwrap_or_default()},
         "admissions":{"instruction_revision":shared["assurance"]["instruction_revision"],
             "decision_record_target":shared["assurance"]["decision_record_target"],
             "decision_record_revision":shared["assurance"]["decision_record_revision"]},
