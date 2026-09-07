@@ -36,6 +36,7 @@ from agentic_workspace._schema import ModuleDescriptor
 from agentic_workspace.authority_envelope import admit_live_mutation_boundary, admit_mutation_boundary, mutation_baseline_payload
 from agentic_workspace.config import DEFAULT_ASSURANCE_LEVEL, DEFAULT_CLI_INVOKE, WorkspaceConfig, WorkspaceUsageError
 from agentic_workspace.current_work_context import resolve_current_work_context
+from agentic_workspace.decision import separation_of_duty
 from agentic_workspace.improvement_consequence import (
     IMPROVEMENT_CONSEQUENCE_HISTORY_RELATIVE_PATH,
     ConsequenceStoreUnavailable,
@@ -7749,30 +7750,8 @@ def _host_closeout_posture_packet(
 
 
 def _separation_of_duty_gate(*, required_mode: str, implementer: dict[str, Any], reviewer: dict[str, Any] | None) -> dict[str, Any]:
-    """Resolve the minimum review separation without treating proof reruns as review."""
-    if required_mode in {"", "none", "not-applicable"}:
-        return {"kind": "agentic-workspace/separation-of-duty-gate/v1", "status": "not-applicable"}
-    reviewer = reviewer or {}
-    if not reviewer:
-        return {"kind": "agentic-workspace/separation-of-duty-gate/v1", "status": "required", "required_mode": required_mode}
-    same_actor = bool(implementer.get("actor_id")) and implementer.get("actor_id") == reviewer.get("actor_id")
-    fresh_context = bool(reviewer.get("fresh_context"))
-    distinct_provider = bool(implementer.get("provider")) and implementer.get("provider") != reviewer.get("provider")
-    human = reviewer.get("role") == "human-approver"
-    accepted = (
-        (required_mode == "fresh-context" and fresh_context)
-        or (required_mode == "separate-actor" and not same_actor)
-        or (required_mode == "distinct-provider" and not same_actor and distinct_provider)
-        or (required_mode == "human" and human and not same_actor)
-    )
-    return {
-        "kind": "agentic-workspace/separation-of-duty-gate/v1",
-        "status": "satisfied" if accepted else "blocked",
-        "required_mode": required_mode,
-        "reviewer_role": reviewer.get("role", ""),
-        "independence": {"same_actor": same_actor, "fresh_context": fresh_context, "distinct_provider": distinct_provider, "human": human},
-        "rule": "Implementer assertions, same-context self-review, and proof reruns never satisfy an independent-review requirement.",
-    }
+    """Consume the shared predicate; producer authentication remains owner-held."""
+    return separation_of_duty({"required_mode": required_mode, "implementer": implementer, "reviewer": reviewer})
 
 
 def _stable_review_json_digest(value: Any) -> str:
