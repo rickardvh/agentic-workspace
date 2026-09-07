@@ -1,5 +1,9 @@
 # Delegation lane cost audit
 
+2026-09-07 residual sweep: reassessment began from the remote integrated foundation `d8e3cb12`, after discovering that the local checkout was still on an older assignment branch. Fetch and a new stack branch preserved existing untracked receipts. No old worker was reclassified. Read-only capability discovery created no worker conversations. Initial overly broad file reads caused truncation and rereads; one guessed startup selector and two guessed paths failed. These are avoidable implementation-agent orientation costs, not provider failures. The ordinary policy-document link-check exposed path-keyword task classification; a second documentation review reached a manual best-fit handoff but projected unrelated active Planning context. No inference was spent on that mismatched subject.
+
+The evidence layer's focused tests passed, then the routed complete orchestration/config suite passed 235 tests in 19.82 seconds. Unknown metric dilution and invalidated-predecessor burden were product computation defects; neither correction establishes monetary savings or a successful supported-host lifecycle.
+
 
 
 This records observed avoidable engineering and execution costs during the delegation reconstruction stack. Measurements, inferred design opportunities and agent mistakes are distinguished. Account-wide credit depletion does not establish this task’s monetary cost. Exact credits and dollars remain unknown.

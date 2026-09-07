@@ -5234,6 +5234,23 @@ def test_target_evidence_normalizes_historical_context_inflation_as_transport_bu
             "transport": "cli",
             "record_count": 1,
             "expected_burden_component": -30,
+            "burden_metric_support": {
+                "effective_input_tokens": {"record_count": 1, "average_penalty": -30},
+                "output_tokens": {"record_count": 1, "average_penalty": 0},
+                "elapsed_ms": {"record_count": 1, "average_penalty": 0},
+                "orientation_command_count": {"record_count": 1, "average_penalty": 0},
+                "retry_count": {"record_count": 1, "average_penalty": 0},
+                "repair_loop_count": {"record_count": 1, "average_penalty": 0},
+            },
+            "burden_aggregation": "sum-of-observed-metric-means-not-a-measured-lifecycle-total",
+            "observed_metric_counts": {
+                "assignment_packet_bytes": 1,
+                "cached_input_tokens": 1,
+                "effective_input_tokens": 1,
+                "elapsed_ms": 1,
+                "output_tokens": 1,
+                "rendered_prompt_bytes": 1,
+            },
             "observed_context_cost": {
                 "assignment_packet_bytes": 3662,
                 "cached_input_tokens": 62464,
