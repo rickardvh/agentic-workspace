@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Require exact current task judgments for bounded completion while keeping command evidence reusable and independent review authoritative."
+issues = [2334, 2909]

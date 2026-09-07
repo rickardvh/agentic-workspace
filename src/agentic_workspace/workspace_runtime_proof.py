@@ -951,6 +951,8 @@ def _proof_receipt_summary(receipt: dict[str, Any]) -> dict[str, Any]:
         if value:
             summary[key] = value
     repair = _as_dict(receipt.get("proof_route_repair"))
+    if isinstance(receipt.get("task_claim_judgment"), dict):
+        summary["task_claim_judgment"] = receipt["task_claim_judgment"]
     if repair:
         summary["proof_route_repair"] = repair
     return summary
