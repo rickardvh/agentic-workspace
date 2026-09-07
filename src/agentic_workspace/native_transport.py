@@ -10,6 +10,7 @@ import hashlib
 import json
 import os
 import queue
+import re
 import shutil
 import subprocess
 import tempfile
@@ -31,11 +32,28 @@ def _lineage_path(root: Path, profile: dict[str, Any], transport: dict[str, Any]
     return root / ".agentic-workspace/local/transport-continuations" / f"{key[7:]}.json"
 
 
-def _source_revision(root: Path) -> str:
-    path = root / ".agentic-workspace/config.local.toml"
-    if path.is_symlink():
-        raise ProviderError("native-source-not-owned")
-    return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+def _source_revision(root: Path, target: str = "") -> str:
+    from agentic_workspace.assignment_source import configuration_authority_revision
+
+    return configuration_authority_revision(root, target)
+
+
+def discovered_transports(root: Path, profile: dict[str, Any]) -> list[dict[str, Any]]:
+    """Adapter-owned peer discovery; the source host still admits authority/safety."""
+    if profile.get("provider") != "openai" or not profile.get("model_family"):
+        return []
+    if any(item.get("adapter") == "codex-app-server/v1" for item in profile.get("transports", [])):
+        return []
+    try:
+        snapshot = discover(root)
+        parameters = {"model": profile["model_family"]}
+        validate_selection(snapshot, {"mode": "fresh", "parameters": parameters, "capability_revision": snapshot["revision"]})
+    except (ProviderError, OSError, subprocess.SubprocessError, ValueError, KeyError):
+        return []
+    transports = [{"kind": "native", "method": "cli", "adapter": "codex-app-server/v1", "parameters": parameters}]
+    if "fresh" in snapshot.get("ephemeral_modes", []):
+        transports.append({**transports[0], "parameters": {**parameters, "ephemeral": True}})
+    return transports
 
 
 def configuration_offers(
@@ -46,7 +64,7 @@ def configuration_offers(
         return []
     try:
         snapshot = discover(root)
-        source_revision = _source_revision(root)
+        source_revision = _source_revision(root, profile["name"])
         fresh: dict[str, Any] = {"mode": "fresh", "parameters": transport["parameters"], "capability_revision": snapshot["revision"]}
         validate_selection(snapshot, fresh)
     except (ProviderError, OSError, subprocess.SubprocessError, ValueError, KeyError):
@@ -138,6 +156,8 @@ def dispatch_packet(root: Path, packet: Any, prompt: str) -> dict[str, Any]:
     """Transport only: the ordinary assignment owner still admits the result."""
     from agentic_workspace.contracts.python_primitive_support import _assignment_context_cost, _assignment_packet_integrity
 
+    started = time.monotonic()
+    custody: dict[str, Any] = {}
     receipt: dict[str, Any] = {
         "kind": "agentic-workspace/assignment-dispatch-receipt/v1",
         "status": "blocked",
@@ -150,7 +170,7 @@ def dispatch_packet(root: Path, packet: Any, prompt: str) -> dict[str, Any]:
             raise ProviderError("native-packet-unsealed")
         configuration = packet["assignment_identity"]["dispatch_adapter"]["execution_configuration"]
         execution = configuration["execution"]
-        if execution.get("source_revision") != _source_revision(root):
+        if execution.get("source_revision") != _source_revision(root, configuration["target"]):
             raise ProviderError("native-source-not-current")
         adapter = execution["adapter"]
         if (
@@ -193,7 +213,58 @@ def dispatch_packet(root: Path, packet: Any, prompt: str) -> dict[str, Any]:
             }
         )
         schema = {"type": "object", "properties": properties, "required": list(properties), "additionalProperties": False}
-        result = execute(root, snapshot, selection, prompt, schema, timeout=adapter.get("timeout_seconds", 1800))
+        validate_selection(snapshot, selection)
+        from agentic_workspace.native_core import core_binary
+
+        try:
+            worker_core = core_binary()
+        except RuntimeError as error:
+            raise ProviderError("native-worker-core-unavailable") from error
+        custody_path = _custody_path(root, packet["run_id"])
+        custody_path.parent.mkdir(parents=True, exist_ok=True)
+        initial = {
+            "kind": "agentic-workspace/native-transport-custody/v1",
+            "run_id": packet["run_id"],
+            "packet_integrity": packet["packet_integrity"],
+            "adapter": "codex-app-server/v1",
+            "reference": None,
+            "live": True,
+            "ephemeral": False,
+        }
+        try:
+            with custody_path.open("x", encoding="utf-8") as handle:
+                json.dump(initial, handle)
+        except FileExistsError as error:
+            raise ProviderError("native-run-already-attempted") from error
+        custody = initial
+
+        def capture_thread(reference: str) -> None:
+            custody["reference"] = reference
+            _write(custody_path, custody)
+
+        def process_closed() -> None:
+            custody["live"] = False
+            _write(custody_path, custody)
+
+        worker_kernel = {"assignment": {key: packet[key] for key in ("assignment_id", "assignment_revision", "run_id", "target")}}
+        result = execute(
+            root,
+            snapshot,
+            selection,
+            prompt,
+            schema,
+            timeout=adapter.get("timeout_seconds", 1800),
+            worker_environment={
+                "AGENTIC_WORKSPACE_DELEGATED_WORKER_KERNEL": json.dumps(worker_kernel),
+                "AGENTIC_WORKSPACE_CORE_BINARY": str(worker_core),
+            },
+            on_thread=capture_thread,
+            on_closed=process_closed,
+        )
+        custody["ephemeral"] = result["continuation"].get("ephemeral") is True
+        if custody["ephemeral"]:
+            custody["reference"] = None
+        _write(custody_path, custody)
         if not result["continuation"].get("ephemeral"):
             _write(
                 lineage_path,
@@ -221,7 +292,7 @@ def dispatch_packet(root: Path, packet: Any, prompt: str) -> dict[str, Any]:
                     prompt=prompt,
                     transport=packet["transport"],
                     adapter_revision=snapshot["revision"],
-                    elapsed_ms=result["elapsed_ms"],
+                    elapsed_ms=round((time.monotonic() - started) * 1000),
                     observed=result["metrics"],
                 ),
             }
@@ -232,7 +303,101 @@ def dispatch_packet(root: Path, packet: Any, prompt: str) -> dict[str, Any]:
             # survive; the caller must resolve a new eligible route explicitly.
             _write(lineage_path, {**lineage, "reference": "", "unavailable": True})
         receipt["reason"] = str(error) if isinstance(error, ProviderError) else "native-transport-contract-unavailable"
+        if custody:
+            receipt["context_cost"] = _assignment_context_cost(
+                packet=packet,
+                prompt=prompt,
+                transport=packet["transport"],
+                adapter_revision=snapshot["revision"],
+                elapsed_ms=round((time.monotonic() - started) * 1000),
+                observed=getattr(error, "metrics", {}),
+            )
+    if custody:
+        receipt["custody_ref"] = custody_path.relative_to(root.resolve()).as_posix()
     return receipt
+
+
+def _custody_path(root: Path, run_id: str) -> Path:
+    if not isinstance(run_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]+", run_id):
+        raise ProviderError("native-run-identity-invalid")
+    path = (root / ".agentic-workspace/local/assignment-runs" / run_id / "transport-custody.json").resolve()
+    if not path.is_relative_to(root.resolve()):
+        raise ProviderError("native-custody-not-local")
+    return path
+
+
+def require_unattempted_run(root: Path, run_id: str) -> None:
+    if _custody_path(root, run_id).exists():
+        raise ProviderError("native-run-already-attempted")
+
+
+def cleanup_owned_run(root: Path, run_id: str) -> dict[str, Any]:
+    """Archive only an exact terminal attempt with confirmed process release."""
+    started = time.monotonic()
+    try:
+        path = _custody_path(root, run_id)
+        custody = json.loads(path.read_text(encoding="utf-8"))
+        state = json.loads(path.with_name("state.json").read_text(encoding="utf-8"))
+        assignment = state.get("assignment") if isinstance(state, dict) else None
+        if (
+            not isinstance(custody, dict)
+            or not isinstance(assignment, dict)
+            or custody.get("kind") != "agentic-workspace/native-transport-custody/v1"
+            or custody.get("adapter") != "codex-app-server/v1"
+            or custody.get("run_id") != run_id
+            or state.get("run_id") != run_id
+            or custody.get("live") is not False
+            or state.get("current_state") not in {"closed", "archived", "rejected", "dispatch-failed"}
+            or not custody.get("packet_integrity")
+            or assignment.get("packet_integrity") != custody["packet_integrity"]
+        ):
+            raise ProviderError("native-cleanup-custody-not-terminal")
+        previous = custody.get("cleanup_status")
+        if previous in {"archived", "already-absent", "not-stored"}:
+            return {"status": previous, "reused": True, "elapsed_ms": 0, "provider_state_deleted": False}
+        if custody.get("ephemeral") is True:
+            status = "not-stored"
+        elif isinstance(custody.get("reference"), str) and custody["reference"]:
+            with exclusive_lineage(custody["reference"]):
+                # The process lock protects live writers. Existing run custody
+                # also protects a released sibling still awaiting admission or
+                # review. Bound inspection rather than inventing a session DB.
+                for index, sibling in enumerate(path.parent.parent.glob("*/transport-custody.json")):
+                    if index >= 256:
+                        raise ProviderError("native-cleanup-custody-scan-limit")
+                    if sibling.resolve() == path:
+                        continue
+                    if not sibling.resolve().is_relative_to(root.resolve()):
+                        raise ProviderError("native-custody-not-local")
+                    other = json.loads(sibling.read_text(encoding="utf-8"))
+                    if not isinstance(other, dict):
+                        raise ProviderError("native-cleanup-custody-unavailable")
+                    if other.get("reference") == custody["reference"]:
+                        other_state = json.loads(sibling.with_name("state.json").read_text(encoding="utf-8"))
+                        if (
+                            other.get("live") is not False
+                            or not isinstance(other_state, dict)
+                            or other_state.get("current_state") not in {"closed", "archived", "rejected", "dispatch-failed"}
+                        ):
+                            raise ProviderError("native-cleanup-conversation-still-needed")
+                lineages = []
+                for index, lineage_path in enumerate((root / ".agentic-workspace/local/transport-continuations").glob("*.json")):
+                    if index >= 256 or not lineage_path.resolve().is_relative_to(root.resolve()):
+                        raise ProviderError("native-cleanup-custody-scan-limit")
+                    lineage = json.loads(lineage_path.read_text(encoding="utf-8"))
+                    if not isinstance(lineage, dict):
+                        raise ProviderError("native-cleanup-custody-unavailable")
+                    if lineage.get("reference") == custody["reference"]:
+                        lineages.append((lineage_path, lineage))
+                status = archive_reference(discover(root), custody["reference"])
+                for lineage_path, lineage in lineages:
+                    _write(lineage_path, {**lineage, "reference": "", "unavailable": "archived"})
+        else:
+            raise ProviderError("native-cleanup-reference-unavailable")
+        _write(path, {**custody, "cleanup_status": status})
+        return {"status": status, "elapsed_ms": round((time.monotonic() - started) * 1000), "provider_state_deleted": False}
+    except (ProviderError, OSError, ValueError, KeyError) as error:
+        return {"status": "deferred", "reason": str(error) if isinstance(error, ProviderError) else "native-cleanup-custody-unavailable"}
 
 
 def digest(value: Any) -> str:
@@ -247,13 +412,15 @@ def _write(path: Path, value: Any) -> None:
 
 
 class ProviderError(ValueError):
-    pass
+    def __init__(self, message: str, *, metrics: dict[str, Any] | None = None):
+        super().__init__(message)
+        self.metrics = metrics or {}
 
 
 class CodexConnection:
     """One provider process. Only the provider owns conversation persistence."""
 
-    def __init__(self, executable: str, *, timeout: float = 30):
+    def __init__(self, executable: str, *, timeout: float = 30, environment: dict[str, str] | None = None):
         self.timeout = timeout
         self.process = subprocess.Popen(
             [executable, "app-server", "--stdio"],
@@ -262,6 +429,7 @@ class CodexConnection:
             stderr=subprocess.DEVNULL,
             text=True,
             encoding="utf-8",
+            env={**os.environ, **environment} if environment is not None else None,
         )
         self.messages: queue.Queue[dict[str, Any]] = queue.Queue()
         self.number = 0
@@ -497,14 +665,21 @@ def execute(
     *,
     timeout: int = 1800,
     on_thread: Callable[[str], None] | None = None,
+    worker_environment: dict[str, str] | None = None,
+    on_closed: Callable[[], None] | None = None,
 ) -> dict[str, Any]:
     """Run an exact native topology; missing provider state never becomes fresh."""
     validate_selection(snapshot, selection)
     reference = selection.get("reference")
     mode = selection["mode"]
     started = time.monotonic()
+    metrics: dict[str, Any] = {"kind": "agentic-workspace/assignment-transport-metrics/v1"}
     with exclusive_lineage(reference or "fresh:" + os.urandom(16).hex()):
-        connection = CodexConnection(snapshot["executable"])
+        connection = (
+            CodexConnection(snapshot["executable"], environment=worker_environment)
+            if worker_environment is not None
+            else CodexConnection(snapshot["executable"])
+        )
         try:
             method = {"fresh": "thread/start", "resume": "thread/resume", "restart": "thread/resume", "fork": "thread/fork"}[mode]
             params = {"cwd": str(root), "model": selection["parameters"]["model"], "sandbox": "read-only", "approvalPolicy": "never"}
@@ -534,7 +709,6 @@ def execute(
             if selection["parameters"].get("reasoning_effort"):
                 turn_params["effort"] = selection["parameters"]["reasoning_effort"]
             turn = connection.call("turn/start", turn_params)["turn"]["id"]
-            metrics: dict[str, Any] = {"kind": "agentic-workspace/assignment-transport-metrics/v1"}
             output = ""
             deadline = time.monotonic() + timeout
             while time.monotonic() < deadline:
@@ -573,11 +747,17 @@ def execute(
                         "raw_transcript_stored": False,
                     }
             raise ProviderError("provider-turn-timeout")
+        except (ProviderError, ValueError, OSError) as error:
+            raise ProviderError(
+                str(error) if isinstance(error, ProviderError) else "native-return-or-control-failed", metrics=metrics
+            ) from error
         finally:
             connection.close()
+            if on_closed is not None:
+                on_closed()
 
 
-def archive_reference(snapshot: dict[str, Any], reference: str) -> None:
+def archive_reference(snapshot: dict[str, Any], reference: str) -> str:
     """Reversible cleanup of a caller-owned terminal worker; never delete state."""
     if not snapshot.get("archive_supported"):
         raise ProviderError("native-archive-unavailable")
@@ -588,5 +768,7 @@ def archive_reference(snapshot: dict[str, Any], reference: str) -> None:
         except ProviderError as error:
             if str(error) != "native-active-thread-unavailable":
                 raise
+            return "already-absent"
+        return "archived"
     finally:
         connection.close()

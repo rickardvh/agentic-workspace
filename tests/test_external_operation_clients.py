@@ -2086,6 +2086,105 @@ def _prepare_shared_worktree_assignment(
     return identity, invocation, state["host_execution"]
 
 
+def test_existing_assignment_dry_run_never_calls_transport(tmp_path: Path, monkeypatch) -> None:
+    from types import SimpleNamespace
+
+    from agentic_workspace.contracts import python_primitive_support as primitive
+
+    identity, _, _ = _prepare_shared_worktree_assignment(tmp_path, run_id="dry-run")
+    before = {path.relative_to(tmp_path): path.read_bytes() for path in tmp_path.rglob("*") if path.is_file() and ".git" not in path.parts}
+    monkeypatch.setattr(primitive, "_dispatch_assignment_packet", lambda **kwargs: pytest.fail("dry run launched a worker"))
+    result = primitive._assignment_lifecycle_apply(
+        values={
+            "operation_id": "assignment.dispatch",
+            "target_root": str(tmp_path),
+            "assignment_id": "assign-shared",
+            "assignment_revision": identity["revision"],
+            "run_id": "dry-run",
+            "target_name": "worker",
+            "transport": "internal",
+            "dry_run": True,
+        },
+        arguments={},
+        context=SimpleNamespace(cwd=str(tmp_path)),
+    )
+    assert result["outcome"] == "noop", result
+    assert result["mutation_applied"] is False
+    after = {path.relative_to(tmp_path): path.read_bytes() for path in tmp_path.rglob("*") if path.is_file() and ".git" not in path.parts}
+    assert after == before
+
+    for transition, dry_run in (("dispatch", True), ("export", False)):
+        node = _run_typescript_assignment(
+            tmp_path,
+            transition,
+            {
+                "assignment_id": "assign-shared",
+                "assignment_revision": identity["revision"],
+                "run_id": "dry-run",
+                "target_name": "worker",
+                "transport": "internal",
+                "dry_run": dry_run,
+            },
+        )
+        assert node["status"] == "handoff-prepared", node
+        assert node["outcome"] == ("noop" if dry_run else "applied")
+
+
+def test_failed_dispatch_preserves_attempt_and_worker_entry(tmp_path: Path, monkeypatch) -> None:
+    from types import SimpleNamespace
+
+    from agentic_workspace.contracts import python_primitive_support as primitive
+
+    identity, _, _ = _prepare_shared_worktree_assignment(tmp_path, run_id="failed-run")
+    state_path = tmp_path / ".agentic-workspace/local/assignment-runs/failed-run/state.json"
+
+    def fail(**kwargs):
+        state = json.loads(state_path.read_text())
+        assert state["assignment"]["assignment_id"] == "assign-shared"
+        assert state["current_state"] == "handoff-prepared"
+        return {"status": "blocked", "reason": "fixture-worker-failed", "context_cost": {"elapsed_ms": 12}}
+
+    monkeypatch.setattr(primitive, "_dispatch_assignment_packet", fail)
+    result = primitive._assignment_lifecycle_apply(
+        values={
+            "operation_id": "assignment.dispatch",
+            "target_root": str(tmp_path),
+            "assignment_id": "assign-shared",
+            "assignment_revision": identity["revision"],
+            "run_id": "failed-run",
+            "target_name": "worker",
+            "transport": "internal",
+        },
+        arguments={},
+        context=SimpleNamespace(cwd=str(tmp_path)),
+    )
+    assert result["status"] == "blocked" and result["mutation_applied"] is True
+    assert json.loads(state_path.read_text())["current_state"] == "dispatch-failed"
+    observation = json.loads(state_path.with_name("dispatch").joinpath("receipt.json").read_text())
+    assert observation["context_cost"]["elapsed_ms"] == 12
+    state_path.with_name("transport-custody.json").write_text("{}")
+    before = state_path.read_bytes()
+    monkeypatch.setattr(primitive, "_assignment_dispatch_configuration", lambda **kwargs: {"kind": "native"})
+    monkeypatch.setattr(primitive, "_dispatch_assignment_packet", lambda **kwargs: pytest.fail("repeated attempt launched"))
+    repeated = primitive._assignment_lifecycle_apply(
+        values={
+            "operation_id": "assignment.dispatch",
+            "target_root": str(tmp_path),
+            "assignment_id": "assign-shared",
+            "assignment_revision": identity["revision"],
+            "run_id": "failed-run",
+            "target_name": "worker",
+            "transport": "internal",
+        },
+        arguments={},
+        context=SimpleNamespace(cwd=str(tmp_path)),
+    )
+    assert repeated["reason_code"] == "native-run-already-attempted"
+    assert repeated["mutation_applied"] is False
+    assert state_path.read_bytes() == before
+    assert json.loads(state_path.with_name("dispatch").joinpath("receipt.json").read_text()) == observation
+
+
 def _run_typescript_assignment(target: Path, transition: str, values: dict[str, object]) -> dict[str, object]:
     arguments: list[str] = []
     for name, value in values.items():

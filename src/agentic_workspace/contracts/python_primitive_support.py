@@ -655,6 +655,8 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
     target_root = Path(str(values.get("target_root") or values.get("target") or context.cwd)).resolve()
     local_root = _resolve_inside(target_root, ".agentic-workspace/local/assignment-runs")
     dry_run = bool(values.get("dry_run", False))
+    dispatch_attempted = False
+    receipt: dict[str, Any]
 
     assignment_id = _optional_text(values.get("assignment_id"))
     assignment_revision = _optional_text(values.get("assignment_revision"))
@@ -996,7 +998,27 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             }
         )
         writes = {packet_path: packet, prompt_path: prompt, manifest_path: manifest}
-        if transition == "dispatch" and transport != "manual" and not failures:
+        if transition == "dispatch" and dispatch_configuration.get("kind") == "native" and not failures and not dry_run:
+            from agentic_workspace.native_transport import ProviderError, require_unattempted_run
+
+            try:
+                require_unattempted_run(target_root, run_id)
+            except ProviderError as error:
+                failures.append(
+                    {
+                        "reason": str(error),
+                        "field": "run_id",
+                        "recovery": "Preserve this attempt's result; use current assignment re-entry for an explicitly new attempt.",
+                    }
+                )
+        if transition == "dispatch" and transport != "manual" and not failures and not dry_run:
+            # The worker must resolve this exact bounded assignment at entry.
+            # Persist custody before crossing the process boundary; failures
+            # cannot erase an attempt that may already have consumed resources.
+            for path, payload in writes.items():
+                _write_assignment_artifact(path=path, payload=payload)
+            _write_assignment_artifact(path=state_path, payload=state)
+            dispatch_attempted = True
             dispatch = _dispatch_assignment_packet(
                 packet=packet,
                 prompt=prompt,
@@ -1114,6 +1136,8 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
                         },
                     }
                 )
+            if failures:
+                state["current_state"] = "dispatch-failed"
     elif transition == "import":
         require("run_id")
         returned = _assignment_import_return_value(values=values, target_root=target_root, failures=failures)
@@ -1636,6 +1660,26 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
                 state["current_state"] = prior_state
                 receipt["status"] = "blocked"
 
+    if transition == "cleanup" and not failures and not dry_run:
+        adapter = _assignment_mapping(
+            _assignment_mapping(_assignment_mapping(state.get("assignment")).get("assignment_identity")).get("dispatch_adapter")
+        )
+        execution = _assignment_mapping(_assignment_mapping(adapter.get("execution_configuration")).get("execution"))
+        if _assignment_mapping(execution.get("adapter")).get("adapter") == "codex-app-server/v1":
+            from agentic_workspace.native_transport import cleanup_owned_run
+
+            cleanup = cleanup_owned_run(target_root, run_id)
+            receipt["transport_cleanup"] = cleanup
+            if cleanup["status"] == "deferred":
+                state["current_state"] = prior_state
+                failures.append(
+                    {
+                        "reason": cleanup["reason"],
+                        "field": "transport_cleanup",
+                        "recovery": "Release the exact worker and retry cleanup; provider state and semantic assignment are preserved.",
+                    }
+                )
+
     transition_receipt = {
         "transition": transition,
         "operation_id": operation_id,
@@ -1657,6 +1701,11 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
     if failures:
         outcome = "blocked"
         status = "blocked"
+        if dispatch_attempted:
+            for path, payload in writes.items():
+                _write_assignment_artifact(path=path, payload=payload)
+            _write_assignment_artifact(path=state_path, payload=state)
+            artifact_paths.append(state_path)
     elif dry_run:
         outcome = "noop"
         status = str(state.get("current_state") or transition)
@@ -1679,7 +1728,7 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
         "transition": transition,
         "status": status,
         "outcome": outcome,
-        "mutation_applied": outcome == "applied",
+        "mutation_applied": outcome == "applied" or dispatch_attempted,
         "target_root": target_root.as_posix(),
         "run_id": run_id,
         "assignment_id": assignment_id or _optional_text(state.get("assignment_id")) or None,

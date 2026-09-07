@@ -1,7 +1,12 @@
 # Native delegation transport
 
-The Python repository host can construct `codex-app-server/v1` as a peer of a
-configured process, API, or manual transport. The generic argv adapter retains
+The Python repository host can discover `codex-app-server/v1` for configured
+OpenAI target/model identities as a peer of a process, API, or manual transport.
+The retained current-host route remains distinct from launching that same target
+through another adapter; only retained execution avoids launch safety checks.
+Discovery offers persisted and disposable fresh alternatives where supported,
+without changing the human policy. Explicit native transports remain supported.
+The generic argv adapter retains
 its existing behavior. Neither transport has a fixed priority over the other;
 selection compares eligible execution configurations and keeps configured order
 as the existing tie breaker when contextual evidence is absent.
@@ -23,8 +28,9 @@ The adapter discovers the installed protocol schema and current account model
 catalog. Supported reasoning settings come from that catalog and are accepted
 only when the installed turn protocol can enforce them. Unknown adapter knobs
 fail closed. Native execution requires automatic transport authority and the
-separate command-safety permission. Changing the source configuration invalidates
-the sealed native execution configuration before another provider effect.
+separate command-safety permission. Changing relevant source authority invalidates
+the sealed native configuration before another provider effect; unrelated local
+editor preferences do not invalidate it.
 
 Discovery uses the adapter implementation, installed executable version and
 protocol fingerprint. A fifteen-minute bound forces rediscovery even when the
@@ -50,8 +56,8 @@ parameter combination, capability/target revisions, exact semantic scope,
 originating AW run and known liveness/exclusivity. The checked-in assignment
 carries only a digest binding to that local residue. Reuse offers become visible
 after the originating attempt is terminal, and only for the same semantic scope
-and revision. Cross-scope lineage admission and a public actor choice among
-these offers remain assignment-owner work. There is no transcript store,
+and revision. The public actor choice below selects among these offers;
+cross-scope lineage admission remains assignment-owner work. There is no transcript store,
 provider database replica, session ledger or portable session taxonomy.
 
 An OS lock excludes another AW adapter writer of the same provider lineage
@@ -60,6 +66,27 @@ uncoordinated external provider clients. A missing provider thread revokes only
 the local reference and blocks that dispatch. Planning survives; the acting
 orchestrator must resolve another eligible configuration, commonly a fresh
 bounded handoff. The adapter never silently converts resume into fresh.
+
+Before launch, the assignment owner persists the exact bounded packet and run
+state. The native process receives that assignment identity and a current AW core
+binary through its local environment. Worker startup resolves the named assignment,
+not whichever sibling was most recently written. An invalid identity fails closed.
+End-to-end inheritance by the provider's worker shell still needs ordinary host
+dogfood; deterministic environment fixtures alone do not prove that boundary.
+
+Minimal per-run custody reserves one native attempt before launch and records the
+opaque reference as soon as the provider returns it. Process release is recorded
+only after close succeeds. Failed dispatch observations survive, including available
+counters and total dispatch elapsed time; they are not successful task evidence.
+Repeated dispatch cannot overwrite the existing attempt or launch another worker.
+Dry-run and export do not launch work.
+
+`assignment cleanup` can reversibly archive a native worker after an exact terminal
+run and confirmed process release. It protects released siblings still awaiting
+admission/review, preserves AW assignments and proof, and revokes archived local
+continuation offers. Cleanup is idempotent. Unknown custody, process loss without
+confirmed release, external writer conflicts or the bounded custody-scan limit
+defer cleanup explicitly. It does not force another client's worker to stop.
 
 ## Supported-host evidence
 
@@ -96,9 +123,11 @@ of a live externally owned thread.
 The persisted live test requires discovered archive support, captures owned
 references before a turn can fail, and attempts exact owned cleanup on success
 or exception. Cleanup failure remains a test failure with minimal local pending
-references. It never deletes provider history. Ordinary assignment-terminal
-cleanup and binding a hard user visibility requirement remain lifecycle/selection
-owner work; advertising archive support alone does not satisfy those outcomes.
+references. It never deletes provider history. Ordinary exact terminal cleanup is
+now implemented with deterministic custody coverage. Automatic terminal cleanup
+policy, binding a hard user visibility requirement, and ordinary supported-host
+custody/worker-entry evidence remain unresolved; advertising archive support alone
+does not satisfy those outcomes.
 
 Run deterministic coverage with `uv run --active pytest tests/test_native_transport.py -q`.
 The live test is skipped unless `AW_NATIVE_TRANSPORT_HOST_MODEL` is explicitly

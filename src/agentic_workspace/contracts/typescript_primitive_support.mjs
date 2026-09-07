@@ -2548,7 +2548,7 @@ function assignmentLifecycleApply(values, operationId) {
     writes.set(promptPath, prompt);
     writes.set(manifestPath, { kind: 'agentic-workspace/assignment-export-manifest/v1', assignment_id: id, assignment_revision: rev, run_id: runId, integrity: assignmentText(effectivePacket.packet_integrity) || assignmentDigest(effectivePacket) });
     Object.assign(state, { assignment: effectivePacket, planning_assignment_ref: authorities.planning_assignment_ref, structural_proof_receipt_ref: authorities.proof_receipt_ref, current_state: 'handoff-prepared', run_id: runId, assignment_id: id });
-    if (transport !== 'manual' && !failures.length) {
+    if (transition === 'dispatch' && transport !== 'manual' && !failures.length && !values.dry_run) {
       const dispatch = assignmentDispatch(effectivePacket, prompt, targetRoot, transport);
       const dispatchPath = artifact('dispatch/receipt.json');
       artifactPaths.push(dispatchPath);
