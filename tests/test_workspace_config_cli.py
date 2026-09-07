@@ -125,9 +125,11 @@ capability_classes = ["boundary-shaping", "reasoning-heavy", "mixed", "mechanica
     )
 
 
-def test_repo_without_machine_local_delegation_policy_stays_quiet_and_canonical() -> None:
+def test_repo_without_machine_local_delegation_policy_stays_quiet_and_canonical(tmp_path: Path) -> None:
     repo_root = Path(__file__).resolve().parents[1]
-    config = cli._load_workspace_config(target_root=repo_root)
+    _init_git_repo(tmp_path)
+    _write(tmp_path / ".agentic-workspace/config.toml", (repo_root / ".agentic-workspace/config.toml").read_text(encoding="utf-8"))
+    config = cli._load_workspace_config(target_root=tmp_path)
     mixed = workspace_runtime_core._mixed_agent_payload(config=config)
 
     assert mixed["effective_orchestration"]["status"] == "direct-local"
