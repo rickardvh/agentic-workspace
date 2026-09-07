@@ -95,6 +95,11 @@ strength = "strong"
 location = "external"
 transports = [{kind = "manual"}]
 """)
+    with source.open("a") as handle:
+        for index in range(8):
+            handle.write(
+                f'\n[delegation_targets.peer_{index}]\ntarget_id = "peer:{index}"\ntarget_revision = "1"\nstrength = "strong"\nlocation = "external"\ntransports = [{{kind = "manual"}}]\n'
+            )
     task = "Repair the bounded feature calculation."
     from repo_planning_bootstrap import installer as planning_installer
 
@@ -139,6 +144,8 @@ transports = [{kind = "manual"}]
     public_selection = json.loads(capsys.readouterr().out)
     assert not public_selection.get("missing")
     offers = public_selection["values"]["context.delegation_decision"]["execution_configurations"]
+    assert any(row["configuration"]["target"] == "peer_7" for row in offers["candidates"])
+    assert all("configuration" in row for row in offers["candidates"])
     assert offers["revision"] == ordinary()["assignment_decision"]["execution_configurations"]["revision"]
     chosen = next(row["configuration"] for row in offers["candidates"] if row["configuration"]["target"] == "worker")
     values = {

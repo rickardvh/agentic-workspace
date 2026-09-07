@@ -394,7 +394,9 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
         if _selector_requests(selected_fields, "context.delegation_decision"):
             assignment = _as_dict(_as_dict(full_payload.get("execution_posture")).get("assignment_decision"))
             payload.setdefault("context", {})["delegation_decision"] = {
-                **_as_dict(full_payload.get("delegation_decision")),
+                **_compact_start_delegation_decision(
+                    _as_dict(full_payload.get("delegation_decision")), include_manual_handoff_detail=False
+                ),
                 "execution_configurations": copy.deepcopy(_as_dict(assignment.get("execution_configurations"))),
             }
         if test_strategy_check_selected:
