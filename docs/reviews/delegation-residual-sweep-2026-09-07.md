@@ -25,7 +25,7 @@ The two previously incomplete ordinary workers remain censored observations. No 
 
 ## Claim boundary
 
-This is an implementation and evidence audit. Local passing checks cannot supply independent acceptance, human/domain judgment, or unavailable supported-host evidence. The stack must remain unmerged; final merge order and closure assessment are recorded after validation.
+This is an implementation and evidence audit. Local passing checks cannot supply independent acceptance, human/domain judgment, or unavailable supported-host evidence. The maintainer merged #3063 through #3071 during the sweep and confirmed those merges. The implementation agent issued no merges, changed no `master` ref, and closed no issues. The remaining stack and proof boundaries are recorded below.
 
 ## Integrated owner changes
 
@@ -41,7 +41,7 @@ The stack implements only demonstrated gaps:
 - Source replacement honors validated override-policy defaults and accepted variants. A recorded reason is sealed provenance; exact human-owned source authorization remains mandatory.
 - Generic/unrelated proof history is filtered before trusted receipt reads. The call-count regression proves zero such reads for 102 irrelevant records, without claiming a whole-operation latency improvement.
 
-Conformance remains a consumer: its final layer adds focused route declarations and removes three obsolete TS-only placeholder expectations. It does not implement owner semantics.
+Conformance remains a consumer. The proof placeholder expectation is removed at #3072; ordinary start/implement expectations are removed at #3074. The final layer adds focused route declarations and the evidence report. No conformance layer implements owner semantics.
 
 ## Current-source disposition
 
@@ -100,8 +100,35 @@ A matched public local control selected Astra for an authority/safety assessment
 | Direct/Planning judgments, current strategy source and public owner parity | `tests/test_verification_public_owner.py`, direct-task claim regression in `tests/test_workspace_cli.py` |
 | Ordinary no-keyword source consumption, local and missing-host controls | `tests/test_ordinary_public_owner.py` |
 | Empty-patch return contract | `tests/test_assignment_no_change_prompt.py`, `tests/test_native_transport.py` |
+| Python3-only installed host, absent interpreters, no retry after owner rejection | `tests/test_typescript_owner_interpreter.py`, generated TypeScript Docker conformance |
 | Sparse evidence, supersession, bounded attempts and irrelevant-history cost | `tests/test_orchestration.py`, `tests/test_assignment_burden.py`, `tests/test_task_judgment_candidates.py` |
 
 Generated adapter conformance with Node required passed after removing obsolete placeholder assertions. Focused groups passed before integration; counts overlap and are not a unique-test total. Initial aggregate run `1a3388944654d59ef05c` remains cancelled after 13/28 passed commands, including 380 tests in its first command. It is not completed proof.
 
-Final selected validation, exact tested revision and publication order are recorded below after execution. Maintained human workflow dispositions (`adapter_surface_refresh`, `dogfooding_lane_closeout`), independent acceptance and the missing host/causal outcomes are not manufactured by executable success.
+Maintained human workflow dispositions (`adapter_surface_refresh`, `dogfooding_lane_closeout`), independent acceptance and the missing host/causal outcomes are not manufactured by executable success.
+
+## Published stack and exact proof scope
+
+Original foundation: `d8e3cb12a9e42272b090051114e636176d89aa30`. After the maintainer's ordered merges of #3063 through #3071, the foundation is `80359e138983ac81788817c2b47ce8a2190d040e`; its tree exactly matches the original #3071 candidate. Remaining merge order:
+
+1. [#3072](https://github.com/rickardvh/agentic-workspace/pull/3072) into `reconstruct/foundation-contract`: public proof/report/claim owner, current proof conformance, portable interpreter discovery.
+2. [#3073](https://github.com/rickardvh/agentic-workspace/pull/3073) into `codex/delegation-public-proof`: effective override policy and corrected generated fingerprints.
+3. [#3074](https://github.com/rickardvh/agentic-workspace/pull/3074) into `codex/delegation-override-policy`: ordinary current-owner entry and matching conformance.
+4. [#3075](https://github.com/rickardvh/agentic-workspace/pull/3075) into `codex/delegation-ordinary-entry`: exclude impossible judgment candidates before trusted reads.
+5. [#3076](https://github.com/rickardvh/agentic-workspace/pull/3076) into `codex/delegation-proof-history`: focused proof routes and this evidence/cost report.
+
+The maintainer's independent comments on the earlier heads identified misplaced conformance and fingerprint drift. Both were repaired at their earliest affected layer, preserving the final tree. Hosted checks passed on the first repaired #3072 through #3075 heads. Those passes are historical evidence, not approval of later revisions.
+
+Integrated run `12fcc879ca1c61610827` passed all 33 selected commands on `503e6e43e204d4f4153c84994564380f46889772`. The first restacked tip `6fedbb7594a3e189a008f0dd64d26e7a688c4f2c` has the identical tree `98524637724d5eb49104c74b9cdfa097ddb59656`. The combined group passed 1077 tests with one skip in 789.19 seconds; the transport/public-client group passed 339 with one skip in 207.45 seconds. Counts overlap. Generated Node conformance, freshness, lint, types and all selected focused routes passed. AW admitted the aggregate receipt but returned `completed-with-unresolved-obligations`, exit 1, with no command failures and manual obligations remaining. This is executable coverage, not permission to claim the full lane complete.
+
+The subsequent explicit Docker check exposed a real portability defect: Debian provides `python3` without a `python` alias. All five bridged operations failed before owner launch. #3072 now tries `python3` only after an `ENOENT` from the generic interpreter; owner rejection never triggers a second execution. Launch errors remain explicit. The repaired implementation tip `b2f96ae5d77378a9457063cc1ebc6e0fe2aa3a49` passed interpreter/ordinary tests, public Verification tests, generated freshness, and both TypeScript Docker tests and Docker conformance. Its tree is `3b34ce8eb1feb3d936c2171b553f10a515b9ed08`. No Docker alias or conformance exception conceals the defect.
+
+The final documentation update changes only this report and the cost audit. [PR #3076's proof record](https://github.com/rickardvh/agentic-workspace/pull/3076) records the exact final published head and selected proof for the delta from `6fedbb7594a3e189a008f0dd64d26e7a688c4f2c` (interpreter repair, generated copies, regression and documentation). That scoped proof supplements the completed integrated run; it does not retrospectively change its subject or turn a failed Docker run into a pass.
+
+## Smallest remaining acceptance packet
+
+- Recheck #2916, #2970 and #2334 against the integrated branch after the remaining ordered merges. The owner-specific closure candidates in the matrix are recommendations, not issue closures or independent acceptance by the implementation session.
+- Disposition the current manual protocols through their existing owners: context consistency; intent/closeout; generated adapter evidence; repository acceptance including organic dogfood; requirement/delegation grounding; test-evidence decisions and proof-route review. Executable artifacts are available above; a review request is not admitted judgment.
+- Preserve the exact host blocker: the admitted read-only Codex sandbox cannot execute the configured checkout interpreter. The successful Docker adapter check does not resolve that separate native worker capability gap. Ordinary successful admission, integration, Verification and reconciliation remain unproved.
+- Keep #2210's role-scoped task-requirement ingress and #2767's broader guided configuration outcomes open with their existing owners. Do not convert evaluator requirements into executor constraints or recreate retired source machinery.
+- Keep #2818/#2209 open until real admitted lifecycle outcomes support contextual economics and justified causal learning. Keep #2909 open for its broader reconstruction and independent acceptance requirements. All three incomplete real workers remain censored observations.
