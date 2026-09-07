@@ -45207,9 +45207,36 @@ def _live_assignment_plan_binding(*, target_root: Path, task_text: str, changed_
         and plan_ref == source.get("active_execplan")
         and source_hash not in {"", "missing"}
     )
-    # Bind the selected owner's content and semantic projection, not the
-    # composite Planning revision: admitting an integration receipt must not
-    # invalidate the assignment that produced it. No private plan reads here.
+    route: dict[str, Any] = {}
+    if task_text.strip() and (plan_ref or source.get("active_execplan")):
+        route = _as_dict(
+            _planning_safety_gate_payload(
+                target_root=target_root,
+                config=_load_workspace_config(target_root=target_root),
+                changed_paths=changed_paths,
+                task_text=task_text,
+                execution_posture={
+                    "capability_posture": _capability_posture_for_implementation(changed_paths=changed_paths, task_text=task_text)
+                },
+            ).get("route_decision")
+        )
+    relation = route.get("task_relation", "not-applicable" if not plan_ref and not source.get("active_execplan") else "")
+    if task_text.strip() and relation in {"bounded-independent", "not-applicable"}:
+        # Legacy field names carry a work reference, not necessarily a file or
+        # durable Planning owner. The exact direct task is its semantic source.
+        direct_revision = "direct-task:" + revision({"task": " ".join(task_text.split()), "paths": sorted(set(changed_paths))})
+        return {
+            "plan_ref": direct_revision,
+            "plan_revision": direct_revision,
+            "allowed_paths": _dedupe(changed_paths),
+            "plan_record": {},
+            "route_decision": route,
+        }
+    if task_text.strip() and relation != "continues-selected-owner":
+        return {"plan_ref": "", "plan_revision": "", "allowed_paths": _dedupe(changed_paths), "plan_record": {}, "route_decision": route}
+    # Bind the selected owner's semantic projection, not its file hash or the
+    # composite Planning revision: attempts and integration bookkeeping must
+    # not invalidate the work they describe. No private plan reads here.
     semantic_fields = (
         "requested_outcome",
         "hard_constraints",
@@ -45228,7 +45255,6 @@ def _live_assignment_plan_binding(*, target_root: Path, task_text: str, changed_
         + revision(
             {
                 "ref": plan_ref,
-                "source_hash": source_hash,
                 "contract": {key: plan_record.get(key) for key in semantic_fields},
             }
         )
@@ -45241,6 +45267,7 @@ def _live_assignment_plan_binding(*, target_root: Path, task_text: str, changed_
         "plan_revision": plan_revision,
         "allowed_paths": allowed_paths,
         "plan_record": plan_record if present else {},
+        "route_decision": route,
     }
 
 
@@ -45256,6 +45283,15 @@ def _assignment_plan_binding_matches(*, assignment: dict[str, Any], live_binding
         return False
     gate = _as_dict(assignment.get("assignment_gate"))
     bound_paths = sorted({str(path) for path in _list_payload(gate.get("allowed_paths")) if str(path).strip()})
+    if plan_revision.startswith("direct-task:") and not str(gate.get("plan_revision") or "").startswith(
+        ("planning-owner:", "direct-task:")
+    ):
+        # Already sealed legacy work keeps its admitted source contract, but
+        # cannot borrow an unrelated modern direct task merely by being current.
+        from agentic_workspace.assignment_source import revision
+
+        expected = "direct-task:" + revision({"task": " ".join(str(gate.get("human_intent") or "").split()), "paths": bound_paths})
+        return plan_revision == expected and bound_paths == allowed_paths
     return (
         str(gate.get("plan_ref") or "").strip() == plan_ref
         and str(gate.get("plan_revision") or "").strip() == plan_revision
@@ -45638,7 +45674,7 @@ def _current_assignment_selection(
     completed_packet: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
     """One current owner evaluation for ordinary selection and replacement admission."""
-    posture = _capability_posture_for_implementation(changed_paths=changed_paths, task_text=task_text)
+    posture: dict[str, Any] = _capability_posture_for_implementation(changed_paths=changed_paths, task_text=task_text)
     if work_identity is not None:
         # Existing canonical work classes outrank fresh text-based discovery.
         posture = {
@@ -45653,19 +45689,12 @@ def _current_assignment_selection(
         if live_binding.get("plan_record"):
             # Consume Planning's existing route authority before borrowing its
             # task judgment. An unrelated active owner is not this task's policy.
-            route = _as_dict(
-                _planning_safety_gate_payload(
-                    target_root=config.target_root,
-                    config=config,
-                    changed_paths=changed_paths,
-                    task_text=task_text,
-                    execution_posture={"capability_posture": posture},
-                ).get("route_decision")
-            )
+            route = _as_dict(live_binding.get("route_decision"))
             if (
                 route.get("task_relation") == "continues-selected-owner"
                 and route.get("owner_posture") == "current"
                 and route.get("required_transition") == "none"
+                and _as_dict(live_binding["plan_record"].get("capability_posture"))
                 and (
                     work_identity is None
                     or (
@@ -45675,7 +45704,12 @@ def _current_assignment_selection(
                 )
             ):
                 planning_posture = _as_dict(live_binding["plan_record"].get("capability_posture"))
-                posture = {**posture, "posture": {**posture["posture"], **planning_posture}}
+                posture = {
+                    **posture,
+                    "status": "planning-owner-judgment",
+                    "reason": "Current related Planning owner supplies task capability judgment.",
+                    "posture": {**posture["posture"], **planning_posture},
+                }
                 if work_identity is not None:
                     posture["posture"].update({"execution class": work_identity["task_class"], "scope class": work_identity["scope_class"]})
     runtime_resolution = _runtime_resolution_payload(config=config, capability_posture=posture["posture"])

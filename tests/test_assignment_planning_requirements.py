@@ -75,3 +75,130 @@ def test_assignment_consumes_only_current_owner_task_judgment(tmp_path: Path, mo
         }[relation]
     )
     assert captured["recommended strength"] == ("strong" if relation in {"unrelated", "stale-reentry"} else "weak")
+
+
+@pytest.mark.parametrize("language", ["python", "typescript"])
+def test_direct_assignment_public_export_ignores_unrelated_owner(tmp_path: Path, language: str, capsys) -> None:
+    from tests.test_external_operation_clients import _prepare_shared_worktree_assignment, _run_typescript_assignment
+
+    from agentic_workspace import cli
+    from agentic_workspace.generated_operations import assignment_export
+
+    _, invocation, _ = _prepare_shared_worktree_assignment(tmp_path, run_id="unrelated")
+    (tmp_path / ".agentic-workspace/config.local.toml").write_text("""schema_version = 1
+[delegation]
+assignment_policy = "required-best-fit"
+current_target = "orchestrator"
+transport_authority = "manual"
+[delegation_targets.orchestrator]
+target_id = "host:orchestrator"
+target_revision = "1"
+strength = "strong"
+location = "local"
+transports = [{kind="internal"}]
+[delegation_targets.worker]
+target_id = "host:worker"
+target_revision = "1"
+strength = "strong"
+location = "external"
+transports = [{kind="manual"}]
+""")
+    owner_task = "Review the unrelated release policy."
+    plan = planning._build_execplan_record_from_todo_item(
+        title=owner_task, item_id="release", status="in-progress", why_now=owner_task, next_action=owner_task, done_when="reviewed"
+    )
+    plan_ref = ".agentic-workspace/planning/execplans/release.plan.json"
+    plan_path = tmp_path / plan_ref
+    plan_path.parent.mkdir(parents=True)
+    plan_path.write_text(json.dumps(plan))
+    (tmp_path / ".agentic-workspace/planning/state.toml").write_text(
+        f'[todo]\nactive_items = [{{id="release", status="in-progress", surface="{plan_ref}"}}]\nqueued_items = []\n'
+    )
+    task = "Inspect the bounded feature calculation."
+    paths = ["src/feature.py"]
+    binding = runtime._live_assignment_plan_binding(target_root=tmp_path, task_text=task, changed_paths=paths)
+    assert binding["plan_ref"].startswith("direct-task:")
+    assert binding["plan_record"] == {}
+    assert runtime._live_assignment_plan_binding(target_root=tmp_path, task_text="", changed_paths=paths)["plan_ref"] == plan_ref
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--task",
+                task,
+                "--changed",
+                *paths,
+                "--select",
+                "context.delegation_decision",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    offers = json.loads(capsys.readouterr().out)["values"]["context.delegation_decision"]["execution_configurations"]
+    selected = next(row["configuration"] for row in offers["candidates"] if row["eligible"] and row["configuration"]["target"] == "worker")
+    args = {
+        "task": task,
+        "changed": paths,
+        "configuration_revision": offers["revision"],
+        "configuration_id": selected["id"],
+        "transport": "manual",
+    }
+    exported = (
+        _run_typescript_assignment(tmp_path, "export", args)
+        if language == "typescript"
+        else assignment_export(args, target=tmp_path, invocation=invocation)
+    )
+    assert exported["status"] == "handoff-prepared", exported
+    packet = json.loads((tmp_path / next(ref for ref in exported["artifact_refs"] if ref.endswith("packet.json"))).read_text())
+    assert packet["assignment_identity"]["plan_ref"] == binding["plan_ref"]
+    assert packet["assignment_identity"]["plan_revision"] == binding["plan_revision"]
+    assert (
+        runtime._live_assignment_plan_binding(target_root=tmp_path, task_text=task + " Check rounding.", changed_paths=paths)[
+            "plan_revision"
+        ]
+        != binding["plan_revision"]
+    )
+    assert (
+        runtime._live_assignment_plan_binding(target_root=tmp_path, task_text=task, changed_paths=["src/other.py"])["plan_revision"]
+        != binding["plan_revision"]
+    )
+    plan["updated_at"] = "later bookkeeping"
+    plan_path.write_text(json.dumps(plan))
+    assert (
+        runtime._live_assignment_plan_binding(target_root=tmp_path, task_text=task, changed_paths=paths)["plan_revision"]
+        == binding["plan_revision"]
+    )
+
+
+def test_planning_semantic_binding_preserves_attempts_and_rejects_ambiguous_custody(tmp_path: Path, monkeypatch) -> None:
+    projected = {
+        "planning_record": {
+            "status": "present",
+            "task": {"surface": "planning://bounded"},
+            "requested_outcome": "Check the calculation",
+            "touched_scope": ["src/feature.py"],
+            "proof_expectations": ["Verify the result"],
+        },
+        "planning_revision": {"active_execplan": "planning://bounded", "active_execplan_hash": "initial"},
+    }
+    route = {"task_relation": "continues-selected-owner", "owner_posture": "current", "required_transition": "none"}
+    monkeypatch.setattr(planning, "planning_summary_query", lambda **_: {"status": "present", "payload": projected})
+    monkeypatch.setattr(runtime, "_planning_safety_gate_payload", lambda **_: {"route_decision": route})
+
+    def bind():
+        return runtime._live_assignment_plan_binding(target_root=tmp_path, task_text="Check the calculation", changed_paths=[])
+
+    first = bind()
+    projected["planning_revision"]["active_execplan_hash"] = "after-return-bookkeeping"
+    projected["planning_record"]["proof_report"] = {"status": "integration-pending"}
+    projected["planning_record"]["attempt"] = {"number": 2}
+    assert bind()["plan_revision"] == first["plan_revision"]
+    projected["planning_record"]["proof_expectations"] = ["Independent domain judgment required"]
+    assert bind()["plan_revision"] != first["plan_revision"]
+    route["task_relation"] = "ambiguous"
+    assert bind()["plan_ref"] == ""
+    assert bind()["plan_record"] == {}
