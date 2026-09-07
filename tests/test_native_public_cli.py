@@ -78,9 +78,10 @@ def test_current_public_route_survives_fresh_process_but_not_source_change(
     assert not (tmp_path / ".agentic-workspace").exists()
 
 
+@pytest.mark.parametrize("selection_source", ["local", "shared"])
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
 def test_real_former_planning_native_invocation_and_fresh_continuation(
-    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str, selection_source: str
 ) -> None:
     plan_ref = Path(".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json")
     plan = tmp_path / plan_ref
@@ -88,23 +89,37 @@ def test_real_former_planning_native_invocation_and_fresh_continuation(
     original = (ROOT / plan_ref).read_bytes()
     plan.write_bytes(original)
     selection = tmp_path / ".agentic-workspace/local/planning/owner-selection.json"
-    selection.parent.mkdir(parents=True)
-    selection.write_text(
-        json.dumps(
-            {
-                "kind": "agentic-planning/owner-selection/v1",
-                "mode": "local",
-                "current_work_id": "default",
-                "selected_owner": {"id": "delegation-lane-sweep", "ref": plan_ref.as_posix()},
-            }
+    if selection_source == "local":
+        selection.parent.mkdir(parents=True)
+        selection.write_text(
+            json.dumps(
+                {
+                    "kind": "agentic-planning/owner-selection/v1",
+                    "mode": "local",
+                    "current_work_id": "default",
+                    "selected_owner": {"id": "delegation-lane-sweep", "ref": plan_ref.as_posix()},
+                }
+            )
         )
-    )
+    else:
+        state = tmp_path / ".agentic-workspace/planning/state.toml"
+        state.write_text(f'[[active.execplans]]\nid="delegation-lane-sweep"\npath="{plan_ref.as_posix()}"\nstatus="active"\n')
     context = {"target": str(tmp_path), "task": "Preserve the current reconstruction scope and returned work"}
     initial = consume(surface, shared_core_binary, native_cli, context)
+    if selection_source == "shared":
+        assert not selection.parent.exists(), "read-only discovery must not acquire local custody"
     question = initial["decision_packet"]["decision_request"]
     request = question["response_request"]
     request["arguments"]["answer"] = "continue-selected"
     continued = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
+    if selection_source == "shared":
+        assert not selection.parent.exists(), "constructing intention must not mutate state"
+    if selection_source == "local":
+        assert any(item["code"] == "planning-selection-custody-required" for item in continued["decision_packet"]["blockers"])
+        assert not (tmp_path / ".agentic-workspace/local/effects").exists()
+        assert "reconciliation" not in json.loads(selection.read_text())
+        assert plan.read_bytes() == original
+        return
     action = continued["decision_packet"]["primary_action"]
     assert action["operation_id"] == "planning.reconcile"
     applied = consume(surface, shared_core_binary, native_cli, {**context, "invocation": action})
@@ -259,17 +274,8 @@ def test_instruction_protection_reaches_actual_planning_writes(
     plan.parent.mkdir(parents=True)
     plan.write_bytes((ROOT / plan_ref).read_bytes())
     selection_ref = ".agentic-workspace/local/planning/owner-selection.json"
-    selection = tmp_path / selection_ref
-    selection.parent.mkdir(parents=True)
-    selection.write_text(
-        json.dumps(
-            {
-                "kind": "agentic-planning/owner-selection/v1",
-                "mode": "local",
-                "current_work_id": "default",
-                "selected_owner": {"id": "delegation-lane-sweep", "ref": plan_ref.as_posix()},
-            }
-        )
+    (tmp_path / ".agentic-workspace/planning/state.toml").write_text(
+        f'[[active.execplans]]\nid="delegation-lane-sweep"\npath="{plan_ref.as_posix()}"\nstatus="active"\n'
     )
     context = {"target": str(tmp_path), "task": "Continue the selected documentation outcome", "changed": ["docs/notes.md"]}
     first = consume(surface, shared_core_binary, native_cli, context)

@@ -44,3 +44,18 @@ Hard checks/protection retain immutable source admission. Planning reconciliatio
 also checks its actual bounded write set (including custody and temporary files),
 so omitted task paths cannot bypass protection. Character classes share the same
 path matcher with native Verification. Discovery creates no state.
+
+A shared-source Planning continuation acquires absent local selection and retains
+attempt custody inside the same `planning.reconcile` operation. A pre-existing
+source-only local selector remains readable but cannot be overwritten merely
+because its shape is valid. Its current owner must admit transfer; that native
+transfer route remains unresolved. Current producer custody supports exact replay
+and fresh-process continuation. No caller-authored local selector is needed for
+the shared-source journey.
+
+For semantic lifetime, source applicability is recomputed from bounded current
+inputs; retaining its result would add custody and invalidation work to a cheap
+calculation. Planning derives current subject meaning from its stronger source
+owner and reuses only exactly admitted effect/attempt custody. A historical next
+decision is never retained as current authority. These choices do not complete
+#2981's remaining measured expensive-proof and negative-result reuse evidence.
