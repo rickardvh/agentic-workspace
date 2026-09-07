@@ -1743,6 +1743,29 @@ function applyPayloadCopy(values) {
   return actions;
 }
 
+function verificationOwnerReport(values) {
+  const targetRoot = resolve(String(values.target_root ?? values.target ?? '.'));
+  const sourceRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../../..');
+  const environmentPython = process.env.VIRTUAL_ENV ? join(process.env.VIRTUAL_ENV, process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python') : '';
+  const checkoutPython = join(sourceRoot, '.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
+  const python = environmentPython && existsSync(environmentPython) ? environmentPython : existsSync(join(sourceRoot, 'scripts/run_agentic_workspace.py')) && existsSync(checkoutPython) ? checkoutPython : 'python';
+  // This is the package's declared public runtime entrypoint. Manifest commands
+  // remain report data and are never executed by this read-only transport.
+  const args = ['-c', 'import sys; from repo_verification_bootstrap.cli import main; raise SystemExit(main(sys.argv[1:]))', 'report', '--target', targetRoot, '--format', 'json'];
+  const changed = values.changed_paths ?? [];
+  if (Array.isArray(changed) && changed.length) args.push('--changed', ...changed.map(String));
+  if (values.task_text) args.push('--task', String(values.task_text));
+  if (values.verbose) args.push('--verbose');
+  const result = spawnSync(python, args, { cwd: targetRoot, encoding: 'utf8', windowsHide: true, timeout: 30000, maxBuffer: 10 * 1024 * 1024 });
+  if (result.status === 0) {
+    try {
+      const report = JSON.parse(result.stdout);
+      if (report.kind === 'agentic-workspace/verification/v1') return report;
+    } catch {}
+  }
+  return { kind: 'agentic-workspace/verification/v1', status: 'unavailable', configured: false, reason_code: 'verification-owner-unavailable', completion_claim_allowed: false, recovery: 'Run the public agentic-verification report with its installed owner runtime; no empty successful report may replace missing owner evidence.' };
+}
+
 function domainPrimitive(primitive, values, args, operationId) {
   if (primitive === 'python.function.call') {
     const moduleName = String(args.import_module ?? '');
@@ -1764,7 +1787,7 @@ function domainPrimitive(primitive, values, args, operationId) {
     if (functionName.includes('uninstall') || functionName.includes('migrate')) return unsupportedMutationResult(values, `${functionName.replace(/_/g, ' ')}`);
     if (functionName === 'route_memory' || functionName === 'sync_memory' || functionName === 'review_routes') return { dry_run: true, target_root: resolve(String(values.target ?? '.')), message: functionName.replace(/_/g, ' '), actions: [] };
     if (moduleName.includes('runtime_search')) return { dry_run: true, query: values.query ?? '', target_root: resolve(String(values.target ?? '.')), matches: [], message: 'Memory search completed with native TypeScript runtime.' };
-    if (moduleName.includes('verification')) return { kind: 'verification-report/v1', target_root: values.target_root ?? resolve(String(values.target ?? '.')), changed_paths: values.changed_paths ?? [], task_text: values.task_text ?? '', checks: [], message: 'Verification report' };
+    if (moduleName.includes('verification')) return verificationOwnerReport(values);
     return lifecycleResult(values, functionName || operationId);
   }
   if (primitive === 'planning.close-item.apply') return unsupportedMutationResult(values, `Close planning item ${values.item ?? ''}`.trim());
@@ -1826,7 +1849,7 @@ function domainPrimitive(primitive, values, args, operationId) {
   if (primitive === 'memory.route_report.load') return { message: 'Routing report', route_report_summary: { feedback: { status: 'not-evaluated', path: '.agentic-workspace/memory/repo/route-feedback.md' }, fixtures: { status: 'not-evaluated', fixture_count: 0 } }, detail_command: 'agentic-memory route-report --target . --verbose --format json' };
   if (primitive === 'memory.bootstrap.doctor.load') return values.result ?? payloadStatus(values, { policy_root: 'memory.contracts', policy_path: 'payload_verification.memory.json', target_root_value: 'target_root', message: 'Doctor report' });
   if (primitive === 'memory.promotion_report.load') return { dry_run: true, target_root: resolve(String(values.target ?? '.')), notes: values.notes ?? [], candidates: [], message: 'Memory promotion report' };
-  if (primitive === 'verification.report.load') return { kind: 'verification-report/v1', target_root: values.target_root ?? resolve(String(values.target ?? '.')), changed_paths: values.changed_paths ?? [], task_text: values.task_text ?? '', checks: [], message: 'Verification report' };
+  if (primitive === 'verification.report.load') return verificationOwnerReport(values);
   if (primitive === 'memory.current.load') return values.current_command === 'check' ? { dry_run: true, target_root: resolve(String(values.target ?? '.')) } : { detected_version: null, target_root: resolve(String(values.target ?? '.')) };
   if (primitive === 'memory.prompt.render' || primitive === 'planning.prompt.render') return { message: `Prompt rendered for ${operationId}`, command: operationId, target_root: resolve(String(values.target ?? '.')) };
   if (primitive === 'prompt.render') {
