@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Require current integrated file and runtime proof subject at assignment close through the authoritative Verification owner."
+issues = [2334, 2947, 2909]
