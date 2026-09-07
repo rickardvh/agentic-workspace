@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Review separation of duty",
+  "description": "Deterministic separation of owner-supplied review identities; this contract does not authenticate producers.",
+  "x-agentic-workspace-doc-role": "contract-reference",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["required_mode", "implementer", "reviewer"],
+  "properties": {
+    "required_mode": {"type": "string", "description": "Current Verification-owned separation requirement; unsupported modes cannot satisfy review."},
+    "implementer": {"type": "object", "description": "Independently admitted implementer identity and provider observations, including unknown values."},
+    "reviewer": {"type": ["object", "null"], "description": "Independently admitted reviewer identity, provider, role and context observations; null means no reviewer."}
+  }
+}

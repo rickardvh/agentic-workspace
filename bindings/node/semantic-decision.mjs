@@ -53,6 +53,10 @@ export function proofReceipt(context) {
   return request({proof_receipt: context});
 }
 
+export function separationOfDuty(context) {
+  return request({separation_of_duty: context});
+}
+
 export function instructionSourceAdmission(context) {
   return request({instruction_source_admission: context});
 }

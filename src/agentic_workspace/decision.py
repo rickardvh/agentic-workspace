@@ -31,6 +31,10 @@ def task_requirements(context: Mapping[str, Any]) -> dict[str, Any]:
     return _request({"task_requirements": context})
 
 
+def separation_of_duty(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"separation_of_duty": context})
+
+
 def task_judgment(context: Mapping[str, Any]) -> dict[str, Any]:
     return _request({"task_judgment": context})
 

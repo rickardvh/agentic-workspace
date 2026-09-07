@@ -11,6 +11,11 @@ fn main() {
     };
     let result = if request
         .as_object()
+        .is_some_and(|v| v.len() == 1 && v.contains_key("separation_of_duty"))
+    {
+        agentic_workspace_core::separation_of_duty::view(request["separation_of_duty"].clone())
+    } else if request
+        .as_object()
         .is_some_and(|v| v.len() == 1 && v.contains_key("instruction_applicability"))
     {
         agentic_workspace_core::instruction_applicability::view(
